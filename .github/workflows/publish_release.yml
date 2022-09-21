@@ -5,7 +5,7 @@ on:
     types: [ published ]
 
 env:
-  PYTHON: 3.7.12
+  PYTHON: 3.9.14
   POETRY: 1.1.12
   PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
