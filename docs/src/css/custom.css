@@ -1,0 +1,13 @@
+:root {
+  --ifm-color-primary: #514cd8;
+  --docusaurus-highlighted-code-line-bg: rgba(86, 88, 221, 0.1);
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #ae85ff;
+}
+
+.text-orange {
+    color: #ff8a6a;
+}
+

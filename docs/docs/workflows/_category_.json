@@ -1,0 +1,9 @@
+{
+  "label": "Workflows",
+  "position": 3,
+  "collapsible": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Workflows for improving your data, labels, and models."
+  }
+}

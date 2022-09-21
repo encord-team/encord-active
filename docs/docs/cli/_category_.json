@@ -1,0 +1,9 @@
+{
+  "label": "Command Line Interface",
+  "position": 5,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "How to use the command line interface (CLI)."
+  }
+}

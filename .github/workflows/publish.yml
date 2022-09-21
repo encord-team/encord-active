@@ -1,0 +1,56 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+env:
+  PYTHON: 3.9.14
+  POETRY: 1.1.12
+  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+concurrency:
+  group: encord-active-${{ github.ref }}-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish Encord.Active
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON }}
+
+      - name: Setup Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY }}
+          virtualenvs-in-project: true
+
+      - name: Version Bump
+        run: "poetry version ${{ github.ref_name }}"
+
+      - name: Version Bump commit
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Version bump to ${{ github.ref_name }}"
+          push_options: --force
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      - name: Build
+        run: poetry build
+
+      - name: Publish
+        run: |
+          poetry config pypi-token.pypi ${{ env.PYPI_TOKEN }}
+          poetry publish

@@ -1,0 +1,9 @@
+{
+  "label": "Metrics",
+  "position": 6,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Detailed descriptions of the pre-existing metrics."
+  }
+}

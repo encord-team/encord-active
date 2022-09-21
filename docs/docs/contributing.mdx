@@ -1,0 +1,236 @@
+---
+sidebar_position: 10
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Contributing
+
+We follow a [code of conduct][code_of_conduct] when participating in the community. Please read it before you make any contributions.
+
+- If you plan to work on an issue, mention so in the issue page before you start working on it.
+- If you plan to work on a new feature, create an issue and discuss it with other community members/maintainers.
+- Ask for help in our [slack community][join-slack].
+
+## Ways to contribute
+
+- **Stars on GitHub**: If you're an Encord Active user and enjoy using our platform, don't forget to star it on [GitHub][repo]! 🌟
+- **Improve documentation**: Good documentation is imperative to the success of any project. You can make our documents the best they need to be by improving their quality or adding new ones.
+- **Give feedback**: We're always looking for ways to make Encord Active better, please share how you use Encord Active, what features are missing and what is done good via [Slack](http://discord.gg/refine).
+- **Share refine**: Help us reach people. Share [Encrod Active repository][repo] with everyone who can be interested.
+- **Contribute to codebase**: Your help is needed to make this project the best it can be! You could develop new features or fix [existing issues][repo-issues] - every contribution will be welcomed with great pleasure!
+
+## Environment setup
+
+Make sure you have `python3.9` installed on your system.
+
+To install the correct version of python you can use [pyenv](https://github.com/pyenv/pyenv), [brew (mac only)](https://formulae.brew.sh/formula/python@3.9) or simply [download](https://www.python.org/downloads) it.
+
+You'll also need to have [poetry installed](https://python-poetry.org/docs/#installation).
+
+After forking and cloning the repository, run:
+
+```shell
+poetry install
+
+# If you intend to work on coco related things, run this instead:
+poetry install --extras "coco"
+```
+
+:::info
+You might need to install `xcode-select` if you are on Mac or `C++ build tools` if you are on Windows.
+:::
+
+After the installation is done, you can activate the created virtual environment with:
+
+```shell
+poetry shell
+```
+
+You're all set up, now you should be able to run your locally installed `encord-active`.
+
+:::info
+Make sure you are always running `encord-active` from the activated virtual environment to not conflict with a globally installed version.
+:::
+
+### Running the frontend
+
+Our frontend is build with [React](https://reactjs.org/). To start it in development mode, run:
+
+:::info
+Running the frontend locally is only required if you intend to work on our React frontend components
+:::
+
+```shell
+cd frontend && npm i && npm start
+```
+
+In order to point `encord-active` to your locally running frontend, you'll need to change the `FRONTEND` environment variable in the `.env` file. Make sure you point it to the correct port, by default it should be running on `http://localhost:5173/`
+
+### Running the documentation
+
+Our documentation is built with [Docusaurus][docusaurus]. To start it in development mode, run:
+
+```shell
+cd docs && npm i && npm start
+```
+
+## Commit convention
+
+Commit messages are essential to make changes clear and concise. We use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) to keep our commit messages consistent and easy to understand.
+
+```
+<type>(optional scope): <description>
+```
+
+Examples:
+
+- `feat: allow provided config object to extend other configs`
+- `fix: array parsing issue when multiple spaces were contained in string`
+- `docs: correct spelling of CHANGELOG`
+
+## Contribution guide
+
+You need to follow these steps below to make contribution to the main repository via pull request. You can learn about the details of pull request [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests).
+
+### 1. Fork the official repository
+
+<Tabs>
+  <TabItem value="git" label="Git" default>
+
+Firstly, you need to visit the [Encord Active repository][repo] and fork into your own account. The `fork` button is at the right top corner of the web page alongside with buttons such as `watch` and `star` (highly appreciated if you click this one as well 🌟).
+
+Now, you can clone your own forked repository into your local environment.
+
+```shell
+git clone https://github.com/<YOUR-USERNAME>/encord-active.git
+```
+
+  </TabItem>
+  <TabItem value="github-cli" label="Github CLI">
+
+If you have Github CLI installed this will create a fork, if you haven't, consider [installing it](https://github.com/cli/cli#installation).
+
+```shell
+gh repo fork encord-team/encord-active
+```
+
+  </TabItem>
+</Tabs>
+
+### 2. Configure git
+
+You need to set the official repository as your upstream so that you can synchronize with the latest updates in the official repository. You can learn about syncing forks [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/configuring-a-remote-for-a-fork).
+
+<Tabs>
+  <TabItem value="git" label="Git" default>
+
+```shell
+cd encord-active
+git remote add upstream https://github.com/encord-team/encord-active.git
+```
+
+  </TabItem>
+  <TabItem value="github-cli" label="Github CLI">
+
+> If you use the Github CLI, this step is done automatically 🪄
+
+  </TabItem>
+</Tabs>
+
+You can use the following command to verify that the remote is set. You should see both `origin` and `upstream` in the output.
+
+```shell
+git remote -v
+> origin    https://github.com/<YOUR-USERNAME>/encord-active.git (fetch)
+> origin    https://github.com/<YOUR-USERNAME>/encord-active.git (push)
+> upstream  https://github.com/encord-team/encord-active.git (fetch)
+> upstream  https://github.com/encord-team/encord-active.git (push)
+```
+
+### 3. Synchronize
+
+Before you make changes to the codebase, it is always good to fetch the latest updates in the official repository. In order to do so, you can use the commands below.
+
+<Tabs>
+  <TabItem value="git" label="Git" default>
+
+```shell
+git fetch upstream
+git checkout main
+git merge upstream/main
+git push origin main
+```
+
+Otherwise, you can click the `fetch upstream` button on the github webpage of the main branch of your forked repository. Then, use these commands to sync.
+
+```shell
+git checkout main
+git fetch main
+```
+
+  </TabItem>
+  <TabItem value="github-cli" label="Github CLI">
+
+To sync your remote fork:
+
+```shell
+gh repo sync <YOUR-USERNAME>/encord-active
+```
+
+And then to sync you local clone:
+
+```shell
+gh repo sync
+```
+
+  </TabItem>
+</Tabs>
+
+### 4. Pull request issue
+
+In order to not waste your time implementing a change that has already been declined, or is generally not needed, start by opening an [issue][repo-issues] describing the problem you would like to solve. Make sure you use appropriate title and description and be as descriptive as possible.
+
+Generally, your code change should be only targeting one problem in order to make the review process as simple as possible.
+
+### 5. Make changes
+
+You should not make changes to the `main` branch of your forked repository as this might make upstream synchronization difficult. You can create a new branch with the appropriate name. Generally, branch names should start with a conventional commit type, e.g. `fix/` / `docs/` / `feat` followed by the scope.
+
+```shell
+git checkout -b <NEW-BRANCH-NAME>
+```
+
+It is finally time to implement your change!
+
+You can commit and push the changes to your local repository. The changes should be kept logical, modular and atomic.
+
+```shell
+git add -A
+git commit -m "<COMMIT-TYPE>: <COMMIT-MESSAGE>"
+git push -u origin <NEW-BRANCH-NAME>
+```
+
+### 7. Open a pull request
+
+You can now create a pull request on the GitHub webpage of your repository. The source branch is `<NEW-BRANCH-NAME>` of your repository and the target branch should be `main` of `encord-team/encord-active`. After creating this pull request, you should be able to see it [here](https://github.com/encord-team/encord-active/pulls).
+
+If you are using Github CLI you can run:
+
+```shell
+gh pr create --web
+```
+
+Fill out the title and body appropriately trying to be as clear as possible. And again, make sure to follow the conventional commit guidelines for your title.
+
+Do write a clear description of your pull request and [link the pull request to your target issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue). This will automatically close the issue when the pull request is approved.
+
+In case of code conflict, you should rebase your branch and resolve the conflicts manually.
+
+[docusaurus]: https://docusaurus.io/
+[issues]: https://github.com/encord-team/encord-active/issues
+[code_of_conduct]: https://github.com/encord-team/encord-active/blob/main/CODE_OF_CONDUCT.md
+[join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[repo]: https://github.com/encord-team/encord-active
+[repo-issues]: https://github.com/encord-team/encord-active/issues

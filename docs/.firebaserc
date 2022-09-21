@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "encord-active-frontend": "encord-active-frontend"
+  },
+  "targets": {
+    "encord-active-frontend": {
+      "hosting": {
+        "prod": [
+          "encord-active-docs"
+        ]
+      }
+    }
+  }
+}

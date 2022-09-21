@@ -1,0 +1,9 @@
+{
+  "label": "Pages",
+  "position": 4,
+  "collapsible": false,
+  "link": {
+    "type": "generated-index",
+    "description": "A description of the pages you can see in the Encord Active app."
+  }
+}

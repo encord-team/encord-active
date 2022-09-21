@@ -1,0 +1,16 @@
+{
+  "hosting": [
+    {
+      "target": "prod",
+      "public": "build",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "redirects": [
+        {
+          "source": "/docs/getting-started",
+          "destination": "/",
+          "type": 301
+        }
+      ]
+    }
+  ]
+}

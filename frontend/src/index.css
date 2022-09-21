@@ -1,0 +1,23 @@
+@import "antd/dist/antd.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  @apply font-sans text-base font-normal text-white/[.87] bg-neutral-800;
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  @apply w-full h-full max-h-screen;
+}
+
+body {
+  @apply m-0 px-4 flex place-items-center min-w-[320px] h-screen;
+}

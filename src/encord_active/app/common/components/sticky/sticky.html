@@ -1,0 +1,39 @@
+<script>
+  const st = window.parent;
+
+  // gets the container of the element we injected. structure is
+  // header > verticalBlock > markdown > markdown container
+  const verticalBlock =
+    st.document.querySelector("#sticky").parentElement.parentElement
+      .parentElement;
+  verticalBlock.style.display = "none";
+
+  const header = verticalBlock.parentElement;
+  header.style.zIndex = 9999;
+  header.style.backgroundColor = "rgb(255, 255, 255)";
+  header.style.boxShadow = "#80808047 0px 10px 6px -6px";
+
+  // streamlit creates a visible element for the iframe even though it's empty
+  const iframeContainer =
+    header.getElementsByTagName("iframe")[0].parentElement;
+  iframeContainer.style.height = 0;
+  iframeContainer.style.display = "none";
+
+  const main = st.document.querySelector(".main");
+  const firstBlock = main.querySelector("[data-testid='stVerticalBlock']");
+  firstBlock.firstChild.style.display = "none";
+
+  const pageHeaderHeight = st.document.querySelector("header").clientHeight;
+
+  main.onscroll = () => {
+    if (main.scrollTop > firstBlock.offsetTop - pageHeaderHeight) {
+      header.style.top = "2.875rem";
+      header.style.position = "fixed";
+      firstBlock.style.paddingTop = `${header.clientHeight}px`;
+    } else {
+      header.style.top = "unset";
+      header.style.position = "relative";
+      firstBlock.style.paddingTop = `unset`;
+    }
+  };
+</script>
