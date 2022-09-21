@@ -1,0 +1,80 @@
+[tool.poetry]
+name = "encord-active"
+version = "0.0.1"
+description = ""
+authors = [
+    "Frederik Hvilshøj <frederik@cord.tech>",
+    "Gorkem Polat <gorkem@encord.com>",
+    "Eloy Torres <eloy@encord.com>",
+    "Javier Leguina <javier@encord.com>",
+    "Alexey Kirichun <alexey@encord.com>"
+]
+packages = [
+    { include = "encord", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+encord = "^0.1.43"
+numpy = "^1.23.1"
+opencv-python = "4.5.5.64"
+hydra-core = "^1.2.0"
+streamlit = "^1.11.1"
+natsort = "^8.1.0"
+pandas = "^1.4.3"
+shapely = "^1.7.0"
+watchdog = "^2.1.9"
+torch = "^1.12.1"
+torchvision = "^0.13.1"
+faiss-cpu = "^1.7.2"
+matplotlib = "^3.5.3"
+scikit-learn = "^1.0.1"
+scipy = "1.8.1"
+av = "^9.2.0"
+pytz = "^2022.2.1"
+types-pytz = "^2022.2.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+black = "^22.6.0"
+isort = "^5.10.1"
+pre-commit = "^2.16.0"
+mypy = "^0.971"
+pylint = "^2.14.5"
+types-requests = "^2.28.8"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '.*\/.*\.i?py(nb)?$'
+exclude = '.*/outputs/.*\.i?py(nb)?$'
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true
+exclude = ["examples/logs", "logs/", "outputs"]
+
+[tool.pylint.'MASTER']
+extension-pkg-allow-list = "cv2"
+generated-members = "cv"
+# Abandon all hope ye who enters the ML code
+
+[tool.pylint.'TYPING']
+generated-members = "torch.*"
+
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 120
+disable = "all"
+enable = "C0123, C0200, C0209, E0001, E0011, E0012, E0013, E0014, E0100, E0101, E0102, E0103, E0104,E0105,E0106,E0107,E0108,E0110,E0111,E0112,E0113,E0114,E0115,E0116,E0117,E0118,E0119,E0202,E0203,E0211,E0213,E0236,E0237,E0238,E0239,E0240,E0241,E0242,E0243,E0244,E0301,E0302,E0303,E0304,E0305,E0306,E0307,E0308,E0309,E0310,E0311,E0312,E0313,E0402,E0601,E0602,E0602,E0603,E0604,E0605,E0633,E0643,E0701,E0702,E0703,E0704,E0710,E0711,E0712,E1003,E1101,E1101,E1111,E1120,E1121,E1123,E1124,E1125,E1126,E1127,E1128,E1129,E1130,E1131,E1132,E1133,E1134,E1135,E1136,E1137,E1138,E1139,E1140,E1141,E1142,E1200,E1201,E1205,E1205,E1206,E1300,E1301,E1302,E1303,E1304,E1305,E1306,E1307,E1310,E1507,E1700,E1701,E2501,E2502,E2510,E2511,E2512,E2513,E2514,E2515,E4702,E4703,W0611,W0621,W1309,W1404,W1514"
+# Removed E6004,E6005 as they are no longer valid options
+# Want to enable
+# From here https://pylint.pycqa.org/en/latest/messages/messages_list.html
+# E1102: Something is not callable (not-callable) - torch.tensor pollutes the logs
+# E0611: No name in module  - some dependencies fail on that
+# E0401: Torch import error - figure out a way to ignore import errors for specific modules

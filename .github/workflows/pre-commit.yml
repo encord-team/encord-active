@@ -1,0 +1,20 @@
+name: Pre-commit workflow
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pre-commit:
+    name: Linting and type checking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Setup root poetry environment
+        uses: ./.github/actions/setup-root-poetry-environment
+
+      - name: Run linting, type checking and testing
+        uses: pre-commit/action@v2.0.3
+        with:
+          extra_args: '--all-files --hook-stage=push'
