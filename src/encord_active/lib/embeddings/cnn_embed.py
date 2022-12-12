@@ -8,7 +8,6 @@ from typing import List, Optional, Tuple
 import torch
 import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
-from encord.project_ontology.classification_type import ClassificationType
 from encord.project_ontology.object_type import ObjectShape
 from PIL import Image
 from torch import nn

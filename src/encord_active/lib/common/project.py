@@ -70,11 +70,9 @@ class Project:
             label_rows = download_all_label_rows(  # todo check this
                 encord_project, subset_size=subset_size, cache_dir=cache_dir, **kwargs
             )
-            image_paths: Dict[str, List[Path]] = download_all_images(
-                label_rows, cache_dir=cache_dir, **kwargs
-            )  # todo check this
+            image_paths = download_all_images(label_rows, cache_dir=cache_dir, **kwargs)  # todo check this
 
-            label_row_meta: Dict[str, LabelRowMetadata] = {
+            label_row_meta = {
                 lr["label_hash"]: LabelRowMetadata.from_dict(lr)
                 for lr in encord_project.label_rows
                 if lr["label_hash"] is not None
