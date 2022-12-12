@@ -21,44 +21,44 @@ Ranks annotations by how likely they are to represent the same object.
 > [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index)
 > is used to measure closeness of two annotations.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/annotation_duplicates.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/annotation_duplicates.py)
 
 ## Annotation closeness to image borders
 
 This metric ranks annotations by how close they are to image borders.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/image_border_closeness.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/image_border_closeness.py)
 
 ## Detect Occlusion in Video
 
 This metric collects information related to object size and aspect ratio for each track
 and find outliers among them.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/occlusion_detection_video.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/occlusion_detection_video.py)
 
 ## Frame object density
 
 Computes the percentage of image area that's occupied by objects.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/object_size.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/object_size.py)
 
 ## Object Area - Absolute
 
 Computes object area in amount of pixels.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/object_size.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/object_size.py)
 
 ## Object Area - Relative
 
 Computes object area as a percentage of total image area.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/object_size.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/object_size.py)
 
 ## Object Aspect Ratio
 
 Computes aspect ratios ($width/height$) of objects.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/object_size.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/object_size.py)
 
 ## Polygon Shape Similarity
 
@@ -66,7 +66,7 @@ This metric ranks objects by how similar they are to their instances in previous
 based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes,
 the lower its score will be.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/hu_temporal.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/hu_temporal.py)
 
 ## Shape outlier detection
 
@@ -74,4 +74,4 @@ Computes the Euclidean distance between the polygons'
 [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and
 the prototypical class moments.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/geometric/hu_static.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/geometric/hu_static.py)

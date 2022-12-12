@@ -23,7 +23,7 @@ This metric ranks images by their area (width\*height).
 
 Area is computed as the product of image width and image height.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Aspect Ratio
 
@@ -31,13 +31,13 @@ This metric ranks images by their aspect ratio (width/height).
 
 Aspect ratio is computed as the ratio of image width to image height.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Blue Values
 
 This metric ranks images by how much blue is present in the image.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Blur
 
@@ -51,7 +51,7 @@ image. Note that this is $1 - \text{sharpness}$.
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Brightness
 
@@ -59,7 +59,7 @@ This metric ranks images by their brightness.
 
 Brightness is computed as the average (normalized) pixel value across each image.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Contrast
 
@@ -67,13 +67,13 @@ This metric ranks images by their contrast.
 
 Contrast is computed as the standard deviation of the pixel values.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Green Values
 
 This metric Ranks images by how much blue is present in the image.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Inconsistent Object Classification and Track IDs
 
@@ -115,7 +115,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 
 `Cat:2` will be flagged as potentially having a broken track, because track ids `1` and `2` doesn't match.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/high_iou_changing_classes.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/high_iou_changing_classes.py)
 
 ## Missing Objects and Broken Tracks
 
@@ -162,19 +162,19 @@ hash, they will be flagged as a potentially broken track.
 
 `CAT:2` will be marked as potentially having a wrong track id.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/missing_objects_and_wrong_tracks.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/missing_objects_and_wrong_tracks.py)
 
 ## Object Count
 
 Counts number of objects in the image.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/object_counting.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/object_counting.py)
 
 ## Red Values
 
 This metric ranks images by how much red is present in the image.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
 ## Sharpness
 
@@ -188,4 +188,4 @@ image.
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/heuristic/img_features.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)

@@ -12,7 +12,7 @@ Operates with the semantic information of images or individual video frames.
 This metric creates embeddings from images. Then, these embeddings are used to build
 nearest neighbor graph. Similar embeddings' classifications are compared against each other.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/semantic/img_classification_quality.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/semantic/img_classification_quality.py)
 
 ## Object Annotation Quality
 
@@ -20,4 +20,4 @@ This metric transforms polygons into bounding boxes
 and an embedding for each bounding box is extracted. Then, these embeddings are compared
 with their neighbors. If the neighbors are annotated differently, a low score is given to it.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/encord_active.metrics/semantic/img_object_quality.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/semantic/img_object_quality.py)
