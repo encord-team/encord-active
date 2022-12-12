@@ -70,8 +70,8 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
                 f"""
     Successfully downloaded sandbox dataset. To view the data, run:
 
-    [cyan blink]encord-active visualise "{escape(out_dir.as_posix())}"
-            """,
+[cyan blink] cd "{escape(out_dir.as_posix())}"\n encord-active visualise
+        """,
                 title="🌟 Success 🌟",
                 style="green",
                 expand=False,

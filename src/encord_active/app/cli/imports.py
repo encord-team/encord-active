@@ -17,22 +17,16 @@ def import_predictions(
         help="Path to a predictions file.",
         dir_okay=False,
     ),
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
     coco: bool = typer.Option(False, help="Import a coco result format file"),
 ):
     """
     [bold]Imports[/bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
     If `--coco` option is specified the file should be a json following the coco results format. :brain:
     """
-
-    from encord_active.app.common.cli_helpers import choose_local_project
-
-    project_dir = choose_local_project(app_config)
-    if not project_dir:
-        raise typer.Abort()
-
     from encord_active.app.common.cli_helpers import get_local_project
 
-    project = get_local_project(project_dir)
+    project = get_local_project(target)
 
     if coco:
         import numpy as np
@@ -41,8 +35,8 @@ def import_predictions(
         from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME
         from encord_active.lib.coco.parsers import parse_results
 
-        image_data_unit = json.loads((Path(project_dir) / IMAGE_DATA_UNIT_FILENAME).read_text(encoding="utf-8"))
-        ontology = json.loads((Path(project_dir) / "ontology.json").read_text(encoding="utf-8"))
+        image_data_unit = json.loads((Path(target) / IMAGE_DATA_UNIT_FILENAME).read_text(encoding="utf-8"))
+        ontology = json.loads((Path(target) / "ontology.json").read_text(encoding="utf-8"))
         category_to_hash = {obj["id"]: obj["featureNodeHash"] for obj in ontology["objects"]}
         predictions = []
         results = json.loads(Path(predictions_path).read_text(encoding="utf-8"))
@@ -79,7 +73,7 @@ def import_predictions(
         import_predictions as app_import_predictions,
     )
 
-    app_import_predictions(project, project_dir, predictions)
+    app_import_predictions(project, target, predictions)
 
 
 @import_cli.command(name="project")
@@ -99,6 +93,9 @@ def import_project(
     encord_project_hash: Optional[str] = typer.Option(
         None, "--project_hash", help="Encord project hash of the project you wish to import."
     ),
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
+    ),
     coco: bool = typer.Option(False, help="Import a project from the coco format"),
 ):
     """
@@ -114,13 +111,12 @@ def import_project(
             raise typer.BadParameter("`images_dir` argument is missing")
 
         ssh_key_path = app_config.get_or_query_ssh_key()
-        projects_root = app_config.get_or_query_project_path()
 
         coco_importer = CocoImporter(
             images_dir_path=images_dir,
             annotations_file_path=annotations_file,
             ssh_key_path=ssh_key_path,
-            destination_dir=projects_root,
+            destination_dir=target,
         )
 
         dataset = coco_importer.create_dataset()
@@ -135,4 +131,4 @@ def import_project(
             main as import_script,
         )
 
-        import_script(app_config, encord_project_hash=encord_project_hash)
+        import_script(app_config, target, encord_project_hash)
