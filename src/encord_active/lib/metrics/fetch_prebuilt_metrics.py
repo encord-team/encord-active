@@ -61,11 +61,10 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
                 bar.update(len(chunk))
 
     rich.print("Unpacking zip file. May take a bit.")
-    __import__('ipdb').set_trace()
     shutil.unpack_archive(output_file_path, out_dir)
     os.remove(output_file_path)
 
-    if verbose: 
+    if verbose:
         rich.print(
             Panel(
                 f"""

@@ -111,6 +111,7 @@ def hello():
     (Path.home() / ".streamlit").touch(exist_ok=True)  # Bypass Streamlit email question.
 
     from streamlit.web import cli as stcli
+
     sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
 
 
