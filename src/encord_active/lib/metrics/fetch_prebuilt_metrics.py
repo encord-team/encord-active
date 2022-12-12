@@ -5,6 +5,7 @@ from typing import Optional
 
 import requests
 import rich
+import typer
 from rich.markup import escape
 from rich.panel import Panel
 from tqdm import tqdm
@@ -15,6 +16,7 @@ PREBUILT_PROJECTS = {
     "[open-source][test]-limuc-ulcerative-colitis-classification": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
     "[open-source]-covid-19-segmentations": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
     "[open-source][validation]-bdd-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
+    "hello": "https://storage.googleapis.com/encord-active-sandbox-data/hello.zip",
 }
 
 
@@ -38,13 +40,17 @@ def fetch_response_content_length(r: requests.Response) -> Optional[int]:
     return int(r.headers["content-length"]) if "content-length" in r.headers.keys() else None
 
 
-def fetch_prebuilt_project(project_name: str, out_dir: Path):
+def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
     url = PREBUILT_PROJECTS[project_name]
     output_file_name = "prebuilt_project.zip"
     output_file_path = out_dir / output_file_name
     rich.print(f"Output destination: {escape(out_dir.as_posix())}")
-    if not out_dir.is_dir():
-        exit()
+    out_dir.mkdir(exist_ok=True)
+
+    if (out_dir / "project_meta.yaml").is_file():
+        redownload = typer.confirm("Do you want to re-download the project?")
+        if not redownload:
+            return
 
     r = requests.get(url, stream=True)
     total_length = fetch_response_content_length(r)
@@ -55,18 +61,20 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path):
                 bar.update(len(chunk))
 
     rich.print("Unpacking zip file. May take a bit.")
+    __import__('ipdb').set_trace()
     shutil.unpack_archive(output_file_path, out_dir)
     os.remove(output_file_path)
 
-    rich.print(
-        Panel(
-            f"""
-Successfully downloaded sandbox dataset. To view the data, run:
+    if verbose: 
+        rich.print(
+            Panel(
+                f"""
+    Successfully downloaded sandbox dataset. To view the data, run:
 
-[cyan blink]encord-active visualise "{escape(out_dir.as_posix())}"
-        """,
-            title="🌟 Success 🌟",
-            style="green",
-            expand=False,
+    [cyan blink]encord-active visualise "{escape(out_dir.as_posix())}"
+            """,
+                title="🌟 Success 🌟",
+                style="green",
+                expand=False,
+            )
         )
-    )

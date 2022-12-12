@@ -92,5 +92,23 @@ def visualise(
     sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
 
 
+@cli.command()
+def hello():
+    from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
+
+    project_parent_dir = app_config.get_or_query_project_path()
+    project_name = "hello"
+    project_dir = project_parent_dir / project_name
+    project_dir.mkdir(exist_ok=True)
+
+    fetch_prebuilt_project(project_name, project_dir, verbose=False)
+
+    streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
+    data_dir = project_dir.expanduser().absolute().as_posix()
+    sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
+
+    from streamlit.web import cli as stcli
+    sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+
 if __name__ == "__main__":
     cli(prog_name=APP_NAME)
