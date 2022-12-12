@@ -10,7 +10,7 @@
 [![Open In Colab][colab-image]][colab-notebook]
 
 [![docs][docs-image]][encord-active-docs]
-[!["Join us on Slack"][slack-image]][join-slack] 
+[!["Join us on Slack"][slack-image]][join-slack]
 [![Twitter Follow][twitter-image]][twitter-url]
 
 ## ❓ What is Encord Active?
@@ -41,9 +41,9 @@ $ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
 
-
 ## 👋 Quick start
-Get started immediately by sourcing your environment and running the code below. 
+
+Get started immediately by sourcing your environment and running the code below.
 This downloads a small dataset and launches the Encord Active App for you to explore:
 
 ```jsx
@@ -52,21 +52,20 @@ encord-active hello
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
-
 ## ⬇️  Downloading a pre-built project
 
 The quickest way to get started is by downloading an existing dataset.
-The download command will setup a directory where the project will be stored and will ask which pre-built dataset to use.
+The download command will ask which pre-built dataset to use and will download it into a new directory in the current working directory.
 
 ```shell
 $ encord-active download
+$ cd /path/of/downloaded/project
 $ encord-active visualise
 ```
 
-The app should then open in the browser. 
-If not, navigate to [`localhost:8501`](http://localhost:8501). 
+The app should then open in the browser.
+If not, navigate to [`localhost:8501`](http://localhost:8501).
 Our [docs][encord-active-docs] contains more information about what you can see in the page.
-
 
 ## <img width="24" height="24" src="resources/logo.png"/> Importing an Encord Project
 
@@ -78,16 +77,15 @@ To import an Encord project, use this command:
 
 `$ encord-active import project`
 
-> There are also options for importing projects from, e.g,. KITTI, CVAT, and COCO.  Find more details in [the documentation][encord-active-docs-workflow-import-data].
-
+> There are also options for importing projects from, e.g,. KITTI, CVAT, and COCO. Find more details in [the documentation][encord-active-docs-workflow-import-data].
 
 ## ⭐ Concepts and features
 
 ### 📊 Quality metric
 
-Quality metric are applied to your data, labels, and predictions to assign them quality metric scores. 
-Plug in your own or rely on Encord Actives prebuilt quality metrics. 
-The quality metrics automatically decompose your data, label, and model quality to show you how to improve your model performance from a data-centric perspective. 
+Quality metric are applied to your data, labels, and predictions to assign them quality metric scores.
+Plug in your own or rely on Encord Actives prebuilt quality metrics.
+The quality metrics automatically decompose your data, label, and model quality to show you how to improve your model performance from a data-centric perspective.
 Encord Active ships with 25+ metrics and more are coming; [contributions][contribute-url] are also very welcome.
 
 **Other core features:**
@@ -104,13 +102,13 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
-| Data |  | Labels |  | Project sizes |  |
-| --- | --- | --- | --- | --- | --- |
-| `jpg` | ✅ | Bounding Boxes | ✅ | Images | 100.000 |
-| `png` | ✅ | Polygons | ✅ | Videos | 100.000 frames |
-| `tiff` | ✅ | Segmentation | ✅ |  |  |
-| `mp4` | ✅ | Classifications | 🟡 |  |  |
-|  |  | Polylines | 🟡 |  |  |
+| Data   |     | Labels          |     | Project sizes |                |
+| ------ | --- | --------------- | --- | ------------- | -------------- |
+| `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 100.000        |
+| `png`  | ✅  | Polygons        | ✅  | Videos        | 100.000 frames |
+| `tiff` | ✅  | Segmentation    | ✅  |               |                |
+| `mp4`  | ✅  | Classifications | 🟡  |               |                |
+|        |     | Polylines       | 🟡  |               |                |
 
 ## 🧑🏽‍💻Development
 
@@ -138,13 +136,13 @@ If you want to share your custom metrics or improve the tool, please see our [c
 
 <a href="https://github.com/encord-team/encord-active/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=encord-team/encord-active" />
-</a>  
+</a>
 
 [@Javi Leguina](https://github.com/jleguina)
 
 ## Licence
-This repository is published under the Apache 2.0 licence.
 
+This repository is published under the Apache 2.0 licence.
 
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
@@ -162,7 +160,6 @@ This repository is published under the Apache 2.0 licence.
 [report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
 [slack-community]: https://encord-active.slack.com
 [twitter-url]: https://twitter.com/encord_team
-
 [colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
 [docs-image]: https://img.shields.io/badge/docs-online-blue

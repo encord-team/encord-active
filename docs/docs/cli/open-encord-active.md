@@ -18,7 +18,11 @@ To run the Encord Active app, you need the data path that you specified when you
 Run the following command:
 
 ```shell
-(ea-venv)$ encord-active visualise
+# from the projects root
+encord-active visualise
+
+# from anywhere
+encord-active visualise --target /path/to/project/root
 ```
 
 Now, you will be able to select either of the projects you have previously imported or downloaded.

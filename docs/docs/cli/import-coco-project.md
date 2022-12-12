@@ -11,8 +11,10 @@ Make sure you have installed Encord Active with the `coco` [extras](/installatio
 If you already have a project on your local machine using the COCO data format, you can import that project with the following command:
 
 ```shell
-(ea-venv)$ encord-active import project --coco ./images ./annotations.json
+encord-active import project --coco ./images ./annotations.json
 ```
+
+This will create a new Encord Active project inside a new directory in you current working directory.
 
 :::info
 The command above assumes the following structure but is not limited to it.
@@ -31,7 +33,7 @@ coco-project-foo
 You can provide any path to each of the arguments as long as the first one is a directory of images and the second is an annotations file following the [COCO data format](https://cocodataset.org/#format-data).
 :::
 
-If this is your first time using Encord Active, you will need the path to your private `ssh-key` associated with Encord and a projects directory where all projects should be stored.
+If this is your first time using Encord Active, you will need the path to your private `ssh-key` associated with Encord.
 Don't worry! The script will guide you on the way if you don't know it already.
 
 Running the importer will do the following things.
