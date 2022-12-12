@@ -15,7 +15,7 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing]  is an open-source active learning framework to help you find failure modes in your models and improve your data quality and model performance.
+[Encord Active][encord-active-landing] is an open-source active learning framework to help you find failure modes in your models and improve your data quality and model performance.
 
 Use Encord Active to visualise your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
@@ -78,8 +78,7 @@ To import an Encord project, use this command:
 
 `$ encord-active import project`
 
-Note, there are also options for importing projects from, e.g,. KITTI, CVAT, and COCO. 
-Find more details in [the documentation][encord-active-docs-workflow-import-data].
+> There are also options for importing projects from, e.g,. KITTI, CVAT, and COCO.  Find more details in [the documentation][encord-active-docs-workflow-import-data].
 
 
 ## ⭐ Concepts and features
@@ -101,7 +100,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [COCO Exports](https://encord-active-docs.web.app/pages/export/filter_export)
 - And much more!
 
-Visit our [documentaiton][encord-active-docs] to learn more.
+Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
@@ -115,7 +114,7 @@ Visit our [documentaiton][encord-active-docs] to learn more.
 
 ## 🧑🏽‍💻Development
 
-### 🛠 Write Your Own Metrics
+### 🛠 Write your own metrics
 
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
 
@@ -123,7 +122,7 @@ Encord Active is built with customizability in mind. Therefore, you can easily b
 
 Find our documentation [here](https://encord-active-docs.web.app).
 
-## 👪 Community and Support
+## 👪 Community and support
 
 Join our community on [Slack][join-slack] to connect with the team behind Encord Active.
 
