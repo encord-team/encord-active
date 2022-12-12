@@ -10,6 +10,7 @@ import encord_active.app.conf  # pylint: disable=unused-import
 from encord_active.app.cli.config import APP_NAME, app_config, config_cli
 from encord_active.app.cli.imports import import_cli
 from encord_active.app.cli.print import print_cli
+from encord_active.app.cli.utils import bypass_streamlit_question
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -66,6 +67,7 @@ def download():
 
 
 @cli.command()
+@bypass_streamlit_question
 def visualise(
     project_path: Optional[Path] = typer.Argument(
         None,
@@ -86,7 +88,6 @@ def visualise(
     streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
     data_dir = project_path.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
-    (Path.home() / ".streamlit").touch(exist_ok=True)  # Bypass Streamlit email question.
 
     from streamlit.web import cli as stcli
 
@@ -94,7 +95,11 @@ def visualise(
 
 
 @cli.command()
+@bypass_streamlit_question
 def hello():
+    """
+    Launches the application with a preselected sample dataset to get you started quickly ✨
+    """
     from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
 
     project_parent_dir = app_config.get_or_query_project_path()
@@ -107,8 +112,6 @@ def hello():
     streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
     data_dir = project_dir.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
-
-    (Path.home() / ".streamlit").touch(exist_ok=True)  # Bypass Streamlit email question.
 
     from streamlit.web import cli as stcli
 
