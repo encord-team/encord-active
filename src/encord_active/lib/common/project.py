@@ -26,10 +26,6 @@ encord_logger = logging.getLogger("encord")
 encord_logger.setLevel(logging.ERROR)
 
 
-def prepare_data(cache_dir: Path, subset_size: Optional[int] = None, project: Optional[EncordProject] = None, **kwargs):
-    return Project.read(cache_dir, subset_size, project, **kwargs)
-
-
 @dataclasses.dataclass
 class Project:
     image_paths: Dict[str, List[Path]]

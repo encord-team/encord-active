@@ -14,7 +14,7 @@ from encord import Project as EncordProject
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from encord_active.lib.common.project import prepare_data
+from encord_active.lib.common.project import Project
 from encord_active.lib.common.utils import binary_mask_to_rle, rle_iou
 
 logger = logging.getLogger(__name__)
@@ -173,7 +173,7 @@ class PredictionWriter:
         self.object_lookup = {o["featureNodeHash"]: o for o in self.project.ontology["objects"]}
 
         logger.info("Fetching project label rows to be able to match predictions.")
-        self.label_rows = prepare_data(cache_dir, project=project, **kwargs).label_rows
+        self.label_rows = Project.read(cache_dir, project=project, **kwargs).label_rows
         self.label_row_meta = {lr["label_hash"]: lr for lr in self.project.label_rows if lr["label_hash"] is not None}
 
         self.uuids: Set[str] = set()
