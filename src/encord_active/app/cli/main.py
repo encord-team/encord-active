@@ -86,6 +86,7 @@ def visualise(
     streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
     data_dir = project_path.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
+    (Path.home() / ".streamlit").touch(exist_ok=True)  # Bypass Streamlit email question.
 
     from streamlit.web import cli as stcli
 
@@ -107,8 +108,11 @@ def hello():
     data_dir = project_dir.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
+    (Path.home() / ".streamlit").touch(exist_ok=True)  # Bypass Streamlit email question.
+
     from streamlit.web import cli as stcli
     sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+
 
 if __name__ == "__main__":
     cli(prog_name=APP_NAME)
