@@ -3,14 +3,23 @@
   <a href="https://encord.com"><img src="src/encord_active/app/assets/encord_2_02.png" width="150" alt="Encord logo"/></a>
 </h1>
 
-[!["Join us on
-Slack"](https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white)][join-slack] [![Twitter
-Follow](https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social)][twitter-url]
 [![PRs-Welcome][contribute-image]][contribute-url]
+![Licence][license-image]
+[![PyPi project][pypi-package-image]][pypi-package]
+![PyPi version][pypi-version-image]
+[![Open In Colab][colab-image]][colab-notebook]
 
-## Documentation
+[![docs][docs-image]][encord-active-docs]
+[!["Join us on Slack"][slack-image]][join-slack] 
+[![Twitter Follow][twitter-image]][twitter-url]
 
-Please refer to our [documentation][encord-active-docs].
+## ❓ What is Encord Active?
+
+[Encord Active][encord-active-landing]  is an open-source active learning framework to help you find failure modes in your models and improve your data quality and model performance.
+
+Use Encord Active to visualise your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
+
+![video](resources/ea-demo.gif)
 
 ## Installation
 
@@ -28,81 +37,138 @@ $ source ea-venv/bin/activate
 $ pip install encord-active
 ```
 
-> `encord-active` requires [python3.9](https://www.python.org/downloads/release/python-3915/).
+> `encord-active` requires [python3.9][python-39].
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
 
-## Downloading a pre-built project
+
+## 👋 Quick start
+Get started immediately by sourcing your environment and running the code below. 
+This downloads a small dataset and launches the Encord Active App for you to explore:
+
+```jsx
+encord-active hello
+```
+
+After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
+
+
+## ⬇️  Downloading a pre-built project
 
 The quickest way to get started is by downloading an existing dataset.
 The download command will setup a directory where the project will be stored and will ask which pre-built dataset to use.
 
 ```shell
 $ encord-active download
-$ encord-active visualise /path/to/project
+$ encord-active visualise
 ```
 
-The app should automatically open in the browser. If not, navigate to `localhost:8501`.
-Our [Docs][encord-active-docs] contain more information about what you can see in the page.
+The app should then open in the browser. 
+If not, navigate to [`localhost:8501`](http://localhost:8501). 
+Our [docs][encord-active-docs] contains more information about what you can see in the page.
 
-## Importing an Encord Project
 
-This section requires setting up an ssh key with Encord, so slightly more technical.
+## <img width="24" height="24" src="resources/logo.png"/> Importing an Encord Project
 
-> If you haven't set up an ssh key with Encord, you can follow the tutorial in this [link](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)
+This section requires [setting up an ssh key][encord-docs-ssh] with Encord, so slightly more technical.
 
-To import an Encord project, use this script:
+> If you haven't set up an ssh key with Encord, you can follow the tutorial in [this link][encord-docs-ssh].
 
-```shell
-$ encord-active import project
-```
+To import an Encord project, use this command:
 
-## Development
+`$ encord-active import project`
 
-### Write your own metrics
+Note, there are also options for importing projects from, e.g,. KITTI, CVAT, and COCO. 
+Find more details in [the documentation][encord-active-docs-workflow-import-data].
 
-Encord Active isn't limited to the metrics we provided, it is actually quite easy to write your own 🔧
-See the [Writing Your Own Metric](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication) page on the WIKI for details on this.
 
-### Pre-commit hooks
+## ⭐ Concepts and features
 
-If you have installed the dependencies with poetry, then you can install pre-commit hooks by running the following command:
+### 📊 Quality metric
 
-```shell
-$ pre-commit install
-```
+Quality metric are applied to your data, labels, and predictions to assign them quality metric scores. 
+Plug in your own or rely on Encord Actives prebuilt quality metrics. 
+The quality metrics automatically decompose your data, label, and model quality to show you how to improve your model performance from a data-centric perspective. 
+Encord Active ships with 25+ metrics and more are coming; [contributions][contribute-url] are also very welcome.
 
-The effect of this will be that `black`, `isort`, `mypy`, and `pylint` needs to run without finding issues with the code before you are allowed to commit.
-When you commit and either `black` or `isort` fails, committing again is enough, as the side effect of committing the first time is to reformat files.
+**Other core features:**
 
-Running each of the tools individually on your code can be done as follows:
+- [Model Decomposition](https://encord-active-docs.web.app/pages/model-assertions/metrics)
+- [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
+- [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
+- [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)
+- [Data Tagging](https://encord-active-docs.web.app/tags/#steps)
+- [COCO Exports](https://encord-active-docs.web.app/pages/export/filter_export)
+- And much more!
 
-```shell
-$ poetry run black --config=pyproject.toml .
-$ poetry run isort --sp=pyproject.toml .
-$ poetry run mypy . --ignore-missing-imports
-$ poetry run pylint -j 0 --rcfile pyproject.toml [subdir]
-```
+Visit our [documentaiton][encord-active-docs] to learn more.
 
-## Community and Support
+### Supported data:
 
-Join our community on [Slack][join-slack] and [Twitter][twitter-url]!
+| Data |  | Labels |  | Project sizes |  |
+| --- | --- | --- | --- | --- | --- |
+| `jpg` | ✅ | Bounding Boxes | ✅ | Images | 100.000 |
+| `png` | ✅ | Polygons | ✅ | Videos | 100.000 frames |
+| `tiff` | ✅ | Segmentation | ✅ |  |  |
+| `mp4` | ✅ | Classifications | 🟡 |  |  |
+|  |  | Polylines | 🟡 |  |  |
 
-[Suggest improvements and report problems][new-issue]
+## 🧑🏽‍💻Development
 
-# Contributions
+### 🛠 Write Your Own Metrics
 
-If you're using Encord Active in your organization, please try to add your company name to the [ADOPTERS.md](./ADOPTERS.md). It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
 
-Read the [contributing docs][contribute-url].
+## 🔖 Documentation
 
-# Licence
+Find our documentation [here](https://encord-active-docs.web.app).
 
-This project is licensed under the terms of the AGPL-3.0 license.
+## 👪 Community and Support
 
-[encord-active-docs]: https://encord-active-docs.web.app/
+Join our community on [Slack][join-slack] to connect with the team behind Encord Active.
+
+Also, feel free to [suggest improvements or report problems][report-issue] via github issues.
+
+## 🎇 Contributions
+
+If you're using Encord Active in your organization, please try to add your company name to the [ADOPTERS.md][adopters]. It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+
+If you want to share your custom metrics or improve the tool, please see our [contributing docs][contribute-url].
+
+### 🦸 Contributors
+
+<a href="https://github.com/encord-team/encord-active/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=encord-team/encord-active" />
+</a>  
+
+[@Javi Leguina](https://github.com/jleguina)
+
+## Licence
+This repository is published under the Apache 2.0 licence.
+
+
+[adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
+[colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-url]: https://encord-active-docs.web.app/contributing
-[contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
+[encord-active-docs-workflow-import-data]: https://encord-active-docs.web.app/workflows/import-data
+[encord-active-docs-workflow]: https://encord-active-docs.web.app/category/workflows
+[encord-active-docs-write-metric]: https://encord-active-docs.web.app/metrics/write-your-own
+[encord-active-docs]: https://encord-active-docs.web.app/
+[encord-active-landing]: https://encord.com/encord_active/
+[encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
-[twitter-url]: https://twitter.com/encord_team
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
+[pypi-package]: https://www.piwheels.org/project/encord-active/
+[python-39]: https://www.python.org/downloads/release/python-3915/
+[report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
+[slack-community]: https://encord-active.slack.com
+[twitter-url]: https://twitter.com/encord_team
+
+[colab-image]: https://colab.research.google.com/assets/colab-badge.svg
+[contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
+[docs-image]: https://img.shields.io/badge/docs-online-blue
+[license-image]: https://img.shields.io/github/license/encord-team/encord-active
+[pypi-package-image]: https://img.shields.io/pypi/v/encord-active
+[pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
+[slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
+[twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
