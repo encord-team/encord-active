@@ -83,7 +83,7 @@ def visualise(
     if not project_path:
         raise typer.Abort()
 
-    streamlit_page = (Path(__file__).parents[2] / "streamlit_entrypoint.py").expanduser().absolute()
+    streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
     data_dir = project_path.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
