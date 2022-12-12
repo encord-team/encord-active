@@ -16,6 +16,7 @@ import Link from '@docusaurus/Link';
 
 Install `encord-active` in your favorite Python environment with the following commands:
 
+
 ```shell
 python3.9 -m venv ea-venv
 source ea-venv/bin/activate
@@ -30,24 +31,24 @@ If you have trouble installing `encord-active`, you find more detailed instructi
 
 :::
 
-## Check the Installation
+## Say Hello to Encord Active
 
-To check that Encord Active is installed, run:
+Understand Encord-Active in **5 minutes** by playing!
+
+The following command will start the Encord Active with a demo project where you can play around.
+This is the fastest way to explore Encord Active.
 
 ```shell
 # within venv
-encord-active --help
+encord-active hello
 ```
 
 This must be run in the same virtual environment where you installed your package.
 
-The `--help` option provides some context to what you can do with `encord-active`.
-
-To learn more about how to use the command line interface, see the [Command Line Interface section](category/command-line-interface).
-
 ## Sandbox Data
 
-To get started quickly with a sandbox dataset, you run the following command:
+If you have more time, we have sandbox projects where you can better explore the Encord Active. To get started quickly 
+with a sandbox dataset, you can run the following command:
 
 ```shell
 # within venv
@@ -74,60 +75,30 @@ In step 1. above, specify, e.g., `/path/to/data/root/sandbox1`
 
 :::
 
-When the download process is complete, you visualise the results by following the printed instructions or following the steps in [Running the App](#running-the-app) section below.
+When the download process is complete, you visualize the results by following the printed instructions.
 
-## Importing Data from Encord
+:::tip  
+You can follow the [COCO dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features
+of te Encord Active.
+:::
 
-If you already have a project on the Encord platform, you can import that project with the following command:
+### Run Encord Active on Google Colab
 
-```
-(ea-venv)$ encord-active import project
-```
+If you want to quickly explore Encord-Active without installing anything into your local machine, we
+have the following Google Colab notebooks for you:
+1. [Explore Encord-Active through sandbox projects](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing)
+2. [Explore Encord-Active through your own Encord projects](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
+
+## What's Up Next?
+
+If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord-Active
+easily.
+
+If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and 
+[upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
+projects.
 
 :::tip
-
-If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](sdk/migrating-data). 
-Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
-
-:::
-
-To be able to do this, you will need the path to your private `ssh-key` associated with Encord and a `project_hash`.
-Don't worry! The script will guide you on the way if you don't know it already.
-
-The script will ask you:
-
-1. `Where is your private ssh key stored?`: type the path to your private ssh key
-2. `Where should your project directory be located?`: use, e.g., `/path/to/data/root/your_project_title` from above.
-3. `Are you sure you want to use /path/you/chose? [y/N]`: hit <key>y</key> then <key>enter</key> to indicate the specified path is correct.
-4. `Specify project hash`: paste / type the `project_hash`. If you don't know the id, you can type `?` and hit enter to get all your projects listed with their `project_hash`s before being prompted with the question again. Now you can copy paste the id.
-
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
-
-Downloading the data and computing the metrics may take a while. 
-Bare with us, it is worth the wait.
-
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page. 
-
-
-## Running the App
-
-To run the Encord Active app, you need the data path that you specified in either of the two sections above.
-Run the following command:
-
-```shell
-# within venv
-encord-active visualise /the/path/you/chose
-```
-
-Now, your browser should open a new window with Encord Active.
-
-:::caution
-
-If the script just seems to hang and nothing happens in your browser, try visiting <Link to={"http://localhost:8501"}>http://localhost:8501</Link>.
-
-:::
-
-### What's Up Next?
 
 We recommend having a look at the [workflows](category/workflows) section to learn about importing your model predictions and improving your model performance.
 A couple of example references are: 
@@ -137,6 +108,6 @@ A couple of example references are:
 3. [Identify metrics](workflows/improve-your-models/metric-importance) that are important for your model performance
 
 You can also have a look at how to [write custom metrics](/metrics/write-your-own) and how to use the [command line interface](https://encord-active-docs.web.app/category/command-line-interface).
-
+:::
 
 
