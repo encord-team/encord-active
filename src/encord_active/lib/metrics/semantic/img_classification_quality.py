@@ -6,7 +6,7 @@ from pathlib import Path
 import faiss
 import numpy as np
 import torch
-from encord.project_ontology.classification_type import ClassificationType
+from encord.objects.common import PropertyType
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
@@ -233,23 +233,19 @@ class ImageLevelQualityTest(Metric):
         # TODO: This only evaluates immediate classes, not nested ones
         # TODO: Look into other types of classifications apart from radio buttons
         found_any = False
-        for class_label in iterator.project.ontology["classifications"]:
-            class_question = class_label["attributes"][0]
-            if class_question["type"] == ClassificationType.RADIO.value:
+        for class_label in iterator.project.ontology.classifications:
+            class_question = class_label.attributes[0]
+            if class_question.get_property_type() == PropertyType.RADIO:
                 found_any = True
-                self.featureNodeHash_to_index[class_label["featureNodeHash"]] = {}
-                self.featureNodeHash_to_name[class_label["featureNodeHash"]] = {}
-                self.featureNodeHash_to_question_name[class_label["featureNodeHash"]] = class_label["attributes"][0][
-                    "name"
-                ]
-                self.index_to_answer_name[class_label["featureNodeHash"]] = {}
+                self.featureNodeHash_to_index[class_label.feature_node_hash] = {}
+                self.featureNodeHash_to_name[class_label.feature_node_hash] = {}
+                self.featureNodeHash_to_question_name[class_label.feature_node_hash] = class_label.attributes[0].name
+                self.index_to_answer_name[class_label.feature_node_hash] = {}
 
-                for counter, option in enumerate(class_question["options"]):
-                    self.featureNodeHash_to_index[class_label["featureNodeHash"]][option["featureNodeHash"]] = counter
-                    self.featureNodeHash_to_name[class_label["featureNodeHash"]][option["featureNodeHash"]] = option[
-                        "label"
-                    ]
-                    self.index_to_answer_name[class_label["featureNodeHash"]][counter] = option["label"]
+                for counter, option in enumerate(class_question.options):
+                    self.featureNodeHash_to_index[class_label.feature_node_hash][option.feature_node_hash] = counter
+                    self.featureNodeHash_to_name[class_label.feature_node_hash][option.feature_node_hash] = option.label
+                    self.index_to_answer_name[class_label.feature_node_hash][counter] = option.label
 
         return found_any
 

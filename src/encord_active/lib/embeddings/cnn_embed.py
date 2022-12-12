@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple
 
 import torch
 import torchvision.transforms as torch_transforms
+from encord.objects.common import PropertyType
 from encord.project_ontology.classification_type import ClassificationType
 from encord.project_ontology.object_type import ObjectShape
 from PIL import Image
@@ -129,14 +130,14 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
 
     # TODO: This only evaluates immediate classes, not nested ones
     # TODO: Look into other types of classifications apart from radio buttons
-    for class_label in iterator.project.ontology["classifications"]:
-        class_question = class_label["attributes"][0]
-        if class_question["type"] == ClassificationType.RADIO.value:
-            ontology_class_hash = class_label["featureNodeHash"]
+    for class_label in iterator.project.ontology.classifications:
+        class_question = class_label.attributes[0]
+        if class_question.get_property_type() == PropertyType.RADIO:
+            ontology_class_hash = class_label.feature_node_hash
             ontology_class_hash_to_index[ontology_class_hash] = {}
-            ontology_class_hash_to_question_hash[ontology_class_hash] = class_question["featureNodeHash"]
-            for index, option in enumerate(class_question["options"]):
-                ontology_class_hash_to_index[ontology_class_hash][option["featureNodeHash"]] = index
+            ontology_class_hash_to_question_hash[ontology_class_hash] = class_question.feature_node_hash
+            for index, option in enumerate(class_question.options):
+                ontology_class_hash_to_index[ontology_class_hash][option.feature_node_hash] = index
 
     start = time.perf_counter()
     feature_extractor, transforms = get_model_and_transforms()

@@ -58,7 +58,7 @@ class PredictionIterator(Iterator):
             class_idx = json.load(f)
 
         self.ontology_objects = {
-            int(k): next(o for o in self.project.ontology["objects"] if v["featureHash"] == o["featureNodeHash"])
+            int(k): next(o for o in self.project.ontology.objects if v["featureHash"] == o["featureNodeHash"])
             for k, v in class_idx.items()
         }
         self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Path]]] = []

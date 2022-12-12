@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional, Tuple, cast
 import cv2
 import numpy as np
 import pandas as pd
-from encord import Project
+from encord import Project as EncordProject
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
@@ -17,7 +17,7 @@ from pandas.errors import EmptyDataError
 from PIL import Image
 from tqdm import tqdm
 
-from encord_active.lib.common.prepare import download_all_label_rows
+from encord_active.lib.common.project import download_all_label_rows
 from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ PNG_FILE_NAME_REGEX = r"^(?P<stem>.*?)\.png$"
 
 
 def import_mask_predictions(
-    project: Project,
+    project: EncordProject,
     data_root: Path,
     cache_dir: Path,
     prediction_writer: PredictionWriter,
@@ -172,7 +172,10 @@ def import_mask_predictions(
 
 
 def import_KITTI_labels(
-    project: Project, data_root: Path, prediction_writer: PredictionWriter, file_name_regex: str = KITTI_FILE_NAME_REGEX
+    project: EncordProject,
+    data_root: Path,
+    prediction_writer: PredictionWriter,
+    file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
 
     label_files = [f for f in (data_root / "labels").iterdir() if f.suffix == ".txt"]

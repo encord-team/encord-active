@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Annotated, Any, Dict, List, NamedTuple, Optional, Union
 
 import numpy as np
-from encord import Project
+from encord import Project as EncordProject
 from pydantic import BaseModel, Field, validator
 
 from encord_active.lib.metrics.run_all import run_all_prediction_metrics
@@ -72,7 +72,7 @@ class Prediction(BaseModel):
         json_encoders = {np.ndarray: lambda v: json.dumps(v.tolist())}
 
 
-def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
+def import_predictions(project: EncordProject, data_dir: Path, predictions: List[Prediction]):
     with PredictionWriter(data_dir, project) as writer:
         for pred in predictions:
             data: Dict[str, Any] = {}

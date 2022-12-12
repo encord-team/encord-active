@@ -3,7 +3,8 @@ from typing import Optional
 
 import inquirer as i
 import rich
-from encord import EncordUserClient, Project
+from encord import EncordUserClient
+from encord import Project as EncordProject
 
 from encord_active.app.app_config import AppConfig, ConfigProperties
 from encord_active.lib.common.utils import fetch_project_meta
@@ -27,7 +28,7 @@ def choose_local_project(config: AppConfig) -> Optional[Path]:
     return projects_dir / selected_project
 
 
-def get_local_project(project_dir: Path) -> Project:
+def get_local_project(project_dir: Path) -> EncordProject:
     project_meta = fetch_project_meta(project_dir)
 
     ssh_key_path = Path(project_meta["ssh_key_path"])

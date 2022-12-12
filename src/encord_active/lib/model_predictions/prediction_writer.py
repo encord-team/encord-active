@@ -10,11 +10,11 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from encord import Project
+from encord import Project as EncordProject
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from encord_active.lib.common.prepare import prepare_data
+from encord_active.lib.common.project import prepare_data
 from encord_active.lib.common.utils import binary_mask_to_rle, rle_iou
 
 logger = logging.getLogger(__name__)
@@ -152,7 +152,7 @@ class PredictionWriter:
     def __init__(
         self,
         cache_dir: Path,
-        project: Project,
+        project: EncordProject,
         prefix: str = "",
         custom_object_map: Optional[Dict[str, int]] = None,
         **kwargs,
@@ -237,7 +237,7 @@ class PredictionWriter:
             label_hash = self.lr_lookup[du_hash]
             row = [
                 f"{label_hash}_{du_hash}_{frame:05d}_{o['objectHash']}",
-                f"{BASE_URL}{self.label_row_meta[label_hash]['data_hash']}&{self.project.project_hash}/{frame}",
+                f"{BASE_URL}{self.label_row_meta[label_hash].data_hash}&{self.project.project_hash}/{frame}",
                 self.get_image_id(du_hash, frame),  # Image id
                 class_id,  # Class id
                 o["objectHash"],  # Object hash
@@ -422,8 +422,8 @@ class PredictionWriter:
                 x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
             else:  # Polygon is points
                 # Read image size from label row
-                if np.all(np.logical_and(polygon >= 0.0, polygon <= 1.0)):
-                    polygon = polygon * np.array([[width, height]])
+                if np.issubdtype(polygon.dtype, np.integer):
+                    polygon = polygon.astype(float) / np.array([[width, height]])
 
                 np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
                 x1, y1, w, h = cv2.boundingRect(polygon.reshape(-1, 1, 2).astype(int))  # type: ignore
@@ -472,5 +472,7 @@ class PredictionWriter:
             )
 
         image_id = self.get_image_id(data_hash, _frame)
-        url = f"{BASE_URL}{self.label_row_meta[self.lr_lookup[data_hash]]['data_hash']}&{self.project.project_hash}/{_frame}"
+        url = (
+            f"{BASE_URL}{self.label_row_meta[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}"
+        )
         self.object_predictions.append([key, url, image_id, class_id, confidence_score] + points + [mask])

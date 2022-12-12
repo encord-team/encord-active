@@ -55,11 +55,11 @@ class ObjectEmbeddingSimilarityTest(Metric):
 
     def setup(self, iterator) -> bool:
         found_any = False
-        for i, object_label in enumerate(iterator.project.ontology["objects"]):
+        for i, object_label in enumerate(iterator.project.ontology.objects):
             found_any = True
-            self.featureNodeHash_to_index[object_label["featureNodeHash"]] = i
-            self.index_to_object_name[i] = object_label["name"]
-            self.object_name_to_index[object_label["name"]] = i
+            self.featureNodeHash_to_index[object_label.feature_node_hash] = i
+            self.index_to_object_name[i] = object_label.name
+            self.object_name_to_index[object_label.name] = i
         return found_any
 
     def convert_to_index(self):
