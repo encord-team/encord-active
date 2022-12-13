@@ -30,32 +30,40 @@ cli.add_typer(print_cli, name="print")
 
 
 @cli.command()
-def download():
+def download(
+    project_name: str = typer.Option(None, help=f"Name of the chosen project."),
+):
     """
     Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
 
-    * Available prebuilt projects will be listed and the user can select one from the menu.
+    * If --project_name is not given as an argument, available prebuilt projects will be listed
+     and the user can select one from the menu.
     """
-    project_parent_dir = app_config.get_or_query_project_path()
-
     from encord_active.lib.metrics.fetch_prebuilt_metrics import (
         PREBUILT_PROJECTS,
         fetch_prebuilt_project_size,
     )
 
-    rich.print("Loading prebuilt projects ...")
-    project_names_with_storage = []
-    for project_name in PREBUILT_PROJECTS.keys():
-        project_size = fetch_prebuilt_project_size(project_name)
-        modified_project_name = project_name + (f" ({project_size} mb)" if project_size is not None else "")
-        project_names_with_storage.append(modified_project_name)
+    project_parent_dir = app_config.get_or_query_project_path()
 
-    questions = [i.List("project_name", message="Choose a project", choices=project_names_with_storage)]
-    answers = i.prompt(questions)
-    if not answers or "project_name" not in answers:
-        rich.print("No project was selected.")
+    if project_name is not None and project_name not in PREBUILT_PROJECTS:
+        rich.print("No such project in prebuilt projects.")
         raise typer.Abort()
-    project_name = answers["project_name"].split(" ", maxsplit=1)[0]
+
+    if not project_name:
+        rich.print("Loading prebuilt projects ...")
+        project_names_with_storage = []
+        for project_name in PREBUILT_PROJECTS.keys():
+            project_size = fetch_prebuilt_project_size(project_name)
+            modified_project_name = project_name + (f" ({project_size} mb)" if project_size is not None else "")
+            project_names_with_storage.append(modified_project_name)
+
+        questions = [i.List("project_name", message="Choose a project", choices=project_names_with_storage)]
+        answers = i.prompt(questions)
+        if not answers or "project_name" not in answers:
+            rich.print("No project was selected.")
+            raise typer.Abort()
+        project_name = answers["project_name"].split(" ", maxsplit=1)[0]
 
     # create project folder
     project_dir = project_parent_dir / project_name
