@@ -31,7 +31,7 @@ cli.add_typer(print_cli, name="print")
 
 @cli.command()
 def download(
-    project_name: str = typer.Option(None, help=f"Name of the chosen project."),
+    project_name: str = typer.Option(None, help="Name of the chosen project."),
 ):
     """
     Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
