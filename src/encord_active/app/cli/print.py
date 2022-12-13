@@ -8,6 +8,7 @@ import typer
 from rich.markup import escape
 
 from encord_active.app.cli.config import app_config
+from encord_active.app.cli.utils import ensure_project
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -36,6 +37,7 @@ def print_encord_projects(
 
 
 @print_cli.command(name="ontology")
+@ensure_project
 def print_ontology(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
 ):
@@ -58,6 +60,7 @@ def print_ontology(
 
 
 @print_cli.command(name="data-mapping")
+@ensure_project
 def print_data_mapping(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
     limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes"),

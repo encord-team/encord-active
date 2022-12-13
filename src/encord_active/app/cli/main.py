@@ -9,7 +9,7 @@ import encord_active.app.conf  # pylint: disable=unused-import
 from encord_active.app.cli.config import APP_NAME, config_cli
 from encord_active.app.cli.imports import import_cli
 from encord_active.app.cli.print import print_cli
-from encord_active.app.cli.utils import bypass_streamlit_question
+from encord_active.app.cli.utils import bypass_streamlit_question, ensure_project
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -76,18 +76,17 @@ def download(
 
 @cli.command()
 @bypass_streamlit_question
+@ensure_project
 def visualise(
-    project_path: Path = typer.Argument(
-        Path.cwd(),
-        help="Path of the project you would like to visualise",
-        file_okay=False,
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
     ),
 ):
     """
     Launches the application with the provided project ✨
     """
     streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
-    data_dir = project_path.expanduser().absolute().as_posix()
+    data_dir = target.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
     from streamlit.web import cli as stcli

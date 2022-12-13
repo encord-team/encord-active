@@ -6,11 +6,13 @@ from typing import Optional
 import typer
 
 from encord_active.app.cli.config import app_config
+from encord_active.app.cli.utils import ensure_project
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
 
 @import_cli.command(name="predictions")
+@ensure_project
 def import_predictions(
     predictions_path: Path = typer.Argument(
         ...,
