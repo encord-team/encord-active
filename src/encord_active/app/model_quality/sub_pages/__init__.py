@@ -9,7 +9,7 @@ import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
 
 
-class ModelAssertionsPage(Page):
+class ModelQualityPage(Page):
     @property
     @abstractmethod
     def title(self) -> str:

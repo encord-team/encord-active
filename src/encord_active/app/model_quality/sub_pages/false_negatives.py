@@ -3,12 +3,12 @@ import streamlit as st
 
 import encord_active.app.common.state as state
 from encord_active.app.common.colors import Color
-from encord_active.app.model_assertions.components import false_negative_view
+from encord_active.app.model_quality.components import false_negative_view
 
-from . import HistogramMixin, ModelAssertionsPage
+from . import HistogramMixin, ModelQualityPage
 
 
-class FalseNegativesPage(ModelAssertionsPage, HistogramMixin):
+class FalseNegativesPage(ModelQualityPage, HistogramMixin):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):

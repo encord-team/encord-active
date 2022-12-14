@@ -90,7 +90,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 **Other core features:**
 
-- [Model Decomposition](https://encord-active-docs.web.app/pages/model-assertions/metrics)
+- [Model Decomposition](https://encord-active-docs.web.app/pages/model-quality/metrics)
 - [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
 - [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
 - [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)

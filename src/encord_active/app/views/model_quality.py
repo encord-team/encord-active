@@ -3,15 +3,15 @@ from copy import deepcopy
 import streamlit as st
 
 import encord_active.app.common.state as state
-import encord_active.app.model_assertions.data as pred_data
+import encord_active.app.model_quality.data as pred_data
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.utils import setup_page
-from encord_active.app.model_assertions.map_mar import compute_mAP_and_mAR
-from encord_active.app.model_assertions.settings import common_settings
-from encord_active.app.model_assertions.sub_pages import Page
+from encord_active.app.model_quality.map_mar import compute_mAP_and_mAR
+from encord_active.app.model_quality.settings import common_settings
+from encord_active.app.model_quality.sub_pages import Page
 
 
-def model_assertions(page: Page):
+def model_quality(page: Page):
     def render():
         setup_page()
 

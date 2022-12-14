@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-import encord_active.app.model_assertions.components.utils as cutils
+import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.components import build_data_tags
@@ -47,6 +47,13 @@ def __build_card(row: pd.Series, st_col: DeltaGenerator, box_color: Color = Colo
 
         if row["fp_reason"] and not row["tps"] == 1.0:
             st.write(f"Reason: {row['fp_reason']}")
+
+        with st.expander("Details"):
+            tmp_df = pd.DataFrame(row)
+            if row["tps"] == 1.0:
+                tmp_df = tmp_df.drop("fp_reason", axis=0)
+            tmp_df = tmp_df.drop(["url", "x1", "y1", "x2", "y2", "rle", "Unnamed: 0"], axis=0)
+            st.dataframe(tmp_df)
 
 
 def metric_view(
