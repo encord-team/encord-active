@@ -22,9 +22,8 @@ from encord_active.lib.metrics.run_all import run_metrics
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
-def main(config: AppConfig, encord_project_hash: Optional[str] = None):
+def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[str] = None):
     ssh_key_path = config.get_or_query_ssh_key()
-    projects_root = config.get_or_query_project_path()
 
     client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text(encoding="utf-8"))
 

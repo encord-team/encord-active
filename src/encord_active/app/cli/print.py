@@ -8,6 +8,7 @@ import typer
 from rich.markup import escape
 
 from encord_active.app.cli.config import app_config
+from encord_active.app.cli.utils import ensure_project
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -36,19 +37,16 @@ def print_encord_projects(
 
 
 @print_cli.command(name="ontology")
-def print_ontology():
+@ensure_project
+def print_ontology(
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
+):
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
-    from encord_active.app.common.cli_helpers import choose_local_project
-
-    project_dir = choose_local_project(app_config)
-    if not project_dir:
-        raise typer.Abort()
-
     from encord_active.app.common.cli_helpers import get_local_project
 
-    project = get_local_project(project_dir)
+    project = get_local_project(target)
     objects = project.ontology["objects"]
 
     ontology = {o["name"].lower(): o["featureNodeHash"] for o in objects}
@@ -62,19 +60,17 @@ def print_ontology():
 
 
 @print_cli.command(name="data-mapping")
-def print_data_mapping(limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes")):
+@ensure_project
+def print_data_mapping(
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
+    limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes"),
+):
     """
     [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`
     """
-    from encord_active.app.common.cli_helpers import choose_local_project
-
-    project_dir = choose_local_project(app_config)
-    if not project_dir:
-        raise typer.Abort()
-
     mapping: Dict[str, str] = {}
 
-    for label in (project_dir / "data").iterdir():
+    for label in (target / "data").iterdir():
         if not label.is_dir() and not (label / "label_row.json").is_file():
             continue
 

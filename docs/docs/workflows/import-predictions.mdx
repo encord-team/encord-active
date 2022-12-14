@@ -1,9 +1,10 @@
 ---
 sidebar_position: 2
 ---
-import TOCInline from '@theme/TOCInline';
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+
+import TOCInline from "@theme/TOCInline";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 
 # Import Model Predictions
 
@@ -20,10 +21,15 @@ In the [SDK section](/sdk/importing-model-predictions), you will also find ways 
 
 :::
 
-
 ## 1. Covering the Bases
 
 Before we can really dive into the details, we have a couple of thing that we need to cover.
+
+:::info
+
+All commands going forward assume you are in the project directory, if now either `cd` into it or use the `--target` option with each command.
+
+:::
 
 ### Uniquiely Identifying Data Units
 
@@ -46,7 +52,6 @@ After selecting the project you want to print mapping for via the command line, 
 
 ```
 
-
 :::tip
 
 To store the data mapping as `data_mapping.json` in the current working directory, you can do
@@ -56,7 +61,6 @@ encord-active print --json data-mapping
 ```
 
 :::
-
 
 Note that for `image_groups`, each image in the group has it's own `data_hash`, while
 videos have one `data_hash` for the entire video.
@@ -90,7 +94,6 @@ After selecting the project you want to print mapping for via the command line, 
 }
 ```
 
-
 :::tip
 
 To store the ontology as `ontology.json` in the current working directory, you can do
@@ -101,7 +104,6 @@ encord-active print --json ontology
 
 :::
 
-
 ## 2. Prepare a `.pkl` File to be Imported
 
 Now, you can prepare a pickle file (`.pkl`) to be imported by Encord Active.
@@ -109,6 +111,7 @@ You do this by building a list of `Prediction` objects.
 A prediction object holds a unique identifier of the data unit (the `data_hash` and potentially a `frame`), the `class_id`, a model `confidence` score, the actual prediction `data`, and the `format` of that data.
 
 #### Creating a `Prediction` Object
+
 Below, you find examples of how to create an object of each of the three supported types.
 
 <Tabs groupId="data-type">
@@ -218,7 +221,6 @@ Notice the double braces `[[img_h, img_w]]` to get an array of shape `[1, 2]`.
   </TabItem>
 </Tabs>
 
-
 #### Preparing the Pickle File
 
 Now you're ready to prepare the file.
@@ -251,5 +253,3 @@ encord-active import predictions /path/to/predictions.pkl
 ```
 
 This will import your predictions into Encord Active and run all the [metrics](/category/metrics) on your predictions.
-
-

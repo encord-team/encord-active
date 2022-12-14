@@ -1,16 +1,15 @@
 import sys
 from pathlib import Path
-from typing import Optional
 
 import inquirer as i
 import rich
 import typer
 
 import encord_active.app.conf  # pylint: disable=unused-import
-from encord_active.app.cli.config import APP_NAME, app_config, config_cli
+from encord_active.app.cli.config import APP_NAME, config_cli
 from encord_active.app.cli.imports import import_cli
 from encord_active.app.cli.print import print_cli
-from encord_active.app.cli.utils import bypass_streamlit_question
+from encord_active.app.cli.utils import bypass_streamlit_question, ensure_project
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -32,6 +31,9 @@ cli.add_typer(print_cli, name="print")
 @cli.command()
 def download(
     project_name: str = typer.Option(None, help="Name of the chosen project."),
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
+    ),
 ):
     """
     Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
@@ -43,8 +45,6 @@ def download(
         PREBUILT_PROJECTS,
         fetch_prebuilt_project_size,
     )
-
-    project_parent_dir = app_config.get_or_query_project_path()
 
     if project_name is not None and project_name not in PREBUILT_PROJECTS:
         rich.print("No such project in prebuilt projects.")
@@ -66,7 +66,7 @@ def download(
         project_name = answers["project_name"].split(" ", maxsplit=1)[0]
 
     # create project folder
-    project_dir = project_parent_dir / project_name
+    project_dir = target / project_name
     project_dir.mkdir(exist_ok=True)
 
     from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
@@ -76,25 +76,17 @@ def download(
 
 @cli.command()
 @bypass_streamlit_question
+@ensure_project
 def visualise(
-    project_path: Optional[Path] = typer.Argument(
-        None,
-        help="Path of the project you would like to visualise",
-        file_okay=False,
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
     ),
 ):
     """
     Launches the application with the provided project ✨
     """
-    from encord_active.app.common.cli_helpers import choose_local_project
-
-    project_path = project_path or choose_local_project(app_config)
-
-    if not project_path:
-        raise typer.Abort()
-
     streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
-    data_dir = project_path.expanduser().absolute().as_posix()
+    data_dir = target.expanduser().absolute().as_posix()
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
     from streamlit.web import cli as stcli
@@ -104,15 +96,18 @@ def visualise(
 
 @cli.command()
 @bypass_streamlit_question
-def hello():
+def hello(
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
+    ),
+):
     """
     Launches the application with a preselected sample dataset to get you started quickly ✨
     """
     from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
 
-    project_parent_dir = app_config.get_or_query_project_path()
     project_name = "hello"
-    project_dir = project_parent_dir / project_name
+    project_dir = target / project_name
     project_dir.mkdir(exist_ok=True)
 
     fetch_prebuilt_project(project_name, project_dir, verbose=False)
