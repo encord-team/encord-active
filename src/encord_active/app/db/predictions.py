@@ -56,8 +56,8 @@ class Prediction(BaseModel):
         if format == Format.BOUNDING_BOX:
             assert v.x + v.w <= 1 and v.y + v.h <= 1, f"{v} is not a valid relative bounding box."
         elif format == Format.MASK:
-            uni = np.unique(v)
-            assert uni == (0, 1) or uni == (1, 0) or uni == (1) or uni == (0)
+            uni = set(np.unique(v))
+            assert (uni - {0, 1}) == set()
         elif format == Format.POLYGON:
             if isinstance(v, np.ndarray):
                 assert np.all(np.logical_and(v >= 0.0, v <= 1.0)), "`data` contains an invalid point."
