@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 import inquirer as i
@@ -6,10 +5,10 @@ import rich
 import typer
 
 import encord_active.app.conf  # pylint: disable=unused-import
-from encord_active.app.cli.config import APP_NAME, config_cli
-from encord_active.app.cli.imports import import_cli
-from encord_active.app.cli.print import print_cli
-from encord_active.app.cli.utils import bypass_streamlit_question, ensure_project
+from encord_active.cli.config import APP_NAME, config_cli
+from encord_active.cli.imports import import_cli
+from encord_active.cli.print import print_cli
+from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -85,13 +84,9 @@ def visualise(
     """
     Launches the application with the provided project ✨
     """
-    streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
-    data_dir = target.expanduser().absolute().as_posix()
-    sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
+    from encord_active.cli.utils.streamlit import launch_streamlit_app
 
-    from streamlit.web import cli as stcli
-
-    sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+    launch_streamlit_app(target)
 
 
 @cli.command()
@@ -104,6 +99,7 @@ def hello(
     """
     Launches the application with a preselected sample dataset to get you started quickly ✨
     """
+    from encord_active.cli.utils.streamlit import launch_streamlit_app
     from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
 
     project_name = "hello"
@@ -112,13 +108,7 @@ def hello(
 
     fetch_prebuilt_project(project_name, project_dir, verbose=False)
 
-    streamlit_page = (Path(__file__).parents[1] / "streamlit_entrypoint.py").expanduser().absolute()
-    data_dir = project_dir.expanduser().absolute().as_posix()
-    sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
-
-    from streamlit.web import cli as stcli
-
-    sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+    launch_streamlit_app(project_dir)
 
 
 if __name__ == "__main__":

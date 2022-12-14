@@ -1,5 +1,4 @@
 import re
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -11,20 +10,13 @@ from encord import EncordUserClient, Project
 from rich.markup import escape
 from rich.panel import Panel
 
-from encord_active.app.app_config import AppConfig
-from encord_active.app.app_print_utils import get_projects_json
-
-project_root = Path(__file__).parents[1]
-sys.path.append(project_root.as_posix())
-
+from encord_active.lib.encord.project import get_projects_json
 from encord_active.lib.metrics.run_all import run_metrics
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
-def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[str] = None):
-    ssh_key_path = config.get_or_query_ssh_key()
-
+def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]):
     client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text(encoding="utf-8"))
 
     if not encord_project_hash:
@@ -32,10 +24,10 @@ def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[s
         rich.print(
             Panel(
                 """
-    Encord Active will need to know the project hash associated with the project you
-    wish to import. If you don't know this hash already, [bold green]you can enter "?"[/bold green] in the following
-    prompt to get all your `project_hash`es and associated project titles listed.
-        """,
+        Encord Active will need to know the project hash associated with the project you
+        wish to import. If you don't know this hash already, [bold green]you can enter "?"[/bold green] in the following
+        prompt to get all your `project_hash`es and associated project titles listed.
+            """,
                 title="The Encord Project",
                 expand=False,
             )
@@ -54,7 +46,7 @@ def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[s
             _encord_project_hash = typer.prompt("Specify project hash").strip().lower()
 
             if _encord_project_hash == "?":
-                rich.print(escape(get_projects_json(config)))
+                rich.print(escape(get_projects_json(ssh_key_path)))
 
             if not re.match(PROJECT_HASH_REGEX, _encord_project_hash):
                 rich.print("🙈 [orange]Project hash does not have the correct format.")
@@ -74,7 +66,7 @@ def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[s
     if project is None:
         exit()
 
-    project_path = projects_root / project.title.replace(" ", "-")
+    project_path = target / project.title.replace(" ", "-")
     project_path.mkdir(exist_ok=True, parents=True)
 
     meta_data = {
@@ -98,14 +90,14 @@ def main(config: AppConfig, projects_root: Path, encord_project_hash: Optional[s
 
     panel = Panel(
         """
-The data is downloaded and the metrics are complete.
+    The data is downloaded and the metrics are complete.
 
-Now run
+    Now run
 
-[cyan]encord-active visualise[/cyan]
+    [cyan]encord-active visualise[/cyan]
 
-to open Encord Active and see your project.
-""",
+    to open Encord Active and see your project.
+    """,
         title="🌟 Success 🌟",
         style="green",
         expand=False,

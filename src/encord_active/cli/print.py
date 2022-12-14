@@ -7,8 +7,8 @@ import rich
 import typer
 from rich.markup import escape
 
-from encord_active.app.cli.config import app_config
-from encord_active.app.cli.utils import ensure_project
+from encord_active.cli.config import app_config
+from encord_active.cli.utils.decorators import ensure_project
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -20,16 +20,16 @@ def print_encord_projects(
     query: Optional[str] = typer.Option(None, help="Optional fuzzy title filter; SQL syntax."),
 ):
     """
-    Print the mapping between \`project_hash\`es of your Encord projects and their titles.
+    Print the mapping between `project_hash`es of your Encord projects and their titles.
 
     You can query projects by title with the SQL fuzzy syntax. To look for a title including "validation" you would do:
 
     > encord-active print encord-projects --query "%validation%"
 
     """
-    from encord_active.app.app_print_utils import get_projects_json
+    from encord_active.lib.encord.project import get_projects_json
 
-    json_projects = get_projects_json(app_config, query)
+    json_projects = get_projects_json(app_config.get_or_query_ssh_key(), query)
     if state.get("json_output"):
         Path("./encord-projects.json").write_text(json_projects, encoding="utf-8")
     else:
