@@ -45,6 +45,18 @@ The `--help` option provides some context to what you can do with `encord-active
 
 To learn more about how to use the command line interface, see the [Command Line Interface section](category/command-line-interface).
 
+## Quickstart
+
+To get started quickly, you run the following command.
+
+```shell
+# within venv
+encord-active quickstart
+```
+
+The script will download a small example project to your current working directory and open the application straight away.
+The next section will show you how to download larger and, perhaps, more interesting datasets to explore.
+
 ## Sandbox Data
 
 To get started quickly with a sandbox dataset, you run the following command:
@@ -54,7 +66,8 @@ To get started quickly with a sandbox dataset, you run the following command:
 encord-active download
 ```
 
-This will download a pre-built project to a new directory in your current working directory.
+This will allow you to choose a dataset to download.
+The dataset will be downloaded to a new directory in your current working directory.
 
 When the download process is complete, you visualise the results by following the printed instructions or following the steps in [Running the App](#running-the-app) section below.
 
