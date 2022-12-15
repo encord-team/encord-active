@@ -9,7 +9,7 @@ import streamlit as st
 
 import encord_active.app.common.state as state
 
-from . import ModelAssertionsPage
+from . import ModelQualityPage
 
 FLOAT_FMT = ",.4f"
 PCT_FMT = ",.2f"
@@ -25,7 +25,7 @@ class ChartSubject(Enum):
     FNR = "false negative rate"
 
 
-class PerformanceMetric(ModelAssertionsPage):
+class PerformanceMetric(ModelQualityPage):
     title = "⚡️ Performance by Metric"
 
     def build_bar_chart(

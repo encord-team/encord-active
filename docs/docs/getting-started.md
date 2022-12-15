@@ -10,7 +10,7 @@ import Link from '@docusaurus/Link';
 # Getting Started
 
 **Encord Active** is an open-source Python library that enables users to improve machine learning models in an active learning fashion via
-[data quality](category/data-quality), [label quality](category/label-quality), and [model assertions](category/model-assertions).
+[data quality](category/data-quality), [label quality](category/label-quality), and [model quality](category/model-quality).
 
 ## Install `encord-active`
 

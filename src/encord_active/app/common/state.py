@@ -3,7 +3,7 @@ from pathlib import Path
 import streamlit as st
 
 # CONSTANTS
-PROJECT_CACHE_FILE = Path.home() / ".encord_assertions" / "current_project_dir.txt"
+PROJECT_CACHE_FILE = Path.home() / ".encord_quality" / "current_project_dir.txt"
 
 # DATABASE
 DB_FILE_NAME = "sqlite.db"
