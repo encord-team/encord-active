@@ -49,16 +49,19 @@ class Project:
         if not ontology_file_path.exists():
             raise FileNotFoundError(f"Expected file `ontology.json` at {project_dir}")
         self.ontology: OntologyStructure = OntologyStructure.from_dict(
-            json.loads((project_dir / "ontology.json").read_text())
+            json.loads((project_dir / "ontology.json").read_text(encoding="utf-8"))
         )
 
         # read label rows' metadata
         label_row_meta_file_path = project_dir / "label_row_meta.json"
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {project_dir}")
-        self.label_row_meta: Dict[str, LabelRowMetadata] = {}
-        for lr_hash, lr_meta in itertools.islice(json.loads(label_row_meta_file_path.read_text()).items(), subset_size):
-            self.label_row_meta[lr_hash] = LabelRowMetadata.from_dict(lr_meta)
+        self.label_row_meta: Dict[str, LabelRowMetadata] = {
+            lr_hash: LabelRowMetadata.from_dict(lr_meta)
+            for lr_hash, lr_meta in itertools.islice(
+                json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
+            )
+        }
 
         # read label rows and their images
         self.label_rows: Dict[str, LabelRow] = {}
@@ -68,7 +71,7 @@ class Project:
             lr_images_dir = project_dir / "data" / lr_hash / "images"
             if not lr_file_path.is_file() or not lr_images_dir.is_dir():  # todo log this issue
                 continue
-            self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text()))
+            self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text(encoding="utf-8")))
             self.image_paths[lr_hash] = list(lr_images_dir.iterdir())
 
     @classmethod
@@ -98,16 +101,16 @@ class Project:
             "project_hash": encord_project.project_hash,
         }
         project_meta_file_path = project_dir / "project_meta.yaml"
-        project_meta_file_path.write_text(yaml.dump(project_meta))  # , encoding="utf-8")
+        project_meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 
         # store project's ontology
         ontology_file_path = project_dir / "ontology.json"
-        ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2))  # , encoding="utf-8")
+        ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
 
         # store label rows' metadata
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
         label_row_meta_file_path = project_dir / "label_row_meta.json"
-        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2))  # , encoding="utf-8")
+        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
         # store label rows and their images
         label_rows = download_all_label_rows(encord_project, cache_dir=project_dir)  # todo no need to output all data
