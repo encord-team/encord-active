@@ -1720,7 +1720,7 @@ coco = ["pycocotools"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "803ad1d05ffd1a6048cc863dccdecc0201e83724b3092ec4e13d74695c2a9376"
+content-hash = "4e6fee364b849f68f6bf33f036740d2f0d3261125fe29cbf9d1b120f3ba05bf5"
 
 [metadata.files]
 altair = [
