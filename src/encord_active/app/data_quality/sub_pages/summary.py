@@ -6,10 +6,8 @@ import streamlit as st
 import encord_active.app.common.state as state
 from encord_active.app.common import metric as iutils
 from encord_active.app.common.components import build_data_tags
-from encord_active.app.common.components.individual_tagging import (
-    multiselect_tag,
-    tag_creator,
-)
+from encord_active.app.common.components.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.utils import load_merged_df
 from encord_active.app.data_quality.common import (

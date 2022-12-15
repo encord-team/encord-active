@@ -50,7 +50,9 @@ def bulk_tagging_form() -> Optional[TaggingFormResult]:
         with st.form("bulk_tagging"):
             select, level_radio, action_radio, button = st.columns([6, 2, 2, 1])
             all_tags = st.session_state.get(state.ALL_TAGS) or []
-            selected_tags = select.multiselect(label="Tags", options=all_tags)
+            selected_tags = select.multiselect(
+                label="Tags", options=all_tags, format_func=lambda x: x[0], label_visibility="collapsed"
+            )
             level = level_radio.radio("Level", ["Page", "Range"], horizontal=True)
             action = action_radio.radio("Action", [a.value for a in TagAction], horizontal=True)
             submitted = button.form_submit_button("Submit")

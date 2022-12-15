@@ -7,6 +7,7 @@ from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.app.common.state import MERGED_DATAFRAME
 from encord_active.app.db.connection import DBConnection
+from encord_active.app.db.tags import Tag
 
 TABLE_NAME = "merged_metrics"
 
@@ -61,16 +62,12 @@ def build_merged_metrics() -> pd.DataFrame:
     return main_df
 
 
-def marshall_tags(df: pd.DataFrame):
-    copy = df.copy()
-    copy.tags = copy.tags.apply(lambda tags: ",".join(tags or []))
-    return copy
+def marshall_tags(tags: List[Tag]) -> str:
+    return json.dumps(tags)
 
 
-def unmarshall_tags(df: pd.DataFrame):
-    copy = df.copy()
-    copy.tags = copy.tags.apply(lambda tags: [] if not tags else tags.split(","))
-    return copy
+def unmarshall_tags(tags_json: str) -> List[Tag]:
+    return [Tag(*tag) for tag in json.loads(tags_json) or []]
 
 
 def ensure_initialised(fn):
@@ -99,18 +96,19 @@ class MergedMetrics(object):
             return pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", conn)
 
     @ensure_initialised
-    def update_tags(self, id: str, tags: List[str]):
+    def update_tags(self, id: str, tags: List[Tag]):
         with DBConnection() as conn:
-            conn.execute(f"UPDATE {TABLE_NAME} SET tags = '{','.join(tags)}' WHERE IDENTIFIER = '{id}'")
+            conn.execute(f"UPDATE {TABLE_NAME} SET tags = '{marshall_tags(tags)}' WHERE IDENTIFIER = '{id}'")
 
     @ensure_initialised
     def all(self):
         with DBConnection() as conn:
             merged_metrics = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
-            return unmarshall_tags(merged_metrics)
+            merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
+            return merged_metrics
 
     def replace_all(self, df: pd.DataFrame):
         with DBConnection() as conn:
-            marshall_tags(df).to_sql(
-                name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier"
-            )
+            copy = df.copy()
+            copy.tags = copy.tags.apply(marshall_tags)
+            copy.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")

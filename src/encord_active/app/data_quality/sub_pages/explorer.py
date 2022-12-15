@@ -21,10 +21,8 @@ from encord_active.app.common.components.bulk_tagging_form import (
     action_bulk_tags,
     bulk_tagging_form,
 )
-from encord_active.app.common.components.individual_tagging import (
-    multiselect_tag,
-    tag_creator,
-)
+from encord_active.app.common.components.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tag_creator import tag_creator
 from encord_active.app.common.metric import MetricData, load_metric
 from encord_active.app.common.page import Page
 from encord_active.app.common.utils import (
@@ -259,7 +257,7 @@ def fill_data_quality_window(current_df: pd.DataFrame):
     else:
         cols: List = []
         similarity_expanders = []
-        for i, (row_no, row) in enumerate(paginated_subset.iterrows()):
+        for i, (_, row) in enumerate(paginated_subset.iterrows()):
             if not cols:
                 cols = list(st.columns(n_cols))
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
