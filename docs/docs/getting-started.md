@@ -31,7 +31,7 @@ If you have trouble installing `encord-active`, you find more detailed instructi
 
 :::
 
-## Say Hello to Encord Active
+## Quickly start Encord Active
 
 Understand Encord-Active in **5 minutes** by playing!
 
@@ -40,7 +40,7 @@ This is the fastest way to explore Encord Active.
 
 ```shell
 # within venv
-encord-active hello
+encord-active quickstart
 ```
 
 This must be run in the same virtual environment where you installed your package.
