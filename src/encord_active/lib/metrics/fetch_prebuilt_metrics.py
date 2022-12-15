@@ -16,7 +16,7 @@ PREBUILT_PROJECTS = {
     "[open-source][test]-limuc-ulcerative-colitis-classification": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
     "[open-source]-covid-19-segmentations": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
     "[open-source][validation]-bdd-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
-    "hello": "https://storage.googleapis.com/encord-active-sandbox-data/hello.zip",
+    "quickstart": "https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
 }
 
 
