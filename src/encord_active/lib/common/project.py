@@ -118,39 +118,6 @@ class Project:
 
         return cls(project_dir)
 
-    # unused method (prototype)
-    def save(self, cache_dir: Path) -> None:
-        ontology_file = cache_dir / "ontology.json"
-        if not ontology_file.exists():
-            with ontology_file.open("w") as f:
-                json.dump(self.ontology.to_dict(), f)
-
-        label_row_meta_file = cache_dir / "label_row_meta.json"
-        if not label_row_meta_file.exists():
-            with label_row_meta_file.open("w") as f:
-                # TODO uncomment next line when LabelRowMetadata's to_dict() method get added in Encord SDK
-                # label_row_meta_dict = {k: v.to_dict() for k, v in self.label_row_meta}
-                label_row_meta_dict = {k: labelrowmetadata_to_dict(v) for k, v in self.label_row_meta.items()}
-                json.dump(label_row_meta_dict, f)
-
-
-# Temporary method. Should last while the related PR in Encord SDK is not in prod
-def labelrowmetadata_to_dict(self) -> dict:
-    """
-    Returns:
-        The dict equivalent of LabelRowMetadata.
-    """
-    return dict(
-        label_hash=self.label_hash,
-        label_status=self.label_status.value,
-        data_hash=self.data_hash,
-        dataset_hash=self.dataset_hash,
-        data_title=self.data_title,
-        data_type=self.data_type,
-        is_shadow_data=self.is_shadow_data,
-        annotation_task_status=self.annotation_task_status.value,
-    )
-
 
 def get_label_row(lr, client, cache_dir, refresh=False) -> Optional[LabelRow]:
     if isinstance(cache_dir, str):
