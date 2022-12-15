@@ -45,17 +45,17 @@ class Project:
         self.project_hash: str = self.project_meta["project_hash"]
 
         # read project ontology
-        ontology_file_path = project_dir / "ontology.json"
+        ontology_file_path = self.get_ontology_file_path(project_dir)
         if not ontology_file_path.exists():
-            raise FileNotFoundError(f"Expected file `ontology.json` at {project_dir}")
+            raise FileNotFoundError(f"Expected file `ontology.json` at {ontology_file_path.parent}")
         self.ontology: OntologyStructure = OntologyStructure.from_dict(
-            json.loads((project_dir / "ontology.json").read_text(encoding="utf-8"))
+            json.loads(ontology_file_path.read_text(encoding="utf-8"))
         )
 
         # read label rows' metadata
-        label_row_meta_file_path = project_dir / "label_row_meta.json"
+        label_row_meta_file_path = self.get_label_row_meta_file_path(project_dir)
         if not label_row_meta_file_path.exists():
-            raise FileNotFoundError(f"Expected file `label_row_meta.json` at {project_dir}")
+            raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_meta: Dict[str, LabelRowMetadata] = {
             lr_hash: LabelRowMetadata.from_dict(lr_meta)
             for lr_hash, lr_meta in itertools.islice(
@@ -67,8 +67,8 @@ class Project:
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, List[Path]] = {}
         for lr_hash in self.label_row_meta.keys():
-            lr_file_path = project_dir / "data" / lr_hash / "label_row.json"
-            lr_images_dir = project_dir / "data" / lr_hash / "images"
+            lr_file_path = self.get_label_row_file_path(project_dir, lr_hash)
+            lr_images_dir = self.get_data_dir_path(project_dir) / lr_hash / "images"
             if not lr_file_path.is_file() or not lr_images_dir.is_dir():  # todo log this issue
                 continue
             self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text(encoding="utf-8")))
@@ -100,16 +100,16 @@ class Project:
             "project_description": encord_project.description,
             "project_hash": encord_project.project_hash,
         }
-        project_meta_file_path = project_dir / "project_meta.yaml"
+        project_meta_file_path = cls.get_project_meta_file_path(project_dir)
         project_meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 
         # store project's ontology
-        ontology_file_path = project_dir / "ontology.json"
+        ontology_file_path = cls.get_ontology_file_path(project_dir)
         ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
 
         # store label rows' metadata
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta_file_path = project_dir / "label_row_meta.json"
+        label_row_meta_file_path = cls.get_label_row_meta_file_path(project_dir)
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
         # store label rows and their images
@@ -117,6 +117,26 @@ class Project:
         image_paths = download_all_images(label_rows, cache_dir=project_dir)  # todo no need to output all data
 
         return cls(project_dir)
+
+    @staticmethod
+    def get_data_dir_path(project_dir: Path) -> Path:
+        return project_dir / "data"
+
+    @staticmethod
+    def get_label_row_file_path(project_dir: Path, label_hash: str) -> Path:
+        return Project.get_data_dir_path(project_dir) / label_hash / "label_row.json"
+
+    @staticmethod
+    def get_label_row_meta_file_path(project_dir: Path) -> Path:
+        return project_dir / "label_row_meta.json"
+
+    @staticmethod
+    def get_ontology_file_path(project_dir: Path) -> Path:
+        return project_dir / "ontology.json"
+
+    @staticmethod
+    def get_project_meta_file_path(project_dir: Path) -> Path:
+        return project_dir / "project_meta.yaml"
 
 
 def get_label_row(lr, client, cache_dir, refresh=False) -> Optional[LabelRow]:
