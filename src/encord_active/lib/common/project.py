@@ -66,9 +66,7 @@ class Project:
         for lr_hash in self.label_row_meta.keys():
             lr_file_path = project_dir / "data" / lr_hash / "label_row.json"
             lr_images_dir = project_dir / "data" / lr_hash / "images"
-            if not lr_file_path.exists():  # todo log this issue
-                continue
-            if not lr_images_dir.exists() or not lr_images_dir.is_dir():  # todo log this issue
+            if not lr_file_path.is_file() or not lr_images_dir.is_dir():  # todo log this issue
                 continue
             self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text()))
             self.image_paths[lr_hash] = list(lr_images_dir.iterdir())
@@ -82,10 +80,7 @@ class Project:
         :param encord_project: Encord project from where the data is fetched.
         :return:
         """
-        if not project_dir.exists():
-            raise FileNotFoundError("`project_dir` must point to an existing directory")
-        if not project_dir.is_dir():
-            raise NotADirectoryError("`project_dir` must point to an existing directory")
+        project_dir.mkdir(parents=True, exist_ok=True)
 
         # todo enforce clean up when we are sure it won't impact performance in other sections (like PredictionWriter)
         # also don't forget to add `from shutil import rmtree` at the top (pylint tags it as unused right now)
