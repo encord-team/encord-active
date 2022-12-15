@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Importing Coco Predictions
@@ -9,7 +9,7 @@ Make sure you have installed Encord Active with the `coco` [extras](/installatio
 :::
 
 :::note
-This command assume that you have imported you project useing the [COCO importer](/cli/import-coco-project).
+This command assume that you have imported you project using the [COCO importer](/cli/import-coco-project) and you are inside the projects directory.
 :::
 
 Importing COCO predictions is currently the easiest way to import predictions to Encord Active.
@@ -19,7 +19,5 @@ You need to have a results JSON file following the [COCO results format](https:/
 ```shell
 encord-active import predictions --coco results.json
 ```
-
-This command will ask you to which project you would want to import the predications.
 
 After the execution is done you should be ready to view your [model assertions metrics](/category/model-assertions).

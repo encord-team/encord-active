@@ -35,7 +35,7 @@ If you have trouble installing `encord-active`, you find more detailed instructi
 
 Understand Encord-Active in **5 minutes** by playing!
 
-The following command will start the Encord Active with a demo project where you can play around.
+The script will download a small example project to your current working directory and open the application straight away.
 This is the fastest way to explore Encord Active.
 
 ```shell
@@ -44,6 +44,8 @@ encord-active quickstart
 ```
 
 This must be run in the same virtual environment where you installed your package.
+
+The next section will show you how to download larger and, perhaps, more interesting datasets to explore.
 
 ## Sandbox Data
 
@@ -55,27 +57,7 @@ with a sandbox dataset, you can run the following command:
 encord-active download
 ```
 
-The script will ask you to
-
-1. `Where should we store the data?`: specify a directory in which the data should be stored.
-2. (potentially) `Directory not existing, want to create it? [y/N]` type <kbd>y</kbd> then <kbd>enter</kbd>.
-3. `[?] Choose a project:` choose a project with <kbd>↑</kbd> and <kbd>↓</kbd> and hit <kbd>enter</kbd>
-
-:::tip
-
-If you plan on using multiple datasets, it may be worth first creating an empty directory for all the datasets.
-
-```shell
-mkdir /path/to/data/root
-# or windows
-md /path/to/data/root
-```
-
-In step 1. above, specify, e.g., `/path/to/data/root/sandbox1`
-
-:::
-
-When the download process is complete, you visualize the results by following the printed instructions.
+This will allow you to choose a dataset to download. When the download process is complete, you visualize the results by following the printed instructions.
 
 :::tip  
 You can follow the [COCO dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features
@@ -94,14 +76,62 @@ have the following Google Colab notebooks for you:
 If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord-Active
 easily.
 
-If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and 
-[upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
-projects.
+:::tip
+
+```shell
+# within venv
+encord-active import project
+```
+
+This will import your encord project to a new directory in your current working directory.
 
 :::tip
 
+If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](sdk/migrating-data).
+Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
+
+To be able to do this, you will need the path to your private `ssh-key` associated with Encord and a `project_hash`.
+Don't worry! The script will guide you on the way if you don't know it already.
+
+The script will ask you:
+
+1. `Where is your private ssh key stored?`: type the path to your private ssh key
+2. `Specify project hash`: paste / type the `project_hash`. If you don't know the id, you can type `?` and hit enter to get all your projects listed with their `project_hash`s before being prompted with the question again. Now you can copy paste the id.
+
+Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
+
+Downloading the data and computing the metrics may take a while.
+Bare with us, it is worth the wait.
+
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
+
+:::info
+If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and 
+[upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
+projects.
+:::
+## Running the App
+
+To run the Encord Active app, you need to `cd` into the directory that was created by one of the previous commands and run the following command:
+
+```shell
+# within venv
+cd /path/to/project
+encord-active visualise
+```
+
+Now, your browser should open a new window with Encord Active.
+
+:::caution
+
+If the script just seems to hang and nothing happens in your browser, try visiting <Link to={"http://localhost:8501"}>http://localhost:8501</Link>.
+
+:::
+
+### What's Up Next?
+
 We recommend having a look at the [workflows](category/workflows) section to learn about importing your model predictions and improving your model performance.
-A couple of example references are: 
+A couple of example references are:
 
 1. [Import your model predictions](workflows/import-predictions)
 2. Find outliers in your [data](workflows/improve-your-data/identify-outliers-edge-cases) or your [labels](workflows/improve-your-labels/identify-outliers)

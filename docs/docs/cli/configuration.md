@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 7
 ---
 
 # Configuration
@@ -16,7 +16,6 @@ And these are the configurable properties.
 
 ```toml
 ssh_key_path = "/absolute/path/to/ssh-key" # A key to use when accessing Encord projects
-projects_dir = "/absolute/path/to/projects/dir" # A directory where all projects should be stored
 ```
 
 All properties are empty by default and are saved after the first time the user is prompted to provide them.
@@ -30,7 +29,6 @@ encord-active config list
 
 # output (only if already set)
 ssh_key_path = "/Users/foo/.ssh/encord"
-projects_dir = "/Users/foo/projects"
 ```
 
 ```shell
