@@ -173,7 +173,8 @@ class PredictionWriter:
         self.object_lookup = {o["featureNodeHash"]: o for o in self.project.ontology["objects"]}
 
         logger.info("Fetching project label rows to be able to match predictions.")
-        self.label_rows = Project.read(cache_dir, project=project, **kwargs).label_rows
+        # todo check if it is really necessary to read from project from Encord (probably should be local storage)
+        self.label_rows = Project.from_encord_project(cache_dir, project).label_rows
         self.label_row_meta = {lr["label_hash"]: lr for lr in self.project.label_rows if lr["label_hash"] is not None}
 
         self.uuids: Set[str] = set()

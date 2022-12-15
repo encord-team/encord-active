@@ -26,7 +26,11 @@ class Iterator(Sized):
         self.du_hash = ""
         self.frame = -1
         self.num_frames = -1
-        self.project: Project = Project.read(cache_dir, subset_size=subset_size, **kwargs)
+        self.project: Project
+        if "project" in kwargs.keys():
+            self.project = Project.from_encord_project(cache_dir, kwargs["project"])
+        else:
+            self.project = Project(cache_dir, subset_size)
         self.label_rows = self.project.label_rows
 
     @abstractmethod

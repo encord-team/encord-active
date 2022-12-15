@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import itertools
 import json
 import logging
@@ -9,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import encord.exceptions
+import yaml
 from encord import Project as EncordProject
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.label_row import LabelRow
@@ -26,70 +26,101 @@ encord_logger = logging.getLogger("encord")
 encord_logger.setLevel(logging.ERROR)
 
 
-@dataclasses.dataclass
 class Project:
-    image_paths: Dict[str, List[Path]]
-    label_rows: Dict[str, LabelRow]
-    label_row_meta: Dict[str, LabelRowMetadata]
-    ontology: OntologyStructure
-    project_hash: str
-    project_meta: Dict[str, str]
-
-    @staticmethod
-    def read(
-        cache_dir: Path,
-        subset_size: Optional[int] = None,
-        encord_project: Optional[EncordProject] = None,
-        **kwargs,
-    ) -> Project:
+    def __init__(self, project_dir: Path, subset_size: Optional[int] = None):
         """
-        Fetches data either from cache or from the Encord project if it's available.
+        Fetch project's data from local storage.
 
-        :param cache_dir: The root directory of the project.
-        :param subset_size: The number of label rows to fetch. None means all.
-        :param encord_project: An encord project for fetching data. If not provided, will only use cached files.
+        :param project_dir: The root directory of the project.
+        :param subset_size: The number of label rows to fetch. If None then all label rows are fetched.
         """
-        if encord_project is None:
-            label_rows = dict(
-                itertools.islice(
-                    (
-                        (p.name, LabelRow(json.loads((p / "label_row.json").read_text())))
-                        for p in (cache_dir / "data").iterdir()
-                        if (p / "label_row.json").is_file()
-                    ),
-                    subset_size,
-                )
-            )
-            image_paths = download_all_images(label_rows, cache_dir)
+        if not project_dir.exists():
+            raise FileNotFoundError("`project_dir` must point to an existing directory")
+        if not project_dir.is_dir():
+            raise NotADirectoryError("`project_dir` must point to an existing directory")
+        self.project_dir: Path = project_dir
 
-            label_row_meta = json.loads((cache_dir / "label_row_meta.json").read_text())
-            ontology = json.loads((cache_dir / "ontology.json").read_text())
-            project_meta = fetch_project_meta(cache_dir)
-            project_hash = project_meta["project_hash"]
-        else:
-            label_rows = download_all_label_rows(  # todo check this
-                encord_project, subset_size=subset_size, cache_dir=cache_dir, **kwargs
-            )
-            image_paths = download_all_images(label_rows, cache_dir=cache_dir, **kwargs)  # todo check this
+        # read project's metadata and hash
+        self.project_meta: Dict[str, str] = fetch_project_meta(project_dir)
+        self.project_hash: str = self.project_meta["project_hash"]
 
-            label_row_meta = {
-                lr["label_hash"]: LabelRowMetadata.from_dict(lr)
-                for lr in encord_project.label_rows
-                if lr["label_hash"] is not None
-            }
-            ontology = OntologyStructure.from_dict(encord_project.ontology)
-            project_meta = fetch_project_meta(cache_dir)  # todo check this
-            project_hash = project_meta["project_hash"]
-
-        return Project(
-            image_paths=image_paths,
-            label_rows=label_rows,
-            label_row_meta=label_row_meta,
-            ontology=ontology,
-            project_hash=project_hash,
-            project_meta=project_meta,
+        # read project ontology
+        ontology_file_path = project_dir / "ontology.json"
+        if not ontology_file_path.exists():
+            raise FileNotFoundError(f"Expected file `ontology.json` at {project_dir}")
+        self.ontology: OntologyStructure = OntologyStructure.from_dict(
+            json.loads((project_dir / "ontology.json").read_text())
         )
 
+        # read label rows' metadata
+        label_row_meta_file_path = project_dir / "label_row_meta.json"
+        if not label_row_meta_file_path.exists():
+            raise FileNotFoundError(f"Expected file `label_row_meta.json` at {project_dir}")
+        self.label_row_meta: Dict[str, LabelRowMetadata] = {}
+        for lr_hash, lr_meta in itertools.islice(json.loads(label_row_meta_file_path.read_text()).items(), subset_size):
+            self.label_row_meta[lr_hash] = LabelRowMetadata.from_dict(lr_meta)
+
+        # read label rows and their images
+        self.label_rows: Dict[str, LabelRow] = {}
+        self.image_paths: Dict[str, List[Path]] = {}
+        for lr_hash in self.label_row_meta.keys():
+            lr_file_path = project_dir / "data" / lr_hash / "label_row.json"
+            lr_images_dir = project_dir / "data" / lr_hash / "images"
+            if not lr_file_path.exists():  # todo log this issue
+                continue
+            if not lr_images_dir.exists() or not lr_images_dir.is_dir():  # todo log this issue
+                continue
+            self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text()))
+            self.image_paths[lr_hash] = list(lr_images_dir.iterdir())
+
+    @classmethod
+    def from_encord_project(cls, project_dir: Path, encord_project: EncordProject):
+        """
+        Construct a Project from Encord platform.
+
+        :param project_dir: The root directory of the project.
+        :param encord_project: Encord project from where the data is fetched.
+        :return:
+        """
+        if not project_dir.exists():
+            raise FileNotFoundError("`project_dir` must point to an existing directory")
+        if not project_dir.is_dir():
+            raise NotADirectoryError("`project_dir` must point to an existing directory")
+
+        # todo enforce clean up when we are sure it won't impact performance in other sections (like PredictionWriter)
+        # also don't forget to add `from shutil import rmtree` at the top (pylint tags it as unused right now)
+        # clean project_dir content
+        # for path in project_dir.iterdir():
+        #     if path.is_file():
+        #         path.unlink()
+        #     elif path.is_dir():
+        #         rmtree(path)
+
+        # store project's metadata
+        project_meta = {
+            "project_title": encord_project.title,
+            "project_description": encord_project.description,
+            "project_hash": encord_project.project_hash,
+        }
+        project_meta_file_path = project_dir / "project_meta.yaml"
+        project_meta_file_path.write_text(yaml.dump(project_meta))  # , encoding="utf-8")
+
+        # store project's ontology
+        ontology_file_path = project_dir / "ontology.json"
+        ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2))  # , encoding="utf-8")
+
+        # store label rows' metadata
+        label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
+        label_row_meta_file_path = project_dir / "label_row_meta.json"
+        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2))  # , encoding="utf-8")
+
+        # store label rows and their images
+        label_rows = download_all_label_rows(encord_project, cache_dir=project_dir)  # todo no need to output all data
+        image_paths = download_all_images(label_rows, cache_dir=project_dir)  # todo no need to output all data
+
+        return Project(project_dir)
+
+    # unused method (prototype)
     def save(self, cache_dir: Path) -> None:
         ontology_file = cache_dir / "ontology.json"
         if not ontology_file.exists():
