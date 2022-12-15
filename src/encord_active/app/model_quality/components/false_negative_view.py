@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-import encord_active.app.model_assertions.components.utils as cutils
+import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.components import build_data_tags

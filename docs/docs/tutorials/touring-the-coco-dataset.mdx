@@ -48,7 +48,7 @@ If the command hangs and nothing happens in your browser, go to <Link to={"http:
 
 ## 3. Finding and Flagging Label Errors {#find-and-flag-label-errors}
 
-You will cary out this process in two steps.
+You will carry out this process in two steps.
 
 <TOCInline toc={getSubsectionNodes(toc, "find-and-flag-label-errors")} />
 
@@ -133,27 +133,24 @@ You can find other sources of label errors by inspecting the other tabs. Good pl
 
 ### Tagging Label Errors
 
-To tag the images with label errors, you first add a new tag in the left sidebar:
-
-1. Give the tag a className
-2. Click the "+" button.
+To tag the images with the identified label errors, you first add a new tag by typing in the tag name in the left sidebar and hitting enter.
 
 ![Add new tag](/img/tutorials/label_duplicate_tag_add.png)
 
-Afterwards, you can add the tag to the images you see in the outlier pane with "Annotation duplicated" by selecting the tag from the drop-down below each image:
+Afterwards, you can add the tag to the images you see in the outlier pane by selecting the tag from the drop-down below each image:
 
 ![Tag an image](/img/tutorials/tag-added-for-oranges.png)
 
 ### Exporting Labels for Additional Annotation
 
 Suppose you have now tagged all the duplicated annotations that you would like to export for additional annotations.
-Then you go to the _Actions_ tab in the left sidebar and check the "Add filters" checkbox in the top of the page.
+Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created (as indicated by the purple arrows).
 
 ![Select images with the `label_duplication` tag](/img/tutorials/export-duplication-tag.png)
 
 _Note how your data has been filtered to only the rows that you tagged._
 
-Now you can _Download_, _Delete_, _Edit_, or _Augment_ your data based on your selection.
+Now you can _Generate COCO file_, _Clone_ the data into a new Encord project, or send the data for _Review_, _Re-label_, or _Augmentation_ tasks.
 
 ## 4. Figuring Out What Metrics Influence Model Performance {#figuring-out-what-metrics-influence-model-performance}
 
@@ -171,7 +168,7 @@ In this section, we'll go through a subset of those:
 
 #### mAP and mAR scores
 
-First, navigate to the _Model Assertions_ > _Metrics_ page to find sections that automatically give you multiple insights into your model performance.
+First, navigate to the _Model Quality_ > _Metrics_ page to find sections that automatically give you multiple insights into your model performance.
 
 The first section will give you the _mean Average Precision (mAP)_ and the _mean Average Recall (mAR)_ of your model based on the IOU threshold set in the top of the page.
 
@@ -186,7 +183,7 @@ In the next section (the _Metric Importance_), you will find importances and cor
 
 ![Metric Importances](/img/tutorials/importance-and-correlations.png)
 
-From this section, you quickly find that, e.g., "Object Area - Absolute (P)" has a high importance for the model performance.
+From this section, you quickly find that, e.g., "Object Area - Relative (P)" has a high importance for the model performance.
 
 :::note
 
@@ -218,19 +215,19 @@ To learn for which instances the model works and for which it doesn't, you can l
 
 ### Inspecting Model Performance for a Specific Metric
 
-Above, we noticed that the "Object Area - Absolute (P)" metric has a high importance on the model performance.
+Above, we noticed that the "Object Area - Relative (P)" metric has a high importance on the model performance.
 To learn more about how the specific metric affects the model performance you:
 
 1. Click the _Performance By Metric_ tab in the sidebar.
-2. Select the "Object Area - Absolute (P)" metric in the settings in the top.
+2. Select the "Object Area - Relative (P)" metric in the settings in the top.
 
 You should now see a page similar to this:
 
 ![Performance by Metric page](/img/tutorials/performance-by-object-area-coco.png)
 
-The plot shows the true positive rate and the false negative rate as a function of the selected metric; the "Object Area - Absolute (P)" in this case.
+The plot shows the true positive rate and the false negative rate as a function of the selected metric; the "Object Area - Relative (P)" in this case.
 We can see how when the model predictions are small in terms of the absolute area, then the true-positive rate is low (bad), while larger predictions are more often correct (good).
-Similarly, when labels are small, the false negative rate is high (bad), while larger labels are less likely to be issed by the model (good).
+Similarly, when labels are small, the false negative rate is high (bad), while larger labels are less likely to be issued by the model (good).
 
 :::tip
 

@@ -2,12 +2,12 @@ import pandas as pd
 import streamlit as st
 
 from encord_active.app.common.colors import Color
-from encord_active.app.model_assertions.components import metric_view
+from encord_active.app.model_quality.components import metric_view
 
-from . import HistogramMixin, ModelAssertionsPage
+from . import HistogramMixin, ModelQualityPage
 
 
-class TruePositivesPage(ModelAssertionsPage, HistogramMixin):
+class TruePositivesPage(ModelQualityPage, HistogramMixin):
     title = "✅ True Positives"
 
     def sidebar_options(self):
