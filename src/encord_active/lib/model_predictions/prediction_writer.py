@@ -10,7 +10,6 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from encord import Project as EncordProject
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
@@ -152,7 +151,7 @@ class PredictionWriter:
     def __init__(
         self,
         cache_dir: Path,
-        project: EncordProject,
+        project: Project,
         prefix: str = "",
         custom_object_map: Optional[Dict[str, int]] = None,
         **kwargs,
@@ -169,14 +168,13 @@ class PredictionWriter:
         self.predictions_file = None
         self.object_predictions: List[List[Any]] = []  # [[key, img_id, class_id, confidence, x1, y1, x2, y2], ...]
 
-        self.project = project
-        self.object_lookup = {o["featureNodeHash"]: o for o in self.project.ontology["objects"]}
-
         logger.info("Fetching project label rows to be able to match predictions.")
-        # todo check if it is really necessary to read from project from Encord (probably should be local storage)
-        self.label_rows = Project.from_encord_project(cache_dir, project).label_rows
-        self.label_row_meta = {lr["label_hash"]: lr for lr in self.project.label_rows if lr["label_hash"] is not None}
+        self.project = project.load()
+        self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
+        # todo check if it is really necessary to read from project from Encord (probably should be local storage)
+        self.label_rows = project.label_rows
+        self.label_row_meta = self.project.label_row_meta
         self.uuids: Set[str] = set()
 
         self.__prepare_lr_lookup()
@@ -187,7 +185,7 @@ class PredictionWriter:
     def __prepare_lr_lookup(self):
         logger.debug("Preparing label row lookup")
         # Top level data hashes
-        self.lr_lookup: Dict[str, str] = {d["data_hash"]: d["label_hash"] for d in self.project.label_rows}
+        self.lr_lookup: Dict[str, str] = {m.data_hash: m.label_hash for m in self.project.label_row_meta.values()}
         # Nested data hashes for every data unit in the project
         for lr in self.label_rows.values():
             self.lr_lookup.update({du_hash: lr["label_hash"] for du_hash in lr["data_units"]})
@@ -210,7 +208,7 @@ class PredictionWriter:
         logger.debug("Preparing class id lookup")
         self.custom_map = False
         if custom_map:
-            feature_hashes = {o["featureNodeHash"] for o in self.project.ontology["objects"]}
+            feature_hashes = {o.feature_node_hash for o in self.project.ontology.objects}
             custom_hashes = set(custom_map.keys())
             if not all([c in feature_hashes for c in custom_hashes]):
                 raise ValueError("custom map keys should correspond to `featureNodeHashes` from the project ontology.")
@@ -219,12 +217,12 @@ class PredictionWriter:
             self.custom_map = True
         else:
             self.object_class_id_lookup = {}
-            for obj in self.project.ontology["objects"]:
-                self.object_class_id_lookup[obj["featureNodeHash"]] = len(self.object_class_id_lookup)
+            for obj in self.project.ontology.objects:
+                self.object_class_id_lookup[obj.feature_node_hash] = len(self.object_class_id_lookup)
 
         self.classification_class_id_lookup: Dict[str, int] = {}
-        for obj in self.project.ontology["classifications"]:
-            self.classification_class_id_lookup[obj["featureNodeHash"]] = len(self.classification_class_id_lookup)
+        for obj in self.project.ontology.classifications:
+            self.classification_class_id_lookup[obj.feature_node_hash] = len(self.classification_class_id_lookup)
 
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
@@ -340,8 +338,8 @@ class PredictionWriter:
 
             class_index[v] = {
                 "featureHash": k,
-                "name": self.object_lookup[k]["name"],
-                "color": self.object_lookup[k]["color"],
+                "name": self.object_lookup[k].name,
+                "color": self.object_lookup[k].color,
             }
 
         with (self.cache_dir / "class_idx.json").open("w") as f:
@@ -467,9 +465,9 @@ class PredictionWriter:
             )
 
         ontology_object = self.object_lookup[class_uid]
-        if ontology_object["shape"] != ptype.value:
+        if ontology_object.shape.value != ptype.value:
             raise ValueError(
-                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object['shape']}"
+                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
             )
 
         image_id = self.get_image_id(data_hash, _frame)

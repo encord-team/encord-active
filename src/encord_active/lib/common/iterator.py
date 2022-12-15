@@ -27,10 +27,10 @@ class Iterator(Sized):
         self.frame = -1
         self.num_frames = -1
         self.project: Project
-        if "project" in kwargs.keys():
-            self.project = Project.from_encord_project(cache_dir, kwargs["project"])
+        if "project" in kwargs and kwargs["project"]:
+            self.project = Project(cache_dir).from_encord_project(kwargs["project"])
         else:
-            self.project = Project(cache_dir, subset_size)
+            self.project = Project(cache_dir).load(subset_size)
         self.label_rows = self.project.label_rows
 
     @abstractmethod
