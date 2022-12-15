@@ -118,7 +118,7 @@ class Project:
         label_rows = download_all_label_rows(encord_project, cache_dir=project_dir)  # todo no need to output all data
         image_paths = download_all_images(label_rows, cache_dir=project_dir)  # todo no need to output all data
 
-        return Project(project_dir)
+        return cls(project_dir)
 
     # unused method (prototype)
     def save(self, cache_dir: Path) -> None:
