@@ -10,22 +10,16 @@ from encord_active.app.common import state
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.data_quality.common import MetricType
 from encord_active.app.frontend_components import pages_menu
-from encord_active.app.model_assertions.sub_pages.false_negatives import (
-    FalseNegativesPage,
-)
-from encord_active.app.model_assertions.sub_pages.false_positives import (
-    FalsePositivesPage,
-)
-from encord_active.app.model_assertions.sub_pages.metrics import MetricsPage
-from encord_active.app.model_assertions.sub_pages.performance_by_metric import (
+from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
+from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
+from encord_active.app.model_quality.sub_pages.metrics import MetricsPage
+from encord_active.app.model_quality.sub_pages.performance_by_metric import (
     PerformanceMetric,
 )
-from encord_active.app.model_assertions.sub_pages.true_positives import (
-    TruePositivesPage,
-)
+from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
 from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
-from encord_active.app.views.model_assertions import model_assertions
+from encord_active.app.views.model_quality import model_quality
 
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
 
@@ -33,12 +27,12 @@ pages: Pages = {
     "Encord Active": landing_page,
     "Data Quality": {"Summary": summary(MetricType.DATA_QUALITY), "Explorer": explorer(MetricType.DATA_QUALITY)},
     "Label Quality": {"Summary": summary(MetricType.LABEL_QUALITY), "Explorer": explorer(MetricType.LABEL_QUALITY)},
-    "Model Assertions": {
-        "Metrics": model_assertions(MetricsPage()),
-        "Performance By Metric": model_assertions(PerformanceMetric()),
-        "True Positives": model_assertions(TruePositivesPage()),
-        "False Positives": model_assertions(FalsePositivesPage()),
-        "False Negatives": model_assertions(FalseNegativesPage()),
+    "Model Quality": {
+        "Metrics": model_quality(MetricsPage()),
+        "Performance By Metric": model_quality(PerformanceMetric()),
+        "True Positives": model_quality(TruePositivesPage()),
+        "False Positives": model_quality(FalsePositivesPage()),
+        "False Negatives": model_quality(FalseNegativesPage()),
     },
     "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance},
 }

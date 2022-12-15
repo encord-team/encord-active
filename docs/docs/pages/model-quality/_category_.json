@@ -1,0 +1,9 @@
+{
+  "label": "Model Quality",
+  "position": 3,
+  "collapsible": true,
+  "link": {
+    "type": "generated-index",
+    "description": "All the components that you can see on the Model Quality page of the Encord Active app."
+  }
+}

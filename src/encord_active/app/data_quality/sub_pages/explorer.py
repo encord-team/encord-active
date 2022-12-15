@@ -369,7 +369,7 @@ def build_card(card_type: str, card_no: int, row: Series, _similarity_expanders:
 
 
 def get_histogram(current_df: pd.DataFrame):
-    # TODO: Unify with app/model_assertions/sub_pages/__init__.py:SamplesPage.get_histogram
+    # TODO: Unify with app/model_quality/sub_pages/__init__.py:SamplesPage.get_histogram
     metric_name = st.session_state[state.DATA_PAGE_METRIC_NAME]
     if metric_name:
         title_suffix = f" - {metric_name}"

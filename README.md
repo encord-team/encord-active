@@ -32,9 +32,9 @@ pip install encord-active
 We recommend using a virtual environment, such as `venv`:
 
 ```shell
-$ python3.9 -m venv ea-venv
-$ source ea-venv/bin/activate
-$ pip install encord-active
+python3.9 -m venv ea-venv
+source ea-venv/bin/activate
+pip install encord-active
 ```
 
 > `encord-active` requires [python3.9][python-39].
@@ -46,8 +46,8 @@ $ pip install encord-active
 Get started immediately by sourcing your environment and running the code below.
 This downloads a small dataset and launches the Encord Active App for you to explore:
 
-```jsx
-encord-active hello
+```shell
+encord-active quickstart
 ```
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
@@ -90,7 +90,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 **Other core features:**
 
-- [Model Decomposition](https://encord-active-docs.web.app/pages/model-assertions/metrics)
+- [Model Decomposition](https://encord-active-docs.web.app/pages/model-quality/metrics)
 - [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
 - [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
 - [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)

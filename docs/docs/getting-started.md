@@ -10,11 +10,12 @@ import Link from '@docusaurus/Link';
 # Getting Started
 
 **Encord Active** is an open-source Python library that enables users to improve machine learning models in an active learning fashion via
-[data quality](category/data-quality), [label quality](category/label-quality), and [model assertions](category/model-assertions).
+[data quality](category/data-quality), [label quality](category/label-quality), and [model quality](category/model-quality).
 
 ## Install `encord-active`
 
 Install `encord-active` in your favorite Python environment with the following commands:
+
 
 ```shell
 python3.9 -m venv ea-venv
@@ -30,37 +31,52 @@ If you have trouble installing `encord-active`, you find more detailed instructi
 
 :::
 
-## Check the Installation
+## Quickly start Encord Active
 
-To check that Encord Active is installed, run:
+Understand Encord-Active in **5 minutes** by playing!
+
+The script will download a small example project to your current working directory and open the application straight away.
+This is the fastest way to explore Encord Active.
 
 ```shell
 # within venv
-encord-active --help
+encord-active quickstart
 ```
 
 This must be run in the same virtual environment where you installed your package.
 
-The `--help` option provides some context to what you can do with `encord-active`.
-
-To learn more about how to use the command line interface, see the [Command Line Interface section](category/command-line-interface).
+The next section will show you how to download larger and, perhaps, more interesting datasets to explore.
 
 ## Sandbox Data
 
-To get started quickly with a sandbox dataset, you run the following command:
+If you have more time, we have sandbox projects where you can better explore the Encord Active. To get started quickly 
+with a sandbox dataset, you can run the following command:
 
 ```shell
 # within venv
 encord-active download
 ```
 
-This will download a pre-built project to a new directory in your current working directory.
+This will allow you to choose a dataset to download. When the download process is complete, you visualize the results by following the printed instructions.
 
-When the download process is complete, you visualise the results by following the printed instructions or following the steps in [Running the App](#running-the-app) section below.
+:::tip  
+You can follow the [COCO dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features
+of te Encord Active.
+:::
 
-## Importing Data from Encord
+### Run Encord Active on Google Colab
 
-If you already have a project on the Encord platform, you can import that project with the following command:
+If you want to quickly explore Encord-Active without installing anything into your local machine, we
+have the following Google Colab notebooks for you:
+1. [Explore Encord-Active through sandbox projects](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing)
+2. [Explore Encord-Active through your own Encord projects](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
+
+## What's Up Next?
+
+If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord-Active
+easily.
+
+:::tip
 
 ```shell
 # within venv
@@ -73,8 +89,6 @@ This will import your encord project to a new directory in your current working 
 
 If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](sdk/migrating-data).
 Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
-
-:::
 
 To be able to do this, you will need the path to your private `ssh-key` associated with Encord and a `project_hash`.
 Don't worry! The script will guide you on the way if you don't know it already.
@@ -91,6 +105,11 @@ Bare with us, it is worth the wait.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
 
+:::info
+If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and 
+[upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
+projects.
+:::
 ## Running the App
 
 To run the Encord Active app, you need to `cd` into the directory that was created by one of the previous commands and run the following command:
@@ -119,3 +138,6 @@ A couple of example references are:
 3. [Identify metrics](workflows/improve-your-models/metric-importance) that are important for your model performance
 
 You can also have a look at how to [write custom metrics](/metrics/write-your-own) and how to use the [command line interface](https://encord-active-docs.web.app/category/command-line-interface).
+:::
+
+

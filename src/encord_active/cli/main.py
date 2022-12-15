@@ -91,18 +91,18 @@ def visualise(
 
 @cli.command()
 @bypass_streamlit_question
-def hello(
+def quickstart(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
     ),
 ):
     """
-    Launches the application with a preselected sample dataset to get you started quickly ✨
+    Take the shortcut and start the application straight away 🏃💨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
     from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
 
-    project_name = "hello"
+    project_name = "quickstart"
     project_dir = target / project_name
     project_dir.mkdir(exist_ok=True)
 

@@ -3,10 +3,10 @@ import pandas as pd
 import streamlit as st
 from sklearn.feature_selection import mutual_info_regression
 
-from . import ModelAssertionsPage
+from . import ModelQualityPage
 
 
-class MetricsPage(ModelAssertionsPage):
+class MetricsPage(ModelQualityPage):
     title = "📈 Metrics"
 
     @staticmethod
