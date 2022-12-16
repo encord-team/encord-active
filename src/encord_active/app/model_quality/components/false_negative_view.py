@@ -9,11 +9,18 @@ import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components.bulk_tagging_form import (
+    BulkLevel,
+    action_bulk_tags,
+    bulk_tagging_form,
+)
+from encord_active.app.common.components.individual_tagging import multiselect_tag
 from encord_active.app.common.utils import (
     build_pagination,
     get_df_subset,
     load_or_fill_image,
 )
+from encord_active.app.data_quality.common import MetricType
 
 
 def __show_image_and_fn(
@@ -53,6 +60,7 @@ def __build_card(
 ):
     with st_col:
         __show_image_and_fn(label, predictions, box_color=box_color)
+        multiselect_tag(label, "false_negatives", MetricType.MODEL_QUALITY)
 
         cls = st.session_state.full_class_idx[str(label["class_id"])]["name"]
         label = label.copy()
@@ -69,6 +77,12 @@ def false_negative_view(false_negatives, model_predictions, color: Color):
     selected_metric = st.session_state.get(state.PREDICTIONS_LABEL_METRIC)
     subset = get_df_subset(false_negatives, selected_metric)
     paginated_subset = build_pagination(subset, n_cols, n_rows, selected_metric)
+
+    form = bulk_tagging_form(MetricType.MODEL_QUALITY)
+
+    if form and form.submitted:
+        df = paginated_subset if form.level == BulkLevel.PAGE else subset
+        action_bulk_tags(df, form.tags, form.action)
 
     if len(paginated_subset) == 0:
         st.error("No data in selected quality interval")

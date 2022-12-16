@@ -1,5 +1,5 @@
 import re
-from typing import List, Set
+from typing import List
 
 import altair as alt
 import numpy as np
@@ -22,23 +22,15 @@ from encord_active.app.common.components.bulk_tagging_form import (
     bulk_tagging_form,
 )
 from encord_active.app.common.components.individual_tagging import multiselect_tag
-from encord_active.app.common.components.tag_creator import (
-    METRIC_TYPE_SCOPES,
-    tag_creator,
-)
+from encord_active.app.common.components.tag_creator import tag_creator
 from encord_active.app.common.metric import MetricData, load_metric
 from encord_active.app.common.page import Page
-from encord_active.app.common.utils import (
-    build_pagination,
-    get_df_subset,
-    load_merged_df,
-)
+from encord_active.app.common.utils import build_pagination, get_df_subset
 from encord_active.app.data_quality.common import (
     MetricType,
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
-from encord_active.app.db.tags import TagScope
 from encord_active.lib.common.metric import AnnotationType, EmbeddingType
 
 
@@ -46,7 +38,6 @@ class ExplorerPage(Page):
     title = "🔎 Explorer"
 
     def sidebar_options(self, available_metrics: List[MetricData]):
-        load_merged_df()
         tag_creator()
 
         if not available_metrics:
