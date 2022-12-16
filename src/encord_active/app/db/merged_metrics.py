@@ -7,7 +7,7 @@ from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.app.common.state import MERGED_DATAFRAME
 from encord_active.app.db.connection import DBConnection
-from encord_active.app.db.tags import Tag
+from encord_active.app.db.tags import Tag, TagScope
 
 TABLE_NAME = "merged_metrics"
 
@@ -67,7 +67,7 @@ def marshall_tags(tags: List[Tag]) -> str:
 
 
 def unmarshall_tags(tags_json: str) -> List[Tag]:
-    return [Tag(*tag) for tag in json.loads(tags_json) or []]
+    return [Tag(tag[0], TagScope(tag[1])) for tag in json.loads(tags_json) or []]
 
 
 def ensure_initialised(fn):

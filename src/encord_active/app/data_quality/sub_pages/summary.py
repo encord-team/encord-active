@@ -61,7 +61,7 @@ class SummaryPage(Page):
         n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
         n_items_in_page = n_cols * n_rows
 
-        metrics = load_available_metrics(metric_type_selection)
+        metrics = load_available_metrics(metric_type_selection.value)
 
         for idx in metrics:
             df = iutils.load_metric(idx, normalize=False)
@@ -127,7 +127,7 @@ class SummaryPage(Page):
                         image = show_image_and_draw_polygons(row)
                         st.image(image)
 
-                        multiselect_tag(row, f"{idx.name}_summary")
+                        multiselect_tag(row, f"{idx.name}_summary", metric_type_selection)
 
                         # === Write scores and link to editor === #
 

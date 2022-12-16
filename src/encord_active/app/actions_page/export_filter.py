@@ -45,7 +45,9 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             key = f"filter-select-{column.replace(' ', '_').lower()}"
 
             if column == "tags":
-                tag_filters = right.multiselect("Choose tags to filter", options=Tags().all(), key=key)
+                tag_filters = right.multiselect(
+                    "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
+                )
                 filtered_rows = [True if set(tag_filters) <= set(x) else False for x in df["tags"]]
                 df = df.loc[filtered_rows]
 

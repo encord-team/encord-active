@@ -13,7 +13,7 @@ def summary(metric_type: MetricType):
         with sticky_header():
             page.sidebar_options()
 
-        page.build(metric_type.value)
+        page.build(metric_type)
 
     return render
 
@@ -30,6 +30,6 @@ def explorer(metric_type: MetricType):
         if selected_df is None:
             return
 
-        page.build(selected_df)
+        page.build(selected_df, metric_type)
 
     return render

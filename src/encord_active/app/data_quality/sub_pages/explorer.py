@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Set
 
 import altair as alt
 import numpy as np
@@ -22,7 +22,10 @@ from encord_active.app.common.components.bulk_tagging_form import (
     bulk_tagging_form,
 )
 from encord_active.app.common.components.individual_tagging import multiselect_tag
-from encord_active.app.common.components.tag_creator import tag_creator
+from encord_active.app.common.components.tag_creator import (
+    METRIC_TYPE_SCOPES,
+    tag_creator,
+)
 from encord_active.app.common.metric import MetricData, load_metric
 from encord_active.app.common.page import Page
 from encord_active.app.common.utils import (
@@ -31,9 +34,11 @@ from encord_active.app.common.utils import (
     load_merged_df,
 )
 from encord_active.app.data_quality.common import (
+    MetricType,
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
+from encord_active.app.db.tags import TagScope
 from encord_active.lib.common.metric import AnnotationType, EmbeddingType
 
 
@@ -103,7 +108,7 @@ class ExplorerPage(Page):
             # For now go the easy route and just filter the dataframe here
             return df_class_selected[annotator_selected]
 
-    def build(self, selected_df: pd.DataFrame):
+    def build(self, selected_df: pd.DataFrame, metric_type: MetricType):
         st.markdown(f"# {self.title}")
         meta = st.session_state[state.DATA_PAGE_METRIC].meta
         st.markdown(f"## {meta['title']}")
@@ -114,7 +119,7 @@ class ExplorerPage(Page):
 
         fill_dataset_properties_window(selected_df)
         fill_annotator_properties_window(selected_df)
-        fill_data_quality_window(selected_df)
+        fill_data_quality_window(selected_df, metric_type)
 
 
 def get_annotator_level_info(df: pd.DataFrame) -> dict[str, list]:
@@ -207,7 +212,7 @@ def fill_annotator_properties_window(current_df: pd.DataFrame):
         annotator_columns[1].dataframe(annotators_df.style.pipe(make_pretty), use_container_width=True)
 
 
-def fill_data_quality_window(current_df: pd.DataFrame):
+def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricType):
     annotation_type = st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type")
     if (
         (annotation_type is None)
@@ -246,7 +251,7 @@ def fill_data_quality_window(current_df: pd.DataFrame):
 
     paginated_subset = build_pagination(subset, n_cols, n_rows, "score")
 
-    form = bulk_tagging_form()
+    form = bulk_tagging_form(metric_type)
 
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
@@ -263,7 +268,7 @@ def fill_data_quality_window(current_df: pd.DataFrame):
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
             with cols.pop(0):
-                build_card(embedding_type, i, row, similarity_expanders)
+                build_card(embedding_type, i, row, similarity_expanders, metric_type)
 
 
 def populate_embedding_information(embedding_type: str):
@@ -313,7 +318,9 @@ def populate_embedding_information(embedding_type: str):
             st.session_state[state.OBJECT_SIMILARITIES] = {}
 
 
-def build_card(card_type: str, card_no: int, row: Series, _similarity_expanders: list[DeltaGenerator]):
+def build_card(
+    card_type: str, card_no: int, row: Series, similarity_expanders: list[DeltaGenerator], metric_type: MetricType
+):
     """
     Builds each sub card (the content displayed for each row in a csv file).
     """
@@ -340,9 +347,9 @@ def build_card(card_type: str, card_no: int, row: Series, _similarity_expanders:
         return
 
     st.image(image)
-    multiselect_tag(row, "explorer")
+    multiselect_tag(row, "explorer", metric_type)
 
-    target_expander = _similarity_expanders[card_no // st.session_state[state.MAIN_VIEW_COLUMN_NUM]]
+    target_expander = similarity_expanders[card_no // st.session_state[state.MAIN_VIEW_COLUMN_NUM]]
 
     st.button(
         str(button_name),

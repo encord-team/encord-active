@@ -18,7 +18,7 @@ class TagScope(str, Enum):
 
 class Tag(NamedTuple):
     name: str
-    scope: str
+    scope: TagScope
 
 
 def ensure_existence(fn: Callable):

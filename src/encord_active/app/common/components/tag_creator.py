@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Set
 
 import streamlit as st
 
 import encord_active.app.common.state as state
+from encord_active.app.data_quality.common import MetricType
 from encord_active.app.db.tags import Tag, Tags, TagScope
 
 SCOPE_EMOJI = {
@@ -10,6 +11,17 @@ SCOPE_EMOJI = {
     TagScope.LABEL.value: "✏️",
     TagScope.PREDICTION.value: "🤖",
 }
+
+METRIC_TYPE_SCOPES = {
+    MetricType.DATA_QUALITY: {TagScope.DATA},
+    MetricType.LABEL_QUALITY: {TagScope.DATA, TagScope.LABEL},
+    MetricType.MODEL_QUALITY: {TagScope.DATA, TagScope.LABEL, TagScope.PREDICTION},
+}
+
+
+def scoped_tags(scopes: Set[TagScope]) -> List[Tag]:
+    all_tags: List[Tag] = st.session_state.get(state.ALL_TAGS) or []
+    return [tag for tag in all_tags if tag.scope in scopes]
 
 
 def on_tag_entered(all_tags: List[Tag], name: str, scope: str):
