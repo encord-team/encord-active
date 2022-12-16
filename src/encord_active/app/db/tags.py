@@ -13,7 +13,6 @@ TABLE_NAME = "tags"
 class TagScope(str, Enum):
     DATA = "Data"
     LABEL = "Label"
-    PREDICTION = "Prediction"
 
 
 class Tag(NamedTuple):

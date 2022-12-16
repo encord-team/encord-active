@@ -9,13 +9,12 @@ from encord_active.app.db.tags import Tag, Tags, TagScope
 SCOPE_EMOJI = {
     TagScope.DATA.value: "🖼️",
     TagScope.LABEL.value: "✏️",
-    TagScope.PREDICTION.value: "🤖",
 }
 
 METRIC_TYPE_SCOPES = {
     MetricType.DATA_QUALITY: {TagScope.DATA},
     MetricType.LABEL_QUALITY: {TagScope.DATA, TagScope.LABEL},
-    MetricType.MODEL_QUALITY: {TagScope.DATA, TagScope.LABEL, TagScope.PREDICTION},
+    MetricType.MODEL_QUALITY: {TagScope.DATA},
 }
 
 
