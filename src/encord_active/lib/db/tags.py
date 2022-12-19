@@ -1,10 +1,7 @@
 from sqlite3 import OperationalError
 from typing import Callable, List
 
-import streamlit as st
-
-from encord_active.app.common.state import ALL_TAGS
-from encord_active.app.db.connection import DBConnection
+from encord_active.lib.db.connection import DBConnection
 
 TABLE_NAME = "tags"
 
@@ -23,9 +20,6 @@ def ensure_existence(fn: Callable):
                      )
                      """
                 )
-                all_tags = st.session_state.get(ALL_TAGS)
-                if all_tags:
-                    conn.executemany(f" INSERT INTO {TABLE_NAME} (label) VALUES(?) ", [all_tags])
 
             return fn(*args, **kwargs)
 
@@ -46,5 +40,12 @@ class Tags(object):
 
     @ensure_existence
     def create_tag(self, tag: str):
+        stripped = tag.strip()
+        if not stripped:
+            raise ValueError("Empty tags are not allowed")
+
+        if tag in self.all():
+            raise ValueError("Tag already exists")
+
         with DBConnection() as conn:
             return conn.execute(f"INSERT INTO {TABLE_NAME} (label) VALUES('{tag}')")

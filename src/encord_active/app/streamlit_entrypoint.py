@@ -7,7 +7,6 @@ import streamlit as st
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
-from encord_active.app.common import state
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.data_quality.common import MetricType
 from encord_active.app.frontend_components import pages_menu

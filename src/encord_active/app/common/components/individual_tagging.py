@@ -4,8 +4,8 @@ import streamlit as st
 from pandas import Series
 
 import encord_active.app.common.state as state
-from encord_active.app.db.merged_metrics import MergedMetrics
-from encord_active.app.db.tags import Tags
+from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tags
 
 
 def update_image_tags(identifier: str, key: str):
@@ -87,21 +87,13 @@ def tag_creator():
 
         def on_tag_entered():
             tag_name = st.session_state.get("new_tag_name_input", "").strip()
-            if not tag_name.strip():
-                msg = "Cannot add empty tag."
-                st.session_state.new_tag_message = msg
+            try:
+                Tags().create_tag(tag_name)
+            except ValueError as e:
+                st.session_state.new_tag_message = str(e)
                 return
 
-            st.session_state.new_tag_name_input = ""
-
-            if tag_name in all_tags:
-                st.session_state.new_tag_message = "Tag is already in project tags"
-                return
-
-            all_tags.append(tag_name)
-            Tags().create_tag(tag_name)
-
-            st.session_state[state.ALL_TAGS] = all_tags
+            st.session_state[state.ALL_TAGS].append(tag_name)
 
         st.text_input(
             "Tag name",
