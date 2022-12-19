@@ -11,7 +11,6 @@ from encord_active.app.common.components.individual_tagging import (
     tag_creator,
 )
 from encord_active.app.common.page import Page
-from encord_active.app.common.utils import load_merged_df
 from encord_active.app.data_quality.common import (
     MetricType,
     load_available_metrics,
@@ -24,7 +23,6 @@ class SummaryPage(Page):
 
     def sidebar_options(self):
         self.row_col_settings_in_sidebar()
-        load_merged_df()
         tag_creator()
 
     def build(self, metric_type_selection: MetricType):
