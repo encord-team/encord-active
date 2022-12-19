@@ -29,7 +29,7 @@ def set_page_config():
 def setup_page():
     populate_session_state()
     write_page_css()
-    DBConnection.set_dbfile(st.session_state.db_path)
+    DBConnection.set_project_path(st.session_state.project_dir)
 
 
 def load_json(json_file: Path) -> Optional[dict]:
