@@ -1,5 +1,6 @@
 import argparse
 from functools import reduce
+from pathlib import Path
 from typing import Callable, Dict, Optional, Union
 
 import streamlit as st
@@ -56,8 +57,10 @@ def to_items(d: dict, parent_key: Optional[str] = None):
 def main(project_path: str):
     set_page_config()
 
-    if not state.set_project_dir(project_path):
+    st.session_state.project_dir = Path(project_path).expanduser().absolute()
+    if not st.session_state.project_dir.is_dir():
         st.error(f"Project not found for directory `{project_path}`.")
+        st.stop()
 
     with st.sidebar:
         items = to_items(pages)
