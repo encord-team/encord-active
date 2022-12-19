@@ -15,6 +15,7 @@ from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
 from loguru import logger
 
+from encord_active.lib.common.project_file_structure import ProjectFileStructure
 from encord_active.lib.common.utils import (
     collect_async,
     download_file,
@@ -30,6 +31,7 @@ encord_logger.setLevel(logging.ERROR)
 class Project:
     def __init__(self, project_dir: Path):
         self.project_dir: Path = project_dir
+        self.project_file_structure = ProjectFileStructure(project_dir)
         self.project_meta: Dict[str, str] = {}
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
@@ -90,22 +92,6 @@ class Project:
         return self.load()
 
     @property
-    def data_dir_path(self) -> Path:
-        return self.project_dir / "data"
-
-    @property
-    def label_row_meta_file_path(self) -> Path:
-        return self.project_dir / "label_row_meta.json"
-
-    @property
-    def ontology_file_path(self) -> Path:
-        return self.project_dir / "ontology.json"
-
-    @property
-    def project_meta_file_path(self) -> Path:
-        return self.project_dir / "project_meta.yaml"
-
-    @property
     def is_loaded(self) -> bool:
         return all(
             map(
@@ -119,35 +105,34 @@ class Project:
             )
         )
 
-    def get_label_row_file_path(self, label_hash: str) -> Path:
-        return self.data_dir_path / label_hash / "label_row.json"
-
     def __save_project_meta(self, encord_project: EncordProject):
-        project_meta = {
-            "project_title": encord_project.title,
-            "project_description": encord_project.description,
-            "project_hash": encord_project.project_hash,
-        }
-        project_meta_file_path = self.project_meta_file_path
-        project_meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
+        project_meta_file_path = self.project_file_structure.project_meta
+        self.project_meta.update(
+            {
+                "project_title": encord_project.title,
+                "project_description": encord_project.description,
+                "project_hash": encord_project.project_hash,
+            }
+        )
+        project_meta_file_path.write_text(yaml.safe_dump(self.project_meta), encoding="utf-8")
 
     def __save_ontology(self, encord_project: EncordProject):
-        ontology_file_path = self.ontology_file_path
+        ontology_file_path = self.project_file_structure.ontology
         ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
 
     def __load_ontology(self):
-        ontology_file_path = self.ontology_file_path
+        ontology_file_path = self.project_file_structure.ontology
         if not ontology_file_path.exists():
             raise FileNotFoundError(f"Expected file `ontology.json` at {ontology_file_path.parent}")
         self.ontology = OntologyStructure.from_dict(json.loads(ontology_file_path.read_text(encoding="utf-8")))
 
     def __save_label_row_meta(self, encord_project: EncordProject):
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta_file_path = self.label_row_meta_file_path
+        label_row_meta_file_path = self.project_file_structure.label_row_meta
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
-        label_row_meta_file_path = self.label_row_meta_file_path
+        label_row_meta_file_path = self.project_file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_meta = {
@@ -165,8 +150,8 @@ class Project:
         self.label_rows = {}
         self.image_paths = {}
         for lr_hash in self.label_row_meta.keys():
-            lr_file_path = self.get_label_row_file_path(lr_hash)
-            lr_images_dir = self.data_dir_path / lr_hash / "images"
+            lr_file_path = self.project_file_structure.get_label_row_file_path(lr_hash)
+            lr_images_dir = self.project_file_structure.data / lr_hash / "images"
             if not lr_file_path.is_file() or not lr_images_dir.is_dir():
                 logger.warning(
                     f"Skipping label row <blue>`{lr_hash}`</blue> as no stored content was found for the label row."
