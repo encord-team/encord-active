@@ -1,22 +1,21 @@
 import json
+from pathlib import Path
 from typing import List
 
 import pandas as pd
-import streamlit as st
 from encord.project_ontology.classification_type import ClassificationType
 
-from encord_active.app.common.state import MERGED_DATAFRAME
 from encord_active.lib.db.connection import DBConnection
 
 TABLE_NAME = "merged_metrics"
 
 
-def build_merged_metrics() -> pd.DataFrame:
+def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
     main_df_images = pd.DataFrame(columns=["identifier"])
     main_df_objects = pd.DataFrame(columns=["identifier"])
     main_df_image_quality = pd.DataFrame()
 
-    for index in st.session_state.metric_dir.glob("*.csv"):
+    for index in metrics_path.glob("*.csv"):
         meta_pth = index.with_suffix(".meta.json")
         if not meta_pth.is_file():
             continue
@@ -78,9 +77,7 @@ def ensure_initialised(fn):
         try:
             return fn(*args, **kwargs)
         except:
-            merged_metrics = st.session_state.get(MERGED_DATAFRAME)
-            if merged_metrics is None:
-                merged_metrics = build_merged_metrics()
+            merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
             MergedMetrics().replace_all(merged_metrics)
             return fn(*args, **kwargs)
 
