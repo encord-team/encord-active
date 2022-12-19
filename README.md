@@ -21,6 +21,13 @@ Use Encord Active to visualise your data, evaluate your models, surface model fa
 
 ![video](resources/ea-demo.gif)
 
+## 💡 When to use Encord Active?
+
+Encord Active helps you understand and improve your data, labels, and models at all stages of your computer vision journey.
+Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production.
+
+![encord active diagram](resources/process-chart-ea.webp)
+
 ## Installation
 
 The simplest way to install the CLI is using `pip` in a suitable virtual environment:
