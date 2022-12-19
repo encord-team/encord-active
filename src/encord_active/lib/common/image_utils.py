@@ -7,25 +7,10 @@ import cv2
 import numpy as np
 import pandas as pd
 import streamlit as st
+from pandas import Series
 
-from encord_active.app.common.css import write_page_css
-from encord_active.app.common.state import populate_session_state
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.utils import get_du_size
-
-
-def set_page_config():
-    favicon_pth = Path(__file__).parents[1] / "assets" / "favicon-32x32.png"
-    st.set_page_config(
-        page_title="Encord Active",
-        layout="wide",
-        page_icon=favicon_pth.as_posix(),
-    )
-
-
-def setup_page():
-    populate_session_state()
-    write_page_css()
 
 
 def load_json(json_file: Path) -> Optional[dict]:
@@ -37,6 +22,22 @@ def load_json(json_file: Path) -> Optional[dict]:
             return json.load(f)
         except JSONDecodeError:
             return None
+
+
+def show_image_and_draw_polygons(row: Union[Series, str], draw_polygons: bool = True) -> np.ndarray:
+    # === Read and annotate the image === #
+    image = load_or_fill_image(row)
+
+    # === Draw polygons / bboxes if available === #
+    is_closed = True
+    thickness = int(image.shape[1] / 150)
+
+    img_h, img_w = image.shape[:2]
+    if draw_polygons:
+        for color, geometry in get_geometries(row, img_h=img_h, img_w=img_w):
+            image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
+
+    return image
 
 
 def load_or_fill_image(row: Union[pd.Series, str]) -> np.ndarray:

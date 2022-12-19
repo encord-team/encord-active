@@ -25,14 +25,14 @@ from encord_active.app.common.components.individual_tagging import (
     multiselect_tag,
     tag_creator,
 )
-from encord_active.app.common.metric import MetricData, load_metric
 from encord_active.app.common.page import Page
 from encord_active.app.common.utils import build_pagination, get_df_subset
-from encord_active.app.data_quality.common import (
+from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
 from encord_active.lib.common.metric import AnnotationType, EmbeddingType
+from encord_active.lib.metrics.load_metrics import MetricData, load_metric
 
 
 class ExplorerPage(Page):

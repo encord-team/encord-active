@@ -2,8 +2,8 @@ import pandas as pd
 import streamlit as st
 
 import encord_active.app.common.state as state
-from encord_active.app.common.colors import Color
 from encord_active.app.model_quality.components import false_negative_view
+from encord_active.lib.common.colors import Color
 
 from . import HistogramMixin, ModelQualityPage
 
