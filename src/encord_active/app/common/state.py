@@ -61,26 +61,7 @@ ACTION_PAGE_CLONE_BUTTON = "action_page_clone_button"
 ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
 
 
-def set_project_dir(project_dir: str) -> bool:
-    _project_dir = Path(project_dir).expanduser().absolute()
-
-    if not _project_dir.is_dir():
-        return False
-    else:
-        PROJECT_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with PROJECT_CACHE_FILE.open("w", encoding="utf-8") as f:
-            f.write(_project_dir.as_posix())
-        st.session_state.project_dir = _project_dir
-        return True
-
-
 def populate_session_state():
-    if "project_dir" not in st.session_state:
-        # Try using a cached one
-        if PROJECT_CACHE_FILE.is_file():
-            with PROJECT_CACHE_FILE.open("r", encoding="utf-8") as f:
-                st.session_state.project_dir = Path(f.readline())
-
     st.session_state.metric_dir = st.session_state.project_dir / "metrics"
     st.session_state.embeddings_dir = st.session_state.project_dir / "embeddings"
     st.session_state.predictions_dir = st.session_state.project_dir / "predictions"
