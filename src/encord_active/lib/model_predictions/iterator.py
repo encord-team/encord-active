@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytz
+from encord.objects.common import Shape
+from encord.objects.ontology_object import Object
 from pandas import Series
 from tqdm import tqdm
 
@@ -41,7 +43,7 @@ class PredictionIterator(Iterator):
         # Predictions
         predictions_file = cache_dir / "predictions" / "predictions.csv"
         predictions = pd.read_csv(predictions_file, index_col=0)
-        self.length = predictions["img_id"].unique().shape[0]
+        self.length = predictions["img_id"].nunique()
 
         identifiers = predictions["identifier"].str.split("_", expand=True)
         identifiers.columns = ["label_hash", "du_hash", "frame", "object_hash"][: len(identifiers.columns)]
@@ -57,8 +59,8 @@ class PredictionIterator(Iterator):
         with class_idx_file.open("r", encoding="utf-8") as f:
             class_idx = json.load(f)
 
-        self.ontology_objects = {
-            int(k): next(o for o in self.project.ontology["objects"] if v["featureHash"] == o["featureNodeHash"])
+        self.ontology_objects: Dict[int, Object] = {
+            int(k): next(o for o in self.project.ontology.objects if v["featureHash"] == o.feature_node_hash)
             for k, v in class_idx.items()
         }
         self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Path]]] = []
@@ -77,8 +79,8 @@ class PredictionIterator(Iterator):
 
     def get_encord_object(self, pred: Tuple[Any, Series], width: int, height: int):
         _pred = pred[1]
-        ontology_object: dict = self.ontology_objects[_pred["class_id"]]
-        if ontology_object["shape"] == "bounding_box":
+        ontology_object: Object = self.ontology_objects[_pred["class_id"]]
+        if ontology_object.shape == Shape.BOUNDING_BOX:
             x1, y1, x2, y2 = _pred["x1"], _pred["y1"], _pred["x2"], _pred["y2"]
             object_data = {
                 "x": x1 / width,
@@ -105,17 +107,17 @@ class PredictionIterator(Iterator):
 
         object_hash = _pred["identifier"].rsplit("_", 1)[1]
         timestamp: str = get_timestamp()
-        shape: str = ontology_object["shape"]
+        shape: str = ontology_object.shape.value
 
         object_dict = {
-            "name": ontology_object["name"],
-            "color": ontology_object["color"],
-            "value": lower_snake_case(ontology_object["name"]),
+            "name": ontology_object.name,
+            "color": ontology_object.color,
+            "value": lower_snake_case(ontology_object.name),
             "createdAt": timestamp,
             "createdBy": "model_predictions@encord.com",
             "confidence": _pred["confidence"],
             "objectHash": object_hash,
-            "featureHash": ontology_object["featureNodeHash"],
+            "featureHash": ontology_object.feature_node_hash,
             "lastEditedAt": timestamp,
             "lastEditedBy": "model_predictions@encord.com",
             "shape": shape,

@@ -10,11 +10,10 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from encord import Project
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from encord_active.lib.common.prepare import prepare_data
+from encord_active.lib.common.project import Project
 from encord_active.lib.common.utils import binary_mask_to_rle, rle_iou
 
 logger = logging.getLogger(__name__)
@@ -169,13 +168,13 @@ class PredictionWriter:
         self.predictions_file = None
         self.object_predictions: List[List[Any]] = []  # [[key, img_id, class_id, confidence, x1, y1, x2, y2], ...]
 
-        self.project = project
-        self.object_lookup = {o["featureNodeHash"]: o for o in self.project.ontology["objects"]}
-
         logger.info("Fetching project label rows to be able to match predictions.")
-        self.label_rows = prepare_data(cache_dir, project=project, **kwargs).label_rows
-        self.label_row_meta = {lr["label_hash"]: lr for lr in self.project.label_rows if lr["label_hash"] is not None}
+        self.project = project.load()
+        self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
+        # todo check if it is really necessary to read from project from Encord (probably should be local storage)
+        self.label_rows = project.label_rows
+        self.label_row_meta = self.project.label_row_meta
         self.uuids: Set[str] = set()
 
         self.__prepare_lr_lookup()
@@ -186,7 +185,7 @@ class PredictionWriter:
     def __prepare_lr_lookup(self):
         logger.debug("Preparing label row lookup")
         # Top level data hashes
-        self.lr_lookup: Dict[str, str] = {d["data_hash"]: d["label_hash"] for d in self.project.label_rows}
+        self.lr_lookup: Dict[str, str] = {m.data_hash: m.label_hash for m in self.project.label_row_meta.values()}
         # Nested data hashes for every data unit in the project
         for lr in self.label_rows.values():
             self.lr_lookup.update({du_hash: lr["label_hash"] for du_hash in lr["data_units"]})
@@ -209,7 +208,7 @@ class PredictionWriter:
         logger.debug("Preparing class id lookup")
         self.custom_map = False
         if custom_map:
-            feature_hashes = {o["featureNodeHash"] for o in self.project.ontology["objects"]}
+            feature_hashes = {o.feature_node_hash for o in self.project.ontology.objects}
             custom_hashes = set(custom_map.keys())
             if not all([c in feature_hashes for c in custom_hashes]):
                 raise ValueError("custom map keys should correspond to `featureNodeHashes` from the project ontology.")
@@ -218,12 +217,12 @@ class PredictionWriter:
             self.custom_map = True
         else:
             self.object_class_id_lookup = {}
-            for obj in self.project.ontology["objects"]:
-                self.object_class_id_lookup[obj["featureNodeHash"]] = len(self.object_class_id_lookup)
+            for obj in self.project.ontology.objects:
+                self.object_class_id_lookup[obj.feature_node_hash] = len(self.object_class_id_lookup)
 
         self.classification_class_id_lookup: Dict[str, int] = {}
-        for obj in self.project.ontology["classifications"]:
-            self.classification_class_id_lookup[obj["featureNodeHash"]] = len(self.classification_class_id_lookup)
+        for obj in self.project.ontology.classifications:
+            self.classification_class_id_lookup[obj.feature_node_hash] = len(self.classification_class_id_lookup)
 
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
@@ -237,7 +236,7 @@ class PredictionWriter:
             label_hash = self.lr_lookup[du_hash]
             row = [
                 f"{label_hash}_{du_hash}_{frame:05d}_{o['objectHash']}",
-                f"{BASE_URL}{self.label_row_meta[label_hash]['data_hash']}&{self.project.project_hash}/{frame}",
+                f"{BASE_URL}{self.label_row_meta[label_hash].data_hash}&{self.project.project_hash}/{frame}",
                 self.get_image_id(du_hash, frame),  # Image id
                 class_id,  # Class id
                 o["objectHash"],  # Object hash
@@ -339,8 +338,8 @@ class PredictionWriter:
 
             class_index[v] = {
                 "featureHash": k,
-                "name": self.object_lookup[k]["name"],
-                "color": self.object_lookup[k]["color"],
+                "name": self.object_lookup[k].name,
+                "color": self.object_lookup[k].color,
             }
 
         with (self.cache_dir / "class_idx.json").open("w") as f:
@@ -422,8 +421,8 @@ class PredictionWriter:
                 x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
             else:  # Polygon is points
                 # Read image size from label row
-                if np.all(np.logical_and(polygon >= 0.0, polygon <= 1.0)):
-                    polygon = polygon * np.array([[width, height]])
+                if np.issubdtype(polygon.dtype, np.integer):
+                    polygon = polygon.astype(float) / np.array([[width, height]])
 
                 np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
                 x1, y1, w, h = cv2.boundingRect(polygon.reshape(-1, 1, 2).astype(int))  # type: ignore
@@ -466,11 +465,13 @@ class PredictionWriter:
             )
 
         ontology_object = self.object_lookup[class_uid]
-        if ontology_object["shape"] != ptype.value:
+        if ontology_object.shape.value != ptype.value:
             raise ValueError(
-                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object['shape']}"
+                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
             )
 
         image_id = self.get_image_id(data_hash, _frame)
-        url = f"{BASE_URL}{self.label_row_meta[self.lr_lookup[data_hash]]['data_hash']}&{self.project.project_hash}/{_frame}"
+        url = (
+            f"{BASE_URL}{self.label_row_meta[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}"
+        )
         self.object_predictions.append([key, url, image_id, class_id, confidence_score] + points + [mask])

@@ -1,11 +1,12 @@
 from pathlib import Path
 
-from encord import EncordUserClient, Project
+from encord import EncordUserClient
+from encord import Project as EncordProject
 
 from encord_active.lib.common.utils import fetch_project_meta
 
 
-def get_local_project(project_dir: Path) -> Project:
+def get_local_project(project_dir: Path) -> EncordProject:
     project_meta = fetch_project_meta(project_dir)
 
     ssh_key_path = Path(project_meta["ssh_key_path"])

@@ -14,7 +14,7 @@ from encord.orm.label_log import LabelLog
 from loguru import logger
 from tqdm import tqdm
 
-from encord_active.lib.common.prepare import EAProject, prepare_data
+from encord_active.lib.common.project import Project
 
 
 class Iterator(Sized):
@@ -26,7 +26,11 @@ class Iterator(Sized):
         self.du_hash = ""
         self.frame = -1
         self.num_frames = -1
-        self.project: EAProject = prepare_data(cache_dir, subset_size=subset_size, **kwargs)
+        self.project: Project
+        if "project" in kwargs and kwargs["project"]:
+            self.project = Project(cache_dir).from_encord_project(kwargs["project"])
+        else:
+            self.project = Project(cache_dir).load(subset_size)
         self.label_rows = self.project.label_rows
 
     @abstractmethod
@@ -114,7 +118,7 @@ class DatasetIterator(Iterator):
 
     def get_data_url(self) -> str:
         base_url = "https://app.encord.com/label_editor/"
-        data_url = f"{base_url}{self.project.label_row_meta[self.label_hash]['data_hash']}&{self.project.project_hash}"
+        data_url = f"{base_url}{self.project.label_row_meta[self.label_hash].data_hash}&{self.project.project_hash}"
         if isinstance(self.frame, int):
             data_url += f"/{self.frame}"
         return data_url

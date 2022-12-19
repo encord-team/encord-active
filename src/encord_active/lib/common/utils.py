@@ -2,6 +2,7 @@ import os
 import shutil
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
+from concurrent.futures import as_completed
 from itertools import product
 from pathlib import Path
 from typing import Any, Collection, Dict, List, Optional, Tuple, Union
@@ -9,6 +10,7 @@ from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 import av
 import cv2
 import numpy as np
+import requests
 import yaml
 from encord import EncordUserClient, Project
 from loguru import logger
@@ -338,3 +340,51 @@ def mask_to_polygon(mask: np.ndarray) -> Tuple[Optional[List[Any]], CocoBbox]:
             return contour.squeeze(1).tolist(), (x, y, w, h)
 
     return None, (x, y, w, h)
+
+
+def collect_async(fn, job_args, key_fn, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
+    """
+    Distribute work across multiple workers. Good for, e.g., downloading data.
+    Will return results in dictionary.
+    :param fn: The function to be applied
+    :param job_args: Arguments to `fn`.
+    :param key_fn: Function to determine dictionary key for the result (given the same input as `fn`).
+    :param max_workers: Number of workers to distribute work over.
+    :param kwargs: Arguments passed on to tqdm.
+    :return: Dictionary {key_fn(*job_args): fn(*job_args)}
+    """
+    job_args = list(job_args)
+    if not isinstance(job_args[0], tuple):
+        job_args = [(j,) for j in job_args]
+
+    results = {}
+    with tqdm(total=len(job_args), **kwargs) as pbar:
+        with Executor(max_workers=max_workers) as exe:
+            jobs = {exe.submit(fn, *args): key_fn(*args) for args in job_args}
+            for job in as_completed(jobs):
+                key = jobs[job]
+
+                result = job.result()
+                if result:
+                    results[key] = result
+
+                pbar.update(1)
+    return results
+
+
+def download_file(
+    url: str,
+    destination: Path,
+    byte_size=1024,
+):
+    if destination.is_file():
+        return destination
+
+    r = requests.get(url, stream=True)
+    with destination.open("wb") as f:
+        for chunk in r.iter_content(chunk_size=byte_size):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+                f.flush()
+
+    return destination
