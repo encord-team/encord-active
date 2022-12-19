@@ -103,9 +103,6 @@ def tag_creator():
             st.info(st.session_state.new_tag_message)
             del st.session_state.new_tag_message
 
-        all_tags = Tags().all()
-        st.session_state[state.ALL_TAGS] = all_tags
-
         def on_tag_entered():
             tag_name = st.session_state.get("new_tag_name_input", "").strip()
             try:
