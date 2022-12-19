@@ -12,13 +12,13 @@ import encord_active.app.common.state as state
 from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.css import write_page_css
 from encord_active.app.common.state import populate_session_state
-from encord_active.app.db.merged_metrics import MergedMetrics
 from encord_active.lib.common.utils import get_du_size
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.merged_metrics import MergedMetrics
 
 
 def set_page_config():
-    project_root = Path(__file__).parents[1]
-    favicon_pth = project_root / "assets" / "favicon-32x32.png"
+    favicon_pth = Path(__file__).parents[1] / "assets" / "favicon-32x32.png"
     st.set_page_config(
         page_title="Encord Active",
         layout="wide",
@@ -29,6 +29,7 @@ def set_page_config():
 def setup_page():
     populate_session_state()
     write_page_css()
+    DBConnection.set_dbfile(st.session_state.db_path)
 
 
 def load_json(json_file: Path) -> Optional[dict]:

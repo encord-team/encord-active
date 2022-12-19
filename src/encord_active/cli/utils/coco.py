@@ -3,9 +3,9 @@ from pathlib import Path
 
 import numpy as np
 
-from encord_active.app.db.predictions import BoundingBox, Format, Prediction
 from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME, CocoImporter
 from encord_active.lib.coco.parsers import parse_results
+from encord_active.lib.db.predictions import BoundingBox, Format, Prediction
 from encord_active.lib.metrics.run_all import run_metrics
 
 
