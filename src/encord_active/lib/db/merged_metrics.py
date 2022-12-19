@@ -6,7 +6,7 @@ import streamlit as st
 from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.app.common.state import MERGED_DATAFRAME
-from encord_active.app.db.connection import DBConnection
+from encord_active.lib.db.connection import DBConnection
 
 TABLE_NAME = "merged_metrics"
 

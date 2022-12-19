@@ -5,7 +5,7 @@ import streamlit as st
 from pandas import DataFrame
 
 import encord_active.app.common.state as state
-from encord_active.app.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.merged_metrics import MergedMetrics
 
 
 class TagAction(str, Enum):
