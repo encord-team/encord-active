@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import altair as alt
 import pandas as pd
 import streamlit as st
-from screeninfo import Monitor, ScreenInfoError, get_monitors
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
@@ -72,49 +71,6 @@ class ModelQualityPage(Page):
         if metric_meta:
             st.markdown(f"### The {metric_meta['title']} metric")
             st.markdown(metric_meta["long_description"])
-
-    @staticmethod
-    def row_col_settings_in_sidebar():
-        with st.expander("Settings"):
-            m_max = Monitor(height=0, width=0, x=0, y=0)
-            try:
-                monitors = get_monitors()
-            except ScreenInfoError:
-                monitors = []
-
-            for m in monitors:
-                if m.width * m.height > m_max.width * m_max.height:
-                    m_max = m
-
-            default_mv_column_num = (m_max.width // 250) or 4
-            default_mv_row_num = (m_max.height // 250) or 4
-
-            if state.MAIN_VIEW_COLUMN_NUM not in st.session_state:
-                st.session_state[state.MAIN_VIEW_COLUMN_NUM] = default_mv_column_num
-
-            if state.MAIN_VIEW_ROW_NUM not in st.session_state:
-                st.session_state[state.MAIN_VIEW_ROW_NUM] = default_mv_row_num
-
-            with st.form(key="settings_from"):
-                setting_columns = st.columns(2)
-
-                setting_columns[0].number_input(
-                    "Columns",
-                    min_value=2,
-                    value=default_mv_column_num,
-                    key=state.MAIN_VIEW_COLUMN_NUM,
-                    help="Number of columns to show images in the main view",
-                )
-
-                setting_columns[1].number_input(
-                    "Rows",
-                    min_value=1,
-                    value=default_mv_row_num,
-                    key=state.MAIN_VIEW_ROW_NUM,
-                    help="Number of rows to show images in the main view",
-                )
-
-                st.form_submit_button(label="Apply")
 
 
 class HistogramMixin:

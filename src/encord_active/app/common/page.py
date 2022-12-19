@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
 import streamlit as st
-from screeninfo import Monitor, ScreenInfoError, get_monitors
 
 import encord_active.app.common.state as state
 from encord_active.lib.common.metric import EmbeddingType
@@ -32,19 +31,9 @@ class Page(ABC):
 
     @staticmethod
     def row_col_settings_in_sidebar():
-        m_max = Monitor(height=0, width=0, x=0, y=0)
-        try:
-            monitors = get_monitors()
-        except ScreenInfoError:
-            monitors = []
-
-        for m in monitors:
-            if m.width * m.height > m_max.width * m_max.height:
-                m_max = m
-
-        col_default_max, row_default_max = 10, 4
-        default_mv_column_num = min(m_max.width // 200, col_default_max) or 4
-        default_mv_row_num = min(m_max.height // 200, row_default_max) or 4
+        col_default_max, row_default_max = 10, 5
+        default_mv_column_num = 4
+        default_mv_row_num = 5
         default_knn_num = 8
 
         with st.expander("Settings"):
