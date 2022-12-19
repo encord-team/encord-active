@@ -2,11 +2,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from encord_active.lib.common.project_file_structure import ProjectFileStructure
+
 # CONSTANTS
 PROJECT_CACHE_FILE = Path.home() / ".encord_quality" / "current_project_dir.txt"
-
-# DATABASE
-DB_FILE_NAME = "sqlite.db"
 
 # STATE VARIABLE KEYS
 CLASS_SELECTION = "class_selection"
@@ -62,9 +61,10 @@ ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
 
 
 def populate_session_state():
-    st.session_state.metric_dir = st.session_state.project_dir / "metrics"
-    st.session_state.embeddings_dir = st.session_state.project_dir / "embeddings"
-    st.session_state.predictions_dir = st.session_state.project_dir / "predictions"
-    st.session_state.data_dir = st.session_state.project_dir / "data"
-    st.session_state.ontology_file = st.session_state.project_dir / "ontology.json"
-    st.session_state.db_path = st.session_state.project_dir / DB_FILE_NAME
+    project_file_structure = ProjectFileStructure(st.session_state.project_dir)
+    st.session_state.metric_dir = project_file_structure.metrics
+    st.session_state.embeddings_dir = project_file_structure.embeddings
+    st.session_state.predictions_dir = project_file_structure.predictions
+    st.session_state.data_dir = project_file_structure.data
+    st.session_state.ontology_file = project_file_structure.ontology
+    st.session_state.db_path = project_file_structure.db
