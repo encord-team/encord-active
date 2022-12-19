@@ -3,6 +3,9 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.lib.common.project_file_structure import ProjectFileStructure
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tags
 
 # CONSTANTS
 PROJECT_CACHE_FILE = Path.home() / ".encord_quality" / "current_project_dir.txt"
@@ -68,3 +71,11 @@ def populate_session_state():
     st.session_state.data_dir = project_file_structure.data
     st.session_state.ontology_file = project_file_structure.ontology
     st.session_state.db_path = project_file_structure.db
+
+    DBConnection.set_project_path(st.session_state.project_dir)
+
+    if MERGED_DATAFRAME not in st.session_state:
+        st.session_state[MERGED_DATAFRAME] = MergedMetrics().all()
+
+    if ALL_TAGS not in st.session_state:
+        st.session_state[ALL_TAGS] = Tags().all()

@@ -12,7 +12,7 @@ from pandas.api.types import (
 
 import encord_active.app.common.state as state
 from encord_active.app.common.action_utils import create_new_project_on_encord_platform
-from encord_active.app.common.utils import load_merged_df, set_page_config, setup_page
+from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.db.tags import Tags
 
@@ -101,7 +101,6 @@ def export_filter():
 
     st.header("Filter & Export")
 
-    load_merged_df()
     filtered_df = filter_dataframe(st.session_state[state.MERGED_DATAFRAME].copy())
     filtered_df.reset_index(inplace=True)
     st.markdown(f"**Total row:** {filtered_df.shape[0]}")

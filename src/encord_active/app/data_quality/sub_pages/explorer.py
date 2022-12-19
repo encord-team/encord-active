@@ -27,11 +27,7 @@ from encord_active.app.common.components.individual_tagging import (
 )
 from encord_active.app.common.metric import MetricData, load_metric
 from encord_active.app.common.page import Page
-from encord_active.app.common.utils import (
-    build_pagination,
-    get_df_subset,
-    load_merged_df,
-)
+from encord_active.app.common.utils import build_pagination, get_df_subset
 from encord_active.app.data_quality.common import (
     load_or_fill_image,
     show_image_and_draw_polygons,
@@ -43,7 +39,6 @@ class ExplorerPage(Page):
     title = "🔎 Explorer"
 
     def sidebar_options(self, available_metrics: List[MetricData]):
-        load_merged_df()
         tag_creator()
 
         if not available_metrics:

@@ -8,13 +8,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-import encord_active.app.common.state as state
 from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.css import write_page_css
 from encord_active.app.common.state import populate_session_state
 from encord_active.lib.common.utils import get_du_size
-from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics
 
 
 def set_page_config():
@@ -29,7 +26,6 @@ def set_page_config():
 def setup_page():
     populate_session_state()
     write_page_css()
-    DBConnection.set_project_path(st.session_state.project_dir)
 
 
 def load_json(json_file: Path) -> Optional[dict]:
@@ -223,8 +219,3 @@ def key_to_image_path(key: str) -> Optional[Path]:
     if frame_pth is not None:
         return frame_pth
     return next(img_folder.glob(f"{du_hash}.*"), None)  # So this is an img_group image
-
-
-def load_merged_df():
-    if state.MERGED_DATAFRAME not in st.session_state:
-        st.session_state[state.MERGED_DATAFRAME] = MergedMetrics().all()
