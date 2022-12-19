@@ -4,6 +4,7 @@ import streamlit as st
 from pandas import Series
 
 import encord_active.app.common.state as state
+from encord_active.lib.db.helpers.tags import count_of_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tags
 
@@ -57,15 +58,7 @@ def multiselect_tag(row: Series, key_prefix: str, metric_type: MetricType):
 
 
 def tag_display_with_counts():
-    all_tags = Tags().all()
-    if not all_tags:
-        return
-
-    tag_counts = st.session_state[state.MERGED_DATAFRAME]["tags"].value_counts()
-    all_counts = {tag: 0 for tag in all_tags}
-    for unique_list, count in tag_counts.items():
-        for tag in unique_list:
-            all_counts[tag] = all_counts.get(tag, 0) + count
+    all_counts = count_of_tags(st.session_state[state.MERGED_DATAFRAME])
 
     sorted_tags = sorted(all_counts.items(), key=lambda x: x[0].lower())
     st.markdown(
