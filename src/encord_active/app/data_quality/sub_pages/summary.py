@@ -4,15 +4,15 @@ import pandas as pd
 import streamlit as st
 
 import encord_active.app.common.state as state
-from encord_active.app.common import metric as iutils
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tag_creator import tag_creator
 from encord_active.app.common.page import Page
-from encord_active.app.data_quality.common import (
-    MetricType,
+from encord_active.lib.common.image_utils import show_image_and_draw_polygons
+from encord_active.lib.metrics.load_metrics import (
+    MetricScope,
     load_available_metrics,
-    show_image_and_draw_polygons,
+    load_metric,
 )
 
 
@@ -23,7 +23,7 @@ class SummaryPage(Page):
         self.row_col_settings_in_sidebar()
         tag_creator()
 
-    def build(self, metric_type_selection: MetricType):
+    def build(self, metric_type_selection: MetricScope):
         st.markdown(f"# {self.title}")
         st.subheader("Outliers by IQR range for every metric")
 
@@ -59,10 +59,10 @@ class SummaryPage(Page):
         n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
         n_items_in_page = n_cols * n_rows
 
-        metrics = load_available_metrics(metric_type_selection.value)
+        metrics = load_available_metrics(st.session_state.metric_dir, metric_type_selection)
 
         for idx in metrics:
-            df = iutils.load_metric(idx, normalize=False)
+            df = load_metric(idx, normalize=False)
 
             current_df = df.copy()
 

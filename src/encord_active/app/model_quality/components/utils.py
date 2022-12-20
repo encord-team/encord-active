@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from encord_active.app.common.colors import Color, hex_to_rgb
+from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.utils import rle_to_binary_mask
 
 
