@@ -1,10 +1,8 @@
 import json
+import os
 from pathlib import Path
 from shutil import copyfile
 from typing import Dict, List, Optional
-from PIL import ImageOps
-from PIL import Image as pil_image
-import os
 
 import requests
 import typer
@@ -16,6 +14,8 @@ from encord.objects.ontology_structure import OntologyStructure
 from encord.ontology import Ontology
 from encord.orm.dataset import CreateDatasetResponse, DataRow, Image, StorageLocation
 from encord.utilities import label_utilities
+from PIL import Image as pil_image
+from PIL import ImageOps
 from tqdm import tqdm
 
 from encord_active.lib.coco.datastructure import CocoAnnotation, CocoImage
@@ -48,12 +48,12 @@ def upload_img(
 
     img = pil_image.open(file_path)
     img_exif = img.getexif()
-    if img_exif and (274 in img_exif): # 274 corresponds to orientation key for EXIF metadata
-        temp_file_name = 'temp_image'+ file_path.suffix
+    if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
+        temp_file_name = "temp_image" + file_path.suffix
         img = ImageOps.exif_transpose(img)
         img.save(temp_file_name)
 
-        encord_image =  dataset_tmp.upload_image(
+        encord_image = dataset_tmp.upload_image(
             title=str(coco_image.id_),
             file_path=temp_file_name,
         )
