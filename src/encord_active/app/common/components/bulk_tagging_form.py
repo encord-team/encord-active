@@ -1,5 +1,4 @@
 from enum import Enum
-from time import perf_counter
 from typing import List, NamedTuple, Optional
 
 import streamlit as st
@@ -40,9 +39,7 @@ def action_bulk_tags(subset: DataFrame, selected_tags: List[Tag], action: TagAct
     all_df: DataFrame = st.session_state[state.MERGED_DATAFRAME].copy()
 
     for tag in selected_tags:
-        start = perf_counter()
         target_ids = [target_identifier(id, tag.scope) for id in subset.identifier.to_list()]
-        print(perf_counter() - start)
         for id, tags in all_df.loc[target_ids, "tags"].items():
             if action == TagAction.ADD:
                 next = list(set(tags + [tag]))
