@@ -55,7 +55,7 @@ properties: List[Property] = [
 ]
 
 TAG_TEMPLATE = """    <div class="tags-item">
-        <i class="fa-solid fa-%s text-%s"></i> 
+        <i class="fa-solid fa-%s text-%s"></i>
         %s
         <span class="tooltiptext">%s</span>
     </div>"""
