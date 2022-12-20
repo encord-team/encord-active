@@ -354,3 +354,4 @@ tags
 /local_tests/
 
 imports.prof
+examples/mask-rcnn/config.ini
