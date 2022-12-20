@@ -1,3 +1,11 @@
+<p align="center">
+<a href="https://encord-active-docs.web.app">Documentation</a> |
+<a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing">Try it Now</a> |
+<a href="https://encord.com/encord_active/">Website</a> |
+<a href="https://encord.com/blog/">Blog</a> |
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q">Slack Community</a>
+</p>
+
 <h1 align="center">
   <p align="center">Encord Active</p>
   <a href="https://encord.com"><img src="src/encord_active/app/assets/encord_2_02.png" width="150" alt="Encord logo"/></a>
@@ -15,9 +23,9 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source active learning framework to help you find failure modes in your models and improve your data quality and model performance.
+[Encord Active][encord-active-landing] is an open-source active learning framework that helps you find failure modes in your models and improve your data quality and model performance.
 
-Use Encord Active to visualise your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
+Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
 ![video](resources/ea-demo.gif)
 
@@ -48,7 +56,7 @@ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
 
-## 👋 Quick start
+## 👋 Quickstart
 
 Get started immediately by sourcing your environment and running the code below.
 This downloads a small dataset and launches the Encord Active App for you to explore:
@@ -119,7 +127,7 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ## 🧑🏽‍💻Development
 
-### 🛠 Write your own metrics
+### 🛠 Build your own metrics
 
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
 
