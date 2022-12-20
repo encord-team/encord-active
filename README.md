@@ -15,7 +15,7 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source active learning framework to help you find failure modes in your models and improve your data quality and model performance.
+[Encord Active][encord-active-landing] is an open-source active learning framework that helps you find failure modes in your models and improve your data quality and model performance.
 
 Use Encord Active to visualise your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
@@ -48,7 +48,7 @@ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
 
-## 👋 Quick start
+## 👋 Quickstart
 
 Get started immediately by sourcing your environment and running the code below.
 This downloads a small dataset and launches the Encord Active App for you to explore:
