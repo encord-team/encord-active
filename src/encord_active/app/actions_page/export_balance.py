@@ -12,12 +12,15 @@ import streamlit as st
 from tqdm import tqdm
 
 import encord_active.app.common.state as state
-from encord_active.app.common import metric as iutils
 from encord_active.app.common.components import multiselect_with_all_option
-from encord_active.app.common.metric import MetricData
 from encord_active.app.common.utils import set_page_config, setup_page
-from encord_active.app.data_quality.common import MetricType, load_available_metrics
 from encord_active.lib.coco.encoder import generate_coco_file
+from encord_active.lib.metrics.load_metrics import (
+    MetricData,
+    MetricScope,
+    load_available_metrics,
+    load_metric,
+)
 
 
 def add_partition():
@@ -37,7 +40,7 @@ def metrics_panel() -> Tuple[List[MetricData], int]:
         seed (int): The seed for the random sampling.
     """
     # TODO - add label metrics
-    metrics = load_available_metrics(MetricType.DATA_QUALITY.value)  # type: ignore
+    metrics = load_available_metrics(st.session_state.metric_dir, MetricScope.DATA_QUALITY)
     metric_names = [metric.name for metric in metrics]
 
     col1, col2 = st.columns([6, 1])
@@ -108,7 +111,7 @@ def balance_dataframe(selected_metrics: List[MetricData], partition_sizes: Dict[
     # Collect metric dataframes
     merged_df_list = []
     for i, m in enumerate(selected_metrics):
-        df = iutils.load_metric(m, normalize=False).copy()
+        df = load_metric(m, normalize=False).copy()
         merged_df_list.append(df[["identifier", "score"]].rename(columns={"score": m.name}))
 
     # Merge all dataframes by identifier

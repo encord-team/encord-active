@@ -8,7 +8,6 @@ from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
-from encord_active.app.common.colors import Color, hex_to_rgb
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.bulk_tagging_form import (
     BulkLevel,
@@ -22,7 +21,7 @@ from encord_active.app.common.utils import (
     get_geometries,
     load_or_fill_image,
 )
-from encord_active.app.data_quality.common import MetricType
+from encord_active.lib.common.colors import Color, hex_to_rgb
 
 
 def __show_image_and_draw_polygons_plus_prediction(row: pd.Series, box_color: Color = Color.GREEN) -> np.ndarray:
