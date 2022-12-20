@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
+import pandera as pa
 from natsort import natsorted
+from pandera.typing import DataFrame, Series
 
 from encord_active.lib.common.image_utils import load_json
 
@@ -17,7 +19,17 @@ class MetricData:
     level: str
 
 
-def load_metric(metric: MetricData, normalize: bool, *, sorting_key="score") -> pd.DataFrame:
+class MetricSchema(pa.SchemaModel):
+    score: Series[float] = pa.Field(coerce=True)
+    identifier: Series[str] = pa.Field()
+    description: Series[str] = pa.Field(nullable=True, coerce=True)
+    object_class: Series[str] = pa.Field(nullable=True, coerce=True)
+    annotator: Series[str] = pa.Field(nullable=True, coerce=True)
+    frame: Series[int] = pa.Field()
+    url: Series[str] = pa.Field()
+
+
+def load_metric(metric: MetricData, normalize: bool, *, sorting_key="score") -> DataFrame[MetricSchema]:
     """
     Load and sort the selected csv file and cache it, so we don't need to perform this
     heavy computation each time the slider in the UI is moved.
@@ -42,7 +54,7 @@ def load_metric(metric: MetricData, normalize: bool, *, sorting_key="score") -> 
 
         df["score"] = (df["score"] - min_val) / diff
 
-    return df
+    return df.pipe(DataFrame[MetricSchema])
 
 
 class MetricScope(Enum):
