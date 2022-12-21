@@ -13,34 +13,7 @@ Encord Active finds outliers using precomputed [Interquartile ranges](/pages/dat
  `Prerequisites:` Dataset  
 
 ### Setup
-If you haven't installed Encord Active, run:
-
-```shell
-python3.9 -m venv ea-venv
-source ea-venv/bin/activate
-# within venv
-pip install encord-active
-```
-
-In this workflow we will be using the BDD validation dataset:
-
-```shell
-# run download command
-encord-active download
-Loading prebuilt projects ...
-[?] Choose a project: [open-source][validation]-bdd-dataset (229.8 mb)
-   [open-source][validation]-coco-2017-dataset (1145.2 mb)
-   [open-source][test]-limuc-ulcerative-colitis-classification (316.0 mb)
-   [open-source]-covid-19-segmentations (55.6 mb)
- > [open-source][validation]-bdd-dataset (229.8 mb)
-```
-
-After downloading the dataset we visualise it:
-```shell
-# open the UI
-cd path/to/[open-source][validation]-bdd-dataset
-encord-active visualise
-```
+If you haven't installed Encord Active, visit [installation](/installation). In this workflow we will be using the BDD validation dataset.
 
 ## Steps
 
@@ -54,7 +27,7 @@ Use the slider to navigate your data from most severe outlier to least severe.
 ![data-quality-outliers.png](../../images/data-quality-outliers.png)
 
 ### 2. Tag outliers
-When you have identified outliers of interest, use the [tagging](/tags) or [bulk tagging](/tags) feature to save a group of images.
+When you have identified outliers of interest, use the [tagging](/workflows/tags) or [bulk tagging](/workflows/tags) feature to save a group of images.
 
 ![data-quality-outliers-tagging.png](../../images/data-quality-outliers-tagging.png)
 

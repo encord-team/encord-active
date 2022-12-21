@@ -18,34 +18,7 @@ If you have uploaded your model predictions you can combine this workflow with [
 :::
 
 ### Setup
-If you haven't installed Encord Active, run:
-
-```shell
-python3.9 -m venv ea-venv
-source ea-venv/bin/activate
-# within venv
-pip install encord-active
-```
-
-In this workflow we will be using the COCO validation dataset:
-
-```shell
-# run download command
-encord-active download
-Loading prebuilt projects ...
-[?] Choose a project: [open-source][validation]-coco-2017-dataset (1145.2 mb)
-  >[open-source][validation]-coco-2017-dataset (1145.2 mb)
-   [open-source][test]-limuc-ulcerative-colitis-classification (316.0 mb)
-   [open-source]-covid-19-segmentations (55.6 mb)
-   [open-source][validation]-bdd-dataset (229.8 mb)
-```
-
-After downloading the dataset we visualise it:
-```shell
-# open the UI
-cd path/to/[open-source][validation]-coco-2017-dataset
-encord-active visualise
-```
+If you haven't installed Encord Active, visit [installation](/installation). In this workflow we will be using the COCO validation dataset.
 
 ## Steps
 Navigate to the _Data Quality_ > _Explorer_ tab and select a quality metric in the top left menu to order your data by.

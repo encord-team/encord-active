@@ -109,7 +109,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
 - [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
 - [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)
-- [Data Tagging](https://encord-active-docs.web.app/tags/#steps)
+- [Data Tagging](https://encord-active-docs.web.app/workflows/tags/#steps)
 - [COCO Exports](https://encord-active-docs.web.app/pages/export/filter_export)
 - And much more!
 

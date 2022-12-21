@@ -13,5 +13,5 @@ According to the chosen metric, data distribution will be shown in the main view
 a double-ended scroll bar filters data to only visualize the selected range. In default, images are ranked in 
 descending order: however, this behavior can be changed by sorting combobox. 
 
-[Tagging](../../tags.md) feature is available on this page to tag images to take action on them later.
+[Tagging](/workflows/tags.mdx) feature is available on this page to tag images to take action on them later.
 
