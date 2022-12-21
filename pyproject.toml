@@ -18,7 +18,7 @@ classifiers=[
     "Topic :: Software Development :: Quality Assurance"
 ]
 documentation = "https://encord-active-docs.web.app/"
-homepage = "https://encord.com/encord_active/"
+homepage = "https://encord.com/encord-active/"
 keywords = ["encord", "active", "machine", "learning", "data", "label", "model", "quality", "test"]
 readme = "README.md"
 repository = "https://github.com/encord-team/encord-active"

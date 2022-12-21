@@ -158,7 +158,7 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-docs-workflow]: https://encord-active-docs.web.app/category/workflows
 [encord-active-docs-write-metric]: https://encord-active-docs.web.app/metrics/write-your-own
 [encord-active-docs]: https://encord-active-docs.web.app/
-[encord-active-landing]: https://encord.com/encord_active/
+[encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
