@@ -314,21 +314,22 @@ def build_card(
     """
     Builds each sub card (the content displayed for each row in a csv file).
     """
+    data_dir = st.session_state.data_dir
 
     if card_type == EmbeddingType.CLASSIFICATION.value:
 
         button_name = "show similar images"
         if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
-            image = load_or_fill_image(row)
+            image = load_or_fill_image(row, data_dir)
             similarity_callback = show_similar_classification_images
         else:
             if st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type") is None:
-                image = load_or_fill_image(row)
+                image = load_or_fill_image(row, data_dir)
             else:
-                image = show_image_and_draw_polygons(row)
+                image = show_image_and_draw_polygons(row, data_dir)
             similarity_callback = show_similar_images
     elif card_type == EmbeddingType.OBJECT.value:
-        image = show_image_and_draw_polygons(row)
+        image = show_image_and_draw_polygons(row, data_dir)
         button_name = "show similar objects"
         similarity_callback = show_similar_object_images
 

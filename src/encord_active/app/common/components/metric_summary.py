@@ -53,7 +53,7 @@ def render_metric_summary(
 
 
 def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers, metric_scope: MetricScope):
-    image = show_image_and_draw_polygons(row)
+    image = show_image_and_draw_polygons(row, st.session_state.data_dir)
     st.image(image)
 
     multiselect_tag(row, f"{metric_name}_summary", metric_scope)

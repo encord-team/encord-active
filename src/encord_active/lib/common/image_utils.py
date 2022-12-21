@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import pandas as pd
-import streamlit as st
 from pandas import Series
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
@@ -24,9 +23,9 @@ def load_json(json_file: Path) -> Optional[dict]:
             return None
 
 
-def show_image_and_draw_polygons(row: Union[Series, str], draw_polygons: bool = True) -> np.ndarray:
+def show_image_and_draw_polygons(row: Union[Series, str], data_dir: Path, draw_polygons: bool = True) -> np.ndarray:
     # === Read and annotate the image === #
-    image = load_or_fill_image(row)
+    image = load_or_fill_image(row, data_dir)
 
     # === Draw polygons / bboxes if available === #
     is_closed = True
@@ -34,13 +33,13 @@ def show_image_and_draw_polygons(row: Union[Series, str], draw_polygons: bool = 
 
     img_h, img_w = image.shape[:2]
     if draw_polygons:
-        for color, geometry in get_geometries(row, img_h=img_h, img_w=img_w):
+        for color, geometry in get_geometries(row, img_h, img_w, data_dir):
             image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
 
     return image
 
 
-def load_or_fill_image(row: Union[pd.Series, str]) -> np.ndarray:
+def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray:
     """
     Tries to read the infered image path. If not possible, generates a white image
     and indicates what the error seemd to be embedded in the image.
@@ -51,7 +50,7 @@ def load_or_fill_image(row: Union[pd.Series, str]) -> np.ndarray:
     read_error = False
     key = __get_key(row)
 
-    img_pth: Optional[Path] = key_to_image_path(key)
+    img_pth: Optional[Path] = key_to_image_path(key, data_dir)
 
     if img_pth and img_pth.is_file():
         try:
@@ -64,7 +63,7 @@ def load_or_fill_image(row: Union[pd.Series, str]) -> np.ndarray:
     error_text = "Image not found" if not img_pth else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
-    lr = json.loads(key_to_lr_path(key).read_text(encoding="utf-8"))
+    lr = json.loads(key_to_lr_path(key, data_dir).read_text(encoding="utf-8"))
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 
@@ -159,7 +158,7 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
 
 
 def get_geometries(
-    row: Union[pd.Series, str], img_h: int, img_w: int, skip_object_hash: bool = False
+    row: Union[pd.Series, str], img_h: int, img_w: int, data_dir: Path, skip_object_hash: Optional[bool] = False
 ) -> List[Tuple[str, np.ndarray]]:
     """
     Loads cached label row and computes geometries from the label row.
@@ -171,7 +170,7 @@ def get_geometries(
     key = __get_key(row)
     _, du_hash, frame, *remainder = key.split("_")
 
-    lr_pth = key_to_lr_path(key)
+    lr_pth = key_to_lr_path(key, data_dir)
     with lr_pth.open("r") as f:
         label_row = json.load(f)
 
@@ -201,19 +200,19 @@ def get_geometries(
     return valid_geometries
 
 
-def key_to_lr_path(key: str) -> Path:
+def key_to_lr_path(key: str, data_dir: Path) -> Path:
     label_hash, *_ = key.split("_")
-    return st.session_state.data_dir / label_hash / "label_row.json"
+    return data_dir / label_hash / "label_row.json"
 
 
-def key_to_image_path(key: str) -> Optional[Path]:
+def key_to_image_path(key: str, data_dir: Path) -> Optional[Path]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
     :return: The associated image path if it exists or a path to a placeholder otherwise
     """
     label_hash, du_hash, frame, *_ = key.split("_")
-    img_folder = st.session_state.data_dir / label_hash / "images"
+    img_folder = data_dir / label_hash / "images"
 
     # check if it is a video frame
     frame_pth = next(img_folder.glob(f"{du_hash}_{int(frame)}.*"), None)
