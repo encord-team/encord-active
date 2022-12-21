@@ -8,7 +8,6 @@ from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
-from encord_active.app.common import embedding_utils
 from encord_active.app.common.components import (
     build_data_tags,
     multiselect_with_all_option,
@@ -20,6 +19,11 @@ from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
 from encord_active.app.common.components.paginator import render_pagination
+from encord_active.app.common.components.similarities import (
+    show_similar_classification_images,
+    show_similar_images,
+    show_similar_object_images,
+)
 from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
@@ -29,6 +33,14 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
+from encord_active.lib.common.embedding import (
+    get_collections,
+    get_collections_and_metadata,
+    get_faiss_index_image,
+    get_faiss_index_object,
+    get_image_keys_having_similarities,
+    get_object_keys_having_similarities,
+)
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
@@ -190,17 +202,17 @@ def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: 
 
 
 def populate_embedding_information(embedding_type: EmbeddingType):
+    embeddings_dir = st.session_state.embeddings_dir
+
     if embedding_type == EmbeddingType.CLASSIFICATION:
         if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
-            collections, question_hash_to_collection_indexes = embedding_utils.get_collections_and_metadata(
-                "cnn_classifications.pkl"
+            collections, question_hash_to_collection_indexes = get_collections_and_metadata(
+                "cnn_classifications.pkl", embeddings_dir
             )
             st.session_state[state.COLLECTIONS_IMAGES] = collections
             st.session_state[state.QUESTION_HASH_TO_COLLECTION_INDEXES] = question_hash_to_collection_indexes
-            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = embedding_utils.get_image_keys_having_similarities(
-                collections
-            )
-            st.session_state[state.FAISS_INDEX_IMAGE] = embedding_utils.get_faiss_index_image(collections)
+            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
+            st.session_state[state.FAISS_INDEX_IMAGE] = get_faiss_index_image(collections, embeddings_dir)
             st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = True
 
             if state.IMAGE_SIMILARITIES not in st.session_state:
@@ -208,28 +220,20 @@ def populate_embedding_information(embedding_type: EmbeddingType):
                 for question_hash in st.session_state[state.QUESTION_HASH_TO_COLLECTION_INDEXES].keys():
                     st.session_state[state.IMAGE_SIMILARITIES][question_hash] = {}
         else:
-            collections = embedding_utils.get_collections("cnn_classifications.pkl")
+            collections = get_collections("cnn_classifications.pkl", embeddings_dir)
             st.session_state[state.COLLECTIONS_IMAGES] = collections
-            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = embedding_utils.get_image_keys_having_similarities(
-                collections
-            )
-            st.session_state[state.FAISS_INDEX_IMAGE_NO_LABEL] = embedding_utils.get_faiss_index_object(
-                collections, state.FAISS_INDEX_IMAGE_NO_LABEL
-            )
+            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
+            st.session_state[state.FAISS_INDEX_IMAGE_NO_LABEL] = get_faiss_index_object(collections)
             st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = False
 
             if state.IMAGE_SIMILARITIES_NO_LABEL not in st.session_state:
                 st.session_state[state.IMAGE_SIMILARITIES_NO_LABEL] = {}
 
     elif embedding_type == EmbeddingType.OBJECT:
-        collections = embedding_utils.get_collections("cnn_objects.pkl")
+        collections = get_collections("cnn_objects.pkl", embeddings_dir)
         st.session_state[state.COLLECTIONS_OBJECTS] = collections
-        st.session_state[state.OBJECT_KEYS_HAVING_SIMILARITIES] = embedding_utils.get_object_keys_having_similarities(
-            collections
-        )
-        st.session_state[state.FAISS_INDEX_OBJECT] = embedding_utils.get_faiss_index_object(
-            collections, state.FAISS_INDEX_OBJECT
-        )
+        st.session_state[state.OBJECT_KEYS_HAVING_SIMILARITIES] = get_object_keys_having_similarities(collections)
+        st.session_state[state.FAISS_INDEX_OBJECT] = get_faiss_index_object(collections)
         st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = True
 
         if state.OBJECT_SIMILARITIES not in st.session_state:
@@ -249,7 +253,6 @@ def build_card(
     data_dir = st.session_state.data_dir
 
     if embedding_type == EmbeddingType.CLASSIFICATION:
-
         button_name = "show similar images"
         if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
             image = load_or_fill_image(row, data_dir)
@@ -264,7 +267,6 @@ def build_card(
         image = show_image_and_draw_polygons(row, data_dir)
         button_name = "show similar objects"
         similarity_callback = show_similar_object_images
-
     else:
         st.write(f"{embedding_type.value} card type is not defined in EmbeddingTypes")
         return
@@ -294,76 +296,3 @@ def build_card(
         # Hacky way for now (with incorrect rounding)
         description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
         st.write(f"Description: {description}")
-
-
-def show_similar_classification_images(row: Series, expander: DeltaGenerator):
-    feature_hash = row["identifier"].split("_")[-1]
-
-    if row["identifier"] not in st.session_state[state.IMAGE_SIMILARITIES][feature_hash].keys():
-        embedding_utils.add_labeled_image_neighbors_to_cache(row["identifier"], feature_hash)
-
-    nearest_images = st.session_state[state.IMAGE_SIMILARITIES][feature_hash][row["identifier"]]
-
-    division = 4
-    column_id = 0
-
-    for nearest_image in nearest_images:
-        if column_id == 0:
-            st_columns = expander.columns(division)
-
-        image = load_or_fill_image(nearest_image["key"], st.session_state.data_dir)
-
-        st_columns[column_id].image(image)
-        st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
-        column_id += 1
-        column_id = column_id % division
-
-
-def show_similar_images(row: Series, expander: DeltaGenerator):
-    image_identifier = "_".join(row["identifier"].split("_")[:3])
-
-    if image_identifier not in st.session_state[state.IMAGE_SIMILARITIES_NO_LABEL].keys():
-        embedding_utils.add_image_neighbors_to_cache(image_identifier)
-
-    nearest_images = st.session_state[state.IMAGE_SIMILARITIES_NO_LABEL][image_identifier]
-
-    division = 4
-    column_id = 0
-
-    for nearest_image in nearest_images:
-        if column_id == 0:
-            st_columns = expander.columns(division)
-
-        image = load_or_fill_image(nearest_image["key"], st.session_state.data_dir)
-
-        st_columns[column_id].image(image)
-        st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
-        column_id += 1
-        column_id = column_id % division
-
-
-def show_similar_object_images(row: Series, expander: DeltaGenerator):
-    object_identifier = "_".join(row["identifier"].split("_")[:4])
-
-    if object_identifier not in st.session_state[state.OBJECT_KEYS_HAVING_SIMILARITIES]:
-        expander.write("Similarity search is not available for this object.")
-        return
-
-    if object_identifier not in st.session_state[state.OBJECT_SIMILARITIES].keys():
-        embedding_utils.add_object_neighbors_to_cache(object_identifier)
-
-    nearest_images = st.session_state[state.OBJECT_SIMILARITIES][object_identifier]
-
-    division = 4
-    column_id = 0
-
-    for nearest_image in nearest_images:
-        if column_id == 0:
-            st_columns = expander.columns(division)
-
-        image = show_image_and_draw_polygons(nearest_image["key"], st.session_state.data_dir)
-
-        st_columns[column_id].image(image)
-        st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
-        column_id += 1
-        column_id = column_id % division

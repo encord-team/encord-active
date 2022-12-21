@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, TypedDict, Union
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import pandas as pd
 import pandera as pa

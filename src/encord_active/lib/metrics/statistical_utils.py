@@ -5,7 +5,7 @@ import pandas as pd
 
 
 def get_histogram(df: pd.DataFrame, column_name: str, metric_name: Optional[str] = None):
-    chart_title = f"Data distribution"
+    chart_title = "Data distribution"
 
     if metric_name:
         chart_title += f" - {metric_name}"
