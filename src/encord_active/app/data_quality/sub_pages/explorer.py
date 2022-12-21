@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Optional
 
 import altair as alt
 import pandas as pd
@@ -20,6 +20,8 @@ from encord_active.app.common.components.annotator_statistics import (
 from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
+from encord_active.app.common.components.paginator import render_pagination
+from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
     action_bulk_tags,
@@ -28,7 +30,6 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
-from encord_active.app.common.utils import build_pagination, get_df_subset
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
@@ -130,22 +131,21 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope)
 
 
-def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: MetricScope):
-    annotation_type = st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type")
+# TODO: move me to lib
+def get_embedding_type(metric_title: str, annotation_type: Optional[List[str]]):
     if (
-        (annotation_type is None)
+        annotation_type is None
         or (len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value))
-        or (
-            st.session_state[state.DATA_PAGE_METRIC].meta.get("title")
-            in [
-                "Frame object density",
-                "Object Count",
-            ]
-        )
+        or (metric_title in ["Frame object density", "Object Count"])
     ):  # TODO find a better way to filter these later because titles can change
-        embedding_type = str(EmbeddingType.CLASSIFICATION.value)
+        return str(EmbeddingType.CLASSIFICATION.value)
     else:
-        embedding_type = str(EmbeddingType.OBJECT.value)
+        return str(EmbeddingType.OBJECT.value)
+
+
+def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: MetricScope):
+    meta = st.session_state[state.DATA_PAGE_METRIC].meta
+    embedding_type = get_embedding_type(meta.get("title"), meta.get("annotation_type"))
 
     populate_embedding_information(embedding_type)
 
@@ -163,11 +163,11 @@ def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: 
 
     chart = get_histogram(current_df)
     st.altair_chart(chart, use_container_width=True)
-    subset = get_df_subset(current_df, "score")
+    subset = render_df_slicer(current_df, "score")
 
     st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} annotations")
 
-    paginated_subset = build_pagination(subset, n_cols, n_rows, "score")
+    paginated_subset = render_pagination(subset, n_cols, n_rows, "score")
 
     form = bulk_tagging_form(metric_scope)
 
