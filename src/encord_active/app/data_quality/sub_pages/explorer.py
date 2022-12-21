@@ -132,15 +132,15 @@ class ExplorerPage(Page):
 
 
 # TODO: move me to lib
-def get_embedding_type(metric_title: str, annotation_type: Optional[List[str]]):
+def get_embedding_type(metric_title: str, annotation_type: Optional[List[str]]) -> EmbeddingType:
     if (
         annotation_type is None
         or (len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value))
         or (metric_title in ["Frame object density", "Object Count"])
     ):  # TODO find a better way to filter these later because titles can change
-        return str(EmbeddingType.CLASSIFICATION.value)
+        return EmbeddingType.CLASSIFICATION
     else:
-        return str(EmbeddingType.OBJECT.value)
+        return EmbeddingType.OBJECT
 
 
 def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: MetricScope):
@@ -189,8 +189,8 @@ def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: 
                 build_card(embedding_type, i, row, similarity_expanders, metric_scope)
 
 
-def populate_embedding_information(embedding_type: str):
-    if embedding_type == EmbeddingType.CLASSIFICATION.value:
+def populate_embedding_information(embedding_type: EmbeddingType):
+    if embedding_type == EmbeddingType.CLASSIFICATION:
         if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
             collections, question_hash_to_collection_indexes = embedding_utils.get_collections_and_metadata(
                 "cnn_classifications.pkl"
@@ -221,7 +221,7 @@ def populate_embedding_information(embedding_type: str):
             if state.IMAGE_SIMILARITIES_NO_LABEL not in st.session_state:
                 st.session_state[state.IMAGE_SIMILARITIES_NO_LABEL] = {}
 
-    elif embedding_type == EmbeddingType.OBJECT.value:
+    elif embedding_type == EmbeddingType.OBJECT:
         collections = embedding_utils.get_collections("cnn_objects.pkl")
         st.session_state[state.COLLECTIONS_OBJECTS] = collections
         st.session_state[state.OBJECT_KEYS_HAVING_SIMILARITIES] = embedding_utils.get_object_keys_having_similarities(
@@ -237,14 +237,18 @@ def populate_embedding_information(embedding_type: str):
 
 
 def build_card(
-    card_type: str, card_no: int, row: Series, similarity_expanders: list[DeltaGenerator], metric_type: MetricScope
+    embedding_type: EmbeddingType,
+    card_no: int,
+    row: Series,
+    similarity_expanders: list[DeltaGenerator],
+    metric_scope: MetricScope,
 ):
     """
     Builds each sub card (the content displayed for each row in a csv file).
     """
     data_dir = st.session_state.data_dir
 
-    if card_type == EmbeddingType.CLASSIFICATION.value:
+    if embedding_type == EmbeddingType.CLASSIFICATION:
 
         button_name = "show similar images"
         if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
@@ -256,17 +260,17 @@ def build_card(
             else:
                 image = show_image_and_draw_polygons(row, data_dir)
             similarity_callback = show_similar_images
-    elif card_type == EmbeddingType.OBJECT.value:
+    elif embedding_type == EmbeddingType.OBJECT:
         image = show_image_and_draw_polygons(row, data_dir)
         button_name = "show similar objects"
         similarity_callback = show_similar_object_images
 
     else:
-        st.write(f"{card_type} card type is not defined in EmbeddingTypes")
+        st.write(f"{embedding_type.value} card type is not defined in EmbeddingTypes")
         return
 
     st.image(image)
-    multiselect_tag(row, "explorer", metric_type)
+    multiselect_tag(row, "explorer", metric_scope)
 
     target_expander = similarity_expanders[card_no // st.session_state[state.MAIN_VIEW_COLUMN_NUM]]
 
