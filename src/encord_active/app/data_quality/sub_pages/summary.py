@@ -1,7 +1,7 @@
 import streamlit as st
 
-from encord_active.app.common.components.individual_tagging import tag_creator
 from encord_active.app.common.components.metric_summary import render_metric_summary
+from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.lib.metrics.load_metrics import (
     MetricScope,
@@ -18,7 +18,7 @@ class SummaryPage(Page):
         self.row_col_settings_in_sidebar()
         tag_creator()
 
-    def build(self, metric_type_selection: MetricScope):
+    def build(self, metric_scope: MetricScope):
         st.markdown(f"# {self.title}")
         st.subheader("Outliers by IQR range for every metric")
 
@@ -50,7 +50,7 @@ class SummaryPage(Page):
                 "an outlier for one metric and a non-outlier for another."
             )
 
-        metrics = load_available_metrics(st.session_state.metric_dir, metric_type_selection)
+        metrics = load_available_metrics(st.session_state.metric_dir, metric_scope)
 
         for metric in metrics:
             original_df = load_metric(metric, normalize=False)
@@ -63,4 +63,4 @@ class SummaryPage(Page):
             with st.expander(
                 label=f"{metric.name} Outliers - {iqr_outliers.n_severe_outliers} severe, {iqr_outliers.n_moderate_outliers} moderate"
             ):
-                render_metric_summary(metric, df, iqr_outliers)
+                render_metric_summary(metric, df, iqr_outliers, metric_scope)

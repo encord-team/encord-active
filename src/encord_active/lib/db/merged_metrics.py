@@ -6,6 +6,7 @@ import pandas as pd
 from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.tags import Tag, TagScope
 
 TABLE_NAME = "merged_metrics"
 

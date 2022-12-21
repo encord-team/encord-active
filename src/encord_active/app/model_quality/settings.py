@@ -4,7 +4,7 @@ import streamlit as st
 
 import encord_active.app.common.components as cst
 import encord_active.app.common.state as state
-from encord_active.app.common.components.tag_creator import tag_creator
+from encord_active.app.common.components.tags.tag_creator import tag_creator
 
 
 def common_settings():

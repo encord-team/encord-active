@@ -6,15 +6,17 @@ from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
 from encord_active.app.common.components import build_data_tags
-from encord_active.app.common.components.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.metrics.load_metrics import MetricData
+from encord_active.lib.metrics.load_metrics import MetricData, MetricScope
 from encord_active.lib.metrics.outliers import IqrOutliers, MetricWithDistanceSchema
 
 _COLUMNS = MetricWithDistanceSchema
 
 
-def render_metric_summary(metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers):
+def render_metric_summary(
+    metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
+):
     n_cols = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM])
     n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
     page_size = n_cols * n_rows
@@ -47,14 +49,14 @@ def render_metric_summary(metric: MetricData, df: DataFrame[MetricWithDistanceSc
             cols = list(st.columns(n_cols))
 
         with cols.pop(0):
-            render_summary_item(row, metric.name, iqr_outliers)
+            render_summary_item(row, metric.name, iqr_outliers, metric_scope)
 
 
-def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers):
+def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers, metric_scope: MetricScope):
     image = show_image_and_draw_polygons(row)
     st.image(image)
 
-    multiselect_tag(row, f"{metric_name}_summary")
+    multiselect_tag(row, f"{metric_name}_summary", metric_scope)
 
     # === Write scores and link to editor === #
 
