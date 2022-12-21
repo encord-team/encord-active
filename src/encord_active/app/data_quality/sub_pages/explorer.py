@@ -1,7 +1,6 @@
 import re
 from typing import List, Optional
 
-import altair as alt
 import pandas as pd
 import streamlit as st
 from pandas import Series
@@ -42,6 +41,7 @@ from encord_active.lib.metrics.load_metrics import (
     get_annotator_level_info,
     load_metric,
 )
+from encord_active.lib.metrics.statistical_utils import get_histogram
 
 
 class ExplorerPage(Page):
@@ -161,7 +161,7 @@ def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: 
     n_cols = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM])
     n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
 
-    chart = get_histogram(current_df)
+    chart = get_histogram(current_df, "score", st.session_state[state.DATA_PAGE_METRIC_NAME])
     st.altair_chart(chart, use_container_width=True)
     subset = render_df_slicer(current_df, "score")
 
@@ -290,30 +290,6 @@ def build_card(
         # Hacky way for now (with incorrect rounding)
         description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
         st.write(f"Description: {description}")
-
-
-def get_histogram(current_df: pd.DataFrame):
-    # TODO: Unify with app/model_quality/sub_pages/__init__.py:SamplesPage.get_histogram
-    metric_name = st.session_state[state.DATA_PAGE_METRIC_NAME]
-    if metric_name:
-        title_suffix = f" - {metric_name}"
-    else:
-        metric_name = "Score"  # Used for plotting
-
-    bar_chart = (
-        alt.Chart(current_df, title=f"Data distribution{title_suffix}")
-        .mark_bar()
-        .encode(
-            alt.X("score:Q", bin=alt.Bin(maxbins=100), title=metric_name),
-            alt.Y("count()", title="Num. samples"),
-            tooltip=[
-                alt.Tooltip("score:Q", title=metric_name, format=",.3f", bin=True),
-                alt.Tooltip("count():Q", title="Num. samples", format="d"),
-            ],
-        )
-        .properties(height=200)
-    )
-    return bar_chart
 
 
 def show_similar_classification_images(row: Series, expander: DeltaGenerator):

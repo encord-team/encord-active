@@ -3,11 +3,12 @@ import streamlit as st
 
 from encord_active.app.model_quality.components import metric_view
 from encord_active.lib.common.colors import Color
+from encord_active.lib.metrics.statistical_utils import get_histogram
 
-from . import HistogramMixin, ModelQualityPage
+from . import ModelQualityPage
 
 
-class FalsePositivesPage(ModelQualityPage, HistogramMixin):
+class FalsePositivesPage(ModelQualityPage):
     title = "🌡 False Positives"
 
     def sidebar_options(self):
@@ -46,6 +47,6 @@ The remaining colors correspond to the dataset labels with the colors you are us
         if fp_df.shape[0] == 0:
             st.write("No false positives")
         else:
-            histogram = self.get_histogram(fp_df, metric_name)
+            histogram = get_histogram(fp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             metric_view(fp_df, box_color=color)

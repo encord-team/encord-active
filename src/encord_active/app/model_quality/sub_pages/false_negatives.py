@@ -4,11 +4,12 @@ import streamlit as st
 import encord_active.app.common.state as state
 from encord_active.app.model_quality.components import false_negative_view
 from encord_active.lib.common.colors import Color
+from encord_active.lib.metrics.statistical_utils import get_histogram
 
-from . import HistogramMixin, ModelQualityPage
+from . import ModelQualityPage
 
 
-class FalseNegativesPage(ModelQualityPage, HistogramMixin):
+class FalseNegativesPage(ModelQualityPage):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):
@@ -50,6 +51,6 @@ The remaining objects are predictions, where colors correspond to their predicte
         if fns_df.shape[0] == 0:
             st.write("No false negatives")
         else:
-            histogram = self.get_histogram(fns_df, metric_name)
+            histogram = get_histogram(fns_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             false_negative_view(fns_df, model_predictions, color=color)
