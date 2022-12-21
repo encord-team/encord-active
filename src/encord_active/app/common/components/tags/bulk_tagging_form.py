@@ -5,7 +5,13 @@ import streamlit as st
 from pandas import DataFrame
 
 import encord_active.app.common.state as state
+from encord_active.app.common.components.tags.individual_tagging import (
+    target_identifier,
+)
+from encord_active.app.common.components.tags.tag_creator import scoped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import METRIC_SCOPE_TAG_SCOPES, Tag
+from encord_active.lib.metrics.load_metrics import MetricScope
 
 
 class TagAction(str, Enum):
@@ -47,11 +53,11 @@ def action_bulk_tags(subset: DataFrame, selected_tags: List[Tag], action: TagAct
     MergedMetrics().replace_all(all_df)
 
 
-def bulk_tagging_form(metric_type: MetricType) -> Optional[TaggingFormResult]:
+def bulk_tagging_form(metric_type: MetricScope) -> Optional[TaggingFormResult]:
     with st.expander("Bulk Tagging"):
         with st.form("bulk_tagging"):
             select, level_radio, action_radio, button = st.columns([6, 2, 2, 1])
-            allowed_tags = scoped_tags(METRIC_TYPE_SCOPES[metric_type])
+            allowed_tags = scoped_tags(METRIC_SCOPE_TAG_SCOPES[metric_type])
             selected_tags = select.multiselect(
                 label="Tags", options=allowed_tags, format_func=lambda x: x[0], label_visibility="collapsed"
             )

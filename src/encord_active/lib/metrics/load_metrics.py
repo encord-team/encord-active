@@ -60,6 +60,7 @@ def load_metric(metric: MetricData, normalize: bool, *, sorting_key="score") -> 
 class MetricScope(Enum):
     DATA_QUALITY = "data_quality"
     LABEL_QUALITY = "label_quality"
+    MODEL_QUALITY = "model_quality"
 
 
 def get_metric_operation_level(pth: Path) -> str:

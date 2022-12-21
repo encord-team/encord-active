@@ -9,12 +9,12 @@ from streamlit.delta_generator import DeltaGenerator
 import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.components import build_data_tags
-from encord_active.app.common.components.bulk_tagging_form import (
+from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
     action_bulk_tags,
     bulk_tagging_form,
 )
-from encord_active.app.common.components.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.utils import (
     build_pagination,
     get_df_subset,
@@ -22,6 +22,7 @@ from encord_active.app.common.utils import (
     load_or_fill_image,
 )
 from encord_active.lib.common.colors import Color, hex_to_rgb
+from encord_active.lib.metrics.load_metrics import MetricScope
 
 
 def __show_image_and_draw_polygons_plus_prediction(row: pd.Series, box_color: Color = Color.GREEN) -> np.ndarray:
@@ -47,7 +48,7 @@ def __build_card(row: pd.Series, st_col: DeltaGenerator, box_color: Color = Colo
     with st_col:
         image = __show_image_and_draw_polygons_plus_prediction(row, box_color=box_color)
         st.image(image)
-        multiselect_tag(row, "metric_view", MetricType.MODEL_QUALITY)
+        multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
 
         # === Write scores and link to editor === #
         build_data_tags(row, st.session_state.predictions_metric)
@@ -68,7 +69,7 @@ def metric_view(
     subset = get_df_subset(df, selected_metric)
     paginated_subset = build_pagination(subset, n_cols, n_rows, selected_metric)
 
-    form = bulk_tagging_form(MetricType.MODEL_QUALITY)
+    form = bulk_tagging_form(MetricScope.MODEL_QUALITY)
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
         action_bulk_tags(df, form.tags, form.action)
