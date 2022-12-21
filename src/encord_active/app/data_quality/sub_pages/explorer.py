@@ -16,15 +16,13 @@ from encord_active.app.common.components import (
     build_data_tags,
     multiselect_with_all_option,
 )
-from encord_active.app.common.components.bulk_tagging_form import (
+from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
     action_bulk_tags,
     bulk_tagging_form,
 )
-from encord_active.app.common.components.individual_tagging import (
-    multiselect_tag,
-    tag_creator,
-)
+from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.utils import build_pagination, get_df_subset
 from encord_active.lib.common.image_utils import (
@@ -32,7 +30,7 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
 )
 from encord_active.lib.common.metric import AnnotationType, EmbeddingType
-from encord_active.lib.metrics.load_metrics import MetricData, load_metric
+from encord_active.lib.metrics.load_metrics import MetricData, MetricScope, load_metric
 
 
 class ExplorerPage(Page):
@@ -100,7 +98,7 @@ class ExplorerPage(Page):
             # For now go the easy route and just filter the dataframe here
             return df_class_selected[annotator_selected]
 
-    def build(self, selected_df: pd.DataFrame, metric_type: MetricType):
+    def build(self, selected_df: pd.DataFrame, metric_type: MetricScope):
         st.markdown(f"# {self.title}")
         meta = st.session_state[state.DATA_PAGE_METRIC].meta
         st.markdown(f"## {meta['title']}")
@@ -204,7 +202,7 @@ def fill_annotator_properties_window(current_df: pd.DataFrame):
         annotator_columns[1].dataframe(annotators_df.style.pipe(make_pretty), use_container_width=True)
 
 
-def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricType):
+def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricScope):
     annotation_type = st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type")
     if (
         (annotation_type is None)
@@ -311,7 +309,7 @@ def populate_embedding_information(embedding_type: str):
 
 
 def build_card(
-    card_type: str, card_no: int, row: Series, similarity_expanders: list[DeltaGenerator], metric_type: MetricType
+    card_type: str, card_no: int, row: Series, similarity_expanders: list[DeltaGenerator], metric_type: MetricScope
 ):
     """
     Builds each sub card (the content displayed for each row in a csv file).

@@ -3,6 +3,7 @@ from sqlite3 import OperationalError
 from typing import Callable, List, NamedTuple
 
 from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.metrics.load_metrics import MetricScope
 
 TABLE_NAME = "tags"
 
@@ -15,6 +16,18 @@ class TagScope(str, Enum):
 class Tag(NamedTuple):
     name: str
     scope: TagScope
+
+
+SCOPE_EMOJI = {
+    TagScope.DATA.value: "🖼️",
+    TagScope.LABEL.value: "✏️",
+}
+
+METRIC_SCOPE_TAG_SCOPES = {
+    MetricScope.DATA_QUALITY: {TagScope.DATA},
+    MetricScope.LABEL_QUALITY: {TagScope.DATA, TagScope.LABEL},
+    MetricScope.MODEL_QUALITY: {TagScope.DATA},
+}
 
 
 def ensure_existence(fn: Callable):
@@ -53,8 +66,8 @@ class Tags(object):
             ]
 
     @ensure_existence
-    def create_tag(self, tag: str):
-        stripped = tag.strip()
+    def create_tag(self, tag: Tag):
+        stripped = tag.name.strip()
         if not stripped:
             raise ValueError("Empty tags are not allowed")
 

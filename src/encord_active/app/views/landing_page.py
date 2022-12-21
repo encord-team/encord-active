@@ -2,7 +2,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from encord_active.app.common.utils import load_merged_df, set_page_config, setup_page
+from encord_active.app.common.utils import set_page_config, setup_page
 
 
 def landing_page():
@@ -24,7 +24,7 @@ def landing_page():
     with right_col:
         st.markdown((Path(__file__).parent.parent / "static" / "landing-page-documentation.md").read_text())
 
-    load_merged_df()
+    # load_merged_df()
 
 
 if __name__ == "__main__":

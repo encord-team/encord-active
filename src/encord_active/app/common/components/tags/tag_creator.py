@@ -3,19 +3,8 @@ from typing import List, Set
 import streamlit as st
 
 import encord_active.app.common.state as state
-from encord_active.app.data_quality.common import MetricType
-from encord_active.app.db.tags import Tag, Tags, TagScope
-
-SCOPE_EMOJI = {
-    TagScope.DATA.value: "🖼️",
-    TagScope.LABEL.value: "✏️",
-}
-
-METRIC_TYPE_SCOPES = {
-    MetricType.DATA_QUALITY: {TagScope.DATA},
-    MetricType.LABEL_QUALITY: {TagScope.DATA, TagScope.LABEL},
-    MetricType.MODEL_QUALITY: {TagScope.DATA},
-}
+from encord_active.lib.db.helpers.tags import count_of_tags
+from encord_active.lib.db.tags import SCOPE_EMOJI, Tag, Tags, TagScope
 
 
 def scoped_tags(scopes: Set[TagScope]) -> List[Tag]:
@@ -23,7 +12,7 @@ def scoped_tags(scopes: Set[TagScope]) -> List[Tag]:
     return [tag for tag in all_tags if tag.scope in scopes]
 
 
-def on_tag_entered(all_tags: List[Tag], name: str, scope: str):
+def on_tag_entered(all_tags: List[Tag], name: str, scope: TagScope):
     tag = Tag(f"{SCOPE_EMOJI[scope]} {name}", scope)
 
     if tag in all_tags:
@@ -71,17 +60,9 @@ def tag_creator():
 
 
 def tag_display_with_counts():
-    all_tags = Tags().all()
-    if not all_tags:
-        return
+    all_counts = count_of_tags(st.session_state[state.MERGED_DATAFRAME])
 
-    tag_counts = st.session_state[state.MERGED_DATAFRAME]["tags"].value_counts()
-    all_counts = {name: 0 for name, _ in all_tags}
-    for unique_list, count in tag_counts.items():
-        for name, *_ in unique_list:
-            all_counts[name] = all_counts.get(name, 0) + count
-
-    sorted_tags = sorted(all_counts.items(), key=lambda x: x[0][0].lower())
+    sorted_tags = sorted(all_counts.items(), key=lambda x: x[0].lower())
     st.markdown(
         f"""
     <div class="data-tag-container">
