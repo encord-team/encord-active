@@ -4,9 +4,12 @@ import streamlit as st
 
 import encord_active.app.common.components as cst
 import encord_active.app.common.state as state
+from encord_active.app.common.components.tag_creator import tag_creator
 
 
 def common_settings():
+    tag_creator()
+
     class_idx = st.session_state.full_class_idx
     col1, col2, col3 = st.columns([4, 4, 3])
 

@@ -16,6 +16,7 @@ from encord_active.app.common.utils import get_geometries, load_json, load_or_fi
 class MetricType(Enum):
     DATA_QUALITY = "data_quality"
     LABEL_QUALITY = "label_quality"
+    MODEL_QUALITY = "model_quality"
 
 
 def get_metric_operation_level(pth: Path) -> str:
@@ -35,7 +36,7 @@ def get_metric_operation_level(pth: Path) -> str:
 
 
 @st.experimental_memo
-def load_available_metrics(metric_type_selection: MetricType) -> List[MetricData]:
+def load_available_metrics(metric_type_selection: str) -> List[MetricData]:
     def criterion(x):
         return x is None if metric_type_selection == MetricType.DATA_QUALITY.value else x is not None
 

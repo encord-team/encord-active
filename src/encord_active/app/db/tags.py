@@ -1,5 +1,6 @@
+from enum import Enum
 from sqlite3 import OperationalError
-from typing import Callable, List
+from typing import Callable, List, NamedTuple
 
 import streamlit as st
 
@@ -7,6 +8,16 @@ from encord_active.app.common.state import ALL_TAGS
 from encord_active.app.db.connection import DBConnection
 
 TABLE_NAME = "tags"
+
+
+class TagScope(str, Enum):
+    DATA = "Data"
+    LABEL = "Label"
+
+
+class Tag(NamedTuple):
+    name: str
+    scope: TagScope
 
 
 def ensure_existence(fn: Callable):
@@ -19,13 +30,14 @@ def ensure_existence(fn: Callable):
                     f"""
                      CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                         id INTEGER PRIMARY KEY,
-                        label TEXT NOT NULL
+                        name TEXT NOT NULL,
+                        scope TEXT NOT NULL
                      )
                      """
                 )
                 all_tags = st.session_state.get(ALL_TAGS)
                 if all_tags:
-                    conn.executemany(f" INSERT INTO {TABLE_NAME} (label) VALUES(?) ", [all_tags])
+                    conn.executemany(f"INSERT INTO {TABLE_NAME} (name, scope) VALUES(?, ?) ", all_tags)
 
             return fn(*args, **kwargs)
 
@@ -40,11 +52,13 @@ class Tags(object):
         return cls.instance
 
     @ensure_existence
-    def all(self) -> List[str]:
+    def all(self) -> List[Tag]:
         with DBConnection() as conn:
-            return [tag for tag, in conn.execute(f"SELECT label FROM {TABLE_NAME}").fetchall()]
+            return [
+                Tag(name, scope) for name, scope, in conn.execute(f"SELECT name, scope FROM {TABLE_NAME}").fetchall()
+            ]
 
     @ensure_existence
-    def create_tag(self, tag: str):
+    def create_tag(self, tag: Tag):
         with DBConnection() as conn:
-            return conn.execute(f"INSERT INTO {TABLE_NAME} (label) VALUES('{tag}')")
+            return conn.execute(f"INSERT INTO {TABLE_NAME} (name, scope) VALUES(?, ?) ", tag)

@@ -78,10 +78,10 @@ def write_page_css():
     }}
 
     .encord-active-info-box {{
-        width: 100%; 
-        padding: 1em; 
-        background-color: rgba(28, 131, 225, 0.1); 
-        color: rgb(0, 66, 128); 
+        width: 100%;
+        padding: 1em;
+        background-color: rgba(28, 131, 225, 0.1);
+        color: rgb(0, 66, 128);
         border-radius: 0.25rem;
         margin-top: 1em;
         margin-bottom: 1em;

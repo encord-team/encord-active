@@ -6,12 +6,9 @@ import streamlit as st
 import encord_active.app.common.state as state
 from encord_active.app.common import metric as iutils
 from encord_active.app.common.components import build_data_tags
-from encord_active.app.common.components.individual_tagging import (
-    multiselect_tag,
-    tag_creator,
-)
+from encord_active.app.common.components.individual_tagging import multiselect_tag
+from encord_active.app.common.components.tag_creator import tag_creator
 from encord_active.app.common.page import Page
-from encord_active.app.common.utils import load_merged_df
 from encord_active.app.data_quality.common import (
     MetricType,
     load_available_metrics,
@@ -24,7 +21,6 @@ class SummaryPage(Page):
 
     def sidebar_options(self):
         self.row_col_settings_in_sidebar()
-        load_merged_df()
         tag_creator()
 
     def build(self, metric_type_selection: MetricType):
@@ -63,7 +59,7 @@ class SummaryPage(Page):
         n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
         n_items_in_page = n_cols * n_rows
 
-        metrics = load_available_metrics(metric_type_selection)
+        metrics = load_available_metrics(metric_type_selection.value)
 
         for idx in metrics:
             df = iutils.load_metric(idx, normalize=False)
@@ -129,7 +125,7 @@ class SummaryPage(Page):
                         image = show_image_and_draw_polygons(row)
                         st.image(image)
 
-                        multiselect_tag(row, f"{idx.name}_summary")
+                        multiselect_tag(row, f"{idx.name}_summary", metric_type_selection)
 
                         # === Write scores and link to editor === #
 
