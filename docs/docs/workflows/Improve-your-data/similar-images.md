@@ -24,7 +24,7 @@ source ea-venv/bin/activate
 pip install encord-active
 ```
 
-In this workflow we will be using the COCO validation dataset:
+In this workflow, we will be using the COCO validation dataset:
 
 ```shell
 # run download command
@@ -37,7 +37,7 @@ Loading prebuilt projects ...
    [open-source][validation]-bdd-dataset (229.8 mb)
 ```
 
-After downloading the dataset we visualise it:
+After downloading the dataset, we visualise it:
 ```shell
 # open the UI
 cd path/to/[open-source][validation]-coco-2017-dataset

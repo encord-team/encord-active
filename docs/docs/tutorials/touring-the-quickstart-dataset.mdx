@@ -19,7 +19,7 @@ This tutorial assumes that you have [installed](/installation) `encord-active`.
 
 :::
 
-### 1. Opening the Quickstart Dataset
+## 1. Opening the Quickstart Dataset
 
 To open the quickstart dataset run:
 
@@ -29,9 +29,6 @@ $ encord-active quickstart
 
 Now `encord-active` will download the dataset and open the UI in your browser.
 
-### 2. Opening Encord Active and browsing the dataset
-
-
 
 :::caution
 
@@ -39,13 +36,13 @@ If the command hangs and nothing happens in your browser, go to <Link to={"http:
 
 :::
 
-### 3. Finding and Flagging Label Errors {#find-and-flag-label-errors}
+## 2. Finding and Flagging Label Errors {#find-and-flag-label-errors}
 
 You will carry out this process in two steps.
 
 <TOCInline toc={getSubsectionNodes(toc, "find-and-flag-label-errors")} />
 
-#### Identifying Metrics with Label Errors
+### Identifying Metrics with Label Errors
 
 When you open Encord Active, you should see a page like this
 
@@ -124,7 +121,7 @@ You can find other sources of label errors by inspecting the other tabs. Good pl
 
 :::
 
-#### Tagging Label Errors
+### Tagging Label Errors
 
 To tag the images with the identified label errors, you first add a new tag by typing in the tag name in the left sidebar and hitting enter.
 
@@ -134,7 +131,7 @@ Afterwards, you can add the tag to the images you see in the outlier pane by sel
 
 ![Tag an image](/img/tutorials/tag-added-for-oranges.png)
 
-#### Exporting Labels for Additional Annotation
+### Exporting Labels for Additional Annotation
 
 Suppose you have now tagged all the duplicated annotations that you would like to export for additional annotations.
 Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created (as indicated by the purple arrows).
@@ -145,7 +142,7 @@ _Note how your data has been filtered to only the rows that you tagged._
 
 Now you can _Generate COCO file_, _Clone_ the data into a new Encord project, or send the data for _Review_, _Re-label_, or _Augmentation_ tasks.
 
-## 4. Figuring Out What Metrics Influence Model Performance {#figuring-out-what-metrics-influence-model-performance}
+## 3. Figuring Out What Metrics Influence Model Performance {#figuring-out-what-metrics-influence-model-performance}
 
 Encord Active also allows you to figure out which metrics influence your model performance the most.
 In this section, we'll go through a subset of those:
@@ -228,7 +225,7 @@ If you click and drag on the top-most plot "Select to Zoom," you can zoom in on 
 
 :::
 
-## 5. Conclusion
+## 4. Conclusion
 
 This concludes the tour around Encord Active.
 By now, you should have a good idea about how you can improve both your data, labels, and models by the insights you get from Encord Active.

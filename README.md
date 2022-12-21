@@ -1,9 +1,9 @@
 <p align="center">
-<a href="https://encord-active-docs.web.app">Documentation</a> |
-<a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing">Try it Now</a> |
-<a href="https://encord.com/encord_active/">Website</a> |
-<a href="https://encord.com/blog/">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q">Slack Community</a>
+<a href="https://encord-active-docs.web.app" target="_blank">Documentation</a> |
+<a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
+<a href="https://encord.com/encord_active/" target="_blank">Website</a> |
+<a href="https://encord.com/blog/" target="_blank">Blog</a> |
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack Community</a>
 </p>
 
 <h1 align="center">
