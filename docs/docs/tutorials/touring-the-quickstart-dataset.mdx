@@ -1,0 +1,238 @@
+---
+sidebar_position: 1
+---
+
+import Link from "@docusaurus/Link";
+import TOCInline from "@theme/TOCInline";
+import getSubsectionNodes from "@site/src/js/toc-filter-functions";
+
+# Quickstart
+
+In this tutorial, we will dive into the quickstart dataset and show you some cool features of Encord Active.
+You will go through the following steps:
+
+<TOCInline toc={toc.filter((node) => node.level === 3)} />
+
+:::note
+
+This tutorial assumes that you have [installed](/installation) `encord-active`.
+
+:::
+
+## 1. Opening the Quickstart Dataset
+
+To open the quickstart dataset run:
+
+```shell
+$ encord-active quickstart
+```
+
+Now `encord-active` will download the dataset and open the UI in your browser.
+
+
+:::caution
+
+If the command hangs and nothing happens in your browser, go to <Link to={"http://localhost:8501"}>http://localhost:8501</Link>.
+
+:::
+
+## 2. Finding and Flagging Label Errors {#find-and-flag-label-errors}
+
+You will carry out this process in two steps.
+
+<TOCInline toc={getSubsectionNodes(toc, "find-and-flag-label-errors")} />
+
+### Identifying Metrics with Label Errors
+
+When you open Encord Active, you should see a page like this
+
+![Encord Active Landing page](/img/tutorials/landing-page.png)
+
+Expand the "Label Quality" tab in the left sidebar and click the "Summary" page.
+The page should look like this:
+
+![Label Quality Summary Page](/img/tutorials/data-quality-summary-entry.png)
+
+In the summary page, you will find all the outliers that Encord Active automatically found based on all the [metrics](category/metrics) that were computed for the labels.
+
+Scroll down on the main view and expand the "Annotation Duplicates Outliers" section and expand it.
+The page should look similar to this:
+
+![Annotation Duplicates Outliers](/img/tutorials/annotation-duplicate-outlier-summary.png)
+
+The page will show you how this metric was computed, how many outliers were found and some of the most severe outliers.
+
+If you hover the image with the oranges, you can click the expand button as indicated here:
+
+![Expand the image](/img/tutorials/expand-image-oranges.png)
+
+When clicking the button and taking a closer look at the image, you will see that there are two overlapping annotations on the orange.
+
+<div style={{ textAlign: "center" }}>
+  <img
+    src="/img/tutorials/duplicated-annotation-orange.jpeg"
+    alt="Duplicated annotations"
+    width={300}
+  />
+  <p>Notice the duplicated annotations.</p>
+</div>
+
+Hit <kbd>esc</kbd> to exit the full screen view.
+
+If you look at the other images displayed, you will notice similar issues.
+
+<div
+  style={{
+    display: "table",
+    borderCollapse: "collapse",
+    width: "100%",
+    margin: "1em",
+  }}
+>
+  <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
+    <img
+      src="/img/tutorials/duplicated-annotation-skiing.jpeg"
+      alt="Duplicated annotations"
+      width={300}
+      style={{ display: "block", width: "100%", height: "auto" }}
+    />
+  </div>
+  <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
+    <img
+      src="/img/tutorials/duplicated-annotation-broccoli.jpeg"
+      alt="Duplicated annotations"
+      width={300}
+      style={{ display: "block", width: "100%", height: "auto" }}
+    />
+  </div>
+  <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
+    <img
+      src="/img/tutorials/duplicated-annotation-fridge.jpeg"
+      alt="Duplicated annotations"
+      width={300}
+      style={{ display: "block", width: "100%", height: "auto" }}
+    />
+  </div>
+</div>
+
+:::tip
+
+You can find other sources of label errors by inspecting the other tabs. Good places to start could be the "Object Area" and "Object Aspect Ratio" sections in the App.
+
+:::
+
+### Tagging Label Errors
+
+To tag the images with the identified label errors, you first add a new tag by typing in the tag name in the left sidebar and hitting enter.
+
+![Add new tag](/img/tutorials/label_duplicate_tag_add.png)
+
+Afterwards, you can add the tag to the images you see in the outlier pane by selecting the tag from the drop-down below each image:
+
+![Tag an image](/img/tutorials/tag-added-for-oranges.png)
+
+### Exporting Labels for Additional Annotation
+
+Suppose you have now tagged all the duplicated annotations that you would like to export for additional annotations.
+Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created (as indicated by the purple arrows).
+
+![Select images with the `label_duplication` tag](/img/tutorials/export-duplication-tag.png)
+
+_Note how your data has been filtered to only the rows that you tagged._
+
+Now you can _Generate COCO file_, _Clone_ the data into a new Encord project, or send the data for _Review_, _Re-label_, or _Augmentation_ tasks.
+
+## 3. Figuring Out What Metrics Influence Model Performance {#figuring-out-what-metrics-influence-model-performance}
+
+Encord Active also allows you to figure out which metrics influence your model performance the most.
+In this section, we'll go through a subset of those:
+
+<TOCInline
+  toc={getSubsectionNodes(
+    toc,
+    "figuring-out-what-metrics-influence-model-performance"
+  )}
+/>
+
+### The High Level View of Model Performance
+
+#### mAP and mAR scores
+
+First, navigate to the _Model Quality_ > _Metrics_ page to find sections that automatically give you multiple insights into your model performance.
+
+The first section will give you the _mean Average Precision (mAP)_ and the _mean Average Recall (mAR)_ of your model based on the IOU threshold set in the top of the page.
+
+![mAP and mAR scored](/img/tutorials/map-mar-fragment.png)
+
+If you drag the slider, you will notice how the score changes.
+You can also choose to see the aggregate score for certain classes by selecting them in the drop-down to the left.
+
+#### Metric Importance and Correlation
+
+In the next section (the _Metric Importance_), you will find importances and correlations of your model performance as function of metrics.
+
+![Metric Importances](/img/tutorials/importance-and-correlations.png)
+
+From this section, you quickly find that, e.g., "Object Area - Relative (P)" has a high importance for the model performance.
+
+:::note
+
+The "(P)" and the "(F)" in the labels of the plots indicate whether the metric was run on predictions or frames, respectively.
+
+:::
+
+A next step from here would be to jump to the _Performance by Metric_ page and have a look at exactly how the true-positive rate of the model is affected by this metric.
+However, we want to show you the rest of this page prior to doing this.
+You can skip straight ahead to the [Inspecting Model Performance for a Specific Metric](#inspecting-model-performance-for-a-specific-metric) if you are too curious to wait.
+
+#### Subset Scores
+
+Before jumping into specific metrics, we want to show you the decomposition of the model performance based on individual classes.
+If you look in the _Subset selection scores_ section, you will find the average precision (AP) and average recall (AR) scores for each individual class.
+
+![AP and AR scores decomposed based on classes](/img/tutorials/precision-recall-coco.png)
+
+:::note
+
+We've choosen a subset of classes [`airplane`, `bus`, `cat`, `dog`, `person`] in the settings in the top of the page to make the plots more digestible.
+
+:::
+
+From the left plot (Mean scores), we can see the AP and the AR for each individual class.
+The right plot shows the precision-recall curves for each of the classes.
+From these plots, we learn that the model performs better on the `cat` class than it does on, e.g., the `person` class.
+To learn for which instances the model works and for which it doesn't, you can look in the _True Positives_, _False Positives_, and _False Negatives_ tabs to see concrete instances of the three success/failure modes.
+
+### Inspecting Model Performance for a Specific Metric
+
+Above, we noticed that the "Object Area - Relative (P)" metric has a high importance on the model performance.
+To learn more about how the specific metric affects the model performance you:
+
+1. Click the _Performance By Metric_ tab in the sidebar.
+2. Select the "Object Area - Relative (P)" metric in the settings in the top.
+
+You should now see a page similar to this:
+
+![Performance by Metric page](/img/tutorials/performance-by-object-area-coco.png)
+
+The plot shows the true positive rate and the false negative rate as a function of the selected metric; the "Object Area - Relative (P)" in this case.
+We can see how when the model predictions are small in terms of the absolute area, then the true-positive rate is low (bad), while larger predictions are more often correct (good).
+Similarly, when labels are small, the false negative rate is high (bad), while larger labels are less likely to be issued by the model (good).
+
+:::tip
+
+If you click and drag on the top-most plot "Select to Zoom," you can zoom in on a specific subsection of the x-axis on the two plots below.
+
+:::
+
+## 4. Conclusion
+
+This concludes the tour around Encord Active.
+By now, you should have a good idea about how you can improve both your data, labels, and models by the insights you get from Encord Active.
+
+_Further reading:_
+
+- We've only covered each page in the app briefly in this tutorial. To learn more about what information you can find in each page, please refer to the [Pages](/category/pages) section.
+- To learn more about concrete actionable steps you can take to improve your model performance, we suggest that you have a look at the [Workflow section](/category/workflows).
+- If you want to learn more about the existing metrics or want to build your own metric function, the [Metrics section](/category/metrics) is where you should continue reading.
+- Finally, we have also included some in-depth descriptions the [Command Line Interface](/category/command-line-interface).

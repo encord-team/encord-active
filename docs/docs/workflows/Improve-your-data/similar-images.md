@@ -13,23 +13,23 @@ When have identified an edge case or a duplicate, you can tag it and export or d
 
  `Prerequisites:` Dataset & Embeddings 
 
-:::tip
 
- There are two tabs where you can utilize similarity search: [Summary tab](/pages/data-quality/summary) and [Explorer tab](/pages/data-quality/explorer).
+### Setup
+If you haven't installed Encord Active, visit [installation](/installation). In this workflow we will be using the COCO validation dataset.
+## Steps
 
-:::
+### 1. Navigate to explorer tab
+Navigate to the _Data Quality_ > _Explorer_ tab and select a quality metric in the top left menu to order your data by.
 
-### Steps:
-1. Navigate to the _Data Quality_ > _Summary_ or _Explorer_ tab.
-2. Select a metric in the top left menu to order your data by.
-3. Select an image of interest and click _Show Similar Images_. 
-   * Encord Active shows the most semantically similar images below the image in a new tab.
-4. If you have not yet created any tags, create a tag on the left sidebar.
-5. Tag images of interest.
-6. Repeat step 2-5 until satisfied.
-7. When you are satisfied with your selection navigate to the _Actions_ tab to act.
-8. Within the _Actions_ tab Click _Add filters_, scroll the bottom, and select _tags_. Next, choose the tags you would like to export, relabel, delete, or augment from your dataset.
-   * To export images in CSV click _Download filtered data_.
-   * To delete images from your dataset click _Delete_.
-   * To relabel images please contact Encord to hear more.
-   * To augment similar images please contact Encord to hear more.
+![data-quality-similar-images.png](../../images/data-quality-similar-images.png)
+
+### 2. Select quality metric
+Select a quality metric to index your images by:
+
+![data-quality-similar-images-quality.png](../../images/data-quality-similar-images-quality.png)
+
+### 3. Find similar images
+Select an image of interest and click _Show Similar Images_. Encord Active shows the most semantically similar images below the image in a new tab.
+
+![data-quality-similar-images-search.png](../../images/data-quality-similar-images-search.png)
+
