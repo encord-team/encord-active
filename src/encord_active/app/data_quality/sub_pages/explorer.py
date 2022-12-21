@@ -2,12 +2,10 @@ import re
 from typing import List
 
 import altair as alt
-import numpy as np
 import pandas as pd
-import plotly.express as px
 import streamlit as st
-from natsort import natsorted
 from pandas import Series
+from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
@@ -15,6 +13,12 @@ from encord_active.app.common import embedding_utils
 from encord_active.app.common.components import (
     build_data_tags,
     multiselect_with_all_option,
+)
+from encord_active.app.common.components.annotator_statistics import (
+    render_annotator_properties,
+)
+from encord_active.app.common.components.label_statistics import (
+    render_dataset_properties,
 )
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
@@ -30,7 +34,13 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
 )
 from encord_active.lib.common.metric import AnnotationType, EmbeddingType
-from encord_active.lib.metrics.load_metrics import MetricData, MetricScope, load_metric
+from encord_active.lib.metrics.load_metrics import (
+    MetricData,
+    MetricSchema,
+    MetricScope,
+    get_annotator_level_info,
+    load_metric,
+)
 
 
 class ExplorerPage(Page):
@@ -55,6 +65,9 @@ class ExplorerPage(Page):
             help="The data in the main view will be sorted by the selected metric. ",
         )
 
+        if not selected_metric_name:
+            return
+
         metric_idx = metric_names.index(selected_metric_name)
         st.session_state[state.DATA_PAGE_METRIC] = sorted_metrics[metric_idx]
         st.session_state[state.DATA_PAGE_METRIC_NAME] = selected_metric_name
@@ -68,37 +81,39 @@ class ExplorerPage(Page):
             st.session_state[state.DATA_PAGE_METRIC], normalize=st.session_state[state.NORMALIZATION_STATUS]
         )
 
-        if df.shape[0] > 0:
-            class_set = sorted(list(df["object_class"].unique()))
-            with col2:
-                selected_classes = multiselect_with_all_option("Filter by class", class_set, key=state.DATA_PAGE_CLASS)
+        if df.shape[0] <= 0:
+            return
 
-            is_class_selected = (
-                df.shape[0] * [True] if "All" in selected_classes else df["object_class"].isin(selected_classes)
-            )
-            df_class_selected = df[is_class_selected]
+        class_set = sorted(list(df["object_class"].unique()))
+        with col2:
+            selected_classes = multiselect_with_all_option("Filter by class", class_set, key=state.DATA_PAGE_CLASS)
 
-            annotators = get_annotator_level_info(df_class_selected)
-            annotator_set = sorted(annotators["annotator"])
+        is_class_selected = (
+            df.shape[0] * [True] if "All" in selected_classes else df["object_class"].isin(selected_classes)
+        )
+        df_class_selected: DataFrame[MetricSchema] = df[is_class_selected]
 
-            with col3:
-                selected_annotators = multiselect_with_all_option(
-                    "Filter by annotator",
-                    annotator_set,
-                    key=state.DATA_PAGE_ANNOTATOR,
-                )
+        annotators = get_annotator_level_info(df_class_selected)
+        annotator_set = sorted(annotators.keys())
 
-            annotator_selected = (
-                df_class_selected.shape[0] * [True]
-                if "All" in selected_annotators
-                else df_class_selected["annotator"].isin(selected_annotators)
+        with col3:
+            selected_annotators = multiselect_with_all_option(
+                "Filter by annotator",
+                annotator_set,
+                key=state.DATA_PAGE_ANNOTATOR,
             )
 
-            self.row_col_settings_in_sidebar()
-            # For now go the easy route and just filter the dataframe here
-            return df_class_selected[annotator_selected]
+        annotator_selected = (
+            df_class_selected.shape[0] * [True]
+            if "All" in selected_annotators
+            else df_class_selected["annotator"].isin(selected_annotators)
+        )
 
-    def build(self, selected_df: pd.DataFrame, metric_type: MetricScope):
+        self.row_col_settings_in_sidebar()
+        # For now go the easy route and just filter the dataframe here
+        return df_class_selected[annotator_selected]
+
+    def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
         st.markdown(f"# {self.title}")
         meta = st.session_state[state.DATA_PAGE_METRIC].meta
         st.markdown(f"## {meta['title']}")
@@ -107,102 +122,15 @@ class ExplorerPage(Page):
         if selected_df.empty:
             return
 
-        fill_dataset_properties_window(selected_df)
-        fill_annotator_properties_window(selected_df)
-        fill_data_quality_window(selected_df, metric_type)
+        with st.expander("Dataset Properties", expanded=True):
+            render_dataset_properties(selected_df)
+        with st.expander("Annotator Statistics", expanded=False):
+            render_annotator_properties(selected_df)
+
+        fill_data_quality_window(selected_df, metric_scope)
 
 
-def get_annotator_level_info(df: pd.DataFrame) -> dict[str, list]:
-    annotator_set = natsorted(list(df["annotator"].unique()))
-    annotators: dict[str, list] = {"annotator": annotator_set, "total annotation": [], "score": []}
-
-    for annotator in annotator_set:
-        annotators["total annotation"].append(df[df["annotator"] == annotator].shape[0])
-        annotators["score"].append(df[df["annotator"] == annotator]["score"].mean())
-
-    return annotators
-
-
-def fill_dataset_properties_window(current_df: pd.DataFrame):
-    dataset_expander = st.expander("Dataset Properties", expanded=True)
-    dataset_columns = dataset_expander.columns(3)
-
-    cls_set = natsorted(list(current_df["object_class"].unique()))
-
-    dataset_columns[0].metric("Number of labels", current_df.shape[0])
-    dataset_columns[1].metric("Number of classes", len(cls_set))
-    dataset_columns[2].metric("Number of images", get_unique_data_units_size(current_df))
-
-    if len(cls_set) > 1:
-        classes = {}
-        for cls in cls_set:
-            classes[cls] = (current_df["object_class"] == cls).sum()
-
-        source = pd.DataFrame({"class": list(classes.keys()), "count": list(classes.values())})
-
-        fig = px.bar(source, x="class", y="count")
-        fig.update_layout(title_text="Distribution of the classes", title_x=0.5, title_font_size=20)
-        dataset_expander.plotly_chart(fig, use_container_width=True)
-
-
-def fill_annotator_properties_window(current_df: pd.DataFrame):
-    annotators = get_annotator_level_info(current_df)
-    if not (len(annotators["annotator"]) == 1 and (not isinstance(annotators["annotator"][0], str))):
-        annotator_expander = st.expander("Annotator Statistics", expanded=False)
-
-        annotator_columns = annotator_expander.columns([2, 2])
-
-        # 1. Pie Chart
-        annotator_columns[0].markdown(
-            "<h5 style='text-align: center; color: black;'>Distribution of the annotations</h1>", unsafe_allow_html=True
-        )
-        source = pd.DataFrame(
-            {
-                "annotator": annotators["annotator"],
-                "total": annotators["total annotation"],
-                "score": [f"{score:.3f}" for score in annotators["score"]],
-            }
-        )
-
-        fig = px.pie(source, values="total", names="annotator", hover_data=["score"])
-        # fig.update_layout(title_text="Distribution of the annotations", title_x=0.5, title_font_size=20)
-
-        annotator_columns[0].plotly_chart(fig, use_container_width=True)
-
-        # 2. Table View
-        annotator_columns[1].markdown(
-            "<h5 style='text-align: center; color: black;'>Detailed annotator statistics</h1>", unsafe_allow_html=True
-        )
-
-        annotators["annotator"].append("all")
-        annotators["total annotation"].append(current_df.shape[0])
-
-        df_mean_score = current_df["score"].mean()
-        annotators["score"].append(df_mean_score)
-        deviations = 100 * ((np.array(annotators["score"]) - df_mean_score) / df_mean_score)
-        annotators["deviations"] = deviations
-        annotators_df = pd.DataFrame.from_dict(annotators)
-
-        def _format_deviation(val):
-            return f"{val:.1f}%"
-
-        def _format_score(val):
-            return f"{val:.3f}"
-
-        def _color_red_or_green(val):
-            color = "red" if val < 0 else "green"
-            return f"color: {color}"
-
-        def make_pretty(styler):
-            styler.format(_format_deviation, subset=["deviations"])
-            styler.format(_format_score, subset=["score"])
-            styler.applymap(_color_red_or_green, subset=["deviations"])
-            return styler
-
-        annotator_columns[1].dataframe(annotators_df.style.pipe(make_pretty), use_container_width=True)
-
-
-def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricScope):
+def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: MetricScope):
     annotation_type = st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type")
     if (
         (annotation_type is None)
@@ -241,7 +169,7 @@ def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricScope)
 
     paginated_subset = build_pagination(subset, n_cols, n_rows, "score")
 
-    form = bulk_tagging_form(metric_type)
+    form = bulk_tagging_form(metric_scope)
 
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
@@ -258,7 +186,7 @@ def fill_data_quality_window(current_df: pd.DataFrame, metric_type: MetricScope)
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
             with cols.pop(0):
-                build_card(embedding_type, i, row, similarity_expanders, metric_type)
+                build_card(embedding_type, i, row, similarity_expanders, metric_scope)
 
 
 def populate_embedding_information(embedding_type: str):
@@ -403,7 +331,7 @@ def show_similar_classification_images(row: Series, expander: DeltaGenerator):
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        image = load_or_fill_image(nearest_image["key"])
+        image = load_or_fill_image(nearest_image["key"], st.session_state.data_dir)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
@@ -426,7 +354,7 @@ def show_similar_images(row: Series, expander: DeltaGenerator):
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        image = load_or_fill_image(nearest_image["key"])
+        image = load_or_fill_image(nearest_image["key"], st.session_state.data_dir)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
@@ -453,19 +381,9 @@ def show_similar_object_images(row: Series, expander: DeltaGenerator):
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        image = show_image_and_draw_polygons(nearest_image["key"])
+        image = show_image_and_draw_polygons(nearest_image["key"], st.session_state.data_dir)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
         column_id += 1
         column_id = column_id % division
-
-
-def get_unique_data_units_size(current_df: pd.DataFrame):
-    data_units = set()
-    identifiers = current_df["identifier"]
-    for identifier in identifiers:
-        key_components = identifier.split("_")
-        data_units.add(key_components[0] + "_" + key_components[1])
-
-    return len(data_units)

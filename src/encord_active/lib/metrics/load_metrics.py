@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, TypedDict, Union
 
 import pandas as pd
 import pandera as pa
@@ -113,3 +113,22 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
 
     out = natsorted(out, key=lambda i: (i.level, i.name))  # type: ignore
     return out
+
+
+class AnnotatorInfo(TypedDict):
+    name: str
+    total_annotations: int
+    mean_score: float
+
+
+def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, AnnotatorInfo]:
+    annotator_set: List[str] = natsorted(list(df[MetricSchema.annotator].unique()))
+    annotators: Dict[str, AnnotatorInfo] = {}
+    for annotator in annotator_set:
+        annotators[annotator] = AnnotatorInfo(
+            name=annotator,
+            total_annotations=df[df[MetricSchema.annotator] == annotator].shape[0],
+            mean_score=df[df[MetricSchema.annotator] == annotator]["score"].mean(),
+        )
+
+    return annotators
