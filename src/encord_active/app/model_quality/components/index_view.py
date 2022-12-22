@@ -9,12 +9,9 @@ from streamlit.delta_generator import DeltaGenerator
 import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.components import build_data_tags
-from encord_active.app.common.utils import (
-    build_pagination,
-    get_df_subset,
-    get_geometries,
-    load_or_fill_image,
-)
+from encord_active.app.common.components.paginator import render_pagination
+from encord_active.app.common.components.slicer import render_df_slicer
+from encord_active.app.common.utils import get_geometries, load_or_fill_image
 from encord_active.lib.common.colors import Color, hex_to_rgb
 
 
@@ -65,8 +62,8 @@ def metric_view(
 
     n_cols, n_rows = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM]), int(st.session_state[state.MAIN_VIEW_ROW_NUM])
     selected_metric = st.session_state.get(state.PREDICTIONS_METRIC, "")
-    subset = get_df_subset(df, selected_metric)
-    paginated_subset = build_pagination(subset, n_cols, n_rows, selected_metric)
+    subset = render_df_slicer(df, selected_metric)
+    paginated_subset = render_pagination(subset, n_cols, n_rows, selected_metric)
 
     if len(paginated_subset) == 0:
         st.error("No data in selected quality interval")

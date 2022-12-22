@@ -14,6 +14,7 @@ from torch import nn
 from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
 from torchvision.models.feature_extraction import create_feature_extractor
 
+from encord_active.lib.common.embedding import LabelEmbedding
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
 
@@ -100,17 +101,17 @@ def generate_cnn_embeddings(iterator: Iterator, filepath: str) -> None:
 
                 last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
 
-                entry = {
-                    "label_row": iterator.label_hash,
-                    "data_unit": data_unit["data_hash"],
-                    "frame": iterator.frame,
-                    "objectHash": obj["objectHash"],
-                    "lastEditedBy": last_edited_by,
-                    "featureHash": obj["featureHash"],
-                    "name": obj["name"],
-                    "dataset_title": iterator.dataset_title,
-                    "embedding": emb,
-                }
+                entry = LabelEmbedding(
+                    label_row=iterator.label_hash,
+                    data_unit=data_unit["data_hash"],
+                    frame=iterator.frame,
+                    objectHash=obj["objectHash"],
+                    lastEditedBy=last_edited_by,
+                    featureHash=obj["featureHash"],
+                    name=obj["name"],
+                    dataset_title=iterator.dataset_title,
+                    embedding=emb,
+                )
 
                 collections.append(entry)
 
@@ -178,7 +179,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
 
         temp_entry["embedding"] = embedding
 
-        collections.append(temp_entry)
+        collections.append(LabelEmbedding(temp_entry))  # type: ignore
 
     with open(filepath, "wb") as f:
         pickle.dump(collections, f)

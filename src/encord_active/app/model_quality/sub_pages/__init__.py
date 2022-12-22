@@ -6,6 +6,7 @@ import streamlit as st
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
+from encord_active.lib.metrics.statistical_utils import get_histogram
 
 
 class ModelQualityPage(Page):
@@ -71,23 +72,3 @@ class ModelQualityPage(Page):
         if metric_meta:
             st.markdown(f"### The {metric_meta['title']} metric")
             st.markdown(metric_meta["long_description"])
-
-
-class HistogramMixin:
-    @staticmethod
-    def get_histogram(data_frame: pd.DataFrame, metric_column: str):
-        title_suffix = f" - {metric_column}"
-        bar_chart = (
-            alt.Chart(data_frame, title=f"Data distribution{title_suffix}")
-            .mark_bar()
-            .encode(
-                alt.X(f"{metric_column}:Q", bin=alt.Bin(maxbins=100), title=metric_column),
-                alt.Y("count()", title="Num. samples"),
-                tooltip=[
-                    alt.Tooltip(f"{metric_column}:Q", title=metric_column, format=",.3f", bin=True),
-                    alt.Tooltip("count():Q", title="Num. samples", format="d"),
-                ],
-            )
-            .properties(height=200)
-        )
-        return bar_chart
