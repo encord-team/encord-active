@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 from itertools import product
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Optional, Tuple, Union
+from typing import Any, Collection, Dict, List, Optional, Tuple, TypedDict, Union
 
 import av
 import cv2
@@ -35,10 +35,29 @@ def load_json(json_file: Path) -> Optional[dict]:
             return None
 
 
-def fetch_project_meta(data_dir: Path) -> dict:
+class ProjectMeta(TypedDict):
+    project_description: str
+    project_hash: str
+    project_title: str
+    ssh_key_path: str
+
+
+class ProjectNotFound(Exception):
+    """Exception raised when a path doesn't contain a valid project.
+
+    Attributes:
+        project_dir -- path to a project directory
+    """
+
+    def __init__(self, project_dir):
+        self.project_dir = project_dir
+        super().__init__(f"Couldn't find meta file for project in `{project_dir}`")
+
+
+def fetch_project_meta(data_dir: Path) -> ProjectMeta:
     meta_file = data_dir / "project_meta.yaml"
     if not meta_file.is_file():
-        raise FileNotFoundError(f"Couldn't find meta file for project in {meta_file}")
+        raise ProjectNotFound(data_dir)
 
     with meta_file.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
