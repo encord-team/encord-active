@@ -1,21 +1,22 @@
 from copy import deepcopy
+from pathlib import Path
 
 import streamlit as st
 
 import encord_active.app.common.state as state
-import encord_active.app.model_quality.data as pred_data
+import encord_active.lib.model_predictions.data as pred_data
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.utils import setup_page
-from encord_active.app.model_quality.map_mar import compute_mAP_and_mAR
 from encord_active.app.model_quality.settings import common_settings
 from encord_active.app.model_quality.sub_pages import Page
+from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
 
 
 def model_quality(page: Page):
     def render():
         setup_page()
 
-        if not pred_data.check_model_prediction_availability():
+        if not pred_data.check_model_prediction_availability(st.session_state.predictions_dir):
             st.markdown(
                 "# Missing Model Predictions\n"
                 "This project does not have any imported predictions. "
@@ -25,29 +26,50 @@ def model_quality(page: Page):
             )
             return
 
-        st.session_state.selected_class_idx = pred_data.get_class_idx()
-        st.session_state.full_class_idx = deepcopy(pred_data.get_class_idx())
-        (
-            st.session_state.model_predictions,
-            st.session_state.prediction_metric_names,
-        ) = pred_data.get_model_predictions() or (None, None)
-        if st.session_state.selected_class_idx is None:
+        predictions_dir: Path = st.session_state.predictions_dir
+        metrics_dir: Path = st.session_state.metric_dir
+        class_idx = state.setdefault(state.PREDICTIONS_FULL_CLASS_IDX, pred_data.get_class_idx, predictions_dir)
+        st.session_state.selected_class_idx = deepcopy(class_idx)
+
+        prediction_metric_data = state.setdefault(
+            state.PREDICTIONS_METRIC_NAMES, pred_data.get_prediction_metric_data, predictions_dir, metrics_dir
+        )
+        state.setdefault(
+            state.PREDICTIONS_MODEL_PREDICTIONS,
+            pred_data.get_model_predictions,
+            predictions_dir,
+            prediction_metric_data,
+        )
+
+        if st.session_state.selected_class_idx is None or st.session_state.model_predictions is None:
             st.error("Couldn't load model predictions")
             return
 
-        st.session_state.labels, st.session_state.label_metric_names = pred_data.get_labels() or (None, None)
+        label_metric_data = state.setdefault(
+            state.PREDICTIONS_LABEL_METRIC_NAMES, pred_data.get_label_metric_data, metrics_dir
+        )
+        state.setdefault(state.PREDICTIONS_LABELS, pred_data.get_labels, predictions_dir, label_metric_data)
+
         if st.session_state.labels is None:
+            st.error("Couldn't load labels properly")
             return
 
-        st.session_state.gt_matched = pred_data.get_gt_matched()
-        st.session_state.metric_meta = pred_data.get_metadata_files()
+        state.setdefault(state.PREDICTIONS_GT_MATCHED, pred_data.get_gt_matched, predictions_dir)
+        st.session_state.metric_meta = {
+            "predictions": {m.name: m for m in prediction_metric_data},
+            "labels": {m.name: m for m in label_metric_data},
+        }
 
         with sticky_header():
             common_settings()
             page.sidebar_options()
 
         metrics, precisions, tps, fp_reasons, fns = compute_mAP_and_mAR(
-            iou_threshold=st.session_state.get(state.IOU_THRESHOLD),
+            st.session_state.get(state.PREDICTIONS_MODEL_PREDICTIONS),  # type: ignore
+            st.session_state.get(state.PREDICTIONS_LABELS),  # type: ignore
+            st.session_state.get(state.PREDICTIONS_GT_MATCHED),  # type: ignore
+            st.session_state.get(state.PREDICTIONS_FULL_CLASS_IDX),  # type: ignore
+            iou_threshold=st.session_state.get(state.IOU_THRESHOLD, 0.5),
             ignore_unmatched_frames=st.session_state[state.IGNORE_FRAMES_WO_PREDICTIONS],
         )
         st.session_state.model_predictions["tps"] = tps.astype(float)
@@ -55,21 +77,27 @@ def model_quality(page: Page):
         st.session_state.labels["fns"] = fns
 
         # Sort predictions and labels according to selected metrics.
-        pred_sort_column = st.session_state.get(state.PREDICTIONS_METRIC, st.session_state.prediction_metric_names[0])
+        pred_sort_column = st.session_state.get(
+            state.PREDICTIONS_METRIC, st.session_state.prediction_metric_names[0].name
+        )
         st.session_state.sorted_model_predictions = st.session_state.model_predictions.sort_values(
             [pred_sort_column], axis=0
         )
 
-        label_sort_column = st.session_state.get(state.PREDICTIONS_LABEL_METRIC, st.session_state.label_metric_names[0])
+        label_sort_column = st.session_state.get(
+            state.PREDICTIONS_LABEL_METRIC, st.session_state.label_metric_names[0].name
+        )
         st.session_state.sorted_labels = st.session_state.labels.sort_values([label_sort_column], axis=0)
 
         if st.session_state[state.IGNORE_FRAMES_WO_PREDICTIONS]:
-            labels = pred_data.filter_labels_for_frames_wo_predictions()
+            labels = pred_data.filter_labels_for_frames_wo_predictions(
+                st.session_state.model_predictions, st.session_state.sorted_labels
+            )
         else:
             labels = st.session_state.sorted_labels
 
         _labels, _metrics, _model_pred, _precisions = pred_data.prediction_and_label_filtering(
-            labels, metrics, st.session_state.sorted_model_predictions, precisions
+            st.session_state.selected_class_idx, labels, metrics, st.session_state.sorted_model_predictions, precisions
         )
         page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
 

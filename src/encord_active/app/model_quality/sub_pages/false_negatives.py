@@ -13,9 +13,10 @@ class FalseNegativesPage(ModelQualityPage):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):
+        metric_columns = list(map(lambda m: m.name, st.session_state.label_metric_names))
         st.selectbox(
             "Select metric for your labels",
-            st.session_state.label_metric_names,
+            metric_columns,
             key=state.PREDICTIONS_LABEL_METRIC,
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (O) := object scores.",

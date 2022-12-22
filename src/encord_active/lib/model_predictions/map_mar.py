@@ -1,15 +1,44 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
 
 import numpy as np
 import pandas as pd
-import streamlit as st
+from pandera.typing import DataFrame
+
+from encord_active.lib.model_predictions.data import LabelSchema, PredictionSchema
 
 
-@st.experimental_memo
+class GtMatchEntry(TypedDict):
+    lidx: str
+    pidxs: List[int]
+
+
+GtMatchCollection = Dict[str, Dict[str, List[GtMatchEntry]]]
+"""
+Collection of lists of labels and what predictions of the same class they match with. 
+First-level key is `class_id`, second-level is `img_id`
+"""
+
+
+class ClassMapEntry(TypedDict):
+    name: str
+    featureHash: str
+    color: str
+
+
+ClassMapCollection = Dict[str, ClassMapEntry]
+"""
+Key is the `class_id`
+"""
+
+
 def compute_mAP_and_mAR(
+    model_predictions: DataFrame[PredictionSchema],
+    labels: DataFrame[LabelSchema],
+    gt_matched: GtMatchCollection,
+    class_map: Dict[str, ClassMapEntry],
     iou_threshold: float,
     rec_thresholds: Optional[np.ndarray] = None,
-    ignore_unmatched_frames: bool = False,  # pylint: disable=unused-argument
+    ignore_unmatched_frames: bool = False,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, pd.DataFrame, np.ndarray]:
     """
     Computes a bunch of quantities used to display results in the UI. The main
@@ -19,6 +48,39 @@ def compute_mAP_and_mAR(
     prediction can atmost match one label. As such, if an iou value is >0, it
     means that the prediction's best match (highest iou) has the given value.
 
+
+    :param model_predictions: A df with the predictions ordered (DESC) by the
+        models confidence scores.
+    :param labels: The df with the labels. The labels are only used in
+        this function to build a list of false negatives, as the matching
+        between labels and predictions were already done during import.
+    :param gt_matched: A dictionary with format::
+
+            gt_matched[class_id: str][img_id: str] = \
+                [{"lidx": lidx: int, "pidxs": [pidx1: int, pidx2, ... ]}]
+
+        each entry in the `gt_matched` is thus a list of all the labels of a
+        particular class (`class_id`) from a particular image (`img_id`).
+        Each entry in the list contains the index to which it belongs in the
+        `labels` data frame (`lidx`) and the indices of all the predictions
+        that matches the given label best sorted by confidence score.
+        That is, if `lidx == 512` and `pidx1 == 256`, it
+        means that prediction 256 (`predictions.iloc[256]`) matched label
+        512 (`labels.iloc[512]`) with the highest iou of all the prediction's
+        matches. Furthermore, as `pidx1` comes before `pidx2`, it means that::
+
+            predictions.iloc[pidx1]["confidence"] >= predictions.iloc[pidx2]["confidence"]
+
+    :param class_map: This is a mapping between class indices and essential
+        metadata. The dict has the structure::
+
+            {
+                "<idx>": {  #  <-- Note string type here, e.g., '"1"' <--
+                    "name": "The name of the object class",
+                    "featureHash": "e2f0be6c",
+                    "color": "#001122",
+                }
+            }
 
     :param iou_threshold: The IOU threshold to compute scores for.
     :param rec_thresholds: The recall thresholds to compute the scores for.
@@ -39,84 +101,39 @@ def compute_mAP_and_mAR(
         - fns: An indicator array for which `fns[j] == True` if `_labels.iloc[j]`
             was not matched by any prediction.
     """
-    """
-    :param _predictions: A df with the predictions ordered (DESC) by the
-        models confidence scores.
-    """
-    _predictions = st.session_state.model_predictions
-    """
-    :param _labels: The df with the labels. The labels are only used in
-        this function to build a list of false negatives, as the matching
-        between labels and predictions were already done during import.
-    """
-    _labels = st.session_state.labels
-    """
-    :param _gt_matched: A dictionary with format::
-
-            _gt_matched[(img_id: int, class_id: int)] = \
-                [{"lidx": lidx: int, "pidxs": [pidx1: int, pidx2, ... ]}]
-
-        each entry in the `_gt_matched` is thus a list of all the labels of a
-        particular class (`class_id`) from a particular image (`img_id`).
-        Each entry in the list contains the index to which it belongs in the
-        `_labels` data frame (`lidx`) and the indices of all the predictions
-        that matches the given label best sorted by confidence score.
-        That is, if `lidx == 512` and `pidx1 == 256`, it
-        means that prediction 256 (`_predictions.iloc[256]`) matched label
-        512 (`_labels.iloc[512]`) with the highest iou of all the prediction's
-        matches. Furthermore, as `pidx1` comes before `pidx2`, it means that::
-
-            _predictions.iloc[pidx1]["confidence"] >= _predictions.iloc[pidx2]["confidence"]
-
-    """
-    _gt_matched = st.session_state.gt_matched
-    """
-    :param _class_map: This is a mapping between class indices and essential
-        metadata. The dict has the structure::
-
-            {
-                "<idx>": {  #  <-- Note string type here <--
-                    "name": "The name of the object class",
-                    "heatureHash": "e2f0be6c",
-                    "color": "#001122",
-                }
-            }
-    """
-    _class_map = st.session_state.full_class_idx
     rec_thresholds = rec_thresholds or np.linspace(0.0, 1.00, round(1.00 / 0.01) + 1)
 
-    full_index_list = np.arange(_predictions.shape[0])
-    pred_class_list = _predictions["class_id"].to_numpy(dtype=int)
-    ious = _predictions["iou"].to_numpy(dtype=float)
+    full_index_list = np.arange(model_predictions.shape[0])
+    pred_class_list = model_predictions["class_id"].to_numpy(dtype=int)
+    ious = model_predictions["iou"].to_numpy(dtype=float)
 
     # == Output containers == #
-    # Stores the mapping between class_idx and list_idx of the following two lists
+    # Stores the mapping between class_id and list_idx of the following two lists
     class_idx_map = {}
     precisions = []
     recalls = []
 
-    _tps = np.zeros((_predictions.shape[0],), dtype=bool)
-    reasons = [f"No overlapping label of class `{_class_map[str(i)]['name']}`." for i in pred_class_list]
-    _fns = np.zeros((_labels.shape[0],), dtype=bool)
+    _tps = np.zeros((model_predictions.shape[0],), dtype=bool)
+    reasons = [f"No overlapping label of class `{class_map[str(i)]['name']}`." for i in pred_class_list]
+    _fns = np.zeros((labels.shape[0],), dtype=bool)
 
-    pred_img_ids = set(_predictions["img_id"])
-    label_include_ids = set(_labels.index[_labels["img_id"].isin(pred_img_ids)])
+    pred_img_ids = set(model_predictions["img_id"])
+    label_include_ids = set(labels.index[labels["img_id"].isin(pred_img_ids)])
 
     cidx = 0
-    for class_idx in _class_map:
+    for class_id in class_map:
         if ignore_unmatched_frames:
-            # nb_labels = sum([len([c for c in l if c in pred_img_ids]) for l in _gt_matched[class_idx].values()])
             nb_labels = sum(
-                [len([t for t in l if t["lidx"] in label_include_ids]) for l in _gt_matched.get(class_idx, {}).values()]
+                [len([t for t in l if t["lidx"] in label_include_ids]) for l in gt_matched.get(class_id, {}).values()]
             )
         else:
-            nb_labels = sum([len(l) for l in _gt_matched.get(class_idx, {}).values()])
+            nb_labels = sum([len(l) for l in gt_matched.get(class_id, {}).values()])
 
         if nb_labels == 0:
             continue
 
-        class_idx_map[cidx] = class_idx  # Keep track of the order of the output lists
-        pred_select = pred_class_list == int(class_idx)
+        class_idx_map[cidx] = class_id  # Keep track of the order of the output lists
+        pred_select = pred_class_list == int(class_id)
         if pred_select.sum() == 0:
             precisions.append(np.zeros(rec_thresholds.shape))
             recalls.append(np.array(0.0))
@@ -130,7 +147,7 @@ def compute_mAP_and_mAR(
         TP_candidates = set(class_level_to_full_list_idx[_ious >= iou_threshold].astype(int).tolist())
         TP = np.zeros(_ious.shape[0])
 
-        for img_idx, img_label_matches in _gt_matched[class_idx].items():
+        for img_label_matches in gt_matched[class_id].values():
             for label_match in img_label_matches:
                 found_one = False
                 for tp_idx in label_match["pidxs"]:
@@ -178,21 +195,21 @@ def compute_mAP_and_mAR(
         ["mAP", np.mean(_precisions.mean(axis=1)).item(), "Mean"],
     ]
     metrics += [
-        [f"AP_{_class_map[class_idx]['name']}", _precisions[cidx].mean().item(), _class_map[class_idx]["name"]]
-        for cidx, class_idx in class_idx_map.items()
+        [f"AP_{class_map[class_id]['name']}", _precisions[cidx].mean().item(), class_map[class_id]["name"]]
+        for cidx, class_id in class_idx_map.items()
     ]
     metrics += [["mAR", np.mean(recalls).item(), "Mean"]]
     metrics += [
-        [f"AR_{_class_map[class_idx]['name']}", recalls[cidx].item(), _class_map[class_idx]["name"]]
-        for cidx, class_idx in class_idx_map.items()
+        [f"AR_{class_map[class_id]['name']}", recalls[cidx].item(), class_map[class_id]["name"]]
+        for cidx, class_id in class_idx_map.items()
     ]
     metrics_df = pd.DataFrame(metrics, columns=["metric", "value", "class_name"])
 
     prec_data = []
     columns = ["rc_threshold", "class_name", "precision"]
-    for cidx, class_idx in class_idx_map.items():
+    for cidx, class_id in class_idx_map.items():
         for rc_idx, rc_threshold in enumerate(rec_thresholds):
-            prec_data.append([rc_threshold, _class_map[class_idx]["name"], _precisions[cidx, rc_idx]])
+            prec_data.append([rc_threshold, class_map[class_id]["name"], _precisions[cidx, rc_idx]])
 
     prec_df = pd.DataFrame(prec_data, columns=columns)
     return metrics_df, prec_df, _tps, pd.DataFrame(reasons, columns=["fp_reason"]), _fns

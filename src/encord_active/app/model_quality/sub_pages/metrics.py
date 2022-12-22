@@ -92,13 +92,14 @@ class MetricsPage(ModelQualityPage):
             )
 
         scores = _predictions["iou"] * _predictions["tps"]
-        metrics = _predictions[st.session_state.prediction_metric_names]
+        column_names = [x.name for x in st.session_state.prediction_metric_names]
+        metrics = _predictions[column_names]
 
         correlations = metrics.fillna(0).corrwith(scores, axis=0).to_frame("correlation")
         correlations["index"] = correlations.index.T
 
         mi = pd.DataFrame.from_dict(
-            {"index": metrics.columns, "importance": mutual_info_regression(metrics.fillna(0), scores)}
+            {"index": metrics.columns, "importance": mutual_info_regression(metrics.fillna(0), scores, random_state=42)}
         )
         sorted_metrics = mi.sort_values("importance", ascending=False, inplace=False)["index"].to_list()
 
