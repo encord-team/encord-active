@@ -79,42 +79,6 @@ def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray
     return image
 
 
-def get_df_subset(df: pd.DataFrame, selected_metric: Optional[str]):
-    if selected_metric not in df:
-        return df
-
-    max_val = float(df[selected_metric].max()) + np.finfo(float).eps.item()
-    min_val = float(df[selected_metric].min())
-
-    if max_val <= min_val:
-        return df
-
-    step = max(0.01, (max_val - min_val) // 100)
-    start, end = st.slider("Choose quality", max_value=max_val, min_value=min_val, value=(min_val, max_val), step=step)
-    subset = df[df[selected_metric].between(start, end)]
-
-    return subset
-
-
-def build_pagination(subset, n_cols, n_rows, selected_metric):
-    n_items = n_cols * n_rows
-    col1, col2 = st.columns(spec=[1, 4])
-
-    with col1:
-        sorting_order = st.selectbox("Sort samples within selected interval", ["Ascending", "Descending"])
-
-    with col2:
-        last = len(subset) // n_items + 1
-        page_num = st.slider("Page", 1, last) if last > 1 else 1
-
-    low_lim = (page_num - 1) * n_items
-    high_lim = page_num * n_items
-
-    sorted_subset = subset.sort_values(by=selected_metric, ascending=sorting_order == "Ascending")
-    paginated_subset = sorted_subset[low_lim:high_lim]
-    return paginated_subset
-
-
 def __get_key(row: Union[pd.Series, str]):
     if isinstance(row, pd.Series):
         if "identifier" not in row:

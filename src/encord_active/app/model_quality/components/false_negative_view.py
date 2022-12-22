@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import cv2
 import pandas as pd
@@ -8,17 +8,15 @@ from streamlit.delta_generator import DeltaGenerator
 import encord_active.app.model_quality.components.utils as cutils
 from encord_active.app.common import state
 from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components.paginator import render_pagination
+from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
     action_bulk_tags,
     bulk_tagging_form,
 )
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.utils import (
-    build_pagination,
-    get_df_subset,
-    load_or_fill_image,
-)
+from encord_active.app.common.utils import load_or_fill_image
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.metrics.load_metrics import MetricScope
 
@@ -74,9 +72,12 @@ def false_negative_view(false_negatives, model_predictions, color: Color):
         st.session_state[state.FALSE_NEGATIVE_VIEW_PAGE_NUMBER] = 1
 
     n_cols, n_rows = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM]), int(st.session_state[state.MAIN_VIEW_ROW_NUM])
-    selected_metric = st.session_state.get(state.PREDICTIONS_LABEL_METRIC)
-    subset = get_df_subset(false_negatives, selected_metric)
-    paginated_subset = build_pagination(subset, n_cols, n_rows, selected_metric)
+    selected_metric: Optional[str] = st.session_state.get(state.PREDICTIONS_LABEL_METRIC)
+    if not selected_metric:
+        return
+
+    subset = render_df_slicer(false_negatives, selected_metric)
+    paginated_subset = render_pagination(subset, n_cols, n_rows, selected_metric)
 
     form = bulk_tagging_form(MetricScope.MODEL_QUALITY)
 
