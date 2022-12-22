@@ -1,12 +1,20 @@
 from abc import abstractmethod
+from typing import Optional
 
-import altair as alt
-import pandas as pd
 import streamlit as st
+from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
-from encord_active.lib.metrics.statistical_utils import get_histogram
+from encord_active.lib.metrics.load_metrics import MetricData
+from encord_active.lib.model_predictions.data import (
+    LabelMatchSchema,
+    PredictionMatchSchema,
+)
+from encord_active.lib.model_predictions.map_mar import (
+    PerformanceMetricSchema,
+    PrecisionRecallSchema,
+)
 
 
 class ModelQualityPage(Page):
@@ -25,19 +33,19 @@ class ModelQualityPage(Page):
     @abstractmethod
     def build(
         self,
-        model_predictions: pd.DataFrame,
-        labels: pd.DataFrame,
-        metrics: pd.DataFrame,
-        precisions: pd.DataFrame,
+        model_predictions: DataFrame[PredictionMatchSchema],
+        labels: DataFrame[LabelMatchSchema],
+        metrics: DataFrame[PerformanceMetricSchema],
+        precisions: DataFrame[PrecisionRecallSchema],
     ):
         pass
 
     def __call__(
         self,
-        model_predictions: pd.DataFrame,
-        labels: pd.DataFrame,
-        metrics: pd.DataFrame,
-        precisions: pd.DataFrame,
+        model_predictions: DataFrame[PredictionMatchSchema],
+        labels: DataFrame[LabelMatchSchema],
+        metrics: DataFrame[PerformanceMetricSchema],
+        precisions: DataFrame[PrecisionRecallSchema],
     ):
         return self.build(model_predictions, labels, metrics, precisions)
 
@@ -53,9 +61,10 @@ class ModelQualityPage(Page):
         `st.session_state.model_predictions` data frame.
         """
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
+        column_names = list(map(lambda x: x.name, st.session_state.prediction_metric_names))
         st.selectbox(
             "Select metric for your predictions",
-            st.session_state.prediction_metric_names + list(fixed_options.keys()),
+            column_names + list(fixed_options.keys()),
             key=state.PREDICTIONS_METRIC,
             format_func=lambda s: fixed_options.get(s, s),
             help="The data in the main view will be sorted by the selected metric. "
@@ -66,9 +75,11 @@ class ModelQualityPage(Page):
     def metric_details_description(metric_name: str = ""):
         if not metric_name:
             metric_name = st.session_state[state.PREDICTIONS_METRIC]
-        metric_meta = st.session_state.metric_meta["prediction"].get(metric_name[:-4], {})  # Remove " (P)"
-        if not metric_meta:
-            metric_meta = st.session_state.metric_meta["data"].get(metric_name[:-4], {})  # Remove " (P)"
-        if metric_meta:
-            st.markdown(f"### The {metric_meta['title']} metric")
-            st.markdown(metric_meta["long_description"])
+        metric_data: Optional[MetricData] = st.session_state.metric_meta["predictions"].get(metric_name)
+
+        if not metric_data:
+            metric_data = st.session_state.metric_meta["labels"].get(metric_name)
+
+        if metric_data:
+            st.markdown(f"### The {metric_data.name[:-4]} metric")
+            st.markdown(metric_data.meta["long_description"])
