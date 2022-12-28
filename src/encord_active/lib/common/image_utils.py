@@ -1,39 +1,108 @@
 import json
-from json import JSONDecodeError
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import pandas as pd
 from pandas import Series
+from pandera.typing import DataFrame
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
-from encord_active.lib.common.utils import get_du_size
+from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
+from encord_active.lib.model_predictions.data import PredictionMatchSchema
 
 
-def load_json(json_file: Path) -> Optional[dict]:
-    if not json_file.exists():
-        return None
-
-    with json_file.open("r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except JSONDecodeError:
-            return None
+def get_polygon_thickness(img_w: int):
+    t = max(1, int(img_w / 100))
+    print(t)
+    return t
 
 
-def show_image_and_draw_polygons(row: Union[Series, str], data_dir: Path, draw_polygons: bool = True) -> np.ndarray:
-    # === Read and annotate the image === #
+def get_bbox_csv(row: pd.Series) -> np.ndarray:
+    """
+    Used to get a bounding box "polygon" for plotting.
+    The input should be a row from a LabelSchema (or descendants thereof).
+    """
+    x1, y1, x2, y2 = row["x1"], row["y1"], row["x2"], row["y2"]
+    return np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]).reshape((-1, 1, 2)).astype(int)
+
+
+def draw_object(
+    image: np.ndarray,
+    row: pd.Series,
+    mask_opacity: float = 0.5,
+    color: Union[Color, str] = Color.PURPLE,
+    with_box: bool = False,
+):
+    """
+    The input should be a row from a LabelSchema (or descendants thereof).
+    """
+    isClosed = True
+    thickness = get_polygon_thickness(image.shape[1])
+
+    hex_color = color.value if isinstance(color, Color) else color
+    _color: Tuple[int, ...] = hex_to_rgb(hex_color)
+    _color_outline: Tuple[int, ...] = hex_to_rgb(hex_color, lighten=-0.5)
+    if isinstance(row["rle"], str):
+        if with_box:
+            box = get_bbox_csv(row)
+            image = cv2.polylines(image, [box], isClosed, _color, thickness // 2, lineType=cv2.LINE_8)
+
+        mask = rle_to_binary_mask(eval(row["rle"]))
+
+        # Draw contour line
+        contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+        image = cv2.polylines(image, contours, isClosed, _color_outline, thickness, lineType=cv2.LINE_8)
+
+        # Fill polygon with opacity
+        patch = np.zeros_like(image)
+        mask_select = mask == 1
+        patch[mask_select] = _color
+        image[mask_select] = cv2.addWeighted(image, (1 - mask_opacity), patch, mask_opacity, 0)[mask_select]
+    return image
+
+
+def show_image_with_predictions_and_label(
+    label: pd.Series,
+    predictions: DataFrame[PredictionMatchSchema],
+    data_dir: Path,
+    label_color: Color = Color.RED,
+    mask_opacity=0.5,
+    class_colors: Optional[Dict[int, str]] = None,
+):
+    """
+    Displays all predictions in the frame and the one label specified by the `label`
+    argument. The label will be colored with the `label_color` provided and the
+    predictions with a `purple` color unless `class_colors` are provided as a dict of
+    (`class_id`, `<hex-color>`) pairs.
+
+    :param label: The csv row of the false-negative label to display (from a LabelSchema).
+    :param predictions: All the predictions on the same image with the samme predicted class (from a PredictionSchema).
+    :param data_dir: The data directory of the project
+    :param label_color: The hex color to use when drawing the prediction.
+    :param class_colors: Dict of [class_id, hex_color] pairs.
+    """
+    class_colors = class_colors or {}
+    image = load_or_fill_image(label, data_dir)
+
+    for _, pred in predictions.iterrows():
+        color = class_colors.get(pred["class_id"], Color.PURPLE)
+        image = draw_object(image, pred, mask_opacity=mask_opacity, color=color)
+
+    return draw_object(image, label, mask_opacity=mask_opacity, color=label_color, with_box=True)
+
+
+def show_image_and_draw_polygons(
+    row: Union[Series, str], data_dir: Path, draw_polygons: bool = True, skip_object_hash: bool = False
+) -> np.ndarray:
     image = load_or_fill_image(row, data_dir)
-
-    # === Draw polygons / bboxes if available === #
     is_closed = True
-    thickness = int(image.shape[1] / 150)
+    thickness = get_polygon_thickness(image.shape[1])
 
     img_h, img_w = image.shape[:2]
     if draw_polygons:
-        for color, geometry in get_geometries(row, img_h, img_w, data_dir):
+        for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
             image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
 
     return image
@@ -46,7 +115,6 @@ def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray
     :param row: A csv row from either a metric, a prediction, or a label csv file.
     :return: Numpy / cv2 image.
     """
-
     read_error = False
     key = __get_key(row)
 
@@ -122,7 +190,7 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
 
 
 def get_geometries(
-    row: Union[pd.Series, str], img_h: int, img_w: int, data_dir: Path, skip_object_hash: Optional[bool] = False
+    row: Union[pd.Series, str], img_h: int, img_w: int, data_dir: Path, skip_object_hash: bool = False
 ) -> List[Tuple[str, np.ndarray]]:
     """
     Loads cached label row and computes geometries from the label row.

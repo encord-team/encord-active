@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import warnings
@@ -21,6 +22,17 @@ from tqdm import tqdm
 # Silence shapely deprecation warnings from v1.* to v2.0
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 from encord_active.lib.coco.datastructure import CocoBbox
+
+
+def load_json(json_file: Path) -> Optional[dict]:
+    if not json_file.exists():
+        return None
+
+    with json_file.open("r", encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return None
 
 
 def fetch_project_meta(data_dir: Path) -> dict:

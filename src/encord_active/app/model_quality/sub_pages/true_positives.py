@@ -1,9 +1,17 @@
-import pandas as pd
 import streamlit as st
+from pandera.typing import DataFrame
 
-from encord_active.app.model_quality.components import metric_view
+from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
-from encord_active.lib.metrics.statistical_utils import get_histogram
+from encord_active.lib.model_predictions.data import (
+    LabelMatchSchema,
+    PredictionMatchSchema,
+)
+from encord_active.lib.model_predictions.map_mar import (
+    PerformanceMetricSchema,
+    PrecisionRecallSchema,
+)
 
 from . import ModelQualityPage
 
@@ -17,10 +25,10 @@ class TruePositivesPage(ModelQualityPage):
 
     def build(
         self,
-        model_predictions: pd.DataFrame,
-        labels: pd.DataFrame,
-        metrics: pd.DataFrame,
-        precisions: pd.DataFrame,
+        model_predictions: DataFrame[PredictionMatchSchema],
+        labels: DataFrame[LabelMatchSchema],
+        metrics: DataFrame[PerformanceMetricSchema],
+        precisions: DataFrame[PrecisionRecallSchema],
     ):
         st.markdown(f"# {self.title}")
 
@@ -41,10 +49,12 @@ The remaining colors correspond to the dataset labels with the colors you are us
             )
             self.metric_details_description()
         metric_name = st.session_state.predictions_metric
-        tp_df = model_predictions[model_predictions["tps"] == 1.0].dropna(subset=[metric_name])
+        tp_df = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == 1.0].dropna(
+            subset=[metric_name]
+        )
         if tp_df.shape[0] == 0:
             st.write("No true positives")
         else:
             histogram = get_histogram(tp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            metric_view(tp_df, box_color=color)
+            prediction_grid(st.session_state.data_dir, model_predictions=tp_df, box_color=color)
