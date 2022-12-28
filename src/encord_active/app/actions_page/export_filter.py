@@ -11,9 +11,12 @@ from pandas.api.types import (
 )
 
 import encord_active.app.common.state as state
-from encord_active.app.common.action_utils import create_new_project_on_encord_platform
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
+from encord_active.lib.common.action_utils import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
+    ProjectActionUtils,
+)
+from encord_active.lib.common.utils import ProjectNotFound
 from encord_active.lib.db.tags import Tags
 
 
@@ -178,17 +181,63 @@ community</a>
             )
             project_description = r_column.text_area("Project description")
 
-            create_new_project = st.form_submit_button("➕ Create")
-            if create_new_project:
-                if dataset_title == "":
-                    st.error("Dataset title cannot be empty!")
-                    return
-                if project_title == "":
-                    st.error("Project title cannot be empty!")
-                    return
-                create_new_project_on_encord_platform(
-                    dataset_title, dataset_description, project_title, project_description, filtered_df
+            if not st.form_submit_button("➕ Create"):
+                return
+
+            if dataset_title == "":
+                st.error("Dataset title cannot be empty!")
+                return
+            if project_title == "":
+                st.error("Project title cannot be empty!")
+                return
+
+            try:
+                action_utils = ProjectActionUtils(st.session_state.project_dir)
+                label = st.empty()
+                progress, clear = render_progress_bar()
+                label.text("Step 1/2: Uploading data...")
+                dataset_creation_result = action_utils.create_dataset(
+                    dataset_title, dataset_description, filtered_df, progress
                 )
+                clear()
+                label.text("Step 2/2: Uploading labels...")
+                new_project = action_utils.create_project(
+                    dataset_creation_result, project_title, project_description, progress
+                )
+                clear()
+                label.info("🎉 New project is created!")
+
+                new_project_link = f"https://app.encord.com/projects/view/{new_project.project_hash}/summary"
+                new_dataset_link = f"https://app.encord.com/datasets/view/{dataset_creation_result.hash}"
+                st.markdown(f"[Go to new project]({new_project_link})")
+                st.markdown(f"[Go to new dataset]({new_dataset_link})")
+
+            except ProjectNotFound as e:
+                st.markdown(
+                    f"""
+                ❌ No `project_meta.yaml` file in the project folder.
+                Please create `project_meta.yaml` file in **{e.project_dir}** folder with the following content
+                and try again:
+                ``` yaml
+                project_hash: <project_hash>
+                ssh_key_path: /path/to/your/encord/ssh_key
+                ```
+                """
+                )
+            except Exception as e:
+                st.error(str(e))
+
+
+def render_progress_bar():
+    progress_bar = st.empty()
+
+    def clear():
+        progress_bar.empty()
+
+    def progress_callback(value: float):
+        progress_bar.progress(value)
+
+    return progress_callback, clear
 
 
 if __name__ == "__main__":

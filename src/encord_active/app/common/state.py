@@ -73,6 +73,7 @@ ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
 
 def populate_session_state():
     project_file_structure = ProjectFileStructure(st.session_state.project_dir)
+    st.session_state.project_file_structure = project_file_structure
     st.session_state.metric_dir = project_file_structure.metrics
     st.session_state.embeddings_dir = project_file_structure.embeddings
     st.session_state.predictions_dir = project_file_structure.predictions

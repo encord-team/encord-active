@@ -32,7 +32,7 @@ class Project:
     def __init__(self, project_dir: Path):
         self.project_dir: Path = project_dir
         self.project_file_structure = ProjectFileStructure(project_dir)
-        self.project_meta: Dict[str, str] = {}
+        self.project_meta = fetch_project_meta(self.project_file_structure.data)
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
@@ -150,7 +150,7 @@ class Project:
         self.label_rows = {}
         self.image_paths = {}
         for lr_hash in self.label_row_meta.keys():
-            lr_file_path = self.project_file_structure.get_label_row_file_path(lr_hash)
+            lr_file_path = self.project_file_structure.label_row_structure(lr_hash).label_row_file
             lr_images_dir = self.project_file_structure.data / lr_hash / "images"
             if not lr_file_path.is_file() or not lr_images_dir.is_dir():
                 logger.warning(
