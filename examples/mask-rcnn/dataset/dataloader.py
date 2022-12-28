@@ -1,9 +1,13 @@
 import os
+import sys
+
+sys.path.append(os.path.dirname(__file__))
+
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from dataset.coco_dataset import EncordCocoDetection
-from dataset.coco_utils import coco_remove_images_without_annotations
+from coco_dataset import EncordCocoDetection
+from coco_utils import coco_remove_images_without_annotations
 from pycocotools import mask as mask_utils
 from torch import Tensor
 from torch import nn as nn
