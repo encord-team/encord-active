@@ -1,4 +1,11 @@
 from pathlib import Path
+from typing import NamedTuple
+
+
+class LabelRowStructure(NamedTuple):
+    path: Path
+    images: Path
+    label_row_file: Path
 
 
 class ProjectFileStructure:
@@ -37,5 +44,6 @@ class ProjectFileStructure:
     def project_meta(self) -> Path:
         return self.project_dir / "project_meta.yaml"
 
-    def get_label_row_file_path(self, label_hash: str) -> Path:
-        return self.data / label_hash / "label_row.json"
+    def label_row_structure(self, label_hash: str) -> LabelRowStructure:
+        path = self.data / label_hash
+        return LabelRowStructure(path, path / "images", path / "label_row.json")
