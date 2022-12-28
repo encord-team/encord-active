@@ -348,9 +348,7 @@ Sessionx.vim
 
 .idea
 
-/viewer/outputs/
-/outputs/
-/viewer/pages/outputs/
 /local_tests/
 
 imports.prof
+ci-tests

@@ -33,6 +33,7 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
+from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.embedding import (
     get_collections,
     get_collections_and_metadata,
@@ -53,7 +54,6 @@ from encord_active.lib.metrics.load_metrics import (
     get_annotator_level_info,
     load_metric,
 )
-from encord_active.lib.metrics.statistical_utils import get_histogram
 
 
 class ExplorerPage(Page):
