@@ -7,6 +7,7 @@ import streamlit as st
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
+from encord_active.app.common.state_new import State
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.frontend_components import pages_menu
 from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
@@ -19,6 +20,7 @@ from encord_active.app.model_quality.sub_pages.true_positives import TruePositiv
 from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
@@ -56,10 +58,14 @@ def to_items(d: dict, parent_key: Optional[str] = None):
 def main(project_path: str):
     set_page_config()
 
-    st.session_state.project_dir = Path(project_path).expanduser().absolute()
+    project_dir = Path(project_path).expanduser().absolute()
+    st.session_state.project_dir = project_dir
     if not st.session_state.project_dir.is_dir():
         st.error(f"Project not found for directory `{project_path}`.")
         st.stop()
+
+    DBConnection.set_project_path(project_dir)
+    State.init(project_dir)
 
     with st.sidebar:
         items = to_items(pages)

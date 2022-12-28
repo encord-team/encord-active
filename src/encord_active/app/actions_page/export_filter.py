@@ -10,7 +10,8 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
-import encord_active.app.common.state as state
+from encord_active.app.common.state import ACTION_PAGE_PREVIOUS_FILTERED_NUM
+from encord_active.app.common.state_new import get_state, use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.common.utils import ProjectNotFound
@@ -101,12 +102,15 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def export_filter():
+    get_clone_button, set_clone_button = use_state(False)
+    getsomeoether, setsome = use_state(0)
+
     setup_page()
     message_placeholder = st.empty()
 
     st.header("Filter & Export")
 
-    filtered_df = filter_dataframe(st.session_state[state.MERGED_DATAFRAME].copy())
+    filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     st.markdown(f"**Total row:** {filtered_df.shape[0]}")
     st.dataframe(filtered_df, use_container_width=True)
@@ -119,7 +123,7 @@ def export_filter():
 
     with st.spinner(text="Generating COCO file"):
         coco_json = (
-            generate_coco_file(filtered_df, st.session_state.project_dir, st.session_state.ontology_file)
+            generate_coco_file(filtered_df, get_state().project_paths.project_dir, get_state().project_paths.ontology)
             if is_pressed
             else ""
         )
@@ -132,11 +136,10 @@ def export_filter():
         help="Ensure you have generated an updated COCO file before downloading",
     )
 
-    def _clone_button_pressed():
-        st.session_state[state.ACTION_PAGE_CLONE_BUTTON] = True
-
     action_columns[3].button(
-        "🏗 Clone", on_click=_clone_button_pressed, help="Clone the filtered data into a new Encord dataset and project"
+        "🏗 Clone",
+        on_click=lambda: set_clone_button(True),
+        help="Clone the filtered data into a new Encord dataset and project",
     )
     delete_btn = action_columns[4].button("❌ Review", help="Assign the filtered data for review on the Encord platform")
     edit_btn = action_columns[5].button(
@@ -145,7 +148,7 @@ def export_filter():
     augment_btn = action_columns[6].button("➕ Augment", help="Augment your dataset based on the filered data")
 
     if any([delete_btn, edit_btn, augment_btn]):
-        st.session_state[state.ACTION_PAGE_CLONE_BUTTON] = False
+        set_clone_button(False)
         message_placeholder.markdown(
             """
 <div class="encord-active-info-box">
@@ -160,13 +163,13 @@ community</a>
         )
 
     if (
-        state.ACTION_PAGE_PREVIOUS_FILTERED_NUM not in st.session_state
-        or st.session_state[state.ACTION_PAGE_PREVIOUS_FILTERED_NUM] != filtered_df.shape[0]
+        ACTION_PAGE_PREVIOUS_FILTERED_NUM not in st.session_state
+        or st.session_state[ACTION_PAGE_PREVIOUS_FILTERED_NUM] != filtered_df.shape[0]
     ):
-        st.session_state[state.ACTION_PAGE_PREVIOUS_FILTERED_NUM] = filtered_df.shape[0]
-        st.session_state[state.ACTION_PAGE_CLONE_BUTTON] = False
+        st.session_state[ACTION_PAGE_PREVIOUS_FILTERED_NUM] = filtered_df.shape[0]
+        set_clone_button(False)
 
-    if st.session_state[state.ACTION_PAGE_CLONE_BUTTON]:
+    if get_clone_button():
         with st.form("new_project_form"):
             st.subheader("Create a new project with the selected items")
             l_column, r_column = st.columns(2)

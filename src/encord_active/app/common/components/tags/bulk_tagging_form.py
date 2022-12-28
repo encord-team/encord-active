@@ -4,11 +4,11 @@ from typing import List, NamedTuple, Optional
 import streamlit as st
 from pandas import DataFrame
 
-import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.individual_tagging import (
     target_identifier,
 )
 from encord_active.app.common.components.tags.tag_creator import scoped_tags
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import METRIC_SCOPE_TAG_SCOPES, Tag
 from encord_active.lib.metrics.utils import MetricScope
@@ -35,7 +35,7 @@ def action_bulk_tags(subset: DataFrame, selected_tags: List[Tag], action: TagAct
     if not selected_tags:
         return
 
-    all_df: DataFrame = st.session_state[state.MERGED_DATAFRAME].copy()
+    all_df = get_state().merged_metrics.copy()
 
     for tag in selected_tags:
         target_ids = [target_identifier(id, tag.scope) for id in subset.identifier.to_list()]
@@ -49,7 +49,7 @@ def action_bulk_tags(subset: DataFrame, selected_tags: List[Tag], action: TagAct
 
             all_df.at[id, "tags"] = next
 
-    st.session_state[state.MERGED_DATAFRAME] = all_df
+    get_state().merged_metrics = all_df
     MergedMetrics().replace_all(all_df)
 
 

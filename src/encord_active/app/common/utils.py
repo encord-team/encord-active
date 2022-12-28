@@ -3,7 +3,6 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.app.common.css import write_page_css
-from encord_active.app.common.state import populate_session_state
 
 
 def set_page_config():
@@ -16,5 +15,4 @@ def set_page_config():
 
 
 def setup_page():
-    populate_session_state()
     write_page_css()

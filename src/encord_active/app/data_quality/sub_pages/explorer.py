@@ -1,13 +1,15 @@
 import re
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Optional, overload
 
 import pandas as pd
 import streamlit as st
+from encord.project_ontology.ontology import ObjectShape
+from matplotlib import use
 from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
-import encord_active.app.common.state as state
 from encord_active.app.common.components import (
     build_data_tags,
     multiselect_with_all_option,
@@ -33,6 +35,25 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
+from encord_active.app.common.state import (
+    COLLECTIONS_IMAGES,
+    COLLECTIONS_OBJECTS,
+    CURRENT_INDEX_HAS_ANNOTATION,
+    FAISS_INDEX_IMAGE,
+    FAISS_INDEX_IMAGE_NO_LABEL,
+    FAISS_INDEX_OBJECT,
+    IMAGE_KEYS_HAVING_SIMILARITIES,
+    IMAGE_SIMILARITIES,
+    IMAGE_SIMILARITIES_NO_LABEL,
+    MAIN_VIEW_COLUMN_NUM,
+    MAIN_VIEW_ROW_NUM,
+    METRIC_METADATA_SCORE_NORMALIZATION,
+    NORMALIZATION_STATUS,
+    OBJECT_KEYS_HAVING_SIMILARITIES,
+    OBJECT_SIMILARITIES,
+    QUESTION_HASH_TO_COLLECTION_INDEXES,
+)
+from encord_active.app.common.state_new import get_state, use_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
@@ -46,7 +67,11 @@ from encord_active.lib.embeddings.utils import (
     get_image_keys_having_similarities,
     get_object_keys_having_similarities,
 )
-from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    EmbeddingType,
+    MetricMetadata,
+)
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
@@ -84,24 +109,22 @@ class ExplorerPage(Page):
             return
 
         metric_idx = metric_names.index(selected_metric_name)
-        st.session_state[state.DATA_PAGE_METRIC] = sorted_metrics[metric_idx]
-        st.session_state[state.DATA_PAGE_METRIC_NAME] = selected_metric_name
+        selected_metric = sorted_metrics[metric_idx]
+        get_state().selected_metric = selected_metric
 
-        if state.NORMALIZATION_STATUS not in st.session_state:
-            st.session_state[state.NORMALIZATION_STATUS] = st.session_state[state.DATA_PAGE_METRIC].meta.get(
-                state.METRIC_METADATA_SCORE_NORMALIZATION, True
+        if NORMALIZATION_STATUS not in st.session_state:
+            st.session_state[NORMALIZATION_STATUS] = selected_metric.meta.get(
+                METRIC_METADATA_SCORE_NORMALIZATION, True
             )  # If there is no information on the meta file, just normalize (its probability is higher)
 
-        df = load_metric_dataframe(
-            st.session_state[state.DATA_PAGE_METRIC], normalize=st.session_state[state.NORMALIZATION_STATUS]
-        )
+        df = load_metric_dataframe(selected_metric, normalize=st.session_state[NORMALIZATION_STATUS])
 
         if df.shape[0] <= 0:
             return
 
         class_set = sorted(list(df["object_class"].unique()))
         with col2:
-            selected_classes = multiselect_with_all_option("Filter by class", class_set, key=state.DATA_PAGE_CLASS)
+            selected_classes = multiselect_with_all_option("Filter by class", class_set)
 
         is_class_selected = (
             df.shape[0] * [True] if "All" in selected_classes else df["object_class"].isin(selected_classes)
@@ -115,7 +138,6 @@ class ExplorerPage(Page):
             selected_annotators = multiselect_with_all_option(
                 "Filter by annotator",
                 annotator_set,
-                key=state.DATA_PAGE_ANNOTATOR,
             )
 
         annotator_selected = (
@@ -129,10 +151,13 @@ class ExplorerPage(Page):
         return df_class_selected[annotator_selected]
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
+        selected_metric = get_state().selected_metric
+        if not selected_metric:
+            return
+
         st.markdown(f"# {self.title}")
-        meta = st.session_state[state.DATA_PAGE_METRIC].meta
-        st.markdown(f"## {meta['title']}")
-        st.markdown(meta["long_description"])
+        st.markdown(f"## {selected_metric.meta['title']}")
+        st.markdown(selected_metric.meta["long_description"])
 
         if selected_df.empty:
             return
@@ -142,11 +167,11 @@ class ExplorerPage(Page):
         with st.expander("Annotator Statistics", expanded=False):
             render_annotator_properties(selected_df)
 
-        fill_data_quality_window(selected_df, metric_scope)
+        fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
 # TODO: move me to lib
-def get_embedding_type(metric_title: str, annotation_type: Optional[List[str]]) -> EmbeddingType:
+def get_embedding_type(metric_title: str, annotation_type: Optional[List[Any]]) -> EmbeddingType:
     if (
         annotation_type is None
         or (len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value))
@@ -157,25 +182,30 @@ def get_embedding_type(metric_title: str, annotation_type: Optional[List[str]]) 
         return EmbeddingType.OBJECT
 
 
-def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: MetricScope):
-    meta = st.session_state[state.DATA_PAGE_METRIC].meta
-    embedding_type = get_embedding_type(meta.get("title"), meta.get("annotation_type"))
+def fill_data_quality_window(
+    current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
+):
+    meta = selected_metric.meta
+    embedding_type = get_embedding_type(meta["title"], meta["annotation_type"])
 
-    populate_embedding_information(embedding_type)
+    populate_embedding_information(embedding_type, meta)
 
-    if (embedding_type == str(EmbeddingType.CLASSIFICATION.value)) and len(
-        st.session_state[state.COLLECTIONS_IMAGES]
-    ) == 0:
+    if (embedding_type == str(EmbeddingType.CLASSIFICATION.value)) and len(st.session_state[COLLECTIONS_IMAGES]) == 0:
         st.write("Image-level embedding file is not available for this project.")
         return
-    if (embedding_type == str(EmbeddingType.OBJECT.value)) and len(st.session_state[state.COLLECTIONS_OBJECTS]) == 0:
+    if (embedding_type == str(EmbeddingType.OBJECT.value)) and len(st.session_state[COLLECTIONS_OBJECTS]) == 0:
         st.write("Object-level embedding file is not available for this project.")
         return
 
-    n_cols = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM])
-    n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
+    n_cols = int(st.session_state[MAIN_VIEW_COLUMN_NUM])
+    n_rows = int(st.session_state[MAIN_VIEW_ROW_NUM])
 
-    chart = get_histogram(current_df, "score", st.session_state[state.DATA_PAGE_METRIC_NAME])
+    metric = get_state().selected_metric
+    if not metric:
+        st.error("Metric not selected.")
+        return
+
+    chart = get_histogram(current_df, "score", metric.name)
     st.altair_chart(chart, use_container_width=True)
     subset = render_df_slicer(current_df, "score")
 
@@ -200,46 +230,57 @@ def fill_data_quality_window(current_df: DataFrame[MetricSchema], metric_scope: 
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
             with cols.pop(0):
-                build_card(embedding_type, i, row, similarity_expanders, metric_scope)
+                build_card(embedding_type, i, row, similarity_expanders, metric_scope, metric)
 
 
-def populate_embedding_information(embedding_type: EmbeddingType):
-    embeddings_dir = st.session_state.embeddings_dir
+# @dataclass
+# class EmbeddingInformation:
+#     embdedding_type: EmbeddingType
+#     collection_images: List[LabelEmbedding]
+#     question_hash_to_collection_indexes: Dict[str, Any]
+#     image_keys_having_similarity: Dict[str, Any]
+#
+
+
+def populate_embedding_information(embedding_type: EmbeddingType, meta: MetricMetadata):
+    embeddings_dir = get_state().project_paths.embeddings
 
     if embedding_type == EmbeddingType.CLASSIFICATION:
-        if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
+        if meta["title"] == "Image-level Annotation Quality":
             collections, question_hash_to_collection_indexes = get_collections_and_metadata(
                 "cnn_classifications.pkl", embeddings_dir
             )
-            st.session_state[state.COLLECTIONS_IMAGES] = collections
-            st.session_state[state.QUESTION_HASH_TO_COLLECTION_INDEXES] = question_hash_to_collection_indexes
-            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
-            st.session_state[state.FAISS_INDEX_IMAGE] = get_faiss_index_image(collections, embeddings_dir)
-            st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = True
+            st.session_state[COLLECTIONS_IMAGES] = collections
+            st.session_state[QUESTION_HASH_TO_COLLECTION_INDEXES] = question_hash_to_collection_indexes
+            st.session_state[IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
+            st.session_state[FAISS_INDEX_IMAGE] = get_faiss_index_image(
+                collections, question_hash_to_collection_indexes
+            )
+            st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = True
 
-            if state.IMAGE_SIMILARITIES not in st.session_state:
-                st.session_state[state.IMAGE_SIMILARITIES] = {}
-                for question_hash in st.session_state[state.QUESTION_HASH_TO_COLLECTION_INDEXES].keys():
-                    st.session_state[state.IMAGE_SIMILARITIES][question_hash] = {}
+            if IMAGE_SIMILARITIES not in st.session_state:
+                st.session_state[IMAGE_SIMILARITIES] = {}
+                for question_hash in st.session_state[QUESTION_HASH_TO_COLLECTION_INDEXES].keys():
+                    st.session_state[IMAGE_SIMILARITIES][question_hash] = {}
         else:
             collections = get_collections("cnn_classifications.pkl", embeddings_dir)
-            st.session_state[state.COLLECTIONS_IMAGES] = collections
-            st.session_state[state.IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
-            st.session_state[state.FAISS_INDEX_IMAGE_NO_LABEL] = get_faiss_index_object(collections)
-            st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = False
+            st.session_state[COLLECTIONS_IMAGES] = collections
+            st.session_state[IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
+            st.session_state[FAISS_INDEX_IMAGE_NO_LABEL] = get_faiss_index_object(collections)
+            st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = False
 
-            if state.IMAGE_SIMILARITIES_NO_LABEL not in st.session_state:
-                st.session_state[state.IMAGE_SIMILARITIES_NO_LABEL] = {}
+            if IMAGE_SIMILARITIES_NO_LABEL not in st.session_state:
+                st.session_state[IMAGE_SIMILARITIES_NO_LABEL] = {}
 
     elif embedding_type == EmbeddingType.OBJECT:
         collections = get_collections("cnn_objects.pkl", embeddings_dir)
-        st.session_state[state.COLLECTIONS_OBJECTS] = collections
-        st.session_state[state.OBJECT_KEYS_HAVING_SIMILARITIES] = get_object_keys_having_similarities(collections)
-        st.session_state[state.FAISS_INDEX_OBJECT] = get_faiss_index_object(collections)
-        st.session_state[state.CURRENT_INDEX_HAS_ANNOTATION] = True
+        st.session_state[COLLECTIONS_OBJECTS] = collections
+        st.session_state[OBJECT_KEYS_HAVING_SIMILARITIES] = get_object_keys_having_similarities(collections)
+        st.session_state[FAISS_INDEX_OBJECT] = get_faiss_index_object(collections)
+        st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = True
 
-        if state.OBJECT_SIMILARITIES not in st.session_state:
-            st.session_state[state.OBJECT_SIMILARITIES] = {}
+        if OBJECT_SIMILARITIES not in st.session_state:
+            st.session_state[OBJECT_SIMILARITIES] = {}
 
 
 def build_card(
@@ -248,19 +289,20 @@ def build_card(
     row: Series,
     similarity_expanders: list[DeltaGenerator],
     metric_scope: MetricScope,
+    metric: MetricData,
 ):
     """
     Builds each sub card (the content displayed for each row in a csv file).
     """
-    data_dir = st.session_state.data_dir
+    data_dir = get_state().project_paths.data
 
     if embedding_type == EmbeddingType.CLASSIFICATION:
         button_name = "show similar images"
-        if st.session_state[state.DATA_PAGE_METRIC].meta.get("title") == "Image-level Annotation Quality":
+        if metric.meta["title"] == "Image-level Annotation Quality":
             image = load_or_fill_image(row, data_dir)
             similarity_callback = show_similar_classification_images
         else:
-            if st.session_state[state.DATA_PAGE_METRIC].meta.get("annotation_type") is None:
+            if metric.meta["annotation_type"] is None:
                 image = load_or_fill_image(row, data_dir)
             else:
                 image = show_image_and_draw_polygons(row, data_dir)
@@ -276,7 +318,7 @@ def build_card(
     st.image(image)
     multiselect_tag(row, "explorer", metric_scope)
 
-    target_expander = similarity_expanders[card_no // st.session_state[state.MAIN_VIEW_COLUMN_NUM]]
+    target_expander = similarity_expanders[card_no // st.session_state[MAIN_VIEW_COLUMN_NUM]]
 
     st.button(
         str(button_name),
@@ -287,12 +329,12 @@ def build_card(
 
     # === Write scores and link to editor === #
     tags_row = row.copy()
-    metric_name = st.session_state[state.DATA_PAGE_METRIC_NAME]
+
     if "object_class" in tags_row and not pd.isna(tags_row["object_class"]):
         tags_row["label_class_name"] = tags_row["object_class"]
         tags_row.drop("object_class")
-    tags_row[metric_name] = tags_row["score"]
-    build_data_tags(tags_row, metric_name)
+    tags_row[metric.name] = tags_row["score"]
+    build_data_tags(tags_row, metric.name)
 
     if not pd.isnull(row["description"]):
         # Hacky way for now (with incorrect rounding)

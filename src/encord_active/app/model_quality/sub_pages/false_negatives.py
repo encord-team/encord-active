@@ -1,8 +1,9 @@
 import streamlit as st
 from pandera.typing import DataFrame
 
-import encord_active.app.common.state as state
 from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.app.common.state import PREDICTIONS_LABEL_METRIC
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (
@@ -25,7 +26,7 @@ class FalseNegativesPage(ModelQualityPage):
         st.selectbox(
             "Select metric for your labels",
             metric_columns,
-            key=state.PREDICTIONS_LABEL_METRIC,
+            key=PREDICTIONS_LABEL_METRIC,
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (O) := object scores.",
         )
@@ -40,7 +41,7 @@ class FalseNegativesPage(ModelQualityPage):
     ):
         st.markdown(f"# {self.title}")
         st.header("False Negatives")
-        metric_name = st.session_state[state.PREDICTIONS_LABEL_METRIC]
+        metric_name = st.session_state[PREDICTIONS_LABEL_METRIC]
         with st.expander("Details"):
             color = Color.PURPLE
             st.markdown(
@@ -63,5 +64,5 @@ The remaining objects are predictions, where colors correspond to their predicte
             histogram = get_histogram(fns_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             prediction_grid(
-                st.session_state.data_dir, labels=fns_df, model_predictions=model_predictions, box_color=color
+                get_state().project_paths.data, labels=fns_df, model_predictions=model_predictions, box_color=color
             )

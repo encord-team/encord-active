@@ -3,8 +3,10 @@ from copy import deepcopy
 import streamlit as st
 
 import encord_active.app.common.components as cst
-import encord_active.app.common.state as state
+
+# import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.tag_creator import tag_creator
+from encord_active.app.common.state_new import get_state
 
 
 def common_settings():
@@ -17,7 +19,6 @@ def common_settings():
         selected_classes = cst.multiselect_with_all_option(
             "Select classes to include",
             list(map(lambda x: x["name"], class_idx.values())),
-            key=state.CLASS_SELECTION,
             help="With this selection, you can choose which classes to include in the main page.",
         )
 
@@ -33,20 +34,19 @@ def common_settings():
             min_value=0,
             max_value=100,
             value=50,
-            key=state.IOU_THRESHOLD_,
             help="The mean average precision (mAP) score is based on true positives and false positives. "
             "The IOU threshold determines how closely predictions need to match labels to be considered "
             "as true positives.",
         )
-        st.session_state[state.IOU_THRESHOLD] = iou_threshold / 100
+        get_state().iou_threshold = iou_threshold / 100
 
     with col3:
         st.write("")
         st.write("")
         # Ignore unmatched frames
-        st.checkbox(
+        get_state().ignore_frames_without_predictions = st.checkbox(
             "Ignore frames without predictions",
-            key=state.IGNORE_FRAMES_WO_PREDICTIONS,
+            value=get_state().ignore_frames_without_predictions,
             help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for which there "
             "exist no predictions. With this flag, you can ignore those.",
         )

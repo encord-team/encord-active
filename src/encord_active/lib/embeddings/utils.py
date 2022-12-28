@@ -12,7 +12,7 @@ class LabelEmbedding(TypedDict):
     label_row: str
     data_unit: str
     frame: int
-    objectHash: str
+    objectHash: Optional[str]
     lastEditedBy: str
     featureHash: str
     name: str

@@ -2,6 +2,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (
@@ -57,4 +58,4 @@ The remaining colors correspond to the dataset labels with the colors you are us
         else:
             histogram = get_histogram(tp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(st.session_state.data_dir, model_predictions=tp_df, box_color=color)
+            prediction_grid(get_state().project_paths.data, model_predictions=tp_df, box_color=color)

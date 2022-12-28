@@ -4,24 +4,28 @@ from typing import List, Optional, cast
 import streamlit as st
 from natsort import natsorted
 
+from encord_active.app.common.state_new import create_key
+
 logger = logging.getLogger(__name__)
 
 
 def multiselect_with_all_option(
     label: str,
     options: List[str],
-    key: str,
     custom_all_name: str = "All",
+    key: Optional[str] = None,
     default: Optional[List[str]] = None,
     **kwargs,
 ):
     if "on_change" in kwargs:
         logger.warning("`st.multiselect.on_change` is being overwritten by custom multiselect with All option")
 
+    key = key or create_key()
+
     default_list = [custom_all_name] if default is None else default
 
     # Filter classes
-    def on_change(prev: List[str] = default_list):
+    def on_change(key: str, prev: List[str] = default_list):
         next: List[str] = (st.session_state.get(key) or default_list).copy()
 
         if custom_all_name not in prev and custom_all_name in next:
@@ -36,4 +40,6 @@ def multiselect_with_all_option(
 
     current: List[str] = st.session_state.get(key) or default_list
 
-    return st.multiselect(label, options, key=key, on_change=on_change, args=(current,), default=default_list, **kwargs)
+    return st.multiselect(
+        label, options, key=key, on_change=on_change, args=(current, key), default=default_list, **kwargs
+    )

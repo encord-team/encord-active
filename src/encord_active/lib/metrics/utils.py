@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict, Union
 
 import pandas as pd
 import pandera as pa
@@ -9,13 +9,14 @@ from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
 from encord_active.lib.common.utils import load_json
+from encord_active.lib.metrics.metric import MetricMetadata
 
 
 @dataclass
 class MetricData:
     name: str
     path: Path
-    meta: Dict[str, Any]
+    meta: MetricMetadata
     level: str
 
 
@@ -113,7 +114,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
 
             continue
 
-        out.append(MetricData(name=n, path=p, meta=m, level=l))
+        out.append(MetricData(name=n, path=p, meta=MetricMetadata(**m), level=l))
 
     out = natsorted(out, key=lambda i: (i.level, i.name))  # type: ignore
     return out

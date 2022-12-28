@@ -4,8 +4,9 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import streamlit as st
 
-import encord_active.app.common.state as state
 from encord_active.app.common.components import multiselect_with_all_option
+from encord_active.app.common.state import NUMBER_OF_PARTITIONS
+from encord_active.app.common.state_new import get_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.charts.partition_histogram import get_partition_histogram
 from encord_active.lib.dataset.balance import balance_dataframe, get_partitions_zip
@@ -17,11 +18,11 @@ from encord_active.lib.metrics.utils import (
 
 
 def add_partition():
-    st.session_state[state.NUMBER_OF_PARTITIONS] += 1
+    st.session_state[NUMBER_OF_PARTITIONS] += 1
 
 
 def remove_partition():
-    st.session_state[state.NUMBER_OF_PARTITIONS] -= 1
+    st.session_state[NUMBER_OF_PARTITIONS] -= 1
 
 
 def metrics_panel() -> Tuple[List[MetricData], int]:
@@ -33,7 +34,7 @@ def metrics_panel() -> Tuple[List[MetricData], int]:
         seed (int): The seed for the random sampling.
     """
     # TODO - add label metrics
-    metrics = load_available_metrics(st.session_state.metric_dir, MetricScope.DATA_QUALITY)
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
     metric_names = [metric.name for metric in metrics]
 
     col1, col2 = st.columns([6, 1])
@@ -60,7 +61,7 @@ def partitions_panel() -> Dict[str, int]:
         A dictionary with the partition names as keys and the partition sizes as values.
     """
     partition_sizes = {}
-    for i in range(st.session_state[state.NUMBER_OF_PARTITIONS]):
+    for i in range(st.session_state[NUMBER_OF_PARTITIONS]):
         partition_columns = st.columns((4, 12, 1))
         partition_name = partition_columns[0].text_input(
             f"Name of partition {i + 1}", key=f"name_partition_{i + 1}", value=f"Partition {i + 1}"
@@ -70,7 +71,7 @@ def partitions_panel() -> Dict[str, int]:
             key=f"size_partition_{i + 1}",
             min_value=1,
             max_value=100,
-            value=100 // st.session_state[state.NUMBER_OF_PARTITIONS],
+            value=100 // st.session_state[NUMBER_OF_PARTITIONS],
             step=1,
         )
         if i > 0:
@@ -95,8 +96,8 @@ def export_balance():
         "Here you can create balanced partitions of your dataset over a set of metrics and export them as a CSV file."
     )
 
-    if not st.session_state.get(state.NUMBER_OF_PARTITIONS):
-        st.session_state[state.NUMBER_OF_PARTITIONS] = 1
+    if not st.session_state.get(NUMBER_OF_PARTITIONS):
+        st.session_state[NUMBER_OF_PARTITIONS] = 1
 
     selected_metrics, seed = metrics_panel()
     partition_sizes = partitions_panel()
@@ -124,9 +125,7 @@ def export_balance():
     )
 
     with st.spinner("Generating COCO files"):
-        partitions_zip_file = (
-            get_partitions_zip(partition_dict, st.session_state.project_file_structure) if is_pressed else ""
-        )
+        partitions_zip_file = get_partitions_zip(partition_dict, get_state().project_paths) if is_pressed else ""
 
     action_columns[1].download_button(
         "⬇ Download filtered data",

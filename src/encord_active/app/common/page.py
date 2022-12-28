@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import streamlit as st
 
 import encord_active.app.common.state as state
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.metrics.metric import EmbeddingType
 
 
@@ -74,10 +75,10 @@ class Page(ABC):
                     help="Number of rows to show images in the main view",
                 )
 
-                if state.DATA_PAGE_METRIC in st.session_state.keys():
-                    if st.session_state[state.DATA_PAGE_METRIC].meta.get(
-                        "embedding_type", EmbeddingType.NONE.value
-                    ) in [
+                selected_metric = get_state().selected_metric
+
+                if selected_metric:
+                    if selected_metric.meta.get("embedding_type", EmbeddingType.NONE.value) in [
                         EmbeddingType.CLASSIFICATION.value,
                         EmbeddingType.OBJECT.value,
                     ]:
