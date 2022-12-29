@@ -8,8 +8,8 @@ import encord_active.app.common.state as state
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.metrics.utils import MetricData, MetricScope
 from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSchema
+from encord_active.lib.metrics.utils import MetricData, MetricScope
 
 _COLUMNS = MetricWithDistanceSchema
 

@@ -7,6 +7,10 @@ import numpy as np
 from tqdm import tqdm
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.common.utils import (
+    fix_duplicate_image_orders_in_knn_graph_all_rows,
+)
+from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
@@ -14,11 +18,7 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
 )
-from encord_active.lib.common.utils import (
-    fix_duplicate_image_orders_in_knn_graph_all_rows,
-)
 from encord_active.lib.metrics.writer import CSVMetricWriter
-from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
 
 logger = logging.getLogger(__name__)
 

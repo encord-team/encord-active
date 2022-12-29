@@ -10,9 +10,14 @@ from torch import nn
 from torch.nn import LeakyReLU
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
 from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

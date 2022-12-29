@@ -3,12 +3,12 @@ import streamlit as st
 from encord_active.app.common.components.metric_summary import render_metric_summary
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
+from encord_active.lib.dataset.outliers import get_iqr_outliers
 from encord_active.lib.metrics.utils import (
     MetricScope,
     load_available_metrics,
     load_metric_dataframe,
 )
-from encord_active.lib.dataset.outliers import get_iqr_outliers
 
 
 class SummaryPage(Page):

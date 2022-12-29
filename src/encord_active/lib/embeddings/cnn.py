@@ -14,9 +14,9 @@ from torch import nn
 from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
 from torchvision.models.feature_extraction import create_feature_extractor
 
-from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
+from encord_active.lib.embeddings.utils import LabelEmbedding
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

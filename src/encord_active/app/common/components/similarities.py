@@ -4,7 +4,6 @@ from pandas import Series
 from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
-from encord_active.lib.embeddings.utils import get_key_from_index
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
@@ -12,6 +11,7 @@ from encord_active.lib.common.image_utils import (
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_single_row,
 )
+from encord_active.lib.embeddings.utils import get_key_from_index
 
 
 def show_similar_classification_images(row: Series, expander: DeltaGenerator):

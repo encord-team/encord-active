@@ -34,6 +34,10 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.lib.charts.histogram import get_histogram
+from encord_active.lib.common.image_utils import (
+    load_or_fill_image,
+    show_image_and_draw_polygons,
+)
 from encord_active.lib.embeddings.utils import (
     get_collections,
     get_collections_and_metadata,
@@ -41,10 +45,6 @@ from encord_active.lib.embeddings.utils import (
     get_faiss_index_object,
     get_image_keys_having_similarities,
     get_object_keys_having_similarities,
-)
-from encord_active.lib.common.image_utils import (
-    load_or_fill_image,
-    show_image_and_draw_polygons,
 )
 from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
 from encord_active.lib.metrics.utils import (
@@ -66,7 +66,9 @@ class ExplorerPage(Page):
             st.error("Your data has not been indexed. Make sure you have imported your data correctly.")
             st.stop()
 
-        non_empty_metrics = [metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty]
+        non_empty_metrics = [
+            metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
+        ]
         sorted_metrics = sorted(non_empty_metrics, key=lambda i: i.name)
 
         metric_names = list(map(lambda i: i.name, sorted_metrics))

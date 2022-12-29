@@ -12,9 +12,14 @@ from torchvision.io import read_image
 from torchvision.models.segmentation import DeepLabV3_MobileNet_V3_Large_Weights
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
 from encord_active.lib.metrics.semantic._class_uncertainty import train_test_split
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
