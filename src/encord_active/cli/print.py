@@ -44,7 +44,7 @@ def print_ontology(
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
-    from encord_active.app.common.cli_helpers import get_local_project
+    from encord_active.lib.common.utils import get_local_project
 
     project = get_local_project(target)
     objects = project.ontology["objects"]

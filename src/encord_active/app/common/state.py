@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, Callable
 
 import streamlit as st
 
@@ -41,9 +42,16 @@ DATA_PAGE_ANNOTATOR = "data_page_annotator_selection"  # annotator
 
 
 # PREDICTIONS PAGE
-PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
 PREDICTIONS_DECOMPOSE_CLASSES = "predictions_decompose_classes"
+PREDICTIONS_FULL_CLASS_IDX = "full_class_idx"
+PREDICTIONS_GT_MATCHED = "gt_matched"
+PREDICTIONS_LABELS = "labels"
+PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
+PREDICTIONS_LABEL_METRIC_NAMES = "label_metric_names"
 PREDICTIONS_METRIC = "predictions_metric"
+PREDICTIONS_METRIC_META = "metric_meta"
+PREDICTIONS_METRIC_NAMES = "prediction_metric_names"
+PREDICTIONS_MODEL_PREDICTIONS = "model_predictions"
 PREDICTIONS_NBINS = "predictions_nbins"
 
 # TILING & PAGINATION
@@ -65,6 +73,7 @@ ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
 
 def populate_session_state():
     project_file_structure = ProjectFileStructure(st.session_state.project_dir)
+    st.session_state.project_file_structure = project_file_structure
     st.session_state.metric_dir = project_file_structure.metrics
     st.session_state.embeddings_dir = project_file_structure.embeddings
     st.session_state.predictions_dir = project_file_structure.predictions
@@ -79,3 +88,9 @@ def populate_session_state():
 
     if ALL_TAGS not in st.session_state:
         st.session_state[ALL_TAGS] = Tags().all()
+
+
+def setdefault(key: str, fn: Callable, *args, **kwargs) -> Any:
+    if not key in st.session_state:
+        st.session_state[key] = fn(*args, **kwargs)
+    return st.session_state.get(key)

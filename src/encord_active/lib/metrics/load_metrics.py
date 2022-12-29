@@ -8,7 +8,7 @@ import pandera as pa
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.common.image_utils import load_json
+from encord_active.lib.common.utils import load_json
 
 
 @dataclass
@@ -19,14 +19,18 @@ class MetricData:
     level: str
 
 
-class MetricSchema(pa.SchemaModel):
+class IdentifierSchema(pa.SchemaModel):
+    identifier: Series[str] = pa.Field()
+
+
+class MetricSchema(IdentifierSchema):
     score: Series[float] = pa.Field(coerce=True)
     identifier: Series[str] = pa.Field()
     description: Series[str] = pa.Field(nullable=True, coerce=True)
     object_class: Series[str] = pa.Field(nullable=True, coerce=True)
     annotator: Series[str] = pa.Field(nullable=True, coerce=True)
     frame: Series[int] = pa.Field()
-    url: Series[str] = pa.Field()
+    url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
 def load_metric(metric: MetricData, normalize: bool, *, sorting_key="score") -> DataFrame[MetricSchema]:

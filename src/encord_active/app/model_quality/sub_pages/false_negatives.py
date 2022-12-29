@@ -1,10 +1,18 @@
-import pandas as pd
 import streamlit as st
+from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
-from encord_active.app.model_quality.components import false_negative_view
+from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
-from encord_active.lib.metrics.statistical_utils import get_histogram
+from encord_active.lib.model_predictions.data import (
+    LabelMatchSchema,
+    PredictionMatchSchema,
+)
+from encord_active.lib.model_predictions.map_mar import (
+    PerformanceMetricSchema,
+    PrecisionRecallSchema,
+)
 
 from . import ModelQualityPage
 
@@ -13,9 +21,10 @@ class FalseNegativesPage(ModelQualityPage):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):
+        metric_columns = list(map(lambda m: m.name, st.session_state.label_metric_names))
         st.selectbox(
             "Select metric for your labels",
-            st.session_state.label_metric_names,
+            metric_columns,
             key=state.PREDICTIONS_LABEL_METRIC,
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (O) := object scores.",
@@ -24,10 +33,10 @@ class FalseNegativesPage(ModelQualityPage):
 
     def build(
         self,
-        model_predictions: pd.DataFrame,
-        labels: pd.DataFrame,
-        metrics: pd.DataFrame,
-        precisions: pd.DataFrame,
+        model_predictions: DataFrame[PredictionMatchSchema],
+        labels: DataFrame[LabelMatchSchema],
+        metrics: DataFrame[PerformanceMetricSchema],
+        precisions: DataFrame[PrecisionRecallSchema],
     ):
         st.markdown(f"# {self.title}")
         st.header("False Negatives")
@@ -47,10 +56,12 @@ The remaining objects are predictions, where colors correspond to their predicte
                 unsafe_allow_html=True,
             )
             self.metric_details_description(metric_name)
-        fns_df = labels[labels["fns"]].dropna(subset=[metric_name])
+        fns_df = labels[labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
         if fns_df.shape[0] == 0:
             st.write("No false negatives")
         else:
             histogram = get_histogram(fns_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            false_negative_view(fns_df, model_predictions, color=color)
+            prediction_grid(
+                st.session_state.data_dir, labels=fns_df, model_predictions=model_predictions, box_color=color
+            )
