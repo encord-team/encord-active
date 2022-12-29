@@ -8,7 +8,7 @@ from typing import Any, List, Union, cast
 
 from tabulate import tabulate
 
-import encord_active.lib.common.metric as metrics
+import encord_active.lib.metrics.type_definitions as metrics
 import encord_active.lib.metrics.run_all as run_all
 
 github_url = "https://github.com/encord-team/encord-active"

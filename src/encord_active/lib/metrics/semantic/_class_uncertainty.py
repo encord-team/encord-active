@@ -10,7 +10,7 @@ from torch import nn
 from torch.nn import LeakyReLU
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
+from encord_active.lib.metrics.type_definitions import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.writer import CSVMetricWriter
 from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
 

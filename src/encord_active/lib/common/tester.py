@@ -7,7 +7,7 @@ from typing import Any, List, Type, Union
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
-from encord_active.lib.common.metric import Metric
+from encord_active.lib.metrics.type_definitions import Metric
 from encord_active.lib.common.utils import fetch_project_info
 from encord_active.lib.common.writer import CSVMetricWriter, StatisticsObserver
 

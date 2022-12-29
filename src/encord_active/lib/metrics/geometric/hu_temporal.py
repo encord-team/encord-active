@@ -4,7 +4,7 @@ import numpy as np
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
+from encord_active.lib.metrics.type_definitions import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.writer import CSVMetricWriter
 from encord_active.lib.embeddings.hu_embed import get_hu_embeddings
 

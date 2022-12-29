@@ -12,7 +12,7 @@ from torchvision.io import read_image
 from torchvision.models.segmentation import DeepLabV3_MobileNet_V3_Large_Weights
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
+from encord_active.lib.metrics.type_definitions import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.writer import CSVMetricWriter
 from encord_active.lib.metrics.semantic._class_uncertainty import train_test_split
 

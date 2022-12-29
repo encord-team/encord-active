@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import (
+from encord_active.lib.metrics.type_definitions import (
     AnnotationType,
     DataType,
     EmbeddingType,
