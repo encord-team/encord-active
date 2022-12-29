@@ -7,11 +7,8 @@ import streamlit as st
 import encord_active.app.common.state as state
 from encord_active.app.common.components import multiselect_with_all_option
 from encord_active.app.common.utils import set_page_config, setup_page
-from encord_active.lib.metrics.balance import (
-    balance_dataframe,
-    get_partiotion_histogram,
-    get_partitions_zip,
-)
+from encord_active.lib.charts.partition_histogram import get_partition_histogram
+from encord_active.lib.dataset.balance import balance_dataframe, get_partitions_zip
 from encord_active.lib.metrics.load_metrics import (
     MetricData,
     MetricScope,
@@ -143,7 +140,7 @@ def export_balance():
     # Plot distribution of partitions for each metric
     for m in selected_metrics:
         with st.expander(f"{m.name} - Partition distribution"):
-            chart = get_partiotion_histogram(balanced_df, m.name)
+            chart = get_partition_histogram(balanced_df, m.name)
             st.altair_chart(chart, use_container_width=True)
 
 
