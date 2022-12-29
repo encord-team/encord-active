@@ -1,6 +1,6 @@
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 class ObjectsCountMetric(Metric):

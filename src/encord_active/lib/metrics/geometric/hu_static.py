@@ -5,10 +5,16 @@ from loguru import logger
 from sklearn.decomposition import PCA
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.utils import get_object_coordinates
-from encord_active.lib.common.writer import CSVEmbeddingWriter, CSVMetricWriter
 from encord_active.lib.embeddings.hu_moments import get_hu_embeddings
+from encord_active.lib.embeddings.writer import CSVEmbeddingWriter
+from encord_active.lib.metrcis.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
 
 logger = logger.opt(colors=True)
 
@@ -29,8 +35,8 @@ def compute_cls_distances(embeddings: np.ndarray, labels: np.ndarray) -> np.ndar
 class HuMomentsStatic(Metric):
     TITLE = "Shape outlier detection"
     SHORT_DESCRIPTION = "Calculates potential outliers by polygon shape."
-    LONG_DESCRIPTION = r"""Computes the Euclidean distance between the polygons' 
-    [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and 
+    LONG_DESCRIPTION = r"""Computes the Euclidean distance between the polygons'
+    [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and
     the prototypical class moments."""
     SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC

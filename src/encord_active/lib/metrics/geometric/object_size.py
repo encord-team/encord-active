@@ -8,7 +8,7 @@ from encord_active.lib.common.utils import (
     get_du_size,
     get_polygon,
 )
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 

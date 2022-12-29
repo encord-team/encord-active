@@ -17,7 +17,7 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
 )
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVMetricWriter
 from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
 
 logger = logger.opt(colors=True)

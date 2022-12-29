@@ -7,7 +7,7 @@ from encord.project_ontology.classification_type import ClassificationType
 from encord.project_ontology.object_type import ObjectShape
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 class MetricType(Enum):

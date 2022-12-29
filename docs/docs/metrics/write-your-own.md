@@ -26,7 +26,7 @@ Your implementation should call `writer.write(<object_score>, <object>)` for eve
 ```python
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import AnnotationType, DataType, MetricType, Metric
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 class ExampleMetric(Metric):
     TITLE = "Example Title"
