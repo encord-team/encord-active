@@ -14,7 +14,7 @@ from torch import nn
 from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
 from torchvision.models.feature_extraction import create_feature_extractor
 
-from encord_active.lib.common.embedding import LabelEmbedding
+from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
 

@@ -10,8 +10,8 @@ from encord.orm.dataset import Image, StorageLocation
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.common.utils import fetch_project_meta
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 class DatasetCreationResult(NamedTuple):
@@ -23,7 +23,7 @@ class ProjectCreationResult(NamedTuple):
     hash: str
 
 
-class ProjectActionUtils:
+class EncordActions:
     def __init__(self, project_dir: Path):
         self.project_meta = fetch_project_meta(project_dir)
         self.project_file_structure = ProjectFileStructure(project_dir)

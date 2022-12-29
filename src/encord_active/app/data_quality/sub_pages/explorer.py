@@ -34,7 +34,7 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.common.embedding import (
+from encord_active.lib.embeddings.utils import (
     get_collections,
     get_collections_and_metadata,
     get_faiss_index_image,

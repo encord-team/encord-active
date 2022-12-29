@@ -13,11 +13,11 @@ from pandas.api.types import (
 import encord_active.app.common.state as state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
-from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
-    ProjectActionUtils,
-)
 from encord_active.lib.common.utils import ProjectNotFound
 from encord_active.lib.db.tags import Tags
+from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
+    EncordActions,
+)
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -192,7 +192,7 @@ community</a>
                 return
 
             try:
-                action_utils = ProjectActionUtils(st.session_state.project_dir)
+                action_utils = EncordActions(st.session_state.project_dir)
                 label = st.empty()
                 progress, clear = render_progress_bar()
                 label.text("Step 1/2: Uploading data...")
