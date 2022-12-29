@@ -75,10 +75,12 @@ class ModelQualityPage(Page):
     def metric_details_description(metric_name: str = ""):
         if not metric_name:
             metric_name = st.session_state[state.PREDICTIONS_METRIC]
-        metric_data: Optional[MetricData] = st.session_state.metric_meta["predictions"].get(metric_name)
+        metric_data: Optional[MetricData] = st.session_state[state.PREDICTIONS_METRIC_META]["predictions"].get(
+            metric_name
+        )
 
         if not metric_data:
-            metric_data = st.session_state.metric_meta["labels"].get(metric_name)
+            metric_data = st.session_state[state.PREDICTIONS_METRIC_META]["labels"].get(metric_name)
 
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")

@@ -12,6 +12,7 @@ from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 T = TypeVar("T")
+P = TypeVar("P")
 Reducer = Callable[[T], T]
 
 SCOPED_STATES = "scoped_states"
@@ -23,8 +24,21 @@ def create_key():
     return f"{frame.filename}:{frame.function}:{frame.lineno}"
 
 
-def use_state(initial: T, key: Optional[str] = None):
-    key = key or create_key()
+def use_lazy_state(initial: Callable[[], T], key: Optional[str] = create_key()):
+    st.session_state.setdefault(SCOPED_STATES, {})
+
+    if key not in st.session_state[SCOPED_STATES]:
+        st.session_state[SCOPED_STATES][key] = initial()
+    value: T = st.session_state[SCOPED_STATES][key]
+
+    return use_state(value)
+
+
+# TODO: is there a way to make this work and have proper types?
+# def use_state(initial: Union[T, Callable[[], T]], key: Optional[str] = create_key()):
+#     st.session_state.setdefault(SCOPED_STATES, {})
+#     st.session_state[SCOPED_STATES].setdefault(key, initial() if callable(initial) else initial)
+def use_state(initial: T, key: Optional[str] = create_key()):
     st.session_state.setdefault(SCOPED_STATES, {}).setdefault(key, initial)
 
     @overload
@@ -48,6 +62,11 @@ def use_state(initial: T, key: Optional[str] = None):
 
 
 @dataclass
+class PredictionsState:
+    decompose_classes = False
+
+
+@dataclass
 class PageGridSettings:
     columns: int = 4
     rows: int = 5
@@ -66,6 +85,7 @@ class State:
     selected_metric: Optional[MetricData] = None
     page_grid_settings = PageGridSettings()
     normalize_metrics = False
+    predictions = PredictionsState()
 
     @classmethod
     def init(cls, project_dir: Path):

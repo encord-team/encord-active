@@ -19,22 +19,16 @@ K_NEAREST_NUM = "k_nearest_num"
 
 
 # PREDICTIONS PAGE
-PREDICTIONS_DECOMPOSE_CLASSES = "predictions_decompose_classes"
 PREDICTIONS_FULL_CLASS_IDX = "full_class_idx"
 PREDICTIONS_GT_MATCHED = "gt_matched"
 PREDICTIONS_LABELS = "labels"
-PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
 PREDICTIONS_LABEL_METRIC_NAMES = "label_metric_names"
+PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
 PREDICTIONS_METRIC = "predictions_metric"
 PREDICTIONS_METRIC_META = "metric_meta"
 PREDICTIONS_METRIC_NAMES = "prediction_metric_names"
 PREDICTIONS_MODEL_PREDICTIONS = "model_predictions"
 PREDICTIONS_NBINS = "predictions_nbins"
-
-
-# Export page
-NUMBER_OF_PARTITIONS = "number_of_partitions"
-ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
 
 
 def setdefault(key: str, fn: Callable, *args, **kwargs) -> Any:

@@ -6,13 +6,14 @@ import encord_active.app.common.components as cst
 
 # import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.tag_creator import tag_creator
+from encord_active.app.common.state import PREDICTIONS_FULL_CLASS_IDX
 from encord_active.app.common.state_new import get_state
 
 
 def common_settings():
     tag_creator()
 
-    class_idx = st.session_state.full_class_idx
+    class_idx = st.session_state[PREDICTIONS_FULL_CLASS_IDX]
     col1, col2, col3 = st.columns([4, 4, 3])
 
     with col1:

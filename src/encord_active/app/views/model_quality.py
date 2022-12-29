@@ -6,16 +6,16 @@ import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.state import (
     PREDICTIONS_FULL_CLASS_IDX,
-    PREDICTIONS_GT_MATCHED,
     PREDICTIONS_LABEL_METRIC,
     PREDICTIONS_LABEL_METRIC_NAMES,
     PREDICTIONS_LABELS,
     PREDICTIONS_METRIC,
+    PREDICTIONS_METRIC_META,
     PREDICTIONS_METRIC_NAMES,
     PREDICTIONS_MODEL_PREDICTIONS,
     setdefault,
 )
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state_new import get_state, use_lazy_state, use_state
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.settings import common_settings
 from encord_active.app.model_quality.sub_pages import Page
@@ -62,24 +62,34 @@ def model_quality(page: Page):
         label_metric_data = setdefault(PREDICTIONS_LABEL_METRIC_NAMES, reader.get_label_metric_data, metrics_dir)
         setdefault(PREDICTIONS_LABELS, reader.get_labels, predictions_dir, label_metric_data)
 
-        if st.session_state.labels is None:
+        if st.session_state[PREDICTIONS_LABELS] is None:
             st.error("Couldn't load labels properly")
             return
 
-        setdefault(PREDICTIONS_GT_MATCHED, reader.get_gt_matched, predictions_dir)
-        st.session_state.metric_meta = {
+        get_gt_matched, _ = use_lazy_state(lambda: reader.get_gt_matched(predictions_dir))
+        st.session_state[PREDICTIONS_METRIC_META] = {
             "predictions": {m.name: m for m in prediction_metric_data},
             "labels": {m.name: m for m in label_metric_data},
         }
+
+        matched_gt = get_gt_matched()
+        if not matched_gt:
+            st.error("Couldn't match groung truths")
+            return
 
         with sticky_header():
             common_settings()
             page.sidebar_options()
 
-        st.session_state.model_predictions, st.session_state.labels, metrics, precisions = compute_mAP_and_mAR(
+        (
+            st.session_state.model_predictions,
+            st.session_state[PREDICTIONS_LABELS],
+            metrics,
+            precisions,
+        ) = compute_mAP_and_mAR(
             st.session_state.get(PREDICTIONS_MODEL_PREDICTIONS),  # type: ignore
             st.session_state.get(PREDICTIONS_LABELS),  # type: ignore
-            st.session_state.get(PREDICTIONS_GT_MATCHED),  # type: ignore
+            matched_gt,
             st.session_state.get(PREDICTIONS_FULL_CLASS_IDX),  # type: ignore
             iou_threshold=get_state().iou_threshold,
             ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
@@ -91,8 +101,10 @@ def model_quality(page: Page):
             [pred_sort_column], axis=0
         )
 
-        label_sort_column = st.session_state.get(PREDICTIONS_LABEL_METRIC, st.session_state.label_metric_names[0].name)
-        st.session_state.sorted_labels = st.session_state.labels.sort_values([label_sort_column], axis=0)
+        label_sort_column = st.session_state.get(
+            PREDICTIONS_LABEL_METRIC, st.session_state[PREDICTIONS_LABEL_METRIC_NAMES][0].name
+        )
+        st.session_state.sorted_labels = st.session_state[PREDICTIONS_LABELS].sort_values([label_sort_column], axis=0)
 
         if get_state().ignore_frames_without_predictions:
             labels = filter_labels_for_frames_wo_predictions(

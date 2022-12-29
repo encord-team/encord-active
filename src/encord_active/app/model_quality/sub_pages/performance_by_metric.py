@@ -5,6 +5,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.model_predictions.map_mar import (
@@ -71,9 +72,9 @@ on your labels are used for the "False Negative Rate" plot.
         with c3:
             st.write("")  # Make some spacing.
             st.write("")
-            st.checkbox(
+            get_state().predictions.decompose_classes = st.checkbox(
                 "Show class decomposition",
-                key=state.PREDICTIONS_DECOMPOSE_CLASSES,
+                value=get_state().predictions.decompose_classes,
                 help="When checked, every plot will have a separate component for each class.",
             )
 
@@ -114,7 +115,8 @@ on your labels are used for the "False Negative Rate" plot.
             )  # Look for it in frame label metrics.
 
         classes_for_coloring = ["Average"]
-        if st.session_state.get(state.PREDICTIONS_DECOMPOSE_CLASSES, False):
+        decompose_classes = get_state().predictions.decompose_classes
+        if decompose_classes:
             unique_classes = set(model_predictions["class_name"].unique()).union(labels["class_name"].unique())
             classes_for_coloring += sorted(list(unique_classes))
 
@@ -122,7 +124,7 @@ on your labels are used for the "False Negative Rate" plot.
         chart_args = dict(
             color_params={"scale": alt.Scale(domain=classes_for_coloring)},
             bins=st.session_state.get(state.PREDICTIONS_NBINS, 100),
-            show_decomposition=st.session_state[state.PREDICTIONS_DECOMPOSE_CLASSES],
+            show_decomposition=decompose_classes,
         )
 
         tpr = performance_rate_by_metric(
