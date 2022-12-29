@@ -4,7 +4,7 @@ import plotly.express as px
 import streamlit as st
 from pandera.typing import DataFrame
 
-from encord_active.lib.metrics.load_metrics import (
+from encord_active.lib.metrics.utils import (
     AnnotatorInfo,
     MetricSchema,
     get_annotator_level_info,

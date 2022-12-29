@@ -11,7 +11,7 @@ from rich.markup import escape
 from rich.panel import Panel
 
 from encord_active.lib.encord.project import get_projects_json
-from encord_active.lib.metrics.run_all import run_metrics
+from encord_active.lib.metrics.execute import run_metrics
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 

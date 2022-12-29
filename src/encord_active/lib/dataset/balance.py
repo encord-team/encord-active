@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from encord_active.lib.coco.encoder import generate_coco_file
-from encord_active.lib.metrics.load_metrics import MetricData, load_metric
+from encord_active.lib.metrics.utils import MetricData, load_metric
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 

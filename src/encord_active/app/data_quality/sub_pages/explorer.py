@@ -47,12 +47,12 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
 )
 from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
-from encord_active.lib.metrics.load_metrics import (
+from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
     MetricScope,
     get_annotator_level_info,
-    load_metric,
+    load_metric_dataframe,
 )
 
 
@@ -66,7 +66,7 @@ class ExplorerPage(Page):
             st.error("Your data has not been indexed. Make sure you have imported your data correctly.")
             st.stop()
 
-        non_empty_metrics = [metric for metric in available_metrics if not load_metric(metric, normalize=False).empty]
+        non_empty_metrics = [metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty]
         sorted_metrics = sorted(non_empty_metrics, key=lambda i: i.name)
 
         metric_names = list(map(lambda i: i.name, sorted_metrics))
@@ -90,7 +90,7 @@ class ExplorerPage(Page):
                 state.METRIC_METADATA_SCORE_NORMALIZATION, True
             )  # If there is no information on the meta file, just normalize (its probability is higher)
 
-        df = load_metric(
+        df = load_metric_dataframe(
             st.session_state[state.DATA_PAGE_METRIC], normalize=st.session_state[state.NORMALIZATION_STATUS]
         )
 

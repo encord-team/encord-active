@@ -9,7 +9,7 @@ from typing import Any, List, Union, cast
 from tabulate import tabulate
 
 import encord_active.lib.metrics.metric as metrics
-import encord_active.lib.metrics.run_all as run_all
+import encord_active.lib.metrics.execute as run_all
 
 github_url = "https://github.com/encord-team/encord-active"
 descriptions = {

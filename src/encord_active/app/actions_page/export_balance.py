@@ -9,7 +9,7 @@ from encord_active.app.common.components import multiselect_with_all_option
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.charts.partition_histogram import get_partition_histogram
 from encord_active.lib.dataset.balance import balance_dataframe, get_partitions_zip
-from encord_active.lib.metrics.load_metrics import (
+from encord_active.lib.metrics.utils import (
     MetricData,
     MetricScope,
     load_available_metrics,

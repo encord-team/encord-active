@@ -6,8 +6,13 @@ from typing import Callable, List, Optional, Union
 
 from encord.project_ontology.object_type import ObjectShape
 
-from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.tester import perform_test
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
 
 
 def get_metrics(module: Optional[Union[str, list[str]]] = None, filter_func=lambda x: True):

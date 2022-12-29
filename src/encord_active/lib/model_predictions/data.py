@@ -9,11 +9,11 @@ from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
 from encord_active.lib.common.utils import load_json
-from encord_active.lib.metrics.load_metrics import (
+from encord_active.lib.metrics.utils import (
     IdentifierSchema,
     MetricData,
     load_available_metrics,
-    load_metric,
+    load_metric_dataframe,
 )
 
 
@@ -93,7 +93,7 @@ def append_metric_columns(df: pd.DataFrame, metric_entries: List[MetricData]) ->
     df["identifier_no_oh"] = df[IdentifierSchema.identifier].str.replace(r"^(\S{73}_\d+)(.*)", r"\1", regex=True)
 
     for metric in metric_entries:
-        metric_scores = load_metric(metric, normalize=False)
+        metric_scores = load_metric_dataframe(metric, normalize=False)
         metric_scores = metric_scores.set_index(keys=["identifier"])
 
         has_object_level_keys = len(cast(str, metric_scores.index[0]).split("_")) > 3
