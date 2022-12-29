@@ -34,13 +34,7 @@ When you have identified outliers of interest, use the [tagging](/workflows/tags
 After creating a tagged image group, you can access it at the bottom of the left sidebar in the _Actions_ tab.
 
 ### 3. Act on outliers
-Within the _Actions_ tab, click _Filter dataframe on_ and select _tags_. Next, choose the tags you would like to export, relabel, or delete from your dataset.
-
-   * To generate a new COCO file click _Generate COCO file_.
-   * To export images in CSV click _download filtered data_.
-   * To review images from your dataset click _Review_.
-   * To relabel images please contact Encord to hear more.
-   * To augment similar images please contact Encord to hear more.
+Within the _Actions_ tab, click _Filter dataframe on_ and select _tags_. Next, choose the tags you would like to export, relabel, augment, review, or delete from your dataset.
 
 ![data-quality-outliers-action.png](../../images/data-quality-outliers-action.png)
 
