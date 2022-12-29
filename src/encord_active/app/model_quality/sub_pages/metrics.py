@@ -3,7 +3,7 @@ from pandera.typing import DataFrame
 
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.precision_recall import create_pr_charts
-from encord_active.lib.model_predictions.data import (
+from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )

@@ -7,7 +7,7 @@ from pandera.typing import DataFrame
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.data import (
+from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )

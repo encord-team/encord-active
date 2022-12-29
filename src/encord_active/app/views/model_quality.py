@@ -4,7 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 import encord_active.app.common.state as state
-import encord_active.lib.model_predictions.data as pred_data
+import encord_active.lib.model_predictions.reader as pred_data
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.settings import common_settings

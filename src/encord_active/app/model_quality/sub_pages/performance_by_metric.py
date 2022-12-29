@@ -7,7 +7,7 @@ from pandera.typing import DataFrame
 import encord_active.app.common.state as state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
-from encord_active.lib.model_predictions.data import (
+from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )

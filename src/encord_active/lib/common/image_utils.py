@@ -10,7 +10,7 @@ from pandera.typing import DataFrame
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
-from encord_active.lib.model_predictions.data import PredictionMatchSchema
+from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 
 
 def get_polygon_thickness(img_w: int):
