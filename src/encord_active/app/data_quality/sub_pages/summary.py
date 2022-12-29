@@ -3,12 +3,12 @@ import streamlit as st
 from encord_active.app.common.components.metric_summary import render_metric_summary
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
-from encord_active.lib.metrics.load_metrics import (
+from encord_active.lib.dataset.outliers import get_iqr_outliers
+from encord_active.lib.metrics.utils import (
     MetricScope,
     load_available_metrics,
-    load_metric,
+    load_metric_dataframe,
 )
-from encord_active.lib.metrics.outliers import get_iqr_outliers
 
 
 class SummaryPage(Page):
@@ -53,7 +53,7 @@ class SummaryPage(Page):
         metrics = load_available_metrics(st.session_state.metric_dir, metric_scope)
 
         for metric in metrics:
-            original_df = load_metric(metric, normalize=False)
+            original_df = load_metric_dataframe(metric, normalize=False)
             res = get_iqr_outliers(original_df)
             if not res:
                 continue

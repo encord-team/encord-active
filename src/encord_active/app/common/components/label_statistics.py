@@ -4,7 +4,7 @@ import streamlit as st
 from natsort import natsorted
 from pandera.typing import DataFrame
 
-from encord_active.lib.metrics.load_metrics import MetricSchema
+from encord_active.lib.metrics.utils import MetricSchema
 
 
 def render_dataset_properties(current_df: DataFrame[MetricSchema]):

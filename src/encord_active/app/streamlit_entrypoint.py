@@ -19,7 +19,7 @@ from encord_active.app.model_quality.sub_pages.true_positives import TruePositiv
 from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
-from encord_active.lib.metrics.load_metrics import MetricScope
+from encord_active.lib.metrics.utils import MetricScope
 
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
 

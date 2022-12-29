@@ -3,7 +3,7 @@ from sqlite3 import OperationalError
 from typing import Callable, List, NamedTuple
 
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.metrics.load_metrics import MetricScope
+from encord_active.lib.metrics.utils import MetricScope
 
 TABLE_NAME = "tags"
 

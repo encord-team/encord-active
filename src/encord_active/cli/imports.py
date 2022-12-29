@@ -25,7 +25,7 @@ def import_predictions(
     [bold]Imports[/bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
     If `--coco` option is specified the file should be a json following the coco results format. :brain:
     """
-    from encord_active.lib.common.project import Project
+    from encord_active.lib.project.project import Project
 
     project = Project(target)
 

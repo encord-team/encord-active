@@ -224,7 +224,7 @@ The code would change to something similar to this:
 
 ```python
 # highlight-next-line
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 def predict(test_loader):
     # highlight-next-line
@@ -367,7 +367,7 @@ To import the predictions, you do the following
 import json
 
 from encord_active.lib.model_predictions.importers import import_KITTI_labels
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 # highlight-next-line
 predictions_root = Path("/path/to/your/predictions")
@@ -416,7 +416,7 @@ You can use this template where the highlighted lined are what you need to chang
 
 ```python
 from encord_active.lib.model_predictions.importers import import_mask_predictions
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 # highlight-start
 class_map = {
@@ -470,7 +470,7 @@ For this, you can use these lines of code:
 
 ```python
 from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.metrics.run_all import run_metrics
+from encord_active.lib.metrics.execute import run_metrics
 
 run_metrics(data_dir=data_dir, iterator_cls=PredictionIterator)
 ```

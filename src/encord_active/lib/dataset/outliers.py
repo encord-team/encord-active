@@ -3,7 +3,7 @@ from typing import NamedTuple, Optional, Tuple
 import pandera as pa
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.metrics.load_metrics import MetricSchema
+from encord_active.lib.metrics.utils import MetricSchema
 
 
 class MetricWithDistanceSchema(MetricSchema):

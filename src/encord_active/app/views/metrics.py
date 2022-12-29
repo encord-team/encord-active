@@ -4,7 +4,7 @@ from encord_active.app.common.components import sticky_header
 from encord_active.app.common.utils import setup_page
 from encord_active.app.data_quality.sub_pages.explorer import ExplorerPage
 from encord_active.app.data_quality.sub_pages.summary import SummaryPage
-from encord_active.lib.metrics.load_metrics import MetricScope, load_available_metrics
+from encord_active.lib.metrics.utils import MetricScope, load_available_metrics
 
 
 def summary(metric_type: MetricScope):

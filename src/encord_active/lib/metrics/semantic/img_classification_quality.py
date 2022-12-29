@@ -10,15 +10,15 @@ from encord.objects.common import PropertyType
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import (
+from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
     Metric,
     MetricType,
 )
-from encord_active.lib.common.writer import CSVMetricWriter
-from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -249,7 +249,7 @@ class ImageLevelQualityTest(Metric):
 
         return found_any
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         project_has_classifications = self.setup(iterator)
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")

@@ -1,8 +1,13 @@
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -13,17 +18,17 @@ class ExampleMetric(Metric):
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
     SHORT_DESCRIPTION = "Assigns same value and description to all objects."
-    LONG_DESCRIPTION = r"""For long descriptions, I can use Markdown to _format_ the text.  
-    
-I can, e.g., make a 
-[hyperlink](https://memegenerator.net/instance/74454868/europe-its-the-final-markdown) 
+    LONG_DESCRIPTION = r"""For long descriptions, I can use Markdown to _format_ the text.
+
+I can, e.g., make a
+[hyperlink](https://memegenerator.net/instance/74454868/europe-its-the-final-markdown)
 to the awesome paper that proposed the method.
 
-Or use math to better explain the method: 
+Or use math to better explain the method:
 $$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
 """
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
 
         logger.info("My custom logging")
@@ -59,7 +64,7 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
-    from encord_active.lib.common.tester import perform_test
+    from encord_active.lib.metric.execute import perform_test
 
     path = sys.argv[1]
     perform_test(ExampleMetric(), data_dir=Path(path))

@@ -12,9 +12,14 @@ from torchvision.io import read_image
 from torchvision.models.segmentation import DeepLabV3_MobileNet_V3_Large_Weights
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
 from encord_active.lib.metrics.semantic._class_uncertainty import train_test_split
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -201,7 +206,7 @@ class EntropyHeatmapMetric(Metric):
     )
     LONG_DESCRIPTION = r""""""
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         model_path = os.path.join(iterator.cache_dir, "models", f"{Path(__file__).stem}_model.pt")
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
