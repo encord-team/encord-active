@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from encord_active.lib.coco.encoder import generate_coco_file
-from encord_active.lib.metrics.utils import MetricData, load_metric
+from encord_active.lib.metrics.utils import MetricData, load_metric_dataframe
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
@@ -29,7 +29,7 @@ def balance_dataframe(selected_metrics: List[MetricData], partition_sizes: Dict[
     # Collect metric dataframes
     merged_df_list = []
     for i, m in enumerate(selected_metrics):
-        df = load_metric(m, normalize=False).copy()
+        df = load_metric_dataframe(m, normalize=False).copy()
         merged_df_list.append(df[["identifier", "score"]].rename(columns={"score": m.name}))
 
     # Merge all dataframes by identifier
