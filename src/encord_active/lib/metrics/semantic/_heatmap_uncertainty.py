@@ -201,7 +201,7 @@ class EntropyHeatmapMetric(Metric):
     )
     LONG_DESCRIPTION = r""""""
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         model_path = os.path.join(iterator.cache_dir, "models", f"{Path(__file__).stem}_model.pt")
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 

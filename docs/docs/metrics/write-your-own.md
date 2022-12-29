@@ -63,7 +63,7 @@ class ExampleMetric(Metric):
 if __name__ == "__main__":
     import sys
     from pathlib import Path
-    from encord_active.lib.common.tester import perform_test
+    from encord_active.lib.metric.execute import perform_test
 
     path = sys.argv[1]
     perform_test(ExampleMetric(), data_dir=Path(path))

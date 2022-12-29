@@ -18,7 +18,7 @@ If no logs are available for a particular object, it will get score 0."""
     ANNOTATION_TYPE = AnnotationType.ALL
     SCORE_NORMALIZATION = True
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         found_any = False
 
         for data_unit, img_pth in iterator.iterate(desc="Computing annotation times"):

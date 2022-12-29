@@ -37,7 +37,7 @@ class EmbeddingType(Enum):
 
 class Metric(ABC):
     @abstractmethod
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         """
         This is where you should perform your data indexing.
 

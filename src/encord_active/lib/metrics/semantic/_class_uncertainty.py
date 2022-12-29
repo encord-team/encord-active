@@ -192,7 +192,7 @@ class EntropyMetric(Metric):
     LONG_DESCRIPTION = r"""Uses the entropy of the distribution over labels from a lightweight classifier neural
 network and Monte-Carlo Dropout to estimate the uncertainty of the label. """
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)
         with classifier.mc_eval() and torch.inference_mode():
             pbar = tqdm.tqdm(total=len(resnet_embeddings_df), desc="Predicting uncertainty")
@@ -220,7 +220,7 @@ class ConfidenceScoreMetric(Metric):
     SHORT_DESCRIPTION = "Estimates the confidence of the assigned label."
     LONG_DESCRIPTION = r"""Estimates the confidence of the assigned label as the probability of the assigned label."""
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)
 
         with classifier.mc_eval() and torch.inference_mode():

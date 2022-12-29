@@ -22,7 +22,7 @@ class ImageBorderCloseness(Metric):
         AnnotationType.OBJECT.SKELETON,
     ]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 

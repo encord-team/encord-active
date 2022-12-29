@@ -43,7 +43,7 @@ class HuMomentsStatic(Metric):
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         hu_moments_df = get_hu_embeddings(iterator, force=True)
 

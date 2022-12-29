@@ -44,7 +44,7 @@ class OcclusionDetectionOnVideo(Metric):
         else:
             return "There is no occlusion"
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
 
         videos: dict[str, dict[str, dict]] = {}

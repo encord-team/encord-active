@@ -249,7 +249,7 @@ class ImageLevelQualityTest(Metric):
 
         return found_any
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         project_has_classifications = self.setup(iterator)
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")

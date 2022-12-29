@@ -14,12 +14,12 @@ class HighIOUChangingClasses(Metric):
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
     SHORT_DESCRIPTION = "Looks for overlapping objects with different classes (across frames)."
-    LONG_DESCRIPTION = r"""This algorithm looks for overlapping objects in consecutive 
-frames that have different classes. Furthermore, if classes are the same for overlapping objects but have different 
+    LONG_DESCRIPTION = r"""This algorithm looks for overlapping objects in consecutive
+frames that have different classes. Furthermore, if classes are the same for overlapping objects but have different
 track-ids, they will be flagged as potential inconsistencies in tracks.
 
 
-**Example 1:**  
+**Example 1:**
 ```
       Frame 1                       Frame 2
 ┌───────────────────┐        ┌───────────────────┐
@@ -34,7 +34,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 ```
 `Dog:1` will be flagged as potentially wrong class, because it overlaps with `CAT:1`.
 
-**Example 2:**  
+**Example 2:**
 ```
       Frame 1                       Frame 2
 ┌───────────────────┐        ┌───────────────────┐
@@ -55,7 +55,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
         super(HighIOUChangingClasses, self).__init__()
         self.threshold = threshold
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
         found_valid = False
