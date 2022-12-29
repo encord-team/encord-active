@@ -45,10 +45,6 @@ from encord_active.app.common.state import (
     IMAGE_KEYS_HAVING_SIMILARITIES,
     IMAGE_SIMILARITIES,
     IMAGE_SIMILARITIES_NO_LABEL,
-    MAIN_VIEW_COLUMN_NUM,
-    MAIN_VIEW_ROW_NUM,
-    METRIC_METADATA_SCORE_NORMALIZATION,
-    NORMALIZATION_STATUS,
     OBJECT_KEYS_HAVING_SIMILARITIES,
     OBJECT_SIMILARITIES,
     QUESTION_HASH_TO_COLLECTION_INDEXES,
@@ -112,12 +108,8 @@ class ExplorerPage(Page):
         selected_metric = sorted_metrics[metric_idx]
         get_state().selected_metric = selected_metric
 
-        if NORMALIZATION_STATUS not in st.session_state:
-            st.session_state[NORMALIZATION_STATUS] = selected_metric.meta.get(
-                METRIC_METADATA_SCORE_NORMALIZATION, True
-            )  # If there is no information on the meta file, just normalize (its probability is higher)
-
-        df = load_metric_dataframe(selected_metric, normalize=st.session_state[NORMALIZATION_STATUS])
+        normalize = selected_metric.meta.get("score_normalization", get_state().normalize_metrics)
+        df = load_metric_dataframe(selected_metric, normalize=normalize)
 
         if df.shape[0] <= 0:
             return
@@ -197,8 +189,8 @@ def fill_data_quality_window(
         st.write("Object-level embedding file is not available for this project.")
         return
 
-    n_cols = int(st.session_state[MAIN_VIEW_COLUMN_NUM])
-    n_rows = int(st.session_state[MAIN_VIEW_ROW_NUM])
+    n_cols = get_state().page_grid_settings.columns
+    n_rows = get_state().page_grid_settings.rows
 
     metric = get_state().selected_metric
     if not metric:
@@ -318,7 +310,7 @@ def build_card(
     st.image(image)
     multiselect_tag(row, "explorer", metric_scope)
 
-    target_expander = similarity_expanders[card_no // st.session_state[MAIN_VIEW_COLUMN_NUM]]
+    target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
 
     st.button(
         str(button_name),

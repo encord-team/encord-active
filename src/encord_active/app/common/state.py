@@ -15,10 +15,7 @@ CURRENT_INDEX_HAS_ANNOTATION = "current_index_has_annotation"
 QUESTION_HASH_TO_COLLECTION_INDEXES = "question_hash_to_collection_indexes"
 COLLECTIONS_IMAGES = "collections_images"
 COLLECTIONS_OBJECTS = "collections_objects"
-
-
-# DATA QUALITY PAGE
-DATA_PAGE_ANNOTATOR = "data_page_annotator_selection"  # annotator
+K_NEAREST_NUM = "k_nearest_num"
 
 
 # PREDICTIONS PAGE
@@ -34,16 +31,6 @@ PREDICTIONS_METRIC_NAMES = "prediction_metric_names"
 PREDICTIONS_MODEL_PREDICTIONS = "model_predictions"
 PREDICTIONS_NBINS = "predictions_nbins"
 
-# TILING & PAGINATION
-MAIN_VIEW_COLUMN_NUM = "main_view_column_num"
-MAIN_VIEW_ROW_NUM = "main_view_row_num"
-K_NEAREST_NUM = "k_nearest_num"
-
-METRIC_VIEW_PAGE_NUMBER = "metric_view_page_number"
-FALSE_NEGATIVE_VIEW_PAGE_NUMBER = "false_negative_view_page_number"
-
-NORMALIZATION_STATUS = "normalization_status"
-METRIC_METADATA_SCORE_NORMALIZATION = "score_normalization"
 
 # Export page
 NUMBER_OF_PARTITIONS = "number_of_partitions"

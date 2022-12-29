@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import streamlit as st
 
@@ -33,46 +34,40 @@ class Page(ABC):
     @staticmethod
     def row_col_settings_in_sidebar():
         col_default_max, row_default_max = 10, 5
-        default_mv_column_num = 4
-        default_mv_row_num = 5
         default_knn_num = 8
 
         with st.expander("Settings"):
-            if state.MAIN_VIEW_COLUMN_NUM not in st.session_state:
-                st.session_state[state.MAIN_VIEW_COLUMN_NUM] = default_mv_column_num
-
-            if state.MAIN_VIEW_ROW_NUM not in st.session_state:
-                st.session_state[state.MAIN_VIEW_ROW_NUM] = default_mv_row_num
-
             if state.K_NEAREST_NUM not in st.session_state:
                 st.session_state[state.K_NEAREST_NUM] = default_knn_num
 
             with st.form(key="settings_from"):
-                st.checkbox(
+                get_state().normalize_metrics = st.checkbox(
                     "Metric normalization",
-                    key=state.NORMALIZATION_STATUS,
+                    value=get_state().normalize_metrics,
                     help="If checked, score values will be normalized between 0 and 1. Otherwise, \
                         original values will be shown.",
                 )
 
                 setting_columns = st.columns(2)
 
-                setting_columns[0].number_input(
-                    "Columns",
-                    min_value=2,
-                    max_value=col_default_max,
-                    value=st.session_state[state.MAIN_VIEW_COLUMN_NUM],
-                    key=state.MAIN_VIEW_COLUMN_NUM,
-                    help="Number of columns to show images in the main view",
+                get_state().page_grid_settings.columns = int(
+                    setting_columns[0].number_input(
+                        "Columns",
+                        min_value=2,
+                        max_value=col_default_max,
+                        value=get_state().page_grid_settings.columns,
+                        help="Number of columns to show images in the main view",
+                    )
                 )
 
-                setting_columns[1].number_input(
-                    "Rows",
-                    min_value=1,
-                    max_value=row_default_max,
-                    value=st.session_state[state.MAIN_VIEW_ROW_NUM],
-                    key=state.MAIN_VIEW_ROW_NUM,
-                    help="Number of rows to show images in the main view",
+                get_state().page_grid_settings.rows = int(
+                    setting_columns[1].number_input(
+                        "Rows",
+                        min_value=1,
+                        max_value=row_default_max,
+                        value=get_state().page_grid_settings.rows,
+                        help="Number of rows to show images in the main view",
+                    )
                 )
 
                 selected_metric = get_state().selected_metric

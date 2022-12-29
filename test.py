@@ -6,12 +6,14 @@ from encord_active.app.common.state_new import use_state
 
 
 def foo():
-    value, set_value = use_state(0, key="foo")
+    value, set_value = use_state(0)
+    set_value(lambda prev: prev + 1)
 
-    st.experimental_show(value())
+    st.write(value())
 
-    set_value(8)
-    st.experimental_show(value())
+    set_value(lambda prev: prev + 5)
+
+    st.write(value())
 
 
 foo()

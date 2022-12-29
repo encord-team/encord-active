@@ -6,7 +6,6 @@ from pandera.typing import DataFrame
 
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.state import MAIN_VIEW_COLUMN_NUM, MAIN_VIEW_ROW_NUM
 from encord_active.app.common.state_new import get_state
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSchema
@@ -18,8 +17,8 @@ _COLUMNS = MetricWithDistanceSchema
 def render_metric_summary(
     metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
 ):
-    n_cols = int(st.session_state[MAIN_VIEW_COLUMN_NUM])
-    n_rows = int(st.session_state[MAIN_VIEW_ROW_NUM])
+    n_cols = get_state().page_grid_settings.columns
+    n_rows = get_state().page_grid_settings.rows
     page_size = n_cols * n_rows
 
     st.markdown(metric.meta["long_description"])

@@ -15,6 +15,7 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
     bulk_tagging_form,
 )
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
+from encord_active.app.common.state_new import get_state
 from encord_active.lib.common.colors import Color
 from encord_active.lib.common.image_utils import (
     draw_object,
@@ -89,10 +90,7 @@ def prediction_grid(
         additionals = None
         selected_metric = st.session_state.get(state.PREDICTIONS_METRIC, "")
 
-    if state.METRIC_VIEW_PAGE_NUMBER not in st.session_state:
-        st.session_state[state.METRIC_VIEW_PAGE_NUMBER] = 1
-
-    n_cols, n_rows = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM]), int(st.session_state[state.MAIN_VIEW_ROW_NUM])
+    n_cols, n_rows = get_state().page_grid_settings.columns, get_state().page_grid_settings.rows
     subset = render_df_slicer(df, selected_metric)
     paginated_subset = render_pagination(subset, n_cols, n_rows, selected_metric)
 

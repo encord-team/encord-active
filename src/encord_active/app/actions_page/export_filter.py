@@ -10,7 +10,6 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
-from encord_active.app.common.state import ACTION_PAGE_PREVIOUS_FILTERED_NUM
 from encord_active.app.common.state_new import get_state, use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
@@ -102,8 +101,8 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def export_filter():
+    get_filtered_row_count, set_filtered_row_count = use_state(0)
     get_clone_button, set_clone_button = use_state(False)
-    getsomeoether, setsome = use_state(0)
 
     setup_page()
     message_placeholder = st.empty()
@@ -112,7 +111,8 @@ def export_filter():
 
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
-    st.markdown(f"**Total row:** {filtered_df.shape[0]}")
+    row_count = filtered_df.shape[0]
+    st.markdown(f"**Total row:** {row_count}")
     st.dataframe(filtered_df, use_container_width=True)
 
     action_columns = st.columns((3, 3, 2, 2, 2, 2, 2))
@@ -162,11 +162,9 @@ community</a>
             unsafe_allow_html=True,
         )
 
-    if (
-        ACTION_PAGE_PREVIOUS_FILTERED_NUM not in st.session_state
-        or st.session_state[ACTION_PAGE_PREVIOUS_FILTERED_NUM] != filtered_df.shape[0]
-    ):
-        st.session_state[ACTION_PAGE_PREVIOUS_FILTERED_NUM] = filtered_df.shape[0]
+    prev_row_count = get_filtered_row_count()
+    if prev_row_count != row_count:
+        set_filtered_row_count(row_count)
         set_clone_button(False)
 
     if get_clone_button():
