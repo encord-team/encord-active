@@ -17,7 +17,7 @@ from pandas.errors import EmptyDataError
 from PIL import Image
 from tqdm import tqdm
 
-from encord_active.lib.common.project import download_all_label_rows
+from encord_active.lib.project.project import download_all_label_rows
 from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
 
 logger = logging.getLogger(__name__)

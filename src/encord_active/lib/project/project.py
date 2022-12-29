@@ -15,7 +15,7 @@ from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
 from loguru import logger
 
-from encord_active.lib.common.project_file_structure import ProjectFileStructure
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.common.utils import (
     collect_async,
     download_file,

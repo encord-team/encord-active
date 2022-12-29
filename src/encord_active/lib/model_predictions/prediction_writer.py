@@ -13,7 +13,7 @@ import torch
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from encord_active.lib.common.project import Project
+from encord_active.lib.project.project import Project
 from encord_active.lib.common.utils import binary_mask_to_rle, rle_iou
 
 logger = logging.getLogger(__name__)

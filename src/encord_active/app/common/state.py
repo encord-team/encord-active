@@ -3,7 +3,7 @@ from typing import Any, Callable
 
 import streamlit as st
 
-from encord_active.lib.common.project_file_structure import ProjectFileStructure
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tags
