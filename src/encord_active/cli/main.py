@@ -40,7 +40,7 @@ def download(
     * If --project_name is not given as an argument, available prebuilt projects will be listed
      and the user can select one from the menu.
     """
-    from encord_active.lib.metrics.fetch_prebuilt_metrics import (
+    from encord_active.lib.project.sandbox_projects import (
         PREBUILT_PROJECTS,
         fetch_prebuilt_project_size,
     )
@@ -68,7 +68,7 @@ def download(
     project_dir = target / project_name
     project_dir.mkdir(exist_ok=True)
 
-    from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
+    from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     fetch_prebuilt_project(project_name, project_dir)
 
@@ -100,7 +100,7 @@ def quickstart(
     Take the shortcut and start the application straight away 🏃💨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
-    from encord_active.lib.metrics.fetch_prebuilt_metrics import fetch_prebuilt_project
+    from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_name = "quickstart"
     project_dir = target / project_name

@@ -11,7 +11,7 @@ from encord_active.app.common.components.tags.individual_tagging import (
 from encord_active.app.common.components.tags.tag_creator import scoped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import METRIC_SCOPE_TAG_SCOPES, Tag
-from encord_active.lib.metrics.load_metrics import MetricScope
+from encord_active.lib.metrics.utils import MetricScope
 
 
 class TagAction(str, Enum):

@@ -7,18 +7,18 @@ import numpy as np
 from tqdm import tqdm
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import (
+from encord_active.lib.common.utils import (
+    fix_duplicate_image_orders_in_knn_graph_all_rows,
+)
+from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
     Metric,
     MetricType,
 )
-from encord_active.lib.common.utils import (
-    fix_duplicate_image_orders_in_knn_graph_all_rows,
-)
-from encord_active.lib.common.writer import CSVMetricWriter
-from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class ObjectEmbeddingSimilarityTest(Metric):
     TITLE = "Object Annotation Quality"
     SHORT_DESCRIPTION = "Compares object annotations against similar image crops"
-    LONG_DESCRIPTION = r"""This metric transforms polygons into bounding boxes 
+    LONG_DESCRIPTION = r"""This metric transforms polygons into bounding boxes
     and an embedding for each bounding box is extracted. Then, these embeddings are compared
     with their neighbors. If the neighbors are annotated differently, a low score is given to it.
     """
@@ -102,7 +102,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
     def get_identifier_from_collection_item(self, item):
         return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}_{item["objectHash"]}'
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         ontology_contains_objects = self.setup(iterator)
         if not ontology_contains_objects:
             logger.info("<yellow>[Skipping]</yellow> No objects in the project ontology.")

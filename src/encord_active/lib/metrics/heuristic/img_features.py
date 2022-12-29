@@ -4,8 +4,13 @@ import cv2
 import numpy as np
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 def iterate_with_rank_fn(
@@ -29,9 +34,9 @@ def iterate_with_rank_fn(
 class ContrastMetric(Metric):
     TITLE = "Contrast"
     SHORT_DESCRIPTION = "Ranks images by their contrast."
-    LONG_DESCRIPTION = r"""Ranks images by their contrast. 
+    LONG_DESCRIPTION = r"""Ranks images by their contrast.
 
-Contrast is computed as the standard deviation of the pixel values. 
+Contrast is computed as the standard deviation of the pixel values.
 """
     SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
@@ -42,7 +47,7 @@ Contrast is computed as the standard deviation of the pixel values.
     def rank_by_contrast(image):
         return image.std() / 255
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_contrast, self.TITLE)
 
 
@@ -130,7 +135,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
 
             return ratio
 
-        def test(self, iterator: Iterator, writer: CSVMetricWriter):
+        def execute(self, iterator: Iterator, writer: CSVMetricWriter):
             return iterate_with_rank_fn(
                 iterator, writer, self.rank_by_hsv_filtering, self.TITLE, color_space=cv2.COLOR_BGR2HSV
             )
@@ -171,7 +176,7 @@ Brightness is computed as the average (normalized) pixel value across each image
     def rank_by_brightness(image):
         return image.mean() / 255
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_brightness, self.TITLE)
 
 
@@ -181,7 +186,7 @@ class SharpnessMetric(Metric):
     LONG_DESCRIPTION = r"""Ranks images by their sharpness.
 
 Sharpness is computed by applying a Laplacian filter to each image and computing the
-variance of the output. In short, the score computes "the amount of edges" in each 
+variance of the output. In short, the score computes "the amount of edges" in each
 image.
 
 ```python
@@ -197,7 +202,7 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
     def rank_by_sharpness(image):
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_sharpness, self.TITLE)
 
 
@@ -207,7 +212,7 @@ class BlurMetric(Metric):
     LONG_DESCRIPTION = r"""Ranks images by their blurriness.
 
 Blurriness is computed by applying a Laplacian filter to each image and computing the
-variance of the output. In short, the score computes "the amount of edges" in each 
+variance of the output. In short, the score computes "the amount of edges" in each
 image. Note that this is $1 - \text{sharpness}$.
 
 ```python
@@ -223,16 +228,16 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
     def rank_by_blur(image):
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_blur, self.TITLE)
 
 
 class AspectRatioMetric(Metric):
     TITLE = "Aspect Ratio"
     SHORT_DESCRIPTION = "Ranks images by their aspect ratio (width/height)."
-    LONG_DESCRIPTION = r"""Ranks images by their aspect ratio (width/height). 
+    LONG_DESCRIPTION = r"""Ranks images by their aspect ratio (width/height).
 
-Aspect ratio is computed as the ratio of image width to image height. 
+Aspect ratio is computed as the ratio of image width to image height.
 """
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
@@ -242,16 +247,16 @@ Aspect ratio is computed as the ratio of image width to image height.
     def rank_by_aspect_ratio(image):
         return image.shape[1] / image.shape[0]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_aspect_ratio, self.TITLE)
 
 
 class AreaMetric(Metric):
     TITLE = "Area"
     SHORT_DESCRIPTION = "Ranks images by their area (width*height)."
-    LONG_DESCRIPTION = r"""Ranks images by their area (width*height). 
+    LONG_DESCRIPTION = r"""Ranks images by their area (width*height).
 
-Area is computed as the product of image width and image height. 
+Area is computed as the product of image width and image height.
 """
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
@@ -261,5 +266,5 @@ Area is computed as the product of image width and image height.
     def rank_by_area(image):
         return image.shape[0] * image.shape[1]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         return iterate_with_rank_fn(iterator, writer, self.rank_by_area, self.TITLE)

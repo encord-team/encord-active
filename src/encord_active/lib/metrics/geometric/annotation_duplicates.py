@@ -1,9 +1,14 @@
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.utils import get_iou, get_polygon
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -11,8 +16,8 @@ logger = logger.opt(colors=True)
 class AnnotationDuplicates(Metric):
     TITLE = "Annotation Duplicates"
     SHORT_DESCRIPTION = "Ranks annotations by how likely they are to represent the same object"
-    LONG_DESCRIPTION = r"""Ranks annotations by how likely they are to represent the same object. 
-> [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index) 
+    LONG_DESCRIPTION = r"""Ranks annotations by how likely they are to represent the same object.
+> [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index)
 is used to measure closeness of two annotations."""
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.IMAGE
@@ -27,7 +32,7 @@ is used to measure closeness of two annotations."""
         super().__init__()
         self.threshold = threshold
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 

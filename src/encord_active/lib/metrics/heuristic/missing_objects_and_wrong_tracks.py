@@ -8,9 +8,14 @@ from loguru import logger
 from shapely.geometry import Polygon
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.utils import get_iou, get_polygon
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -36,11 +41,11 @@ class MissingObjectsMetric(Metric):
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
     SHORT_DESCRIPTION = "Identifies missing objects and broken tracks based on object overlaps."
-    LONG_DESCRIPTION = r"""Identifies missing objects by comparing object overlaps based 
-on a running window. 
+    LONG_DESCRIPTION = r"""Identifies missing objects by comparing object overlaps based
+on a running window.
 
-**Case 1:**  
-If an intermediate frame (frame $i$) doesn't include an object in the same 
+**Case 1:**
+If an intermediate frame (frame $i$) doesn't include an object in the same
 region, as the two surrounding framge ($i-1$ and $i+1$), it is flagged.
 
 ```
@@ -58,7 +63,7 @@ region, as the two surrounding framge ($i-1$ and $i+1$), it is flagged.
 ```
 Frame $i$ will be flagged as potentially missing an object.
 
-**Case 2:**  
+**Case 2:**
 If objects of the same class overlap in three consecutive frames ($i-1$, $i$, and $i+1$) but do not share object
 hash, they will be flagged as a potentially broken track.
 
@@ -82,7 +87,7 @@ hash, they will be flagged as a potentially broken track.
         super().__init__()
         self.threshold = threshold
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
         found_valid = False

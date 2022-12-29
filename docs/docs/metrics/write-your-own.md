@@ -25,8 +25,8 @@ Your implementation should call `writer.write(<object_score>, <object>)` for eve
 
 ```python
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, MetricType, Metric
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import AnnotationType, DataType, MetricType, Metric
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 class ExampleMetric(Metric):
     TITLE = "Example Title"
@@ -63,7 +63,7 @@ class ExampleMetric(Metric):
 if __name__ == "__main__":
     import sys
     from pathlib import Path
-    from encord_active.lib.common.tester import perform_test
+    from encord_active.lib.metric.execute import perform_test
 
     path = sys.argv[1]
     perform_test(ExampleMetric(), data_dir=Path(path))

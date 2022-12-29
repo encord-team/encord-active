@@ -5,7 +5,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.model_predictions.data import (
+from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     LabelSchema,
     PredictionMatchSchema,

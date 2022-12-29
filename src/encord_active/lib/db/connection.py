@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from encord_active.lib.common.project_file_structure import ProjectFileStructure
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 class DBConnection:

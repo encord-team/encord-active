@@ -4,13 +4,13 @@ from pandera.typing import DataFrame
 from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
-from encord_active.lib.model_predictions.data import (
-    LabelMatchSchema,
-    PredictionMatchSchema,
-)
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
+)
+from encord_active.lib.model_predictions.reader import (
+    LabelMatchSchema,
+    PredictionMatchSchema,
 )
 
 from . import ModelQualityPage

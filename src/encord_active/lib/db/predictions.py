@@ -6,10 +6,10 @@ from typing import Annotated, Any, Dict, List, NamedTuple, Optional, Union
 import numpy as np
 from pydantic import BaseModel, Field, validator
 
-from encord_active.lib.common.project import Project
-from encord_active.lib.metrics.run_all import run_all_prediction_metrics
+from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
+from encord_active.lib.project.project import Project
 
 RelativeFloat = Annotated[float, Field(ge=0, le=1)]
 

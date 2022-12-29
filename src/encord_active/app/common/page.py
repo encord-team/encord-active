@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import streamlit as st
 
 import encord_active.app.common.state as state
-from encord_active.lib.common.metric import EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType
 
 
 class Page(ABC):
