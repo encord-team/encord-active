@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.type_definitions import AnnotationType, DataType, Metric, MetricType
+from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.writer import CSVMetricWriter
 
 

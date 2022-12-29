@@ -2,7 +2,7 @@ from loguru import logger
 from shapely.ops import unary_union
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.type_definitions import AnnotationType, DataType, Metric, MetricType
+from encord_active.lib.metrics.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.utils import (
     get_bbox_from_encord_label_object,
     get_du_size,
