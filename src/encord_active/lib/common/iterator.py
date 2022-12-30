@@ -12,7 +12,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from encord.exceptions import EncordException
 from encord.orm.label_log import LabelLog
 from loguru import logger
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.project.project import Project
 

@@ -8,7 +8,7 @@ import rich
 import typer
 from rich.markup import escape
 from rich.panel import Panel
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # GCP bucket links will be added here
 PREBUILT_PROJECTS = {
@@ -40,7 +40,7 @@ def fetch_response_content_length(r: requests.Response) -> Optional[int]:
     return int(r.headers["content-length"]) if "content-length" in r.headers.keys() else None
 
 
-def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
+def fetch_prebuilt_project(project_name: str, out_dir: Path) -> Path:
     url = PREBUILT_PROJECTS[project_name]
     output_file_name = "prebuilt_project.zip"
     output_file_path = out_dir / output_file_name
@@ -56,7 +56,7 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
     total_length = fetch_response_content_length(r)
     with open(output_file_path.as_posix(), "wb") as f:
         with tqdm(total=total_length, unit="B", unit_scale=True, desc="Downloading sandbox project", ascii=True) as bar:
-            for chunk in tqdm(r.iter_content(chunk_size=1024 * 1024)):
+            for chunk in r.iter_content(chunk_size=1024 * 1024):
                 f.write(chunk)
                 bar.update(len(chunk))
 

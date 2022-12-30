@@ -13,7 +13,7 @@ import pytz
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from pandas import Series
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import rle_to_binary_mask

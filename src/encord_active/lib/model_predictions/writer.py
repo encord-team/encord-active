@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torchvision.ops import box_iou
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import binary_mask_to_rle, rle_iou
 from encord_active.lib.project.project import Project
