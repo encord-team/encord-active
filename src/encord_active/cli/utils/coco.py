@@ -47,11 +47,10 @@ def import_coco_predictions(
     return predictions
 
 
-def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, ssh_key_path: Path):
+def import_coco_project(images_dir: Path, annotations_file: Path, target: Path):
     coco_importer = CocoImporter(
         images_dir_path=images_dir,
         annotations_file_path=annotations_file,
-        ssh_key_path=ssh_key_path,
         destination_dir=target,
     )
 
@@ -62,4 +61,4 @@ def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, 
         ontology=ontology,
     )
 
-    run_metrics(data_dir=coco_importer.project_dir)
+    run_metrics(data_dir=coco_importer.project_dir, use_cache_only=True)
