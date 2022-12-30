@@ -81,20 +81,24 @@ def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash:
         f.write(yaml_str)
 
     rich.print("Stored the following data:")
-    rich.print(f"[magenta]{yaml_str}")
+    rich.print(f"[magenta]{escape(yaml_str)}")
     rich.print(f"In file: [blue]`{escape(meta_file_path.as_posix())}`")
     rich.print()
     rich.print("Now downloading data and running metrics")
 
     run_metrics(data_dir=project_path)
 
+    cwd = Path.cwd()
+    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
+
     panel = Panel(
-        """
+        f"""
     The data is downloaded and the metrics are complete.
 
-    Now run
+    You can run
 
-    [cyan]encord-active visualise[/cyan]
+    [cyan]cd "{escape(cd_dir.as_posix())}"
+    encord-active visualise[/cyan]
 
     to open Encord Active and see your project.
     """,
