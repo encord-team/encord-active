@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.coco.datastructure import (
     CocoAnnotation,

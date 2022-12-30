@@ -4,7 +4,7 @@ from typing import List
 
 import faiss
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
