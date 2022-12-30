@@ -3,6 +3,8 @@ from pathlib import Path
 import inquirer as i
 import rich
 import typer
+from rich.markup import escape
+from rich.panel import Panel
 
 import encord_active.app.conf  # pylint: disable=unused-import
 from encord_active.cli.config import APP_NAME, config_cli
@@ -70,7 +72,24 @@ def download(
 
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
-    fetch_prebuilt_project(project_name, project_dir)
+    project_path = fetch_prebuilt_project(project_name, project_dir)
+
+    cwd = Path.cwd()
+    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
+
+    rich.print(
+        Panel(
+            f"""
+Successfully downloaded sandbox dataset. To view the data, run:
+
+[cyan] cd "{escape(cd_dir.as_posix())}"
+encord-active visualise
+    """,
+            title="🌟 Success 🌟",
+            style="green",
+            expand=False,
+        )
+    )
 
 
 @cli.command()
@@ -106,8 +125,7 @@ def quickstart(
     project_dir = target / project_name
     project_dir.mkdir(exist_ok=True)
 
-    fetch_prebuilt_project(project_name, project_dir, verbose=False)
-
+    fetch_prebuilt_project(project_name, project_dir)
     launch_streamlit_app(project_dir)
 
 
