@@ -5,14 +5,11 @@ from shutil import copyfile
 from typing import Dict, List, Optional
 
 import requests
-import typer
 import yaml
-from encord import Dataset, EncordUserClient, Project
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
-from encord.ontology import Ontology
-from encord.orm.dataset import CreateDatasetResponse, DataRow, Image, StorageLocation
+from encord.orm.dataset import Image
 from encord.utilities import label_utilities
 from PIL import Image as pil_image
 from PIL import ImageOps
@@ -26,12 +23,19 @@ from encord_active.lib.coco.parsers import (
     parse_info,
 )
 from encord_active.lib.coco.utils import make_object_dict
+from encord_active.lib.encord.local_sdk import (
+    LocalDataRow,
+    LocalDataset,
+    LocalOntology,
+    LocalProject,
+    LocalUserClient,
+)
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
 
 def upload_img(
-    dataset_tmp: Dataset,
+    dataset_tmp: LocalDataset,
     coco_image: CocoImage,
     image_path: Path,
 ) -> Optional[Image]:
@@ -67,19 +71,19 @@ def upload_img(
 
 
 def upload_annotation(
-    project: Project,
+    project: LocalProject,
     annotations: Dict[int, List[CocoAnnotation]],
-    data_unit: DataRow,
+    data_row: LocalDataRow,
     id_to_obj: Dict[int, Object],
 ):
-    data_hash = data_unit["data_hash"]
+    data_hash = data_row["data_hash"]
     lr_dict = project.create_label_row(data_hash)
     label_hash = lr_dict["label_hash"]
     lr = project.get_label_row(label_hash, get_signed_url=False)
     try:
-        annotation_list = annotations[int(data_unit["data_title"])]
+        annotation_list = annotations[int(data_row["data_title"])]
     except KeyError:
-        print(f"No annotations for {data_unit['data_title']}")
+        print(f"No annotations for {data_row['data_title']}")
         annotation_list = []
     data_unit = lr["data_units"][data_hash]
     img_w, img_h = data_unit["width"], data_unit["height"]
@@ -98,40 +102,27 @@ def upload_annotation(
     return data_hash, updated_lr
 
 
-def build_local_lr(
-    image: CocoImage,
-    image_path: Path,
-    data_hash: str,
-    lr: label_utilities.LabelRow,
-    lr_path: Path,
-):
-    lr_path.parent.mkdir(parents=True, exist_ok=True)
-    lr_path.write_text(json.dumps(lr, indent=2), encoding="utf-8")
-
-    dst_dir_path = lr_path.parent / "images"
-    dst_dir_path.mkdir(exist_ok=True)
-    img_file = Path(image.file_name)
-
-    data_type = lr["data_units"][data_hash]["data_type"]
-    new_suffix = f".{data_type.split('/')[1]}"
-    copyfile(
-        image_path / img_file,
-        dst_dir_path / f"{data_hash}{new_suffix}",
-    )
-
-
 class CocoImporter:
-    def __init__(self, images_dir_path: Path, annotations_file_path: Path, ssh_key_path: Path, destination_dir: Path):
-        self.ssh_key_path = ssh_key_path
+    def __init__(
+        self, images_dir_path: Path, annotations_file_path: Path, destination_dir: Path, use_symlinks: bool = False
+    ):
+        """
+        Importer for COCO datasets.
+        Args:
+            images_dir_path (Path): Path where images are stored
+            annotations_file_path (Path): The COCO JSON annotation file
+            destination_dir (Path): Where to store the data
+            use_symlinks (bool): If False, the importer will copy images.
+                Otherwise, symlinks will be used to save disk space.
+        """
         self.images_dir = images_dir_path
         self.annotations_file_path = annotations_file_path
+        self.use_symlinks: bool = use_symlinks
 
         if not self.images_dir.is_dir():
             raise NotADirectoryError(f"Images directory '{self.images_dir}' doesn't exist")
         if not self.annotations_file_path.is_file():
             raise FileNotFoundError(f"Annotation file '{self.annotations_file_path}' doesn't exist")
-
-        self.user_client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text())
 
         annotations_file = json.loads(self.annotations_file_path.read_text(encoding="utf-8"))
         self.info = parse_info(annotations_file["info"])
@@ -140,37 +131,27 @@ class CocoImporter:
         self.annotations = parse_annotations(annotations_file["annotations"])
 
         title = self.info.description.replace(" ", "-")
-        with_prefix = f"[EA]{title}"
-        existing_projects = {o["project"].title: o["project"] for o in self.user_client.get_projects()}
-
-        while with_prefix in existing_projects:
-            title = typer.prompt(
-                f"We found a project named '{title}', please provide a new name for this project", type=str
-            )
-            with_prefix = f"[EA]{title}"
-
-        self.title = with_prefix
+        self.title = f"[EA] {title}"
         self.project_dir = destination_dir / self.title
 
-    def create_dataset(self) -> Dataset:
+        self.user_client = LocalUserClient(self.project_dir)
+
+    def create_dataset(self) -> LocalDataset:
         print(f"Creating a new dataset: {self.title}")
-        dataset_response: CreateDatasetResponse = self.user_client.create_dataset(
-            self.title, StorageLocation.CORD_STORAGE
-        )
-        dataset: Dataset = self.user_client.get_dataset(dataset_response["dataset_hash"])
+        dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
         for _, coco_image in tqdm(self.images.items(), desc="Uploading images"):
             upload_img(dataset, coco_image, self.images_dir)
 
         return dataset
 
-    def create_ontology(self) -> Ontology:
+    def create_ontology(self) -> LocalOntology:
         print(f"Creating a new dataset: {self.title}")
         ontology_structure = OntologyStructure()
         for cat in self.categories:
             ontology_structure.add_object(name=cat.name, shape=Shape.POLYGON, uid=cat.id_)
 
-        ontology: Ontology = self.user_client.create_ontology(
+        ontology: LocalOntology = self.user_client.create_ontology(
             self.title,
             description=self.info.description,
             structure=ontology_structure,
@@ -178,15 +159,13 @@ class CocoImporter:
 
         return ontology
 
-    def create_project(self, dataset: Dataset, ontology: Ontology) -> Project:
+    def create_project(self, dataset: LocalDataset, ontology: LocalOntology) -> LocalProject:
         print(f"Creating a new project: {self.title}")
-        project_hash = self.user_client.create_project(
+        project = self.user_client.create_project(
             project_title=self.title,
             dataset_hashes=[dataset.dataset_hash],
             ontology_hash=ontology.ontology_hash,
         )
-
-        project = self.user_client.get_project(project_hash)
 
         self.project_dir.mkdir(exist_ok=True)
 
@@ -197,12 +176,15 @@ class CocoImporter:
             "project_title": project.title,
             "project_description": project.description,
             "project_hash": project.project_hash,
-            "ssh_key_path": self.ssh_key_path.as_posix(),
         }
         meta_file_path = self.project_dir / "project_meta.yaml"
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
+
+        label_row_meta = {lr["label_hash"]: lr for lr in project.label_rows}
+        label_row_meta_file_path = self.project_dir / "label_row_meta.json"
+        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
         image_to_du = {}
 
@@ -211,9 +193,6 @@ class CocoImporter:
             image_id = lr["data_title"]
             image = self.images[image_id]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
-
-            lr_path = self.project_dir / "data" / lr["label_hash"] / "label_row.json"
-            build_local_lr(image, self.images_dir, data_hash, lr, lr_path)
 
         (Path(self.project_dir) / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
 

@@ -78,7 +78,7 @@ def import_project(
             raise typer.BadParameter("`images_dir` argument is missing")
 
         ssh_key_path = app_config.get_or_query_ssh_key()
-        import_coco_project(images_dir, annotations_file, target, ssh_key_path)
+        import_coco_project(images_dir, annotations_file, target)
     else:
         from encord_active.cli.utils.encord import import_encord_project
 
