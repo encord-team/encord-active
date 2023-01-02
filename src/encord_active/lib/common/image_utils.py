@@ -15,7 +15,6 @@ from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 
 def get_polygon_thickness(img_w: int):
     t = max(1, int(img_w / 100))
-    print(t)
     return t
 
 
