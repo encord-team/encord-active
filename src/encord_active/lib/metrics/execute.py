@@ -131,7 +131,7 @@ def execute_metric(
             writer.attach(stats)
 
             try:
-                metric.execute(iterator, writer)
+                metrics.execute(iterator, writer)
             except Exception as e:
                 logging.critical(e, exc_info=True)
 
