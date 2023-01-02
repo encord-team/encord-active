@@ -47,11 +47,21 @@ def import_coco_predictions(
     return predictions
 
 
-def import_coco_project(images_dir: Path, annotations_file: Path, target: Path):
+def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, use_symlinks: bool = False) -> Path:
+    """
+    Importer for COCO datasets.
+    Args:
+        images_dir (Path): path where images are stored
+        annotations_file (Path): the COCO JSON annotation file
+        target (Path): where to store the data
+        use_symlinks (bool): if False, the importer will copy images.
+            Otherwise, symlinks will be used to save disk space.
+    """
     coco_importer = CocoImporter(
         images_dir_path=images_dir,
         annotations_file_path=annotations_file,
         destination_dir=target,
+        use_symlinks=use_symlinks,
     )
 
     dataset = coco_importer.create_dataset()
@@ -62,3 +72,5 @@ def import_coco_project(images_dir: Path, annotations_file: Path, target: Path):
     )
 
     run_metrics(data_dir=coco_importer.project_dir, use_cache_only=True)
+
+    return coco_importer.project_dir
