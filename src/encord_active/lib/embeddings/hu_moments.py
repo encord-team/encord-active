@@ -6,7 +6,7 @@ import pandas as pd
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_du_size, get_object_coordinates
-from encord_active.libe.embeddings.writer import CSVEmbeddingWriter
+from encord_active.lib.embeddings.writer import CSVEmbeddingWriter
 
 logger = logging.getLogger(__name__)
 HU_FILENAME = "hu_moments-embeddings"

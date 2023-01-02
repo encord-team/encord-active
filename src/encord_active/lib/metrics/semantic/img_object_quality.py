@@ -10,7 +10,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
-from encord_active.lib.embeddings.cnn_embed import get_cnn_embeddings
+from encord_active.lib.embeddings.cnn import get_cnn_embeddings
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
