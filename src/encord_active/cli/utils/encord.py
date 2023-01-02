@@ -16,7 +16,7 @@ from encord_active.lib.metrics.execute import run_metrics
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
-def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]):
+def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]) -> Path:
     client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text(encoding="utf-8"))
 
     if not encord_project_hash:
@@ -88,22 +88,4 @@ def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash:
 
     run_metrics(data_dir=project_path)
 
-    cwd = Path.cwd()
-    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
-
-    panel = Panel(
-        f"""
-    The data is downloaded and the metrics are complete.
-
-    You can run
-
-    [cyan]cd "{escape(cd_dir.as_posix())}"
-    encord-active visualise[/cyan]
-
-    to open Encord Active and see your project.
-    """,
-        title="🌟 Success 🌟",
-        style="green",
-        expand=False,
-    )
-    rich.print(panel)
+    return project_path
