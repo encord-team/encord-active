@@ -32,7 +32,7 @@ class Project:
     def __init__(self, project_dir: Path):
         self.project_dir: Path = project_dir
         self.project_file_structure = ProjectFileStructure(project_dir)
-        self.project_meta = fetch_project_meta(self.project_file_structure.data)
+        self.project_meta = fetch_project_meta(self.project_file_structure.project_dir)
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
