@@ -24,8 +24,8 @@ def common_settings():
 
     with col1:
         selected_classes = st.multiselect(
-            "Select classes to include",
-            list(class_idx.items()),
+            "Filter by class",
+            list(all_classes.items()),
             format_func=lambda x: x[1]["name"],
             help="""
             With this selection, you can choose which classes to include in the main page.\n
@@ -34,7 +34,7 @@ def common_settings():
         )
 
     if not selected_classes:
-        st.session_state.selected_class_idx = deepcopy(class_idx)
+        st.session_state.selected_class_idx = deepcopy(all_classes)
     else:
         st.session_state.selected_class_idx = dict(selected_classes)
 

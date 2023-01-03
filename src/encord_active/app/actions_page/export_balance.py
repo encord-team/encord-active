@@ -4,7 +4,6 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import streamlit as st
 
-from encord_active.app.common.components import multiselect_with_all_option
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
@@ -31,11 +30,10 @@ def metrics_panel() -> Tuple[List[MetricData], int]:
 
     col1, col2 = st.columns([6, 1])
     with col1:
-        selected_metric_names = multiselect_with_all_option(
-            label="Metrics to balance",
+        selected_metric_names = st.multiselect(
+            label="Filter by metric",
             options=metric_names,
             key="balance_metrics",
-            default=["All"],
         )
     seed = col2.number_input("Seed", value=42, step=1, key="seed")
 

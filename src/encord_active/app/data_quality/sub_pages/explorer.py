@@ -1,19 +1,13 @@
 import re
-from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional, overload
+from typing import Any, List, Optional
 
 import pandas as pd
 import streamlit as st
-from encord.project_ontology.ontology import ObjectShape
-from matplotlib import use
 from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
-from encord_active.app.common.components import (
-    build_data_tags,
-    multiselect_with_all_option,
-)
+from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
@@ -116,7 +110,7 @@ class ExplorerPage(Page):
 
         class_set = sorted(list(df["object_class"].unique()))
         with col2:
-            selected_classes = multiselect_with_all_option("Filter by class", class_set)
+            selected_classes = st.multiselect("Filter by class", class_set)
 
         is_class_selected = (
             df.shape[0] * [True] if "All" in selected_classes else df["object_class"].isin(selected_classes)
@@ -127,10 +121,7 @@ class ExplorerPage(Page):
         annotator_set = sorted(annotators.keys())
 
         with col3:
-            selected_annotators = multiselect_with_all_option(
-                "Filter by annotator",
-                annotator_set,
-            )
+            selected_annotators = st.multiselect("Filter by annotator", annotator_set)
 
         annotator_selected = (
             df_class_selected.shape[0] * [True]
