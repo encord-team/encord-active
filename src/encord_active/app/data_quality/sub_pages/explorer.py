@@ -112,9 +112,7 @@ class ExplorerPage(Page):
         with col2:
             selected_classes = st.multiselect("Filter by class", class_set)
 
-        is_class_selected = (
-            df.shape[0] * [True] if "All" in selected_classes else df["object_class"].isin(selected_classes)
-        )
+        is_class_selected = df.shape[0] * [True] if not selected_classes else df["object_class"].isin(selected_classes)
         df_class_selected: DataFrame[MetricSchema] = df[is_class_selected]
 
         annotators = get_annotator_level_info(df_class_selected)
@@ -125,7 +123,7 @@ class ExplorerPage(Page):
 
         annotator_selected = (
             df_class_selected.shape[0] * [True]
-            if "All" in selected_annotators
+            if not selected_annotators
             else df_class_selected["annotator"].isin(selected_annotators)
         )
 

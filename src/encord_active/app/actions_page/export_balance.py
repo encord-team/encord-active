@@ -37,7 +37,7 @@ def metrics_panel() -> Tuple[List[MetricData], int]:
         )
     seed = col2.number_input("Seed", value=42, step=1, key="seed")
 
-    if "All" in selected_metric_names:
+    if not selected_metric_names:
         selected_metric_names = metric_names
     selected_metrics = [metric for metric in metrics if metric.name in selected_metric_names]
     return selected_metrics, int(seed)
