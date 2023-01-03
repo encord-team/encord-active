@@ -10,7 +10,7 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
-from encord_active.app.common.state_new import get_state, use_state
+from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.common.utils import ProjectNotFound

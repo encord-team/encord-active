@@ -1,8 +1,12 @@
+from typing import List
+
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.precision_recall import create_pr_charts
+from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
@@ -85,7 +89,7 @@ class MetricsPage(ModelQualityPage):
             else:
                 num_samples = model_predictions.shape[0]
 
-            metric_columns = [x.name for x in st.session_state.prediction_metric_names]
+            metric_columns = [x.name for x in get_state().predictions.metric_datas]
             with st.spinner("Computing index importance..."):
                 chart = create_metric_importance_charts(
                     model_predictions,

@@ -5,7 +5,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.model_predictions.map_mar import (

@@ -4,7 +4,7 @@ import streamlit as st
 from pandas import Series
 
 from encord_active.app.common.components.tags.tag_creator import scoped_tags
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import METRIC_SCOPE_TAG_SCOPES, Tag, TagScope
 from encord_active.lib.metrics.utils import MetricScope

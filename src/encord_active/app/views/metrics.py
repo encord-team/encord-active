@@ -1,7 +1,7 @@
 import streamlit as st
 
 from encord_active.app.common.components import sticky_header
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
 from encord_active.app.data_quality.sub_pages.explorer import ExplorerPage
 from encord_active.app.data_quality.sub_pages.summary import SummaryPage

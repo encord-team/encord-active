@@ -1,10 +1,10 @@
 import logging
-from typing import List, Optional, cast
+from typing import List, Optional, TypeVar, cast
 
 import streamlit as st
 from natsort import natsorted
 
-from encord_active.app.common.state_new import create_key
+from encord_active.app.common.state_hooks import create_key
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,44 @@ def multiselect_with_all_option(
     options = [custom_all_name] + sorted_options
 
     current: List[str] = st.session_state.get(key) or default_list
+
+    return st.multiselect(
+        label, options, key=key, on_change=on_change, args=(current, key), default=default_list, **kwargs
+    )
+
+
+T = TypeVar("T")
+
+
+def generic_multiselect_with_all_option(
+    label: str,
+    options: List[T],
+    custom_all_name: T,
+    key: Optional[str] = None,
+    default: Optional[List[T]] = None,
+    **kwargs,
+):
+    if "on_change" in kwargs:
+        logger.warning("`st.multiselect.on_change` is being overwritten by custom multiselect with All option")
+
+    key = key or create_key()
+
+    default_list = [custom_all_name] if default is None else default
+
+    # Filter classes
+    def on_change(key: str, prev=default_list):
+        next: List[T] = st.session_state.get(key, [])
+
+        if len(next) == 0:
+            next = [custom_all_name]
+        if len(next) > 1 and custom_all_name in next:
+            next.remove(custom_all_name)
+
+        st.session_state[key] = next
+
+    # sorted_options = cast(List[str], natsorted(list(options)))
+    options = [custom_all_name] + options
+    current = st.session_state.get(key) or default_list
 
     return st.multiselect(
         label, options, key=key, on_change=on_change, args=(current, key), default=default_list, **kwargs

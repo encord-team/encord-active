@@ -2,7 +2,7 @@ from typing import List, Set
 
 import streamlit as st
 
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.db.helpers.tags import count_of_tags
 from encord_active.lib.db.tags import SCOPE_EMOJI, Tag, Tags, TagScope
 

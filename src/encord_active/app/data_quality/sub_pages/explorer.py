@@ -48,8 +48,8 @@ from encord_active.app.common.state import (
     OBJECT_KEYS_HAVING_SIMILARITIES,
     OBJECT_SIMILARITIES,
     QUESTION_HASH_TO_COLLECTION_INDEXES,
+    get_state,
 )
-from encord_active.app.common.state_new import get_state, use_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,

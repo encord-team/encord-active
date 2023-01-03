@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import streamlit as st
 
 import encord_active.app.common.state as state
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.metrics.metric import EmbeddingType
 
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, cast
+from typing import Any, Callable, Iterable, List, Optional, TypedDict, cast
 
 import pandas as pd
 import pandera as pa
@@ -15,6 +15,12 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+
+
+class OntologyObjectJSON(TypedDict):
+    featureHash: str
+    name: str
+    color: str
 
 
 @dataclass
@@ -158,6 +164,6 @@ def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
     return load_json(gt_path)
 
 
-def get_class_idx(predictions_dir: Path) -> Optional[dict]:
+def get_class_idx(predictions_dir: Path) -> Optional[dict[str, OntologyObjectJSON]]:
     class_idx_pth = predictions_dir / "class_idx.json"
     return load_json(class_idx_pth)

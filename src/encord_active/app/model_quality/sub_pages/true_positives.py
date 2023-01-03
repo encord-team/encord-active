@@ -2,7 +2,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components.prediction_grid import prediction_grid
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (

@@ -5,7 +5,8 @@ import pandas as pd
 import streamlit as st
 
 from encord_active.app.common.components import multiselect_with_all_option
-from encord_active.app.common.state_new import get_state, use_state
+from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.charts.partition_histogram import get_partition_histogram
 from encord_active.lib.dataset.balance import balance_dataframe, get_partitions_zip

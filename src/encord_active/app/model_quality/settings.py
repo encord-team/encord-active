@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Dict, List, Tuple
 
 import streamlit as st
 
@@ -6,27 +7,36 @@ import encord_active.app.common.components as cst
 
 # import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.tag_creator import tag_creator
-from encord_active.app.common.state import PREDICTIONS_FULL_CLASS_IDX
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import (
+    PREDICTIONS_FULL_CLASS_IDX,
+    get_state,
+    setdefault,
+)
+from encord_active.lib.model_predictions.reader import OntologyObjectJSON, get_class_idx
 
 
 def common_settings():
     tag_creator()
 
-    class_idx = st.session_state[PREDICTIONS_FULL_CLASS_IDX]
+    predictions_dir = get_state().project_paths.predictions
+    class_idx: Dict[str, OntologyObjectJSON] = setdefault(PREDICTIONS_FULL_CLASS_IDX, get_class_idx, predictions_dir)
     col1, col2, col3 = st.columns([4, 4, 3])
 
     with col1:
-        selected_classes = cst.multiselect_with_all_option(
+        selected_classes = st.multiselect(
             "Select classes to include",
-            list(map(lambda x: x["name"], class_idx.values())),
-            help="With this selection, you can choose which classes to include in the main page.",
+            list(class_idx.items()),
+            format_func=lambda x: x[1]["name"],
+            help="""
+            With this selection, you can choose which classes to include in the main page.\n
+            This acts as a filter, i.e. when nothing is selected all classes are included.
+            """,
         )
 
-    if "All" in selected_classes:
+    if not selected_classes:
         st.session_state.selected_class_idx = deepcopy(class_idx)
     else:
-        st.session_state.selected_class_idx = {k: v for k, v in class_idx.items() if v["name"] in selected_classes}
+        st.session_state.selected_class_idx = dict(selected_classes)
 
     with col2:
         # IOU

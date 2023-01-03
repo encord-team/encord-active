@@ -15,7 +15,7 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
     bulk_tagging_form,
 )
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.common.colors import Color
 from encord_active.lib.common.image_utils import (
     draw_object,

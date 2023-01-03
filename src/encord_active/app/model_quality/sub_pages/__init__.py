@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import List, Optional
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -61,7 +61,7 @@ class ModelQualityPage(Page):
         `st.session_state.model_predictions` data frame.
         """
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
-        column_names = list(map(lambda x: x.name, st.session_state.prediction_metric_names))
+        column_names = list(map(lambda x: x.name, state.get_state().predictions.metric_datas))
         st.selectbox(
             "Select metric for your predictions",
             column_names + list(fixed_options.keys()),

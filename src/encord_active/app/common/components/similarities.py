@@ -17,7 +17,7 @@ from encord_active.app.common.state import (
     OBJECT_SIMILARITIES,
     QUESTION_HASH_TO_COLLECTION_INDEXES,
 )
-from encord_active.app.common.state_new import get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
