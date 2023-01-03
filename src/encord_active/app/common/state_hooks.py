@@ -7,7 +7,6 @@ T = TypeVar("T")
 Reducer = Callable[[T], T]
 
 SCOPED_STATES = "scoped_states"
-GLOBAL_STATE = "global_state"
 
 
 def create_key():
