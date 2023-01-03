@@ -2,11 +2,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components.prediction_grid import prediction_grid
-from encord_active.app.common.state import (
-    PREDICTIONS_LABEL_METRIC,
-    PREDICTIONS_LABEL_METRIC_NAMES,
-)
-from encord_active.app.common.state import get_state
+from encord_active.app.common.state import PREDICTIONS_LABEL_METRIC, get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (
@@ -25,7 +21,7 @@ class FalseNegativesPage(ModelQualityPage):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):
-        metric_columns = list(map(lambda m: m.name, st.session_state[PREDICTIONS_LABEL_METRIC_NAMES]))
+        metric_columns = list(get_state().predictions.metric_names.labels.keys())
         st.selectbox(
             "Select metric for your labels",
             metric_columns,

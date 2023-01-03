@@ -1,25 +1,20 @@
 from copy import deepcopy
-from typing import Dict, List, Tuple
 
 import streamlit as st
 
-import encord_active.app.common.components as cst
-
 # import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.tag_creator import tag_creator
-from encord_active.app.common.state import (
-    PREDICTIONS_FULL_CLASS_IDX,
-    get_state,
-    setdefault,
-)
-from encord_active.lib.model_predictions.reader import OntologyObjectJSON, get_class_idx
+from encord_active.app.common.state import get_state
+from encord_active.lib.model_predictions.reader import get_class_idx
 
 
 def common_settings():
     tag_creator()
 
-    predictions_dir = get_state().project_paths.predictions
-    class_idx: Dict[str, OntologyObjectJSON] = setdefault(PREDICTIONS_FULL_CLASS_IDX, get_class_idx, predictions_dir)
+    if not get_state().predictions.all_classes:
+        get_state().predictions.all_classes = get_class_idx(get_state().project_paths.predictions)
+
+    all_classes = get_state().predictions.all_classes
     col1, col2, col3 = st.columns([4, 4, 3])
 
     with col1:

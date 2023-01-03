@@ -35,14 +35,14 @@ def build_card_for_labels(
     data_dir: Path,
     label_color: Color = Color.RED,
 ):
-    class_colors = {int(k): idx["color"] for k, idx in st.session_state[state.PREDICTIONS_FULL_CLASS_IDX].items()}
+    class_colors = {int(k): idx["color"] for k, idx in get_state().predictions.all_classes.items()}
     image = show_image_with_predictions_and_label(
         label, predictions, data_dir, label_color=label_color, class_colors=class_colors
     )
     st.image(image)
     multiselect_tag(label, "false_negatives", MetricScope.MODEL_QUALITY)
 
-    cls = st.session_state[state.PREDICTIONS_FULL_CLASS_IDX][str(label["class_id"])]["name"]
+    cls = get_state().predictions.all_classes[str(label["class_id"])]["name"]
     label = label.copy()
     label["label_class_name"] = cls
     # === Write scores and link to editor === #

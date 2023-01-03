@@ -3,12 +3,10 @@ import streamlit as st
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.state import (
-    PREDICTIONS_FULL_CLASS_IDX,
     PREDICTIONS_LABEL_METRIC,
-    PREDICTIONS_LABEL_METRIC_NAMES,
     PREDICTIONS_LABELS,
     PREDICTIONS_METRIC,
-    PREDICTIONS_METRIC_META,
+    MetricNames,
     get_state,
     setdefault,
 )
@@ -40,30 +38,30 @@ def model_quality(page: Page):
         predictions_dir = get_state().project_paths.predictions
         metrics_dir = get_state().project_paths.metrics
 
-        if not get_state().predictions.metric_datas:
-            get_state().predictions.metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
+        predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+        label_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+        model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
+        selected_classes = get_state().predictions.selected_classes
 
-        model_predictions = use_memo(
-            lambda: reader.get_model_predictions(predictions_dir, get_state().predictions.metric_datas)
-        )
-        selected_class_idx = get_state().predictions.selected_classes
-
-        if selected_class_idx is None or model_predictions is None:
+        if selected_classes is None or model_predictions is None:
             st.error("Couldn't load model predictions")
             return
 
-        label_metric_data = setdefault(PREDICTIONS_LABEL_METRIC_NAMES, reader.get_label_metric_data, metrics_dir)
-        setdefault(PREDICTIONS_LABELS, reader.get_labels, predictions_dir, label_metric_data)
+        setdefault(PREDICTIONS_LABELS, reader.get_labels, predictions_dir, label_metric_datas)
 
         if st.session_state[PREDICTIONS_LABELS] is None:
             st.error("Couldn't load labels properly")
             return
 
         get_gt_matched, _ = use_lazy_state(lambda: reader.get_gt_matched(predictions_dir))
-        st.session_state[PREDICTIONS_METRIC_META] = {
-            "predictions": {m.name: m for m in get_state().predictions.metric_datas},
-            "labels": {m.name: m for m in label_metric_data},
-        }
+        get_state().predictions.metric_names = MetricNames(
+            predictions={m.name: m for m in predictions_metric_datas},
+            labels={m.name: m for m in label_metric_datas},
+        )
+        # st.session_state[PREDICTIONS_METRIC_META] = {
+        #     "predictions": {m.name: m for m in get_state().predictions.predictions_metric_datas},
+        #     "labels": {m.name: m for m in get_state().predictions.label_metric_datas},
+        # }
 
         matched_gt = get_gt_matched()
         if not matched_gt:
@@ -78,18 +76,16 @@ def model_quality(page: Page):
             model_predictions,
             st.session_state.get(PREDICTIONS_LABELS),  # type: ignore
             matched_gt,
-            st.session_state.get(PREDICTIONS_FULL_CLASS_IDX),  # type: ignore
+            get_state().predictions.all_classes,
             iou_threshold=get_state().iou_threshold,
             ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
         )
 
         # Sort predictions and labels according to selected metrics.
-        pred_sort_column = st.session_state.get(PREDICTIONS_METRIC, get_state().predictions.metric_datas[0].name)
+        pred_sort_column = st.session_state.get(PREDICTIONS_METRIC, predictions_metric_datas[0].name)
         sorted_model_predictions = model_predictions.sort_values([pred_sort_column], axis=0)
 
-        label_sort_column = st.session_state.get(
-            PREDICTIONS_LABEL_METRIC, st.session_state[PREDICTIONS_LABEL_METRIC_NAMES][0].name
-        )
+        label_sort_column = st.session_state.get(PREDICTIONS_LABEL_METRIC, label_metric_datas[0].name)
         st.session_state.sorted_labels = st.session_state[PREDICTIONS_LABELS].sort_values([label_sort_column], axis=0)
 
         if get_state().ignore_frames_without_predictions:

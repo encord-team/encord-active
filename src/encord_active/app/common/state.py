@@ -15,9 +15,15 @@ GLOBAL_STATE = "global_state"
 
 
 @dataclass
+class MetricNames:
+    predictions: Dict[str, MetricData] = field(default_factory=dict)
+    labels: Dict[str, MetricData] = field(default_factory=dict)
+
+
+@dataclass
 class PredictionsState:
     decompose_classes = False
-    metric_datas: List[MetricData] = field(default_factory=list)
+    metric_names = MetricNames()
     all_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     selected_classes: List[str] = field(default_factory=list)
 
@@ -78,10 +84,10 @@ K_NEAREST_NUM = "k_nearest_num"
 
 
 # PREDICTIONS PAGE
-PREDICTIONS_FULL_CLASS_IDX = "full_class_idx"
+# PREDICTIONS_FULL_CLASS_IDX = "full_class_idx"
 # PREDICTIONS_GT_MATCHED = "gt_matched"
 PREDICTIONS_LABELS = "labels"
-PREDICTIONS_LABEL_METRIC_NAMES = "label_metric_names"
+# PREDICTIONS_LABEL_METRIC_NAMES = "label_metric_names"
 PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
 PREDICTIONS_METRIC = "predictions_metric"
 PREDICTIONS_METRIC_META = "metric_meta"

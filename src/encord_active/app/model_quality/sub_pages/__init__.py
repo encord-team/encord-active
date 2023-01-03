@@ -61,7 +61,7 @@ class ModelQualityPage(Page):
         `st.session_state.model_predictions` data frame.
         """
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
-        column_names = list(map(lambda x: x.name, state.get_state().predictions.metric_datas))
+        column_names = list(state.get_state().predictions.metric_names.predictions.keys())
         st.selectbox(
             "Select metric for your predictions",
             column_names + list(fixed_options.keys()),
@@ -75,12 +75,10 @@ class ModelQualityPage(Page):
     def metric_details_description(metric_name: str = ""):
         if not metric_name:
             metric_name = st.session_state[state.PREDICTIONS_METRIC]
-        metric_data: Optional[MetricData] = st.session_state[state.PREDICTIONS_METRIC_META]["predictions"].get(
-            metric_name
-        )
+        metric_data = state.get_state().predictions.metric_names.predictions.get(metric_name)
 
         if not metric_data:
-            metric_data = st.session_state[state.PREDICTIONS_METRIC_META]["labels"].get(metric_name)
+            metric_data = state.get_state().predictions.metric_names.labels.get(metric_name)
 
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")
