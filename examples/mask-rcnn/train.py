@@ -7,7 +7,6 @@ from mask_rcnn import MaskRCNN
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
-
 def main() -> None:
     params = get_config("config.ini")
     pl.seed_everything(params.general.seed)
@@ -43,12 +42,12 @@ def main() -> None:
     checkpoint_callback = ModelCheckpoint(
         monitor="val/map",
         mode="max",
-        filename="{epoch}-{val/map:.2f}",
+        filename=f"{wandb_logger.version}-best",
     )
 
     trainer = pl.Trainer(
         accelerator=params.general.device,
-        max_epochs=20,
+        max_epochs=50,
         logger=wandb_logger,  # type: ignore
         callbacks=[checkpoint_callback],
         log_every_n_steps=params.logging.log_every_n_steps,

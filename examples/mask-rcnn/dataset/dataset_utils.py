@@ -16,9 +16,9 @@ def resize_images(root_folder: Path, target_width: int, target_height: int):
     target_data_path.mkdir()
 
     for lr_item in tqdm(
-        data_path.iterdir(),
-        desc="Resizing images",
-        total=len(list(data_path.glob("*"))),
+            data_path.iterdir(),
+            desc="Resizing images",
+            total=len(list(data_path.glob("*"))),
     ):
         if lr_item.is_dir():
             data_units = lr_item / "images"
@@ -28,31 +28,31 @@ def resize_images(root_folder: Path, target_width: int, target_height: int):
                 if item.as_posix().endswith((".png", ".jpg", ".jpeg", "tiff", ".tif", ".bmp", ".gif")):
                     target_file_path = target_data_path / "/".join(item.as_posix().split("/")[-3:])
                     img = cv2.imread(item.as_posix())
-                    img_resized = cv2.resize(img, (target_width, target_height))
+                    img_resized = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_AREA)
                     cv2.imwrite(target_file_path.as_posix(), img_resized)
                 else:
                     print(f"Not supported file: {item.as_posix()}")
 
 
 def resize_coco_annotations(
-    coco_annotation_file_path: Path,
-    images_folder_name: str,
-    target_width: int,
-    target_height: int,
+        coco_annotation_file_path: Path,
+        images_folder_name: str,
+        target_width: int,
+        target_height: int,
 ):
     target_coco_annotation_file_path = (
-        coco_annotation_file_path.with_suffix("").as_posix()
-        + f" {target_width}x{target_height}"
-        + coco_annotation_file_path.suffix
+            coco_annotation_file_path.with_suffix("").as_posix()
+            + f" {target_width}x{target_height}"
+            + coco_annotation_file_path.suffix
     )
 
     coco_annotation = json.loads(coco_annotation_file_path.read_text())
     target_coco_annotation = copy.deepcopy(coco_annotation)
 
     for image in tqdm(
-        iterable=target_coco_annotation["images"],
-        desc="Resizing image info",
-        total=len(target_coco_annotation["images"]),
+            iterable=target_coco_annotation["images"],
+            desc="Resizing image info",
+            total=len(target_coco_annotation["images"]),
     ):
         image["file_name"] = "/".join((images_folder_name, image["file_name"].split("/", 1)[1]))
         image["width"] = target_width
@@ -81,14 +81,14 @@ def resize_coco_annotations(
 
 
 # resize_images(
-#     Path("/data/encord-active/[EA]TACO"),
-#     512,
-#     512,
+#     Path("/data/encord-active/[EA]TACO-Official"),
+#     1024,
+#     1024,
 # )
 
 resize_coco_annotations(
-    Path("/home/ec2-user/gorkem/TACO-project/coco-files/train.json"),
-    "data_512x512",
-    512,
-    512,
+    Path("/home/ec2-user/gorkem/project_info/TACO-project/coco-files/model_test.json"),
+    "data_1024x1024",
+    1024,
+    1024,
 )
