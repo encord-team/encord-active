@@ -61,24 +61,25 @@ class ModelQualityPage(Page):
         `st.session_state.model_predictions` data frame.
         """
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
-        column_names = list(state.get_state().predictions.metric_names.predictions.keys())
-        st.selectbox(
+        column_names = list(state.get_state().predictions.metric_datas.predictions.keys())
+        state.get_state().predictions.metric_datas.selected_predicion = st.selectbox(
             "Select metric for your predictions",
             column_names + list(fixed_options.keys()),
-            key=state.PREDICTIONS_METRIC,
             format_func=lambda s: fixed_options.get(s, s),
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (P) := prediction scores.",
         )
 
     @staticmethod
-    def metric_details_description(metric_name: str = ""):
+    def metric_details_description():
+        metric_name = state.get_state().predictions.metric_datas.selected_predicion
         if not metric_name:
-            metric_name = st.session_state[state.PREDICTIONS_METRIC]
-        metric_data = state.get_state().predictions.metric_names.predictions.get(metric_name)
+            return
+
+        metric_data = state.get_state().predictions.metric_datas.predictions.get(metric_name)
 
         if not metric_data:
-            metric_data = state.get_state().predictions.metric_names.labels.get(metric_name)
+            metric_data = state.get_state().predictions.metric_datas.labels.get(metric_name)
 
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")

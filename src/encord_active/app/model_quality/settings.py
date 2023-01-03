@@ -28,10 +28,7 @@ def common_settings():
             """,
         )
 
-    if not selected_classes:
-        st.session_state.selected_class_idx = deepcopy(all_classes)
-    else:
-        st.session_state.selected_class_idx = dict(selected_classes)
+    get_state().predictions.selected_classes = dict(selected_classes) or deepcopy(all_classes)
 
     with col2:
         # IOU

@@ -61,13 +61,14 @@ on your labels are used for the "False Negative Rate" plot.
             self.prediction_metric_in_sidebar()
 
         with c2:
-            st.number_input(
-                "Number of buckets (n)",
-                min_value=5,
-                max_value=200,
-                value=50,
-                help="Choose the number of bins to discritize the prediction metric values into.",
-                key=state.PREDICTIONS_NBINS,
+            get_state().predictions.nbins = int(
+                st.number_input(
+                    "Number of buckets (n)",
+                    min_value=5,
+                    max_value=200,
+                    value=get_state().predictions.nbins,
+                    help="Choose the number of bins to discritize the prediction metric values into.",
+                )
             )
         with c3:
             st.write("")  # Make some spacing.
@@ -91,7 +92,8 @@ on your labels are used for the "False Negative Rate" plot.
             st.write("No predictions of the given class(es).")
             return
 
-        if state.PREDICTIONS_METRIC not in st.session_state:
+        metric_name = state.get_state().predictions.metric_datas.selected_predicion
+        if not metric_name:
             # This shouldn't happen with the current flow. The only way a user can do this
             # is if he/she write custom code to bypass running the metrics. In this case,
             # I think that it is fair to not give more information than this.
@@ -104,7 +106,6 @@ on your labels are used for the "False Negative Rate" plot.
 
         self.description_expander()
 
-        metric_name = st.session_state[state.PREDICTIONS_METRIC]
         label_metric_name = metric_name
         if metric_name[-3:] == "(P)":  # Replace the P with O:  "Metric (P)" -> "Metric (O)"
             label_metric_name = re.sub(r"(.*?\()P(\))", r"\1O\2", metric_name)
@@ -123,7 +124,7 @@ on your labels are used for the "False Negative Rate" plot.
         # Ensure same colors between plots
         chart_args = dict(
             color_params={"scale": alt.Scale(domain=classes_for_coloring)},
-            bins=st.session_state.get(state.PREDICTIONS_NBINS, 100),
+            bins=get_state().predictions.nbins,
             show_decomposition=decompose_classes,
         )
 

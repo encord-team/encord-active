@@ -31,6 +31,11 @@ class FalsePositivesPage(ModelQualityPage):
         metrics: DataFrame[PerformanceMetricSchema],
         precisions: DataFrame[PrecisionRecallSchema],
     ):
+        metric_name = get_state().predictions.metric_datas.selected_predicion
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
         st.markdown(f"# {self.title}")
         color = Color.RED
         with st.expander("Details"):
@@ -51,7 +56,6 @@ The remaining colors correspond to the dataset labels with the colors you are us
             )
             self.metric_details_description()
 
-        metric_name = st.session_state.predictions_metric
         fp_df = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == 0.0].dropna(
             subset=[metric_name]
         )

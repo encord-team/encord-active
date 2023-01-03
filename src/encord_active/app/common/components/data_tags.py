@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import streamlit as st
@@ -61,7 +61,7 @@ TAG_TEMPLATE = """    <div class="tags-item">
     </div>"""
 
 
-def build_data_tags(row: pd.Series, metric_name: str):
+def build_data_tags(row: pd.Series, metric_name: Optional[str] = None):
     tag_list = []
     for p in properties:
         key = p.get_key(metric_name)

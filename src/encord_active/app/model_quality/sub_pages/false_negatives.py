@@ -2,7 +2,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components.prediction_grid import prediction_grid
-from encord_active.app.common.state import PREDICTIONS_LABEL_METRIC, get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (
@@ -21,11 +21,10 @@ class FalseNegativesPage(ModelQualityPage):
     title = "🔍 False Negatives"
 
     def sidebar_options(self):
-        metric_columns = list(get_state().predictions.metric_names.labels.keys())
-        st.selectbox(
+        metric_columns = list(get_state().predictions.metric_datas.labels.keys())
+        get_state().predictions.metric_datas.selected_label = st.selectbox(
             "Select metric for your labels",
             metric_columns,
-            key=PREDICTIONS_LABEL_METRIC,
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (O) := object scores.",
         )
@@ -40,7 +39,11 @@ class FalseNegativesPage(ModelQualityPage):
     ):
         st.markdown(f"# {self.title}")
         st.header("False Negatives")
-        metric_name = st.session_state[PREDICTIONS_LABEL_METRIC]
+        metric_name = get_state().predictions.metric_datas.selected_label
+        if not metric_name:
+            st.error("Prediction label not selected")
+            return
+
         with st.expander("Details"):
             color = Color.PURPLE
             st.markdown(
@@ -55,7 +58,7 @@ The remaining objects are predictions, where colors correspond to their predicte
 """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(metric_name)
+            self.metric_details_description()
         fns_df = labels[labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
         if fns_df.shape[0] == 0:
             st.write("No false negatives")

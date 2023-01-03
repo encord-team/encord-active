@@ -49,7 +49,12 @@ The remaining colors correspond to the dataset labels with the colors you are us
                 unsafe_allow_html=True,
             )
             self.metric_details_description()
-        metric_name = st.session_state.predictions_metric
+
+        metric_name = get_state().predictions.metric_datas.selected_predicion
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
         tp_df = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == 1.0].dropna(
             subset=[metric_name]
         )

@@ -46,7 +46,7 @@ def build_card_for_labels(
     label = label.copy()
     label["label_class_name"] = cls
     # === Write scores and link to editor === #
-    build_data_tags(label, st.session_state[state.PREDICTIONS_LABEL_METRIC])
+    build_data_tags(label, get_state().predictions.metric_datas.selected_label)
 
 
 def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.GREEN):
@@ -56,7 +56,7 @@ def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.G
     multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
 
     # === Write scores and link to editor === #
-    build_data_tags(row, st.session_state.predictions_metric)
+    build_data_tags(row, get_state().predictions.metric_datas.selected_predicion)
 
     if row[PredictionMatchSchema.false_positive_reason] and not row[PredictionMatchSchema.is_true_positive]:
         st.write(f"Reason: {row[PredictionMatchSchema.false_positive_reason]}")
@@ -84,11 +84,11 @@ def prediction_grid(
     if use_labels:
         df = labels
         additionals = model_predictions
-        selected_metric = st.session_state.get(state.PREDICTIONS_LABEL_METRIC, "")
+        selected_metric = get_state().predictions.metric_datas.selected_label or ""
     else:
         df = model_predictions
         additionals = None
-        selected_metric = st.session_state.get(state.PREDICTIONS_METRIC, "")
+        selected_metric = get_state().predictions.metric_datas.selected_predicion or ""
 
     n_cols, n_rows = get_state().page_grid_settings.columns, get_state().page_grid_settings.rows
     subset = render_df_slicer(df, selected_metric)

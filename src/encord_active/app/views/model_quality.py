@@ -2,14 +2,7 @@ import streamlit as st
 
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
-from encord_active.app.common.state import (
-    PREDICTIONS_LABEL_METRIC,
-    PREDICTIONS_LABELS,
-    PREDICTIONS_METRIC,
-    MetricNames,
-    get_state,
-    setdefault,
-)
+from encord_active.app.common.state import MetricNames, get_state, setdefault
 from encord_active.app.common.state_hooks import use_lazy_state, use_memo
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.settings import common_settings
@@ -41,29 +34,22 @@ def model_quality(page: Page):
         predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
         label_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
         model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
-        selected_classes = get_state().predictions.selected_classes
+        labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
 
-        if selected_classes is None or model_predictions is None:
+        if model_predictions is None:
             st.error("Couldn't load model predictions")
             return
 
-        setdefault(PREDICTIONS_LABELS, reader.get_labels, predictions_dir, label_metric_datas)
-
-        if st.session_state[PREDICTIONS_LABELS] is None:
+        if labels is None:
             st.error("Couldn't load labels properly")
             return
 
-        get_gt_matched, _ = use_lazy_state(lambda: reader.get_gt_matched(predictions_dir))
-        get_state().predictions.metric_names = MetricNames(
+        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+        get_state().predictions.metric_datas = MetricNames(
             predictions={m.name: m for m in predictions_metric_datas},
             labels={m.name: m for m in label_metric_datas},
         )
-        # st.session_state[PREDICTIONS_METRIC_META] = {
-        #     "predictions": {m.name: m for m in get_state().predictions.predictions_metric_datas},
-        #     "labels": {m.name: m for m in get_state().predictions.label_metric_datas},
-        # }
 
-        matched_gt = get_gt_matched()
         if not matched_gt:
             st.error("Couldn't match groung truths")
             return
@@ -72,9 +58,9 @@ def model_quality(page: Page):
             common_settings()
             page.sidebar_options()
 
-        (model_predictions, st.session_state[PREDICTIONS_LABELS], metrics, precisions,) = compute_mAP_and_mAR(
+        (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
             model_predictions,
-            st.session_state.get(PREDICTIONS_LABELS),  # type: ignore
+            labels,
             matched_gt,
             get_state().predictions.all_classes,
             iou_threshold=get_state().iou_threshold,
@@ -82,19 +68,19 @@ def model_quality(page: Page):
         )
 
         # Sort predictions and labels according to selected metrics.
-        pred_sort_column = st.session_state.get(PREDICTIONS_METRIC, predictions_metric_datas[0].name)
-        sorted_model_predictions = model_predictions.sort_values([pred_sort_column], axis=0)
+        pred_sort_column = get_state().predictions.metric_datas.selected_predicion or predictions_metric_datas[0].name
+        sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
 
-        label_sort_column = st.session_state.get(PREDICTIONS_LABEL_METRIC, label_metric_datas[0].name)
-        st.session_state.sorted_labels = st.session_state[PREDICTIONS_LABELS].sort_values([label_sort_column], axis=0)
+        label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
+        sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
 
         if get_state().ignore_frames_without_predictions:
-            labels = filter_labels_for_frames_wo_predictions(model_predictions, st.session_state.sorted_labels)
+            matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
         else:
-            labels = st.session_state.sorted_labels
+            matched_labels = sorted_labels
 
         _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
-            st.session_state.selected_class_idx, labels, metrics, sorted_model_predictions, precisions
+            get_state().predictions.selected_classes, matched_labels, metrics, sorted_model_predictions, precisions
         )
         page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
 

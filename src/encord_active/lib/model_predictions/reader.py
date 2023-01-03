@@ -154,7 +154,7 @@ def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
     return get_metric_data(entry_points)
 
 
-def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[pd.DataFrame]:
+def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[DataFrame[LabelSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
     return df.pipe(DataFrame[LabelSchema]) if df is not None else None
 

@@ -89,7 +89,7 @@ class MetricsPage(ModelQualityPage):
             else:
                 num_samples = model_predictions.shape[0]
 
-            metric_columns = list(get_state().predictions.metric_names.predictions.keys())
+            metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
             with st.spinner("Computing index importance..."):
                 chart = create_metric_importance_charts(
                     model_predictions,
