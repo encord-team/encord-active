@@ -38,15 +38,15 @@ def create_a_new_dataset(
 
     # The following operation is for image groups (to upload them efficiently)
     label_hash_to_data_units: dict[str, list] = {}
-    for index, item in tqdm(filtered_dataset.iterrows(), total=filtered_dataset.shape[0]):
-        label_row_hash, data_unit_hash, *rest = item["identifier"].split("_")
+    for _, item in tqdm(filtered_dataset.iterrows(), total=filtered_dataset.shape[0]):
+        label_row_hash, data_unit_hash, *_ = item["identifier"].split("_")
         label_hash_to_data_units.setdefault(label_row_hash, []).append(data_unit_hash)
 
     temp_progress_bar = st.empty()
     temp_progress_bar.progress(0.0)
     uploaded_label_rows: set = set()
-    for counter, (index, item) in enumerate(filtered_dataset.iterrows()):
-        label_row_hash, data_unit_hash, frame_id, *rest = item["identifier"].split("_")
+    for counter, (_, item) in enumerate(filtered_dataset.iterrows()):
+        label_row_hash, data_unit_hash, *_ = item["identifier"].split("_")
         json_txt = (st.session_state.project_dir / "data" / label_row_hash / "label_row.json").expanduser().read_text()
         label_row = json.loads(json_txt)
 
@@ -136,13 +136,13 @@ def create_new_project_on_encord_platform(
         st.error(f"`ssh_key_path` not specified in the project meta data file `{meta_file}`.")
         return
 
-    ssh_key_path = Path(ssh_key_path).expanduser()
-    if not ssh_key_path.is_file():
-        st.error(f"No SSH file in location:{ssh_key_path}")
+    _ssh_key_path = Path(ssh_key_path).expanduser()
+    if not _ssh_key_path.is_file():
+        st.error(f"No SSH file in location:{_ssh_key_path}")
         return
 
     user_client = EncordUserClient.create_with_ssh_private_key(
-        Path(ssh_key_path).expanduser().read_text(encoding="utf-8"),
+        _ssh_key_path.expanduser().read_text(encoding="utf-8"),
     )
 
     original_project_hash = project_meta.get("project_hash")
@@ -156,7 +156,7 @@ def create_new_project_on_encord_platform(
             pass
     except AuthorisationError:
         st.error(
-            f'The user associated to the ssh key `{ssh_key_path}` does not have access to the project with project hash `{original_project_hash}`. Run "encord-active config set ssh_key_path /path/to/your/key_file" to set it.'
+            f'The user associated to the ssh key `{_ssh_key_path}` does not have access to the project with project hash `{original_project_hash}`. Run "encord-active config set ssh_key_path /path/to/your/key_file" to set it.'
         )
         return
 
