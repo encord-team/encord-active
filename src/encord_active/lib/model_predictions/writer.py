@@ -65,7 +65,12 @@ def polyobj_to_nparray(o: dict, width: int, height: int) -> np.ndarray:
 
 def points_to_mask(points: np.ndarray, width: int, height: int):
     mask = np.zeros((height, width), dtype=np.uint8)
-    mask = cv2.fillPoly(mask, [(points * np.array([[width, height]])).astype(int)], 1)  # type: ignore
+
+    if np.issubdtype(points.dtype, np.float):
+        if not (np.min(points) >= 0.0 and np.max(points) <= 1.0):
+            raise ValueError("Float polygon points between 0 and 1.")
+        points = points * np.array([[width, height]])
+    mask = cv2.fillPoly(mask, [(points).astype(int)], 1)  # type: ignore
     return mask
 
 
@@ -268,7 +273,7 @@ class PredictionWriter:
                 row[LKey.X2.value] = x2  # bbox.x2
                 row[LKey.Y2.value] = y2  # bbox.y2
 
-                mask = points_to_mask(points, width=width, height=height)
+                mask = points_to_mask(points.astype(int), width=width, height=height)
                 row[LKey.RLE.value] = binary_mask_to_rle(mask)
             else:
                 # Only supporting polygons and bounding boxes.
