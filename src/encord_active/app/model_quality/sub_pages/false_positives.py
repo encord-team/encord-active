@@ -2,6 +2,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
 from encord_active.lib.model_predictions.map_mar import (
@@ -30,6 +31,11 @@ class FalsePositivesPage(ModelQualityPage):
         metrics: DataFrame[PerformanceMetricSchema],
         precisions: DataFrame[PrecisionRecallSchema],
     ):
+        metric_name = get_state().predictions.metric_datas.selected_predicion
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
         st.markdown(f"# {self.title}")
         color = Color.RED
         with st.expander("Details"):
@@ -50,7 +56,6 @@ The remaining colors correspond to the dataset labels with the colors you are us
             )
             self.metric_details_description()
 
-        metric_name = st.session_state.predictions_metric
         fp_df = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == 0.0].dropna(
             subset=[metric_name]
         )
@@ -59,4 +64,4 @@ The remaining colors correspond to the dataset labels with the colors you are us
         else:
             histogram = get_histogram(fp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(st.session_state.data_dir, model_predictions=fp_df, box_color=color)
+            prediction_grid(get_state().project_paths.data, model_predictions=fp_df, box_color=color)

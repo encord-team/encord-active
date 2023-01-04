@@ -4,9 +4,9 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
-import encord_active.app.common.state as state
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
+from encord_active.app.common.state import get_state
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSchema
 from encord_active.lib.metrics.utils import MetricData, MetricScope
@@ -17,8 +17,8 @@ _COLUMNS = MetricWithDistanceSchema
 def render_metric_summary(
     metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
 ):
-    n_cols = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM])
-    n_rows = int(st.session_state[state.MAIN_VIEW_ROW_NUM])
+    n_cols = get_state().page_grid_settings.columns
+    n_rows = get_state().page_grid_settings.rows
     page_size = n_cols * n_rows
 
     st.markdown(metric.meta["long_description"])
@@ -53,7 +53,7 @@ def render_metric_summary(
 
 
 def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers, metric_scope: MetricScope):
-    image = show_image_and_draw_polygons(row, st.session_state.data_dir)
+    image = show_image_and_draw_polygons(row, get_state().project_paths.data)
     st.image(image)
 
     multiselect_tag(row, f"{metric_name}_summary", metric_scope)

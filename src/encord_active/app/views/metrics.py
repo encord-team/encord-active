@@ -1,6 +1,7 @@
 import streamlit as st
 
 from encord_active.app.common.components import sticky_header
+from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
 from encord_active.app.data_quality.sub_pages.explorer import ExplorerPage
 from encord_active.app.data_quality.sub_pages.summary import SummaryPage
@@ -24,7 +25,7 @@ def explorer(metric_type: MetricScope):
     def render():
         setup_page()
         page = ExplorerPage()
-        available_metrics = load_available_metrics(st.session_state.metric_dir, metric_type)
+        available_metrics = load_available_metrics(get_state().project_paths.metrics, metric_type)
 
         with sticky_header():
             selected_df = page.sidebar_options(available_metrics)

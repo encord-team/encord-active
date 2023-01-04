@@ -2,13 +2,13 @@ from typing import List, Set
 
 import streamlit as st
 
-import encord_active.app.common.state as state
+from encord_active.app.common.state import get_state
 from encord_active.lib.db.helpers.tags import count_of_tags
 from encord_active.lib.db.tags import SCOPE_EMOJI, Tag, Tags, TagScope
 
 
 def scoped_tags(scopes: Set[TagScope]) -> List[Tag]:
-    all_tags: List[Tag] = st.session_state.get(state.ALL_TAGS) or []
+    all_tags: List[Tag] = get_state().all_tags or []
     return [tag for tag in all_tags if tag.scope in scopes]
 
 
@@ -22,7 +22,7 @@ def on_tag_entered(all_tags: List[Tag], name: str, scope: TagScope):
     Tags().create_tag(tag)
     all_tags.append(tag)
 
-    st.session_state[state.ALL_TAGS] = all_tags
+    get_state().all_tags = all_tags
 
 
 def tag_creator():
@@ -36,7 +36,7 @@ def tag_creator():
             del st.session_state.new_tag_message
 
         all_tags = Tags().all()
-        st.session_state[state.ALL_TAGS] = all_tags
+        get_state().all_tags = all_tags
 
         with st.form("tag_creation_form", clear_on_submit=False):
             left, right = st.columns([2, 1])
@@ -60,7 +60,7 @@ def tag_creator():
 
 
 def tag_display_with_counts():
-    all_counts = count_of_tags(st.session_state[state.MERGED_DATAFRAME])
+    all_counts = count_of_tags(get_state().merged_metrics)
 
     sorted_tags = sorted(all_counts.items(), key=lambda x: x[0].lower())
     st.markdown(

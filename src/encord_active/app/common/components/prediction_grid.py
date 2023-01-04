@@ -15,6 +15,7 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
     bulk_tagging_form,
 )
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
+from encord_active.app.common.state import get_state
 from encord_active.lib.common.colors import Color
 from encord_active.lib.common.image_utils import (
     draw_object,
@@ -34,18 +35,18 @@ def build_card_for_labels(
     data_dir: Path,
     label_color: Color = Color.RED,
 ):
-    class_colors = {int(k): idx["color"] for k, idx in st.session_state.full_class_idx.items()}
+    class_colors = {int(k): idx["color"] for k, idx in get_state().predictions.all_classes.items()}
     image = show_image_with_predictions_and_label(
         label, predictions, data_dir, label_color=label_color, class_colors=class_colors
     )
     st.image(image)
     multiselect_tag(label, "false_negatives", MetricScope.MODEL_QUALITY)
 
-    cls = st.session_state.full_class_idx[str(label["class_id"])]["name"]
+    cls = get_state().predictions.all_classes[str(label["class_id"])]["name"]
     label = label.copy()
     label["label_class_name"] = cls
     # === Write scores and link to editor === #
-    build_data_tags(label, st.session_state[state.PREDICTIONS_LABEL_METRIC])
+    build_data_tags(label, get_state().predictions.metric_datas.selected_label)
 
 
 def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.GREEN):
@@ -55,7 +56,7 @@ def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.G
     multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
 
     # === Write scores and link to editor === #
-    build_data_tags(row, st.session_state.predictions_metric)
+    build_data_tags(row, get_state().predictions.metric_datas.selected_predicion)
 
     if row[PredictionMatchSchema.false_positive_reason] and not row[PredictionMatchSchema.is_true_positive]:
         st.write(f"Reason: {row[PredictionMatchSchema.false_positive_reason]}")
@@ -83,16 +84,13 @@ def prediction_grid(
     if use_labels:
         df = labels
         additionals = model_predictions
-        selected_metric = st.session_state.get(state.PREDICTIONS_LABEL_METRIC, "")
+        selected_metric = get_state().predictions.metric_datas.selected_label or ""
     else:
         df = model_predictions
         additionals = None
-        selected_metric = st.session_state.get(state.PREDICTIONS_METRIC, "")
+        selected_metric = get_state().predictions.metric_datas.selected_predicion or ""
 
-    if state.METRIC_VIEW_PAGE_NUMBER not in st.session_state:
-        st.session_state[state.METRIC_VIEW_PAGE_NUMBER] = 1
-
-    n_cols, n_rows = int(st.session_state[state.MAIN_VIEW_COLUMN_NUM]), int(st.session_state[state.MAIN_VIEW_ROW_NUM])
+    n_cols, n_rows = get_state().page_grid_settings.columns, get_state().page_grid_settings.rows
     subset = render_df_slicer(df, selected_metric)
     paginated_subset = render_pagination(subset, n_cols, n_rows, selected_metric)
 

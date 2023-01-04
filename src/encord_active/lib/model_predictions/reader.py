@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, cast
+from typing import Any, Callable, Iterable, List, Optional, TypedDict, cast
 
 import pandas as pd
 import pandera as pa
@@ -15,6 +15,12 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+
+
+class OntologyObjectJSON(TypedDict):
+    featureHash: str
+    name: str
+    color: str
 
 
 @dataclass
@@ -148,7 +154,7 @@ def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
     return get_metric_data(entry_points)
 
 
-def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[pd.DataFrame]:
+def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[DataFrame[LabelSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
     return df.pipe(DataFrame[LabelSchema]) if df is not None else None
 
@@ -158,6 +164,6 @@ def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
     return load_json(gt_path)
 
 
-def get_class_idx(predictions_dir: Path) -> Optional[dict]:
+def get_class_idx(predictions_dir: Path) -> dict[str, OntologyObjectJSON]:
     class_idx_pth = predictions_dir / "class_idx.json"
-    return load_json(class_idx_pth)
+    return load_json(class_idx_pth) or {}

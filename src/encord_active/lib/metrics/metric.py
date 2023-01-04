@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from hashlib import md5
-from typing import List, Optional, Union
+from typing import List, Optional, TypedDict, Union
 
 from encord.project_ontology.classification_type import ClassificationType
 from encord.project_ontology.object_type import ObjectShape
@@ -33,6 +33,22 @@ class EmbeddingType(Enum):
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
     NONE = "none"
+
+
+class MetricMetadata(TypedDict):
+    annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]]
+    data_type: DataType
+    long_description: str
+    metric_type: MetricType
+    needs_images: bool
+    score_normalization: bool
+    short_description: str
+    title: str
+    threshold: float
+    max_value: Optional[float]
+    mean_value: float
+    min_value: Optional[float]
+    num_rows: int
 
 
 class Metric(ABC):

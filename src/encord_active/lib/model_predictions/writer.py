@@ -65,7 +65,7 @@ def polyobj_to_nparray(o: dict, width: int, height: int) -> np.ndarray:
 
 def points_to_mask(points: np.ndarray, width: int, height: int):
     mask = np.zeros((height, width), dtype=np.uint8)
-    mask = cv2.fillPoly(mask, [points.astype(int)], 1)  # type: ignore
+    mask = cv2.fillPoly(mask, [(points * np.array([[width, height]])).astype(int)], 1)  # type: ignore
     return mask
 
 
@@ -425,7 +425,7 @@ class PredictionWriter:
                     polygon = polygon.astype(float) / np.array([[width, height]])
 
                 np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
-                x1, y1, w, h = cv2.boundingRect(polygon.reshape(-1, 1, 2).astype(int))  # type: ignore
+                x1, y1, w, h = cv2.boundingRect((polygon * np.array([[width, height]])).reshape(-1, 1, 2).astype(int))  # type: ignore
             x2, y2 = x1 + w, y1 + h
             points = [x1, y1, x2, y2]
             mask = binary_mask_to_rle(np_mask)
