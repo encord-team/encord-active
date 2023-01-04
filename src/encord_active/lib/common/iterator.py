@@ -14,7 +14,7 @@ from encord.orm.label_log import LabelLog
 from loguru import logger
 from tqdm import tqdm
 
-from encord_active.lib.project.project import Project
+from encord_active.lib.project import Project
 
 
 class Iterator(Sized):

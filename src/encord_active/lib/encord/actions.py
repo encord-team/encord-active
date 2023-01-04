@@ -11,7 +11,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.lib.common.utils import fetch_project_meta
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.lib.project import ProjectFileStructure
 
 
 class DatasetCreationResult(NamedTuple):

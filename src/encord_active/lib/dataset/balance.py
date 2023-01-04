@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.metrics.utils import MetricData, load_metric_dataframe
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.lib.project import ProjectFileStructure
 
 
 def balance_dataframe(selected_metrics: List[MetricData], partition_sizes: Dict[str, int], seed: int) -> pd.DataFrame:
