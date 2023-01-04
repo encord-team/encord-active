@@ -22,7 +22,6 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
     annotators_df = pd.DataFrame(annotators.values())
 
     fig = px.pie(annotators_df, values="total_annotations", names="name", hover_data=["mean_score"])
-    fig.update_layout(title_text="Distribution of the annotations", title_x=0.5, title_font_size=20)
 
     left_col.plotly_chart(fig, use_container_width=True)
 
