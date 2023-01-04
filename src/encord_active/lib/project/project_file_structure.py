@@ -10,7 +10,7 @@ class LabelRowStructure(NamedTuple):
 
 class ProjectFileStructure:
     def __init__(self, project_dir: Path):
-        self.project_dir: Path = project_dir
+        self.project_dir: Path = project_dir.expanduser().resolve()
 
     @property
     def data(self) -> Path:

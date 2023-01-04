@@ -30,9 +30,8 @@ encord_logger.setLevel(logging.ERROR)
 
 class Project:
     def __init__(self, project_dir: Path):
-        self.project_dir: Path = project_dir
-        self.project_file_structure = ProjectFileStructure(project_dir)
-        self.project_meta = fetch_project_meta(self.project_file_structure.project_dir)
+        self.file_structure = ProjectFileStructure(project_dir)
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
@@ -49,12 +48,12 @@ class Project:
         if self.is_loaded:
             return self
 
-        if not self.project_dir.exists():
-            raise FileNotFoundError(f"`{self.project_dir}` does not exist")
-        if not self.project_dir.is_dir():
-            raise NotADirectoryError(f"`{self.project_dir}` does not point to a directory")
+        if not self.file_structure.project_dir.exists():
+            raise FileNotFoundError(f"`{self.file_structure.project_dir}` does not exist")
+        if not self.file_structure.project_dir.is_dir():
+            raise NotADirectoryError(f"`{self.file_structure.project_dir}` does not point to a directory")
 
-        self.project_meta = fetch_project_meta(self.project_dir)
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         self.project_hash = self.project_meta["project_hash"]
 
         self.__load_ontology()
@@ -73,12 +72,12 @@ class Project:
         if self.is_loaded:
             return self
 
-        self.project_dir.mkdir(parents=True, exist_ok=True)
+        self.file_structure.project_dir.mkdir(parents=True, exist_ok=True)
 
         # todo enforce clean up when we are sure it won't impact performance in other sections (like PredictionWriter)
         # also don't forget to add `from shutil import rmtree` at the top (pylint tags it as unused right now)
         # clean project_dir content
-        # for path in self.project_dir.iterdir():
+        # for path in self.file_structure.project_dir.iterdir():
         #     if path.is_file():
         #         path.unlink()
         #     elif path.is_dir():
@@ -106,7 +105,7 @@ class Project:
         )
 
     def __save_project_meta(self, encord_project: EncordProject):
-        project_meta_file_path = self.project_file_structure.project_meta
+        project_meta_file_path = self.file_structure.project_meta
         self.project_meta.update(
             {
                 "project_title": encord_project.title,
@@ -117,22 +116,22 @@ class Project:
         project_meta_file_path.write_text(yaml.safe_dump(self.project_meta), encoding="utf-8")
 
     def __save_ontology(self, encord_project: EncordProject):
-        ontology_file_path = self.project_file_structure.ontology
+        ontology_file_path = self.file_structure.ontology
         ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
 
     def __load_ontology(self):
-        ontology_file_path = self.project_file_structure.ontology
+        ontology_file_path = self.file_structure.ontology
         if not ontology_file_path.exists():
             raise FileNotFoundError(f"Expected file `ontology.json` at {ontology_file_path.parent}")
         self.ontology = OntologyStructure.from_dict(json.loads(ontology_file_path.read_text(encoding="utf-8")))
 
     def __save_label_row_meta(self, encord_project: EncordProject):
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta_file_path = self.project_file_structure.label_row_meta
+        label_row_meta_file_path = self.file_structure.label_row_meta
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
-        label_row_meta_file_path = self.project_file_structure.label_row_meta
+        label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_meta = {
@@ -143,15 +142,15 @@ class Project:
         }
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        label_rows = download_all_label_rows(encord_project, cache_dir=self.project_dir)
-        download_all_images(label_rows, cache_dir=self.project_dir)
+        label_rows = download_all_label_rows(encord_project, cache_dir=self.file_structure.project_dir)
+        download_all_images(label_rows, cache_dir=self.file_structure.project_dir)
 
     def __load_label_rows(self):
         self.label_rows = {}
         self.image_paths = {}
         for lr_hash in self.label_row_meta.keys():
-            lr_file_path = self.project_file_structure.label_row_structure(lr_hash).label_row_file
-            lr_images_dir = self.project_file_structure.data / lr_hash / "images"
+            lr_file_path = self.file_structure.label_row_structure(lr_hash).label_row_file
+            lr_images_dir = self.file_structure.data / lr_hash / "images"
             if not lr_file_path.is_file() or not lr_images_dir.is_dir():
                 logger.warning(
                     f"Skipping label row <blue>`{lr_hash}`</blue> as no stored content was found for the label row."
