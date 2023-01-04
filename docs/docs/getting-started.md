@@ -61,19 +61,19 @@ This will allow you to choose a dataset to download. When the download process i
 
 :::tip  
 You can follow the [COCO dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features
-of te Encord Active.
+of Encord Active.
 :::
 
 ### Run Encord Active on Google Colab
 
-If you want to quickly explore Encord-Active without installing anything into your local machine, we
+If you want to quickly explore Encord Active without installing anything into your local machine, we
 have the following Google Colab notebooks for you:
 1. [Explore Encord-Active through sandbox projects](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing)
 2. [Explore Encord-Active through your own Encord projects](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
 
 ## What's Up Next?
 
-If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord-Active
+If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord Active
 easily.
 
 :::tip

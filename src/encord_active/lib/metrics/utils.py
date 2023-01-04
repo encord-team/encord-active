@@ -114,7 +114,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
 
             continue
 
-        out.append(MetricData(name=n, path=p, meta=MetricMetadata(**m), level=l))
+        out.append(MetricData(name=n, path=p, meta=MetricMetadata(**m), level=l))  # type: ignore
 
     out = natsorted(out, key=lambda i: (i.level, i.name))  # type: ignore
     return out

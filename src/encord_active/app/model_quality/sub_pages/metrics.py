@@ -1,12 +1,9 @@
-from typing import List
-
 import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.precision_recall import create_pr_charts
-from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,

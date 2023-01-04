@@ -65,11 +65,9 @@ def polyobj_to_nparray(o: dict, width: int, height: int) -> np.ndarray:
 
 def points_to_mask(points: np.ndarray, width: int, height: int):
     mask = np.zeros((height, width), dtype=np.uint8)
+    if np.issubdtype(points.dtype, np.floating) and points.max() <= 1.0:
+        points *= np.array([[width, height]])
 
-    if np.issubdtype(points.dtype, np.float):
-        if not (np.min(points) >= 0.0 and np.max(points) <= 1.0):
-            raise ValueError("Float polygon points between 0 and 1.")
-        points = points * np.array([[width, height]])
     mask = cv2.fillPoly(mask, [(points).astype(int)], 1)  # type: ignore
     return mask
 

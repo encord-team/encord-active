@@ -2,8 +2,8 @@ import streamlit as st
 
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
-from encord_active.app.common.state import MetricNames, get_state, setdefault
-from encord_active.app.common.state_hooks import use_lazy_state, use_memo
+from encord_active.app.common.state import MetricNames, get_state
+from encord_active.app.common.state_hooks import use_memo
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.settings import common_settings
 from encord_active.app.model_quality.sub_pages import Page

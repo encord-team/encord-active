@@ -13,11 +13,12 @@ from encord_active.app.common.state import (
     IMAGE_KEYS_HAVING_SIMILARITIES,
     IMAGE_SIMILARITIES,
     IMAGE_SIMILARITIES_NO_LABEL,
+    K_NEAREST_NUM,
     OBJECT_KEYS_HAVING_SIMILARITIES,
     OBJECT_SIMILARITIES,
     QUESTION_HASH_TO_COLLECTION_INDEXES,
+    get_state,
 )
-from encord_active.app.common.state import get_state
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
@@ -44,7 +45,7 @@ def show_similar_classification_images(row: Series, expander: DeltaGenerator):
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        image = load_or_fill_image(nearest_image["key"], global_state.project_paths.data)
+        image = load_or_fill_image(nearest_image["key"], get_state().project_paths.data)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
@@ -68,7 +69,7 @@ def show_similar_images(row: Series, expander: DeltaGenerator):
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        image = load_or_fill_image(nearest_image["key"], global_state.project_paths.data)
+        image = load_or_fill_image(nearest_image["key"], get_state().project_paths.data)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")
