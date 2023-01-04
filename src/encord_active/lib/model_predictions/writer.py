@@ -69,7 +69,6 @@ def points_to_mask(points: np.ndarray, width: int, height: int):
     if np.issubdtype(points.dtype, np.float):
         if points.max() <= 1.0:
             points *= np.array([[width, height]])
-        points = points * np.array([[width, height]])
     mask = cv2.fillPoly(mask, [(points).astype(int)], 1)  # type: ignore
     return mask
 
