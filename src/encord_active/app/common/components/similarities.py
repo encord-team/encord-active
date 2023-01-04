@@ -13,7 +13,6 @@ from encord_active.app.common.state import (
     IMAGE_KEYS_HAVING_SIMILARITIES,
     IMAGE_SIMILARITIES,
     IMAGE_SIMILARITIES_NO_LABEL,
-    K_NEAREST_NUM,
     OBJECT_KEYS_HAVING_SIMILARITIES,
     OBJECT_SIMILARITIES,
     QUESTION_HASH_TO_COLLECTION_INDEXES,
@@ -112,7 +111,7 @@ def add_labeled_image_neighbors_to_cache(image_identifier: str, question_feature
     )
     embedding = np.array([st.session_state[COLLECTIONS_IMAGES][collection_id]["embedding"]]).astype(np.float32)
     _, nearest_indexes = st.session_state[FAISS_INDEX_IMAGE][question_feature_hash].search(
-        embedding, int(st.session_state[K_NEAREST_NUM] + 1)
+        embedding, get_state().similarities_count + 1
     )
     nearest_indexes = fix_duplicate_image_orders_in_knn_graph_single_row(collection_item_index, nearest_indexes)
 
@@ -154,9 +153,7 @@ def _get_nearest_items_from_nearest_indexes(nearest_indexes: np.ndarray, collect
 def add_object_neighbors_to_cache(object_identifier: str) -> None:
     item_index = st.session_state[OBJECT_KEYS_HAVING_SIMILARITIES][object_identifier]
     embedding = np.array([st.session_state[COLLECTIONS_OBJECTS][item_index]["embedding"]]).astype(np.float32)
-    _, nearest_indexes = st.session_state[FAISS_INDEX_OBJECT].search(
-        embedding, int(st.session_state[K_NEAREST_NUM] + 1)
-    )
+    _, nearest_indexes = st.session_state[FAISS_INDEX_OBJECT].search(embedding, get_state().similarities_count + 1)
 
     st.session_state[OBJECT_SIMILARITIES][object_identifier] = _get_nearest_items_from_nearest_indexes(
         nearest_indexes, COLLECTIONS_OBJECTS
@@ -167,7 +164,7 @@ def add_image_neighbors_to_cache(image_identifier: str):
     collection_id = st.session_state[IMAGE_KEYS_HAVING_SIMILARITIES][image_identifier]
     embedding = np.array([st.session_state[COLLECTIONS_IMAGES][collection_id]["embedding"]]).astype(np.float32)
     _, nearest_indexes = st.session_state[FAISS_INDEX_IMAGE_NO_LABEL].search(
-        embedding, int(st.session_state[K_NEAREST_NUM] + 1)
+        embedding, get_state().similarities_count + 1
     )
 
     st.session_state[IMAGE_SIMILARITIES_NO_LABEL][image_identifier] = _get_nearest_items_from_nearest_indexes(

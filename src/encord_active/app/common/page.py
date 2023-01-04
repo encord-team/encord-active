@@ -4,7 +4,6 @@ import streamlit as st
 
 import encord_active.app.common.state as state
 from encord_active.app.common.state import get_state
-from encord_active.lib.metrics.metric import EmbeddingType
 
 
 class Page(ABC):
@@ -33,12 +32,8 @@ class Page(ABC):
     @staticmethod
     def row_col_settings_in_sidebar():
         col_default_max, row_default_max = 10, 5
-        default_knn_num = 8
 
         with st.expander("Settings"):
-            if state.K_NEAREST_NUM not in st.session_state:
-                st.session_state[state.K_NEAREST_NUM] = default_knn_num
-
             with st.form(key="settings_from"):
                 get_state().normalize_metrics = st.checkbox(
                     "Metric normalization",
@@ -47,7 +42,7 @@ class Page(ABC):
                         original values will be shown.",
                 )
 
-                setting_columns = st.columns(2)
+                setting_columns = st.columns(3)
 
                 get_state().page_grid_settings.columns = int(
                     setting_columns[0].number_input(
@@ -69,18 +64,13 @@ class Page(ABC):
                     )
                 )
 
-                selected_metric = get_state().selected_metric
-
-                if selected_metric:
-                    if selected_metric.meta.get("embedding_type", EmbeddingType.NONE.value) in [
-                        EmbeddingType.CLASSIFICATION.value,
-                        EmbeddingType.OBJECT.value,
-                    ]:
-                        st.number_input(
-                            "k nearest",
-                            min_value=4,
-                            max_value=20,
-                            key=state.K_NEAREST_NUM,
-                            help="Number of the most similar images to show",
-                        )
+                get_state().similarities_count = int(
+                    setting_columns[2].number_input(
+                        "Number of similar Images/Objects",
+                        min_value=4,
+                        max_value=20,
+                        value=get_state().similarities_count,
+                        help="Number of the most similar images to show",
+                    )
+                )
                 st.form_submit_button(label="Apply")

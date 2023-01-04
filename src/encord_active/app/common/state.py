@@ -52,6 +52,7 @@ class State:
     page_grid_settings = PageGridSettings()
     normalize_metrics = False
     predictions = PredictionsState()
+    similarities_count = 8
 
     @classmethod
     def init(cls, project_dir: Path):
@@ -84,7 +85,7 @@ CURRENT_INDEX_HAS_ANNOTATION = "current_index_has_annotation"
 QUESTION_HASH_TO_COLLECTION_INDEXES = "question_hash_to_collection_indexes"
 COLLECTIONS_IMAGES = "collections_images"
 COLLECTIONS_OBJECTS = "collections_objects"
-K_NEAREST_NUM = "k_nearest_num"
+# K_NEAREST_NUM = "k_nearest_num"
 
 
 def setdefault(key: str, fn: Callable, *args, **kwargs) -> Any:
