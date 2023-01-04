@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project.project import download_all_label_rows
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logging.getLogger(__name__)
 KITTI_COLUMNS = [
@@ -106,7 +107,7 @@ def import_mask_predictions(
 
 
     """
-    label_rows = download_all_label_rows(project, cache_dir=cache_dir)
+    label_rows = download_all_label_rows(project, ProjectFileStructure(cache_dir))
     du_hash_lookup: Dict[str, Tuple[str, int]] = {}
 
     if not class_map:

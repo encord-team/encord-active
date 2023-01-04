@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 class LabelRowStructure(NamedTuple):
     path: Path
-    images: Path
+    images_dir: Path
     label_row_file: Path
 
 
@@ -46,4 +46,4 @@ class ProjectFileStructure:
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
         path = self.data / label_hash
-        return LabelRowStructure(path, path / "images", path / "label_row.json")
+        return LabelRowStructure(path=path, images_dir=path / "images", label_row_file=path / "label_row.json")

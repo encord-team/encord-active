@@ -84,7 +84,7 @@ class EncordActions:
 
             if label_row_hash not in uploaded_label_rows:
                 if label_row["data_type"] == DataType.IMAGE.value:
-                    image_path = list(label_row_structure.images.glob(f"{data_unit_hash}.*"))[0]
+                    image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
                     uploaded_image: Image = dataset.upload_image(
                         file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
                     )
@@ -99,7 +99,7 @@ class EncordActions:
                     image_names = []
                     if len(label_hash_to_data_units[label_row_hash]) > 0:
                         for data_unit in label_hash_to_data_units[label_row_hash]:
-                            img_path = list(label_row_structure.images.glob(f"{data_unit}.*"))[0]
+                            img_path = list(label_row_structure.images_dir.glob(f"{data_unit}.*"))[0]
                             image_paths.append(img_path.as_posix())
                             image_names.append(img_path.name)
 
@@ -113,7 +113,7 @@ class EncordActions:
                         )
 
                 elif label_row["data_type"] == DataType.VIDEO.value:
-                    video_path = list(label_row_structure.images.glob(f"{data_unit_hash}.*"))[0].as_posix()
+                    video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
 
                     # Unfortunately the following function does not return metadata related to the uploaded items
                     dataset.upload_video(
