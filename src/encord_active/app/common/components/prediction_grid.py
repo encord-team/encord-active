@@ -5,7 +5,6 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
-from encord_active.app.common import state
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.paginator import render_pagination
 from encord_active.app.common.components.slicer import render_df_slicer

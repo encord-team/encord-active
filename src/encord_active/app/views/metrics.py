@@ -1,5 +1,3 @@
-import streamlit as st
-
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
