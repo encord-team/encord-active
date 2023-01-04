@@ -25,18 +25,18 @@ class AnnotationType:
     NONE = None
     OBJECT = ObjectShape
     CLASSIFICATION = ClassificationType
-    ALL = [OBJECT, CLASSIFICATION]
+    ALL = [*OBJECT, *CLASSIFICATION]
 
 
 class EmbeddingType(Enum):
     CLASSIFICATION = "classification"
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
-    NONE = "none"
 
 
 class MetricMetadata(TypedDict):
     annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]]
+    embedding_type: Optional[str]
     data_type: DataType
     long_description: str
     metric_type: MetricType

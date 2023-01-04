@@ -1,11 +1,18 @@
 import os
 import pickle
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
 
 import faiss
 import numpy as np
 from faiss import IndexFlatL2
+
+
+class ClassificationAnswer(TypedDict):
+    answer_featureHash: str
+    answer_name: str
+    annotator: str
 
 
 class LabelEmbedding(TypedDict):
@@ -17,11 +24,17 @@ class LabelEmbedding(TypedDict):
     featureHash: str
     name: str
     dataset_title: str
+    classification_answers: Optional[dict[str, ClassificationAnswer]]
     embedding: np.ndarray
 
 
-def get_collections(embedding_name: str, embeddings_dir: Path) -> list[LabelEmbedding]:
-    embedding_path = embeddings_dir / embedding_name
+class EmbeddingTarget(Enum):
+    CLASSIFICATIONS = "classifications"
+    OBJECTS = "objects"
+
+
+def get_collections(embedding_name: EmbeddingTarget, embeddings_dir: Path) -> list[LabelEmbedding]:
+    embedding_path = embeddings_dir / f"cnn_{embedding_name.value}.pkl"
     collections = []
     if os.path.isfile(embedding_path):
         with open(embedding_path, "rb") as f:
@@ -29,7 +42,9 @@ def get_collections(embedding_name: str, embeddings_dir: Path) -> list[LabelEmbe
     return collections
 
 
-def get_collections_and_metadata(embedding_name: str, embeddings_dir: Path) -> Tuple[list[LabelEmbedding], dict]:
+def get_collections_and_metadata(
+    embedding_name: EmbeddingTarget, embeddings_dir: Path
+) -> Tuple[list[LabelEmbedding], dict]:
     try:
         collections = get_collections(embedding_name, embeddings_dir)
 
