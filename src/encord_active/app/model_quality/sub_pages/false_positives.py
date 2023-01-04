@@ -1,13 +1,23 @@
-import pandas as pd
 import streamlit as st
+from pandera.typing import DataFrame
 
-from encord_active.app.common.colors import Color
-from encord_active.app.model_quality.components import metric_view
+from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.app.common.state import get_state
+from encord_active.lib.charts.histogram import get_histogram
+from encord_active.lib.common.colors import Color
+from encord_active.lib.model_predictions.map_mar import (
+    PerformanceMetricSchema,
+    PrecisionRecallSchema,
+)
+from encord_active.lib.model_predictions.reader import (
+    LabelMatchSchema,
+    PredictionMatchSchema,
+)
 
-from . import HistogramMixin, ModelQualityPage
+from . import ModelQualityPage
 
 
-class FalsePositivesPage(ModelQualityPage, HistogramMixin):
+class FalsePositivesPage(ModelQualityPage):
     title = "🌡 False Positives"
 
     def sidebar_options(self):
@@ -16,11 +26,16 @@ class FalsePositivesPage(ModelQualityPage, HistogramMixin):
 
     def build(
         self,
-        model_predictions: pd.DataFrame,
-        labels: pd.DataFrame,
-        metrics: pd.DataFrame,
-        precisions: pd.DataFrame,
+        model_predictions: DataFrame[PredictionMatchSchema],
+        labels: DataFrame[LabelMatchSchema],
+        metrics: DataFrame[PerformanceMetricSchema],
+        precisions: DataFrame[PrecisionRecallSchema],
     ):
+        metric_name = get_state().predictions.metric_datas.selected_predicion
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
         st.markdown(f"# {self.title}")
         color = Color.RED
         with st.expander("Details"):
@@ -41,11 +56,12 @@ The remaining colors correspond to the dataset labels with the colors you are us
             )
             self.metric_details_description()
 
-        metric_name = st.session_state.predictions_metric
-        fp_df = model_predictions[model_predictions["tps"] == 0.0].dropna(subset=[metric_name])
+        fp_df = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == 0.0].dropna(
+            subset=[metric_name]
+        )
         if fp_df.shape[0] == 0:
             st.write("No false positives")
         else:
-            histogram = self.get_histogram(fp_df, metric_name)
+            histogram = get_histogram(fp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            metric_view(fp_df, box_color=color)
+            prediction_grid(get_state().project_paths.data, model_predictions=fp_df, box_color=color)

@@ -339,7 +339,7 @@ Sessionx.vim
 # Temporary
 .netrwhist
 # Auto-generated tag files
-tags
+# tags
 # Persistent undo
 [._]*.un~
 
@@ -348,9 +348,7 @@ tags
 
 .idea
 
-/viewer/outputs/
-/outputs/
-/viewer/pages/outputs/
 /local_tests/
 
 imports.prof
+ci-tests

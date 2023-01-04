@@ -27,7 +27,7 @@ def print_encord_projects(
     > encord-active print encord-projects --query "%validation%"
 
     """
-    from encord_active.lib.encord.project import get_projects_json
+    from encord_active.lib.encord.utils import get_projects_json
 
     json_projects = get_projects_json(app_config.get_or_query_ssh_key(), query)
     if state.get("json_output"):
@@ -44,7 +44,7 @@ def print_ontology(
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
-    from encord_active.app.common.cli_helpers import get_local_project
+    from encord_active.lib.common.utils import get_local_project
 
     project = get_local_project(target)
     objects = project.ontology["objects"]

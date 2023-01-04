@@ -80,7 +80,7 @@ That is:
 - `h`: box pixel height / image height
 
 ```python
-from encord_active.app.db.predictions import BoundingBox, Prediction, Format
+from encord_active.lib.db.predictions import BoundingBox, Prediction, Format
 
 prediction = Prediction(
     data_hash =  "<your_data_hash>",
@@ -112,7 +112,7 @@ BoundingBox(x=10/img_w, y=25/img_h, w=200/img_w, h=150/img_h)
 You specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
 
 ```python
-from encord_active.app.db.predictions import Prediction, Format
+from encord_active.lib.db.predictions import Prediction, Format
 
 prediction = Prediction(
     data_hash =  "<your_data_hash>",
@@ -136,7 +136,7 @@ That is, an array of relative (`x`, `y`) coordinates:
 - `y`: relative y-coordinate of each point of the polygon (pixel coordinate / image height)
 
 ```python
-from encord_active.app.db.predictions import Prediction, Format
+from encord_active.lib.db.predictions import Prediction, Format
 import numpy as np
 
 polygon = np.array([
@@ -182,7 +182,7 @@ You can copy the appropriate snippet based on your prediction format from above 
 Note the highlighted line, which defines where the `.pkl` file will be stored.
 
 ```python showLineNumbers
-from encord_active.app.db.predictions import Prediction, Format
+from encord_active.lib.db.predictions import Prediction, Format
 
 predictions_to_store = []
 
@@ -224,7 +224,7 @@ The code would change to something similar to this:
 
 ```python
 # highlight-next-line
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 def predict(test_loader):
     # highlight-next-line
@@ -367,7 +367,7 @@ To import the predictions, you do the following
 import json
 
 from encord_active.lib.model_predictions.importers import import_KITTI_labels
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 # highlight-next-line
 predictions_root = Path("/path/to/your/predictions")
@@ -416,7 +416,7 @@ You can use this template where the highlighted lined are what you need to chang
 
 ```python
 from encord_active.lib.model_predictions.importers import import_mask_predictions
-from encord_active.lib.model_predictions.prediction_writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import PredictionWriter
 
 # highlight-start
 class_map = {
@@ -470,7 +470,7 @@ For this, you can use these lines of code:
 
 ```python
 from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.metrics.run_all import run_metrics
+from encord_active.lib.metrics.execute import run_metrics
 
 run_metrics(data_dir=data_dir, iterator_cls=PredictionIterator)
 ```

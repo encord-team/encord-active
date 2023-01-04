@@ -1,8 +1,13 @@
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -18,7 +23,7 @@ If no logs are available for a particular object, it will get score 0."""
     ANNOTATION_TYPE = AnnotationType.ALL
     SCORE_NORMALIZATION = True
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         found_any = False
 
         for data_unit, img_pth in iterator.iterate(desc="Computing annotation times"):
