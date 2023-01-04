@@ -65,7 +65,7 @@ def polyobj_to_nparray(o: dict, width: int, height: int) -> np.ndarray:
 
 def points_to_mask(points: np.ndarray, width: int, height: int):
     mask = np.zeros((height, width), dtype=np.uint8)
-    mask = cv2.fillPoly(mask, [points.astype(int)], 1)  # type: ignore
+    mask = cv2.fillPoly(mask, [(points*np.array([[width, height]])).astype(int)], 1)  # type: ignore
     return mask
 
 
