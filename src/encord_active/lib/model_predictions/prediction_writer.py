@@ -273,7 +273,7 @@ class PredictionWriter:
                 row[LKey.X2.value] = x2  # bbox.x2
                 row[LKey.Y2.value] = y2  # bbox.y2
 
-                mask = points_to_mask(points, width=width, height=height)
+                mask = points_to_mask(points.astype(int), width=width, height=height)
                 row[LKey.RLE.value] = binary_mask_to_rle(mask)
             else:
                 # Only supporting polygons and bounding boxes.
