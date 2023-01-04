@@ -18,7 +18,7 @@ from PIL import Image
 from tqdm import tqdm
 
 from encord_active.lib.model_predictions.writer import PredictionWriter
-from encord_active.lib.project import Project, ProjectFileStructure
+from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
 KITTI_COLUMNS = [
