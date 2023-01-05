@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.elements.image as st_image
 from PIL import Image
 
-from encord_active.app.common.colors import Color
+from encord_active.lib.common.colors import Color
 
 
 def write_page_css():

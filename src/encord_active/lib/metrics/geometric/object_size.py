@@ -2,13 +2,18 @@ from loguru import logger
 from shapely.ops import unary_union
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
 from encord_active.lib.common.utils import (
     get_bbox_from_encord_label_object,
     get_du_size,
     get_polygon,
 )
-from encord_active.lib.common.writer import CSVMetricWriter
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -35,7 +40,7 @@ class RelativeObjectAreaMetric(Metric):
         AnnotationType.OBJECT.POLYGON,
     ]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 
@@ -65,7 +70,7 @@ class OccupiedTotalAreaMetric(Metric):
         AnnotationType.OBJECT.POLYGON,
     ]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 
@@ -101,7 +106,7 @@ class AbsoluteObjectAreaMetric(Metric):
         AnnotationType.OBJECT.POLYGON,
     ]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 
@@ -137,7 +142,7 @@ class ObjectAspectRatioMetric(Metric):
         AnnotationType.OBJECT.POLYGON,
     ]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 

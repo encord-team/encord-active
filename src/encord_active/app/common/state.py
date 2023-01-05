@@ -1,20 +1,75 @@
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
+import pandas as pd
 import streamlit as st
+from pandera.typing import DataFrame
 
-# CONSTANTS
-PROJECT_CACHE_FILE = Path.home() / ".encord_quality" / "current_project_dir.txt"
+from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tag, Tags
+from encord_active.lib.metrics.utils import MetricData
+from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
-# DATABASE
-DB_FILE_NAME = "sqlite.db"
+GLOBAL_STATE = "global_state"
 
-# STATE VARIABLE KEYS
-CLASS_SELECTION = "class_selection"
-IGNORE_FRAMES_WO_PREDICTIONS = "ignore_frames_wo_predictions"
-IOU_THRESHOLD = "iou_threshold_scaled"  # After normalization
-IOU_THRESHOLD_ = "iou_threshold_"  # Before normalization
-MERGED_DATAFRAME = "merged_dataframe"
-ALL_TAGS = "all_tags"
+
+@dataclass
+class MetricNames:
+    predictions: Dict[str, MetricData] = field(default_factory=dict)
+    selected_predicion: Optional[str] = None
+    labels: Dict[str, MetricData] = field(default_factory=dict)
+    selected_label: Optional[str] = None
+
+
+@dataclass
+class PredictionsState:
+    decompose_classes = False
+    metric_datas = MetricNames()
+    all_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    selected_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    labels: Optional[DataFrame[LabelSchema]] = None
+    nbins = 50
+
+
+@dataclass
+class PageGridSettings:
+    columns: int = 4
+    rows: int = 5
+
+
+@dataclass
+class State:
+    """This is not intended for usage, please use the `get_state` constant instead."""
+
+    project_paths: ProjectFileStructure
+    all_tags: List[Tag]
+    merged_metrics: pd.DataFrame
+    ignore_frames_without_predictions = False
+    iou_threshold = 0.5
+    selected_metric: Optional[MetricData] = None
+    page_grid_settings = PageGridSettings()
+    normalize_metrics = False
+    predictions = PredictionsState()
+
+    @classmethod
+    def init(cls, project_dir: Path):
+        if GLOBAL_STATE in st.session_state:
+            return
+
+        st.session_state[GLOBAL_STATE] = State(
+            project_paths=ProjectFileStructure(project_dir),
+            merged_metrics=MergedMetrics().all(),
+            all_tags=Tags().all(),
+        )
+
+
+def get_state() -> State:
+    return st.session_state.get(GLOBAL_STATE)  # type: ignore
+
+
+# EVERYTHING BELOW SHOULD BE DEPRACATED
 
 # SIMILARITY KEYS
 OBJECT_KEYS_HAVING_SIMILARITIES = "object_keys_having_similarities"
@@ -29,61 +84,10 @@ CURRENT_INDEX_HAS_ANNOTATION = "current_index_has_annotation"
 QUESTION_HASH_TO_COLLECTION_INDEXES = "question_hash_to_collection_indexes"
 COLLECTIONS_IMAGES = "collections_images"
 COLLECTIONS_OBJECTS = "collections_objects"
-
-
-# DATA QUALITY PAGE
-DATA_PAGE_METRIC = "data_page_metric"  # metric
-DATA_PAGE_METRIC_NAME = "data_page_metric_name"  # metric name
-DATA_PAGE_CLASS = "data_page_class_selection"  # class
-DATA_PAGE_ANNOTATOR = "data_page_annotator_selection"  # annotator
-
-
-# PREDICTIONS PAGE
-PREDICTIONS_LABEL_METRIC = "predictions_label_metric"
-PREDICTIONS_DECOMPOSE_CLASSES = "predictions_decompose_classes"
-PREDICTIONS_METRIC = "predictions_metric"
-PREDICTIONS_NBINS = "predictions_nbins"
-
-# TILING & PAGINATION
-MAIN_VIEW_COLUMN_NUM = "main_view_column_num"
-MAIN_VIEW_ROW_NUM = "main_view_row_num"
 K_NEAREST_NUM = "k_nearest_num"
 
-METRIC_VIEW_PAGE_NUMBER = "metric_view_page_number"
-FALSE_NEGATIVE_VIEW_PAGE_NUMBER = "false_negative_view_page_number"
 
-NORMALIZATION_STATUS = "normalization_status"
-METRIC_METADATA_SCORE_NORMALIZATION = "score_normalization"
-
-# Export page
-NUMBER_OF_PARTITIONS = "number_of_partitions"
-ACTION_PAGE_CLONE_BUTTON = "action_page_clone_button"
-ACTION_PAGE_PREVIOUS_FILTERED_NUM = "action_page_previous_filtered"
-
-
-def set_project_dir(project_dir: str) -> bool:
-    _project_dir = Path(project_dir).expanduser().absolute()
-
-    if not _project_dir.is_dir():
-        return False
-    else:
-        PROJECT_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with PROJECT_CACHE_FILE.open("w", encoding="utf-8") as f:
-            f.write(_project_dir.as_posix())
-        st.session_state.project_dir = _project_dir
-        return True
-
-
-def populate_session_state():
-    if "project_dir" not in st.session_state:
-        # Try using a cached one
-        if PROJECT_CACHE_FILE.is_file():
-            with PROJECT_CACHE_FILE.open("r", encoding="utf-8") as f:
-                st.session_state.project_dir = Path(f.readline())
-
-    st.session_state.metric_dir = st.session_state.project_dir / "metrics"
-    st.session_state.embeddings_dir = st.session_state.project_dir / "embeddings"
-    st.session_state.predictions_dir = st.session_state.project_dir / "predictions"
-    st.session_state.data_dir = st.session_state.project_dir / "data"
-    st.session_state.ontology_file = st.session_state.project_dir / "ontology.json"
-    st.session_state.db_path = st.session_state.project_dir / DB_FILE_NAME
+def setdefault(key: str, fn: Callable, *args, **kwargs) -> Any:
+    if not key in st.session_state:
+        st.session_state[key] = fn(*args, **kwargs)
+    return st.session_state.get(key)

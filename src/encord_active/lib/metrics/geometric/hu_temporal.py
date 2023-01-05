@@ -4,9 +4,14 @@ import numpy as np
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.metric import AnnotationType, DataType, Metric, MetricType
-from encord_active.lib.common.writer import CSVMetricWriter
-from encord_active.lib.embeddings.hu_embed import get_hu_embeddings
+from encord_active.lib.embeddings.hu_moments import get_hu_embeddings
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
+from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -43,15 +48,15 @@ class MomentStore:
 class HuMomentsTemporalMetric(Metric):
     TITLE = "Polygon Shape Similarity"
     SHORT_DESCRIPTION = "Ranks objects by how similar they are to their instances in previous frames."
-    LONG_DESCRIPTION = r"""Ranks objects by how similar they are to their instances in previous frames 
-based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes, 
+    LONG_DESCRIPTION = r"""Ranks objects by how similar they are to their instances in previous frames
+based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes,
 the lower its score will be."""
     SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]
 
-    def test(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 
