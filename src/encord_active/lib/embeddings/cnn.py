@@ -16,7 +16,7 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
-from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -84,7 +84,7 @@ def generate_cnn_embeddings(iterator: Iterator, filepath: str) -> None:
     start = time.perf_counter()
     feature_extractor, transforms = get_model_and_transforms()
 
-    collections = []
+    collections: List[LabelEmbedding] = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding object data."):
         if img_pth is None:
             continue
@@ -102,15 +102,17 @@ def generate_cnn_embeddings(iterator: Iterator, filepath: str) -> None:
                 last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
 
                 entry = LabelEmbedding(
+                    url=data_unit["data_link"],
                     label_row=iterator.label_hash,
                     data_unit=data_unit["data_hash"],
                     frame=iterator.frame,
-                    objectHash=obj["objectHash"],
+                    labelHash=obj["objectHash"],
                     lastEditedBy=last_edited_by,
                     featureHash=obj["featureHash"],
                     name=obj["name"],
                     dataset_title=iterator.dataset_title,
                     embedding=emb,
+                    classification_answers=None,
                 )
 
                 collections.append(entry)
@@ -146,40 +148,52 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
     for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
         if not img_pth:
             continue
-        temp_entry = {}
-        temp_entry["label_row"] = iterator.label_hash
-        temp_entry["data_unit"] = data_unit["data_hash"]
-        temp_entry["frame"] = str(iterator.frame)
-        temp_entry["url"] = data_unit["data_link"]
-
-        temp_classification_hash = {}
-        classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
-        for classification in data_unit["labels"].get("classifications", []):
-
-            classification_hash = classification["classificationHash"]
-            ontology_class_hash = classification["featureHash"]
-            if ontology_class_hash in ontology_class_hash_to_index.keys():
-                for classification_answer in classification_answers[classification_hash]["classifications"]:
-                    if (
-                        classification_answer["featureHash"]
-                        == ontology_class_hash_to_question_hash[ontology_class_hash]
-                    ):
-                        temp_classification_hash[ontology_class_hash] = {
-                            "answer_featureHash": classification_answer["answers"][0]["featureHash"],
-                            "answer_name": classification_answer["answers"][0]["name"],
-                            "annotator": classification["createdBy"],
-                        }
-
-        temp_entry["classification_answers"] = temp_classification_hash  # type: ignore[assignment]
 
         image = image_path_to_tensor(img_pth)
         transformed_image = transforms(image).unsqueeze(0)
         embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
         embedding = torch.flatten(embedding).cpu().detach().numpy()
 
-        temp_entry["embedding"] = embedding
+        classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
+        for classification in data_unit["labels"].get("classifications", []):
 
-        collections.append(LabelEmbedding(temp_entry))  # type: ignore
+            last_edited_by = (
+                classification["lastEditedBy"]
+                if "lastEditedBy" in classification.keys()
+                else classification["createdBy"]
+            )
+            classification_hash = classification["classificationHash"]
+            ontology_class_hash = classification["featureHash"]
+
+            answers: List[ClassificationAnswer] = []
+            if ontology_class_hash in ontology_class_hash_to_index.keys():
+                for classification_answer in classification_answers[classification_hash]["classifications"]:
+                    if (
+                        classification_answer["featureHash"]
+                        == ontology_class_hash_to_question_hash[ontology_class_hash]
+                    ):
+                        answers.append(
+                            ClassificationAnswer(
+                                answer_featureHash=classification_answer["answers"][0]["featureHash"],
+                                answer_name=classification_answer["answers"][0]["name"],
+                                annotator=classification["createdBy"],
+                            )
+                        )
+
+            entry = LabelEmbedding(
+                url=data_unit["data_link"],
+                label_row=iterator.label_hash,
+                data_unit=data_unit["data_hash"],
+                frame=iterator.frame,
+                labelHash=classification_hash,
+                lastEditedBy=last_edited_by,
+                featureHash=ontology_class_hash,
+                name=classification["name"],
+                dataset_title=iterator.dataset_title,
+                embedding=embedding,
+                classification_answers=answers[0],
+            )
+            collections.append(entry)
 
     with open(filepath, "wb") as f:
         pickle.dump(collections, f)

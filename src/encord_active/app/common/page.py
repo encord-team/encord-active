@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 import streamlit as st
 
-import encord_active.app.common.state as state
 from encord_active.app.common.state import get_state
 
 

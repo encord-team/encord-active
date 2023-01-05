@@ -16,11 +16,7 @@ from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
 from encord_active.app.common.components.paginator import render_pagination
-from encord_active.app.common.components.similarities import (
-    show_similar_classification_images,
-    show_similar_images,
-    show_similar_object_images,
-)
+from encord_active.app.common.components.similarities import show_similarities
 from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
@@ -36,21 +32,8 @@ from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
-from encord_active.lib.embeddings.embedding import EmbeddingInformation
-from encord_active.lib.embeddings.utils import (
-    EmbeddingTarget,
-    get_collections,
-    get_collections_and_metadata,
-    get_faiss_index_image,
-    get_faiss_index_object,
-    get_image_keys_having_similarities,
-    get_object_keys_having_similarities,
-)
-from encord_active.lib.metrics.metric import (
-    AnnotationType,
-    EmbeddingType,
-    MetricMetadata,
-)
+from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
@@ -142,11 +125,9 @@ class ExplorerPage(Page):
 
 # TODO: move me to lib
 def get_embedding_type(metric_title: str, annotation_type: Optional[List[Any]]) -> EmbeddingType:
-    if (
-        annotation_type is None
-        or (len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value))
-        or (metric_title in ["Frame object density", "Object Count"])
-    ):  # TODO find a better way to filter these later because titles can change
+    if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
+        return EmbeddingType.NONE
+    elif len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value):
         return EmbeddingType.CLASSIFICATION
     else:
         return EmbeddingType.OBJECT
@@ -157,18 +138,15 @@ def fill_data_quality_window(
 ):
     meta = selected_metric.meta
     embedding_type = get_embedding_type(meta["title"], meta["annotation_type"])
-    embedding_information = EmbeddingInformation(embedding_type)
-    try:
-        populate_embedding_information(embedding_information, meta)
+    embeddings_dir = get_state().project_paths.embeddings
+    embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
 
-        if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
-            st.write("Image-level embedding file is not available for this project.")
-            return
-        if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
-            st.write("Object-level embedding file is not available for this project.")
-            return
-    except:
-        st.write("Bad embedding type")
+    if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
+        st.write("Image-level embedding file is not available for this project.")
+        return
+    if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
+        st.write("Object-level embedding file is not available for this project.")
+        return
 
     n_cols = get_state().page_grid_settings.columns
     n_rows = get_state().page_grid_settings.rows
@@ -206,44 +184,13 @@ def fill_data_quality_window(
                 build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
 
 
-def populate_embedding_information(embedding_information: EmbeddingInformation, meta: MetricMetadata):
-    embeddings_dir = get_state().project_paths.embeddings
-
-    if embedding_information.type == EmbeddingType.CLASSIFICATION:
-        if meta["title"] == "Image-level Annotation Quality":
-            collections, question_hash_to_collection_indexes = get_collections_and_metadata(
-                EmbeddingTarget.CLASSIFICATIONS, embeddings_dir
-            )
-            embedding_information.collections = collections
-            embedding_information.question_hash_to_collection_indexes = question_hash_to_collection_indexes
-            embedding_information.keys_having_similarity = get_image_keys_having_similarities(collections)
-            embedding_information.faiss_index_mapping = get_faiss_index_image(
-                collections, question_hash_to_collection_indexes
-            )
-            embedding_information.has_annotations = True
-            for question_hash in embedding_information.question_hash_to_collection_indexes.keys():
-                embedding_information.similarities[question_hash] = {}
-        else:
-            collections = get_collections(EmbeddingTarget.CLASSIFICATIONS, embeddings_dir)
-            embedding_information.collections = collections
-            embedding_information.keys_having_similarity = get_image_keys_having_similarities(collections)
-            embedding_information.faiss_index = get_faiss_index_object(collections)
-
-    elif embedding_information.type == EmbeddingType.OBJECT:
-        collections = get_collections(EmbeddingTarget.OBJECTS, embeddings_dir)
-        embedding_information.collections = collections
-        embedding_information.keys_having_similarity = get_object_keys_having_similarities(collections)
-        embedding_information.faiss_index = get_faiss_index_object(collections)
-        embedding_information.has_annotations = True
-
-
 class LabelType(Enum):
     OBJECT = "object"
     CLASSIFICATION = "classification"
 
 
 def build_card(
-    embedding_information: EmbeddingInformation,
+    embedding_information: SimilaritiesFinder,
     card_no: int,
     row: Series,
     similarity_expanders: list[DeltaGenerator],
@@ -255,21 +202,15 @@ def build_card(
     """
     data_dir = get_state().project_paths.data
 
-    if embedding_information.type == EmbeddingType.CLASSIFICATION:
+    identifier_parts = 4 if embedding_information.has_annotations else 3
+    identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
+
+    if embedding_information.type in [EmbeddingType.NONE, EmbeddingType.CLASSIFICATION]:
         button_name = "show similar images"
-        if metric.meta["title"] == "Image-level Annotation Quality":
-            image = load_or_fill_image(row, data_dir)
-            similarity_callback = show_similar_classification_images
-        else:
-            if metric.meta["annotation_type"] is None:
-                image = load_or_fill_image(row, data_dir)
-            else:
-                image = show_image_and_draw_polygons(row, data_dir)
-            similarity_callback = show_similar_images
+        image = load_or_fill_image(row, data_dir)
     elif embedding_information.type == EmbeddingType.OBJECT:
-        image = show_image_and_draw_polygons(row, data_dir)
         button_name = "show similar objects"
-        similarity_callback = show_similar_object_images
+        image = show_image_and_draw_polygons(row, data_dir)
     else:
         st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return
@@ -282,8 +223,8 @@ def build_card(
     st.button(
         str(button_name),
         key=f"similarity_button_{row['identifier']}",
-        on_click=similarity_callback,
-        args=(row, target_expander, embedding_information),
+        on_click=show_similarities,
+        args=(identifier, target_expander, embedding_information),
     )
 
     # === Write scores and link to editor === #

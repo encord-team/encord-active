@@ -32,6 +32,7 @@ class EmbeddingType(Enum):
     CLASSIFICATION = "classification"
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
+    NONE = "none"
 
 
 class MetricMetadata(TypedDict):

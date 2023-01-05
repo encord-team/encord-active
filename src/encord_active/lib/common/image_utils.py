@@ -96,13 +96,16 @@ def show_image_and_draw_polygons(
     row: Union[Series, str], data_dir: Path, draw_polygons: bool = True, skip_object_hash: bool = False
 ) -> np.ndarray:
     image = load_or_fill_image(row, data_dir)
+
+    if not draw_polygons:
+        return image
+
     is_closed = True
     thickness = get_polygon_thickness(image.shape[1])
 
     img_h, img_w = image.shape[:2]
-    if draw_polygons:
-        for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
-            image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
+    for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
+        image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
 
     return image
 

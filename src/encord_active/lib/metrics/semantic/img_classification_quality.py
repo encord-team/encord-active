@@ -11,6 +11,7 @@ from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
@@ -46,13 +47,13 @@ class ImageLevelQualityTest(Metric):
         the annotation
         """
         super(ImageLevelQualityTest, self).__init__()
-        self.collections: list[dict] = []
+        self.collections: list[LabelEmbedding] = []
         self.featureNodeHash_to_index: dict[str, dict] = {}
         self.featureNodeHash_to_name: dict[str, dict] = {}
         self.featureNodeHash_to_question_name: dict[str, str] = {}
         self.index_to_answer_name: dict[str, dict] = {}
         self.identifier_to_embedding: dict[str, np.ndarray] = {}
-        self.question_hash_to_collection_indexes: dict[str, list] = {}
+        # self.question_hash_to_collection_indexes: dict[str, list] = {}
         self.cache_dir: Path = Path()
         self.num_nearest_neighbors = num_nearest_neighbors
         self.certainty_ratio = certainty_ratio
@@ -80,11 +81,11 @@ class ImageLevelQualityTest(Metric):
 
     def convert_to_indexes(self):
         embedding_databases, indexes = {}, {}
+        question_hashes = {c["featureHash"] for c in self.collections}
 
-        for question_hash in self.featureNodeHash_to_name.keys():
-            selected_collections = [
-                self.collections[i] for i in self.question_hash_to_collection_indexes[question_hash]
-            ]
+        for question_hash in question_hashes:
+            selected_collections = list(filter(lambda c: c["featureHash"] == question_hash, self.collections))
+
             if len(selected_collections) > self.num_nearest_neighbors:
                 embedding_database = np.stack(list(map(lambda x: x["embedding"], selected_collections)))
 
@@ -115,10 +116,7 @@ class ImageLevelQualityTest(Metric):
         for question in nearest_indexes:
             noisy_labels_list = []
             for i in range(nearest_indexes[question].shape[0]):
-                collection_index = self.question_hash_to_collection_indexes[question][i]
-                answer_featureHash = self.collections[collection_index]["classification_answers"][question][
-                    "answer_featureHash"
-                ]
+                answer_featureHash = self.collections[i]["classification_answers"]["answer_featureHash"]
                 gt_label = self.featureNodeHash_to_index[question][answer_featureHash]
                 noisy_labels_list.append(gt_label)
 
@@ -169,42 +167,20 @@ class ImageLevelQualityTest(Metric):
             key = f"{label_hash}_{du_hash}_{frame_idx:05d}"
 
             temp_entry = {}
-            for question in collection["classification_answers"]:
-                if question in collections_scores_all_questions:
-                    sub_collection_index = self.question_hash_to_collection_indexes[question].index(i)
-                    score = collections_scores_all_questions[question][sub_collection_index]
+            question = collection["featureHash"]
+            if question in collections_scores_all_questions:
+                # sub_collection_index = self.question_hash_to_collection_indexes[question].index(i)
+                score = collections_scores_all_questions[question][i]
 
-                    temp_entry[question] = {
-                        "score": score,
-                        "description": self.extract_description_info(
-                            question, nearest_labels_all_questions[question], sub_collection_index
-                        ),
-                        "class_name": self.featureNodeHash_to_question_name[question],
-                        "annotator": collection["classification_answers"][question]["annotator"],
-                    }
+                temp_entry[question] = {
+                    "score": score,
+                    "description": self.extract_description_info(question, nearest_labels_all_questions[question], i),
+                    "class_name": self.featureNodeHash_to_question_name[question],
+                    "annotator": collection["classification_answers"]["annotator"],
+                }
 
             key_score_pairs[key] = temp_entry
         return key_score_pairs
-
-    def build_question_hash_to_collection_index(self):
-        target_folder = os.path.join(self.cache_dir, "embeddings")
-        embedding_metadata_path = os.path.join(target_folder, "embedding_classifications_metadata.pkl")
-        if os.path.isfile(embedding_metadata_path):
-            with open(embedding_metadata_path, "rb") as f:
-                self.question_hash_to_collection_indexes = pickle.load(f)
-        else:
-            for question_hash in self.featureNodeHash_to_name.keys():
-                self.question_hash_to_collection_indexes[question_hash] = []
-
-            for i, collection in enumerate(self.collections):
-                for question_hash in self.featureNodeHash_to_name.keys():
-                    if question_hash in collection["classification_answers"]:
-                        self.question_hash_to_collection_indexes[question_hash].append(i)
-
-            if not os.path.isdir(target_folder):
-                os.makedirs(target_folder)
-            with open(embedding_metadata_path, "wb") as f:
-                pickle.dump(self.question_hash_to_collection_indexes, f)
 
     def fix_nearest_indexes(self, nearest_indexes: dict[str, np.ndarray]) -> None:
         """
@@ -256,7 +232,7 @@ class ImageLevelQualityTest(Metric):
 
         self.collections = get_cnn_embeddings(iterator, embedding_type="classifications")
         if len(self.collections) > 0:
-            self.build_question_hash_to_collection_index()
+            # self.build_question_hash_to_collection_index()
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)
@@ -269,7 +245,7 @@ class ImageLevelQualityTest(Metric):
                         if question_featureHash in key_score_pairs[key]:
                             writer.write(
                                 key_score_pairs[key][question_featureHash]["score"],
-                                key=key + "_" + question_featureHash,
+                                key=key + "_" + classification["classificationHash"],
                                 description=key_score_pairs[key][question_featureHash]["description"],
                                 labels=classification,
                             )
