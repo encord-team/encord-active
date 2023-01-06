@@ -22,9 +22,9 @@ class LabelEmbedding(TypedDict):
     frame: int
     url: str
     labelHash: Optional[str]
-    lastEditedBy: str
-    featureHash: str
-    name: str
+    lastEditedBy: Optional[str]
+    featureHash: Optional[str]
+    name: Optional[str]
     dataset_title: str
     embedding: np.ndarray
     classification_answers: Optional[ClassificationAnswer]

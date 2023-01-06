@@ -154,6 +154,21 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
         embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
         embedding = torch.flatten(embedding).cpu().detach().numpy()
 
+        entry = LabelEmbedding(
+            url=data_unit["data_link"],
+            label_row=iterator.label_hash,
+            data_unit=data_unit["data_hash"],
+            frame=iterator.frame,
+            labelHash=None,
+            lastEditedBy=None,
+            featureHash=None,
+            name=None,
+            dataset_title=iterator.dataset_title,
+            embedding=embedding,
+            classification_answers=None,
+        )
+        collections.append(entry)
+
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
 

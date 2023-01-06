@@ -236,7 +236,6 @@ class ImageLevelQualityTest(Metric):
 
         self.collections = get_cnn_embeddings(iterator, embedding_type="classifications")
         if len(self.collections) > 0:
-            # self.build_question_hash_to_collection_index()
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)
