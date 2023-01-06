@@ -10,7 +10,7 @@ from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.lib.project import ProjectFileStructure
 
 GLOBAL_STATE = "global_state"
 

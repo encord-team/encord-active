@@ -14,7 +14,7 @@ from encord.orm.label_log import LabelLog
 from loguru import logger
 from tqdm.auto import tqdm
 
-from encord_active.lib.project.project import Project
+from encord_active.lib.project import Project
 
 
 class Iterator(Sized):
@@ -92,7 +92,7 @@ class DatasetIterator(Iterator):
 
                     image_path = None
                     if self.project.image_paths:
-                        image_folder = self.cache_dir / "data" / self.label_hash / "images"
+                        image_folder = self.project.file_structure.label_row_structure(self.label_hash).images_dir
                         image_path = next(image_folder.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
 
                     yield fake_data_unit, image_path

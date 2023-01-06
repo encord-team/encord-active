@@ -18,7 +18,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from encord_active.lib.model_predictions.writer import PredictionWriter
-from encord_active.lib.project.project import download_all_label_rows
+from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
 KITTI_COLUMNS = [
@@ -106,7 +106,7 @@ def import_mask_predictions(
 
 
     """
-    label_rows = download_all_label_rows(project, cache_dir=cache_dir)
+    label_rows = Project(cache_dir).from_encord_project(project).label_rows
     du_hash_lookup: Dict[str, Tuple[str, int]] = {}
 
     if not class_map:

@@ -5,7 +5,7 @@ import json
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import encord.exceptions
 import yaml
@@ -30,9 +30,8 @@ encord_logger.setLevel(logging.ERROR)
 
 class Project:
     def __init__(self, project_dir: Path):
-        self.project_dir: Path = project_dir
-        self.project_file_structure = ProjectFileStructure(project_dir)
-        self.project_meta = fetch_project_meta(self.project_file_structure.project_dir)
+        self.file_structure = ProjectFileStructure(project_dir)
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
@@ -49,12 +48,12 @@ class Project:
         if self.is_loaded:
             return self
 
-        if not self.project_dir.exists():
-            raise FileNotFoundError(f"`{self.project_dir}` does not exist")
-        if not self.project_dir.is_dir():
-            raise NotADirectoryError(f"`{self.project_dir}` does not point to a directory")
+        if not self.file_structure.project_dir.exists():
+            raise FileNotFoundError(f"`{self.file_structure.project_dir}` does not exist")
+        if not self.file_structure.project_dir.is_dir():
+            raise NotADirectoryError(f"`{self.file_structure.project_dir}` does not point to a directory")
 
-        self.project_meta = fetch_project_meta(self.project_dir)
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         self.project_hash = self.project_meta["project_hash"]
 
         self.__load_ontology()
@@ -73,12 +72,12 @@ class Project:
         if self.is_loaded:
             return self
 
-        self.project_dir.mkdir(parents=True, exist_ok=True)
+        self.file_structure.project_dir.mkdir(parents=True, exist_ok=True)
 
         # todo enforce clean up when we are sure it won't impact performance in other sections (like PredictionWriter)
         # also don't forget to add `from shutil import rmtree` at the top (pylint tags it as unused right now)
         # clean project_dir content
-        # for path in self.project_dir.iterdir():
+        # for path in self.file_structure.project_dir.iterdir():
         #     if path.is_file():
         #         path.unlink()
         #     elif path.is_dir():
@@ -106,7 +105,7 @@ class Project:
         )
 
     def __save_project_meta(self, encord_project: EncordProject):
-        project_meta_file_path = self.project_file_structure.project_meta
+        project_meta_file_path = self.file_structure.project_meta
         self.project_meta.update(
             {
                 "project_title": encord_project.title,
@@ -117,22 +116,22 @@ class Project:
         project_meta_file_path.write_text(yaml.safe_dump(self.project_meta), encoding="utf-8")
 
     def __save_ontology(self, encord_project: EncordProject):
-        ontology_file_path = self.project_file_structure.ontology
+        ontology_file_path = self.file_structure.ontology
         ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
 
     def __load_ontology(self):
-        ontology_file_path = self.project_file_structure.ontology
+        ontology_file_path = self.file_structure.ontology
         if not ontology_file_path.exists():
             raise FileNotFoundError(f"Expected file `ontology.json` at {ontology_file_path.parent}")
         self.ontology = OntologyStructure.from_dict(json.loads(ontology_file_path.read_text(encoding="utf-8")))
 
     def __save_label_row_meta(self, encord_project: EncordProject):
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta_file_path = self.project_file_structure.label_row_meta
+        label_row_meta_file_path = self.file_structure.label_row_meta
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
-        label_row_meta_file_path = self.project_file_structure.label_row_meta
+        label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_meta = {
@@ -143,91 +142,81 @@ class Project:
         }
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        label_rows = download_all_label_rows(encord_project, cache_dir=self.project_dir)
-        download_all_images(label_rows, cache_dir=self.project_dir)
+        label_rows = download_all_label_rows(encord_project, self.file_structure)
+        download_all_images(label_rows, self.file_structure)
 
     def __load_label_rows(self):
         self.label_rows = {}
         self.image_paths = {}
         for lr_hash in self.label_row_meta.keys():
-            lr_file_path = self.project_file_structure.label_row_structure(lr_hash).label_row_file
-            lr_images_dir = self.project_file_structure.data / lr_hash / "images"
-            if not lr_file_path.is_file() or not lr_images_dir.is_dir():
+            lr_structure = self.file_structure.label_row_structure(lr_hash)
+            if not lr_structure.label_row_file.is_file() or not lr_structure.images_dir.is_dir():
                 logger.warning(
-                    f"Skipping label row <blue>`{lr_hash}`</blue> as no stored content was found for the label row."
+                    f"Skipping label row <blue>`{lr_hash}`</blue> as its content wasn't found in the storage."
                 )
                 continue
-            self.label_rows[lr_hash] = LabelRow(json.loads(lr_file_path.read_text(encoding="utf-8")))
-            self.image_paths[lr_hash] = list(lr_images_dir.iterdir())
+            self.label_rows[lr_hash] = LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
+            self.image_paths[lr_hash] = list(lr_structure.images_dir.iterdir())
 
 
-def get_label_row(lr, client, cache_dir, refresh=False) -> Optional[LabelRow]:
-    if isinstance(cache_dir, str):
-        cache_dir = Path(cache_dir)
-
+def get_label_row(
+    lr, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
+) -> Optional[LabelRow]:
     if not lr["label_hash"]:
         return None
 
-    cache_pth = cache_dir / "data" / lr["label_hash"] / "label_row.json"
+    lr_structure = project_file_structure.label_row_structure(lr["label_hash"])
+    lr_structure.path.mkdir(parents=True, exist_ok=True)
 
-    if not refresh and cache_pth.is_file():
+    if not refresh and lr_structure.label_row_file.is_file():
         try:
-            with cache_pth.open("r") as f:
-                return LabelRow(json.load(f))
+            return LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
         except json.decoder.JSONDecodeError:
             pass
 
     try:
-        lr = client.get_label_row(lr["label_hash"])
+        lr = project.get_label_row(lr["label_hash"])
     except encord.exceptions.UnknownException:
         logger.warning(
-            f"Failed to download label row with label_hash <blue>`{lr['label_hash'][:8]}`</blue> and data_title <blue>`{lr['data_title']}`</blue>"
+            f"Failed to download label row with label_hash <blue>`{lr['label_hash']}`</blue> and data_title <blue>`{lr['data_title']}`</blue>"
         )
         return None
 
-    cache_pth.parent.mkdir(parents=True, exist_ok=True)
-    with cache_pth.open("w") as f:
-        json.dump(lr, f, indent=2)
-
+    lr_structure.label_row_file.write_text(json.dumps(lr, indent=2), encoding="utf-8")
     return lr
 
 
-def download_all_label_rows(client, subset_size: Optional[int] = None, **kwargs) -> Dict[str, LabelRow]:
-    label_rows = list(itertools.islice(filter(lambda x: x["label_hash"], client.label_rows), subset_size))
+def download_all_label_rows(
+    project: EncordProject, project_file_structure: ProjectFileStructure, subset_size: Optional[int] = None, **kwargs
+) -> Dict[str, LabelRow]:
+    label_rows = list(itertools.islice(filter(lambda x: x["label_hash"], project.label_rows), subset_size))
 
     return collect_async(
-        partial(get_label_row, client=client, **kwargs),
+        partial(get_label_row, project=project, project_file_structure=project_file_structure, **kwargs),
         label_rows,
         lambda lr: lr["label_hash"],
         desc="Collecting label rows from Encord SDK.",
     )
 
 
-def download_images_from_data_unit(lr, cache_dir, **kwargs) -> Optional[List[Path]]:
-    if isinstance(cache_dir, str):
-        cache_dir = Path(cache_dir)
-
+def download_images_from_data_unit(lr, project_file_structure: ProjectFileStructure) -> Optional[List[Path]]:
     label_hash = lr.label_hash
 
     if label_hash is None:
         return None
 
-    label_pth = cache_dir / "data" / label_hash
-    label_pth.mkdir(parents=True, exist_ok=True)
+    lr_structure = project_file_structure.label_row_structure(label_hash)
+    lr_structure.path.mkdir(parents=True, exist_ok=True)
 
-    lr_path = label_pth / "label_row.json"
-    if not lr_path.exists():
-        with (label_pth / "label_row.json").open("w") as f:
-            json.dump(lr, f, indent=2)
+    if not lr_structure.label_row_file.exists():
+        lr_structure.label_row_file.write_text(json.dumps(lr, indent=2), encoding="utf-8")
 
-    frame_pth = label_pth / "images"
-
-    frame_pth.mkdir(parents=True, exist_ok=True)
+    lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     frame_pths: List[Path] = []
     data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
-        out_pth = (frame_pth / du["data_hash"]).with_suffix(suffix)
+        out_pth = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         out_pth = download_file(du["data_link"], out_pth)
         frame_pths.append(out_pth)
 
@@ -240,9 +229,9 @@ def download_images_from_data_unit(lr, cache_dir, **kwargs) -> Optional[List[Pat
     return frame_pths
 
 
-def download_all_images(label_rows, cache_dir: Union[str, Path], **kwargs) -> Dict[str, List[Path]]:
+def download_all_images(label_rows, project_file_structure: ProjectFileStructure) -> Dict[str, List[Path]]:
     return collect_async(
-        partial(download_images_from_data_unit, cache_dir=cache_dir, **kwargs),
+        partial(download_images_from_data_unit, project_file_structure=project_file_structure),
         label_rows.values(),
         lambda lr: lr.label_hash,
         desc="Collecting frames from label rows.",

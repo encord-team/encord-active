@@ -66,9 +66,9 @@ class PredictionIterator(Iterator):
         self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Path]]] = []
 
     def get_image_path(self, pred: Series) -> Optional[Path]:
-        img_folder = self.cache_dir / "data" / pred["label_hash"] / "images"
+        images_dir = self.project.file_structure.label_row_structure(pred["label_hash"]).images_dir
         du_hash = pred["du_hash"]
-        image_options = list(img_folder.glob(f"{du_hash}.*"))
+        image_options = list(images_dir.glob(f"{du_hash}.*"))
         if len(image_options) == 1:
             return image_options[0]
         elif len(image_options) > 1:
