@@ -126,7 +126,7 @@ class ExplorerPage(Page):
 # TODO: move me to lib
 def get_embedding_type(metric_title: str, annotation_type: Optional[List[Any]]) -> EmbeddingType:
     if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
-        return EmbeddingType.NONE
+        return EmbeddingType.IMAGE
     elif len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value):
         return EmbeddingType.CLASSIFICATION
     else:
@@ -205,7 +205,7 @@ def build_card(
     identifier_parts = 4 if embedding_information.has_annotations else 3
     identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
 
-    if embedding_information.type in [EmbeddingType.NONE, EmbeddingType.CLASSIFICATION]:
+    if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
         button_name = "show similar images"
         image = load_or_fill_image(row, data_dir)
     elif embedding_information.type == EmbeddingType.OBJECT:

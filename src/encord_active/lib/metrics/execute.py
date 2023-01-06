@@ -19,6 +19,9 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
 )
+from encord_active.lib.metrics.semantic.img_classification_quality import (
+    ImageLevelQualityTest,
+)
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 

@@ -109,7 +109,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             logger.info("<yellow>[Skipping]</yellow> No objects in the project ontology.")
             return
 
-        collections = get_cnn_embeddings(iterator, embedding_type="objects")
+        collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.OBJECT)
         if len(collections) > 0:
             embedding_identifiers = [self.get_identifier_from_collection_item(item) for item in collections]
 

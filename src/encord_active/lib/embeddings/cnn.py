@@ -10,13 +10,18 @@ import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
 from encord.project_ontology.object_type import ObjectShape
 from PIL import Image
-from torch import nn
+from torch import embedding, nn
 from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
 from torchvision.models.feature_extraction import create_feature_extractor
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
-from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
+from encord_active.lib.embeddings.utils import (
+    EMBEDDING_TYPE_TO_FILENAME,
+    ClassificationAnswer,
+    LabelEmbedding,
+)
+from encord_active.lib.metrics.metric import EmbeddingType
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -80,7 +85,45 @@ def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[
 
 
 @torch.inference_mode()
-def generate_cnn_embeddings(iterator: Iterator, filepath: str) -> None:
+def generate_cnn_image_embeddings(iterator: Iterator, filepath: str) -> None:
+    start = time.perf_counter()
+    feature_extractor, transforms = get_model_and_transforms()
+
+    collections: List[LabelEmbedding] = []
+    for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
+        if img_pth is None:
+            continue
+
+        image = image_path_to_tensor(img_pth)
+        transformed_image = transforms(image).unsqueeze(0)
+        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
+        embedding = torch.flatten(embedding).cpu().detach().numpy()
+
+        entry = LabelEmbedding(
+            url=data_unit["data_link"],
+            label_row=iterator.label_hash,
+            data_unit=data_unit["data_hash"],
+            frame=iterator.frame,
+            labelHash=None,
+            lastEditedBy=None,
+            featureHash=None,
+            name=None,
+            dataset_title=iterator.dataset_title,
+            embedding=embedding,
+            classification_answers=None,
+        )
+        collections.append(entry)
+
+    with open(filepath, "wb") as f:
+        pickle.dump(collections, f)
+
+    logger.info(
+        f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
+    )
+
+
+@torch.inference_mode()
+def generate_cnn_object_embeddings(iterator: Iterator, filepath: str) -> None:
     start = time.perf_counter()
     feature_extractor, transforms = get_model_and_transforms()
 
@@ -145,7 +188,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
     feature_extractor, transforms = get_model_and_transforms()
 
     collections = []
-    for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
+    for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
         if not img_pth:
             continue
 
@@ -153,21 +196,6 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
         transformed_image = transforms(image).unsqueeze(0)
         embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
         embedding = torch.flatten(embedding).cpu().detach().numpy()
-
-        entry = LabelEmbedding(
-            url=data_unit["data_link"],
-            label_row=iterator.label_hash,
-            data_unit=data_unit["data_hash"],
-            frame=iterator.frame,
-            labelHash=None,
-            lastEditedBy=None,
-            featureHash=None,
-            name=None,
-            dataset_title=iterator.dataset_title,
-            embedding=embedding,
-            classification_answers=None,
-        )
-        collections.append(entry)
 
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
@@ -218,39 +246,37 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
     )
 
 
-def get_cnn_embeddings(iterator: Iterator, embedding_type: str = "objects", *, force: bool = False) -> list:
-    target_folder = os.path.join(iterator.cache_dir, "embeddings")
-    if embedding_type == "objects":
-        embedding_file = "cnn_objects"
-    elif embedding_type == "classifications":
-        embedding_file = "cnn_classifications"
-    else:
+def get_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> list:
+    if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_cnn_embeddings method")
 
-    embedding_path = os.path.join(target_folder, f"{embedding_file}.pkl")
+    target_folder = os.path.join(iterator.cache_dir, "embeddings")
+    embedding_path = os.path.join(target_folder, f"{EMBEDDING_TYPE_TO_FILENAME[embedding_type]}")
 
     if force:
         logger.info("Regenerating CNN embeddings...")
-        if embedding_type == "objects":
-            generate_cnn_embeddings(iterator, filepath=embedding_path)
-        elif embedding_type == "classifications":
-            generate_cnn_classification_embeddings(iterator, filepath=embedding_path)
-
-        with open(embedding_path, "rb") as f:
-            cnn_embeddings = pickle.load(f)
-        logger.info("Done!")
+        cnn_embeddings = generate_cnn_embeddings(iterator, embedding_type, embedding_path)
     else:
         try:
             with open(embedding_path, "rb") as f:
                 cnn_embeddings = pickle.load(f)
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
-            if embedding_type == "objects":
-                generate_cnn_embeddings(iterator, filepath=embedding_path)
-            elif embedding_type == "classifications":
-                generate_cnn_classification_embeddings(iterator, filepath=embedding_path)
-            with open(embedding_path, "rb") as f:
-                cnn_embeddings = pickle.load(f)
-            logger.info("Done!")
+            cnn_embeddings = generate_cnn_embeddings(iterator, embedding_type, embedding_path)
+
+    return cnn_embeddings
+
+
+def generate_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, target: str):
+    if embedding_type == EmbeddingType.IMAGE:
+        generate_cnn_image_embeddings(iterator, filepath=target)
+    elif embedding_type == EmbeddingType.OBJECT:
+        generate_cnn_object_embeddings(iterator, filepath=target)
+    elif embedding_type == EmbeddingType.CLASSIFICATION:
+        generate_cnn_classification_embeddings(iterator, filepath=target)
+
+    with open(target, "rb") as f:
+        cnn_embeddings = pickle.load(f)
+    logger.info("Done!")
 
     return cnn_embeddings

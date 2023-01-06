@@ -72,7 +72,7 @@ class SimilaritiesFinder:
 
 
 EMBEDDING_TYPE_TO_FILENAME = {
-    EmbeddingType.NONE: "cnn_classifications.pkl",
+    EmbeddingType.IMAGE: "cnn_images.pkl",
     EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
     EmbeddingType.OBJECT: "cnn_objects.pkl",
 }

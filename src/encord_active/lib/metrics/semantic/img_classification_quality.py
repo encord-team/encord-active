@@ -234,7 +234,10 @@ class ImageLevelQualityTest(Metric):
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")
 
-        self.collections = get_cnn_embeddings(iterator, embedding_type="classifications")
+        # TODO: move me somewhere else, this is here to ensure the generation of image embeddings
+        get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+
+        self.collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.CLASSIFICATION)
         if len(self.collections) > 0:
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
