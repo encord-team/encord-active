@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
@@ -68,27 +68,3 @@ class State:
 
 def get_state() -> State:
     return st.session_state.get(GLOBAL_STATE)  # type: ignore
-
-
-# EVERYTHING BELOW SHOULD BE DEPRACATED
-
-# SIMILARITY KEYS
-OBJECT_KEYS_HAVING_SIMILARITIES = "object_keys_having_similarities"
-IMAGE_KEYS_HAVING_SIMILARITIES = "image_keys_having_similarity"
-OBJECT_SIMILARITIES = "object_similarities"
-IMAGE_SIMILARITIES = "image_similarities"
-IMAGE_SIMILARITIES_NO_LABEL = "image_similarities_no_label"
-FAISS_INDEX_OBJECT = "faiss_index_object"
-FAISS_INDEX_IMAGE = "faiss_index_image"
-FAISS_INDEX_IMAGE_NO_LABEL = "faiss_index_image_no_label"
-CURRENT_INDEX_HAS_ANNOTATION = "current_index_has_annotation"
-QUESTION_HASH_TO_COLLECTION_INDEXES = "question_hash_to_collection_indexes"
-COLLECTIONS_IMAGES = "collections_images"
-COLLECTIONS_OBJECTS = "collections_objects"
-# K_NEAREST_NUM = "k_nearest_num"
-
-
-def setdefault(key: str, fn: Callable, *args, **kwargs) -> Any:
-    if not key in st.session_state:
-        st.session_state[key] = fn(*args, **kwargs)
-    return st.session_state.get(key)
