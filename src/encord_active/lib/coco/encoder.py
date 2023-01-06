@@ -151,7 +151,7 @@ class CocoEncoder:
 
         self._coco_json["info"] = self.get_info()
         self._coco_json["categories"] = self.get_categories()
-        self._coco_json["images"] = self.get_images()
+        self._coco_json["images"] = self.get_images()  # TODO: remove images without annotations
         self._coco_json["annotations"] = self.get_annotations()
 
         return self._coco_json
@@ -374,8 +374,12 @@ class CocoEncoder:
         # DENIS: need to make sure at least one image
         for labels in tqdm(self._labels_list, desc="Processing annotations"):
             label_hash = labels["label_hash"]
+            if label_hash not in self._metrics.keys():
+                continue
             for data_unit in labels["data_units"].values():
                 data_hash = data_unit["data_hash"]
+                if data_hash not in self._metrics[label_hash].keys():
+                    continue
                 data_unit_metrics = self._metrics[label_hash][data_hash]
 
                 if data_unit["data_type"] in ["video", "application/dicom"]:
