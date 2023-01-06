@@ -1,5 +1,3 @@
-import os
-import pickle
 from collections import Counter
 from pathlib import Path
 
@@ -53,7 +51,6 @@ class ImageLevelQualityTest(Metric):
         self.featureNodeHash_to_question_name: dict[str, str] = {}
         self.index_to_answer_name: dict[str, dict] = {}
         self.identifier_to_embedding: dict[str, np.ndarray] = {}
-        # self.question_hash_to_collection_indexes: dict[str, list] = {}
         self.cache_dir: Path = Path()
         self.num_nearest_neighbors = num_nearest_neighbors
         self.certainty_ratio = certainty_ratio
@@ -116,8 +113,12 @@ class ImageLevelQualityTest(Metric):
         for question in nearest_indexes:
             noisy_labels_list = []
             for i in range(nearest_indexes[question].shape[0]):
-                answer_featureHash = self.collections[i]["classification_answers"]["answer_featureHash"]
-                gt_label = self.featureNodeHash_to_index[question][answer_featureHash]
+                answers = self.collections[i]["classification_answers"]
+
+                if not answers:
+                    raise Exception("Missing classification answers")
+
+                gt_label = self.featureNodeHash_to_index[question][answers["answer_featureHash"]]
                 noisy_labels_list.append(gt_label)
 
             noisy_labels = np.array(noisy_labels_list).astype(np.int32)
@@ -171,12 +172,15 @@ class ImageLevelQualityTest(Metric):
             if question in collections_scores_all_questions:
                 # sub_collection_index = self.question_hash_to_collection_indexes[question].index(i)
                 score = collections_scores_all_questions[question][i]
+                answers = collection["classification_answers"]
+                if not answers:
+                    raise Exception("Missing classification answers")
 
                 temp_entry[question] = {
                     "score": score,
                     "description": self.extract_description_info(question, nearest_labels_all_questions[question], i),
                     "class_name": self.featureNodeHash_to_question_name[question],
-                    "annotator": collection["classification_answers"]["annotator"],
+                    "annotator": answers["annotator"],
                 }
 
             key_score_pairs[key] = temp_entry

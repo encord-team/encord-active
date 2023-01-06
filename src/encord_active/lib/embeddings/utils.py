@@ -53,7 +53,9 @@ class SimilaritiesFinder:
     def _add_similarities(self, identifier: str):
         collection_id = self.keys_having_similarity[identifier]
         embedding = np.array([self.collections[collection_id]["embedding"]]).astype(np.float32)
-        _, nearest_indexes = self.faiss_index.search(embedding, self.num_of_neighbors + 1)
+        _, nearest_indexes = self.faiss_index.search(  # pylint: disable=no-value-for-parameter
+            embedding, self.num_of_neighbors + 1
+        )
 
         self.similarities[identifier] = []
 
