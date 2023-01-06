@@ -261,7 +261,7 @@ class CocoEncoder:
             "width": data_unit["width"],
             "label_hash": label_hash,
             "data_hash": data_hash,
-            "frame_num": 0,
+            "frame_num": int(data_unit["data_sequence"]),
         }
 
     def get_file_name_and_download_image(self, label_hash: str, data_unit: dict) -> str:
