@@ -151,7 +151,7 @@ class CocoEncoder:
 
         self._coco_json["info"] = self.get_info()
         self._coco_json["categories"] = self.get_categories()
-        self._coco_json["images"] = self.get_images()
+        self._coco_json["images"] = self.get_images()  # TODO: remove images without annotations
         self._coco_json["annotations"] = self.get_annotations()
 
         return self._coco_json
@@ -261,7 +261,7 @@ class CocoEncoder:
             "width": data_unit["width"],
             "label_hash": label_hash,
             "data_hash": data_hash,
-            "frame_num": 0,
+            "frame_num": int(data_unit["data_sequence"]),
         }
 
     def get_file_name_and_download_image(self, label_hash: str, data_unit: dict) -> str:
@@ -374,8 +374,12 @@ class CocoEncoder:
         # DENIS: need to make sure at least one image
         for labels in tqdm(self._labels_list, desc="Processing annotations"):
             label_hash = labels["label_hash"]
+            if label_hash not in self._metrics.keys():
+                continue
             for data_unit in labels["data_units"].values():
                 data_hash = data_unit["data_hash"]
+                if data_hash not in self._metrics[label_hash].keys():
+                    continue
                 data_unit_metrics = self._metrics[label_hash][data_hash]
 
                 if data_unit["data_type"] in ["video", "application/dicom"]:
@@ -390,7 +394,8 @@ class CocoEncoder:
                 else:
                     image_id = self.get_image_id(data_hash)
                     objects = data_unit["labels"]["objects"]
-                    object_metrics = copy.deepcopy(data_unit_metrics["00000"])
+                    frame_num = int(data_unit["data_sequence"])
+                    object_metrics = copy.deepcopy(data_unit_metrics[f"{frame_num:05d}"])
                     annotations.extend(self.get_annotation(objects, object_metrics, image_id))
 
         return annotations
@@ -765,20 +770,24 @@ def df_to_nested_dict(df: pd.DataFrame) -> dict:
         else:
             raise ValueError(f"Invalid identifier `{row[0]}`")
 
-        # Create metrics dict
+        # Create metrics dict (enforce the structure stated in this method's docstring)
         label_dict = metrics.setdefault(label_hash, {})
         data_dict = label_dict.setdefault(data_hash, {})
         frame_dict = data_dict.setdefault(frame_number, {})
+        frame_dict.setdefault("frame-level", {})
 
+        tags = [t.name for t in (row["tags"] if "tags" in row and isinstance(row["tags"], list) else [])]
         if object_hashes is None:  # Frame level metric
             frame_dict.setdefault("frame-level", {}).update(
-                {k: v for k, v in row.items() if k not in ["identifier", "url"] and not pd.isnull(v)}
+                {k: v for k, v in row.items() if k not in ["identifier", "url", "tags"] and not pd.isnull(v)}
             )
+            frame_dict["frame-level"].setdefault("tags", []).extend(tags)
         else:  # Object level metric
             for object_hash in object_hashes:
                 frame_dict.setdefault(object_hash, {}).update(
-                    {k: v for k, v in row.items() if k not in ["identifier", "url"] and not pd.isnull(v)}
+                    {k: v for k, v in row.items() if k not in ["identifier", "url", "tags"] and not pd.isnull(v)}
                 )
+                frame_dict[object_hash].setdefault("tags", []).extend(tags)
     return metrics
 
 
