@@ -60,8 +60,8 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 if df[column].isnull().sum() != df.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
-                        df[column].unique(),
-                        default=list(df[column].unique()),
+                        df[column].dropna().unique().tolist(),
+                        default=df[column].dropna().unique().tolist(),
                         key=key,
                     )
                     df = df[df[column].isin(user_cat_input)]
