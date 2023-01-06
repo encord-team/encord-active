@@ -17,7 +17,7 @@ from encord import EncordUserClient, Project
 from loguru import logger
 from shapely.errors import ShapelyDeprecationWarning
 from shapely.geometry import Polygon
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # Silence shapely deprecation warnings from v1.* to v2.0
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)

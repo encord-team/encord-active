@@ -15,7 +15,7 @@ from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
 from pandas.errors import EmptyDataError
 from PIL import Image
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project.project import download_all_label_rows
