@@ -19,7 +19,7 @@ This tutorial assumes that you have [installed](/installation) `encord-active`.
 
 :::
 
-## 1. Downloading the Data
+## 1. Downloading the dataset
 
 Download the data by running this command
 
@@ -31,7 +31,7 @@ The script will ask you to choose a project, navigate the options with <kbd>↑<
 
 Now `encord-active` will download your data.
 
-## 2. Opening Encord Active in Your Browser
+## 2. Opening Encord Active in your browser
 
 When the download process is done, `encord-active` will print how to run the app:
 
@@ -46,13 +46,13 @@ If the command hangs and nothing happens in your browser, go to <Link to={"http:
 
 :::
 
-## 3. Finding and Flagging Label Errors {#find-and-flag-label-errors}
+## 3. Finding and flagging label errors {#find-and-flag-label-errors}
 
 You will carry out this process in two steps.
 
 <TOCInline toc={getSubsectionNodes(toc, "find-and-flag-label-errors")} />
 
-### Identifying Metrics with Label Errors
+### Identifying metrics with label errors
 
 When you open Encord Active, you should see a page like this
 
@@ -131,7 +131,7 @@ You can find other sources of label errors by inspecting the other tabs. Good pl
 
 :::
 
-### Tagging Label Errors
+### Tagging label errors
 
 To tag the images with the identified label errors, you first add a new tag by typing in the tag name in the left sidebar and hitting enter.
 
@@ -141,9 +141,9 @@ Afterwards, you can add the tag to the images you see in the outlier pane by sel
 
 ![Tag an image](/img/tutorials/tag-added-for-oranges.png)
 
-### Exporting Labels for Additional Annotation
+### Exporting labels for re-labeling
 
-Suppose you have now tagged all the duplicated annotations that you would like to export for additional annotations.
+Suppose you have now tagged all the duplicated annotations that you would like to export for re-labeling.
 Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created (as indicated by the purple arrows).
 
 ![Select images with the `label_duplication` tag](/img/tutorials/export-duplication-tag.png)
@@ -152,7 +152,7 @@ _Note how your data has been filtered to only the rows that you tagged._
 
 Now you can _Generate COCO file_, _Clone_ the data into a new Encord project, or send the data for _Review_, _Re-label_, or _Augmentation_ tasks.
 
-## 4. Figuring Out What Metrics Influence Model Performance {#figuring-out-what-metrics-influence-model-performance}
+## 4. Figuring out what metrics influence model performance {#figuring-out-what-metrics-influence-model-performance}
 
 Encord Active also allows you to figure out which metrics influence your model performance the most.
 In this section, we'll go through a subset of those:
@@ -164,7 +164,7 @@ In this section, we'll go through a subset of those:
   )}
 />
 
-### The High Level View of Model Performance
+### The high level view of model performance
 
 #### mAP and mAR scores
 
@@ -177,7 +177,7 @@ The first section will give you the _mean Average Precision (mAP)_ and the _mean
 If you drag the slider, you will notice how the score changes.
 You can also choose to see the aggregate score for certain classes by selecting them in the drop-down to the left.
 
-#### Metric Importance and Correlation
+#### Metric importance and correlation
 
 In the next section (the _Metric Importance_), you will find importances and correlations of your model performance as function of metrics.
 
@@ -195,7 +195,7 @@ A next step from here would be to jump to the _Performance by Metric_ page and h
 However, we want to show you the rest of this page prior to doing this.
 You can skip straight ahead to the [Inspecting Model Performance for a Specific Metric](#inspecting-model-performance-for-a-specific-metric) if you are too curious to wait.
 
-#### Subset Scores
+#### Subset scores
 
 Before jumping into specific metrics, we want to show you the decomposition of the model performance based on individual classes.
 If you look in the _Subset selection scores_ section, you will find the average precision (AP) and average recall (AR) scores for each individual class.
@@ -213,7 +213,7 @@ The right plot shows the precision-recall curves for each of the classes.
 From these plots, we learn that the model performs better on the `cat` class than it does on, e.g., the `person` class.
 To learn for which instances the model works and for which it doesn't, you can look in the _True Positives_, _False Positives_, and _False Negatives_ tabs to see concrete instances of the three success/failure modes.
 
-### Inspecting Model Performance for a Specific Metric
+### Inspecting model performance for a specific metric
 
 Above, we noticed that the "Object Area - Relative (P)" metric has a high importance on the model performance.
 To learn more about how the specific metric affects the model performance you:
@@ -229,12 +229,12 @@ The plot shows the true positive rate and the false negative rate as a function 
 We can see how when the model predictions are small in terms of the absolute area, then the true-positive rate is low (bad), while larger predictions are more often correct (good).
 Similarly, when labels are small, the false negative rate is high (bad), while larger labels are less likely to be issued by the model (good).
 
-## 5. Conclusion
+## 5. Summary
 
 This concludes the tour around Encord Active with the COCO Sandbox dataset.
 By now, you should have a good idea about how you can improve both your data, labels, and models by the insights you get from Encord Active.
 
-_Further reading:_
+### Next steps
 
 - We've only covered each page in the app briefly in this tutorial. To learn more about what information you can find in each page, please refer to the [Pages](/category/pages) section.
 - To learn more about concrete actionable steps you can take to improve your model performance, we suggest that you have a look at the [Workflow section](/category/workflows).
