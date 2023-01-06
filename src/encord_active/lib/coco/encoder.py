@@ -766,10 +766,11 @@ def df_to_nested_dict(df: pd.DataFrame) -> dict:
         else:
             raise ValueError(f"Invalid identifier `{row[0]}`")
 
-        # Create metrics dict
+        # Create metrics dict (enforce the structure stated in this method's docstring)
         label_dict = metrics.setdefault(label_hash, {})
         data_dict = label_dict.setdefault(data_hash, {})
         frame_dict = data_dict.setdefault(frame_number, {})
+        frame_dict.setdefault("frame-level", {})
 
         if object_hashes is None:  # Frame level metric
             frame_dict.setdefault("frame-level", {}).update(
