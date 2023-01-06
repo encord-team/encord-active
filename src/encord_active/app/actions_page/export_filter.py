@@ -131,7 +131,7 @@ def export_filter():
 
     action_columns[1].download_button(
         "⬇ Download filtered data",
-        json.dumps(coco_json),
+        json.dumps(coco_json, indent=2),
         file_name=f"encord-active-coco-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.json",
         disabled=not is_pressed,
         help="Ensure you have generated an updated COCO file before downloading",
