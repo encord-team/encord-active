@@ -1,7 +1,6 @@
 import json
 import os
 from pathlib import Path
-from shutil import copyfile
 from typing import Dict, List, Optional
 
 import requests
