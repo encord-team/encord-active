@@ -776,15 +776,18 @@ def df_to_nested_dict(df: pd.DataFrame) -> dict:
         frame_dict = data_dict.setdefault(frame_number, {})
         frame_dict.setdefault("frame-level", {})
 
+        tags = [t.name for t in (row["tags"] if "tags" in row and isinstance(row["tags"], list) else [])]
         if object_hashes is None:  # Frame level metric
             frame_dict.setdefault("frame-level", {}).update(
-                {k: v for k, v in row.items() if k not in ["identifier", "url"] and not pd.isnull(v)}
+                {k: v for k, v in row.items() if k not in ["identifier", "url", "tags"] and not pd.isnull(v)}
             )
+            frame_dict["frame-level"].setdefault("tags", []).extend(tags)
         else:  # Object level metric
             for object_hash in object_hashes:
                 frame_dict.setdefault(object_hash, {}).update(
-                    {k: v for k, v in row.items() if k not in ["identifier", "url"] and not pd.isnull(v)}
+                    {k: v for k, v in row.items() if k not in ["identifier", "url", "tags"] and not pd.isnull(v)}
                 )
+                frame_dict[object_hash].setdefault("tags", []).extend(tags)
     return metrics
 
 
