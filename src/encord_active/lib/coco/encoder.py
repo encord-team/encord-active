@@ -390,7 +390,8 @@ class CocoEncoder:
                 else:
                     image_id = self.get_image_id(data_hash)
                     objects = data_unit["labels"]["objects"]
-                    object_metrics = copy.deepcopy(data_unit_metrics["00000"])
+                    frame_num = int(data_unit["data_sequence"])
+                    object_metrics = copy.deepcopy(data_unit_metrics[f"{frame_num:05d}"])
                     annotations.extend(self.get_annotation(objects, object_metrics, image_id))
 
         return annotations
