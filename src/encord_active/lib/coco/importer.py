@@ -16,7 +16,7 @@ from encord.orm.dataset import CreateDatasetResponse, DataRow, Image, StorageLoc
 from encord.utilities import label_utilities
 from PIL import Image as pil_image
 from PIL import ImageOps
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.coco.datastructure import CocoAnnotation, CocoImage
 from encord_active.lib.coco.parsers import (

@@ -1,7 +1,7 @@
 import numpy as np
 from loguru import logger
 from sklearn import preprocessing
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import (

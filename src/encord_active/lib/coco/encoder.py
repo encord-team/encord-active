@@ -27,7 +27,7 @@ from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
 from shapely.geometry import Polygon
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.coco.datastructure import (
     CocoAnnotation,
