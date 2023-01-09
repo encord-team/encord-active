@@ -1,5 +1,6 @@
 from collections import Counter
 from pathlib import Path
+from typing import Dict, List
 
 import faiss
 import numpy as np
@@ -133,7 +134,7 @@ class ImageLevelQualityTest(Metric):
 
         return nearest_labels_all_questions
 
-    def convert_nearest_labels_to_scores(self, nearest_labels: dict[str, np.ndarray]) -> list[float]:
+    def convert_nearest_labels_to_scores(self, nearest_labels: dict[str, np.ndarray]) -> List[float]:
         """
         Higher scores mean more reliable label
         :param nearest_labels: output of the index.search()
@@ -145,8 +146,10 @@ class ImageLevelQualityTest(Metric):
 
         return collections_scores
 
-    def convert_nearest_labels_to_scores_for_all_questions(self, nearest_labels_all_questions: dict[str, dict]):
-        collections_scores_all_questions = {}
+    def convert_nearest_labels_to_scores_for_all_questions(
+        self, nearest_labels_all_questions: Dict[str, dict]
+    ) -> Dict[str, List[float]]:
+        collections_scores_all_questions: Dict[str, List[float]] = {}
         for question in nearest_labels_all_questions:
             scores = self.convert_nearest_labels_to_scores(nearest_labels_all_questions[question])
             collections_scores_all_questions[question] = scores

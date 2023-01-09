@@ -10,7 +10,7 @@ import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
 from encord.project_ontology.object_type import ObjectShape
 from PIL import Image
-from torch import embedding, nn
+from torch import nn
 from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
 from torchvision.models.feature_extraction import create_feature_extractor
 
