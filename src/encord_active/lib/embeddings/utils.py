@@ -1,27 +1,85 @@
 import os
 import pickle
 from pathlib import Path
-from typing import List, Optional, Tuple, TypedDict
+from typing import Dict, List, Optional, TypedDict
 
 import faiss
 import numpy as np
 from faiss import IndexFlatL2
+
+from encord_active.lib.metrics.metric import EmbeddingType
+
+
+class ClassificationAnswer(TypedDict):
+    answer_featureHash: str
+    answer_name: str
+    annotator: str
 
 
 class LabelEmbedding(TypedDict):
     label_row: str
     data_unit: str
     frame: int
-    objectHash: Optional[str]
-    lastEditedBy: str
-    featureHash: str
-    name: str
+    url: str
+    labelHash: Optional[str]
+    lastEditedBy: Optional[str]
+    featureHash: Optional[str]
+    name: Optional[str]
     dataset_title: str
     embedding: np.ndarray
+    classification_answers: Optional[ClassificationAnswer]
 
 
-def get_collections(embedding_name: str, embeddings_dir: Path) -> list[LabelEmbedding]:
-    embedding_path = embeddings_dir / embedding_name
+class SimilaritiesFinder:
+    def __init__(self, type: EmbeddingType, path: Path, num_of_neighbors: int = 8):
+        self.type = type
+        self.path = path
+        self.num_of_neighbors = num_of_neighbors
+        self.collections = load_collections(self.type, self.path)
+        self.faiss_index = get_faiss_index_object(self.collections)
+        self.keys_having_similarity = build_keys_having_similarities(self.collections, self.has_annotations)
+        self.similarities: Dict[str, List[Dict]] = {}
+
+    @property
+    def has_annotations(self):
+        return self.type in [EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]
+
+    def get_similarities(self, identifier: str):
+        if identifier not in self.similarities.keys():
+            self._add_similarities(identifier)
+
+        return self.similarities[identifier]
+
+    def _add_similarities(self, identifier: str):
+        collection_id = self.keys_having_similarity[identifier]
+        embedding = np.array([self.collections[collection_id]["embedding"]]).astype(np.float32)
+        _, nearest_indexes = self.faiss_index.search(  # pylint: disable=no-value-for-parameter
+            embedding, self.num_of_neighbors + 1
+        )
+
+        self.similarities[identifier] = []
+
+        for nearest_index in nearest_indexes[0, 1:]:
+            collection = self.collections[nearest_index]
+
+            answers = collection.get("classification_answers") or {}
+            if self.type == EmbeddingType.CLASSIFICATION and not answers:
+                raise Exception("Missing classification answers")
+
+            key = get_key_from_index(collection, has_annotation=self.has_annotations)
+            name = answers.get("answer_name") or collection.get("name", "No label")
+            self.similarities[identifier].append({"key": key, "name": name})
+
+
+EMBEDDING_TYPE_TO_FILENAME = {
+    EmbeddingType.IMAGE: "cnn_images.pkl",
+    EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
+    EmbeddingType.OBJECT: "cnn_objects.pkl",
+}
+
+
+def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:
+    embedding_path = embeddings_dir / EMBEDDING_TYPE_TO_FILENAME[embedding_type]
     collections = []
     if os.path.isfile(embedding_path):
         with open(embedding_path, "rb") as f:
@@ -29,96 +87,21 @@ def get_collections(embedding_name: str, embeddings_dir: Path) -> list[LabelEmbe
     return collections
 
 
-def get_collections_and_metadata(embedding_name: str, embeddings_dir: Path) -> Tuple[list[LabelEmbedding], dict]:
-    try:
-        collections = get_collections(embedding_name, embeddings_dir)
-
-        embedding_metadata_file_name = "embedding_classifications_metadata.pkl"
-        embedding_metadata_path = embeddings_dir / embedding_metadata_file_name
-        if os.path.isfile(embedding_metadata_path):
-            with open(embedding_metadata_path, "rb") as f:
-                question_hash_to_collection_indexes_local = pickle.load(f)
-        else:
-            question_hash_to_collection_indexes_local = {}
-
-        return collections, question_hash_to_collection_indexes_local
-    except Exception:
-        return [], {}
+def build_keys_having_similarities(collections: List[LabelEmbedding], has_annotation: bool):
+    return {get_key_from_index(collection, has_annotation): i for i, collection in enumerate(collections)}
 
 
-def get_key_from_index(collection: LabelEmbedding, question_hash: Optional[str] = None, has_annotation=True) -> str:
+def get_key_from_index(collection: LabelEmbedding, has_annotation: bool) -> str:
     label_hash = collection["label_row"]
     du_hash = collection["data_unit"]
     frame_idx = int(collection["frame"])
 
-    if not has_annotation:
-        key = f"{label_hash}_{du_hash}_{frame_idx:05d}"
-    else:
-        if question_hash:
-            key = f"{label_hash}_{du_hash}_{frame_idx:05d}_{question_hash}"
-        else:
-            object_hash = collection["objectHash"]
-            key = f"{label_hash}_{du_hash}_{frame_idx:05d}_{object_hash}"
+    key = f"{label_hash}_{du_hash}_{frame_idx:05d}"
+
+    if has_annotation:
+        key += f"_{collection['labelHash']}"
 
     return key
-
-
-# TODO: remove if unused
-def get_identifier_to_neighbors(
-    collections: list[LabelEmbedding], nearest_indexes: np.ndarray, has_annotation=True
-) -> dict[str, list]:
-    nearest_neighbors = {}
-    n, k = nearest_indexes.shape
-    for i in range(n):
-        key = get_key_from_index(collections[i], has_annotation=has_annotation)
-        temp_list = []
-        for j in range(1, k):
-            temp_list.append(
-                {
-                    "key": get_key_from_index(collections[nearest_indexes[i, j]], has_annotation=has_annotation),
-                    "name": collections[nearest_indexes[i, j]].get("name", "Does not have a label"),
-                }
-            )
-        nearest_neighbors[key] = temp_list
-    return nearest_neighbors
-
-
-# TODO: remove if unused
-def convert_to_indexes(collections, question_hash_to_collection_indexes):
-    embedding_databases, indexes = {}, {}
-
-    for question_hash in question_hash_to_collection_indexes:
-        selected_collections = [collections[i] for i in question_hash_to_collection_indexes[question_hash]]
-
-        if len(selected_collections) > 10:
-            embedding_database = np.stack(list(map(lambda x: x["embedding"], selected_collections)))
-
-            index = faiss.IndexFlatL2(embedding_database.shape[1])
-            index.add(embedding_database)  # pylint: disable=no-value-for-parameter
-
-            embedding_databases[question_hash] = embedding_database
-            indexes[question_hash] = index
-
-    return embedding_databases, indexes
-
-
-def get_faiss_index_image(
-    collections: list[LabelEmbedding], question_hash_to_collection_indexes: dict
-) -> dict[str, IndexFlatL2]:
-    indexes = {}
-
-    for question_hash in question_hash_to_collection_indexes:
-        selected_collections = [collections[i] for i in question_hash_to_collection_indexes[question_hash]]
-
-        if len(selected_collections) > 10:
-            embedding_database = np.stack(list(map(lambda x: x["embedding"], selected_collections)))
-
-            index = faiss.IndexFlatL2(embedding_database.shape[1])
-            index.add(embedding_database)  # pylint: disable=no-value-for-parameter
-
-            indexes[question_hash] = index
-
-    return indexes
 
 
 def get_faiss_index_object(collections: list[LabelEmbedding]) -> IndexFlatL2:
@@ -140,11 +123,3 @@ def get_faiss_index_object(collections: list[LabelEmbedding]) -> IndexFlatL2:
     db_index = faiss.IndexFlatL2(embeddings.shape[1])
     db_index.add(embeddings)  # pylint: disable=no-value-for-parameter
     return db_index
-
-
-def get_object_keys_having_similarities(collections: list[LabelEmbedding]) -> dict:
-    return {get_key_from_index(collection): i for i, collection in enumerate(collections)}
-
-
-def get_image_keys_having_similarities(collections: list[LabelEmbedding]) -> dict:
-    return {get_key_from_index(collection, has_annotation=False): i for i, collection in enumerate(collections)}

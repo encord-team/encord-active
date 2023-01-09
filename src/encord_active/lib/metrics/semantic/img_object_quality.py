@@ -11,6 +11,7 @@ from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
 from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
@@ -45,7 +46,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
          empty, it means evaluate all datasets in the project
         """
         super(ObjectEmbeddingSimilarityTest, self).__init__()
-        self.collections: dict[str, dict] = {}
+        self.collections: dict[str, LabelEmbedding] = {}
         self.featureNodeHash_to_index: dict[str, int] = {}
         self.index_to_object_name: dict[int, str] = {}
         self.object_name_to_index: dict[str, int] = {}
@@ -63,7 +64,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
         return found_any
 
     def convert_to_index(self):
-        embeddings_list: List[list] = []
+        embeddings_list: List[np.ndarray] = []
         noisy_labels_list: List[int] = []
         for x in self.collections.values():
             embeddings_list.append(x["embedding"])
@@ -100,7 +101,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
                 self.collections[identifier] = item
 
     def get_identifier_from_collection_item(self, item):
-        return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}_{item["objectHash"]}'
+        return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}_{item["labelHash"]}'
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         ontology_contains_objects = self.setup(iterator)
@@ -108,7 +109,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             logger.info("<yellow>[Skipping]</yellow> No objects in the project ontology.")
             return
 
-        collections = get_cnn_embeddings(iterator, embedding_type="objects")
+        collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.OBJECT)
         if len(collections) > 0:
             embedding_identifiers = [self.get_identifier_from_collection_item(item) for item in collections]
 

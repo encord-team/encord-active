@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 from typing import Any, List, Optional
 
 import pandas as pd
@@ -15,11 +16,7 @@ from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
 from encord_active.app.common.components.paginator import render_pagination
-from encord_active.app.common.components.similarities import (
-    show_similar_classification_images,
-    show_similar_images,
-    show_similar_object_images,
-)
+from encord_active.app.common.components.similarities import show_similarities
 from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
@@ -29,39 +26,14 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
-from encord_active.app.common.state import (
-    COLLECTIONS_IMAGES,
-    COLLECTIONS_OBJECTS,
-    CURRENT_INDEX_HAS_ANNOTATION,
-    FAISS_INDEX_IMAGE,
-    FAISS_INDEX_IMAGE_NO_LABEL,
-    FAISS_INDEX_OBJECT,
-    IMAGE_KEYS_HAVING_SIMILARITIES,
-    IMAGE_SIMILARITIES,
-    IMAGE_SIMILARITIES_NO_LABEL,
-    OBJECT_KEYS_HAVING_SIMILARITIES,
-    OBJECT_SIMILARITIES,
-    QUESTION_HASH_TO_COLLECTION_INDEXES,
-    get_state,
-)
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
-from encord_active.lib.embeddings.utils import (
-    get_collections,
-    get_collections_and_metadata,
-    get_faiss_index_image,
-    get_faiss_index_object,
-    get_image_keys_having_similarities,
-    get_object_keys_having_similarities,
-)
-from encord_active.lib.metrics.metric import (
-    AnnotationType,
-    EmbeddingType,
-    MetricMetadata,
-)
+from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
@@ -153,11 +125,9 @@ class ExplorerPage(Page):
 
 # TODO: move me to lib
 def get_embedding_type(metric_title: str, annotation_type: Optional[List[Any]]) -> EmbeddingType:
-    if (
-        annotation_type is None
-        or (len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value))
-        or (metric_title in ["Frame object density", "Object Count"])
-    ):  # TODO find a better way to filter these later because titles can change
+    if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
+        return EmbeddingType.IMAGE
+    elif len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value):
         return EmbeddingType.CLASSIFICATION
     else:
         return EmbeddingType.OBJECT
@@ -168,13 +138,13 @@ def fill_data_quality_window(
 ):
     meta = selected_metric.meta
     embedding_type = get_embedding_type(meta["title"], meta["annotation_type"])
+    embeddings_dir = get_state().project_paths.embeddings
+    embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
 
-    populate_embedding_information(embedding_type, meta)
-
-    if (embedding_type == str(EmbeddingType.CLASSIFICATION.value)) and len(st.session_state[COLLECTIONS_IMAGES]) == 0:
+    if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
         st.write("Image-level embedding file is not available for this project.")
         return
-    if (embedding_type == str(EmbeddingType.OBJECT.value)) and len(st.session_state[COLLECTIONS_OBJECTS]) == 0:
+    if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
         st.write("Object-level embedding file is not available for this project.")
         return
 
@@ -211,61 +181,16 @@ def fill_data_quality_window(
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
             with cols.pop(0):
-                build_card(embedding_type, i, row, similarity_expanders, metric_scope, metric)
+                build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
 
 
-# @dataclass
-# class EmbeddingInformation:
-#     embdedding_type: EmbeddingType
-#     collection_images: List[LabelEmbedding]
-#     question_hash_to_collection_indexes: Dict[str, Any]
-#     image_keys_having_similarity: Dict[str, Any]
-#
-
-
-def populate_embedding_information(embedding_type: EmbeddingType, meta: MetricMetadata):
-    embeddings_dir = get_state().project_paths.embeddings
-
-    if embedding_type == EmbeddingType.CLASSIFICATION:
-        if meta["title"] == "Image-level Annotation Quality":
-            collections, question_hash_to_collection_indexes = get_collections_and_metadata(
-                "cnn_classifications.pkl", embeddings_dir
-            )
-            st.session_state[COLLECTIONS_IMAGES] = collections
-            st.session_state[QUESTION_HASH_TO_COLLECTION_INDEXES] = question_hash_to_collection_indexes
-            st.session_state[IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
-            st.session_state[FAISS_INDEX_IMAGE] = get_faiss_index_image(
-                collections, question_hash_to_collection_indexes
-            )
-            st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = True
-
-            if IMAGE_SIMILARITIES not in st.session_state:
-                st.session_state[IMAGE_SIMILARITIES] = {}
-                for question_hash in st.session_state[QUESTION_HASH_TO_COLLECTION_INDEXES].keys():
-                    st.session_state[IMAGE_SIMILARITIES][question_hash] = {}
-        else:
-            collections = get_collections("cnn_classifications.pkl", embeddings_dir)
-            st.session_state[COLLECTIONS_IMAGES] = collections
-            st.session_state[IMAGE_KEYS_HAVING_SIMILARITIES] = get_image_keys_having_similarities(collections)
-            st.session_state[FAISS_INDEX_IMAGE_NO_LABEL] = get_faiss_index_object(collections)
-            st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = False
-
-            if IMAGE_SIMILARITIES_NO_LABEL not in st.session_state:
-                st.session_state[IMAGE_SIMILARITIES_NO_LABEL] = {}
-
-    elif embedding_type == EmbeddingType.OBJECT:
-        collections = get_collections("cnn_objects.pkl", embeddings_dir)
-        st.session_state[COLLECTIONS_OBJECTS] = collections
-        st.session_state[OBJECT_KEYS_HAVING_SIMILARITIES] = get_object_keys_having_similarities(collections)
-        st.session_state[FAISS_INDEX_OBJECT] = get_faiss_index_object(collections)
-        st.session_state[CURRENT_INDEX_HAS_ANNOTATION] = True
-
-        if OBJECT_SIMILARITIES not in st.session_state:
-            st.session_state[OBJECT_SIMILARITIES] = {}
+class LabelType(Enum):
+    OBJECT = "object"
+    CLASSIFICATION = "classification"
 
 
 def build_card(
-    embedding_type: EmbeddingType,
+    embedding_information: SimilaritiesFinder,
     card_no: int,
     row: Series,
     similarity_expanders: list[DeltaGenerator],
@@ -277,23 +202,17 @@ def build_card(
     """
     data_dir = get_state().project_paths.data
 
-    if embedding_type == EmbeddingType.CLASSIFICATION:
+    identifier_parts = 4 if embedding_information.has_annotations else 3
+    identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
+
+    if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
         button_name = "show similar images"
-        if metric.meta["title"] == "Image-level Annotation Quality":
-            image = load_or_fill_image(row, data_dir)
-            similarity_callback = show_similar_classification_images
-        else:
-            if metric.meta["annotation_type"] is None:
-                image = load_or_fill_image(row, data_dir)
-            else:
-                image = show_image_and_draw_polygons(row, data_dir)
-            similarity_callback = show_similar_images
-    elif embedding_type == EmbeddingType.OBJECT:
-        image = show_image_and_draw_polygons(row, data_dir)
+        image = load_or_fill_image(row, data_dir)
+    elif embedding_information.type == EmbeddingType.OBJECT:
         button_name = "show similar objects"
-        similarity_callback = show_similar_object_images
+        image = show_image_and_draw_polygons(row, data_dir)
     else:
-        st.write(f"{embedding_type.value} card type is not defined in EmbeddingTypes")
+        st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return
 
     st.image(image)
@@ -304,8 +223,8 @@ def build_card(
     st.button(
         str(button_name),
         key=f"similarity_button_{row['identifier']}",
-        on_click=similarity_callback,
-        args=(row, target_expander),
+        on_click=show_similarities,
+        args=(identifier, target_expander, embedding_information),
     )
 
     # === Write scores and link to editor === #

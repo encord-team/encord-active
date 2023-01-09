@@ -14,7 +14,7 @@ TABLE_NAME = "merged_metrics"
 def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
     main_df_images = pd.DataFrame(columns=["identifier"])
     main_df_objects = pd.DataFrame(columns=["identifier"])
-    main_df_image_quality = pd.DataFrame()
+    main_df_image_quality = pd.DataFrame(columns=["identifier"])
 
     for index in metrics_path.glob("*.csv"):
         meta_pth = index.with_suffix(".meta.json")
