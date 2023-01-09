@@ -4,12 +4,16 @@ import torch
 import wandb
 from torch.optim import lr_scheduler
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-
-from utils.provider import coco_remove_images_without_annotations
 from utils.encord_dataset import EncordMaskRCNNDataset
 from utils.model_libs import get_model_instance_segmentation
-from utils.provider import (collate_fn, get_config, get_transform,
-                            setup_reproducibility, threshold_masks)
+from utils.provider import (
+    coco_remove_images_without_annotations,
+    collate_fn,
+    get_config,
+    get_transform,
+    setup_reproducibility,
+    threshold_masks,
+)
 
 
 def train_one_epoch(model, device, data_loader, optimizer, log_freq=None):
@@ -115,12 +119,8 @@ def main(params):
         verbose=True,
     )
 
-    train_map_metric = MeanAveragePrecision(iou_type="segm").to(
-        device
-    )
-    val_map_metric = MeanAveragePrecision(iou_type="segm").to(
-        device
-    )
+    train_map_metric = MeanAveragePrecision(iou_type="segm").to(device)
+    val_map_metric = MeanAveragePrecision(iou_type="segm").to(device)
 
     for epoch in range(params.train.max_epoch):
         print(f"Epoch: {epoch}")
@@ -174,9 +174,7 @@ if __name__ == "__main__":
     params = get_config("config.ini")
     if params.logging.wandb_enabled:
         wandb.init(project=params.logging.wandb_project, save_code=True)
-        wandb.run.name = (
-            os.path.basename(__file__)[:-3] + "_" + wandb.run.name.split("-")[2]
-        )
+        wandb.run.name = os.path.basename(__file__)[:-3] + "_" + wandb.run.name.split("-")[2]
         wandb.run.save()
 
         config = wandb.config

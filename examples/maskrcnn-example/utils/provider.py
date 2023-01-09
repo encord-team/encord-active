@@ -3,16 +3,18 @@ from pathlib import Path
 
 sys.path.append(Path(__file__).parent.as_posix())
 
-import torch
-import torchvision
-from pycocotools import mask as coco_mask
-import transforms as T
 import configparser
-from types import SimpleNamespace
-import numpy as np
 import random
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List
+
+import numpy as np
+import torch
+import torchvision
+import transforms as T
+from pycocotools import mask as coco_mask
+
 
 def get_config(path: str):
     """Read config from file.
@@ -36,6 +38,7 @@ def get_config(path: str):
         params[section.lower()] = SimpleNamespace(**d)
     return SimpleNamespace(**params)
 
+
 def get_transform(train: bool):
     transforms = []
     transforms.append(T.PILToTensor())
@@ -43,6 +46,7 @@ def get_transform(train: bool):
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
+
 
 def threshold_masks(outputs: List[Dict[str, torch.Tensor]], threshold: float = 0.5):
     thresh_outs = []
@@ -53,6 +57,7 @@ def threshold_masks(outputs: List[Dict[str, torch.Tensor]], threshold: float = 0
         thresh_outs.append(out)
     outputs = thresh_outs
     return outputs
+
 
 def convert_coco_poly_to_mask(segmentations, height, width):
     masks = []
@@ -69,6 +74,7 @@ def convert_coco_poly_to_mask(segmentations, height, width):
     else:
         masks = torch.zeros((0, height, width), dtype=torch.uint8)
     return masks
+
 
 def coco_remove_images_without_annotations(dataset, cat_list=None):
     def _has_only_empty_bbox(anno):
@@ -112,8 +118,10 @@ def coco_remove_images_without_annotations(dataset, cat_list=None):
     dataset = torch.utils.data.Subset(dataset, ids)
     return dataset
 
+
 def collate_fn(batch):
     return tuple(zip(*batch))
+
 
 def setup_reproducibility(seed):
     torch.manual_seed(seed)

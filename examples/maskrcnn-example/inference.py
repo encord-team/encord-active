@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 import torch
 from PIL import Image
-
 from utils.encord_dataset import EncordMaskRCNNDataset
 from utils.model_libs import get_model_instance_segmentation
-from utils.provider import get_transform, get_config
+from utils.provider import get_config, get_transform
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 

@@ -8,8 +8,8 @@ from tqdm import tqdm
 
 target_width = 1024
 target_height = 1024
-data_folder_path = '/path/to/ea-project'
-annotations_path = '/path/to/annotation/file'
+data_folder_path = "/path/to/ea-project"
+annotations_path = "/path/to/annotation/file"
 
 
 def resize_images(root_folder: Path, target_width: int, target_height: int):
@@ -21,9 +21,9 @@ def resize_images(root_folder: Path, target_width: int, target_height: int):
     target_data_path.mkdir()
 
     for lr_item in tqdm(
-            data_path.iterdir(),
-            desc="Resizing images",
-            total=len(list(data_path.glob("*"))),
+        data_path.iterdir(),
+        desc="Resizing images",
+        total=len(list(data_path.glob("*"))),
     ):
         if lr_item.is_dir():
             data_units = lr_item / "images"
@@ -40,24 +40,24 @@ def resize_images(root_folder: Path, target_width: int, target_height: int):
 
 
 def resize_coco_annotations(
-        coco_annotation_file_path: Path,
-        images_folder_name: str,
-        target_width: int,
-        target_height: int,
+    coco_annotation_file_path: Path,
+    images_folder_name: str,
+    target_width: int,
+    target_height: int,
 ):
     target_coco_annotation_file_path = (
-            coco_annotation_file_path.with_suffix("").as_posix()
-            + f" {target_width}x{target_height}"
-            + coco_annotation_file_path.suffix
+        coco_annotation_file_path.with_suffix("").as_posix()
+        + f" {target_width}x{target_height}"
+        + coco_annotation_file_path.suffix
     )
 
     coco_annotation = json.loads(coco_annotation_file_path.read_text())
     target_coco_annotation = copy.deepcopy(coco_annotation)
 
     for image in tqdm(
-            iterable=target_coco_annotation["images"],
-            desc="Resizing image info",
-            total=len(target_coco_annotation["images"]),
+        iterable=target_coco_annotation["images"],
+        desc="Resizing image info",
+        total=len(target_coco_annotation["images"]),
     ):
         image["file_name"] = "/".join((images_folder_name, image["file_name"].split("/", 1)[1]))
         image["width"] = target_width
