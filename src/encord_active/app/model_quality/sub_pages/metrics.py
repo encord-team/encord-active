@@ -88,12 +88,18 @@ class MetricsPage(ModelQualityPage):
 
             metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
             with st.spinner("Computing index importance..."):
-                chart = create_metric_importance_charts(
-                    model_predictions,
-                    metric_columns=metric_columns,
-                    num_samples=num_samples,
-                )
-            st.altair_chart(chart, use_container_width=True)
+                try:
+                    chart = create_metric_importance_charts(
+                        model_predictions,
+                        metric_columns=metric_columns,
+                        num_samples=num_samples,
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+                except ValueError as e:
+                    if e.args:
+                        st.info(e.args[0])
+                    else:
+                        st.info("Failed to compute metric importance")
 
         st.subheader("Subset selection scores")
         with st.container():

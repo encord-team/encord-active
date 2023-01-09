@@ -22,7 +22,7 @@ def create_metric_importance_charts(
     if num_tps < 50:
         raise ValueError(
             f"Not enough true positives ({num_tps}) to calculate reliable metric importance. "
-            "Try increasing the number of samples or lower the IoU threshold in the side bar."
+            "Try increasing the number of samples or lower the IoU threshold in the top bar."
         )
 
     scores = _predictions[_P_COLS.iou] * _predictions[_P_COLS.is_true_positive]
