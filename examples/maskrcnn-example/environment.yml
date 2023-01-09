@@ -85,6 +85,7 @@ dependencies:
       - decorator==5.1.1
       - docker-pycreds==0.4.0
       - encord==0.1.54
+      - encord-active==0.1.17
       - entrypoints==0.4
       - faiss-cpu==1.7.3
       - fire==0.4.0
