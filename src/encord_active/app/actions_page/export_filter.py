@@ -142,7 +142,7 @@ def export_filter():
         on_click=lambda: set_clone_button(True),
         help="Clone the filtered data into a new Encord dataset and project",
     )
-    delete_btn = action_columns[4].button("❌ Review", help="Assign the filtered data for review on the Encord platform")
+    delete_btn = action_columns[4].button("👀 Review", help="Assign the filtered data for review on the Encord platform")
     edit_btn = action_columns[5].button(
         "🖋 Re-label", help="Assign the filtered data for relabelling on the Encord platform"
     )
