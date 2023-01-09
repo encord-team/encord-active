@@ -111,7 +111,7 @@ exclude = ['examples/']
 
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"
-ignore = 'examples/'
+ignore-paths = ['^examples/.*']
 
 [tool.pylint.'TYPING']
 generated-members = "torch.*, cv2"
