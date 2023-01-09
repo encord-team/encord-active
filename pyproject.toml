@@ -107,9 +107,11 @@ profile = "black"
 
 [tool.mypy]
 ignore_missing_imports = true
+exclude = ['examples/']
 
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"
+ignore = 'examples/'
 
 [tool.pylint.'TYPING']
 generated-members = "torch.*, cv2"
