@@ -7,7 +7,6 @@ import requests
 import rich
 import typer
 from rich.markup import escape
-from rich.panel import Panel
 from tqdm.auto import tqdm
 
 # GCP bucket links will be added here
@@ -40,7 +39,7 @@ def fetch_response_content_length(r: requests.Response) -> Optional[int]:
     return int(r.headers["content-length"]) if "content-length" in r.headers.keys() else None
 
 
-def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
+def fetch_prebuilt_project(project_name: str, out_dir: Path):
     url = PREBUILT_PROJECTS[project_name]
     output_file_name = "prebuilt_project.zip"
     output_file_path = out_dir / output_file_name
@@ -50,7 +49,7 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
     if (out_dir / "project_meta.yaml").is_file():
         redownload = typer.confirm("Do you want to re-download the project?")
         if not redownload:
-            return
+            return out_dir
 
     r = requests.get(url, stream=True)
     total_length = fetch_response_content_length(r)
@@ -63,17 +62,4 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path, verbose=True):
     rich.print("Unpacking zip file. May take a bit.")
     shutil.unpack_archive(output_file_path, out_dir)
     os.remove(output_file_path)
-
-    if verbose:
-        rich.print(
-            Panel(
-                f"""
-    Successfully downloaded sandbox dataset. To view the data, run:
-
-[cyan blink] cd "{escape(out_dir.as_posix())}"\n encord-active visualise
-        """,
-                title="🌟 Success 🌟",
-                style="green",
-                expand=False,
-            )
-        )
+    return out_dir
