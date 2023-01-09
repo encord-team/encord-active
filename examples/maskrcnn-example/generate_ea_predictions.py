@@ -19,7 +19,7 @@ predictions_to_store = []
 
 params = get_config("config.ini")
 
-with open(params.inference.ontology_file_path, encoding="utf-8") as f:
+with open(params.inference.ontology_filepath, encoding="utf-8") as f:
     encord_ontology: dict = json.load(f)
 
 dataset_validation = EncordMaskRCNNDataset(
