@@ -32,7 +32,7 @@ def model_quality(page: Page):
         metrics_dir = get_state().project_paths.metrics
 
         predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
-        label_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
         model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
         labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
 
