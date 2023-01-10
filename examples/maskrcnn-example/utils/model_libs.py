@@ -4,7 +4,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 
-def get_model_instance_segmentation(num_classes):
+def get_model_instance_segmentation(num_classes, fine_tuning=False):
     # load an instance segmentation model pre-trained on COCO
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights=MaskRCNN_ResNet50_FPN_Weights.DEFAULT)
 
@@ -20,5 +20,13 @@ def get_model_instance_segmentation(num_classes):
 
     # and replace the mask predictor with a new one
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
+
+    if fine_tuning:
+        for param in model.parameters():
+            param.requires_grad = False
+        for param in model.roi_heads.box_predictor.parameters():
+            param.requires_grad = True
+        for param in model.roi_heads.mask_predictor.parameters():
+            param.requires_grad = True
 
     return model
