@@ -41,7 +41,11 @@ class PageGridSettings:
 
 @dataclass
 class State:
-    """This is not intended for usage, please use the `get_state` constant instead."""
+    """
+    Use this only for getting default values, otherwise use `get_state()`
+    To get the default `iou_threshold` we would call `State.iou_threshold`
+    and to get/set the current value we would call `get_state().iou_threshold.`
+    """
 
     project_paths: ProjectFileStructure
     all_tags: List[Tag]
@@ -50,7 +54,6 @@ class State:
     iou_threshold = 0.5
     selected_metric: Optional[MetricData] = None
     page_grid_settings = PageGridSettings()
-    normalize_metrics = False
     predictions = PredictionsState()
     similarities_count = 8
 
