@@ -15,6 +15,7 @@ from utils.provider import (
     threshold_masks,
 )
 
+
 def train_one_epoch(model, device, data_loader, optimizer, log_freq=None):
     model.train()
 
