@@ -75,9 +75,7 @@ class ExplorerPage(Page):
         selected_metric = sorted_metrics[metric_idx]
         get_state().selected_metric = selected_metric
 
-        normalize = selected_metric.meta.get("score_normalization", get_state().normalize_metrics)
-        df: DataFrame[MetricSchema] = load_metric_dataframe(selected_metric, normalize=normalize)
-
+        df = load_metric_dataframe(selected_metric)
         if df.shape[0] <= 0:
             return
 

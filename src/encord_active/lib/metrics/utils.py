@@ -34,7 +34,9 @@ class MetricSchema(IdentifierSchema):
     url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
-def load_metric_dataframe(metric: MetricData, normalize: bool, *, sorting_key="score") -> DataFrame[MetricSchema]:
+def load_metric_dataframe(
+    metric: MetricData, normalize: bool = False, *, sorting_key="score"
+) -> DataFrame[MetricSchema]:
     """
     Load and sort the selected csv file and cache it, so we don't need to perform this
     heavy computation each time the slider in the UI is moved.

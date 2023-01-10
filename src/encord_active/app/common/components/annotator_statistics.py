@@ -35,7 +35,7 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
 
     total_mean_score = annotators_df["mean_score"].mean()
     annotators_df.loc[len(annotators_df.index)] = AnnotatorInfo(
-        name="all", total_annotations=annotators_df.shape[0], mean_score=total_mean_score
+        name="all", total_annotations=annotators_df["total_annotations"].sum(), mean_score=total_mean_score
     )
 
     deviations = 100 * ((np.array(annotators_df["mean_score"]) - total_mean_score) / total_mean_score)

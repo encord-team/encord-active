@@ -4,7 +4,7 @@ import streamlit as st
 
 # import encord_active.app.common.state as state
 from encord_active.app.common.components.tags.tag_creator import tag_creator
-from encord_active.app.common.state import get_state
+from encord_active.app.common.state import State, get_state
 from encord_active.lib.model_predictions.reader import get_class_idx
 
 
@@ -32,16 +32,15 @@ def common_settings():
 
     with col2:
         # IOU
-        iou_threshold = st.slider(
+        get_state().iou_threshold = st.slider(
             "Select an IOU threshold",
             min_value=0,
-            max_value=100,
-            value=50,
+            max_value=1,
+            value=State.iou_threshold,
             help="The mean average precision (mAP) score is based on true positives and false positives. "
             "The IOU threshold determines how closely predictions need to match labels to be considered "
             "as true positives.",
         )
-        get_state().iou_threshold = iou_threshold / 100
 
     with col3:
         st.write("")
@@ -49,7 +48,7 @@ def common_settings():
         # Ignore unmatched frames
         get_state().ignore_frames_without_predictions = st.checkbox(
             "Ignore frames without predictions",
-            value=get_state().ignore_frames_without_predictions,
+            value=State.ignore_frames_without_predictions,
             help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for which there "
             "exist no predictions. With this flag, you can ignore those.",
         )
