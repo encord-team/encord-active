@@ -129,7 +129,7 @@ class AnnotatorInfo(TypedDict):
 
 
 def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, AnnotatorInfo]:
-    annotator_set: List[str] = natsorted(list(df[MetricSchema.annotator].unique()))
+    annotator_set: List[str] = natsorted(df[MetricSchema.annotator].dropna().unique().tolist())
     annotators: Dict[str, AnnotatorInfo] = {}
     for annotator in annotator_set:
         annotators[annotator] = AnnotatorInfo(

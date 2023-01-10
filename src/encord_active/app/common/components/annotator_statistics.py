@@ -13,6 +13,9 @@ from encord_active.lib.metrics.utils import (
 
 def render_annotator_properties(df: DataFrame[MetricSchema]):
     annotators = get_annotator_level_info(df)
+    if len(annotators) == 0:
+        return
+
     left_col, right_col = st.columns([2, 2])
 
     # 1. Pie Chart
