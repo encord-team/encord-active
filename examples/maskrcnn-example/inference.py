@@ -8,6 +8,7 @@ from utils.provider import get_config, get_transform
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 params = get_config("config.ini")
+IMAGE_ID = 4
 
 dataset_validation = EncordMaskRCNNDataset(
     img_folder=params.inference.target_data_folder,
@@ -18,7 +19,7 @@ dataset_validation = EncordMaskRCNNDataset(
 model = get_model_instance_segmentation(len(dataset_validation.coco.cats) + 1)
 model.load_state_dict(torch.load(params.inference.model_checkpoint_path))
 model.to(device)
-img, target, img_metadata = dataset_validation[4]
+img, target, img_metadata = dataset_validation[IMAGE_ID]
 
 model.eval()
 with torch.no_grad():
