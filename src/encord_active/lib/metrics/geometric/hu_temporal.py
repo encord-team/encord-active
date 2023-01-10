@@ -51,7 +51,6 @@ class HuMomentsTemporalMetric(Metric):
     LONG_DESCRIPTION = r"""Ranks objects by how similar they are to their instances in previous frames
 based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes,
 the lower its score will be."""
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]

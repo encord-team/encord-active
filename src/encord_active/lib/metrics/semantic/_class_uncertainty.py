@@ -219,7 +219,6 @@ network and Monte-Carlo Dropout to estimate the uncertainty of the label. """
 
 class ConfidenceScoreMetric(Metric):
     TITLE = "Class Confidence Score"
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.SEMANTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]

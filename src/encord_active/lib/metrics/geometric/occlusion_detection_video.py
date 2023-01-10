@@ -20,7 +20,6 @@ class OcclusionDetectionOnVideo(Metric):
     SHORT_DESCRIPTION = "Tracks objects and detect outliers"
     LONG_DESCRIPTION = r"""This metric collects information related to object size and aspect ratio for each track
  and find outliers among them."""
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX]

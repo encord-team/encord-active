@@ -21,7 +21,6 @@ If no logs are available for a particular object, it will get score 0."""
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.ALL
-    SCORE_NORMALIZATION = True
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         found_any = False

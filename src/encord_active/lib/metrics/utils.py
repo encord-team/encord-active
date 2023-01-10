@@ -86,11 +86,13 @@ def get_metric_operation_level(pth: Path) -> str:
     return "O" if object_hashes else "F"
 
 
-def is_valid_annotaion_type(annotaion_type: Union[None, List[str]], metric_scope: Optional[MetricScope] = None) -> bool:
+def is_valid_annotation_type(
+    annotation_type: Union[None, List[str]], metric_scope: Optional[MetricScope] = None
+) -> bool:
     if metric_scope == MetricScope.DATA_QUALITY:
-        return annotaion_type is None
+        return annotation_type is None
     elif metric_scope == MetricScope.LABEL_QUALITY:
-        return isinstance(annotaion_type, list)
+        return isinstance(annotation_type, list)
     else:
         return True
 
@@ -112,7 +114,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
         return out
 
     for p, n, m, l in zip(paths, names, meta_data, levels):
-        if m is None or not l or not is_valid_annotaion_type(m.get("annotation_type"), metric_scope):
+        if m is None or not l or not is_valid_annotation_type(m.get("annotation_type"), metric_scope):
 
             continue
 

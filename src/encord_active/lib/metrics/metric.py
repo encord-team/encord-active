@@ -42,7 +42,6 @@ class MetricMetadata(TypedDict):
     long_description: str
     metric_type: MetricType
     needs_images: bool
-    score_normalization: bool
     short_description: str
     title: str
     threshold: float
@@ -175,15 +174,6 @@ class Metric(ABC):
         providing full details makes sense.
         """
         pass
-
-    @property
-    def SCORE_NORMALIZATION(self) -> bool:
-        """
-        If the score normalization will be applied to metrics from this metric as default in the app.
-        :return: True or False
-        """
-
-        return False
 
     @property
     def NEEDS_IMAGES(self):

@@ -38,7 +38,6 @@ class ContrastMetric(Metric):
 
 Contrast is computed as the standard deviation of the pixel values.
 """
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
@@ -53,7 +52,6 @@ Contrast is computed as the standard deviation of the pixel values.
 
 class Wrapper:  # we can't have a non-default-constructible Metric implementation at module level
     class ColorMetric(Metric):
-        SCORE_NORMALIZATION = True
         METRIC_TYPE = MetricType.HEURISTIC
         DATA_TYPE = DataType.IMAGE
         ANNOTATION_TYPE = AnnotationType.NONE
@@ -167,7 +165,6 @@ class BrightnessMetric(Metric):
 
 Brightness is computed as the average (normalized) pixel value across each image.
 """
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
@@ -193,7 +190,6 @@ image.
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
@@ -219,7 +215,6 @@ image. Note that this is $1 - \text{sharpness}$.
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
