@@ -197,7 +197,6 @@ def train_model(model, model_path, batches):
 
 class EntropyHeatmapMetric(Metric):
     TITLE = "Heatmap uncertainty"
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.SEMANTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.ALL

@@ -36,7 +36,6 @@ class ErrorStore:
 
 class MissingObjectsMetric(Metric):
     TITLE = "Missing Objects and Broken Tracks"
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.SEQUENCE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]

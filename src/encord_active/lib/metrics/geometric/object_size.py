@@ -32,7 +32,6 @@ class RelativeObjectAreaMetric(Metric):
     TITLE = "Object Area - Relative"
     SHORT_DESCRIPTION = "Computes object area as a percentage of total image area"
     LONG_DESCRIPTION = r"""Computes object area as a percentage of total image area."""
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [
@@ -62,7 +61,6 @@ class OccupiedTotalAreaMetric(Metric):
     TITLE = "Frame object density"
     SHORT_DESCRIPTION = "Computes the percentage of image area that's occupied by objects"
     LONG_DESCRIPTION = r"""Computes the percentage of image area that's occupied by objects."""
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [
