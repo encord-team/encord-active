@@ -15,7 +15,6 @@ from utils.provider import (
     threshold_masks,
 )
 
-
 def train_one_epoch(model, device, data_loader, optimizer, log_freq=None):
     model.train()
 
@@ -100,7 +99,7 @@ def main(params):
     )
 
     # get the model using our helper function
-    model = get_model_instance_segmentation(num_classes)
+    model = get_model_instance_segmentation(num_classes, fine_tuning=True)
 
     # move model to the right device
     model.to(device)
@@ -109,15 +108,15 @@ def main(params):
     model_params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(model_params, lr=params.train.learning_rate)
 
-    # and a learning rate scheduler
-    scheduler = lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="max",
-        factor=0.2,
-        patience=params.train.lr_scheduler_patience,
-        threshold=0.0001,
-        verbose=True,
-    )
+    if params.train.use_lr_scheduler:
+        scheduler = lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="max",
+            factor=0.2,
+            patience=params.train.lr_scheduler_patience,
+            threshold=0.0001,
+            verbose=True,
+        )
 
     train_map_metric = MeanAveragePrecision(iou_type="segm").to(device)
     val_map_metric = MeanAveragePrecision(iou_type="segm").to(device)
@@ -130,7 +129,8 @@ def main(params):
             train_map = evaluate(model, device, data_loader, train_map_metric)
             val_map = evaluate(model, device, data_loader_validation, val_map_metric)
 
-            scheduler.step(val_map["map"])
+            if params.train.use_lr_scheduler:
+                scheduler.step(val_map["map"])
 
             if params.logging.wandb_enabled:
                 train_map_logs = {f"train/{k}": v.item() for k, v in train_map.items()}
