@@ -34,8 +34,8 @@ def common_settings():
         # IOU
         get_state().iou_threshold = st.slider(
             "Select an IOU threshold",
-            min_value=0,
-            max_value=1,
+            min_value=0.0,
+            max_value=1.0,
             value=State.iou_threshold,
             help="The mean average precision (mAP) score is based on true positives and false positives. "
             "The IOU threshold determines how closely predictions need to match labels to be considered "
