@@ -5,7 +5,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 import encord_active.app.common.state as state
-from encord_active.app.common.state import get_state
+from encord_active.app.common.state import State, get_state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.model_predictions.map_mar import (
@@ -66,7 +66,7 @@ on your labels are used for the "False Negative Rate" plot.
                     "Number of buckets (n)",
                     min_value=5,
                     max_value=200,
-                    value=get_state().predictions.nbins,
+                    value=State.predictions.nbins,
                     help="Choose the number of bins to discritize the prediction metric values into.",
                 )
             )
@@ -75,7 +75,7 @@ on your labels are used for the "False Negative Rate" plot.
             st.write("")
             get_state().predictions.decompose_classes = st.checkbox(
                 "Show class decomposition",
-                value=get_state().predictions.decompose_classes,
+                value=State.predictions.decompose_classes,
                 help="When checked, every plot will have a separate component for each class.",
             )
 
