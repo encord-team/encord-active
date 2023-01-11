@@ -38,7 +38,6 @@ class HuMomentsStatic(Metric):
     LONG_DESCRIPTION = r"""Computes the Euclidean distance between the polygons'
     [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and
     the prototypical class moments."""
-    SCORE_NORMALIZATION = True
     METRIC_TYPE = MetricType.GEOMETRIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]
