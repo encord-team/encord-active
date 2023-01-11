@@ -24,7 +24,12 @@ def ensure_project(fn: Callable[..., R]) -> Callable[..., R]:
     @wraps(fn)
     def inner(*args: Any, **kwargs: Any) -> Any:
         if not (kwargs["target"] / "project_meta.yaml").exists():
-            rich.print("[red]Couldn't find a project[/red]")
+            rich.print(
+                f"""
+[red]Couldn't find a project at:[/red] {kwargs['target']}
+[yellow]Make sure you either `cd` into directory containing a project or specify it with the `--target` option.[/yellow]
+                """
+            )
             raise typer.Abort()
         fn(*args, **kwargs)
 
