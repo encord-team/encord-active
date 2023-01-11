@@ -4,6 +4,7 @@ from typing import Any, List, Optional
 
 import pandas as pd
 import streamlit as st
+from natsort import natsorted
 from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
@@ -56,7 +57,7 @@ class ExplorerPage(Page):
         non_empty_metrics = [
             metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
         ]
-        sorted_metrics = sorted(non_empty_metrics, key=lambda i: i.name)
+        sorted_metrics = natsorted(non_empty_metrics, key=lambda i: i.name)
 
         metric_names = list(map(lambda i: i.name, sorted_metrics))
 
@@ -74,29 +75,32 @@ class ExplorerPage(Page):
         selected_metric = sorted_metrics[metric_idx]
         get_state().selected_metric = selected_metric
 
-        normalize = selected_metric.meta.get("score_normalization", get_state().normalize_metrics)
-        df = load_metric_dataframe(selected_metric, normalize=normalize)
-
+        df = load_metric_dataframe(selected_metric)
         if df.shape[0] <= 0:
             return
 
-        class_set = sorted(list(df["object_class"].unique()))
+        class_set = natsorted(df[MetricSchema.object_class].dropna().unique().tolist())
         with col2:
-            selected_classes = st.multiselect("Filter by class", class_set)
+            selected_classes = None
+            if len(class_set) > 0:
+                selected_classes = st.multiselect("Filter by class", class_set)
 
-        is_class_selected = df.shape[0] * [True] if not selected_classes else df["object_class"].isin(selected_classes)
+        is_class_selected = (
+            df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
+        )
         df_class_selected: DataFrame[MetricSchema] = df[is_class_selected]
 
         annotators = get_annotator_level_info(df_class_selected)
-        annotator_set = sorted(annotators.keys())
-
+        annotator_set = natsorted(annotators.keys())
         with col3:
-            selected_annotators = st.multiselect("Filter by annotator", annotator_set)
+            selected_annotators = None
+            if len(annotator_set) > 0:
+                selected_annotators = st.multiselect("Filter by annotator", annotator_set)
 
         annotator_selected = (
             df_class_selected.shape[0] * [True]
             if not selected_annotators
-            else df_class_selected["annotator"].isin(selected_annotators)
+            else df_class_selected[MetricSchema.annotator].isin(selected_annotators)
         )
 
         self.row_col_settings_in_sidebar()

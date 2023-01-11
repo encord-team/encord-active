@@ -8,10 +8,11 @@ from encord_active.lib.metrics.utils import MetricSchema
 
 
 def render_dataset_properties(current_df: DataFrame[MetricSchema]):
+    cls_set = natsorted(current_df[MetricSchema.object_class].dropna().unique().tolist())
+    if len(cls_set) == 0:
+        return
+
     dataset_columns = st.columns(3)
-
-    cls_set = natsorted(list(current_df[MetricSchema.object_class].unique()))
-
     dataset_columns[0].metric("Number of labels", current_df.shape[0])
     dataset_columns[1].metric("Number of classes", len(cls_set))
     dataset_columns[2].metric("Number of images", get_unique_data_units_size(current_df))

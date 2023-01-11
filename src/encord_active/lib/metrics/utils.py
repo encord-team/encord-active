@@ -34,7 +34,9 @@ class MetricSchema(IdentifierSchema):
     url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
-def load_metric_dataframe(metric: MetricData, normalize: bool, *, sorting_key="score") -> DataFrame[MetricSchema]:
+def load_metric_dataframe(
+    metric: MetricData, normalize: bool = False, *, sorting_key="score"
+) -> DataFrame[MetricSchema]:
     """
     Load and sort the selected csv file and cache it, so we don't need to perform this
     heavy computation each time the slider in the UI is moved.
@@ -127,7 +129,7 @@ class AnnotatorInfo(TypedDict):
 
 
 def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, AnnotatorInfo]:
-    annotator_set: List[str] = natsorted(list(df[MetricSchema.annotator].unique()))
+    annotator_set: List[str] = natsorted(df[MetricSchema.annotator].dropna().unique().tolist())
     annotators: Dict[str, AnnotatorInfo] = {}
     for annotator in annotator_set:
         annotators[annotator] = AnnotatorInfo(
