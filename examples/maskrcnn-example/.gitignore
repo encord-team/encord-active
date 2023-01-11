@@ -348,7 +348,6 @@ Sessionx.vim
 
 .idea
 
-/local_tests/
-
 imports.prof
-ci-tests
+config.ini
+wandb/
