@@ -21,9 +21,9 @@ def update_tags(identifier: str, key: str):
     tags_for_update: List[Tag] = st.session_state[key]
 
     targeted_tags: Dict[str, List[Tag]] = {}
-    for tag in tags_for_update:
-        target_id = target_identifier(identifier, tag.scope)
-        targeted_tags.setdefault(target_id, []).append(tag)
+    for scope in TagScope:
+        target_id = target_identifier(identifier, scope)
+        targeted_tags[target_id] = [tag for tag in tags_for_update if tag.scope == scope]
 
     for id, tags in targeted_tags.items():
         get_state().merged_metrics.at[id, "tags"] = tags
