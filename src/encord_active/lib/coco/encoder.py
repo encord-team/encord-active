@@ -254,6 +254,7 @@ class CocoEncoder:
         self._data_hash_to_image_id_map[(data_hash, 0)] = image_id
         return {
             "coco_url": data_unit["data_link"],
+            "flickr_url": "",
             "id": image_id,
             "image_title": data_unit["data_title"],
             "file_name": self.get_file_name_and_download_image(label_hash, data_unit),
