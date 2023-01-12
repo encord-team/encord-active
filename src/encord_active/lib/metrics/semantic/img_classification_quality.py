@@ -208,7 +208,7 @@ class ImageLevelQualityTest(Metric):
                     score=score,
                     description=self.build_description_string(description_info),
                     annotator=answers["annotator"],
-                    **description_info,
+                    **description_info,  # type: ignore
                 )
 
             key_score_pairs[key] = temp_entry
