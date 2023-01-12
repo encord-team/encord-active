@@ -20,7 +20,7 @@ def create_pr_charts(metrics: DataFrame[PerformanceMetricSchema], precisions: Da
 
     class_selection = alt.selection_multi(fields=[_M_COLS.class_name])
 
-    _metrics.sort_values(by=['group', _M_COLS.value], ascending=[True, False], inplace=True)
+    _metrics.sort_values(by=["group", _M_COLS.value], ascending=[True, False], inplace=True)
 
     class_bars = (
         alt.Chart(_metrics, title="Mean scores")
