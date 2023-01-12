@@ -1,6 +1,6 @@
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, TypedDict
 
 import faiss
 import numpy as np
@@ -18,10 +18,24 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
 )
+from encord_active.lib.metrics.utils import is_multiclass_ontology
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class DescriptionInfo(TypedDict):
+    question: str
+    answer: str
+    target_answer: str
+    above_threshold: bool
+
+
+class ClassificationInfo(DescriptionInfo):
+    score: float
+    description: str
+    annotator: str
 
 
 class ImageLevelQualityTest(Metric):
@@ -56,7 +70,9 @@ class ImageLevelQualityTest(Metric):
         self.num_nearest_neighbors = num_nearest_neighbors
         self.certainty_ratio = certainty_ratio
 
-    def extract_description_info(self, question_hash: str, nearest_labels: dict[str, np.ndarray], index: int):
+    def extract_description_info(
+        self, question_hash: str, nearest_labels: dict[str, np.ndarray], index: int
+    ) -> DescriptionInfo:
         gt_label = nearest_labels["gt_label"][index]
         neighbor_labels = nearest_labels["neighbor_labels"][index].tolist()
 
@@ -64,18 +80,23 @@ class ImageLevelQualityTest(Metric):
         counter = Counter(neighbor_labels)
         target_label, target_label_frequency = counter.most_common(1)[0]
 
-        if gt_label == target_label and target_label_frequency > threshold:
-            description = f":heavy_check_mark: For the question `{self.featureNodeHash_to_question_name[question_hash]}`, the image is correctly annotated as `{self.index_to_answer_name[question_hash][gt_label]}`"
+        return DescriptionInfo(
+            question=self.featureNodeHash_to_question_name[question_hash],
+            answer=self.index_to_answer_name[question_hash][gt_label],
+            target_answer=self.index_to_answer_name[question_hash][target_label],
+            above_threshold=target_label_frequency > threshold,
+        )
 
-        elif gt_label != target_label and target_label_frequency > threshold:
-            description = f":x: For the question `{self.featureNodeHash_to_question_name[question_hash]}`, the image is annotated as `{self.index_to_answer_name[question_hash][gt_label]}`. Similar \
-             images were annotated as `{self.index_to_answer_name[question_hash][target_label]}`."
-
-        else:  # covers cases for  target_label_frequency <= threshold:
-            description = f":question: For the question `{self.featureNodeHash_to_question_name[question_hash]}`, the image is annotated as `{self.index_to_answer_name[question_hash][gt_label]}`. \
+    def build_description_string(self, info: DescriptionInfo) -> str:
+        if not info["above_threshold"]:
+            return f":question: For the question `{info['question']}`, the image is annotated as `{info['question']}`. \
             The annotated class may be wrong, as the most similar objects have different classes."
 
-        return description
+        if info["answer"] == info["target_answer"]:
+            return f":heavy_check_mark: For the question `{info['question']}`, the image is correctly annotated as `{info['answer']}`"
+        else:
+            return f":x: For the question `{info['question']}`, the image is annotated as `{info['answer']}`. Similar \
+                    images were annotated as `{info['target_answer']}`."
 
     def convert_to_indexes(self):
         embedding_databases, indexes = {}, {}
@@ -155,14 +176,14 @@ class ImageLevelQualityTest(Metric):
             collections_scores_all_questions[question] = scores
         return collections_scores_all_questions
 
-    def create_key_score_pairs(self, nearest_indexes: dict[str, np.ndarray]) -> dict[str, dict]:
+    def create_key_score_pairs(self, nearest_indexes: dict[str, np.ndarray]):
 
         nearest_labels_all_questions = self.transform_neighbors_to_labels_for_all_questions(nearest_indexes)
         collections_scores_all_questions = self.convert_nearest_labels_to_scores_for_all_questions(
             nearest_labels_all_questions
         )
 
-        key_score_pairs = {}
+        key_score_pairs: Dict[str, Dict[str, ClassificationInfo]] = {}
         for i, collection in enumerate(self.collections):
             label_hash = collection["label_row"]
             du_hash = collection["data_unit"]
@@ -171,20 +192,24 @@ class ImageLevelQualityTest(Metric):
             key = f"{label_hash}_{du_hash}_{frame_idx:05d}"
 
             temp_entry = {}
-            question = collection["featureHash"]
-            if question in collections_scores_all_questions:
+            question_hash = collection["featureHash"]
+            if question_hash in collections_scores_all_questions:
                 # sub_collection_index = self.question_hash_to_collection_indexes[question].index(i)
-                score = collections_scores_all_questions[question][i]
+                score = collections_scores_all_questions[question_hash][i]
                 answers = collection["classification_answers"]
                 if not answers:
                     raise Exception("Missing classification answers")
 
-                temp_entry[question] = {
-                    "score": score,
-                    "description": self.extract_description_info(question, nearest_labels_all_questions[question], i),
-                    "class_name": self.featureNodeHash_to_question_name[question],
-                    "annotator": answers["annotator"],
-                }
+                description_info = self.extract_description_info(
+                    question_hash, nearest_labels_all_questions[question_hash], i
+                )
+
+                temp_entry[question_hash] = ClassificationInfo(
+                    score=score,
+                    description=self.build_description_string(description_info),
+                    annotator=answers["annotator"],
+                    **description_info,
+                )
 
             key_score_pairs[key] = temp_entry
         return key_score_pairs
@@ -245,17 +270,26 @@ class ImageLevelQualityTest(Metric):
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)
-
             for data_unit, img_pth in iterator.iterate(desc="Storing index"):
                 key = iterator.get_identifier()
+                is_multiclass = is_multiclass_ontology(iterator.project.ontology)
+
                 if key in key_score_pairs:
                     for classification in data_unit["labels"].get("classifications", []):
                         question_featureHash = classification["featureHash"]
+                        classification_hash = classification["classificationHash"]
+                        classification_info = key_score_pairs[key][question_featureHash]
+
+                        label_class = f"{classification_info['answer']}"
+                        if is_multiclass:
+                            label_class = f"{classification_info['question']}:{label_class}"
+
                         if question_featureHash in key_score_pairs[key]:
                             writer.write(
                                 key_score_pairs[key][question_featureHash]["score"],
-                                key=key + "_" + classification["classificationHash"],
-                                description=key_score_pairs[key][question_featureHash]["description"],
+                                key=f"{key}_{classification_hash}",
+                                description=classification_info["description"],
+                                label_class=label_class,
                                 labels=classification,
                             )
         else:
