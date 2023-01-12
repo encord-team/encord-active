@@ -1,6 +1,6 @@
 from pathlib import Path
+from typing import List, TypedDict
 
-import inquirer as i
 import rich
 import typer
 from rich.markup import escape
@@ -42,6 +42,8 @@ def download(
     * If --project_name is not given as an argument, available prebuilt projects will be listed
      and the user can select one from the menu.
     """
+    from InquirerPy import inquirer as i
+
     from encord_active.lib.project.sandbox_projects import (
         PREBUILT_PROJECTS,
         fetch_prebuilt_project_size,
@@ -59,12 +61,11 @@ def download(
             modified_project_name = project_name + (f" ({project_size} mb)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
 
-        questions = [i.List("project_name", message="Choose a project", choices=project_names_with_storage)]
-        answers = i.prompt(questions)
-        if not answers or "project_name" not in answers:
+        answer = i.select(message="Choose a project", choices=project_names_with_storage, vi_mode=True).execute()
+        if not answer:
             rich.print("No project was selected.")
             raise typer.Abort()
-        project_name = answers["project_name"].split(" ", maxsplit=1)[0]
+        project_name = answer.split(" ", maxsplit=1)[0]
 
     # create project folder
     project_dir = target / project_name
@@ -127,6 +128,46 @@ def quickstart(
 
     fetch_prebuilt_project(project_name, project_dir)
     launch_streamlit_app(project_dir)
+
+
+@cli.command()
+@ensure_project
+def metricize(
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
+    ),
+    fuzzy: bool = typer.Option(
+        False, help="Enbale fuzzy searching in the selection. (press [TAB] to select more than one) 🪄"
+    ),
+):
+    """
+    Execute metrics on your data and predictions 🧠
+    """
+    from InquirerPy import inquirer as i
+    from InquirerPy.base.control import Choice
+
+    from encord_active.lib.metrics.execute import (
+        execute_metrics,
+        get_metrics,
+        load_metric,
+    )
+
+    metrics = list(map(load_metric, get_metrics()))
+    choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
+    Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
+    options: Options = {
+        "message": "What metrics would you like to run?",
+        "choices": choices,
+        "vi_mode": True,
+    }
+
+    if fuzzy:
+        options["message"] += " [blue](press [TAB] to select more than one)[/blue]"
+        selected_metrics = i.fuzzy(**options, multiselect=True).execute()
+    else:
+        selected_metrics = i.checkbox(**options).execute()
+
+    execute_metrics(selected_metrics, data_dir=target)
 
 
 if __name__ == "__main__":

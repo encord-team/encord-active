@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 from encord.project_ontology.object_type import ObjectShape
 from loguru import logger
@@ -80,13 +80,12 @@ def run_all_prediction_metrics(**kwargs):
 
 
 def run_metrics(filter_func: Callable = lambda x: True, **kwargs):
-    metrics: List[Metric] = list(
-        map(
-            lambda mod_cls: import_module(mod_cls[0]).__getattribute__(mod_cls[1])(),
-            get_metrics(filter_func=filter_func),
-        )
-    )
-    execute_metric(metrics, **kwargs)
+    metrics = list(map(load_metric, get_metrics(filter_func=filter_func)))
+    execute_metrics(metrics, **kwargs)
+
+
+def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
+    return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
 
 
 def __get_value(o):
@@ -109,7 +108,7 @@ logger = logger.opt(colors=True)
 
 
 @logger.catch()
-def execute_metric(
+def execute_metrics(
     metrics: Union[Metric, List[Metric]],
     data_dir: Path,
     iterator_cls: Type[Iterator] = DatasetIterator,
