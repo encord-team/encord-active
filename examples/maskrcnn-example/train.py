@@ -127,14 +127,17 @@ def main(params):
         train_one_epoch(model, device, data_loader, optimizer, log_freq=10)
 
         if epoch % params.logging.performance_tracking_interval == 0:
-            train_map = evaluate(model, device, data_loader, train_map_metric)
+            if params.logging.log_train_map:
+                train_map = evaluate(model, device, data_loader, train_map_metric)
             val_map = evaluate(model, device, data_loader_validation, val_map_metric)
 
             if params.train.use_lr_scheduler:
                 scheduler.step(val_map["map"])
 
             if params.logging.wandb_enabled:
-                train_map_logs = {f"train/{k}": v.item() for k, v in train_map.items()}
+                train_map_logs = {}
+                if params.logging.log_train_map:
+                    train_map_logs = {f"train/{k}": v.item() for k, v in train_map.items()}
                 val_map_logs = {f"val/{k}": v.item() for k, v in val_map.items()}
                 wandb.log(
                     {
