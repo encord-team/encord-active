@@ -9,7 +9,9 @@ from encord.orm.project import Project
 
 def get_client(ssh_key_path: Path):
     return EncordUserClient.create_with_ssh_private_key(
-        ssh_key_path.read_text(encoding="utf-8"), requests_settings=RequestsSettings(max_retries=5)
+        ssh_key_path.read_text(encoding="utf-8"),
+        requests_settings=RequestsSettings(max_retries=5),
+        domain="http://127.0.0.1:8000",
     )
 
 

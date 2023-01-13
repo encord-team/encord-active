@@ -1,4 +1,5 @@
 import json
+import shutil
 from datetime import datetime
 from typing import Tuple, cast
 
@@ -9,6 +10,8 @@ from pandas.api.types import (
     is_datetime64_any_dtype,
     is_numeric_dtype,
 )
+from pandera.typing import DataFrame
+from tqdm.auto import tqdm
 
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state
@@ -21,6 +24,7 @@ from encord_active.lib.db.tags import Tags
 from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
     EncordActions,
 )
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -42,10 +46,12 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         columns_to_filter = [tags_column] + columns_to_filter
 
         to_filter_columns = st.multiselect("Filter dataframe on", columns_to_filter)
-        if to_filter_columns:
-            df = df.copy()
+
+        filtered = df.copy()
 
         for column in to_filter_columns:
+            non_applicable = filtered[pd.isna(filtered[column])]
+
             left, right = st.columns((1, 20))
             left.write("↳")
             key = f"filter-select-{column.replace(' ', '_').lower()}"
@@ -54,24 +60,24 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 tag_filters = right.multiselect(
                     "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
                 )
-                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in df["tags"]]
-                df = df.loc[filtered_rows]
+                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in filtered["tags"]]
+                filtered = filtered.loc[filtered_rows]
 
             # Treat columns with < 10 unique values as categorical
-            elif is_categorical_dtype(df[column]) or df[column].nunique() < 10:
-                if df[column].isnull().sum() != df.shape[0]:
+            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
+                if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
-                        df[column].dropna().unique().tolist(),
-                        default=df[column].dropna().unique().tolist(),
+                        filtered[column].dropna().unique().tolist(),
+                        default=filtered[column].dropna().unique().tolist(),
                         key=key,
                     )
-                    df = df[df[column].isin(user_cat_input)]
+                    filtered = filtered[filtered[column].isin(user_cat_input)]
                 else:
                     right.markdown(f"For column *{column}*, all values are NaN")
-            elif is_numeric_dtype(df[column]):
-                _min = float(df[column].min())
-                _max = float(df[column].max())
+            elif is_numeric_dtype(filtered[column]):
+                _min = float(filtered[column].min())
+                _max = float(filtered[column].max())
                 step = (_max - _min) / 100
                 user_num_input = right.slider(
                     f"Values for {column}",
@@ -81,26 +87,33 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     step=step,
                     key=key,
                 )
-                df = df[df[column].between(*user_num_input)]
-            elif is_datetime64_any_dtype(df[column]):
-                first = df[column].min()
-                last = df[column].max()
+                filtered = filtered[filtered[column].between(*user_num_input)]
+            elif is_datetime64_any_dtype(filtered[column]):
+                first = filtered[column].min()
+                last = filtered[column].max()
                 res = right.date_input(
                     f"Values for {column}", min_value=first, max_value=last, value=(first, last), key=key
                 )
                 if isinstance(res, tuple) and len(res) == 2:
                     res = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
                     start_date, end_date = res
-                    df = df.loc[df[column].between(start_date, end_date)]
+                    filtered = filtered.loc[filtered[column].between(start_date, end_date)]
             else:
                 user_text_input = right.text_input(
                     f"Substring or regex in {column}",
                     key=key,
                 )
                 if user_text_input:
-                    df = df[df[column].astype(str).str.contains(user_text_input)]
+                    filtered = filtered[filtered[column].astype(str).str.contains(user_text_input)]
 
-    return df
+            non_applicable["data_row_id"] = non_applicable.index.str.rsplit("_", n=1, expand=True).droplevel(1)
+            non_applicable = non_applicable[non_applicable.data_row_id.isin(filtered.index)].drop(
+                ["data_row_id"], axis=1
+            )
+
+            filtered = pd.concat([filtered, non_applicable])
+
+    return filtered
 
 
 def export_filter():
@@ -175,13 +188,15 @@ community</a>
             st.subheader("Create a new project with the selected items")
             l_column, r_column = st.columns(2)
 
+            project_dir = get_state().project_paths.project_dir
+
             dataset_title = l_column.text_input(
-                "Dataset title", value=f"Subset: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
+                "Dataset title", value=f"Subset: {project_dir.name} ({filtered_df.shape[0]})"
             )
             dataset_description = l_column.text_area("Dataset description")
 
             project_title = r_column.text_input(
-                "Project title", value=f"Sub-project: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
+                "Project title", value=f"Sub-project: {project_dir.name} ({filtered_df.shape[0]})"
             )
             project_description = r_column.text_area("Project description")
 
@@ -197,6 +212,17 @@ community</a>
 
             try:
                 action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
+                # with st.spinner("Cloning..."):
+                #     dest = shutil.copytree(project_dir, project_dir / f"../{project_title}")
+
+                # ProjectFileStructure(dest).db.unlink()
+                #
+                # with st.spinner("Updating metrics..."):
+                #     for path in (dest / "metrics").glob("*.csv"):
+                #         metric_df = pd.read_csv(path, index_col=0)
+                #         metric_df = metric_df[metric_df.index.isin(filtered_df.identifier)]
+                #         metric_df.to_csv(path)
+
                 label = st.empty()
                 progress, clear = render_progress_bar()
                 label.text("Step 1/2: Uploading data...")
