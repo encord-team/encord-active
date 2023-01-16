@@ -33,7 +33,7 @@ click **Download filtered data** to download COCO file.
 (encord-maskrcnn) > python train.py
 ```
 
-10. Import predictions.
+10. Import predictions. Check the readme.md file for detailed instructions of importing Encord predictions.
 
 ```shell
 (encord-maskrcnn) > python generate_ea_predictions.py
