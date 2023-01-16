@@ -21,6 +21,16 @@ class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
 
         boxes, labels, area, iscrowd = [], [], [], []
         for target_item in target:
+            if (not target_item["bbox"][2] > 0) or (not target_item["bbox"][3] > 0):
+                print(
+                    f"ERROR: Target bbox for the following image \n"
+                    f'title:      {img_metadata[0]["image_title"]} \n'
+                    f'label_hash: {img_metadata[0]["label_hash"]} \n'
+                    f'data_hash:  {img_metadata[0]["data_hash"]} \n'
+                    f'has non-positive width/height => [x,y,w,h]: {target_item["bbox"]}. \n'
+                    f"Therefore, skipping this annotation."
+                )
+                continue
             boxes.append(
                 [
                     target_item["bbox"][0],
