@@ -24,7 +24,7 @@ on the Encord Annotate side. So delete the local project and import it again.
 7. Open the App. Go to **Actions => Filter & Export**, click **Generate COCO file** and when activated 
 click **Download filtered data** to download COCO file.
 
-8. Fill in **config.ini** files.
+8. Fill in **config.ini** file.
 
 9. Train the model
 
