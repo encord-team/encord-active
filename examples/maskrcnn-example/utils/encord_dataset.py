@@ -21,7 +21,7 @@ class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
 
         boxes, labels, area, iscrowd = [], [], [], []
         for target_item in target:
-            if (not target_item["bbox"][2] > 0) or (not target_item["bbox"][3] > 0):
+            if target_item["bbox"][2] <= 0 or target_item["bbox"][3] <= 0:
                 print(
                     f"ERROR: Target bbox for the following image \n"
                     f'title:      {img_metadata[0]["image_title"]} \n'
