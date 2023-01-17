@@ -20,12 +20,14 @@ def create_pr_charts(metrics: DataFrame[PerformanceMetricSchema], precisions: Da
 
     class_selection = alt.selection_multi(fields=[_M_COLS.class_name])
 
+    _metrics.sort_values(by=["group", _M_COLS.value], ascending=[True, False], inplace=True)
+
     class_bars = (
         alt.Chart(_metrics, title="Mean scores")
         .mark_bar()
         .encode(
             alt.X(_M_COLS.value, title="", scale=alt.Scale(domain=[0.0, 1.0])),
-            alt.Y(_M_COLS.metric, title=""),
+            alt.Y(_M_COLS.metric, title="", sort=None),
             alt.Color(_M_COLS.class_name),
             tooltip=[
                 alt.Tooltip(_M_COLS.metric, title="Metric"),
@@ -38,7 +40,7 @@ def create_pr_charts(metrics: DataFrame[PerformanceMetricSchema], precisions: Da
     # Average
     mean_bars = class_bars.encode(
         alt.X(f"mean({_M_COLS.value}):Q", title="", scale=alt.Scale(domain=[0.0, 1.0])),
-        alt.Y("group:N", title=""),
+        alt.Y("group:N", title="", sort=None),
         alt.Color("average:N"),
         tooltip=[
             alt.Tooltip("group:N", title="Metric"),
