@@ -58,6 +58,7 @@ def main(params):
     setup_reproducibility(35)
 
     best_map = 0
+    last_epoch = 0
     early_stop_counter = 0
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -123,6 +124,7 @@ def main(params):
     val_map_metric = MeanAveragePrecision(iou_type="segm").to(device)
 
     for epoch in range(params.train.max_epoch):
+        last_epoch = epoch
         print(f"Epoch: {epoch}")
         train_one_epoch(model, device, data_loader, optimizer, log_freq=10)
 
@@ -169,6 +171,15 @@ def main(params):
             if early_stop_counter >= params.train.early_stopping_thresh:
                 print("Early stopping at: " + str(epoch))
                 break
+
+
+    if params.logging.wandb_enabled:
+        torch.save(
+            model.state_dict(),
+            os.path.join(wandb.run.dir, f"epoch_{last_epoch}_maskrcnn.ckpt"),
+        )
+    else:
+        torch.save(model.state_dict(), f"weights/epoch_{last_epoch}_maskrcnn.ckpt")
 
     print("Training finished")
 
