@@ -69,6 +69,7 @@ psutil = "^5.9.4"
 pandera = "^0.13.4"
 jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
+easyocr = "^1.6.2"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
