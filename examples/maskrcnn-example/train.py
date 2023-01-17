@@ -172,7 +172,6 @@ def main(params):
                 print("Early stopping at: " + str(epoch))
                 break
 
-
     if params.logging.wandb_enabled:
         torch.save(
             model.state_dict(),
