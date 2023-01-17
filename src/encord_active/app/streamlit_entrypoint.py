@@ -1,4 +1,5 @@
 import argparse
+import logging
 from functools import reduce
 from pathlib import Path
 from typing import Callable, Dict, Optional, Union
@@ -22,6 +23,11 @@ from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
+
+for logger_name in logging.root.manager.loggerDict:
+    if "streamlit" in logger_name:
+        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+
 
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
 
