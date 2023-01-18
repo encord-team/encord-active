@@ -3,7 +3,6 @@ from typing import List, Set, TypedDict
 
 import rich
 import typer
-from rich.markup import escape
 from rich.panel import Panel
 
 import encord_active.app.conf  # pylint: disable=unused-import
@@ -11,6 +10,7 @@ from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib.project.local import NoFilesFoundError, ProjectExistsError
 
 cli = typer.Typer(
@@ -75,23 +75,7 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
-
-    cwd = Path.cwd()
-    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
-
-    rich.print(
-        Panel(
-            f"""
-Successfully downloaded sandbox dataset. To view the data, run:
-
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise
-    """,
-            title="🌟 Success 🌟",
-            style="green",
-            expand=False,
-        )
-    )
+    success_with_visualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
 
 @cli.command(
@@ -164,25 +148,7 @@ def import_local_project(
             if not isinstance(project_path, Path):
                 raise ValueError("Expected a single path for an actual init execution")
 
-            cwd = Path.cwd()
-            cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
-
-            panel = Panel(
-                f"""
-Project initialised :+1:
-
-You can run
-
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise[/cyan]
-
-to open Encord Active and see your project.
-            """,
-                title="🌟 Success 🌟",
-                style="green",
-                expand=False,
-            )
-            rich.print(panel)
+            success_with_visualise_command(project_path, "Project initialised :+1:")
 
     except NoFilesFoundError as e:
         rich.print(

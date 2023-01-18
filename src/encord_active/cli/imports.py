@@ -2,13 +2,12 @@ import pickle
 from pathlib import Path
 from typing import Optional
 
-import rich
 import typer
 from rich.markup import escape
-from rich.panel import Panel
 
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
+from encord_active.cli.utils.prints import success_with_visualise_command
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -114,17 +113,4 @@ def import_project(
         ssh_key_path = app_config.get_or_query_ssh_key()
         project_path = import_encord_project(ssh_key_path, target, encord_project_hash)
 
-    cwd = Path.cwd()
-    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
-
-    panel = Panel(
-        f"""The data is downloaded and the metrics are complete.        
-💡 Hint: You can open your project in Encord Active with the following commands
-
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise[/cyan]""",
-        title="🌟 Success 🌟",
-        style="green",
-        expand=False,
-    )
-    rich.print(panel)
+    success_with_visualise_command(project_path, "The data is downloaded and the metrics are complete.")
