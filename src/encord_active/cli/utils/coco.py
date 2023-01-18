@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+from encord_active.cli.config import app_config
 from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME, CocoImporter
 from encord_active.lib.coco.parsers import parse_results
 from encord_active.lib.db.predictions import BoundingBox, Format, Prediction
@@ -69,6 +70,7 @@ def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, 
     coco_importer.create_project(
         dataset=dataset,
         ontology=ontology,
+        ssh_key_path=app_config.get_or_query_ssh_key(),
     )
 
     run_metrics(data_dir=coco_importer.project_dir, use_cache_only=True)

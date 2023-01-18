@@ -14,7 +14,6 @@ from PIL import Image as pil_image
 from PIL import ImageOps
 from tqdm.auto import tqdm
 
-from encord_active.cli.config import app_config
 from encord_active.lib.coco.datastructure import CocoAnnotation, CocoImage
 from encord_active.lib.coco.parsers import (
     parse_annotations,
@@ -159,7 +158,7 @@ class CocoImporter:
 
         return ontology
 
-    def create_project(self, dataset: LocalDataset, ontology: LocalOntology) -> LocalProject:
+    def create_project(self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Path) -> LocalProject:
         print(f"Creating a new project: {self.title}")
         project = self.user_client.create_project(
             project_title=self.title,
@@ -176,7 +175,7 @@ class CocoImporter:
             "project_title": project.title,
             "project_description": project.description,
             "project_hash": project.project_hash,
-            "ssh_key_path": app_config.get_or_query_ssh_key().as_posix(),
+            "ssh_key_path": ssh_key_path.as_posix(),
         }
         meta_file_path = self.project_dir / "project_meta.yaml"
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
