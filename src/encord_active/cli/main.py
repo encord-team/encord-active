@@ -167,7 +167,7 @@ def metricize(
     else:
         selected_metrics = i.checkbox(**options).execute()
 
-    execute_metrics(selected_metrics, data_dir=target)
+    execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
 
 
 if __name__ == "__main__":
