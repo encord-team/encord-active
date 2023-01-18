@@ -195,7 +195,7 @@ def download_all_label_rows(
         partial(get_label_row, project=project, project_file_structure=project_file_structure, **kwargs),
         label_rows,
         lambda lr: lr["label_hash"],
-        desc="Collecting label rows from Encord SDK.",
+        desc="Collecting label rows from Encord SDK",
     )
 
 
@@ -234,5 +234,5 @@ def download_all_images(label_rows, project_file_structure: ProjectFileStructure
         partial(download_images_from_data_unit, project_file_structure=project_file_structure),
         label_rows.values(),
         lambda lr: lr.label_hash,
-        desc="Collecting frames from label rows.",
+        desc="Collecting frames from label rows",
     )
