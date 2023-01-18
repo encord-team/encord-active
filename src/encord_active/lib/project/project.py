@@ -36,7 +36,7 @@ class Project:
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
-        self.image_paths: Dict[str, List[Path]] = {}
+        self.image_paths: Dict[str, Dict[str, Path]] = {}
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
@@ -156,7 +156,7 @@ class Project:
                 )
                 continue
             self.label_rows[lr_hash] = LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
-            self.image_paths[lr_hash] = list(lr_structure.images_dir.iterdir())
+            self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
 
 
 def get_label_row(
