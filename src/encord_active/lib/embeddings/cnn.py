@@ -209,7 +209,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
             ontology_class_hash = classification["featureHash"]
 
             answers: List[ClassificationAnswer] = []
-            if ontology_class_hash in ontology_class_hash_to_index.keys():
+            if ontology_class_hash in ontology_class_hash_to_index.keys() and classification_answers:
                 for classification_answer in classification_answers[classification_hash]["classifications"]:
                     if (
                         classification_answer["featureHash"]
@@ -222,6 +222,8 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
                                 annotator=classification["createdBy"],
                             )
                         )
+            # NOTE: since we only support one one classification for now
+            classification_answers = answers[0] if len(answers) else None
 
             entry = LabelEmbedding(
                 url=data_unit["data_link"],
@@ -234,7 +236,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
                 name=classification["name"],
                 dataset_title=iterator.dataset_title,
                 embedding=embedding,
-                classification_answers=answers[0],
+                classification_answers=classification_answers,
             )
             collections.append(entry)
 
