@@ -64,7 +64,7 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
-    from encord_active.lib.metric.execute import perform_test
+    from encord_active.lib.metrics.execute import execute_metric
 
     path = sys.argv[1]
-    perform_test(ExampleMetric(), data_dir=Path(path))
+    execute_metric(ExampleMetric(), data_dir=Path(path))
