@@ -159,7 +159,7 @@ class CocoImporter:
         return ontology
 
     def create_project(
-            self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Optional[Path]
+        self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Optional[Path]
     ) -> LocalProject:
         print(f"Creating a new project: {self.title}")
         project = self.user_client.create_project(
