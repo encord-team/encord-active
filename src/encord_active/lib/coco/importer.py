@@ -158,7 +158,7 @@ class CocoImporter:
 
         return ontology
 
-    def create_project(self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Path) -> LocalProject:
+    def create_project(self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Optional[Path]) -> LocalProject:
         print(f"Creating a new project: {self.title}")
         project = self.user_client.create_project(
             project_title=self.title,
@@ -175,8 +175,9 @@ class CocoImporter:
             "project_title": project.title,
             "project_description": project.description,
             "project_hash": project.project_hash,
-            "ssh_key_path": ssh_key_path.as_posix(),
         }
+        if ssh_key_path:
+            project_meta["ssh_key_path"] = ssh_key_path.as_posix()
         meta_file_path = self.project_dir / "project_meta.yaml"
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 

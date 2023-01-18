@@ -70,7 +70,7 @@ def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, 
     coco_importer.create_project(
         dataset=dataset,
         ontology=ontology,
-        ssh_key_path=app_config.get_or_query_ssh_key(),
+        ssh_key_path=app_config.get_ssh_key(),
     )
 
     run_metrics(data_dir=coco_importer.project_dir, use_cache_only=True)
