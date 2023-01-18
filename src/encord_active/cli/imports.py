@@ -118,16 +118,11 @@ def import_project(
     cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
     panel = Panel(
-        f"""
-    The data is downloaded and the metrics are complete.
+        f"""The data is downloaded and the metrics are complete.        
+💡 Hint: You can open your project in Encord Active with the following commands
 
-    You can run
-
-    [cyan]cd "{escape(cd_dir.as_posix())}"
-    encord-active visualise[/cyan]
-
-    to open Encord Active and see your project.
-    """,
+[cyan]cd "{escape(cd_dir.as_posix())}"
+encord-active visualise[/cyan]""",
         title="🌟 Success 🌟",
         style="green",
         expand=False,
