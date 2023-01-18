@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, TypedDict
+from typing import List, Set, TypedDict
 
 import rich
 import typer
@@ -11,6 +11,7 @@ from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.lib.project.local import NoFilesFoundError, ProjectExistsError
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -91,6 +92,122 @@ encord-active visualise
             expand=False,
         )
     )
+
+
+@cli.command(
+    name="init",
+)
+def import_local_project(
+    root: Path = typer.Argument(
+        ...,
+        help="The root directory of the dataset you are trying to import",
+        file_okay=False,
+    ),
+    glob: List[str] = typer.Option(
+        ["**/*.jpg", "**/*.png", "**/*.tiff"],
+        "--glob",
+        "-g",
+        help='Glob pattern to choose files in the "leaf directories". Note that you can repeat the `--glob` argument if you want to match multiple things.',
+    ),
+    target: Path = typer.Option(
+        Path.cwd(),
+        "--target",
+        "-t",
+        help="Directory where the project would be saved.",
+        file_okay=False,
+    ),
+    project_name: str = typer.Option(
+        "",
+        "--name",
+        "-n",
+        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended",
+    ),
+    symlinks: bool = typer.Option(
+        False,
+        help="Use symlinks instead of copying images to the target directory.",
+    ),
+    dryrun: bool = typer.Option(
+        False,
+        help="Print the files that will be imported WITHOUT importing them.",
+    ),
+):
+    """
+    [bold]Initialise[/bold] a project from your local file system by searching for images based on the `glob` arguments.
+    By default, all jpeg, jpg, png, and tiff files will be matched.
+
+
+    """
+    from encord_active.lib.project.local import init_local_project
+
+    try:
+        project_path = init_local_project(
+            root=root, target=target, glob=glob, project_name=project_name, symlinks=symlinks, dryrun=dryrun
+        )
+        if dryrun:
+            if not isinstance(project_path, list):
+                raise ValueError("Expected a list of paths for the dryrun execution")
+            file_paths = project_path
+
+            directories: Set[Path] = set()
+            for file in file_paths:
+                directories.add(file.parent)
+                print(file)
+            print()
+            rich.print(
+                Panel(
+                    f"Found {len(file_paths)} files in {len(directories)} directories.",
+                    title=":bar_chart: Stats :bar_chart:",
+                    expand=False,
+                )
+            )
+        else:
+            if not isinstance(project_path, Path):
+                raise ValueError("Expected a single path for an actual init execution")
+
+            cwd = Path.cwd()
+            cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
+
+            panel = Panel(
+                f"""
+Project initialised :+1:
+
+You can run
+
+[cyan]cd "{escape(cd_dir.as_posix())}"
+encord-active visualise[/cyan]
+
+to open Encord Active and see your project.
+            """,
+                title="🌟 Success 🌟",
+                style="green",
+                expand=False,
+            )
+            rich.print(panel)
+
+    except NoFilesFoundError as e:
+        rich.print(
+            Panel(
+                e.args[0],
+                title=":fire: No Files Found :fire:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        typer.Abort()
+    except ProjectExistsError as e:
+        rich.print(
+            Panel(
+                f"""
+{e.args[0]}
+
+Consider removing the directory or setting the `--name` option.
+                """,
+                title=":open_file_folder: Project already exists :open_file_folder:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        typer.Abort()
 
 
 @cli.command()
