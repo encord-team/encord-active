@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, TypedDict, Union
 
 import pandas as pd
 import pandera as pa
+from encord.objects.common import PropertyType
 from encord.ontology import OntologyStructure
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
@@ -146,6 +147,10 @@ def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, Annotator
 
 def is_multiclass_ontology(ontology: OntologyStructure):
     has_objects = bool(ontology.objects)
-    num_of_classifications = len(ontology.classifications)
+    radio_classifications = filter(
+        lambda class_label: class_label.attributes[0].get_property_type() == PropertyType.RADIO,
+        ontology.classifications,
+    )
+    num_of_classifications = len(list(radio_classifications))
 
     return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)

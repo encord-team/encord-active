@@ -138,9 +138,10 @@ class ImageLevelQualityTest(Metric):
                 answers = self.collections[i]["classification_answers"]
 
                 if not answers:
-                    raise Exception("Missing classification answers")
+                    gt_label = "Unclassified"
+                else:
+                    gt_label = self.featureNodeHash_to_index[question][answers["answer_featureHash"]]
 
-                gt_label = self.featureNodeHash_to_index[question][answers["answer_featureHash"]]
                 noisy_labels_list.append(gt_label)
 
             noisy_labels = np.array(noisy_labels_list).astype(np.int32)
@@ -277,6 +278,9 @@ class ImageLevelQualityTest(Metric):
                 if key in key_score_pairs:
                     for classification in data_unit["labels"].get("classifications", []):
                         question_featureHash = classification["featureHash"]
+                        if question_featureHash not in self.featureNodeHash_to_question_name:
+                            continue
+
                         classification_hash = classification["classificationHash"]
                         classification_info = key_score_pairs[key][question_featureHash]
 
