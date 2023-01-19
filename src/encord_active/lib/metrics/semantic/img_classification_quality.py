@@ -89,7 +89,7 @@ class ImageLevelQualityTest(Metric):
 
     def build_description_string(self, info: DescriptionInfo) -> str:
         if not info["above_threshold"]:
-            return f":question: For the question `{info['question']}`, the image is annotated as `{info['question']}`. \
+            return f":question: For the question `{info['question']}`, the image is annotated as `{info['answer']}`. \
             The annotated class may be wrong, as the most similar objects have different classes."
 
         if info["answer"] == info["target_answer"]:
