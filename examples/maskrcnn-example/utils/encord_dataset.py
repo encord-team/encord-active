@@ -5,6 +5,7 @@ sys.path.append(Path(__file__).parent.as_posix())
 import torch
 import torchvision
 from provider import convert_coco_poly_to_mask
+import logging
 
 
 class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
@@ -22,7 +23,7 @@ class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
         boxes, labels, area, iscrowd = [], [], [], []
         for target_item in target:
             if target_item["bbox"][2] <= 0 or target_item["bbox"][3] <= 0:
-                print(
+                logging.warning(
                     f"ERROR: Target bbox for the following image \n"
                     f'title:      {img_metadata[0]["image_title"]} \n'
                     f'label_hash: {img_metadata[0]["label_hash"]} \n'
