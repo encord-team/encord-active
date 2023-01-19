@@ -38,7 +38,7 @@ class LabelSchema(IdentifierSchema):
     y1: Series[padt.Int64] = pa.Field(coerce=True)
     x2: Series[padt.Int64] = pa.Field(coerce=True)
     y2: Series[padt.Int64] = pa.Field(coerce=True)
-    rle: Series[object] = pa.Field()
+    # rle: Series[Optional[object]] = pa.Field()
 
 
 class PredictionSchema(LabelSchema):

@@ -43,10 +43,12 @@ def draw_object(
     hex_color = color.value if isinstance(color, Color) else color
     _color: Tuple[int, ...] = hex_to_rgb(hex_color)
     _color_outline: Tuple[int, ...] = hex_to_rgb(hex_color, lighten=-0.5)
+    # __import__("ipdb").set_trace()
+    if with_box:
+        box = get_bbox_csv(row)
+        image = cv2.polylines(image, [box], isClosed, _color, thickness, lineType=cv2.LINE_8)
+
     if isinstance(row["rle"], str):
-        if with_box:
-            box = get_bbox_csv(row)
-            image = cv2.polylines(image, [box], isClosed, _color, thickness // 2, lineType=cv2.LINE_8)
 
         mask = rle_to_binary_mask(eval(row["rle"]))
 
