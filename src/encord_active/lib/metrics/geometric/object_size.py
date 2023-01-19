@@ -69,6 +69,9 @@ class OccupiedTotalAreaMetric(Metric):
     ]
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+        if not iterator.project.ontology.objects:
+            return
+
         valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
         found_any = False
 
