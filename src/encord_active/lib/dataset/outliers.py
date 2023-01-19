@@ -1,5 +1,6 @@
-from typing import NamedTuple, Optional, Tuple
 from enum import Enum
+from typing import NamedTuple, Optional, Tuple
+
 import pandera as pa
 from pandera.typing import DataFrame, Series
 
@@ -7,9 +8,9 @@ from encord_active.lib.metrics.utils import MetricSchema
 
 
 class OutlierStatus(str, Enum):
-    severe = 'Severe'
-    moderate = 'Moderate'
-    low = 'Low'
+    severe = "Severe"
+    moderate = "Moderate"
+    low = "Low"
 
 
 class MetricWithDistanceSchema(MetricSchema):
@@ -30,7 +31,7 @@ _COLUMNS = MetricWithDistanceSchema
 
 
 def get_iqr_outliers(
-        input: DataFrame[MetricSchema],
+    input: DataFrame[MetricSchema],
 ) -> Optional[Tuple[DataFrame[MetricWithDistanceSchema], IqrOutliers]]:
     if input.empty:
         return None
@@ -52,15 +53,18 @@ def get_iqr_outliers(
     severe_lb, severe_ub = Q1 - severe_iqr_scale * IQR, Q3 + severe_iqr_scale * IQR
 
     df[_COLUMNS.outliers_status] = OutlierStatus.low.value
-    df.loc[((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb)) | (
-            (severe_ub >= df[_COLUMNS.score]) & (
-                df[_COLUMNS.score] > moderate_ub)), _COLUMNS.outliers_status] = OutlierStatus.moderate.value
-    df.loc[(df[_COLUMNS.score] < severe_lb) | (
-                df[_COLUMNS.score] > severe_ub), _COLUMNS.outliers_status] = OutlierStatus.severe.value
+    df.loc[
+        ((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb))
+        | ((severe_ub >= df[_COLUMNS.score]) & (df[_COLUMNS.score] > moderate_ub)),
+        _COLUMNS.outliers_status,
+    ] = OutlierStatus.moderate.value
+    df.loc[
+        (df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub), _COLUMNS.outliers_status
+    ] = OutlierStatus.severe.value
 
     n_moderate_outliers = (
-            ((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb))
-            | ((severe_ub >= df[_COLUMNS.score]) & (df[_COLUMNS.score] > moderate_ub))
+        ((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb))
+        | ((severe_ub >= df[_COLUMNS.score]) & (df[_COLUMNS.score] > moderate_ub))
     ).sum()
 
     n_severe_outliers = ((df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub)).sum()
