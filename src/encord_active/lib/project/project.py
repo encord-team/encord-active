@@ -36,7 +36,7 @@ class Project:
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_meta: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
-        self.image_paths: Dict[str, List[Path]] = {}
+        self.image_paths: Dict[str, Dict[str, Path]] = {}
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
@@ -156,7 +156,7 @@ class Project:
                 )
                 continue
             self.label_rows[lr_hash] = LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
-            self.image_paths[lr_hash] = list(lr_structure.images_dir.iterdir())
+            self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
 
 
 def get_label_row(
@@ -195,7 +195,7 @@ def download_all_label_rows(
         partial(get_label_row, project=project, project_file_structure=project_file_structure, **kwargs),
         label_rows,
         lambda lr: lr["label_hash"],
-        desc="Collecting label rows from Encord SDK.",
+        desc="Collecting label rows from Encord SDK",
     )
 
 
@@ -234,5 +234,5 @@ def download_all_images(label_rows, project_file_structure: ProjectFileStructure
         partial(download_images_from_data_unit, project_file_structure=project_file_structure),
         label_rows.values(),
         lambda lr: lr.label_hash,
-        desc="Collecting frames from label rows.",
+        desc="Collecting frames from label rows",
     )

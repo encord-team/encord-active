@@ -73,13 +73,11 @@ class DatasetIterator(Iterator):
             self.label_hash = label_hash
             if label_row.data_type in {"img_group", "image"}:
                 self.num_frames = len(label_row.data_units)
-                image_paths = self.project.image_paths[label_hash]
-
                 data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
-                for data_unit, image_path in zip(data_units, image_paths):
+                for data_unit in data_units:
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
-                    yield data_unit, image_path
+                    yield data_unit, self.project.image_paths[label_hash][self.du_hash]
                     pbar.update(1)
             elif label_row.data_type == "video":
                 data_unit, *_ = label_row["data_units"].values()
