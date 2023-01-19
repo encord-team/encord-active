@@ -42,7 +42,7 @@ class SummaryPage(Page):
     title = "📑 Summary"
     _severe_outlier_color = "tomato"
     _moderate_outlier_color = "orange"
-    _summary_item_background_color = '#fbfbfb'
+    _summary_item_background_color = "#fbfbfb"
 
     def sidebar_options(self):
         self.row_col_settings_in_sidebar()
@@ -95,7 +95,9 @@ class SummaryPage(Page):
         st.markdown(f"# {self.title}")
         total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
 
-        summary_item(total_images_col, "Number of images", len(image_sizes), background_color=self._summary_item_background_color)
+        summary_item(
+            total_images_col, "Number of images", len(image_sizes), background_color=self._summary_item_background_color
+        )
         summary_item(
             total_severe_outliers_col,
             "🔴 Total severe outliers",
@@ -129,10 +131,16 @@ class SummaryPage(Page):
         outliers_plotting_col.plotly_chart(fig, use_container_width=True)
 
         metrics_with_severe_outliers = all_metrics_plotting[all_metrics_plotting["total_severe_outliers"] > 0]
-        issues_col.subheader(f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset")
+        issues_col.subheader(
+            f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset"
+        )
 
         for counter, (_, row) in enumerate(metrics_with_severe_outliers.iterrows()):
-            issues_col.metric(f"{counter+1}. {row['metric']} outliers", row["total_severe_outliers"], help=f'Go to Data Quality => Explorer and chose {row["metric"]} metric to spot these outliers.')
+            issues_col.metric(
+                f"{counter+1}. {row['metric']} outliers",
+                row["total_severe_outliers"],
+                help=f'Go to Data Quality => Explorer and chose {row["metric"]} metric to spot these outliers.',
+            )
 
         with st.expander("Outlier description", expanded=True):
             st.write(
