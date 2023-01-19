@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, TypedDict, Union
 
 import pandas as pd
 import pandera as pa
+from encord.ontology import OntologyStructure
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
@@ -141,3 +142,10 @@ def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, Annotator
         )
 
     return annotators
+
+
+def is_multiclass_ontology(ontology: OntologyStructure):
+    has_objects = bool(ontology.objects)
+    num_of_classifications = len(ontology.classifications)
+
+    return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)
