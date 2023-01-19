@@ -2,10 +2,11 @@ import sys
 from pathlib import Path
 
 sys.path.append(Path(__file__).parent.as_posix())
+import logging
+
 import torch
 import torchvision
 from provider import convert_coco_poly_to_mask
-import logging
 
 
 class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
