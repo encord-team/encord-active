@@ -170,6 +170,8 @@ def generate_cnn_object_embeddings(iterator: Iterator, filepath: str) -> None:
 
 @torch.inference_mode()
 def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) -> None:
+    image_collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+
     ontology_class_hash_to_index: dict[str, dict] = {}
     ontology_class_hash_to_question_hash: dict[str, str] = {}
 
@@ -192,10 +194,21 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
         if not img_pth:
             continue
 
-        image = image_path_to_tensor(img_pth)
-        transformed_image = transforms(image).unsqueeze(0)
-        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
-        embedding = torch.flatten(embedding).cpu().detach().numpy()
+        matching_image_collections = [
+            collection
+            for collection in image_collections
+            if collection["data_unit"] == data_unit["data_hash"]
+            and collection["label_row"] == iterator.label_hash
+            and collection["frame"] == iterator.frame
+        ]
+
+        if len(image_collections):
+            embedding = matching_image_collections[0]["embedding"]
+        else:
+            image = image_path_to_tensor(img_pth)
+            transformed_image = transforms(image).unsqueeze(0)
+            embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
+            embedding = torch.flatten(embedding).cpu().detach().numpy()  # type: ignore
 
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
@@ -207,6 +220,9 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
             )
             classification_hash = classification["classificationHash"]
             ontology_class_hash = classification["featureHash"]
+
+            if ontology_class_hash not in ontology_class_hash_to_question_hash:
+                continue
 
             answers: List[ClassificationAnswer] = []
             if ontology_class_hash in ontology_class_hash_to_index.keys() and classification_answers:
@@ -248,7 +264,9 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
     )
 
 
-def get_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> list:
+def get_cnn_embeddings(
+    iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False
+) -> List[LabelEmbedding]:
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_cnn_embeddings method")
 
