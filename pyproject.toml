@@ -59,7 +59,6 @@ loguru = "^0.6.0"
 python-dotenv = "^0.21.0"
 streamlit-nested-layout = "^0.1.1"
 typer = "^0.6.1"
-inquirer = "^2.10.0"
 rich = "^12.6.0"
 PyYAML = "^6.0"
 toml = "^0.10.2"
@@ -69,6 +68,8 @@ psutil = "^5.9.4"
 pandera = "^0.13.4"
 jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
+# TODO: replace when a new version is released
+inquirerpy = { git = "https://github.com/kazhala/InquirerPy.git"}
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

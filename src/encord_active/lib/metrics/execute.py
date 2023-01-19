@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 from encord.project_ontology.object_type import ObjectShape
 from loguru import logger
@@ -80,13 +80,12 @@ def run_all_prediction_metrics(**kwargs):
 
 
 def run_metrics(filter_func: Callable = lambda x: True, **kwargs):
-    metrics: List[Metric] = list(
-        map(
-            lambda mod_cls: import_module(mod_cls[0]).__getattribute__(mod_cls[1])(),
-            get_metrics(filter_func=filter_func),
-        )
-    )
-    execute_metric(metrics, **kwargs)
+    metrics = list(map(load_metric, get_metrics(filter_func=filter_func)))
+    execute_metrics(metrics, **kwargs)
+
+
+def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
+    return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
 
 
 def __get_value(o):
@@ -109,20 +108,18 @@ logger = logger.opt(colors=True)
 
 
 @logger.catch()
-def execute_metric(
-    metrics: Union[Metric, List[Metric]],
+def execute_metrics(
+    metrics: List[Metric],
     data_dir: Path,
     iterator_cls: Type[Iterator] = DatasetIterator,
     use_cache_only: bool = False,
     **kwargs,
 ):
-    all_tests: List[Metric] = metrics if isinstance(metrics, list) else [metrics]
-
     project = None if use_cache_only else fetch_project_info(data_dir)
     iterator = iterator_cls(data_dir, project=project, **kwargs)
     cache_dir = iterator.update_cache_dir(data_dir)
 
-    for metric in all_tests:
+    for metric in metrics:
         logger.info(f"Running Metric <blue>{metric.TITLE.title()}</blue>")
         unique_metric_name = metric.get_unique_name()
 
