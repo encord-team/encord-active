@@ -109,19 +109,17 @@ logger = logger.opt(colors=True)
 
 @logger.catch()
 def execute_metrics(
-    metrics: Union[Metric, List[Metric]],
+    metrics: List[Metric],
     data_dir: Path,
     iterator_cls: Type[Iterator] = DatasetIterator,
     use_cache_only: bool = False,
     **kwargs,
 ):
-    all_tests: List[Metric] = metrics if isinstance(metrics, list) else [metrics]
-
     project = None if use_cache_only else fetch_project_info(data_dir)
     iterator = iterator_cls(data_dir, project=project, **kwargs)
     cache_dir = iterator.update_cache_dir(data_dir)
 
-    for metric in all_tests:
+    for metric in metrics:
         logger.info(f"Running Metric <blue>{metric.TITLE.title()}</blue>")
         unique_metric_name = metric.get_unique_name()
 
