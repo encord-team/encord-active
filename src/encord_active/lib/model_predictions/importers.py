@@ -148,7 +148,10 @@ def import_mask_predictions(
                     logger.warning(f"Couldn't match file {pth} to any data unit.")
                     continue
 
-                input_mask = np.array(Image.open(pth))
+                try:
+                    input_mask = np.array(Image.open(pth))
+                except Exception:
+                    continue
                 for cls in np.unique(input_mask):
                     if cls == 0:  # background
                         continue

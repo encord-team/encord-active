@@ -23,7 +23,7 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source active learning framework that helps you find failure modes in your models and improve your data quality and model performance.
+[Encord Active][encord-active-landing] is an open-source active learning tookit that helps you find failure modes in your models and improve your data quality and model performance.
 
 Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
@@ -32,9 +32,19 @@ Use Encord Active to visualize your data, evaluate your models, surface model fa
 ## 💡 When to use Encord Active?
 
 Encord Active helps you understand and improve your data, labels, and models at all stages of your computer vision journey.
-Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production.
+
+Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
 
 ![encord active diagram](resources/process-chart-ea.webp)
+
+## 🔖 Documentation
+
+Our full documentation is available [here](https://encord-active-docs.web.app). In particular we recommend checking out:
+
+- [Getting Started](https://encord-active-docs.web.app/)
+- [Workflows][encord-active-docs-workflow] 
+- [Tutorials](https://encord-active-docs.web.app/category/tutorials)
+- [CLI Documentation](https://encord-active-docs.web.app/category/command-line-interface)
 
 ## Installation
 
@@ -56,6 +66,8 @@ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
 
+
+
 ## 👋 Quickstart
 
 Get started immediately by sourcing your environment and running the code below.
@@ -67,49 +79,87 @@ encord-active quickstart
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
-## ⬇️  Downloading a pre-built project
+## ⬇️  Download a sandbox dataset
 
-The quickest way to get started is by downloading an existing dataset.
+Another way to start quickly is by downloading an existing dataset from the sandbox.
 The download command will ask which pre-built dataset to use and will download it into a new directory in the current working directory.
 
 ```shell
-$ encord-active download
-$ cd /path/of/downloaded/project
-$ encord-active visualise
+encord-active download
+cd /path/of/downloaded/project
+encord-active visualise
 ```
 
 The app should then open in the browser.
 If not, navigate to [`localhost:8501`](http://localhost:8501).
 Our [docs][encord-active-docs] contains more information about what you can see in the page.
 
-## <img width="24" height="24" src="resources/logo.png"/> Importing an Encord Project
+## <img width="24" height="24" src="resources/logo.png"/> Import your dataset
 
+### Quick import Dataset
+
+To import your data (without labels) save your data in a directory and run the command:
+
+```shell
+# within venv
+encord-active init /path/to/data/directory
+```
+A project will be created using the data in the directory.
+
+To visualise the project run:
+
+```shell
+cd /path/to/project
+encord-active visualise
+```
+
+### Import from COCO
+To import your data, labels, and predictions from COCO, save your data in a directory and run the command:
+
+```shell
+# install COCO extras
+(ea-venv)$ python -m pip install encord-active[coco]
+
+# import samples with COCO annotaions
+encord-active import project --coco -i ./images -a ./annotations.json
+
+# import COCO model predictions
+encord-active import predictions --coco results.json
+```
+### Import from Encord Platform
 This section requires [setting up an ssh key][encord-docs-ssh] with Encord, so slightly more technical.
 
 > If you haven't set up an ssh key with Encord, you can follow the tutorial in [this link][encord-docs-ssh].
 
 To import an Encord project, use this command:
+```shell
+encord-active import project
+```
 
-`$ encord-active import project`
+### Other options
 
-> There are also options for importing projects from, e.g,. KITTI, CVAT, and COCO. Find more details in [the documentation][encord-active-docs-workflow-import-data].
+> There are also options for importing projects from, e.g,. KITTI and CVAT. Find more details in [the documentation][encord-active-docs-workflow-import-data].
 
 ## ⭐ Concepts and features
 
-### 📊 Quality metric
+### Quality metrics:
 
-Quality metric are applied to your data, labels, and predictions to assign them quality metric scores.
-Plug in your own or rely on Encord Actives prebuilt quality metrics.
+Quality metrics are applied to your data, labels, and predictions to assign them quality metric scores.
+Plug in your own or rely on Encord Active's prebuilt quality metrics.
 The quality metrics automatically decompose your data, label, and model quality to show you how to improve your model performance from a data-centric perspective.
 Encord Active ships with 25+ metrics and more are coming; [contributions][contribute-url] are also very welcome.
 
-**Other core features:**
+### Core features:
 
-- [Model Decomposition](https://encord-active-docs.web.app/pages/model-quality/metrics)
 - [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
+- [Data Outlier detection](https://encord-active-docs.web.app/workflows/Improve-your-data/identify-outliers-edge-cases)
+- [Label Outlier detection](https://encord-active-docs.web.app/workflows/improve-your-labels/identify-outliers)
+- [Model Decomposition](https://encord-active-docs.web.app/pages/model-quality/metrics)
 - [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
 - [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)
 - [Data Tagging](https://encord-active-docs.web.app/workflows/tags/#steps)
+- [Visualise TP/FP/FN](https://encord-active-docs.web.app/category/model-quality)
+- [Dataset Balancing](https://encord-active-docs.web.app/pages/export/balance_export)
 - [COCO Exports](https://encord-active-docs.web.app/pages/export/filter_export)
 - And much more!
 
@@ -127,13 +177,10 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ## 🧑🏽‍💻Development
 
-### 🛠 Build your own metrics
+### 🛠 Build your own quality metrics
 
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
 
-## 🔖 Documentation
-
-Find our documentation [here](https://encord-active-docs.web.app).
 
 ## 👪 Community and support
 

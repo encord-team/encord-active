@@ -43,22 +43,23 @@ def draw_object(
     hex_color = color.value if isinstance(color, Color) else color
     _color: Tuple[int, ...] = hex_to_rgb(hex_color)
     _color_outline: Tuple[int, ...] = hex_to_rgb(hex_color, lighten=-0.5)
-    if isinstance(row["rle"], str):
-        if with_box:
-            box = get_bbox_csv(row)
-            image = cv2.polylines(image, [box], isClosed, _color, thickness // 2, lineType=cv2.LINE_8)
 
-        mask = rle_to_binary_mask(eval(row["rle"]))
+    if with_box or not isinstance(row["rle"], str):
+        box = get_bbox_csv(row)
+        return cv2.polylines(image, [box], isClosed, _color, thickness, lineType=cv2.LINE_8)
 
-        # Draw contour line
-        contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-        image = cv2.polylines(image, contours, isClosed, _color_outline, thickness, lineType=cv2.LINE_8)
+    mask = rle_to_binary_mask(eval(row["rle"]))
 
-        # Fill polygon with opacity
-        patch = np.zeros_like(image)
-        mask_select = mask == 1
-        patch[mask_select] = _color
-        image[mask_select] = cv2.addWeighted(image, (1 - mask_opacity), patch, mask_opacity, 0)[mask_select]
+    # Draw contour line
+    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    image = cv2.polylines(image, contours, isClosed, _color_outline, thickness, lineType=cv2.LINE_8)
+
+    # Fill polygon with opacity
+    patch = np.zeros_like(image)
+    mask_select = mask == 1
+    patch[mask_select] = _color
+    image[mask_select] = cv2.addWeighted(image, (1 - mask_opacity), patch, mask_opacity, 0)[mask_select]
+
     return image
 
 
@@ -126,7 +127,7 @@ def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray
         try:
             image = cv2.imread(img_pth.as_posix())
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        except cv2.error:
+        except Exception:
             pass
 
     # Read not successful, so tell the user why
