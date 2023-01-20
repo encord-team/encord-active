@@ -126,7 +126,7 @@ def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray
         try:
             image = cv2.imread(img_pth.as_posix())
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        except cv2.error:
+        except Exception:
             pass
 
     # Read not successful, so tell the user why

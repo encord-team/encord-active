@@ -49,7 +49,10 @@ def upload_img(
             print(f"Image {coco_image.file_name} not found")
             return None
 
-    img = pil_image.open(file_path)
+    try:
+        img = pil_image.open(file_path)
+    except Exception:
+        return None
     img_exif = img.getexif()
     if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
         temp_file_name = "temp_image" + file_path.suffix
