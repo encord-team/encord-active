@@ -102,7 +102,7 @@ def get_du_size(data_unit: dict, img_pth: Optional[Path] = None) -> Optional[Tup
         try:
             image = cv2.imread(img_pth.as_posix())
             return image.shape[:2]
-        except cv2.error:
+        except Exception:
             image_corrupted = True
 
     return None
