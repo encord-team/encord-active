@@ -1,10 +1,12 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
@@ -12,6 +14,83 @@ from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSc
 from encord_active.lib.metrics.utils import MetricData, MetricScope
 
 _COLUMNS = MetricWithDistanceSchema
+
+
+def render_data_quality_summary_top_bar(median_image_dimension: np.ndarray, background_color: str):
+    total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
+
+    total_images_col.markdown(
+        summary_item("Number of images", len(get_state().image_sizes), background_color=background_color),
+        unsafe_allow_html=True,
+    )
+
+    total_severe_outliers_col.markdown(
+        summary_item(
+            "🔴 Total severe outliers",
+            get_state().metrics_data_summary.total_unique_severe_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_moderate_outliers_col.markdown(
+        summary_item(
+            "🟠 Total moderate outliers",
+            get_state().metrics_data_summary.total_unique_moderate_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    average_image_size.markdown(
+        summary_item(
+            "Median image size",
+            f"{median_image_dimension[0]}x{median_image_dimension[1]}",
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_label_quality_summary_top_bar(background_color: str):
+    (
+        total_object_annotations_col,
+        total_classification_annotations_col,
+        total_severe_outliers_col,
+        total_moderate_outliers_col,
+    ) = st.columns(4)
+
+    total_object_annotations_col.markdown(
+        summary_item("Object annotations", get_state().annotation_sizes[1], background_color=background_color),
+        unsafe_allow_html=True,
+    )
+
+    total_classification_annotations_col.markdown(
+        summary_item(
+            "Classification annotations",
+            get_state().annotation_sizes[0],
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_severe_outliers_col.markdown(
+        summary_item(
+            "🔴 Total severe outliers",
+            get_state().metrics_label_summary.total_unique_severe_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_moderate_outliers_col.markdown(
+        summary_item(
+            "🟠 Total moderate outliers",
+            get_state().metrics_label_summary.total_unique_moderate_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def render_metric_summary(

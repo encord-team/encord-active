@@ -72,7 +72,9 @@ class State:
     predictions = PredictionsState()
     similarities_count = 8
     image_sizes: Optional[np.ndarray] = None
+    annotation_sizes: Optional[tuple[int, int]] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
+    metrics_label_summary: Optional[MetricsSeverity] = None
 
     @classmethod
     def init(cls, project_dir: Path):
