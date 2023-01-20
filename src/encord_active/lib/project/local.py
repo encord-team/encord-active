@@ -70,11 +70,11 @@ def init_local_project(
         glob = ["**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.tiff"]
 
     files = list(chain(*[root.glob(g) for g in glob]))
-    if dryrun:
-        return files
-
     if not len(files):
         raise NoFilesFoundError()
+
+    if dryrun:
+        return files
 
     client = LocalUserClient(project_path)
 
