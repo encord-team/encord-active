@@ -1,7 +1,5 @@
 from typing import Union
 
-import streamlit as st
-
 
 def summary_item(
     title: str,
