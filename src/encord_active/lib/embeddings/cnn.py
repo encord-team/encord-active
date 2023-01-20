@@ -60,7 +60,10 @@ def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[
     if transforms is None:
         transforms = torch.nn.Sequential()
 
-    image = image_path_to_tensor(img_path)
+    try:
+        image = image_path_to_tensor(img_path)
+    except Exception:
+        return None
     img_batch: List[torch.Tensor] = []
 
     for obj in data_unit["labels"].get("objects", []):

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, TypedDict
+from typing import List, Set, TypedDict
 
 import rich
 import typer
@@ -11,6 +11,7 @@ from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.cli.utils.prints import success_with_visualise_command
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -74,23 +75,123 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
+    success_with_visualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
-    cwd = Path.cwd()
-    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
-    rich.print(
-        Panel(
-            f"""
-Successfully downloaded sandbox dataset. To view the data, run:
+@cli.command(
+    name="init",
+)
+def import_local_project(
+    root: Path = typer.Argument(
+        ...,
+        help="The root directory of the dataset you are trying to import",
+        file_okay=False,
+    ),
+    glob: List[str] = typer.Option(
+        ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"],
+        "--glob",
+        "-g",
+        help='Glob pattern to choose files in the "leaf directories". Note that you can repeat the `--glob` argument if you want to match multiple things.',
+    ),
+    target: Path = typer.Option(
+        Path.cwd(),
+        "--target",
+        "-t",
+        help="Directory where the project would be saved.",
+        file_okay=False,
+    ),
+    project_name: str = typer.Option(
+        "",
+        "--name",
+        "-n",
+        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended",
+    ),
+    symlinks: bool = typer.Option(
+        False,
+        help="Use symlinks instead of copying images to the target directory.",
+    ),
+    dryrun: bool = typer.Option(
+        False,
+        help="Print the files that will be imported WITHOUT importing them.",
+    ),
+):
+    """
+    [bold]Initialise[/bold] a project from your local file system by searching for images based on the `glob` arguments.
+    By default, all jpeg, jpg, png, and tiff files will be matched.
 
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise
-    """,
-            title="🌟 Success 🌟",
-            style="green",
-            expand=False,
-        )
+
+    """
+    from encord_active.lib.project.local import (
+        NoFilesFoundError,
+        ProjectExistsError,
+        file_glob,
+        init_local_project,
     )
+
+    try:
+        glob_result = file_glob(root, glob, images_only=True)
+    except NoFilesFoundError as e:
+        rich.print(
+            Panel(
+                str(e),
+                title=":fire: No Files Found :fire:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        typer.Abort()
+        exit()  # Not strictly necessary but prevents mypy from complaining
+
+    if dryrun:
+        directories: Set[Path] = set()
+        rich.print("[blue]Matches:[/blue]")
+        for file in glob_result.matched:
+            directories.add(file.parent)
+            rich.print(f"[blue]{escape(file.as_posix())}[/blue]")
+
+        print()
+        rich.print("[yellow]Excluded:[/yellow]")
+        for file in glob_result.excluded:
+            directories.add(file.parent)
+            rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
+
+        print()
+        rich.print(
+            Panel(
+                f"""
+[blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
+[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images. 
+""",
+                title=":bar_chart: Stats :bar_chart:",
+                expand=False,
+            )
+        )
+        typer.Abort()
+        exit()
+
+    try:
+        if not project_name:
+            project_name = f"[EA] {root.name}"
+
+        project_path = init_local_project(
+            files=glob_result.matched, target=target, project_name=project_name, symlinks=symlinks
+        )
+        success_with_visualise_command(project_path, "Project initialised :+1:")
+
+    except ProjectExistsError as e:
+        rich.print(
+            Panel(
+                f"""
+{str(e)}
+
+Consider removing the directory or setting the `--name` option.
+                """,
+                title=":open_file_folder: Project already exists :open_file_folder:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        typer.Abort()
 
 
 @cli.command()
