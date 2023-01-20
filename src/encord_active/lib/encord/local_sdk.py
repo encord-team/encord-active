@@ -16,19 +16,29 @@ Encord platform.
 import json
 import mimetypes
 import os
+import random
 import shutil
+import string
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, TypedDict, Union
+from typing import Dict, Iterable, List, Optional, TypedDict, Union
 from uuid import uuid4
 
 from encord.dataset import DataRow
+from encord.exceptions import (
+    FileTypeNotSupportedError as EncordFiletypeNotSupportedError,
+)
+from encord.http.utils import CloudUploadSettings
 from encord.ontology import OntologyStructure
 from encord.orm.dataset import DataType
 from encord.orm.label_row import LabelRow
 from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
+
+
+class FileTypeNotSupportedError(EncordFiletypeNotSupportedError):
+    ...
 
 
 @dataclass(frozen=True)
@@ -53,6 +63,15 @@ class LabelRowMetadata(TypedDict):
     annotation_task_status: str
 
 
+@dataclass
+class DataRowMedia:
+    path: Path
+    uid: str
+
+    def __post_init__(self):
+        self.path = self.path.resolve()
+
+
 class LocalDataRow(DataRow):
     def __init__(
         self,
@@ -60,35 +79,34 @@ class LocalDataRow(DataRow):
         label_hash: str,
         title: str,
         data_type: DataType,
-        path: Path,
+        media: Union[DataRowMedia, List[DataRowMedia]],
     ):
         """
         Mimics the Encord DataRow but with two additional parameters `path` and
         `label_hash` to ease implementation.
 
         Args:
-            uid (str): The data hash
-            label_hash (str): The hash of the associated label row in the `LocalProject.
-            title (str): The title of the Data row.
-            data_type (DataType): The data type of the DataRow. Not really used as
-                everything is `DataType.IMAGE` at the moment.
-            path (Path): The local path to the data asset.
+            uid: The data hash
+            label_hash: The hash of the associated label row in the `LocalProject`.
+            title: The title of the Data row.
+            data_type: The data type of the DataRow.
+            media: The local path(s) and uids of the media asset(s).
         """
         created_at: datetime = datetime.now()
         super(LocalDataRow, self).__init__(uid=uid, title=title, data_type=data_type, created_at=created_at)  # type: ignore
 
-        self.path = path.resolve()
+        self.media = [media] if isinstance(media, DataRowMedia) else media
         self.label_hash = label_hash
 
 
-def get_mimetype(dr: LocalDataRow) -> str:
-    guess = mimetypes.guess_type(dr.path)[1]
+def get_mimetype(path: Path) -> str:
+    guess = mimetypes.guess_type(path)[0]
     if guess:
         return guess
-    return f"image/{dr.path.suffix[1:]}"
+    return f"unknown/{path.suffix[1:]}"
 
 
-def get_dimensions(dr: LocalDataRow) -> Dimensions:
+def get_dimensions(path, data_type: DataType) -> Dimensions:
     """
     Gets the dimensionality of the image.
     Note that PIL.Image has this nice ability to not read the entire image into
@@ -101,9 +119,40 @@ def get_dimensions(dr: LocalDataRow) -> Dimensions:
     Returns:
         The size of the image.
     """
-    assert dr.data_type == DataType.IMAGE, "Only single image support for now"
-    size = Image.open(dr.path).size
-    return Dimensions(size[1], size[0])
+    if data_type in {DataType.IMAGE, DataType.IMG_GROUP}:
+        size = Image.open(path).size
+        return Dimensions(size[1], size[0])
+    else:
+        raise FileTypeNotSupportedError("Video support for local initialisation is not implemented yet.")
+        # with av.open(path) as container:
+        #     stream = container.streams.video[0]
+        #     for frame in container.decode(stream):
+        #         width, height = frame.width, frame.height
+        #         return Dimensions(width=width, height=height)
+
+
+def get_data_units(dr: LocalDataRow) -> Dict[str, dict]:
+    data_units: Dict[str, dict] = {}
+    for i, media in enumerate(dr.media):
+        title = media.path.name if len(dr.media) > 1 else dr.title
+        try:
+            dims = get_dimensions(media.path, dr.data_type)
+        except NotImplementedError as e:
+            print(str(e))
+            print(f"Skipping `{media.path}`")
+            continue
+
+        data_units[media.uid] = {
+            "data_hash": media.uid,
+            "data_title": title,
+            "data_type": get_mimetype(media.path),
+            "data_sequence": i,
+            "labels": {"objects": [], "classifications": []},
+            "data_link": media.path.as_posix(),
+            "width": dims.width,
+            "height": dims.height,
+        }
+    return data_units
 
 
 def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title: str) -> LabelRow:
@@ -113,7 +162,7 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
     if dr.data_type != DataType.IMAGE:
         raise NotImplementedError("Not implemented as COCO only uses single images")
 
-    dims = get_dimensions(dr)
+    data_units = get_data_units(dr)
     return LabelRow(
         {
             "label_hash": meta["label_hash"],
@@ -121,18 +170,7 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
             "dataset_title": dataset_title,
             "data_title": meta["data_title"],
             "data_type": "image",
-            "data_units": {
-                dr.uid: {
-                    "data_hash": dr.uid,
-                    "data_title": dr.title,
-                    "data_type": get_mimetype(dr),
-                    "data_sequence": 0,
-                    "labels": {"objects": [], "classifications": []},
-                    "data_link": dr.path.as_posix(),
-                    "width": dims.width,
-                    "height": dims.height,
-                }
-            },
+            "data_units": data_units,
             "object_answers": {},
             "classification_answers": {},
             "object_actions": {},
@@ -167,6 +205,58 @@ class LocalDataset:
             raise ValueError(f"Data hash `{data_hash}` not in the dataset")
         return self._data_rows[data_hash]
 
+    @staticmethod
+    def check_mime_type(path: Path):
+        if "image" not in get_mimetype(path):
+            raise FileTypeNotSupportedError("Video support for local initialisation is not implemented yet.")
+
+    def create_image_group(
+        self,
+        file_paths: Iterable[Union[str, Path]],
+        max_workers: Optional[int] = None,
+        cloud_upload_settings: CloudUploadSettings = CloudUploadSettings(),
+        title: Optional[str] = None,
+    ):
+        """
+        Replication of the encord.Dataset class.
+
+        NOTE: The function declaration replicates the Encord dataset, so some
+        parameters are ignored.
+
+        Args:
+            file_paths: The ordered paths to where the files for the image group are stored.
+            max_workers: !THIS IS IGNORED!
+            cloud_upload_settings: !THIS IS IGNORED!
+            title: The title of the image group.
+        """
+        _file_paths = list(map(Path, file_paths))
+        [self.check_mime_type(p) for p in _file_paths]  # Raises FileTypeNotSupportedError
+
+        data_hash = str(uuid4())
+        label_hash = str(uuid4())
+
+        out_dir = self.data_path / label_hash / "images"
+        out_dir.mkdir(exist_ok=True, parents=True)
+
+        media: List[DataRowMedia] = []
+        for _uri in _file_paths:
+            uid = str(uuid4())
+            out_file = out_dir / f"{uid}{_uri.suffix}"
+            if self.use_symlinks:
+                os.symlink(_uri.expanduser().absolute(), out_file)
+            else:
+                shutil.copy(_uri, out_file)
+            media.append(DataRowMedia(_uri, uid))
+
+        if not title:
+            uid = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
+            title = f"image-group-{uid}"
+
+        data_row = LocalDataRow(
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=media
+        )
+        self._data_rows[data_hash] = data_row
+
     def upload_image(self, file_path: Union[Path, str], title: str = ""):
         """
         Copies image to `self.data_path/label_hash/images/datahash.ext`.
@@ -184,6 +274,8 @@ class LocalDataset:
         else:
             _uri = file_path
 
+        self.check_mime_type(_uri)
+
         data_hash = str(uuid4())
         label_hash = str(uuid4())
 
@@ -195,12 +287,13 @@ class LocalDataset:
             os.symlink(_uri.expanduser().absolute(), out_file)
         else:
             shutil.copy(_uri, out_file)
+        dr_media = DataRowMedia(_uri, data_hash)
 
         if not title:
             title = _uri.name
 
         data_row = LocalDataRow(
-            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, path=out_file
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=dr_media
         )
         self._data_rows[data_hash] = data_row
 
