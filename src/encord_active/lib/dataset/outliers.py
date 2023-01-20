@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import NamedTuple, Optional, Tuple
 
 import pandera as pa
@@ -6,8 +7,15 @@ from pandera.typing import DataFrame, Series
 from encord_active.lib.metrics.utils import MetricSchema
 
 
+class Severity(str, Enum):
+    severe = "Severe"
+    moderate = "Moderate"
+    low = "Low"
+
+
 class MetricWithDistanceSchema(MetricSchema):
     dist_to_iqr: Optional[Series[float]] = pa.Field()
+    outliers_status: Optional[Series[str]] = pa.Field()
 
 
 class IqrOutliers(NamedTuple):
@@ -43,6 +51,16 @@ def get_iqr_outliers(
 
     moderate_lb, moderate_ub = Q1 - moderate_iqr_scale * IQR, Q3 + moderate_iqr_scale * IQR
     severe_lb, severe_ub = Q1 - severe_iqr_scale * IQR, Q3 + severe_iqr_scale * IQR
+
+    df[_COLUMNS.outliers_status] = Severity.low
+    df.loc[
+        ((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb))
+        | ((severe_ub >= df[_COLUMNS.score]) & (df[_COLUMNS.score] > moderate_ub)),
+        _COLUMNS.outliers_status,
+    ] = Severity.moderate
+    df.loc[
+        (df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub), _COLUMNS.outliers_status
+    ] = Severity.severe
 
     n_moderate_outliers = (
         ((severe_lb <= df[_COLUMNS.score]) & (df[_COLUMNS.score] < moderate_lb))
