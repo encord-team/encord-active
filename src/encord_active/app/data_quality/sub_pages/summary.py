@@ -120,10 +120,11 @@ class SummaryPage(Page):
         outliers_plotting_col, issues_col = st.columns([6, 3])
 
         # Outlier Distributions
-        fig = create_outlier_distribution_chart(
-            all_metrics_plotting, self._severe_outlier_color, self._moderate_outlier_color
-        )
-        outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+        if self._get_summary(metric_scope).total_unique_severe_outliers > 0:
+            fig = create_outlier_distribution_chart(
+                all_metrics_plotting, self._severe_outlier_color, self._moderate_outlier_color
+            )
+            outliers_plotting_col.plotly_chart(fig, use_container_width=True)
 
         # Image size distribution
         if metric_scope == MetricScope.DATA_QUALITY:
