@@ -3,6 +3,7 @@ from typing import List, Set, TypedDict
 
 import rich
 import typer
+from rich.markup import escape
 from rich.panel import Panel
 
 import encord_active.app.conf  # pylint: disable=unused-import
@@ -11,7 +12,6 @@ from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
-from encord_active.lib.project.local import NoFilesFoundError, ProjectExistsError
 
 cli = typer.Typer(
     rich_markup_mode="rich",
@@ -88,7 +88,7 @@ def import_local_project(
         file_okay=False,
     ),
     glob: List[str] = typer.Option(
-        ["**/*.jpg", "**/*.png", "**/*.tiff"],
+        ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"],
         "--glob",
         "-g",
         help='Glob pattern to choose files in the "leaf directories". Note that you can repeat the `--glob` argument if you want to match multiple things.',
@@ -121,35 +121,15 @@ def import_local_project(
 
 
     """
-    from encord_active.lib.project.local import init_local_project
+    from encord_active.lib.project.local import (
+        NoFilesFoundError,
+        ProjectExistsError,
+        file_glob,
+        init_local_project,
+    )
 
     try:
-        project_path = init_local_project(
-            root=root, target=target, glob=glob, project_name=project_name, symlinks=symlinks, dryrun=dryrun
-        )
-        if dryrun:
-            if not isinstance(project_path, list):
-                raise ValueError("Expected a list of paths for the dryrun execution")
-            file_paths = project_path
-
-            directories: Set[Path] = set()
-            for file in file_paths:
-                directories.add(file.parent)
-                print(file)
-            print()
-            rich.print(
-                Panel(
-                    f"Found {len(file_paths)} files in {len(directories)} directories.",
-                    title=":bar_chart: Stats :bar_chart:",
-                    expand=False,
-                )
-            )
-        else:
-            if not isinstance(project_path, Path):
-                raise ValueError("Expected a single path for an actual init execution")
-
-            success_with_visualise_command(project_path, "Project initialised :+1:")
-
+        glob_result = file_glob(root, glob, images_only=True)
     except NoFilesFoundError as e:
         rich.print(
             Panel(
@@ -160,6 +140,44 @@ def import_local_project(
             )
         )
         typer.Abort()
+        exit()  # Not strictly necessary but prevents mypy from complaining
+
+    if dryrun:
+        directories: Set[Path] = set()
+        rich.print("[blue]Matches:[/blue]")
+        for file in glob_result.matched:
+            directories.add(file.parent)
+            rich.print(f"[blue]{escape(file.as_posix())}[/blue]")
+
+        print()
+        rich.print("[yellow]Excluded:[/yellow]")
+        for file in glob_result.excluded:
+            directories.add(file.parent)
+            rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
+
+        print()
+        rich.print(
+            Panel(
+                f"""
+[blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
+[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images. 
+""",
+                title=":bar_chart: Stats :bar_chart:",
+                expand=False,
+            )
+        )
+        typer.Abort()
+        exit()
+
+    try:
+        if not project_name:
+            project_name = f"[EA] {root.name}"
+
+        project_path = init_local_project(
+            files=glob_result.matched, target=target, project_name=project_name, symlinks=symlinks
+        )
+        success_with_visualise_command(project_path, "Project initialised :+1:")
+
     except ProjectExistsError as e:
         rich.print(
             Panel(

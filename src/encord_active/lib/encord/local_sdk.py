@@ -269,12 +269,12 @@ class LocalDataset:
             file_path (Union[Path, str]): The image to add.
             title (str): The title of the image to be associated with the image.
         """
-        self.check_mime_type(file_path)
-
         if isinstance(file_path, str):
             _uri = Path(file_path)
         else:
             _uri = file_path
+
+        self.check_mime_type(_uri)
 
         data_hash = str(uuid4())
         label_hash = str(uuid4())

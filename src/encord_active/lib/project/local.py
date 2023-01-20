@@ -1,7 +1,8 @@
 import json
+from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List
 
 import yaml
 from encord.ontology import OntologyStructure
@@ -10,6 +11,7 @@ from tqdm.auto import tqdm
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalUserClient,
+    get_mimetype,
 )
 from encord_active.lib.metrics.execute import run_metrics
 
@@ -31,14 +33,37 @@ class ProjectExistsError(Exception):
         self.project_path = project_path
 
 
+@dataclass
+class GlobResult:
+    matched: List[Path]
+    excluded: List[Path] = field(default_factory=list)
+
+
+def file_glob(root: Path, glob: List[str], images_only: bool = False) -> GlobResult:
+    files = list(chain(*[root.glob(g) for g in glob]))
+
+    if not len(files):
+        raise NoFilesFoundError()
+
+    if images_only:
+        matches = []
+        excluded = []
+        for file in files:
+            if "image" in get_mimetype(file):
+                matches.append(file)
+            else:
+                excluded.append(file)
+        return GlobResult(matches, excluded)
+
+    return GlobResult(files)
+
+
 def init_local_project(
-    root: Path,
+    files: List[Path],
     target: Path,
-    glob: Optional[List[str]] = None,
     project_name: str = "",
     symlinks: bool = False,
-    dryrun: bool = False,
-) -> Union[Path, List[Path]]:
+) -> Path:
     """
     Initialising an Encord Active project based on the data found from the `root`
     based on the `glob` arguments.
@@ -58,23 +83,10 @@ def init_local_project(
         If `dryrun` is True, a list of all the matched files will be returned
         without actually initialising a project.
     """
-    if not project_name:
-        project_name = f"[EA] {root.name}"
-
     project_path = target / project_name
 
     if project_path.is_dir():
         raise ProjectExistsError(project_path)
-
-    if glob is None:
-        glob = ["**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.tiff"]
-
-    files = list(chain(*[root.glob(g) for g in glob]))
-    if not len(files):
-        raise NoFilesFoundError()
-
-    if dryrun:
-        return files
 
     client = LocalUserClient(project_path)
 
@@ -82,7 +94,7 @@ def init_local_project(
     for file in tqdm(files, desc="Importing data"):
         try:
             dataset.upload_image(file)
-        except FileTypeNotSupportedError as e:
+        except FileTypeNotSupportedError:
             print(f"{file} will be skipped as it doesn't seem to be an image.")
 
     empty_structure = OntologyStructure()
