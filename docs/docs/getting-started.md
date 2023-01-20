@@ -79,7 +79,7 @@ To import your own data save your data in a directory and run the command:
 # within venv
 encord-active init /path/to/data/directory
 ```
-A project will be created using the data (without labels) in the directory.
+A project will be created using the data (without labels) in the current working directory (unless used with `--target`).
 
 To visualise the project run:
 
