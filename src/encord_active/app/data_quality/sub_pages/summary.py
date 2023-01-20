@@ -15,7 +15,7 @@ from encord_active.lib.charts.data_quality_summary import (
 from encord_active.lib.dataset.outliers import (
     IqrOutliers,
     MetricWithDistanceSchema,
-    OutlierStatus,
+    Severity,
     get_iqr_outliers,
 )
 from encord_active.lib.dataset.summary_utils import (
@@ -83,9 +83,9 @@ class SummaryPage(Page):
             )
 
             for _, row in df.iterrows():
-                if row[_COLUMNS.outliers_status] == OutlierStatus.severe.value:
+                if row[_COLUMNS.outliers_status] == Severity.severe:
                     total_severe_outliers.add(row[_COLUMNS.identifier])
-                elif row[_COLUMNS.outliers_status] == OutlierStatus.moderate.value:
+                elif row[_COLUMNS.outliers_status] == Severity.moderate:
                     total_moderate_outliers.add(row[_COLUMNS.identifier])
 
             metrics_info.append(MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers))
@@ -95,27 +95,27 @@ class SummaryPage(Page):
         st.markdown(f"# {self.title}")
         total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
 
-        summary_item(
-            total_images_col, "Number of images", len(image_sizes), background_color=self._summary_item_background_color
-        )
-        summary_item(
-            total_severe_outliers_col,
+        total_images_col.markdown(summary_item(
+             "Number of images", len(image_sizes), background_color=self._summary_item_background_color
+        ), unsafe_allow_html=True)
+
+        total_severe_outliers_col.markdown(summary_item(
             "🔴 Total severe outliers",
             len(total_severe_outliers),
             background_color=self._summary_item_background_color,
-        )
-        summary_item(
-            total_moderate_outliers_col,
+        ), unsafe_allow_html=True)
+
+        total_moderate_outliers_col.markdown(summary_item(
             "🟠 Total moderate outliers",
             len(total_moderate_outliers),
             background_color=self._summary_item_background_color,
-        )
-        summary_item(
-            average_image_size,
+        ), unsafe_allow_html=True)
+
+        average_image_size.markdown(summary_item(
             "Median image size",
             f"{median_dimension[0]}x{median_dimension[1]}",
             background_color=self._summary_item_background_color,
-        )
+        ), unsafe_allow_html=True)
 
         st.write("")
         outliers_plotting_col, issues_col = st.columns([6, 3])
