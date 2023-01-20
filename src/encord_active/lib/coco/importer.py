@@ -23,6 +23,7 @@ from encord_active.lib.coco.parsers import (
 )
 from encord_active.lib.coco.utils import make_object_dict
 from encord_active.lib.encord.local_sdk import (
+    FileTypeNotSupportedError,
     LocalDataRow,
     LocalDataset,
     LocalOntology,
@@ -56,17 +57,27 @@ def upload_img(
         img = ImageOps.exif_transpose(img)
         img.save(temp_file_name)
 
-        encord_image = dataset_tmp.upload_image(
-            title=str(coco_image.id_),
-            file_path=temp_file_name,
-        )
-        os.remove(temp_file_name)
+        try:
+            encord_image = dataset_tmp.upload_image(
+                title=str(coco_image.id_),
+                file_path=temp_file_name,
+            )
+        except FileTypeNotSupportedError as e:
+            print(f"{file_path} will be skipped as it doesn't seem to be an image.")
+            encord_image = None
+        finally:
+            os.remove(temp_file_name)
+
         return encord_image
     else:
-        return dataset_tmp.upload_image(
-            title=str(coco_image.id_),
-            file_path=file_path,
-        )
+        try:
+            return dataset_tmp.upload_image(
+                title=str(coco_image.id_),
+                file_path=file_path,
+            )
+        except FileTypeNotSupportedError as e:
+            print(f"{file_path} will be skipped as it doesn't seem to be an image.")
+            return None
 
 
 def upload_annotation(
