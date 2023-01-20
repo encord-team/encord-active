@@ -42,7 +42,7 @@ Whether you've just started collecting data, labeled your first batch of samples
 Our full documentation is available [here](https://encord-active-docs.web.app). In particular we recommend checking out:
 
 - [Getting Started](https://encord-active-docs.web.app/)
-- [Workflows][encord-active-docs-workflow] 
+- [Workflows][encord-active-docs-workflow]
 - [Tutorials](https://encord-active-docs.web.app/category/tutorials)
 - [CLI Documentation](https://encord-active-docs.web.app/category/command-line-interface)
 
@@ -65,8 +65,6 @@ pip install encord-active
 > `encord-active` requires [python3.9][python-39].
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here][encord-active-docs].
-
-
 
 ## 👋 Quickstart
 
@@ -104,6 +102,7 @@ To import your data (without labels) save your data in a directory and run the c
 # within venv
 encord-active init /path/to/data/directory
 ```
+
 A project will be created using the data in the directory.
 
 To visualise the project run:
@@ -113,7 +112,10 @@ cd /path/to/project
 encord-active visualise
 ```
 
+You can find more details on the `init` command in the [CLI documentation][encord-active-docs-init].
+
 ### Import from COCO
+
 To import your data, labels, and predictions from COCO, save your data in a directory and run the command:
 
 ```shell
@@ -126,12 +128,15 @@ encord-active import project --coco -i ./images -a ./annotations.json
 # import COCO model predictions
 encord-active import predictions --coco results.json
 ```
+
 ### Import from Encord Platform
+
 This section requires [setting up an ssh key][encord-docs-ssh] with Encord, so slightly more technical.
 
 > If you haven't set up an ssh key with Encord, you can follow the tutorial in [this link][encord-docs-ssh].
 
 To import an Encord project, use this command:
+
 ```shell
 encord-active import project
 ```
@@ -181,7 +186,6 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
 
-
 ## 👪 Community and support
 
 Join our community on [Slack][join-slack] to connect with the team behind Encord Active.
@@ -209,6 +213,7 @@ This repository is published under the Apache 2.0 licence.
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-url]: https://encord-active-docs.web.app/contributing
+[encord-active-docs-init]: https://encord-active-docs.web.app/cli/initialising-project-from-image-directories
 [encord-active-docs-workflow-import-data]: https://encord-active-docs.web.app/workflows/import-data
 [encord-active-docs-workflow]: https://encord-active-docs.web.app/category/workflows
 [encord-active-docs-write-metric]: https://encord-active-docs.web.app/metrics/write-your-own
