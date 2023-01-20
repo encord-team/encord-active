@@ -153,7 +153,7 @@ def import_local_project(
     except NoFilesFoundError as e:
         rich.print(
             Panel(
-                e.args[0],
+                str(e),
                 title=":fire: No Files Found :fire:",
                 expand=False,
                 style="yellow",
@@ -164,7 +164,7 @@ def import_local_project(
         rich.print(
             Panel(
                 f"""
-{e.args[0]}
+{str(e)}
 
 Consider removing the directory or setting the `--name` option.
                 """,

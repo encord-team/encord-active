@@ -26,12 +26,19 @@ from typing import Dict, Iterable, List, Optional, TypedDict, Union
 from uuid import uuid4
 
 from encord.dataset import DataRow
+from encord.exceptions import (
+    FileTypeNotSupportedError as EncordFiletypeNotSupportedError,
+)
 from encord.http.utils import CloudUploadSettings
 from encord.ontology import OntologyStructure
 from encord.orm.dataset import DataType
 from encord.orm.label_row import LabelRow
 from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
+
+
+class FileTypeNotSupportedError(EncordFiletypeNotSupportedError):
+    ...
 
 
 @dataclass(frozen=True)
@@ -57,7 +64,7 @@ class LabelRowMetadata(TypedDict):
 
 
 @dataclass
-class DataRowFrame:
+class DataRowMedia:
     path: Path
     uid: str
 
@@ -72,7 +79,7 @@ class LocalDataRow(DataRow):
         label_hash: str,
         title: str,
         data_type: DataType,
-        frame: Union[DataRowFrame, List[DataRowFrame]],
+        media: Union[DataRowMedia, List[DataRowMedia]],
     ):
         """
         Mimics the Encord DataRow but with two additional parameters `path` and
@@ -83,20 +90,20 @@ class LocalDataRow(DataRow):
             label_hash: The hash of the associated label row in the `LocalProject`.
             title: The title of the Data row.
             data_type: The data type of the DataRow.
-            frame: The local path(s) and uids of the data asset(s).
+            media: The local path(s) and uids of the media asset(s).
         """
         created_at: datetime = datetime.now()
         super(LocalDataRow, self).__init__(uid=uid, title=title, data_type=data_type, created_at=created_at)  # type: ignore
 
-        self.frames = [frame] if isinstance(frame, DataRowFrame) else frame
+        self.media = [media] if isinstance(media, DataRowMedia) else media
         self.label_hash = label_hash
 
 
 def get_mimetype(path: Path) -> str:
-    guess = mimetypes.guess_type(path)[1]
+    guess = mimetypes.guess_type(path)[0]
     if guess:
         return guess
-    return f"image/{path.suffix[1:]}"
+    return f"unknown/{path.suffix[1:]}"
 
 
 def get_dimensions(path, data_type: DataType) -> Dimensions:
@@ -116,7 +123,7 @@ def get_dimensions(path, data_type: DataType) -> Dimensions:
         size = Image.open(path).size
         return Dimensions(size[1], size[0])
     else:
-        raise ValueError("Videos are currently not supported for local import")
+        raise FileTypeNotSupportedError("Video support for local initialisation is not implemented yet.")
         # with av.open(path) as container:
         #     stream = container.streams.video[0]
         #     for frame in container.decode(stream):
@@ -126,16 +133,22 @@ def get_dimensions(path, data_type: DataType) -> Dimensions:
 
 def get_data_units(dr: LocalDataRow) -> Dict[str, dict]:
     data_units: Dict[str, dict] = {}
-    for i, frame in enumerate(dr.frames):
-        title = frame.path.name if len(dr.frames) > 1 else dr.title
-        dims = get_dimensions(frame.path, dr.data_type)
-        data_units[frame.uid] = {
-            "data_hash": frame.uid,
+    for i, media in enumerate(dr.media):
+        title = media.path.name if len(dr.media) > 1 else dr.title
+        try:
+            dims = get_dimensions(media.path, dr.data_type)
+        except NotImplementedError as e:
+            print(str(e))
+            print(f"Skipping `{media.path}`")
+            continue
+
+        data_units[media.uid] = {
+            "data_hash": media.uid,
             "data_title": title,
-            "data_type": get_mimetype(frame.path),
+            "data_type": get_mimetype(media.path),
             "data_sequence": i,
             "labels": {"objects": [], "classifications": []},
-            "data_link": frame.path.as_posix(),
+            "data_link": media.path.as_posix(),
             "width": dims.width,
             "height": dims.height,
         }
@@ -192,6 +205,11 @@ class LocalDataset:
             raise ValueError(f"Data hash `{data_hash}` not in the dataset")
         return self._data_rows[data_hash]
 
+    @staticmethod
+    def check_mime_type(path: Path):
+        if "image" not in get_mimetype(path):
+            raise FileTypeNotSupportedError("Video support for local initialisation is not implemented yet.")
+
     def create_image_group(
         self,
         file_paths: Iterable[Union[str, Path]],
@@ -212,6 +230,7 @@ class LocalDataset:
             title: The title of the image group.
         """
         _file_paths = list(map(Path, file_paths))
+        [self.check_mime_type(p) for p in _file_paths]  # Raises FileTypeNotSupportedError
 
         data_hash = str(uuid4())
         label_hash = str(uuid4())
@@ -219,7 +238,7 @@ class LocalDataset:
         out_dir = self.data_path / label_hash / "images"
         out_dir.mkdir(exist_ok=True, parents=True)
 
-        frames: List[DataRowFrame] = []
+        media: List[DataRowMedia] = []
         for _uri in _file_paths:
             uid = str(uuid4())
             out_file = out_dir / f"{uid}{_uri.suffix}"
@@ -227,14 +246,14 @@ class LocalDataset:
                 os.symlink(_uri.expanduser().absolute(), out_file)
             else:
                 shutil.copy(_uri, out_file)
-            frames.append(DataRowFrame(_uri, uid))
+            media.append(DataRowMedia(_uri, uid))
 
         if not title:
             uid = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
             title = f"image-group-{uid}"
 
         data_row = LocalDataRow(
-            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, frame=frames
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=media
         )
         self._data_rows[data_hash] = data_row
 
@@ -250,6 +269,8 @@ class LocalDataset:
             file_path (Union[Path, str]): The image to add.
             title (str): The title of the image to be associated with the image.
         """
+        self.check_mime_type(file_path)
+
         if isinstance(file_path, str):
             _uri = Path(file_path)
         else:
@@ -266,13 +287,13 @@ class LocalDataset:
             os.symlink(_uri.expanduser().absolute(), out_file)
         else:
             shutil.copy(_uri, out_file)
-        dr_frame = DataRowFrame(_uri, data_hash)
+        dr_media = DataRowMedia(_uri, data_hash)
 
         if not title:
             title = _uri.name
 
         data_row = LocalDataRow(
-            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, frame=dr_frame
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=dr_media
         )
         self._data_rows[data_hash] = data_row
 

@@ -7,7 +7,10 @@ import yaml
 from encord.ontology import OntologyStructure
 from tqdm.auto import tqdm
 
-from encord_active.lib.encord.local_sdk import LocalUserClient
+from encord_active.lib.encord.local_sdk import (
+    FileTypeNotSupportedError,
+    LocalUserClient,
+)
 from encord_active.lib.metrics.execute import run_metrics
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
@@ -77,7 +80,10 @@ def init_local_project(
 
     dataset = client.create_dataset(project_name, symlinks)
     for file in tqdm(files, desc="Importing data"):
-        dataset.upload_image(file)
+        try:
+            dataset.upload_image(file)
+        except FileTypeNotSupportedError as e:
+            print(f"{file} will be skipped as it doesn't seem to be an image.")
 
     empty_structure = OntologyStructure()
     ontology = client.create_ontology(title=project_name, description="", structure=empty_structure)
