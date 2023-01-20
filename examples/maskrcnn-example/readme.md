@@ -25,11 +25,12 @@ conda activate encord-maskrcnn
 ```
 
 ## Training
-1. Create a config.ini file by looking at the example_config.ini
-2. You can use resize the imagens and corresponding annotations via utils/downscle_dataset.py.
-2. For the training, the only required fields are [DATA], [LOGGING], and [TRAIN] sections
-3. Activate the environment and run `python train.py`
-4. You can track the progress of the training on wandb platformdd
+1. You can use Encord-Active's Actions tab to create COCO annotations.
+2. Create a config.ini file by looking at the example_config.ini
+3. You can resize the images and corresponding annotations via utils/downscale_dataset.py.
+4. For the training, the only required fields are [DATA], [LOGGING], and [TRAIN] sections
+5. Activate the environment and run `python train.py`
+6. You can track the progress of the training on wandb platform.
 
 
 ## Importing Encord-Active predictions
@@ -42,4 +43,4 @@ conda activate encord-maskrcnn
 encord-active import predictions /path/to/predictions.pkl -t /path/to/project
 ```
 
-5. Now you can see the model performance on the __Model Quality__ tab.
+5. Open the app. Now you can see the model performance on the __Model Quality__ tab.
