@@ -69,14 +69,11 @@ def init_local_project(
     based on the `glob` arguments.
 
     Args:
-        root: The root from which to search for files.
-        target: The directory in which the new project will be stored.
-        glob: A list of glob expressions that will be used to match image files.
+        files: The file paths to include in the project.
+        target: The directory in which the new project will be initialised.
         project_name: A specific project name to use. If left out, the project
             name will be the root directory name prepended with "[EA] "
         symlinks: If false, files will be copied. If true, files will be symlinked.
-        dryrun: If false, a project will be created. If false, a list of all the
-            matched files will be returned.
 
     Returns:
         The path to the project directory.
