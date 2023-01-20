@@ -91,7 +91,7 @@ def import_local_project(
         ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"],
         "--glob",
         "-g",
-        help='Glob pattern to choose files in the "leaf directories". Note that you can repeat the `--glob` argument if you want to match multiple things.',
+        help="Glob pattern to choose files. Note that you can repeat the `--glob` argument if you want to match multiple things.",
     ),
     target: Path = typer.Option(
         Path.cwd(),
@@ -104,7 +104,7 @@ def import_local_project(
         "",
         "--name",
         "-n",
-        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended",
+        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended.",
     ),
     symlinks: bool = typer.Option(
         False,

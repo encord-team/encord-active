@@ -16,7 +16,6 @@ import Link from '@docusaurus/Link';
 
 Install `encord-active` in your favorite Python environment with the following commands:
 
-
 ```shell
 python3.9 -m venv ea-venv
 source ea-venv/bin/activate
@@ -49,7 +48,7 @@ The next section will show you how to download larger and more interesting datas
 
 ## Sandbox Dataset
 
-If you have more time, we have pre-built a few sandbox datasets with data, labels, and model predictions for you to start exploring Encord Active. 
+If you have more time, we have pre-built a few sandbox datasets with data, labels, and model predictions for you to start exploring Encord Active.
 
 To get started quickly with a sandbox dataset, you can run the following command:
 
@@ -68,6 +67,7 @@ You can follow the [COCO sandbox dataset tutorial](tutorials/touring-the-coco-da
 
 If you want to quickly explore Encord Active without installing anything into your local machine, we
 have the following Google Colab notebooks for you:
+
 1. [Explore Encord Active sandbox dataset](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing)
 2. [Explore Encord Active through your own Encord projects](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
 
@@ -79,6 +79,7 @@ To import your own data save your data in a directory and run the command:
 # within venv
 encord-active init /path/to/data/directory
 ```
+
 A project will be created using the data (without labels) in the current working directory (unless used with `--target`).
 
 To visualise the project run:
@@ -88,12 +89,12 @@ cd /path/to/project
 encord-active visualise
 ```
 
+You can find more details on the `init` command in the [CLI section](cli/initialising-project-from-image-directories).
+
 ## Import an Encord Project
 
 If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord Active
 easily.
-
-
 
 ```shell
 # within venv
@@ -101,8 +102,6 @@ encord-active import project
 ```
 
 This will import your encord project to a new directory in your current working directory.
-
-
 
 If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](sdk/migrating-data).
 Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
@@ -123,10 +122,11 @@ Bare with us, it is worth the wait.
 When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
 
 :::info
-If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and 
+If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and
 [upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
 projects.
 :::
+
 ## Running the App
 
 To run the Encord Active app, you need to `cd` into the directory that was created by one of the previous commands and run the following command:
@@ -157,5 +157,5 @@ A couple of example references are:
 You can also have a look at how to [write custom metrics](/metrics/write-your-own) and how to use the [command line interface](https://encord-active-docs.web.app/category/command-line-interface).
 
 ### Need Support?
-If you got any issues with Encord Active you are more than welcome to [connect with us on Slack](https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q) or reach out to us at active@encord.com 
 
+If you got any issues with Encord Active you are more than welcome to [connect with us on Slack](https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q) or reach out to us at active@encord.com
