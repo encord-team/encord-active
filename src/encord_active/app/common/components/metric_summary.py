@@ -206,7 +206,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     st.write("")
     outliers_plotting_col, issues_col = st.columns([6, 3])
 
-    if get_state().metrics_data_summary.total_unique_severe_outliers > 0:
+    if get_state().metrics_label_summary.total_unique_severe_outliers > 0:
         fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
         outliers_plotting_col.plotly_chart(fig, use_container_width=True)
 
