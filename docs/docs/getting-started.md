@@ -93,8 +93,7 @@ You can find more details on the `init` command in the [CLI section](cli/initial
 
 ## Import an Encord Project
 
-If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects to the Encord Active
-easily.
+If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects into Encord Active easily.
 
 ```shell
 # within venv
@@ -102,17 +101,24 @@ encord-active import project
 ```
 
 This will import your encord project to a new directory in your current working directory.
+If you don't have an Encord project ready, you can either
 
-If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](sdk/migrating-data).
-Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
+1. [Initialise a project from a local data directory](/cli/initialising-project-from-image-directories)
+2. [Migrating data and labels to Encord](sdk/migrating-data) before calling this command
+3. [Download one of our sandbox datasets](/cli/download-sandbox-data)
 
-To be able to do this, you will need the path to your private `ssh-key` associated with Encord and a `project_hash`.
-Don't worry! The script will guide you on the way if you don't know it already.
+:::info
 
-The script will ask you:
+If you are new to the Encord platform, you can easily [sign up](https://app.encord.com/register) for an Encord account.
+
+:::
+
+To be able to import an Encord project, you will need the path to your private `ssh-key` associated with Encord (see documentation [here](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)).
+
+The command will ask you:
 
 1. `Where is your private ssh key stored?`: type the path to your private ssh key
-2. `Specify project hash`: paste / type the `project_hash`. If you don't know the id, you can type `?` and hit enter to get all your projects listed with their `project_hash`s before being prompted with the question again. Now you can copy paste the id.
+2. `What project would you like to import?`: here, you can (fuzzy) search for the project title that you would like to import. Hit <kbd>enter</kbd> when your desired project is highlighted.
 
 Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
 
@@ -120,12 +126,6 @@ Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
-
-:::info
-If you are new to the Encord platform, [sign up](https://app.encord.com/register) for an Encord account and
-[upload your projects](sdk/migrating-data) to the Encord platform. Then you can easily import your
-projects.
-:::
 
 ## Running the App
 

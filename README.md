@@ -141,6 +141,8 @@ To import an Encord project, use this command:
 encord-active import project
 ```
 
+The command will allow you to search through your Encord projects and choose which one to import.
+
 ### Other options
 
 > There are also options for importing projects from, e.g,. KITTI and CVAT. Find more details in [the documentation][encord-active-docs-workflow-import-data].
