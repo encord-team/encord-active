@@ -49,11 +49,11 @@ class SummaryPage(Page):
 
             st.markdown(
                 '- <i class="fa-solid fa-circle text-red"></i>  **Severe**: '
-                r"used for those samples where $(score \leq Q1-2.5 \\times IQR) \lor (Q3+2.5 \\times IQR \leq "
+                "used for those samples where $(score \leq Q1-2.5 \\times IQR) \lor (Q3+2.5 \\times IQR \leq " 
                 "score)$. \n"
                 '- <i class="fa-solid fa-circle text-orange"></i> **Moderate**: '
-                r"used for those samples where $score$ does not fall into **Severe** status and $(score \leq Q1-1.5 "
-                r"\\times IQR) \lor (Q3+1.5 \\times IQR \leq score)$. \n"
+                "used for those samples where $score$ does not fall into **Severe** status and $(score \leq Q1-1.5 "
+                "\\times IQR) \lor (Q3+1.5 \\times IQR \leq score)$. \n"
                 '- <i class="fa-solid fa-circle text-green"></i> **Low**: '
                 "used for those samples where $Q1-1.5 \\times IQR < score < Q3+1.5 \\times IQR$. ",
                 unsafe_allow_html=True,
