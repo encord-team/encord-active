@@ -40,15 +40,19 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
     total_unique_severe_outliers = set()
     total_unique_moderate_outliers = set()
 
+    df_timer = 0
+    iter_timer = 0
     for metric in metrics:
         original_df = load_metric_dataframe(metric, normalize=False)
         res = get_iqr_outliers(original_df)
+
         if not res:
             continue
 
         df, iqr_outliers = res
 
-        for _, row in df.iterrows():
+        df_dict = df.to_dict('records')
+        for row in df_dict:
             if row[_COLUMNS.outliers_status] == Severity.severe:
                 total_unique_severe_outliers.add(row[_COLUMNS.identifier])
             elif row[_COLUMNS.outliers_status] == Severity.moderate:
@@ -58,6 +62,9 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
 
     metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
     metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)
+
+    print(f'df timer: {df_timer}')
+    print(f'iter timer: {iter_timer}')
 
     return metric_severity
 
@@ -155,6 +162,7 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
 
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+
     if get_state().annotation_sizes is None:
         get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths.project_dir)
 
