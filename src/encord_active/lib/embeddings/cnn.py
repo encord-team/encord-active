@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import numpy as np
 import torch
 import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
@@ -94,13 +95,10 @@ def generate_cnn_image_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
 
     collections: List[LabelEmbedding] = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
-        if img_pth is None:
-            continue
+        embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
 
-        image = image_path_to_tensor(img_pth)
-        transformed_image = transforms(image).unsqueeze(0)
-        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
-        embedding = torch.flatten(embedding).cpu().detach().numpy()
+        if embedding is None:
+            continue
 
         entry = LabelEmbedding(
             url=data_unit["data_link"],
@@ -192,9 +190,6 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
 
     collections = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
-        if not img_pth:
-            continue
-
         matching_image_collections = [
             collection
             for collection in image_collections
@@ -203,13 +198,13 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
             and collection["frame"] == iterator.frame
         ]
 
-        if len(image_collections):
-            embedding = matching_image_collections[0]["embedding"]
+        if not len(image_collections):
+            embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
         else:
-            image = image_path_to_tensor(img_pth)
-            transformed_image = transforms(image).unsqueeze(0)
-            embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
-            embedding = torch.flatten(embedding).cpu().detach().numpy()  # type: ignore
+            embedding = matching_image_collections[0]["embedding"]
+
+        if embedding is None:
+            continue
 
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
@@ -304,3 +299,17 @@ def generate_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, t
     logger.info("Done!")
 
     return cnn_embeddings
+
+
+def get_embdding_for_image(feature_extractor, transforms, img_pth: Optional[Path] = None) -> Optional[np.ndarray]:
+    if img_pth is None:
+        return None
+
+    try:
+        image = image_path_to_tensor(img_pth)
+        transformed_image = transforms(image).unsqueeze(0)
+        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
+        return torch.flatten(embedding).cpu().detach().numpy()
+    except:
+        logger.error(f"Falied generating embedding for file: {img_pth}")
+        return None

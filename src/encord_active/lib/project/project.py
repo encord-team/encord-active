@@ -217,8 +217,11 @@ def download_images_from_data_unit(lr, project_file_structure: ProjectFileStruct
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
         out_pth = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        out_pth = download_file(du["data_link"], out_pth)
-        frame_pths.append(out_pth)
+        try:
+            out_pth = download_file(du["data_link"], out_pth)
+            frame_pths.append(out_pth)
+        except:
+            logger.warning(f"Could not download data unit <blue>`{du['data_hash']}`</blue>, skipping...")
 
     if lr.data_type == "video":
         video_path = frame_pths[0]
