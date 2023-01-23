@@ -1,12 +1,10 @@
-import re
 from pathlib import Path
 from typing import Optional
 
 import encord.exceptions
 import rich
-import typer
 import yaml
-from encord import EncordUserClient, Project
+from encord import EncordUserClient
 from rich.markup import escape
 from rich.panel import Panel
 
