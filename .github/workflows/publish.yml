@@ -39,7 +39,7 @@ jobs:
         run: "poetry version ${{ github.ref_name }}"
 
       - name: Module Version Bump
-        run: 'sed "s/__version__ = \".*\"/__version__ = \"${{ github.ref_name }}\"/g" src/encord_active/__init__.py'
+        run: 'sed -i "s/__version__ = \".*\"/__version__ = \"${{ github.ref_name }}\"/g" src/encord_active/__init__.py'
 
       - name: Version Bump commit
         uses: stefanzweifel/git-auto-commit-action@v4
