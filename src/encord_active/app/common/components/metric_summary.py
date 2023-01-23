@@ -2,6 +2,7 @@ from typing import List
 
 import pandas as pd
 import streamlit as st
+from streamlit.delta_generator import DeltaGenerator
 from pandera.typing import DataFrame
 
 from encord_active.app.common.components import build_data_tags
@@ -83,6 +84,17 @@ def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFr
     return all_metrics_outliers
 
 
+def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
+    st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")
+
+    for counter, (_, row) in enumerate(metrics.iterrows()):
+        st_col.metric(
+            f"{counter + 1}. {row['metric']} outliers",
+            row["total_severe_outliers"],
+            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+        )
+
+
 def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
     if get_state().image_sizes is None:
         get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
@@ -139,16 +151,7 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     outliers_plotting_col.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
-    issues_col.subheader(
-        f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset"
-    )
-
-    for counter, (_, row) in enumerate(metrics_with_severe_outliers.iterrows()):
-        issues_col.metric(
-            f"{counter + 1}. {row['metric']} outliers",
-            row["total_severe_outliers"],
-            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
-        )
+    render_issues_pane(metrics_with_severe_outliers, issues_col)
 
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
@@ -208,16 +211,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
         outliers_plotting_col.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
-    issues_col.subheader(
-        f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset"
-    )
-
-    for counter, (_, row) in enumerate(metrics_with_severe_outliers.iterrows()):
-        issues_col.metric(
-            f"{counter + 1}. {row['metric']} outliers",
-            row["total_severe_outliers"],
-            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
-        )
+    render_issues_pane(metrics_with_severe_outliers, issues_col)
 
 
 def render_metric_summary(
