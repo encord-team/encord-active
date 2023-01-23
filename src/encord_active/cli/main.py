@@ -271,5 +271,14 @@ def metricize(
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
 
 
+@cli.callback(invoke_without_command=True)
+def version(version_: bool = typer.Option(False, "--version", "-v", help="Print the current version of Encord Active")):
+    if version_:
+        from encord_active import __version__ as ea_version
+
+        rich.print(f"Version: [green]{ea_version}[/green]")
+        exit()
+
+
 if __name__ == "__main__":
     cli(prog_name=APP_NAME)
