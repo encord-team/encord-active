@@ -25,7 +25,7 @@ class SummaryPage(Page):
         tag_creator()
 
     def build(self, metric_scope: MetricScope):
-
+        st.markdown(f"# {self.title}")
         if metric_scope == MetricScope.DATA_QUALITY:
             render_data_quality_dashboard(
                 self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
@@ -35,7 +35,7 @@ class SummaryPage(Page):
                 self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
             )
 
-        with st.expander("Outlier description", expanded=True):
+        with st.expander("Outlier description", expanded=False):
             st.write(
                 "Box plot visualisation is a common technique in descriptive statistics to detect outliers. "
                 "Interquartile range ($IQR$) refers to the difference between the 25th ($Q1$) and 75th ($Q3$)"
