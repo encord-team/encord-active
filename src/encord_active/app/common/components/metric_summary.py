@@ -8,15 +8,93 @@ from pandera.typing import DataFrame
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.state import get_state
+from encord_active.app.common.state import MetricOutlierInfo, MetricsSeverity, get_state
+from encord_active.lib.charts.data_quality_summary import (
+    create_image_size_distribution_chart,
+    create_outlier_distribution_chart,
+)
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSchema
-from encord_active.lib.metrics.utils import MetricData, MetricScope
+from encord_active.lib.dataset.outliers import (
+    IqrOutliers,
+    MetricWithDistanceSchema,
+    Severity,
+    get_iqr_outliers,
+)
+from encord_active.lib.dataset.summary_utils import (
+    get_all_annotation_numbers,
+    get_all_image_sizes,
+    get_median_value_of_2D_array,
+)
+from encord_active.lib.metrics.utils import (
+    MetricData,
+    MetricScope,
+    load_available_metrics,
+    load_metric_dataframe,
+)
 
 _COLUMNS = MetricWithDistanceSchema
 
 
-def render_data_quality_summary_top_bar(median_image_dimension: np.ndarray, background_color: str):
+def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
+    metric_severity = MetricsSeverity()
+    total_unique_severe_outliers = set()
+    total_unique_moderate_outliers = set()
+
+    for metric in metrics:
+        original_df = load_metric_dataframe(metric, normalize=False)
+        res = get_iqr_outliers(original_df)
+        if not res:
+            continue
+
+        df, iqr_outliers = res
+
+        for _, row in df.iterrows():
+            if row[_COLUMNS.outliers_status] == Severity.severe:
+                total_unique_severe_outliers.add(row[_COLUMNS.identifier])
+            elif row[_COLUMNS.outliers_status] == Severity.moderate:
+                total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
+
+        metric_severity.metrics.append(MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers))
+
+    metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
+    metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)
+
+    return metric_severity
+
+
+def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
+    all_metrics_outliers = pd.DataFrame(columns=["metric", "total_severe_outliers", "total_moderate_outliers"])
+    for item in metrics_data_summary.metrics:
+        all_metrics_outliers = pd.concat(
+            [
+                all_metrics_outliers,
+                pd.DataFrame(
+                    {
+                        "metric": [item.metric.name],
+                        "total_severe_outliers": [item.iqr_outliers.n_severe_outliers],
+                        "total_moderate_outliers": [item.iqr_outliers.n_moderate_outliers],
+                    }
+                ),
+            ],
+            axis=0,
+        )
+
+    all_metrics_outliers.sort_values(by=["total_severe_outliers"], ascending=False, inplace=True)
+
+    return all_metrics_outliers
+
+
+def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+    if get_state().image_sizes is None:
+        get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
+    median_image_dimension = get_median_value_of_2D_array(get_state().image_sizes)
+
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
+    if get_state().metrics_data_summary is None:
+        get_state().metrics_data_summary = get_metric_summary(metrics)
+
+    all_metrics_outliers = get_all_metrics_outliers(get_state().metrics_data_summary)
+
     total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
 
     total_images_col.markdown(
@@ -51,8 +129,39 @@ def render_data_quality_summary_top_bar(median_image_dimension: np.ndarray, back
         unsafe_allow_html=True,
     )
 
+    st.write("")
+    outliers_plotting_col, issues_col = st.columns([6, 3])
 
-def render_label_quality_summary_top_bar(background_color: str):
+    if get_state().metrics_data_summary.total_unique_severe_outliers > 0:
+        fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
+        outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+
+    fig = create_image_size_distribution_chart(get_state().image_sizes)
+    outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+
+    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    issues_col.subheader(
+        f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset"
+    )
+
+    for counter, (_, row) in enumerate(metrics_with_severe_outliers.iterrows()):
+        issues_col.metric(
+            f"{counter + 1}. {row['metric']} outliers",
+            row["total_severe_outliers"],
+            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+        )
+
+
+def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+    if get_state().annotation_sizes is None:
+        get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths.project_dir)
+
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.LABEL_QUALITY)
+    if get_state().metrics_label_summary is None:
+        get_state().metrics_label_summary = get_metric_summary(metrics)
+
+    all_metrics_outliers = get_all_metrics_outliers(get_state().metrics_label_summary)
+
     (
         total_object_annotations_col,
         total_classification_annotations_col,
@@ -91,6 +200,25 @@ def render_label_quality_summary_top_bar(background_color: str):
         ),
         unsafe_allow_html=True,
     )
+
+    st.write("")
+    outliers_plotting_col, issues_col = st.columns([6, 3])
+
+    if get_state().metrics_data_summary.total_unique_severe_outliers > 0:
+        fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
+        outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+
+    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    issues_col.subheader(
+        f":triangular_flag_on_post: {metrics_with_severe_outliers.shape[0]} issues to fix in your dataset"
+    )
+
+    for counter, (_, row) in enumerate(metrics_with_severe_outliers.iterrows()):
+        issues_col.metric(
+            f"{counter + 1}. {row['metric']} outliers",
+            row["total_severe_outliers"],
+            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+        )
 
 
 def render_metric_summary(
