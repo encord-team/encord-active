@@ -198,7 +198,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
             and collection["frame"] == iterator.frame
         ]
 
-        if not len(image_collections):
+        if not matching_image_collections:
             embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
         else:
             embedding = matching_image_collections[0]["embedding"]
