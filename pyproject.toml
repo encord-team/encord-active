@@ -68,8 +68,7 @@ psutil = "^5.9.4"
 pandera = "^0.13.4"
 jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
-# TODO: replace when a new version is released
-inquirerpy = { git = "https://github.com/kazhala/InquirerPy.git"}
+inquirerpy = "^0.3.4"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
