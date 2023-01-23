@@ -2,8 +2,8 @@ from typing import List
 
 import pandas as pd
 import streamlit as st
-from streamlit.delta_generator import DeltaGenerator
 from pandera.typing import DataFrame
+from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.data_quality_summary import summary_item
@@ -40,8 +40,6 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
     total_unique_severe_outliers = set()
     total_unique_moderate_outliers = set()
 
-    df_timer = 0
-    iter_timer = 0
     for metric in metrics:
         original_df = load_metric_dataframe(metric, normalize=False)
         res = get_iqr_outliers(original_df)
@@ -51,7 +49,7 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
 
         df, iqr_outliers = res
 
-        df_dict = df.to_dict('records')
+        df_dict = df.to_dict("records")
         for row in df_dict:
             if row[_COLUMNS.outliers_status] == Severity.severe:
                 total_unique_severe_outliers.add(row[_COLUMNS.identifier])
@@ -62,9 +60,6 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
 
     metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
     metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)
-
-    print(f'df timer: {df_timer}')
-    print(f'iter timer: {iter_timer}')
 
     return metric_severity
 

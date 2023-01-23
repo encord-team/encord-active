@@ -49,7 +49,7 @@ class SummaryPage(Page):
 
             st.markdown(
                 '- <i class="fa-solid fa-circle text-red"></i>  **Severe**: '
-                "used for those samples where $(score \leq Q1-2.5 \\times IQR) \lor (Q3+2.5 \\times IQR \leq " 
+                "used for those samples where $(score \leq Q1-2.5 \\times IQR) \lor (Q3+2.5 \\times IQR \leq "
                 "score)$. \n"
                 '- <i class="fa-solid fa-circle text-orange"></i> **Moderate**: '
                 "used for those samples where $score$ does not fall into **Severe** status and $(score \leq Q1-1.5 "
