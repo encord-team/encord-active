@@ -143,14 +143,14 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     )
 
     st.write("")
-    outliers_plotting_col, issues_col = st.columns([6, 3])
+    plots_col, issues_col = st.columns([6, 3])
 
     if get_state().metrics_data_summary.total_unique_severe_outliers > 0:
         fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
-        outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+        plots_col.plotly_chart(fig, use_container_width=True)
 
     fig = create_image_size_distribution_chart(get_state().image_sizes)
-    outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+    plots_col.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
