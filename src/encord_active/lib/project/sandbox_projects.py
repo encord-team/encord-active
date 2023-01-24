@@ -11,16 +11,15 @@ from tqdm.auto import tqdm
 
 # GCP bucket links will be added here
 PREBUILT_PROJECTS = {
-   "[open-source][validation]-coco-2017-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-coco-2017-dataset.zip",
-   "[open-source][test]-limuc-ulcerative-colitis-classification": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
-   "[open-source]-covid-19-segmentations": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
-   "[open-source][validation]-bdd-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
-   "[open-source]-TACO-Official": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
-   "[open-source]-TACO-Unofficial": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
-   "rareplanes": "https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
-   "quickstart": "https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
+    "[open-source][validation]-coco-2017-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-coco-2017-dataset.zip",
+    "[open-source][test]-limuc-ulcerative-colitis-classification": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
+    "[open-source]-covid-19-segmentations": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
+    "[open-source][validation]-bdd-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
+    "[open-source]-TACO-Official": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
+    "[open-source]-TACO-Unofficial": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
+    "rareplanes": "https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
+    "quickstart": "https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
 }
-
 
 
 def fetch_prebuilt_project_size(project_name: str) -> Optional[float]:
