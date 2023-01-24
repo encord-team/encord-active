@@ -1,19 +1,50 @@
 from pathlib import Path
-from typing import List, Set, TypedDict
+from typing import List, Set, Tuple, TypedDict
 
+import click
 import rich
 import typer
 from rich.markup import escape
 from rich.panel import Panel
+from typer.core import TyperGroup
 
 import encord_active.app.conf  # pylint: disable=unused-import
+import encord_active.cli.utils.typer  # pylint: disable=unused-import
 from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
 
+
+class OrderedPanelGroup(TyperGroup):
+    COMMAND_ORDER = [
+        "quickstart",
+        "download",
+        "init",
+        "import",
+        "visualize",
+        "visualise",
+        "metricize",
+        "print",
+        "config",
+    ]
+
+    def list_commands(self, ctx: click.Context):
+        keys_with_index: List[Tuple[int, str]] = []
+        remaining = []
+        for key in self.commands.keys():
+            if key in self.COMMAND_ORDER:
+                keys_with_index.append((self.COMMAND_ORDER.index(key), key))
+            else:
+                remaining.append(key)
+        sorted_keys = list(map(lambda x: x[1], sorted(keys_with_index, key=lambda x: x[0])))
+
+        return sorted_keys + remaining
+
+
 cli = typer.Typer(
+    cls=OrderedPanelGroup,
     rich_markup_mode="rich",
     help="""
 All commands in this CLI have a --help option, which will guide you on the way.
@@ -21,12 +52,18 @@ If you don't find the information you need here, we recommend that you visit
 our main documentation: [blue]https://encord-active-docs.web.app[/blue]
 """,
     epilog="""
-Made by Encord. Contact Encord here: [blue]https://encord.com/contact_us/[/blue] to learn more
-about our active learning platform for computer vision.
+Made by Encord. [bold]Get in touch[/bold]: 
+
+
+:call_me_hand: Slack Channel: [blue]https://encordactive.slack.com[/blue]   
+
+:e-mail: Email: [blue]active@encord.com[/blue]
+
+:star: Github: [blue]https://github.com/encord-team/encord-active[/blue]
 """,
 )
-cli.add_typer(config_cli, name="config", help="Configure global settings 🔧")
-cli.add_typer(import_cli, name="import", help="Import Projects or Predictions ⬇️")
+cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
+cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
 
 
@@ -38,10 +75,10 @@ def download(
     ),
 ):
     """
-    Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
+    [green bold]Download[/green bold] a sandbox dataset to get started. 📁
 
-    * If --project_name is not given as an argument, available prebuilt projects will be listed
-     and the user can select one from the menu.
+    * If --project_name is not given as an argument, available sandbox projects will be listed
+     and you can select one from the menu.
     """
     from InquirerPy import inquirer as i
 
@@ -116,10 +153,11 @@ def import_local_project(
     ),
 ):
     """
-    [bold]Initialise[/bold] a project from your local file system by searching for images based on the `glob` arguments.
+    [green bold]Initialise[/green bold] a project from your local file system :seedling:
+
+    The command will search for images based on the `glob` arguments.
+
     By default, all jpeg, jpg, png, and tiff files will be matched.
-
-
     """
     from encord_active.lib.project.local import (
         NoFilesFoundError,
@@ -194,7 +232,8 @@ Consider removing the directory or setting the `--name` option.
         typer.Abort()
 
 
-@cli.command()
+@cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
+@cli.command(name="visualize")
 @bypass_streamlit_question
 @ensure_project
 def visualise(
@@ -203,7 +242,7 @@ def visualise(
     ),
 ):
     """
-    Launches the application with the provided project ✨
+    [green bold]Launch[/green bold] the application with the provided project ✨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
 
@@ -218,7 +257,7 @@ def quickstart(
     ),
 ):
     """
-    Take the shortcut and start the application straight away 🏃💨
+    [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
@@ -242,7 +281,7 @@ def metricize(
     ),
 ):
     """
-    Execute metrics on your data and predictions 🧠
+    [green bold]Execute[/green bold] metrics on your data and predictions 🧠
     """
     from InquirerPy import inquirer as i
     from InquirerPy.base.control import Choice
