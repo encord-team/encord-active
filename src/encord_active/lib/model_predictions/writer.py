@@ -177,7 +177,7 @@ class PredictionWriter:
 
         # todo check if it is really necessary to read from project from Encord (probably should be local storage)
         self.label_rows = project.label_rows
-        self.label_row_meta = self.project.label_row_meta
+        self.label_row_meta = self.project.label_row_metas
         self.uuids: Set[str] = set()
 
         self.__prepare_lr_lookup()
@@ -188,7 +188,7 @@ class PredictionWriter:
     def __prepare_lr_lookup(self):
         logger.debug("Preparing label row lookup")
         # Top level data hashes
-        self.lr_lookup: Dict[str, str] = {m.data_hash: m.label_hash for m in self.project.label_row_meta.values()}
+        self.lr_lookup: Dict[str, str] = {m.data_hash: m.label_hash for m in self.project.label_row_metas.values()}
         # Nested data hashes for every data unit in the project
         for lr in self.label_rows.values():
             self.lr_lookup.update({du_hash: lr["label_hash"] for du_hash in lr["data_units"]})

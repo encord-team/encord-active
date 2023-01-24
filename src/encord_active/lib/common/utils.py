@@ -407,7 +407,7 @@ def collect_async(fn, job_args, key_fn, max_workers=min(10, (os.cpu_count() or 1
                 key = jobs[job]
 
                 result = job.result()
-                if result:
+                if result is not None:
                     results[key] = result
 
                 pbar.update(1)
@@ -423,6 +423,10 @@ def download_file(
         return destination
 
     r = requests.get(url, stream=True)
+
+    if r.status_code != 200:
+        raise Exception(f"Something happened, couldn't download file from: {url}")
+
     with destination.open("wb") as f:
         for chunk in r.iter_content(chunk_size=byte_size):
             if chunk:  # filter out keep-alive new chunks
