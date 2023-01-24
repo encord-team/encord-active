@@ -5,7 +5,7 @@ import json
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import encord.exceptions
 import yaml
@@ -34,7 +34,7 @@ class Project:
         self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
-        self.label_row_meta: Dict[str, LabelRowMetadata] = {}
+        self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
 
@@ -82,6 +82,7 @@ class Project:
         #         path.unlink()
         #     elif path.is_dir():
         #         rmtree(path)
+        self.encord_project = encord_project
 
         self.__save_project_meta(encord_project)
         self.__save_ontology(encord_project)
@@ -98,7 +99,7 @@ class Project:
                 [
                     self.project_meta,
                     self.project_hash,
-                    self.label_row_meta,
+                    self.label_row_metas,
                     self.label_rows,
                 ],
             )
@@ -117,7 +118,7 @@ class Project:
 
     def __save_ontology(self, encord_project: EncordProject):
         ontology_file_path = self.file_structure.ontology
-        ontology_file_path.write_text(json.dumps(encord_project.ontology, indent=2), encoding="utf-8")
+        ontology_file_path.write_text(json.dumps(self.encord_project.ontology, indent=2), encoding="utf-8")
 
     def __load_ontology(self):
         ontology_file_path = self.file_structure.ontology
@@ -134,7 +135,7 @@ class Project:
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
-        self.label_row_meta = {
+        self.label_row_metas = {
             lr_hash: LabelRowMetadata.from_dict(lr_meta)
             for lr_hash, lr_meta in itertools.islice(
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
@@ -142,13 +143,38 @@ class Project:
         }
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        label_rows = download_all_label_rows(encord_project, self.file_structure)
-        download_all_images(label_rows, self.file_structure)
+        label_rows = download_label_rows(encord_project, self.file_structure)
+        results = download_all_images(label_rows, self.file_structure)
+
+        lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
+
+        if not lr_with_failed_images:
+            logger.info("Successfully downloaded all label row datas")
+            return
+
+        # NOTE: most likely the singed url have expired, we should refresh the label row and try again.
+        logger.warning(
+            f"Failed downloading datas for some the following label rows: {lr_with_failed_images}. \nRetrying..."
+        )
+        label_rows = download_label_rows(
+            self.encord_project,
+            self.file_structure,
+            filter_fn=lambda lr: lr["label_hash"] in lr_with_failed_images,
+            refresh=True,
+        )
+        results = download_all_images(label_rows, self.file_structure)
+        lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
+
+        if not lr_with_failed_images:
+            logger.info("Successfully downloaded all label row datas")
+            return
+
+        logger.error("Retry didn't help. Skipping...")
 
     def __load_label_rows(self):
         self.label_rows = {}
         self.image_paths = {}
-        for lr_hash in self.label_row_meta.keys():
+        for lr_hash in self.label_row_metas.keys():
             lr_structure = self.file_structure.label_row_structure(lr_hash)
             if not lr_structure.label_row_file.is_file() or not lr_structure.images_dir.is_dir():
                 logger.warning(
@@ -186,10 +212,14 @@ def get_label_row(
     return lr
 
 
-def download_all_label_rows(
-    project: EncordProject, project_file_structure: ProjectFileStructure, subset_size: Optional[int] = None, **kwargs
+def download_label_rows(
+    project: EncordProject,
+    project_file_structure: ProjectFileStructure,
+    filter_fn: Optional[Callable[..., bool]] = lambda x: x["label_hash"] is not None,
+    subset_size: Optional[int] = None,
+    **kwargs,
 ) -> Dict[str, LabelRow]:
-    label_rows = list(itertools.islice(filter(lambda x: x["label_hash"], project.label_rows), subset_size))
+    label_rows = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
 
     return collect_async(
         partial(get_label_row, project=project, project_file_structure=project_file_structure, **kwargs),
@@ -199,7 +229,7 @@ def download_all_label_rows(
     )
 
 
-def download_images_from_data_unit(lr, project_file_structure: ProjectFileStructure) -> Optional[List[Path]]:
+def download_images_from_data_unit(lr: LabelRow, project_file_structure: ProjectFileStructure) -> Optional[bool]:
     label_hash = lr.label_hash
 
     if label_hash is None:
@@ -221,7 +251,7 @@ def download_images_from_data_unit(lr, project_file_structure: ProjectFileStruct
             out_pth = download_file(du["data_link"], out_pth)
             frame_pths.append(out_pth)
         except:
-            logger.warning(f"Could not download data unit <blue>`{du['data_hash']}`</blue>, skipping...")
+            return False
 
     if lr.data_type == "video":
         video_path = frame_pths[0]
@@ -229,10 +259,10 @@ def download_images_from_data_unit(lr, project_file_structure: ProjectFileStruct
         for out_pth in slice_video_into_frames(video_path)[0].values():
             frame_pths.append(out_pth)
 
-    return frame_pths
+    return True
 
 
-def download_all_images(label_rows, project_file_structure: ProjectFileStructure) -> Dict[str, List[Path]]:
+def download_all_images(label_rows, project_file_structure: ProjectFileStructure) -> Dict[str, Optional[bool]]:
     return collect_async(
         partial(download_images_from_data_unit, project_file_structure=project_file_structure),
         label_rows.values(),
