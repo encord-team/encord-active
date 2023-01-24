@@ -59,7 +59,7 @@ def download(
         project_names_with_storage = []
         for project_name in PREBUILT_PROJECTS.keys():
             project_size = fetch_prebuilt_project_size(project_name)
-            modified_project_name = project_name + (f" ({project_size} mb)" if project_size is not None else "")
+            modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
 
         answer = i.select(message="Choose a project", choices=project_names_with_storage, vi_mode=True).execute()
