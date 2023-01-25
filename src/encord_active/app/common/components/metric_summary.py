@@ -217,17 +217,22 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
         plots_col.plotly_chart(fig, use_container_width=True)
 
     # label distribution plots
-    if get_state().annotation_sizes["total_object_labels"] > 0:
-        fig = create_labels_distribution_chart(
-            get_state().annotation_sizes["objects"], "Objects distributions", "Object"
-        )
-        plots_col.plotly_chart(fig, use_container_width=True)
+    with plots_col.expander("Labels distribution", expanded=True):
+        if get_state().annotation_sizes["total_object_labels"] > 0 or get_state().annotation_sizes["classifications"] >0:
+            st.info('If a class\'s size is lower than half of the median value, it is indicated as \'undersampled\'.')
 
-    for classification_question_name, classification_question_answers in (
-        get_state().annotation_sizes["classifications"].items()
-    ):
-        fig = create_labels_distribution_chart(classification_question_answers, classification_question_name, "Class")
-        plots_col.plotly_chart(fig, use_container_width=True)
+
+        if get_state().annotation_sizes["total_object_labels"] > 0:
+            fig = create_labels_distribution_chart(
+                get_state().annotation_sizes["objects"], "Objects distributions", "Object"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        for classification_question_name, classification_question_answers in (
+            get_state().annotation_sizes["classifications"].items()
+        ):
+            fig = create_labels_distribution_chart(classification_question_answers, classification_question_name, "Class")
+            st.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
