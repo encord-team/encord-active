@@ -64,7 +64,7 @@ Don't know this? Please see our documentation on the topic to get more help.
 
         if not ssh_key_path.exists():
             rich.print(f"[red]The provided path `{ssh_key_path}` does not seem to be correct.")
-            typer.Abort()
+            raise typer.Abort()
 
         self.contents[ConfigProperties.SSH_KEY_PATH.value] = ssh_key_path.as_posix()
         self.save()

@@ -11,17 +11,19 @@ def success_with_visualise_command(
     cwd = Path.cwd()
     cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
+    commands = "[cyan]encord-active visualise[/cyan]"
+    if cd_dir.resolve() != cwd.resolve():
+        commands = f"[cyan]cd {escape(cd_dir.as_posix())}[/cyan]\n{commands}"
+
     panel = Panel(
-        f"""
-{success_text}
-
-💡 Hint: You can open your project in Encord Active with the following commands
-
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise[/cyan]
-
-to open Encord Active and see your project.
-    """,
+        "\n\n".join(
+            [
+                success_text,
+                "💡 Hint: You can open your project in Encord Active with the following commands",
+                commands,
+                "to open Encord Active and see your project.",
+            ]
+        ),
         title="🌟 Success 🌟",
         style="green",
         expand=False,
