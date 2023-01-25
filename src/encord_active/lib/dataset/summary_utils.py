@@ -1,9 +1,13 @@
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 from encord.constants.enums import DataType
-from dataclasses import dataclass, field
+from encord.objects.ontology_structure import OntologyStructure
+
+from encord_active.lib.project import ProjectFileStructure
+
 
 @dataclass
 class AnnotationStatistics:
@@ -11,6 +15,7 @@ class AnnotationStatistics:
     classifications: dict = field(default_factory=dict)
     total_object_labels: int = 0
     total_classification_labels: int = 0
+
 
 def get_all_image_sizes(project_folder: Path) -> np.ndarray:
     image_sizes = []
@@ -36,7 +41,7 @@ def get_median_value_of_2d_array(array: np.ndarray) -> np.ndarray:
     return array[item_index[0][0], :]
 
 
-def get_all_annotation_numbers(project_folder: Path) -> AnnotationStatistics:
+def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> AnnotationStatistics:
     """
     returns label statistics for both objects and classifications. Does not count nested
     labels, only counts the immediate labels.
@@ -46,17 +51,20 @@ def get_all_annotation_numbers(project_folder: Path) -> AnnotationStatistics:
     classification_label_counter = 0
     object_label_counter = 0
 
-    project_ontology = json.loads((project_folder / "ontology.json").read_text(encoding="utf-8"))
-    for object_item in project_ontology["objects"]:
-        labels.objects[object_item["name"]] = 0
-    for classification_item in project_ontology["classifications"]:
-        labels.classifications[classification_item["attributes"][0]["name"]] = {}
+    project_ontology = json.loads((project_paths.ontology).read_text(encoding="utf-8"))
+    ontology = OntologyStructure.from_dict(project_ontology)
+
+    for object_item in ontology.objects:
+        labels.objects[object_item.name] = 0
+    for classification_item in ontology.classifications:
+        labels.classifications[classification_item.attributes[0].name] = {}
 
         # For radio and checkbox types
-        for option in classification_item["attributes"][0].get("options", []):
-            labels.classifications[classification_item["attributes"][0]["name"]][option["label"]] = 0
+        if hasattr(classification_item.attributes[0], "options"):
+            for option in classification_item.attributes[0].options:
+                labels.classifications[classification_item.attributes[0].name][option.label] = 0
 
-    for label_row in (project_folder / "data").iterdir():
+    for label_row in (project_paths.data).iterdir():
         if (label_row / "label_row.json").exists():
             label_row_meta = json.loads((label_row / "label_row.json").read_text(encoding="utf-8"))
             if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
@@ -81,9 +89,7 @@ def get_all_annotation_numbers(project_folder: Path) -> AnnotationStatistics:
                             if isinstance(classification_answer_item["answers"], list):
                                 for answer_item in classification_answer_item["answers"]:
                                     if answer_item["name"] in labels.classifications[classification_question_name]:
-                                        labels.classifications[classification_question_name][
-                                            answer_item["name"]
-                                        ] += 1
+                                        labels.classifications[classification_question_name][answer_item["name"]] += 1
                             elif isinstance(classification_answer_item["answers"], str):
                                 labels.classifications[classification_question_name].setdefault(
                                     classification_answer_item["answers"], 0
