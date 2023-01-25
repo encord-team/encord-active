@@ -55,7 +55,7 @@ def create_labels_distribution_chart(
     Q2 = labels_df[LabelStatisticsSchema.count].quantile(0.5)
 
     labels_df.loc[labels_df[LabelStatisticsSchema.count] <= (Q2 * 0.5), LabelStatisticsSchema.status] = True
-    print(labels_df)
+
     fig = go.Figure(
         data=[
             go.Bar(
