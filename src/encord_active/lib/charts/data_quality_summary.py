@@ -30,6 +30,21 @@ def create_outlier_distribution_chart(
 
     return fig
 
+def create_labels_distribution_chart(labels: dict, title: str, x_title: str='Class', y_title: str='Count') -> go.Figure:
+    object_df = pd.DataFrame.from_dict(labels, orient='index').reset_index()
+    object_df.rename(columns={'index': x_title, 0: y_title}, inplace=True)
+
+    object_df.sort_values(by=y_title, ascending=False, inplace=True)
+
+    fig = px.bar(object_df, x = x_title, y=y_title)
+    fig.update_layout(
+        title=title,
+        xaxis_title=x_title,
+        yaxis_title=y_title,
+        height=300,
+    )
+
+    return fig
 
 def create_image_size_distribution_chart(image_sizes: np.ndarray) -> go.Figure:
     fig = px.scatter(x=image_sizes[:, 0], y=image_sizes[:, 1])
