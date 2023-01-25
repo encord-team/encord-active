@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Union
+from typing import Dict, List, NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 
 GLOBAL_STATE = "global_state"
 
@@ -28,6 +29,8 @@ class MetricsSeverity:
     metrics: list[MetricOutlierInfo] = field(default_factory=list)
     total_unique_moderate_outliers: Optional[int] = None
     total_unique_severe_outliers: Optional[int] = None
+
+
 
 
 @dataclass
@@ -72,7 +75,7 @@ class State:
     predictions = PredictionsState()
     similarities_count = 8
     image_sizes: Optional[np.ndarray] = None
-    annotation_sizes: Optional[Dict[str, Union[dict, int]]] = None
+    annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
 
