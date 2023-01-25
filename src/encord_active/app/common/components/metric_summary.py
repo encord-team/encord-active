@@ -24,7 +24,7 @@ from encord_active.lib.dataset.outliers import (
 from encord_active.lib.dataset.summary_utils import (
     get_all_annotation_numbers,
     get_all_image_sizes,
-    get_median_value_of_2D_array,
+    get_median_value_of_2d_array,
 )
 from encord_active.lib.metrics.utils import (
     MetricData,
@@ -101,7 +101,7 @@ def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
 def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
     if get_state().image_sizes is None:
         get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
-    median_image_dimension = get_median_value_of_2D_array(get_state().image_sizes)
+    median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
 
     metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
     if get_state().metrics_data_summary is None:
@@ -167,7 +167,7 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
     if get_state().annotation_sizes is None:
-        get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths.project_dir)
+        get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths)
 
     metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.LABEL_QUALITY)
     if get_state().metrics_label_summary is None:
@@ -184,7 +184,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
 
     total_object_annotations_col.markdown(
         summary_item(
-            "Object annotations", get_state().annotation_sizes["total_object_labels"], background_color=background_color
+            "Object annotations", get_state().annotation_sizes.total_object_labels, background_color=background_color
         ),
         unsafe_allow_html=True,
     )
@@ -192,7 +192,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     total_classification_annotations_col.markdown(
         summary_item(
             "Classification annotations",
-            get_state().annotation_sizes["total_classification_labels"],
+            get_state().annotation_sizes.total_classification_labels,
             background_color=background_color,
         ),
         unsafe_allow_html=True,
@@ -226,20 +226,21 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     # label distribution plots
     with plots_col.expander("Labels distribution", expanded=True):
         if (
-                get_state().annotation_sizes["total_object_labels"] > 0
-                or get_state().annotation_sizes["classifications"] > 0
+            get_state().annotation_sizes.total_object_labels > 0
+            or get_state().annotation_sizes.total_classification_labels > 0
         ):
             st.info("If a class's size is lower than half of the median value, it is indicated as 'undersampled'.")
 
-        if get_state().annotation_sizes["total_object_labels"] > 0:
+        if get_state().annotation_sizes.total_object_labels > 0:
             fig = create_labels_distribution_chart(
-                get_state().annotation_sizes["objects"], "Objects distributions", "Object"
+                get_state().annotation_sizes.objects, "Objects distributions", "Object"
             )
             st.plotly_chart(fig, use_container_width=True)
 
-        for classification_question_name, classification_question_answers in (
-                get_state().annotation_sizes["classifications"].items()
-        ):
+        for (
+            classification_question_name,
+            classification_question_answers,
+        ) in get_state().annotation_sizes.classifications.items():
             fig = create_labels_distribution_chart(
                 classification_question_answers, classification_question_name, "Class"
             )

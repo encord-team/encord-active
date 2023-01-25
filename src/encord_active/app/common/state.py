@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Union
+from typing import Dict, List, NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -8,6 +8,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 
 from encord_active.lib.dataset.outliers import IqrOutliers
+from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
@@ -72,7 +73,7 @@ class State:
     predictions = PredictionsState()
     similarities_count = 8
     image_sizes: Optional[np.ndarray] = None
-    annotation_sizes: Optional[Dict[str, Union[dict, int]]] = None
+    annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
 
