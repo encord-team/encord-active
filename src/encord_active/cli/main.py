@@ -24,21 +24,14 @@ class OrderedPanelGroup(TyperGroup):
         "init",
         "import",
         "visualize",
-        "visualise",
         "metricize",
         "print",
         "config",
     ]
 
     def list_commands(self, ctx: click.Context):
-        keys_with_index: List[Tuple[int, str]] = []
-        remaining = []
-        for key in self.commands.keys():
-            if key in self.COMMAND_ORDER:
-                keys_with_index.append((self.COMMAND_ORDER.index(key), key))
-            else:
-                remaining.append(key)
-        sorted_keys = list(map(lambda x: x[1], sorted(keys_with_index, key=lambda x: x[0])))
+        sorted_keys = [key for key in self.COMMAND_ORDER if key in self.commands.keys()]
+        remaining = [key for key in self.commands.keys() if key not in self.COMMAND_ORDER]
 
         return sorted_keys + remaining
 
@@ -153,7 +146,7 @@ def import_local_project(
     ),
 ):
     """
-    [green bold]Initialise[/green bold] a project from your local file system :seedling:
+    [green bold]Initialize[/green bold] a project from your local file system :seedling:
 
     The command will search for images based on the `glob` arguments.
 
