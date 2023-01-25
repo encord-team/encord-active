@@ -156,9 +156,16 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
 
+    # 2D metrics view
+    metric_selection_col, scatter_plot_col = st.columns([1, 5])
+    metric_names = [item.metric.name for item in get_state().metrics_data_summary.metrics]
+    x_metric = metric_selection_col.selectbox('x axis', metric_names, index=0)
+    y_metric = metric_selection_col.selectbox('y axis', metric_names, index=1)
+
+
+
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
-
     if get_state().annotation_sizes is None:
         get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths.project_dir)
 
@@ -219,8 +226,8 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     # label distribution plots
     with plots_col.expander("Labels distribution", expanded=True):
         if (
-            get_state().annotation_sizes["total_object_labels"] > 0
-            or get_state().annotation_sizes["classifications"] > 0
+                get_state().annotation_sizes["total_object_labels"] > 0
+                or get_state().annotation_sizes["classifications"] > 0
         ):
             st.info("If a class's size is lower than half of the median value, it is indicated as 'undersampled'.")
 
@@ -231,7 +238,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
             st.plotly_chart(fig, use_container_width=True)
 
         for classification_question_name, classification_question_answers in (
-            get_state().annotation_sizes["classifications"].items()
+                get_state().annotation_sizes["classifications"].items()
         ):
             fig = create_labels_distribution_chart(
                 classification_question_answers, classification_question_name, "Class"
@@ -243,7 +250,8 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
 
 
 def render_metric_summary(
-    metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
+        metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers,
+        metric_scope: MetricScope
 ):
     n_cols = get_state().page_grid_settings.columns
     n_rows = get_state().page_grid_settings.rows
