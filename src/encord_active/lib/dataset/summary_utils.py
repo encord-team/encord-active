@@ -4,7 +4,6 @@ from typing import Union
 
 import numpy as np
 from encord.constants.enums import DataType
-from encord.project_ontology.classification_type import ClassificationType
 
 
 def get_all_image_sizes(project_folder: Path) -> np.ndarray:
@@ -36,7 +35,7 @@ def get_all_annotation_numbers(project_folder: Path) -> dict[str, Union[dict, in
     returns label statistics for both objects and classifications. Does not count nested
     labels, only counts the immediate labels.
     """
-    labels = {"objects": {}, "classifications": {}}
+    labels: dict = {"objects": {}, "classifications": {}}
     classification_label_counter = 0
     object_label_counter = 0
 
@@ -47,9 +46,8 @@ def get_all_annotation_numbers(project_folder: Path) -> dict[str, Union[dict, in
         labels["classifications"][classification_item["attributes"][0]["name"]] = {}
 
         # For radio and checkbox types
-        for option in classification_item["attributes"][0].get('options', []):
+        for option in classification_item["attributes"][0].get("options", []):
             labels["classifications"][classification_item["attributes"][0]["name"]][option["label"]] = 0
-
 
     for label_row in (project_folder / "data").iterdir():
         if (label_row / "label_row.json").exists():
@@ -57,8 +55,8 @@ def get_all_annotation_numbers(project_folder: Path) -> dict[str, Union[dict, in
             if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
                 for data_unit in label_row_meta["data_units"].values():
 
-                    object_label_counter += len(data_unit["labels"].get('objects', []))
-                    classification_label_counter += len(data_unit["labels"].get('classifications', []))
+                    object_label_counter += len(data_unit["labels"].get("objects", []))
+                    classification_label_counter += len(data_unit["labels"].get("classifications", []))
 
                     for object_ in data_unit["labels"].get("objects", []):
                         if object_["name"] not in labels["objects"]:
@@ -76,12 +74,18 @@ def get_all_annotation_numbers(project_folder: Path) -> dict[str, Union[dict, in
                             if isinstance(classification_answer_item["answers"], list):
                                 for answer_item in classification_answer_item["answers"]:
                                     if answer_item["name"] in labels["classifications"][classification_question_name]:
-                                        labels["classifications"][classification_question_name][answer_item["name"]] += 1
-                            elif isinstance(classification_answer_item['answers'], str):
-                                labels["classifications"][classification_question_name].setdefault(classification_answer_item['answers'], 0)
-                                labels["classifications"][classification_question_name][classification_answer_item['answers']] +=1
+                                        labels["classifications"][classification_question_name][
+                                            answer_item["name"]
+                                        ] += 1
+                            elif isinstance(classification_answer_item["answers"], str):
+                                labels["classifications"][classification_question_name].setdefault(
+                                    classification_answer_item["answers"], 0
+                                )
+                                labels["classifications"][classification_question_name][
+                                    classification_answer_item["answers"]
+                                ] += 1
 
-    labels['total_object_labels'] = object_label_counter
-    labels['total_classification_labels'] = classification_label_counter
+    labels["total_object_labels"] = object_label_counter
+    labels["total_classification_labels"] = classification_label_counter
 
     return labels
