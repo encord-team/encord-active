@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -72,7 +72,7 @@ class State:
     predictions = PredictionsState()
     similarities_count = 8
     image_sizes: Optional[np.ndarray] = None
-    annotation_sizes: Optional[tuple[int, int]] = None
+    annotation_sizes: Optional[Dict[str, Union[dict, int]]] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
 

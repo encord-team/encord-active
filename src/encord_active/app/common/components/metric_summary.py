@@ -12,6 +12,7 @@ from encord_active.app.common.state import MetricOutlierInfo, MetricsSeverity, g
 from encord_active.lib.charts.data_quality_summary import (
     create_image_size_distribution_chart,
     create_outlier_distribution_chart,
+    create_labels_distribution_chart
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
@@ -31,6 +32,7 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+
 
 _COLUMNS = MetricWithDistanceSchema
 
@@ -175,14 +177,14 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     ) = st.columns(4)
 
     total_object_annotations_col.markdown(
-        summary_item("Object annotations", get_state().annotation_sizes[1], background_color=background_color),
+        summary_item("Object annotations", get_state().annotation_sizes['total_object_labels'], background_color=background_color),
         unsafe_allow_html=True,
     )
 
     total_classification_annotations_col.markdown(
         summary_item(
             "Classification annotations",
-            get_state().annotation_sizes[0],
+            get_state().annotation_sizes['total_classification_labels'],
             background_color=background_color,
         ),
         unsafe_allow_html=True,
@@ -207,11 +209,20 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     )
 
     st.write("")
-    outliers_plotting_col, issues_col = st.columns([6, 3])
+    plots_col, issues_col = st.columns([6, 3])
 
     if get_state().metrics_label_summary.total_unique_severe_outliers > 0:
         fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
-        outliers_plotting_col.plotly_chart(fig, use_container_width=True)
+        plots_col.plotly_chart(fig, use_container_width=True)
+
+    # label distribution plots
+    if get_state().annotation_sizes['total_object_labels'] > 0:
+        fig = create_labels_distribution_chart(get_state().annotation_sizes['objects'], 'Objects distributions', 'Object')
+        plots_col.plotly_chart(fig, use_container_width=True)
+
+    for classification_question_name, classification_question_answers in get_state().annotation_sizes['classifications'].items():
+        fig = create_labels_distribution_chart(classification_question_answers, classification_question_name, 'Class')
+        plots_col.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
