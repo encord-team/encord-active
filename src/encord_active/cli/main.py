@@ -172,8 +172,7 @@ def import_local_project(
                 style="yellow",
             )
         )
-        typer.Abort()
-        exit()  # Not strictly necessary but prevents mypy from complaining
+        raise typer.Abort()
 
     if dryrun:
         directories: Set[Path] = set()
@@ -193,14 +192,13 @@ def import_local_project(
             Panel(
                 f"""
 [blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
-[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images. 
+[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images.
 """,
                 title=":bar_chart: Stats :bar_chart:",
                 expand=False,
             )
         )
-        typer.Abort()
-        exit()
+        raise typer.Abort()
 
     try:
         if not project_name:
@@ -224,7 +222,7 @@ Consider removing the directory or setting the `--name` option.
                 style="yellow",
             )
         )
-        typer.Abort()
+        raise typer.Abort()
 
 
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
