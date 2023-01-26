@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Set, Tuple, TypedDict
+from typing import List, Set, TypedDict
 
 import click
 import rich
