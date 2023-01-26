@@ -7,8 +7,8 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
-from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.dataset.outliers import MetricsSeverity
+from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
