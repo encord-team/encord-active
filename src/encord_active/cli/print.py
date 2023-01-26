@@ -153,6 +153,6 @@ def print_system_info():
 @print_cli.callback()
 def main(json: bool = False):  # pylint: disable=redefined-outer-name
     """
-    [bold]Print[/bold] useful information 🖨️
+    [green bold]Print[/green bold] useful information 🖨️
     """
     state["json_output"] = json

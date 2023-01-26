@@ -20,7 +20,7 @@ def import_predictions(
     coco: bool = typer.Option(False, help="Import a coco result format file"),
 ):
     """
-    [bold]Imports[/bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
+    [green bold]Imports[/green bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
     If `--coco` option is specified the file should be a json following the coco results format. :brain:
     """
     from encord_active.lib.project import Project
