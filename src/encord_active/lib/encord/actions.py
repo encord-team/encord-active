@@ -98,11 +98,11 @@ class EncordActions:
             )
 
     def create_dataset(
-            self,
-            dataset_title: str,
-            dataset_description: str,
-            filtered_dataset: pd.DataFrame,
-            progress_callback: Optional[Callable] = None,
+        self,
+        dataset_title: str,
+        dataset_description: str,
+        filtered_dataset: pd.DataFrame,
+        progress_callback: Optional[Callable] = None,
     ):
         datasets_with_same_title = self.user_client.get_datasets(title_eq=dataset_title)
         if len(datasets_with_same_title) > 0:
