@@ -10,8 +10,8 @@ from tabulate import tabulate
 
 import encord_active.lib.metrics.execute as run_all
 import encord_active.lib.metrics.metric as metrics
+from encord_active.lib.constants import GITHUB_URL
 
-github_url = "https://github.com/encord-team/encord-active"
 descriptions = {
     "heuristic": "Work on images or individual video frames and are heuristic in the sense that they mostly depend on the image content without labels.",
     "geometric": "Operate on the geometries of objects like bounding boxes, polygons, and polylines.",
@@ -78,7 +78,7 @@ for submodule, metrics_list in zip(submodules, ms):
 
     md = ""
     for metric in metrics_list:
-        url = f"{github_url}/blob/main/{type(metric).__module__.replace('.', '/')}.py"
+        url = f"{GITHUB_URL}/blob/main/{type(metric).__module__.replace('.', '/')}.py"
         md += f"\n## {metric.TITLE}  \n" f"{metric.LONG_DESCRIPTION}  \n\n" f"Implementation on [GitHub]({url})\n"
 
     markdown_file = docs_root / "docs" / "metrics" / f"{submodule}.md"

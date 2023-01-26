@@ -15,6 +15,7 @@ from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
+from encord_active.lib import constants as ea_constants
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -39,20 +40,21 @@ class OrderedPanelGroup(TyperGroup):
 cli = typer.Typer(
     cls=OrderedPanelGroup,
     rich_markup_mode="rich",
-    help="""
+    no_args_is_help=True,
+    help=f"""
 All commands in this CLI have a --help option, which will guide you on the way.
 If you don't find the information you need here, we recommend that you visit
-our main documentation: [blue]https://encord-active-docs.web.app[/blue]
+our main documentation: [blue]{ea_constants.DOCS_URL}[/blue]
 """,
-    epilog="""
+    epilog=f"""
 Made by Encord. [bold]Get in touch[/bold]: 
 
 
-:call_me_hand: Slack Channel: [blue]https://encordactive.slack.com[/blue]   
+:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]   
 
-:e-mail: Email: [blue]active@encord.com[/blue]
+:e-mail: Email: [blue]{ea_constants.ENCORD_EMAIL}[/blue]
 
-:star: Github: [blue]https://github.com/encord-team/encord-active[/blue]
+:star: Github: [blue]{ea_constants.GITHUB_URL}[/blue]
 """,
 )
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
@@ -301,6 +303,26 @@ def metricize(
         selected_metrics = i.checkbox(**options).execute()
 
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
+
+
+@cli.command(rich_help_panel="Resources")
+def docs():
+    """
+    [green bold]Read[/green bold] the documentation :book:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.DOCS_URL)
+
+
+@cli.command(name="join-slack", rich_help_panel="Resources")
+def join_slack():
+    """
+    [green bold]Join[/green bold] the Slack community :family:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.SLACK_INVITE_URL)
 
 
 @cli.callback(invoke_without_command=True)
