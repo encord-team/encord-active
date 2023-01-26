@@ -1,10 +1,34 @@
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import NamedTuple, Optional, Tuple
 
+import pandas as pd
 import pandera as pa
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.metrics.utils import MetricSchema
+from encord_active.lib.metrics.utils import MetricData, MetricSchema
+
+
+class IqrOutliers(NamedTuple):
+    n_moderate_outliers: int
+    n_severe_outliers: int
+    moderate_lb: float
+    moderate_ub: float
+    severe_lb: float
+    severe_ub: float
+
+
+class MetricOutlierInfo(NamedTuple):
+    metric: MetricData
+    df: pd.DataFrame
+    iqr_outliers: IqrOutliers
+
+
+@dataclass
+class MetricsSeverity:
+    metrics: list[MetricOutlierInfo] = field(default_factory=list)
+    total_unique_moderate_outliers: Optional[int] = None
+    total_unique_severe_outliers: Optional[int] = None
 
 
 class Severity(str, Enum):
@@ -16,15 +40,6 @@ class Severity(str, Enum):
 class MetricWithDistanceSchema(MetricSchema):
     dist_to_iqr: Optional[Series[float]] = pa.Field()
     outliers_status: Optional[Series[str]] = pa.Field()
-
-
-class IqrOutliers(NamedTuple):
-    n_moderate_outliers: int
-    n_severe_outliers: int
-    moderate_lb: float
-    moderate_ub: float
-    severe_lb: float
-    severe_ub: float
 
 
 _COLUMNS = MetricWithDistanceSchema

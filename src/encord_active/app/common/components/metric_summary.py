@@ -8,7 +8,7 @@ from streamlit.delta_generator import DeltaGenerator
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.state import MetricOutlierInfo, MetricsSeverity, get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
     create_image_size_distribution_chart,
     create_outlier_distribution_chart,
@@ -16,6 +16,8 @@ from encord_active.lib.charts.data_quality_summary import (
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
     IqrOutliers,
+    MetricOutlierInfo,
+    MetricsSeverity,
     MetricWithDistanceSchema,
     Severity,
     get_iqr_outliers,
