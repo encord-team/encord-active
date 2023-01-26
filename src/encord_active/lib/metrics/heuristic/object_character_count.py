@@ -35,6 +35,8 @@ class ObjectCharacterCount(Metric):
                 if not obj["shape"] in valid_annotation_types:
                     continue
                 coords = get_object_coordinates(obj)
+                if coords is None:
+                    continue
                 x1, y1 = int(coords[0][0] * W), int(coords[0][1] * H)
                 x2, y2 = int(coords[2][0] * W), int(coords[2][1] * H)
                 bbox = (x1, y1, x2, y2)
