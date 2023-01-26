@@ -128,18 +128,20 @@ on your labels are used for the "False Negative Rate" plot.
             show_decomposition=decompose_classes,
         )
 
-        tpr = performance_rate_by_metric(
-            model_predictions, metric_name, scope=PredictionMatchScope.TRUE_POSITIVES, **chart_args
-        )
-        if tpr is None:
-            st.stop()
-        st.altair_chart(tpr.interactive(), use_container_width=True)
+        try:
+            tpr = performance_rate_by_metric(
+                model_predictions, metric_name, scope=PredictionMatchScope.TRUE_POSITIVES, **chart_args
+            )
+            if tpr is not None:
+                st.altair_chart(tpr.interactive(), use_container_width=True)
+        except:
+            pass
 
-        fnr = performance_rate_by_metric(
-            labels, label_metric_name, scope=PredictionMatchScope.FALSE_NEGATIVES, **chart_args
-        )
-
-        if fnr is None:  # Label metric couldn't be matched to
-            st.stop()
-
-        st.altair_chart(fnr.interactive(), use_container_width=True)
+        try:
+            fnr = performance_rate_by_metric(
+                labels, label_metric_name, scope=PredictionMatchScope.FALSE_NEGATIVES, **chart_args
+            )
+            if fnr is not None:
+                st.altair_chart(fnr.interactive(), use_container_width=True)
+        except:
+            pass
