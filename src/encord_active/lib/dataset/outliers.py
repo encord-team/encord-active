@@ -85,3 +85,25 @@ def get_iqr_outliers(
     n_severe_outliers = ((df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub)).sum()
 
     return (df, IqrOutliers(n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub))
+
+
+def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
+    all_metrics_outliers = pd.DataFrame(columns=["metric", "total_severe_outliers", "total_moderate_outliers"])
+    for item in metrics_data_summary.metrics:
+        all_metrics_outliers = pd.concat(
+            [
+                all_metrics_outliers,
+                pd.DataFrame(
+                    {
+                        "metric": [item.metric.name],
+                        "total_severe_outliers": [item.iqr_outliers.n_severe_outliers],
+                        "total_moderate_outliers": [item.iqr_outliers.n_moderate_outliers],
+                    }
+                ),
+            ],
+            axis=0,
+        )
+
+    all_metrics_outliers.sort_values(by=["total_severe_outliers"], ascending=False, inplace=True)
+
+    return all_metrics_outliers
