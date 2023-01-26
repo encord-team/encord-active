@@ -3,9 +3,6 @@ from enum import Enum
 from hashlib import md5
 from typing import List, Optional, TypedDict, Union
 
-from encord.project_ontology.classification_type import ClassificationType
-from encord.project_ontology.object_type import ObjectShape
-
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
@@ -21,13 +18,6 @@ class DataType(Enum):
     SEQUENCE = "sequence"
 
 
-class AnnotationType:
-    NONE = None
-    OBJECT = ObjectShape
-    CLASSIFICATION = ClassificationType
-    ALL = [*OBJECT, *CLASSIFICATION]
-
-
 class EmbeddingType(Enum):
     CLASSIFICATION = "classification"
     OBJECT = "object"
@@ -35,8 +25,35 @@ class EmbeddingType(Enum):
     IMAGE = "image"
 
 
+# copy from encord but as a string enum
+class ClassificationType(str, Enum):
+    RADIO = "radio"
+    TEXT = "text"
+    CHECKLIST = "checklist"
+
+
+# copy from encord but as a string enum
+class ObjectShape(str, Enum):
+    POLYGON = "polygon"
+    POLYLINE = "polyline"
+    BOUNDING_BOX = "bounding_box"
+    KEY_POINT = "point"
+    SKELETON = "skeleton"
+    ROTATABLE_BOUNDING_BOX = "rotatable_bounding_box"
+
+
+class AnnotationType:
+    NONE = None
+    OBJECT = ObjectShape
+    CLASSIFICATION = ClassificationType
+    ALL = [*OBJECT, *CLASSIFICATION]
+
+
+AnnotationTypeUnion = Union[ObjectShape, ClassificationType]
+
+
 class MetricMetadata(TypedDict):
-    annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]]
+    annotation_type: Optional[List[AnnotationTypeUnion]]
     embedding_type: Optional[str]
     data_type: DataType
     long_description: str
@@ -135,7 +152,7 @@ class Metric(ABC):
 
     @property
     @abstractmethod
-    def ANNOTATION_TYPE(self) -> Optional[Union[List[AnnotationType], AnnotationType]]:
+    def ANNOTATION_TYPE(self) -> Optional[Union[List[AnnotationTypeUnion], AnnotationTypeUnion]]:
         """
         Type of annotations the metric operates needs. Choose one of the following:
             - Object: includes bounding box, polygon, polyline, keypoint and skeleton
