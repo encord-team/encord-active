@@ -117,9 +117,10 @@ class MergedMetrics(object):
     @ensure_initialised
     def replace_identifiers(self, mappings: dict[str, str]):
         def _replace_identifiers(id):
-            lr, du, *rest = id.split('_')
+            lr, du, *rest = id.split("_")
             mappedlr, mappeddu = mappings[lr], mappings[du]
-            return '_'.join([mappedlr, mappeddu, *rest])
+            return "_".join([mappedlr, mappeddu, *rest])
+
         with DBConnection() as conn:
             df = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
             df.index = df.index.map(_replace_identifiers)

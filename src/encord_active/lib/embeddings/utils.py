@@ -89,7 +89,7 @@ def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> lis
 
 def save_collections(embedding_type: EmbeddingType, embeddings_dir: Path, collection: list[LabelEmbedding]):
     embedding_path = embeddings_dir / EMBEDDING_TYPE_TO_FILENAME[embedding_type]
-    with open(embedding_path, 'wb') as f:
+    with open(embedding_path, "wb") as f:
         pickle.dump(collection, f)
 
 

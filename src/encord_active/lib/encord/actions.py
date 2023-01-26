@@ -58,8 +58,9 @@ class EncordActions:
             return False
         return True
 
-    def _upload_item(self, dataset, label_row_hash, data_unit_hash, data_unit_hashes, new_du_to_original,
-                     uploaded_data) -> Optional[str]:
+    def _upload_item(
+        self, dataset, label_row_hash, data_unit_hash, data_unit_hashes, new_du_to_original, uploaded_data
+    ) -> Optional[str]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
         dataset_hash = dataset.dataset_hash
@@ -87,22 +88,18 @@ class EncordActions:
             video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
 
             # Unfortunately the following function does not return metadata related to the uploaded items
-            dataset.upload_video(
-                file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"]
-            )
+            dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
             return _find_new_row_hash(self.user_client, dataset_hash, new_du_to_original)
 
         else:
-            raise Exception(
-                f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}'
-            )
+            raise Exception(f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}')
 
     def create_dataset(
-            self,
-            dataset_title: str,
-            dataset_description: str,
-            filtered_dataset: pd.DataFrame,
-            progress_callback: Optional[Callable] = None,
+        self,
+        dataset_title: str,
+        dataset_description: str,
+        filtered_dataset: pd.DataFrame,
+        progress_callback: Optional[Callable] = None,
     ):
         datasets_with_same_title = self.user_client.get_datasets(title_eq=dataset_title)
         if len(datasets_with_same_title) > 0:
@@ -131,14 +128,15 @@ class EncordActions:
                 if data_unit_hash not in uploaded_data_units:
                     # Since create_image_group does not return info related to the uploaded images, we should find its
                     # data_hash in a hacky way
-                    new_data_unit_hash = self._upload_item(dataset, label_row_hash, data_unit_hash, data_hashes,
-                                                           new_du_to_original, uploaded_data_units)
+                    new_data_unit_hash = self._upload_item(
+                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original, uploaded_data_units
+                    )
                     if not new_data_unit_hash:
-                        raise Exception('Data unit upload failed')
+                        raise Exception("Data unit upload failed")
 
                     _update_mapping(new_data_unit_hash, label_row_hash, data_unit_hash, new_du_to_original)
                     uploaded_data_units.add(data_unit_hash)
-                    lrdu_mapping[(label_row_hash, data_unit_hash)] = ('', new_data_unit_hash)
+                    lrdu_mapping[(label_row_hash, data_unit_hash)] = ("", new_data_unit_hash)
 
                 if progress_callback:
                     progress_callback(len(uploaded_data_units) / filtered_dataset.shape[0])
@@ -150,12 +148,12 @@ class EncordActions:
         return self.user_client.create_ontology(title, structure=ontology_structure)
 
     def create_project(
-            self,
-            dataset_creation_result: DatasetCreationResult,
-            project_title: str,
-            project_description: str,
-            ontology_hash: str,
-            progress_callback: Optional[Callable] = None,
+        self,
+        dataset_creation_result: DatasetCreationResult,
+        project_title: str,
+        project_description: str,
+        ontology_hash: str,
+        progress_callback: Optional[Callable] = None,
     ):
         new_project_hash: str = self.user_client.create_project(
             project_title=project_title,
@@ -175,11 +173,12 @@ class EncordActions:
             original_data = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
 
             new_label_row_hash = initiated_label_row["label_hash"]
-            new_data_unit_hash = dataset_creation_result.lr_du_mapping[(original_data["label_row_hash"],
-                                                                        original_data["data_unit_hash"])][1]
+            new_data_unit_hash = dataset_creation_result.lr_du_mapping[
+                (original_data["label_row_hash"], original_data["data_unit_hash"])
+            ][1]
             dataset_creation_result.lr_du_mapping[
-                (original_data["label_row_hash"], original_data["data_unit_hash"])] = (
-                new_label_row_hash, new_data_unit_hash)
+                (original_data["label_row_hash"], original_data["data_unit_hash"])
+            ] = (new_label_row_hash, new_data_unit_hash)
             original_label_row = json.loads(
                 self.project_file_structure.label_row_structure(
                     original_data["label_row_hash"]
@@ -236,9 +235,9 @@ class EncordActions:
         def fix_pickle_file(up, renaming_map):
             up["label_row"] = renaming_map[up["label_row"]]
             up["data_unit"] = renaming_map[up["data_unit"]]
-            url_without_extension, extension = up["url"].split('.')
-            changed_parts = [renaming_map[x] if x in renaming_map else x for x in url_without_extension.split('/')]
-            up["url"] = '/'.join(changed_parts) + '.' + extension
+            url_without_extension, extension = up["url"].split(".")
+            changed_parts = [renaming_map[x] if x in renaming_map else x for x in url_without_extension.split("/")]
+            up["url"] = "/".join(changed_parts) + "." + extension
             return up
 
         collection = load_collections(embedding_type, self.project_file_structure.embeddings)
@@ -249,8 +248,10 @@ class EncordActions:
         renaming_map = {self.original_project_hash: project_hash}
 
         for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            os.rename((self.project_file_structure.data / old_lr / 'images' / old_du).as_posix() + '.jpg',
-                      (self.project_file_structure.data / old_lr / 'images' / new_du).as_posix() + '.jpg')
+            os.rename(
+                (self.project_file_structure.data / old_lr / "images" / old_du).as_posix() + ".jpg",
+                (self.project_file_structure.data / old_lr / "images" / new_du).as_posix() + ".jpg",
+            )
             renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
         dir_renames = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
@@ -305,4 +306,3 @@ class DatasetUniquenessError(Exception):
         super().__init__(
             f"Dataset title '{dataset_title}' already exists in your list of datasets at Encord. Please use a different title."
         )
-

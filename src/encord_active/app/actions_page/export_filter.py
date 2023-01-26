@@ -213,7 +213,11 @@ community</a>
                 )
                 clear()
                 label.text("Step 2/2: Uploading labels...")
-                ontology = action_utils.original_project.get_project().ontology_hash if has_original_project else action_utils.create_ontology(ontology_title)
+                ontology = (
+                    action_utils.original_project.get_project().ontology_hash
+                    if has_original_project
+                    else action_utils.create_ontology(ontology_title)
+                )
                 new_project = action_utils.create_project(
                     dataset_creation_result, project_title, project_description, ontology.ontology_hash, progress
                 )
