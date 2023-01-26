@@ -59,7 +59,7 @@ class EncordActions:
         return True
 
     def _upload_item(self, dataset, label_row_hash, data_unit_hash, data_unit_hashes, new_du_to_original,
-                     uploaded_data) -> str:
+                     uploaded_data) -> Optional[str]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
         dataset_hash = dataset.dataset_hash
@@ -98,11 +98,11 @@ class EncordActions:
             )
 
     def create_dataset(
-        self,
-        dataset_title: str,
-        dataset_description: str,
-        filtered_dataset: pd.DataFrame,
-        progress_callback: Optional[Callable] = None,
+            self,
+            dataset_title: str,
+            dataset_description: str,
+            filtered_dataset: pd.DataFrame,
+            progress_callback: Optional[Callable] = None,
     ):
         datasets_with_same_title = self.user_client.get_datasets(title_eq=dataset_title)
         if len(datasets_with_same_title) > 0:
@@ -133,6 +133,10 @@ class EncordActions:
                     # data_hash in a hacky way
                     new_data_unit_hash = self._upload_item(dataset, label_row_hash, data_unit_hash, data_hashes,
                                                            new_du_to_original, uploaded_data_units)
+                    if not new_data_unit_hash:
+                        raise Exception(
+                            f'Data unit upload failed'
+                        )
                     _update_mapping(new_data_unit_hash, label_row_hash, data_unit_hash, new_du_to_original)
                     uploaded_data_units.add(data_unit_hash)
                     lrdu_mapping[(label_row_hash, data_unit_hash)] = ('', new_data_unit_hash)
@@ -264,11 +268,12 @@ class EncordActions:
             self.fix_pickle_files(embedding_type, renaming_map)
 
 
-def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> str:
+def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
     updated_dataset = user_client.get_dataset(new_dataset_hash)
     for new_data_row in updated_dataset.data_rows:
         if new_data_row["data_hash"] not in out_mapping:
             return new_data_row["data_hash"]
+    return None
 
 
 def _update_mapping(new_data_hash: str, label_row_hash: str, data_unit_hash: str, out_mapping: dict):
@@ -301,3 +306,4 @@ class DatasetUniquenessError(Exception):
         super().__init__(
             f"Dataset title '{dataset_title}' already exists in your list of datasets at Encord. Please use a different title."
         )
+
