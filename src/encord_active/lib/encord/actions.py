@@ -274,11 +274,12 @@ class EncordActions:
             self.fix_pickle_files(embedding_type, renaming_map)
 
 
-def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> str:
+def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
     updated_dataset = user_client.get_dataset(new_dataset_hash)
     for new_data_row in updated_dataset.data_rows:
         if new_data_row["data_hash"] not in out_mapping:
             return new_data_row["data_hash"]
+    return None
 
 
 def _update_mapping(new_data_hash: str, label_row_hash: str, data_unit_hash: str, out_mapping: dict):
