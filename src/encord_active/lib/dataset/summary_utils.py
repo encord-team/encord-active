@@ -137,7 +137,7 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
             elif row[_COLUMNS.outliers_status] == Severity.moderate:
                 total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
 
-        metric_severity.metrics.append(MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers))
+        metric_severity.metrics[metric.name] = MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers)
 
     metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
     metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)

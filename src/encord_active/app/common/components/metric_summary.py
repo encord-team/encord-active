@@ -10,6 +10,7 @@ from encord_active.app.common.components.data_quality_summary import summary_ite
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
+    create_2d_metric_chart,
     create_image_size_distribution_chart,
     create_labels_distribution_chart,
     create_outlier_distribution_chart,
@@ -17,6 +18,7 @@ from encord_active.lib.charts.data_quality_summary import (
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
     IqrOutliers,
+    MetricsSeverity,
     MetricWithDistanceSchema,
     get_all_metrics_outliers,
 )
@@ -33,6 +35,25 @@ from encord_active.lib.metrics.utils import (
 )
 
 _COLUMNS = MetricWithDistanceSchema
+
+
+def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
+    with st.expander("2D metrics view", True):
+        metric_selection_col, scatter_plot_col = st.columns([2, 5])
+        metric_names = [metric_name for metric_name in metrics_data_summary.metrics.keys()]
+        x_metric_name = metric_selection_col.selectbox("x axis", metric_names, index=0)
+        y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
+
+        x_metric_df = metrics_data_summary.metrics[x_metric_name].df[["identifier", "score"]]
+        x_metric_df.rename(columns={"score": f"{x_metric_name}"}, inplace=True)
+
+        y_metric_df = metrics_data_summary.metrics[y_metric_name].df[["identifier", "score"]]
+        y_metric_df.rename(columns={"score": f"{y_metric_name}"}, inplace=True)
+
+        merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on="identifier")
+
+        fig = create_2d_metric_chart(merged_metrics)
+        scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
 
 def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
@@ -104,13 +125,7 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
 
-    # 2D metrics view
-    metric_selection_col, scatter_plot_col = st.columns([1, 5])
-    metric_names = [item.metric.name for item in get_state().metrics_data_summary.metrics]
-    x_metric = metric_selection_col.selectbox('x axis', metric_names, index=0)
-    y_metric = metric_selection_col.selectbox('y axis', metric_names, index=1)
-
-
+    render_2d_metric_plots(get_state().metrics_data_summary)
 
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
@@ -196,11 +211,11 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
 
     metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
+    render_2d_metric_plots(get_state().metrics_label_summary)
 
 
 def render_metric_summary(
-        metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers,
-        metric_scope: MetricScope
+    metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
 ):
     n_cols = get_state().page_grid_settings.columns
     n_rows = get_state().page_grid_settings.rows

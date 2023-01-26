@@ -69,7 +69,7 @@ class SummaryPage(Page):
             if metric_scope == MetricScope.DATA_QUALITY
             else get_state().metrics_label_summary
         )
-        for metric_item in current_metrics.metrics:
+        for metric_item in current_metrics.metrics.values():
             with st.expander(
                 label=f"{metric_item.metric.name} Outliers - {metric_item.iqr_outliers.n_severe_outliers} severe, "
                 f"{metric_item.iqr_outliers.n_moderate_outliers} moderate"

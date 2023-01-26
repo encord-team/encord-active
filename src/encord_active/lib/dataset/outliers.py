@@ -26,7 +26,7 @@ class MetricOutlierInfo(NamedTuple):
 
 @dataclass
 class MetricsSeverity:
-    metrics: list[MetricOutlierInfo] = field(default_factory=list)
+    metrics: dict[str, MetricOutlierInfo] = field(default_factory=dict)
     total_unique_moderate_outliers: Optional[int] = None
     total_unique_severe_outliers: Optional[int] = None
 
@@ -89,7 +89,7 @@ def get_iqr_outliers(
 
 def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
     all_metrics_outliers = pd.DataFrame(columns=["metric", "total_severe_outliers", "total_moderate_outliers"])
-    for item in metrics_data_summary.metrics:
+    for item in metrics_data_summary.metrics.values():
         all_metrics_outliers = pd.concat(
             [
                 all_metrics_outliers,
