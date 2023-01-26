@@ -21,7 +21,8 @@ class RadiometricResolutionUsage(Metric):
         "[Radiometric resolution](https://en.wikipedia.org/wiki/Image_resolution#:~:text=Radiometric%20resolution%20) "
         "determines how finely a system can represent or distinguish differences of intensity. The higher the "
         "radiometric resolution, the better subtle differences of intensity or reflectivity can be represented, at "
-        "least in theory.\nThis metric calculates how much (%) of the image's radiometric resolution is actually used."
+        "least in theory.  \n"
+        "This metric calculates how much (%) of the image's radiometric resolution is actually used."
     )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
