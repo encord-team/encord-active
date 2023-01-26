@@ -15,16 +15,19 @@ PREBUILT_PROJECTS = {
     "[open-source][test]-limuc-ulcerative-colitis-classification": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
     "[open-source]-covid-19-segmentations": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
     "[open-source][validation]-bdd-dataset": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
+    "[open-source]-TACO-Official": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
+    "[open-source]-TACO-Unofficial": "https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
+    "rareplanes": "https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
     "quickstart": "https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
 }
 
 
 def fetch_prebuilt_project_size(project_name: str) -> Optional[float]:
     """
-    Returns the storage size (mb) of a prebuilt project stored in the cloud
+    Returns the storage size (MB) of a prebuilt project stored in the cloud
 
     :param project_name: Prebuilt project name
-    :return: Prebuilt project's storage size (mb). Can return None if the information is not available.
+    :return: Prebuilt project's storage size (MB). Can return None if the information is not available.
     """
     if project_name not in PREBUILT_PROJECTS.keys():
         return None

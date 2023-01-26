@@ -32,8 +32,12 @@ def resize_images(root_folder: Path, target_width: int, target_height: int):
             for item in data_units.glob("*.*"):
                 if item.as_posix().endswith((".png", ".jpg", ".jpeg", "tiff", ".tif", ".bmp", ".gif")):
                     target_file_path = target_data_path / "/".join(item.as_posix().split("/")[-3:])
-                    img = cv2.imread(item.as_posix())
-                    img_resized = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_AREA)
+                    try:
+                        img = cv2.imread(item.as_posix())
+                        img_resized = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_AREA)
+                    except Exception:
+                        print(f"Corrupted file: {item.as_posix}")
+                        continue
                     cv2.imwrite(target_file_path.as_posix(), img_resized)
                 else:
                     print(f"Not supported file: {item.as_posix()}")

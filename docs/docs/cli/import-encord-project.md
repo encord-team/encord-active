@@ -11,6 +11,7 @@ encord-active import project
 ```
 
 :::note
+
 This will import a project to new folder in your current working directory. If you prefer to specify a different directory, use:
 
 ```shell
@@ -21,19 +22,28 @@ encord-active import project --targe /path/to/store/project
 
 :::tip
 
-If you don't have an Encord project ready, you can find your next steps in the SDK section [Migrating Data to Encord](/sdk/migrating-data).
-Otherwise, you can [download one of our sandbox datasets](/cli/download-sandbox-data).
+If you don't have an Encord project already, you can either
+
+1. [Initialise a project from a local data directory](/cli/initialising-project-from-image-directories)
+2. [Migrating data and labels to Encord](sdk/migrating-data) before calling this command
+3. [Download one of our sandbox datasets](/cli/download-sandbox-data)
 
 :::
 
-To be able to do this, you will need the path to your private `ssh-key` associated with Encord and a `project_hash`.
-Don't worry! The script will guide you on the way if you don't know it already.
-The script will ask you:
+:::info
+
+If you are new to the Encord platform, you can easily [sign up](https://app.encord.com/register) for an Encord account.
+
+:::
+
+To be able to import an Encord project, you will need the path to your private `ssh-key` associated with Encord (see documentation [here](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)).
+
+The command will ask you:
 
 1. `Where is your private ssh key stored?`: type the path to your private ssh key
-2. `Specify project hash`: paste / type the `project_hash`. If you don't know the id, you can type `?` and hit enter to get all your projects listed with their `project_hash`s before being prompted with the question again. Now you can copy paste the id.
+2. `What project would you like to import?`: here, you can (fuzzy) search for the project title that you would like to import. Hit <kbd>enter</kbd> when your desired project is highlighted.
 
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/metrics) available in `encord-active`.
+Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
 
 Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.

@@ -54,17 +54,6 @@ class ProjectNotFound(Exception):
         super().__init__(f"Couldn't find meta file for project in `{project_dir}`")
 
 
-def get_local_project(project_dir: Path) -> Project:
-    project_meta = fetch_project_meta(project_dir)
-
-    ssh_key_path = Path(project_meta["ssh_key_path"])
-    with open(ssh_key_path.expanduser(), "r", encoding="utf-8") as f:
-        key = f.read()
-
-    client = EncordUserClient.create_with_ssh_private_key(key)
-    return client.get_project(project_meta.get("project_hash"))
-
-
 def fetch_project_meta(data_dir: Path) -> ProjectMeta:
     meta_file = data_dir / "project_meta.yaml"
     if not meta_file.is_file():
@@ -102,7 +91,7 @@ def get_du_size(data_unit: dict, img_pth: Optional[Path] = None) -> Optional[Tup
         try:
             image = cv2.imread(img_pth.as_posix())
             return image.shape[:2]
-        except cv2.error:
+        except Exception:
             image_corrupted = True
 
     return None
@@ -407,7 +396,7 @@ def collect_async(fn, job_args, key_fn, max_workers=min(10, (os.cpu_count() or 1
                 key = jobs[job]
 
                 result = job.result()
-                if result:
+                if result is not None:
                     results[key] = result
 
                 pbar.update(1)
@@ -423,6 +412,10 @@ def download_file(
         return destination
 
     r = requests.get(url, stream=True)
+
+    if r.status_code != 200:
+        raise Exception(f"Something happened, couldn't download file from: {url}")
+
     with destination.open("wb") as f:
         for chunk in r.iter_content(chunk_size=byte_size):
             if chunk:  # filter out keep-alive new chunks

@@ -26,7 +26,7 @@ def iterate_with_rank_fn(
         try:
             image = cv2.imread(img_pth.as_posix())
             image = cv2.cvtColor(image, color_space)
-        except cv2.error:
+        except Exception:
             continue
         writer.write(rank_fn(image))
 

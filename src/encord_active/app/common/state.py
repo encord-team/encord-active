@@ -2,10 +2,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
@@ -56,6 +58,10 @@ class State:
     page_grid_settings = PageGridSettings()
     predictions = PredictionsState()
     similarities_count = 8
+    image_sizes: Optional[np.ndarray] = None
+    annotation_sizes: Optional[tuple[int, int]] = None
+    metrics_data_summary: Optional[MetricsSeverity] = None
+    metrics_label_summary: Optional[MetricsSeverity] = None
 
     @classmethod
     def init(cls, project_dir: Path):

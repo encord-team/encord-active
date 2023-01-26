@@ -15,6 +15,7 @@ from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.common.utils import ProjectNotFound
+from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
 from encord_active.lib.db.tags import Tags
 from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
     EncordActions,
@@ -151,13 +152,13 @@ def export_filter():
     if any([delete_btn, edit_btn, augment_btn]):
         set_clone_button(False)
         message_placeholder.markdown(
-            """
+            f"""
 <div class="encord-active-info-box">
     For more information and help on using this feature reach out to us on the
-    <a href="https://encordactive.slack.com" target="_blank"><i class="fa-brands fa-slack"></i> Encord Active Slack
+    <a href="{SLACK_URL}" target="_blank"><i class="fa-brands fa-slack"></i> Encord Active Slack
 community</a>
     or shoot us an
-    <a href="mailto:active@encord.com" target="_blank"><i class="fa fa-envelope"></i> email</a>🙏
+    <a href="mailto:{ENCORD_EMAIL}" target="_blank"><i class="fa fa-envelope"></i> email</a>🙏
 </div>
 """,
             unsafe_allow_html=True,

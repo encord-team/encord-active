@@ -1,31 +1,64 @@
 from pathlib import Path
+from typing import List, Set, TypedDict
 
-import inquirer as i
+import click
 import rich
 import typer
 from rich.markup import escape
 from rich.panel import Panel
+from typer.core import TyperGroup
 
 import encord_active.app.conf  # pylint: disable=unused-import
+import encord_active.cli.utils.typer  # pylint: disable=unused-import
 from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.cli.utils.prints import success_with_visualise_command
+from encord_active.lib import constants as ea_constants
+
+
+class OrderedPanelGroup(TyperGroup):
+    COMMAND_ORDER = [
+        "quickstart",
+        "download",
+        "init",
+        "import",
+        "visualize",
+        "metricize",
+        "print",
+        "config",
+    ]
+
+    def list_commands(self, ctx: click.Context):
+        sorted_keys = [key for key in self.COMMAND_ORDER if key in self.commands.keys()]
+        remaining = [key for key in self.commands.keys() if key not in self.COMMAND_ORDER]
+
+        return sorted_keys + remaining
+
 
 cli = typer.Typer(
+    cls=OrderedPanelGroup,
     rich_markup_mode="rich",
-    help="""
+    no_args_is_help=True,
+    help=f"""
 All commands in this CLI have a --help option, which will guide you on the way.
 If you don't find the information you need here, we recommend that you visit
-our main documentation: [blue]https://encord-active-docs.web.app[/blue]
+our main documentation: [blue]{ea_constants.DOCS_URL}[/blue]
 """,
-    epilog="""
-Made by Encord. Contact Encord here: [blue]https://encord.com/contact_us/[/blue] to learn more
-about our active learning platform for computer vision.
+    epilog=f"""
+Made by Encord. [bold]Get in touch[/bold]: 
+
+
+:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]   
+
+:e-mail: Email: [blue]{ea_constants.ENCORD_EMAIL}[/blue]
+
+:star: Github: [blue]{ea_constants.GITHUB_URL}[/blue]
 """,
 )
-cli.add_typer(config_cli, name="config", help="Configure global settings 🔧")
-cli.add_typer(import_cli, name="import", help="Import Projects or Predictions ⬇️")
+cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
+cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
 
 
@@ -37,11 +70,13 @@ def download(
     ),
 ):
     """
-    Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
+    [green bold]Download[/green bold] a sandbox dataset to get started. 📁
 
-    * If --project_name is not given as an argument, available prebuilt projects will be listed
-     and the user can select one from the menu.
+    * If --project_name is not given as an argument, available sandbox projects will be listed
+     and you can select one from the menu.
     """
+    from InquirerPy import inquirer as i
+
     from encord_active.lib.project.sandbox_projects import (
         PREBUILT_PROJECTS,
         fetch_prebuilt_project_size,
@@ -56,15 +91,14 @@ def download(
         project_names_with_storage = []
         for project_name in PREBUILT_PROJECTS.keys():
             project_size = fetch_prebuilt_project_size(project_name)
-            modified_project_name = project_name + (f" ({project_size} mb)" if project_size is not None else "")
+            modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
 
-        questions = [i.List("project_name", message="Choose a project", choices=project_names_with_storage)]
-        answers = i.prompt(questions)
-        if not answers or "project_name" not in answers:
+        answer = i.select(message="Choose a project", choices=project_names_with_storage, vi_mode=True).execute()
+        if not answer:
             rich.print("No project was selected.")
             raise typer.Abort()
-        project_name = answers["project_name"].split(" ", maxsplit=1)[0]
+        project_name = answer.split(" ", maxsplit=1)[0]
 
     # create project folder
     project_dir = target / project_name
@@ -73,26 +107,126 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
+    success_with_visualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
-    cwd = Path.cwd()
-    cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
-    rich.print(
-        Panel(
-            f"""
-Successfully downloaded sandbox dataset. To view the data, run:
+@cli.command(
+    name="init",
+)
+def import_local_project(
+    root: Path = typer.Argument(
+        ...,
+        help="The root directory of the dataset you are trying to import",
+        file_okay=False,
+    ),
+    glob: List[str] = typer.Option(
+        ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"],
+        "--glob",
+        "-g",
+        help="Glob pattern to choose files. Note that you can repeat the `--glob` argument if you want to match multiple things.",
+    ),
+    target: Path = typer.Option(
+        Path.cwd(),
+        "--target",
+        "-t",
+        help="Directory where the project would be saved.",
+        file_okay=False,
+    ),
+    project_name: str = typer.Option(
+        "",
+        "--name",
+        "-n",
+        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended.",
+    ),
+    symlinks: bool = typer.Option(
+        False,
+        help="Use symlinks instead of copying images to the target directory.",
+    ),
+    dryrun: bool = typer.Option(
+        False,
+        help="Print the files that will be imported WITHOUT importing them.",
+    ),
+):
+    """
+    [green bold]Initialize[/green bold] a project from your local file system :seedling:
 
-[cyan]cd "{escape(cd_dir.as_posix())}"
-encord-active visualise
-    """,
-            title="🌟 Success 🌟",
-            style="green",
-            expand=False,
-        )
+    The command will search for images based on the `glob` arguments.
+
+    By default, all jpeg, jpg, png, and tiff files will be matched.
+    """
+    from encord_active.lib.project.local import (
+        NoFilesFoundError,
+        ProjectExistsError,
+        file_glob,
+        init_local_project,
     )
 
+    try:
+        glob_result = file_glob(root, glob, images_only=True)
+    except NoFilesFoundError as e:
+        rich.print(
+            Panel(
+                str(e),
+                title=":fire: No Files Found :fire:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        raise typer.Abort()
 
-@cli.command()
+    if dryrun:
+        directories: Set[Path] = set()
+        rich.print("[blue]Matches:[/blue]")
+        for file in glob_result.matched:
+            directories.add(file.parent)
+            rich.print(f"[blue]{escape(file.as_posix())}[/blue]")
+
+        print()
+        rich.print("[yellow]Excluded:[/yellow]")
+        for file in glob_result.excluded:
+            directories.add(file.parent)
+            rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
+
+        print()
+        rich.print(
+            Panel(
+                f"""
+[blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
+[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images.
+""",
+                title=":bar_chart: Stats :bar_chart:",
+                expand=False,
+            )
+        )
+        raise typer.Abort()
+
+    try:
+        if not project_name:
+            project_name = f"[EA] {root.name}"
+
+        project_path = init_local_project(
+            files=glob_result.matched, target=target, project_name=project_name, symlinks=symlinks
+        )
+        success_with_visualise_command(project_path, "Project initialised :+1:")
+
+    except ProjectExistsError as e:
+        rich.print(
+            Panel(
+                f"""
+{str(e)}
+
+Consider removing the directory or setting the `--name` option.
+                """,
+                title=":open_file_folder: Project already exists :open_file_folder:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        raise typer.Abort()
+
+
+@cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
+@cli.command(name="visualize")
 @bypass_streamlit_question
 @ensure_project
 def visualise(
@@ -101,7 +235,7 @@ def visualise(
     ),
 ):
     """
-    Launches the application with the provided project ✨
+    [green bold]Launch[/green bold] the application with the provided project ✨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
 
@@ -116,7 +250,7 @@ def quickstart(
     ),
 ):
     """
-    Take the shortcut and start the application straight away 🏃💨
+    [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
@@ -127,6 +261,75 @@ def quickstart(
 
     fetch_prebuilt_project(project_name, project_dir)
     launch_streamlit_app(project_dir)
+
+
+@cli.command()
+@ensure_project
+def metricize(
+    target: Path = typer.Option(
+        Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
+    ),
+    fuzzy: bool = typer.Option(
+        False, help="Enbale fuzzy search in the selection. (press [TAB] to select more than one) 🪄"
+    ),
+):
+    """
+    [green bold]Execute[/green bold] metrics on your data and predictions 🧠
+    """
+    from InquirerPy import inquirer as i
+    from InquirerPy.base.control import Choice
+
+    from encord_active.lib.metrics.execute import (
+        execute_metrics,
+        get_metrics,
+        load_metric,
+    )
+
+    metrics = list(map(load_metric, get_metrics()))
+    choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
+    Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
+    options: Options = {
+        "message": "What metrics would you like to run?",
+        "choices": choices,
+        "vi_mode": True,
+    }
+
+    if fuzzy:
+        options["message"] += " [blue](press [TAB] to select more than one)[/blue]"
+        selected_metrics = i.fuzzy(**options, multiselect=True).execute()
+    else:
+        selected_metrics = i.checkbox(**options).execute()
+
+    execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
+
+
+@cli.command(rich_help_panel="Resources")
+def docs():
+    """
+    [green bold]Read[/green bold] the documentation :book:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.DOCS_URL)
+
+
+@cli.command(name="join-slack", rich_help_panel="Resources")
+def join_slack():
+    """
+    [green bold]Join[/green bold] the Slack community :family:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.SLACK_INVITE_URL)
+
+
+@cli.callback(invoke_without_command=True)
+def version(version_: bool = typer.Option(False, "--version", "-v", help="Print the current version of Encord Active")):
+    if version_:
+        from encord_active import __version__ as ea_version
+
+        rich.print(f"Version: [green]{ea_version}[/green]")
+        exit()
 
 
 if __name__ == "__main__":
