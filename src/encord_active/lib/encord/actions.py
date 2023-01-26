@@ -134,9 +134,8 @@ class EncordActions:
                     new_data_unit_hash = self._upload_item(dataset, label_row_hash, data_unit_hash, data_hashes,
                                                            new_du_to_original, uploaded_data_units)
                     if not new_data_unit_hash:
-                        raise Exception(
-                            f'Data unit upload failed'
-                        )
+                        raise Exception('Data unit upload failed')
+
                     _update_mapping(new_data_unit_hash, label_row_hash, data_unit_hash, new_du_to_original)
                     uploaded_data_units.add(data_unit_hash)
                     lrdu_mapping[(label_row_hash, data_unit_hash)] = ('', new_data_unit_hash)
