@@ -176,6 +176,11 @@ community</a>
             dataset_title = l_column.text_input(
                 "Dataset title", value=f"Subset: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
             )
+
+            ontology_title = l_column.text_input(
+                "Ontology title", value=f"Subset: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
+            )
+
             dataset_description = l_column.text_area("Dataset description")
 
             project_title = r_column.text_input(
@@ -192,9 +197,13 @@ community</a>
             if project_title == "":
                 st.error("Project title cannot be empty!")
                 return
+            if ontology_title == "":
+                st.error("Ontology title cannot be empty!")
+                return
 
             try:
                 action_utils = EncordActions(st.session_state.project_dir)
+                has_original_project = action_utils.init_original_project()
                 label = st.empty()
                 progress, clear = render_progress_bar()
                 label.text("Step 1/2: Uploading data...")
@@ -203,9 +212,12 @@ community</a>
                 )
                 clear()
                 label.text("Step 2/2: Uploading labels...")
+                ontology = action_utils.original_project.get_project().ontology_hash if has_original_project else action_utils.create_ontology(ontology_title)
                 new_project = action_utils.create_project(
-                    dataset_creation_result, project_title, project_description, progress
+                    dataset_creation_result, project_title, project_description, ontology.ontology_hash, progress
                 )
+
+                action_utils.replace_uids(dataset_creation_result.lr_du_mapping, new_project.project_hash)
                 clear()
                 label.info("🎉 New project is created!")
 
