@@ -44,10 +44,26 @@ def print_ontology(
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
-    from encord_active.lib.common.utils import get_local_project
+    from rich.panel import Panel
 
-    project = get_local_project(target)
-    objects = project.ontology["objects"]
+    from encord_active.lib.project.project_file_structure import ProjectFileStructure
+
+    fs = ProjectFileStructure(target)
+    if not fs.ontology.is_file():
+        rich.print(
+            Panel(
+                """
+Couldn't identify a project ontology. The reason for this may be that you have a very old project. Please try re-importing the project.
+                """,
+                title=":exclamation: :exclamation: ",
+                style="yellow",
+                expand=False,
+            )
+        )
+
+        raise typer.Exit()
+
+    objects = json.loads(fs.ontology.read_text())["objects"]
 
     ontology = {o["name"].lower(): o["featureNodeHash"] for o in objects}
     json_ontology = json.dumps(ontology, indent=2)
@@ -137,6 +153,6 @@ def print_system_info():
 @print_cli.callback()
 def main(json: bool = False):  # pylint: disable=redefined-outer-name
     """
-    [bold]Print[/bold] useful information 🖨️
+    [green bold]Print[/green bold] useful information 🖨️
     """
     state["json_output"] = json

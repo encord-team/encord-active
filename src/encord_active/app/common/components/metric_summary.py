@@ -8,84 +8,31 @@ from streamlit.delta_generator import DeltaGenerator
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.state import MetricOutlierInfo, MetricsSeverity, get_state
+from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
     create_image_size_distribution_chart,
-    create_labels_distribution_chart,
     create_outlier_distribution_chart,
+    create_labels_distribution_chart
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
     IqrOutliers,
     MetricWithDistanceSchema,
-    Severity,
-    get_iqr_outliers,
+    get_all_metrics_outliers,
 )
 from encord_active.lib.dataset.summary_utils import (
     get_all_annotation_numbers,
     get_all_image_sizes,
     get_median_value_of_2d_array,
+    get_metric_summary,
 )
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricScope,
     load_available_metrics,
-    load_metric_dataframe,
 )
 
 _COLUMNS = MetricWithDistanceSchema
-
-
-def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
-    metric_severity = MetricsSeverity()
-    total_unique_severe_outliers = set()
-    total_unique_moderate_outliers = set()
-
-    for metric in metrics:
-        original_df = load_metric_dataframe(metric, normalize=False)
-        res = get_iqr_outliers(original_df)
-
-        if not res:
-            continue
-
-        df, iqr_outliers = res
-
-        df_dict = df.to_dict("records")
-        for row in df_dict:
-            if row[_COLUMNS.outliers_status] == Severity.severe:
-                total_unique_severe_outliers.add(row[_COLUMNS.identifier])
-            elif row[_COLUMNS.outliers_status] == Severity.moderate:
-                total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
-
-        metric_severity.metrics.append(MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers))
-
-    metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
-    metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)
-
-    return metric_severity
-
-
-def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
-    all_metrics_outliers = pd.DataFrame(columns=["metric", "total_severe_outliers", "total_moderate_outliers"])
-    for item in metrics_data_summary.metrics:
-        all_metrics_outliers = pd.concat(
-            [
-                all_metrics_outliers,
-                pd.DataFrame(
-                    {
-                        "metric": [item.metric.name],
-                        "total_severe_outliers": [item.iqr_outliers.n_severe_outliers],
-                        "total_moderate_outliers": [item.iqr_outliers.n_moderate_outliers],
-                    }
-                ),
-            ],
-            axis=0,
-        )
-
-    all_metrics_outliers.sort_values(by=["total_severe_outliers"], ascending=False, inplace=True)
-
-    return all_metrics_outliers
-
 
 def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
     st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")

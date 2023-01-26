@@ -16,6 +16,17 @@ class AnnotationStatistics:
     total_object_labels: int = 0
     total_classification_labels: int = 0
 
+from encord_active.lib.dataset.outliers import (
+    MetricOutlierInfo,
+    MetricsSeverity,
+    MetricWithDistanceSchema,
+    Severity,
+    get_iqr_outliers,
+)
+from encord_active.lib.metrics.utils import MetricData, load_metric_dataframe
+
+_COLUMNS = MetricWithDistanceSchema
+
 
 def get_all_image_sizes(project_folder: Path) -> np.ndarray:
     image_sizes = []
@@ -43,7 +54,7 @@ def get_median_value_of_2d_array(array: np.ndarray) -> np.ndarray:
 
 def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> AnnotationStatistics:
     """
-    returns label statistics for both objects and classifications. Does not count nested
+    Returns label statistics for both objects and classifications. Does not count nested
     labels, only counts the immediate labels.
     """
 
@@ -102,3 +113,32 @@ def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> Annotatio
     labels.total_classification_labels = classification_label_counter
 
     return labels
+
+
+def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
+    metric_severity = MetricsSeverity()
+    total_unique_severe_outliers = set()
+    total_unique_moderate_outliers = set()
+
+    for metric in metrics:
+        original_df = load_metric_dataframe(metric, normalize=False)
+        res = get_iqr_outliers(original_df)
+
+        if not res:
+            continue
+
+        df, iqr_outliers = res
+
+        df_dict = df.to_dict("records")
+        for row in df_dict:
+            if row[_COLUMNS.outliers_status] == Severity.severe:
+                total_unique_severe_outliers.add(row[_COLUMNS.identifier])
+            elif row[_COLUMNS.outliers_status] == Severity.moderate:
+                total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
+
+        metric_severity.metrics.append(MetricOutlierInfo(metric=metric, df=df, iqr_outliers=iqr_outliers))
+
+    metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
+    metric_severity.total_unique_moderate_outliers = len(total_unique_moderate_outliers)
+
+    return metric_severity
