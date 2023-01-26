@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# Find Outliers
+# Finding Data Outliers
 
 **Find outliers in your dataset using Encord Active's Data Quality tab**
 

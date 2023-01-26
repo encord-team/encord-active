@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Find Important Metrics
+# Finding Important Metrics
 
 **Visualise the relationship between your model performance and metrics**
 

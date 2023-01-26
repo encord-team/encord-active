@@ -2,12 +2,12 @@
 sidebar_position: 1
 ---
 
-# Visualise Performance Metrics
+# Visualizing Performance Metrics
 
-**Visualise performance of your model**
+**Visualize performance of your model**
 
-Encord Active enables you to visualise the important performance metrics, such as mean Average-Precision (mAP), for your model.
-Performance metrics can be visualised based on different classes and intersection-over-Union (IoU) thresholds.
+Encord Active enables you to visualize the important performance metrics, such as mean Average-Precision (mAP), for your model.
+Performance metrics can be visualized based on different classes and intersection-over-Union (IoU) thresholds.
 Performance metrics are supported for bounding-boxes (object detection) and polygons (segmentation).
 
 `Prerequisites:` Dataset, Labels, Predictions

@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Understand your label Distribution
+# Understanding Label Distribution
 
 **Get insights into the distribution of your labels with Encord Active**
 

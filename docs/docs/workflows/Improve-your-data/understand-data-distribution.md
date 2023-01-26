@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Understand your Data Distribution
+# Understanding Data Distribution
 
 **Get insights into the distribution of your visual data with Encord Active**
 
