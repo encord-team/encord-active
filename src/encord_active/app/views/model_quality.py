@@ -7,6 +7,7 @@ from encord_active.app.common.state_hooks import use_memo
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.settings import common_settings
 from encord_active.app.model_quality.sub_pages import Page
+from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
@@ -23,7 +24,7 @@ def model_quality(page: Page):
                 "# Missing Model Predictions\n"
                 "This project does not have any imported predictions. "
                 "Please refer to the "
-                "[Importing Model Predictions](https://encord-active-docs.web.app/sdk/importing-model-predictions) "
+                f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
                 "section of the documentation to learn how to import your predictions."
             )
             return

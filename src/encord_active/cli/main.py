@@ -1,32 +1,64 @@
 from pathlib import Path
 from typing import List, Set, TypedDict
 
+import click
 import rich
 import typer
 from rich.markup import escape
 from rich.panel import Panel
+from typer.core import TyperGroup
 
 import encord_active.app.conf  # pylint: disable=unused-import
+import encord_active.cli.utils.typer  # pylint: disable=unused-import
 from encord_active.cli.config import APP_NAME, config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
+from encord_active.lib import constants as ea_constants
+
+
+class OrderedPanelGroup(TyperGroup):
+    COMMAND_ORDER = [
+        "quickstart",
+        "download",
+        "init",
+        "import",
+        "visualize",
+        "metricize",
+        "print",
+        "config",
+    ]
+
+    def list_commands(self, ctx: click.Context):
+        sorted_keys = [key for key in self.COMMAND_ORDER if key in self.commands.keys()]
+        remaining = [key for key in self.commands.keys() if key not in self.COMMAND_ORDER]
+
+        return sorted_keys + remaining
+
 
 cli = typer.Typer(
+    cls=OrderedPanelGroup,
     rich_markup_mode="rich",
-    help="""
+    no_args_is_help=True,
+    help=f"""
 All commands in this CLI have a --help option, which will guide you on the way.
 If you don't find the information you need here, we recommend that you visit
-our main documentation: [blue]https://encord-active-docs.web.app[/blue]
+our main documentation: [blue]{ea_constants.DOCS_URL}[/blue]
 """,
-    epilog="""
-Made by Encord. Contact Encord here: [blue]https://encord.com/contact_us/[/blue] to learn more
-about our active learning platform for computer vision.
+    epilog=f"""
+Made by Encord. [bold]Get in touch[/bold]: 
+
+
+:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]   
+
+:e-mail: Email: [blue]{ea_constants.ENCORD_EMAIL}[/blue]
+
+:star: Github: [blue]{ea_constants.GITHUB_URL}[/blue]
 """,
 )
-cli.add_typer(config_cli, name="config", help="Configure global settings 🔧")
-cli.add_typer(import_cli, name="import", help="Import Projects or Predictions ⬇️")
+cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
+cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
 
 
@@ -38,10 +70,10 @@ def download(
     ),
 ):
     """
-    Try out Encord Active fast. [bold]Download[/bold] an existing dataset to get started. 📁
+    [green bold]Download[/green bold] a sandbox dataset to get started. 📁
 
-    * If --project_name is not given as an argument, available prebuilt projects will be listed
-     and the user can select one from the menu.
+    * If --project_name is not given as an argument, available sandbox projects will be listed
+     and you can select one from the menu.
     """
     from InquirerPy import inquirer as i
 
@@ -116,10 +148,11 @@ def import_local_project(
     ),
 ):
     """
-    [bold]Initialise[/bold] a project from your local file system by searching for images based on the `glob` arguments.
+    [green bold]Initialize[/green bold] a project from your local file system :seedling:
+
+    The command will search for images based on the `glob` arguments.
+
     By default, all jpeg, jpg, png, and tiff files will be matched.
-
-
     """
     from encord_active.lib.project.local import (
         NoFilesFoundError,
@@ -139,8 +172,7 @@ def import_local_project(
                 style="yellow",
             )
         )
-        typer.Abort()
-        exit()  # Not strictly necessary but prevents mypy from complaining
+        raise typer.Abort()
 
     if dryrun:
         directories: Set[Path] = set()
@@ -160,14 +192,13 @@ def import_local_project(
             Panel(
                 f"""
 [blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
-[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images. 
+[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images.
 """,
                 title=":bar_chart: Stats :bar_chart:",
                 expand=False,
             )
         )
-        typer.Abort()
-        exit()
+        raise typer.Abort()
 
     try:
         if not project_name:
@@ -191,10 +222,11 @@ Consider removing the directory or setting the `--name` option.
                 style="yellow",
             )
         )
-        typer.Abort()
+        raise typer.Abort()
 
 
-@cli.command()
+@cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
+@cli.command(name="visualize")
 @bypass_streamlit_question
 @ensure_project
 def visualise(
@@ -203,7 +235,7 @@ def visualise(
     ),
 ):
     """
-    Launches the application with the provided project ✨
+    [green bold]Launch[/green bold] the application with the provided project ✨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
 
@@ -218,7 +250,7 @@ def quickstart(
     ),
 ):
     """
-    Take the shortcut and start the application straight away 🏃💨
+    [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
@@ -242,7 +274,7 @@ def metricize(
     ),
 ):
     """
-    Execute metrics on your data and predictions 🧠
+    [green bold]Execute[/green bold] metrics on your data and predictions 🧠
     """
     from InquirerPy import inquirer as i
     from InquirerPy.base.control import Choice
@@ -269,6 +301,26 @@ def metricize(
         selected_metrics = i.checkbox(**options).execute()
 
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
+
+
+@cli.command(rich_help_panel="Resources")
+def docs():
+    """
+    [green bold]Read[/green bold] the documentation :book:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.DOCS_URL)
+
+
+@cli.command(name="join-slack", rich_help_panel="Resources")
+def join_slack():
+    """
+    [green bold]Join[/green bold] the Slack community :family:
+    """
+    import webbrowser
+
+    webbrowser.open(ea_constants.SLACK_INVITE_URL)
 
 
 @cli.callback(invoke_without_command=True)
