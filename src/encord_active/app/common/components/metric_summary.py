@@ -30,6 +30,7 @@ from encord_active.lib.dataset.summary_utils import (
 )
 from encord_active.lib.metrics.utils import (
     MetricData,
+    MetricSchema,
     MetricScope,
     load_available_metrics,
 )
@@ -48,13 +49,38 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             value=False,
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
-        x_metric_df = metrics_data_summary.metrics[x_metric_name].df[["identifier", "score"]]
-        x_metric_df.rename(columns={"score": f"{x_metric_name}"}, inplace=True)
+        x_metric_df = metrics_data_summary.metrics[x_metric_name].df[[MetricSchema.identifier, MetricSchema.score]]
+        x_metric_df.rename(columns={MetricSchema.score: f"{x_metric_name}"}, inplace=True)
 
-        y_metric_df = metrics_data_summary.metrics[y_metric_name].df[["identifier", "score"]]
-        y_metric_df.rename(columns={"score": f"{y_metric_name}"}, inplace=True)
+        y_metric_df = metrics_data_summary.metrics[y_metric_name].df[[MetricSchema.identifier, MetricSchema.score]]
+        y_metric_df.rename(columns={MetricSchema.score: f"{y_metric_name}"}, inplace=True)
 
-        merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on="identifier")
+        if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == len(
+            y_metric_df.iloc[0][MetricSchema.identifier].split("_")
+        ):
+            merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on=MetricSchema.identifier)
+        else:
+            x_changed, to_be_parsed_df = (
+                (True, x_metric_df.copy(deep=True))
+                if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == 4
+                else (False, y_metric_df)
+            )
+
+            to_be_parsed_df[[MetricSchema.identifier, "identifier_rest"]] = to_be_parsed_df[
+                MetricSchema.identifier
+            ].str.rsplit("_", n=1, expand=True)
+
+            merged_metrics = pd.merge(
+                to_be_parsed_df if x_changed else x_metric_df,
+                y_metric_df if x_changed else to_be_parsed_df,
+                how="inner",
+                on=MetricSchema.identifier,
+            )
+            merged_metrics[MetricSchema.identifier] = (
+                merged_metrics[MetricSchema.identifier] + "_" + merged_metrics["identifier_rest"]
+            )
+
+            merged_metrics.pop("identifier_rest")
 
         fig = create_2d_metric_chart(merged_metrics, trend_selected)
         scatter_plot_col.plotly_chart(fig, use_container_width=True)
