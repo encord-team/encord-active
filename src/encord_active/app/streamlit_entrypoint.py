@@ -20,6 +20,7 @@ from encord_active.app.model_quality.sub_pages.true_positives import TruePositiv
 from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
+from encord_active.lib.common.utils import fetch_project_meta
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 
@@ -68,6 +69,8 @@ def main(project_path: str):
     State.init(project_dir)
 
     with st.sidebar:
+        project_meta = fetch_project_meta(project_dir)
+        st.subheader(project_meta.get("project_title", project_dir.name))
         items = to_items(pages)
         key = pages_menu(items=items)
         path = key.split(SEPARATOR) if key else []
