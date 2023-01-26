@@ -1,14 +1,14 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
-from encord_active.lib.dataset.outliers import IqrOutliers
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
+from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.metrics.utils import MetricData
@@ -16,19 +16,6 @@ from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObje
 from encord_active.lib.project import ProjectFileStructure
 
 GLOBAL_STATE = "global_state"
-
-
-class MetricOutlierInfo(NamedTuple):
-    metric: MetricData
-    df: pd.DataFrame
-    iqr_outliers: IqrOutliers
-
-
-@dataclass
-class MetricsSeverity:
-    metrics: list[MetricOutlierInfo] = field(default_factory=list)
-    total_unique_moderate_outliers: Optional[int] = None
-    total_unique_severe_outliers: Optional[int] = None
 
 
 @dataclass
