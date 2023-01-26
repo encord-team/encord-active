@@ -11,8 +11,8 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
     create_image_size_distribution_chart,
+    create_labels_distribution_chart,
     create_outlier_distribution_chart,
-    create_labels_distribution_chart
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
@@ -33,6 +33,7 @@ from encord_active.lib.metrics.utils import (
 )
 
 _COLUMNS = MetricWithDistanceSchema
+
 
 def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
     st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")

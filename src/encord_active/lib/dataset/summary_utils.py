@@ -16,6 +16,7 @@ class AnnotationStatistics:
     total_object_labels: int = 0
     total_classification_labels: int = 0
 
+
 from encord_active.lib.dataset.outliers import (
     MetricOutlierInfo,
     MetricsSeverity,
