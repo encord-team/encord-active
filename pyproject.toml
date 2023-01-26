@@ -69,6 +69,7 @@ pandera = "^0.13.4"
 jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
 inquirerpy = "^0.3.4"
+statsmodels = "^0.13.5"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

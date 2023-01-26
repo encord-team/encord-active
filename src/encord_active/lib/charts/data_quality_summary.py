@@ -96,11 +96,18 @@ def create_image_size_distribution_chart(image_sizes: np.ndarray) -> go.Figure:
     return fig
 
 
-def create_2d_metric_chart(metrics_df: pd.DataFrame) -> go.Figure:
+def create_2d_metric_chart(metrics_df: pd.DataFrame, show_trendline: True) -> go.Figure:
     """
     This function expects a dataframe where its columns are [identifier, x_value, y_value]
     """
-    fig = px.scatter(metrics_df, x=metrics_df.columns[1], y=metrics_df.columns[2], hover_data=["identifier"])
+    fig = px.scatter(
+        metrics_df,
+        x=metrics_df.columns[1],
+        y=metrics_df.columns[2],
+        hover_data=["identifier"],
+        trendline="ols" if show_trendline else None,
+        trendline_color_override="black",
+    )
     fig.update_layout(
         title=f"{metrics_df.columns[1]} vs. {metrics_df.columns[2]}",
         xaxis_title=metrics_df.columns[1],

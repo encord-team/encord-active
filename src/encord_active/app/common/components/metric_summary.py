@@ -43,7 +43,11 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
         metric_names = [metric_name for metric_name in metrics_data_summary.metrics.keys()]
         x_metric_name = metric_selection_col.selectbox("x axis", metric_names, index=0)
         y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
-
+        trend_selected = metric_selection_col.checkbox(
+            "Show trend",
+            value=False,
+            help="Draws a trend line to demonstrate the relationship between the two metrics.",
+        )
         x_metric_df = metrics_data_summary.metrics[x_metric_name].df[["identifier", "score"]]
         x_metric_df.rename(columns={"score": f"{x_metric_name}"}, inplace=True)
 
@@ -52,7 +56,7 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
 
         merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on="identifier")
 
-        fig = create_2d_metric_chart(merged_metrics)
+        fig = create_2d_metric_chart(merged_metrics, trend_selected)
         scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
 
