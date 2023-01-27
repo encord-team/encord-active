@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Set, TypedDict
+from typing import List, Optional, Set, TypedDict
 
 import click
 import rich
@@ -269,6 +269,12 @@ def metricize(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
     ),
+    metric_names: Optional[list[str]] = typer.Option(
+        None,
+        "--add",
+        "-a",
+        help="Name of the metric to run. This option can be repeated to add multiple metrics to the run.",
+    ),
     fuzzy: bool = typer.Option(
         False, help="Enable fuzzy search in the selection. (press [TAB] to select more than one) 🪄"
     ),
@@ -286,19 +292,45 @@ def metricize(
     )
 
     metrics = list(map(load_metric, get_metrics()))
-    choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
-    Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
-    options: Options = {
-        "message": "What metrics would you like to run?",
-        "choices": choices,
-        "vi_mode": True,
-    }
 
-    if fuzzy:
-        options["message"] += " [blue](press [TAB] to select more than one)[/blue]"
-        selected_metrics = i.fuzzy(**options, multiselect=True).execute()
+    # (interactive) User chooses some metrics via CLI prompt selection
+    if metric_names is None:
+        choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
+        Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
+        options: Options = {
+            "message": "What metrics would you like to run?",
+            "choices": choices,
+            "vi_mode": True,
+        }
+
+        if fuzzy:
+            options["message"] += " [blue](press [TAB] to select more than one)[/blue]"
+            selected_metrics = i.fuzzy(**options, multiselect=True).execute()
+        else:
+            selected_metrics = i.checkbox(**options).execute()
+
+    # (non-interactive) User chooses some metrics via --add (-a) option
     else:
-        selected_metrics = i.checkbox(**options).execute()
+        metric_name_to_cls = {m.TITLE: m for m in metrics}
+        used_metric_names = set()
+        selected_metrics = []
+        unknown_metric_names = []
+        for name in metric_names:
+            if name in used_metric_names:  # repeated metric name in --add
+                continue
+            used_metric_names.add(name)
+
+            metric_cls = metric_name_to_cls.get(name, None)
+            if metric_cls is None:  # unknown and/or wrong metric name in user selection
+                unknown_metric_names.append(name)
+            else:
+                selected_metrics.append(metric_cls)
+
+        if len(unknown_metric_names) > 0:
+            rich.print("No available metric has this name:")
+            for name in unknown_metric_names:
+                rich.print(f"[yellow]{name}[/yellow]")
+            raise typer.Abort()
 
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
 
