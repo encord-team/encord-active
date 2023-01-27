@@ -49,10 +49,11 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             value=True,
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
-        x_metric_df = metrics_data_summary.metrics[x_metric_name].df[[MetricSchema.identifier, MetricSchema.score]]
+
+        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
         x_metric_df.rename(columns={MetricSchema.score: f"{x_metric_name}"}, inplace=True)
 
-        y_metric_df = metrics_data_summary.metrics[y_metric_name].df[[MetricSchema.identifier, MetricSchema.score]]
+        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
         y_metric_df.rename(columns={MetricSchema.score: f"{y_metric_name}"}, inplace=True)
 
         if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == len(
