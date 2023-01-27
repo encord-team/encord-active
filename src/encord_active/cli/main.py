@@ -270,7 +270,7 @@ def metricize(
         Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
     ),
     fuzzy: bool = typer.Option(
-        False, help="Enbale fuzzy search in the selection. (press [TAB] to select more than one) 🪄"
+        False, help="Enable fuzzy search in the selection. (press [TAB] to select more than one) 🪄"
     ),
 ):
     """
