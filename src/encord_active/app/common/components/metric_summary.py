@@ -46,7 +46,7 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
         y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
         trend_selected = metric_selection_col.checkbox(
             "Show trend",
-            value=False,
+            value=True,
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
         x_metric_df = metrics_data_summary.metrics[x_metric_name].df[[MetricSchema.identifier, MetricSchema.score]]
