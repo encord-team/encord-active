@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, TypedDict, Union
 from uuid import uuid4
 
-from encord.dataset import DataRow
 from encord.exceptions import (
     FileTypeNotSupportedError as EncordFiletypeNotSupportedError,
 )
@@ -276,7 +275,7 @@ class LocalDataset:
             title = _uri.name
 
         data_row = LocalDataRow(
-            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=dr_media
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=[dr_media]
         )
         self._data_rows[data_hash] = data_row
 
