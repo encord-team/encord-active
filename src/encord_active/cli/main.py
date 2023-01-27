@@ -266,14 +266,9 @@ def quickstart(
 @cli.command()
 @ensure_project
 def metricize(
+    metric_names: Optional[list[str]] = typer.Argument(None, help="Names of the metrics to run."),
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
-    ),
-    metric_names: list[str] = typer.Option(
-        [],
-        "--add",
-        "-a",
-        help="Name of the metric to run. This option can be repeated to add multiple metrics to the run.",
     ),
     run_all: bool = typer.Option(False, "--all", help="Run all available metrics."),
     fuzzy: bool = typer.Option(
