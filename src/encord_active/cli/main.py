@@ -269,12 +269,13 @@ def metricize(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory of the project to run the metrics on.", file_okay=False
     ),
-    metric_names: Optional[list[str]] = typer.Option(
-        None,
+    metric_names: list[str] = typer.Option(
+        [],
         "--add",
         "-a",
         help="Name of the metric to run. This option can be repeated to add multiple metrics to the run.",
     ),
+    run_all: bool = typer.Option(False, "--all", help="Run all available metrics."),
     fuzzy: bool = typer.Option(
         False, help="Enable fuzzy search in the selection. (press [TAB] to select more than one) 🪄"
     ),
@@ -292,9 +293,11 @@ def metricize(
     )
 
     metrics = list(map(load_metric, get_metrics()))
+    if run_all:  # User chooses to run all available metrics
+        selected_metrics = metrics
 
     # (interactive) User chooses some metrics via CLI prompt selection
-    if metric_names is None:
+    elif not metric_names:
         choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
         Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
         options: Options = {
