@@ -41,9 +41,9 @@ Sample pictures:
 - **Research Paper:** [Microsoft COCO: Common Objects in Context](https://arxiv.org/abs/1405.0312)
 - **Author:** [Tsung-Yi Lin](https://arxiv.org/search/cs?searchtype=author&query=Lin%2C+T) , [Michael Maire](https://arxiv.org/search/cs?searchtype=author&query=Maire%2C+M), [Serge Belongie](https://arxiv.org/search/cs?searchtype=author&query=Belongie%2C+S), [Lubomir Bourdev](https://arxiv.org/search/cs?searchtype=author&query=Bourdev%2C+L) , [Ross Girshick](https://arxiv.org/search/cs?searchtype=author&query=Girshick%2C+R), [James Hays](https://arxiv.org/search/cs?searchtype=author&query=Hays%2C+J), [Pietro Perona](https://arxiv.org/search/cs?searchtype=author&query=Perona%2C+P), [Deva Ramanan](https://arxiv.org/search/cs?searchtype=author&query=Ramanan%2C+D), [C. Lawrence Zitnic](https://arxiv.org/search/cs?searchtype=author&query=Zitnick%2C+C+L), [Piotr Dollár](https://arxiv.org/search/cs?searchtype=author&query=Doll%C3%A1r%2C+P)
 - **Dataset Size:**  5000 images, 4784 annotations
-- **Categories:**  7 plane categories
+- **Categories:** 81 classes
 - **License:** CC BY 4.0
-- **Release:** 1 May 2014
+- **Release:** 1st, May, 2014
 - **Read More:** [GitHub](https://github.com/cocodataset/cocodataset.github.io) & [Webpage](https://cocodataset.org/#home)
 
 
@@ -54,14 +54,16 @@ Sample pictures:
 
 **About the dataset**
 
-- **Research Paper: None**
-- **Author:**
-- **Dataset Size:** 2710 images & 6812 annotations
-- **Categories:**  10 categoties
-- **License: CC BY 4.0**
-- **Release: XYZ**
-- **Read more:** [Webpage](https://www.cosmiqworks.org/rareplanes/) & [GitHub](https://github.com/GeneralBlockchain/covid-19-chest-xray-segmentations-dataset)
+- **Research Paper:** Unknown 
+- **Author:** Unknown
+- **Dataset Size:** 100 images & 602 annotations
+- **Categories:**  13 classes
+- **License:** CC BY 4.0
+- **Release:** Unknown
+- **Read more:** [GitHub](https://github.com/GeneralBlockchain/covid-19-chest-xray-segmentations-dataset)
 
+Sample pictures:
+![Covid dataset](../images/Covid.png)
 
 ## Rareplanes
 
@@ -72,7 +74,7 @@ Sample pictures:
 - **Dataset Size:** 2710 images & 6812 annotations
 - **Categories:**  7 plane categories
 - **License:** CC 4.0 BY SA
-- **Release: 4** June 2020
+- **Release: 4** June, 2020
 - **Read More:** [Webpage](https://www.cosmiqworks.org/rareplanes/)
 
 Sample pictures:
@@ -87,7 +89,7 @@ Sample pictures:
 - **Dataset Size:** Official: 1500 images, 4784 annotations & Unofficial: 3736 images, 8419 annotations
 - **Categories:** 60 litter categories
 - **License:** CC BY 4.0
-- **Release:** 17 March 2020
+- **Release:** 17th, March, 2020
 - **Read More:** [GitHub](https://github.com/pedropro/TACO) & [Webpage](http://tacodataset.org/)
 
 Sample pictures:
@@ -101,5 +103,5 @@ Sample pictures:
 - **Dataset Size:** 11276 images
 - **Categories:** Medical (Endoscopy/Colonoscopy)
 - **License:** Creative Commons Attribution 4.0 International
-- **Release: 14/03/2022**
+- **Release:** 14th March 2022
 - **Read more:** [Webpage](https://www.notion.so/Jan-9-2023-c23ea70fe8b64b889dc8b8ad4f77ad18) & [GitHub](https://github.com/GorkemP/labeled-images-for-ulcerative-colitis)
