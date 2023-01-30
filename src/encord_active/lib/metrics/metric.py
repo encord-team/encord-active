@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from hashlib import md5
-from typing import List, Optional, TypedDict, Union
+from typing import List, Optional, Union
 
 from encord.project_ontology.classification_type import ClassificationType
 from encord.project_ontology.object_type import ObjectShape
@@ -35,20 +36,46 @@ class EmbeddingType(Enum):
     IMAGE = "image"
 
 
-class MetricMetadata(TypedDict):
-    annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]]
-    embedding_type: Optional[str]
-    data_type: DataType
+@dataclass()
+class StatsMetadata:
+    threshold: float
+    max_value: float
+    mean_value: float
+    min_value: float
+    num_rows: int
+
+
+@dataclass
+class MetricMetadata:
+    title: str
+    short_description: str
     long_description: str
     metric_type: MetricType
+    data_type: DataType
+    annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]]
+    embedding_type: Optional[str]
     needs_images: bool
-    short_description: str
-    title: str
-    threshold: float
-    max_value: Optional[float]
-    mean_value: float
-    min_value: Optional[float]
-    num_rows: int
+
+
+class SimpleMetric(ABC):
+    def __init__(self, title, short_description, long_description, metric_type, data_type, annotation_type):
+        self.metadata = MetricMetadata(
+            title=title,
+            short_description=short_description,
+            long_description=long_description,
+            metric_type=metric_type,
+            data_type=data_type,
+            annotation_type=annotation_type
+        )
+
+    @abstractmethod
+    def execute(self, image, writer: CSVMetricWriter):
+        pass
+
+    def get_unique_name(self):
+        name_hash = md5((self.metadata.title + self.metadata.short_description + self.metadata.long_description).encode()).hexdigest()
+
+        return f"{name_hash[:8]}_{self.metadata.title.lower().replace(' ', '_')}"
 
 
 class Metric(ABC):
