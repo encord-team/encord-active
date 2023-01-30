@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
@@ -15,16 +14,25 @@ from tqdm import tqdm
 
 from encord_active.lib.common.utils import fetch_project_meta
 from encord_active.lib.db.merged_metrics import rename_identifiers
-from encord_active.lib.embeddings.utils import load_collections, save_collections
+from encord_active.lib.embeddings.utils import (
+    LabelEmbedding,
+    load_collections,
+    save_collections,
+)
 from encord_active.lib.encord.utils import get_client
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.project import ProjectFileStructure
 
 
+class LabelRowDataUnit(NamedTuple):
+    label_row: str
+    data_unit: str
+
+
 class DatasetCreationResult(NamedTuple):
     hash: str
-    du_original_mapping: dict[str, dict]
-    lr_du_mapping: dict[tuple[str, str], tuple[str, str]]
+    du_original_mapping: dict[str, LabelRowDataUnit]
+    lr_du_mapping: dict[LabelRowDataUnit, LabelRowDataUnit]
 
 
 class ProjectCreationResult(NamedTuple):
@@ -32,8 +40,6 @@ class ProjectCreationResult(NamedTuple):
 
 
 class EncordActions:
-    def __init__(self, project_dir: Path):
-        self.original_project = None
     def __init__(self, project_dir: Path, fallback_ssh_key_path: Optional[Path] = None):
         self._original_project = None
         self.project_meta = fetch_project_meta(project_dir)
@@ -45,8 +51,6 @@ class EncordActions:
             raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
 
         try:
-            ssh_key_path = Path("/Users/encord/.ssh/id_ed25519")
-            self.original_project_hash = self.project_meta["project_hash"]
             ssh_key_path = Path(self.project_meta["ssh_key_path"]).resolve()
         except Exception as e:
             if not fallback_ssh_key_path:
@@ -58,22 +62,31 @@ class EncordActions:
 
         self.user_client = get_client(ssh_key_path.expanduser())
 
-    def init_original_project(self):
+    @property
+    def original_project(self):
+        if self._original_project:
+            return self._original_project
+
         try:
-            self.original_project = self.user_client.get_project(self.original_project_hash)
-            if self.original_project.project_hash == self.original_project_hash:
-                return False
+            project = self.user_client.get_project(self.project_meta["project_hash"])
+            if project.project_hash == self.project_meta["project_hash"]:
+                self._original_project = project
         except AuthorisationError:
-            return False
-        return True
+            pass
+
+        return self._original_project
 
     def _upload_item(
-        self, dataset, label_row_hash, data_unit_hash, data_unit_hashes, new_du_to_original, uploaded_data
-    ) -> str:
+        self,
+        dataset: Dataset,
+        label_row_hash: str,
+        data_unit_hash: str,
+        data_unit_hashes: set[str],
+        new_du_to_original
+    ) -> Optional[str]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
         dataset_hash = dataset.dataset_hash
-        uploaded_data.add(data_unit_hash)
 
         if label_row["data_type"] == DataType.IMAGE.value:
             image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
@@ -114,8 +127,8 @@ class EncordActions:
         if len(datasets_with_same_title) > 0:
             raise DatasetUniquenessError(dataset_title)
 
-        new_du_to_original: dict[str, dict] = {}
-        lrdu_mapping: dict[tuple[str, str], tuple[str, str]] = {}
+        new_du_to_original: dict[str, LabelRowDataUnit] = {}
+        lrdu_mapping: dict[LabelRowDataUnit, LabelRowDataUnit] = {}
 
         self.user_client.create_dataset(
             dataset_title=dataset_title,
@@ -138,20 +151,23 @@ class EncordActions:
                     # Since create_image_group does not return info related to the uploaded images, we should find its
                     # data_hash in a hacky way
                     new_data_unit_hash = self._upload_item(
-                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original, uploaded_data_units
-                    )
-                    _update_mapping(new_data_unit_hash, label_row_hash, data_unit_hash, new_du_to_original)
+                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original)
                     uploaded_data_units.add(data_unit_hash)
-                    lrdu_mapping[(label_row_hash, data_unit_hash)] = ("", new_data_unit_hash)
+                    if not new_data_unit_hash:
+                        raise Exception("Data unit upload failed")
+
+                    new_du_to_original[new_data_unit_hash] = LabelRowDataUnit(label_row_hash, data_unit_hash)
+                    lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit("", new_data_unit_hash)
+                    uploaded_data_units.add(data_unit_hash)
 
                 if progress_callback:
                     progress_callback(len(uploaded_data_units) / filtered_dataset.shape[0])
         return DatasetCreationResult(dataset_hash, new_du_to_original, lrdu_mapping)
 
-    def create_ontology(self, title):
-        ontology_d = json.loads(self.project_file_structure.ontology.read_text(encoding="utf-8"))
-        ontology_structure = OntologyStructure.from_dict(ontology_d)
-        return self.user_client.create_ontology(title, structure=ontology_structure)
+    def create_ontology(self, title: str, description: str):
+        ontology_dict = json.loads(self.project_file_structure.ontology.read_text(encoding="utf-8"))
+        ontology_structure = OntologyStructure.from_dict(ontology_dict)
+        return self.user_client.create_ontology(title, structure=ontology_structure, description=description)
 
     def create_project(
         self,
@@ -179,22 +195,18 @@ class EncordActions:
             original_data = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
 
             new_label_row_hash = initiated_label_row["label_hash"]
-            new_data_unit_hash = dataset_creation_result.lr_du_mapping[
-                (original_data["label_row_hash"], original_data["data_unit_hash"])
-            ][1]
-            dataset_creation_result.lr_du_mapping[
-                (original_data["label_row_hash"], original_data["data_unit_hash"])
-            ] = (new_label_row_hash, new_data_unit_hash)
+            new_data_unit_hash = dataset_creation_result.lr_du_mapping[original_data].data_unit
+            dataset_creation_result.lr_du_mapping[original_data] = LabelRowDataUnit(new_label_row_hash, new_data_unit_hash)
             original_label_row = json.loads(
                 self.project_file_structure.label_row_structure(
-                    original_data["label_row_hash"]
+                    original_data.label_row
                 ).label_row_file.read_text(
                     encoding="utf-8",
                 )
             )
 
             if initiated_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
-                original_labels = original_label_row["data_units"][original_data["data_unit_hash"]]["labels"]
+                original_labels = original_label_row["data_units"][original_data.data_unit]["labels"]
                 initiated_label_row["data_units"][new_label_row["data_hash"]]["labels"] = original_labels
                 initiated_label_row["object_answers"] = original_label_row["object_answers"]
                 initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
@@ -237,37 +249,34 @@ class EncordActions:
 
         return new_project
 
-    def fix_pickle_files(self, embedding_type: EmbeddingType, renaming_map):
-        def fix_pickle_file(up, renaming_map):
-            up["label_row"] = renaming_map[up["label_row"]]
-            up["data_unit"] = renaming_map[up["data_unit"]]
-            url_without_extension, extension = up["url"].split(".")
+    def fix_pickle_files(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
+        def fix_pickle_file(embedding: LabelEmbedding, renaming_map: dict[str, str]):
+            embedding["label_row"] = renaming_map[embedding["label_row"]]
+            embedding["data_unit"] = renaming_map[embedding["data_unit"]]
+            url_without_extension, extension = embedding["url"].split(".")
             changed_parts = [renaming_map[x] if x in renaming_map else x for x in url_without_extension.split("/")]
-            up["url"] = "/".join(changed_parts) + "." + extension
-            return up
+            embedding["url"] = "/".join(changed_parts) + "." + extension
+            return embedding
 
         collection = load_collections(embedding_type, self.project_file_structure.embeddings)
         updated_collection = [fix_pickle_file(up, renaming_map) for up in collection]
         save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
 
-    def replace_uids(self, file_mappings, project_hash):
-        renaming_map = {self.original_project_hash: project_hash}
+    def replace_uids(self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str):
+        renaming_map = {self.project_meta["project_hash"]: project_hash}
 
         for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            os.rename(
-                (self.project_file_structure.data / old_lr / "images" / old_du).as_posix() + ".jpg",
-                (self.project_file_structure.data / old_lr / "images" / new_du).as_posix() + ".jpg",
-            )
+            old_lr_path = self.project_file_structure.data / old_lr
+            (old_lr_path / "images" / f"{old_du}.jpg").rename(old_lr_path / "images" / f"{new_du}.jpg")
             renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
         dir_renames = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
-
         for (old_lr, new_lr) in dir_renames.items():
-            os.rename(self.project_file_structure.data / old_lr, self.project_file_structure.data / new_lr)
+            (self.project_file_structure.data / old_lr).rename(self.project_file_structure.data / new_lr)
 
         rename_identifiers(renaming_map)
-        for o, n in renaming_map.items():
-            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' 's/{o}/{n}/g' {{}} +"
+        for old, new in renaming_map.items():
+            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' 's/{old}/{new}/g' {{}} +"
             subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
@@ -280,13 +289,6 @@ def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out
         if new_data_row["data_hash"] not in out_mapping:
             return new_data_row["data_hash"]
     return None
-
-
-def _update_mapping(new_data_hash: str, label_row_hash: str, data_unit_hash: str, out_mapping: dict):
-    out_mapping[new_data_hash] = {
-        "label_row_hash": label_row_hash,
-        "data_unit_hash": data_unit_hash,
-    }
 
 
 class MissingProjectMetaAttribure(Exception):

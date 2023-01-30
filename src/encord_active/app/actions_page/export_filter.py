@@ -1,6 +1,7 @@
+import dataclasses
 import json
 from datetime import datetime
-from typing import Tuple, cast
+from typing import NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
 import streamlit as st
@@ -103,6 +104,35 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+class InputItem(NamedTuple):
+    title: str
+    description: str
+
+
+class dada(NamedTuple):
+    dataset: InputItem
+    project: InputItem
+    ontology: Optional[InputItem] = None
+
+
+def _get_column(col, item, num_rows) -> InputItem:
+    return InputItem(
+        col.text_input(f"{item} title",
+                       value=f"Subset: {get_state().project_paths.project_dir.name} ({num_rows})"),
+        col.text_area(f"{item} description")
+    )
+
+
+def _get_columns(needs_ontology: bool, num_rows: int) -> dada:
+    items_to_render = ["Dataset", "Project"] if needs_ontology else ["Dataset", "Project", "Ontology"]
+    form_columns = st.columns(len(items_to_render))
+
+    return dada(
+        *[_get_column(col, item, num_rows)
+          for item, col in zip(items_to_render, form_columns)]
+    )
+
+
 def export_filter():
     get_filtered_row_count, set_filtered_row_count = use_state(0)
     get_clone_button, set_clone_button = use_state(False)
@@ -196,66 +226,9 @@ community</a>
 
     if get_clone_button():
         with st.form("new_project_form"):
-            st.subheader("Create a new project with the selected items")
-            l_column, r_column = st.columns(2)
-
-            dataset_title = l_column.text_input(
-                "Dataset title", value=f"Subset: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
-            )
-
-            ontology_title = l_column.text_input(
-                "Ontology title", value=f"Subset: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
-            )
-
-            dataset_description = l_column.text_area("Dataset description")
-
-            project_title = r_column.text_input(
-                "Project title", value=f"Sub-project: {st.session_state.project_dir.name} ({filtered_df.shape[0]})"
-            )
-            project_description = r_column.text_area("Project description")
-
-            if not st.form_submit_button("➕ Create"):
-                return
-
-            if dataset_title == "":
-                st.error("Dataset title cannot be empty!")
-                return
-            if project_title == "":
-                st.error("Project title cannot be empty!")
-                return
-            if ontology_title == "":
-                st.error("Ontology title cannot be empty!")
-                return
-
             try:
                 action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
-                has_original_project = action_utils.init_original_project()
-                label = st.empty()
-                progress, clear = render_progress_bar()
-                label.text("Step 1/2: Uploading data...")
-                dataset_creation_result = action_utils.create_dataset(
-                    dataset_title, dataset_description, filtered_df, progress
-                )
-                clear()
-                label.text("Step 2/2: Uploading labels...")
-                ontology = (
-                    action_utils.original_project.get_project().ontology_hash
-                    if has_original_project
-                    else action_utils.create_ontology(ontology_title)
-                )
-                new_project = action_utils.create_project(
-                    dataset_creation_result, project_title, project_description, ontology.ontology_hash, progress
-                )
-
-                action_utils.replace_uids(dataset_creation_result.lr_du_mapping, new_project.project_hash)
-                clear()
-                label.info("🎉 New project is created!")
-
-                new_project_link = f"https://app.encord.com/projects/view/{new_project.project_hash}/summary"
-                new_dataset_link = f"https://app.encord.com/datasets/view/{dataset_creation_result.hash}"
-                st.markdown(f"[Go to new project]({new_project_link})")
-                st.markdown(f"[Go to new dataset]({new_dataset_link})")
-
+                has_original_project = bool(action_utils.original_project)
             except ProjectNotFound as e:
                 st.markdown(
                     f"""
@@ -270,6 +243,43 @@ community</a>
                 )
             except Exception as e:
                 st.error(str(e))
+
+            st.subheader("Create a new project with the selected items")
+
+            cols = _get_columns(has_original_project, filtered_df.shape[0])
+
+            if not st.form_submit_button("➕ Create"):
+                return
+            for item, (title, _) in zip(cols._fields, cols):
+                if title == "":
+                    st.error(f"{item.capitalize()} title cannot be empty!")
+                    return
+
+            label = st.empty()
+            progress, clear = render_progress_bar()
+            label.text("Step 1/2: Uploading data...")
+            dataset_creation_result = action_utils.create_dataset(
+                cols.dataset.title, cols.dataset.description, filtered_df, progress
+            )
+            clear()
+            label.text("Step 2/2: Uploading labels...")
+            ontology_hash = (
+                action_utils.original_project.get_project().ontology_hash
+                if has_original_project and cols.ontology
+                else action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
+            )
+            new_project = action_utils.create_project(
+                dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
+            )
+
+            action_utils.replace_uids(dataset_creation_result.lr_du_mapping, new_project.project_hash)
+            clear()
+            label.info("🎉 New project is created!")
+
+            new_project_link = f"https://app.encord.com/projects/view/{new_project.project_hash}/summary"
+            new_dataset_link = f"https://app.encord.com/datasets/view/{dataset_creation_result.hash}"
+            st.markdown(f"[Go to new project]({new_project_link})")
+            st.markdown(f"[Go to new dataset]({new_dataset_link})")
 
 
 def render_progress_bar():
