@@ -5,6 +5,7 @@ from typing import List
 import faiss
 import numpy as np
 from loguru import logger
+from sklearn.preprocessing import normalize as sk_normalize
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
@@ -57,10 +58,12 @@ class ImageSingularity(Metric):
         embeddings_list: List[np.ndarray] = [x["embedding"] for x in self.collections]
 
         embeddings = np.array(embeddings_list).astype(np.float32)
+        embeddings_normalized = sk_normalize(embeddings, axis=1, norm="l2")
 
-        db_index = faiss.IndexFlatL2(embeddings.shape[1])
-        db_index.add(embeddings)  # pylint: disable=no-value-for-parameter
-        return embeddings, db_index
+        db_index = faiss.index_factory(embeddings_normalized.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
+
+        db_index.add(embeddings_normalized)  # pylint: disable=no-value-for-parameter
+        return embeddings_normalized, db_index
 
     def get_identifier_from_collection_item(self, item):
         return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}'
