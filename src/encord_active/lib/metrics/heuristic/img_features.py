@@ -239,12 +239,14 @@ Aspect ratio is computed as the ratio of image width to image height.
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
 
-    @staticmethod
-    def rank_by_aspect_ratio(image):
-        return image.shape[1] / image.shape[0]
-
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_aspect_ratio, self.TITLE)
+        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.TITLE}"):
+            size = get_du_size(data_unit, img_pth)
+            if not size:
+                continue
+            img_h, img_w = size
+            aspect_ratio = img_w / img_h
+            writer.write(aspect_ratio)
 
 
 class AreaMetric(Metric):
