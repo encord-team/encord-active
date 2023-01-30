@@ -13,3 +13,4 @@ These are the predictions for which either of the following is true:
 The red boxes mark the false positive predictions. The remaining colors correspond to the dataset labels with the 
 colors you are used to from the label editor.
 
+![export_encord.png](../../images/FP-page.png)

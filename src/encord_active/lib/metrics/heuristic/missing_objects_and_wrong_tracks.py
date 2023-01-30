@@ -193,7 +193,7 @@ hash, they will be flagged as a potentially broken track.
             window.append(list(zip(objects, polygons)))
 
         if not found_sequential:
-            logger.info("<yellow>[Skipping]</yellow> Sequential data found.")
+            logger.info("<yellow>[Skipping]</yellow> No sequential data found.")
             return
 
         if not found_any:

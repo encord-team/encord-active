@@ -13,7 +13,6 @@ from utils.provider import get_config, get_transform
 from encord_active.lib.db.predictions import Format, Prediction
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-confidence_threshold = 0.5
 
 predictions_to_store = []
 
@@ -37,7 +36,7 @@ with torch.no_grad():
     for img, _, img_metadata in tqdm(dataset_validation, desc="Generating Encord Predictions"):
         prediction = model([img.to(device)])
 
-        scores_filter = prediction[0]["scores"] > confidence_threshold
+        scores_filter = prediction[0]["scores"] > params.inference.confidence_threshold
         masks = prediction[0]["masks"][scores_filter].detach().cpu().numpy()
         labels = prediction[0]["labels"][scores_filter].detach().cpu().numpy()
         scores = prediction[0]["scores"][scores_filter].detach().cpu().numpy()

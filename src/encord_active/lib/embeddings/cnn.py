@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import numpy as np
 import torch
 import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
@@ -60,7 +61,10 @@ def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[
     if transforms is None:
         transforms = torch.nn.Sequential()
 
-    image = image_path_to_tensor(img_path)
+    try:
+        image = image_path_to_tensor(img_path)
+    except Exception:
+        return None
     img_batch: List[torch.Tensor] = []
 
     for obj in data_unit["labels"].get("objects", []):
@@ -85,19 +89,16 @@ def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[
 
 
 @torch.inference_mode()
-def generate_cnn_image_embeddings(iterator: Iterator, filepath: str) -> None:
+def generate_cnn_image_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
     start = time.perf_counter()
     feature_extractor, transforms = get_model_and_transforms()
 
     collections: List[LabelEmbedding] = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
-        if img_pth is None:
-            continue
+        embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
 
-        image = image_path_to_tensor(img_pth)
-        transformed_image = transforms(image).unsqueeze(0)
-        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
-        embedding = torch.flatten(embedding).cpu().detach().numpy()
+        if embedding is None:
+            continue
 
         entry = LabelEmbedding(
             url=data_unit["data_link"],
@@ -114,16 +115,15 @@ def generate_cnn_image_embeddings(iterator: Iterator, filepath: str) -> None:
         )
         collections.append(entry)
 
-    with open(filepath, "wb") as f:
-        pickle.dump(collections, f)
-
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
+    return collections
+
 
 @torch.inference_mode()
-def generate_cnn_object_embeddings(iterator: Iterator, filepath: str) -> None:
+def generate_cnn_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
     start = time.perf_counter()
     feature_extractor, transforms = get_model_and_transforms()
 
@@ -160,16 +160,17 @@ def generate_cnn_object_embeddings(iterator: Iterator, filepath: str) -> None:
 
                 collections.append(entry)
 
-    with open(filepath, "wb") as f:
-        pickle.dump(collections, f)
-
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
+    return collections
+
 
 @torch.inference_mode()
-def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) -> None:
+def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
+    image_collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+
     ontology_class_hash_to_index: dict[str, dict] = {}
     ontology_class_hash_to_question_hash: dict[str, str] = {}
 
@@ -189,13 +190,21 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
 
     collections = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
-        if not img_pth:
-            continue
+        matching_image_collections = [
+            collection
+            for collection in image_collections
+            if collection["data_unit"] == data_unit["data_hash"]
+            and collection["label_row"] == iterator.label_hash
+            and collection["frame"] == iterator.frame
+        ]
 
-        image = image_path_to_tensor(img_pth)
-        transformed_image = transforms(image).unsqueeze(0)
-        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
-        embedding = torch.flatten(embedding).cpu().detach().numpy()
+        if not matching_image_collections:
+            embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
+        else:
+            embedding = matching_image_collections[0]["embedding"]
+
+        if embedding is None:
+            continue
 
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
@@ -208,8 +217,11 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
             classification_hash = classification["classificationHash"]
             ontology_class_hash = classification["featureHash"]
 
+            if ontology_class_hash not in ontology_class_hash_to_question_hash:
+                continue
+
             answers: List[ClassificationAnswer] = []
-            if ontology_class_hash in ontology_class_hash_to_index.keys():
+            if ontology_class_hash in ontology_class_hash_to_index.keys() and classification_answers:
                 for classification_answer in classification_answers[classification_hash]["classifications"]:
                     if (
                         classification_answer["featureHash"]
@@ -222,6 +234,8 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
                                 annotator=classification["createdBy"],
                             )
                         )
+            # NOTE: since we only support one one classification for now
+            classification_answers = answers[0] if len(answers) else None
 
             entry = LabelEmbedding(
                 url=data_unit["data_link"],
@@ -234,19 +248,20 @@ def generate_cnn_classification_embeddings(iterator: Iterator, filepath: str) ->
                 name=classification["name"],
                 dataset_title=iterator.dataset_title,
                 embedding=embedding,
-                classification_answers=answers[0],
+                classification_answers=classification_answers,
             )
             collections.append(entry)
-
-    with open(filepath, "wb") as f:
-        pickle.dump(collections, f)
 
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
+    return collections
 
-def get_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> list:
+
+def get_cnn_embeddings(
+    iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False
+) -> List[LabelEmbedding]:
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_cnn_embeddings method")
 
@@ -269,14 +284,32 @@ def get_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, for
 
 def generate_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, target: str):
     if embedding_type == EmbeddingType.IMAGE:
-        generate_cnn_image_embeddings(iterator, filepath=target)
+        cnn_embeddings = generate_cnn_image_embeddings(iterator)
     elif embedding_type == EmbeddingType.OBJECT:
-        generate_cnn_object_embeddings(iterator, filepath=target)
+        cnn_embeddings = generate_cnn_object_embeddings(iterator)
     elif embedding_type == EmbeddingType.CLASSIFICATION:
-        generate_cnn_classification_embeddings(iterator, filepath=target)
+        cnn_embeddings = generate_cnn_classification_embeddings(iterator)
+    else:
+        raise ValueError(f"Unsupported embedding type {embedding_type}")
 
-    with open(target, "rb") as f:
-        cnn_embeddings = pickle.load(f)
+    target_path = Path(target)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(pickle.dumps(cnn_embeddings))
+
     logger.info("Done!")
 
     return cnn_embeddings
+
+
+def get_embdding_for_image(feature_extractor, transforms, img_pth: Optional[Path] = None) -> Optional[np.ndarray]:
+    if img_pth is None:
+        return None
+
+    try:
+        image = image_path_to_tensor(img_pth)
+        transformed_image = transforms(image).unsqueeze(0)
+        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
+        return torch.flatten(embedding).cpu().detach().numpy()
+    except:
+        logger.error(f"Falied generating embedding for file: {img_pth}")
+        return None

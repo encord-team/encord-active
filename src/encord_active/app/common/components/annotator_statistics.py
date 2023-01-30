@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -20,7 +19,7 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
 
     # 1. Pie Chart
     left_col.markdown(
-        "<h5 style='text-align: center; color: black;'>Distribution of the annotations</h1>", unsafe_allow_html=True
+        "<h5 style='text-align: center; color: black;'>Distribution of annotations</h1>", unsafe_allow_html=True
     )
     annotators_df = pd.DataFrame(annotators.values())
 
@@ -33,13 +32,14 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
         "<h5 style='text-align: center; color: black;'>Detailed annotator statistics</h1>", unsafe_allow_html=True
     )
 
-    total_mean_score = annotators_df["mean_score"].mean()
+    total_annotations = annotators_df["total_annotations"].sum()
+    total_mean_score = (annotators_df["mean_score"] * annotators_df["total_annotations"]).sum() / total_annotations
     annotators_df.loc[len(annotators_df.index)] = AnnotatorInfo(
-        name="all", total_annotations=annotators_df["total_annotations"].sum(), mean_score=total_mean_score
+        name="all", total_annotations=total_annotations, mean_score=total_mean_score
     )
 
-    deviations = 100 * ((np.array(annotators_df["mean_score"]) - total_mean_score) / total_mean_score)
-    annotators_df["deviations"] = deviations
+    deviation = (annotators_df["mean_score"] - total_mean_score) / total_mean_score * 100
+    annotators_df["deviation"] = deviation
 
     right_col.dataframe(annotators_df.style.pipe(make_pretty), use_container_width=True)
 
@@ -58,7 +58,7 @@ def _color_red_or_green(val):
 
 
 def make_pretty(styler):
-    styler.format(_format_deviation, subset=["deviations"])
+    styler.format(_format_deviation, subset=["deviation"])
     styler.format(_format_score, subset=["mean_score"])
-    styler.applymap(_color_red_or_green, subset=["deviations"])
+    styler.applymap(_color_red_or_green, subset=["deviation"])
     return styler

@@ -165,10 +165,10 @@ If you have your polygon represented in absolute terms of pixel locations, you c
 
 ```python
 img_h, img_w = 720, 1280  # the image size in pixels
-polygon = polygon / np.array([[img_h, img_w]])
+polygon = polygon / np.array([[img_w, img_h]])
 ```
 
-Notice the double braces `[[img_h, img_w]]` to get an array of shape `[1, 2]`.
+Notice the double braces `[[img_w, img_h]]` to get an array of shape `[1, 2]`.
 
 :::
 

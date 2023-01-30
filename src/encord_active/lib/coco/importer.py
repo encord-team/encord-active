@@ -23,6 +23,7 @@ from encord_active.lib.coco.parsers import (
 )
 from encord_active.lib.coco.utils import make_object_dict
 from encord_active.lib.encord.local_sdk import (
+    FileTypeNotSupportedError,
     LocalDataRow,
     LocalDataset,
     LocalOntology,
@@ -49,24 +50,37 @@ def upload_img(
             print(f"Image {coco_image.file_name} not found")
             return None
 
-    img = pil_image.open(file_path)
+    try:
+        img = pil_image.open(file_path)
+    except Exception:
+        return None
     img_exif = img.getexif()
     if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
         temp_file_name = "temp_image" + file_path.suffix
         img = ImageOps.exif_transpose(img)
         img.save(temp_file_name)
 
-        encord_image = dataset_tmp.upload_image(
-            title=str(coco_image.id_),
-            file_path=temp_file_name,
-        )
-        os.remove(temp_file_name)
+        try:
+            encord_image = dataset_tmp.upload_image(
+                title=str(coco_image.id_),
+                file_path=temp_file_name,
+            )
+        except FileTypeNotSupportedError as e:
+            print(f"{file_path} will be skipped as it doesn't seem to be an image.")
+            encord_image = None
+        finally:
+            os.remove(temp_file_name)
+
         return encord_image
     else:
-        return dataset_tmp.upload_image(
-            title=str(coco_image.id_),
-            file_path=file_path,
-        )
+        try:
+            return dataset_tmp.upload_image(
+                title=str(coco_image.id_),
+                file_path=file_path,
+            )
+        except FileTypeNotSupportedError as e:
+            print(f"{file_path} will be skipped as it doesn't seem to be an image.")
+            return None
 
 
 def upload_annotation(
@@ -158,7 +172,9 @@ class CocoImporter:
 
         return ontology
 
-    def create_project(self, dataset: LocalDataset, ontology: LocalOntology) -> LocalProject:
+    def create_project(
+        self, dataset: LocalDataset, ontology: LocalOntology, ssh_key_path: Optional[Path]
+    ) -> LocalProject:
         print(f"Creating a new project: {self.title}")
         project = self.user_client.create_project(
             project_title=self.title,
@@ -176,6 +192,8 @@ class CocoImporter:
             "project_description": project.description,
             "project_hash": project.project_hash,
         }
+        if ssh_key_path:
+            project_meta["ssh_key_path"] = ssh_key_path.as_posix()
         meta_file_path = self.project_dir / "project_meta.yaml"
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 

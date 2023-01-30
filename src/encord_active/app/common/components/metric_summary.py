@@ -3,15 +3,192 @@ from typing import List
 import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
+from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
+from encord_active.lib.charts.data_quality_summary import (
+    create_image_size_distribution_chart,
+    create_labels_distribution_chart,
+    create_outlier_distribution_chart,
+)
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.dataset.outliers import IqrOutliers, MetricWithDistanceSchema
-from encord_active.lib.metrics.utils import MetricData, MetricScope
+from encord_active.lib.dataset.outliers import (
+    IqrOutliers,
+    MetricWithDistanceSchema,
+    get_all_metrics_outliers,
+)
+from encord_active.lib.dataset.summary_utils import (
+    get_all_annotation_numbers,
+    get_all_image_sizes,
+    get_median_value_of_2d_array,
+    get_metric_summary,
+)
+from encord_active.lib.metrics.utils import (
+    MetricData,
+    MetricScope,
+    load_available_metrics,
+)
 
 _COLUMNS = MetricWithDistanceSchema
+
+
+def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
+    st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")
+
+    for counter, (_, row) in enumerate(metrics.iterrows()):
+        st_col.metric(
+            f"{counter + 1}. {row['metric']} outliers",
+            row["total_severe_outliers"],
+            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+        )
+
+
+def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+    if get_state().image_sizes is None:
+        get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
+    median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
+
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
+    if get_state().metrics_data_summary is None:
+        get_state().metrics_data_summary = get_metric_summary(metrics)
+
+    all_metrics_outliers = get_all_metrics_outliers(get_state().metrics_data_summary)
+
+    total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
+
+    total_images_col.markdown(
+        summary_item("Number of images", len(get_state().image_sizes), background_color=background_color),
+        unsafe_allow_html=True,
+    )
+
+    total_severe_outliers_col.markdown(
+        summary_item(
+            "🔴 Total severe outliers",
+            get_state().metrics_data_summary.total_unique_severe_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_moderate_outliers_col.markdown(
+        summary_item(
+            "🟠 Total moderate outliers",
+            get_state().metrics_data_summary.total_unique_moderate_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    average_image_size.markdown(
+        summary_item(
+            "Median image size",
+            f"{median_image_dimension[0]}x{median_image_dimension[1]}",
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.write("")
+    plots_col, issues_col = st.columns([6, 3])
+
+    if get_state().metrics_data_summary.total_unique_severe_outliers > 0:
+        fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
+        plots_col.plotly_chart(fig, use_container_width=True)
+
+    fig = create_image_size_distribution_chart(get_state().image_sizes)
+    plots_col.plotly_chart(fig, use_container_width=True)
+
+    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    render_issues_pane(metrics_with_severe_outliers, issues_col)
+
+
+def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+
+    if get_state().annotation_sizes is None:
+        get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths)
+
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.LABEL_QUALITY)
+    if get_state().metrics_label_summary is None:
+        get_state().metrics_label_summary = get_metric_summary(metrics)
+
+    all_metrics_outliers = get_all_metrics_outliers(get_state().metrics_label_summary)
+
+    (
+        total_object_annotations_col,
+        total_classification_annotations_col,
+        total_severe_outliers_col,
+        total_moderate_outliers_col,
+    ) = st.columns(4)
+
+    total_object_annotations_col.markdown(
+        summary_item(
+            "Object annotations", get_state().annotation_sizes.total_object_labels, background_color=background_color
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_classification_annotations_col.markdown(
+        summary_item(
+            "Classification annotations",
+            get_state().annotation_sizes.total_classification_labels,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_severe_outliers_col.markdown(
+        summary_item(
+            "🔴 Total severe outliers",
+            get_state().metrics_label_summary.total_unique_severe_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    total_moderate_outliers_col.markdown(
+        summary_item(
+            "🟠 Total moderate outliers",
+            get_state().metrics_label_summary.total_unique_moderate_outliers,
+            background_color=background_color,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.write("")
+    plots_col, issues_col = st.columns([6, 3])
+
+    if get_state().metrics_label_summary.total_unique_severe_outliers > 0:
+        fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
+        plots_col.plotly_chart(fig, use_container_width=True)
+
+    # label distribution plots
+    with plots_col.expander("Labels distribution", expanded=True):
+        if (
+            get_state().annotation_sizes.total_object_labels > 0
+            or get_state().annotation_sizes.total_classification_labels > 0
+        ):
+            st.info("If a class's size is lower than half of the median value, it is indicated as 'undersampled'.")
+
+        if get_state().annotation_sizes.total_object_labels > 0:
+            fig = create_labels_distribution_chart(
+                get_state().annotation_sizes.objects, "Objects distributions", "Object"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        for (
+            classification_question_name,
+            classification_question_answers,
+        ) in get_state().annotation_sizes.classifications.items():
+            fig = create_labels_distribution_chart(
+                classification_question_answers, classification_question_name, "Class"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    render_issues_pane(metrics_with_severe_outliers, issues_col)
 
 
 def render_metric_summary(

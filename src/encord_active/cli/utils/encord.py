@@ -1,16 +1,14 @@
-import re
 from pathlib import Path
 from typing import Optional
 
 import encord.exceptions
 import rich
-import typer
 import yaml
-from encord import EncordUserClient, Project
+from encord import EncordUserClient
 from rich.markup import escape
 from rich.panel import Panel
 
-from encord_active.lib.encord.utils import get_projects_json
+from encord_active.lib.encord.utils import get_encord_projects
 from encord_active.lib.metrics.execute import run_metrics
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
@@ -19,51 +17,41 @@ PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-(
 def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]) -> Path:
     client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text(encoding="utf-8"))
 
-    if not encord_project_hash:
-        # == Get project hash === #
-        rich.print(
-            Panel(
-                """
-        Encord Active will need to know the project hash associated with the project you
-        wish to import. If you don't know this hash already, [bold green]you can enter "?"[/bold green] in the following
-        prompt to get all your `project_hash`es and associated project titles listed.
-            """,
-                title="The Encord Project",
-                expand=False,
-            )
-        )
-
-    project: Optional[Project] = None
     if encord_project_hash:
-        try:
-            project = client.get_project(encord_project_hash)
-            _ = project.title
-        except encord.exceptions.AuthorisationError:
-            rich.print("⚡️ [red]You don't have access to the project, sorry[/red] 😫")
-            exit()
+        project_hash = encord_project_hash
     else:
-        while not encord_project_hash:
-            _encord_project_hash = typer.prompt("Specify project hash").strip().lower()
+        from InquirerPy import inquirer as i
+        from InquirerPy.base.control import Choice
 
-            if _encord_project_hash == "?":
-                rich.print(escape(get_projects_json(ssh_key_path)))
+        projects = get_encord_projects(ssh_key_path)
+        if not projects:
+            rich.print(
+                Panel(
+                    """
+Couldn't find any projects to import.
+Check that you have the correct ssh key set up and available projects on [blue]https://app.encord.com/projects[/blue].
+                    """,
+                    title="⚡️ [red]Failed to find projects[/red] ⚡️",
+                    style="yellow",
+                    expand=False,
+                )
+            )
+            exit()
 
-            if not re.match(PROJECT_HASH_REGEX, _encord_project_hash):
-                rich.print("🙈 [orange]Project hash does not have the correct format.")
-                rich.print("The format is a (hex) uuid: aaaaaaaa-bbbb-bbbb-bbbb-000000000000")
-                rich.print("💡 Hint: You can type [green]?[/green] to list all your projects")
-                continue
+        choices = list(map(lambda p: Choice(p.project_hash, name=p.title), projects))
+        project_hash = i.fuzzy(
+            message="What project would you like to import?",
+            choices=choices,
+            vi_mode=True,
+            multiselect=False,
+            instruction="💡 Type a (fuzzy) search query to find the project you want to import.",
+        ).execute()
 
-            project = client.get_project(_encord_project_hash)
-            try:
-                _ = project.title
-            except encord.exceptions.AuthorisationError:
-                rich.print("⚡️ [red]You don't have access to the project, sorry[/red] 😫")
-                continue
-
-            encord_project_hash = _encord_project_hash
-
-    if project is None:
+    try:
+        project = client.get_project(project_hash)
+        _ = project.title
+    except encord.exceptions.AuthorisationError:
+        rich.print("⚡️ [red]You don't have access to the project, sorry[/red] 😫")
         exit()
 
     project_path = target / project.title.replace(" ", "-")
@@ -82,7 +70,7 @@ def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash:
 
     rich.print("Stored the following data:")
     rich.print(f"[magenta]{escape(yaml_str)}")
-    rich.print(f"In file: [blue]`{escape(meta_file_path.as_posix())}`")
+    rich.print(f'In file: [blue]"{escape(meta_file_path.as_posix())}"')
     rich.print()
     rich.print("Now downloading data and running metrics")
 

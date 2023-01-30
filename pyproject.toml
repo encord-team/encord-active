@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "encord-active"
-version = "v0.1.19"
+version = "v0.1.26"
 description = "Enable users to improve machine learning models in an active learning fashion via data, label, and model quality."
 authors = ["Cord Technologies Limited <hello@encord.com>"]
 classifiers=[
@@ -59,7 +59,6 @@ loguru = "^0.6.0"
 python-dotenv = "^0.21.0"
 streamlit-nested-layout = "^0.1.1"
 typer = "^0.6.1"
-inquirer = "^2.10.0"
 rich = "^12.6.0"
 PyYAML = "^6.0"
 toml = "^0.10.2"
@@ -70,6 +69,7 @@ pandera = "^0.13.4"
 jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
 easyocr = "^1.6.2"
+inquirerpy = "^0.3.4"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
