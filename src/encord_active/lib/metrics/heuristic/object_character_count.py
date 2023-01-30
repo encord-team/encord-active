@@ -29,7 +29,15 @@ class ObjectCharacterCount(Metric):
         reader = easyocr.Reader(["en"], verbose=False)
 
         for data_unit, img_pth in iterator.iterate(desc="Counting text characters"):
-            image = imread(str(img_pth))
+            if img_pth is None:
+                continue
+            try:
+                image = imread(str(img_pth))
+                if image is None:
+                    continue
+            except Exception:
+                continue
+
             H, W = image.shape[:2]
             for obj in data_unit["labels"].get("objects", []):
                 if not obj["shape"] in valid_annotation_types:
@@ -39,9 +47,24 @@ class ObjectCharacterCount(Metric):
                     continue
                 x1, y1 = int(coords[0][0] * W), int(coords[0][1] * H)
                 x2, y2 = int(coords[2][0] * W), int(coords[2][1] * H)
+                try:
+                    assert 0 <= x1 <= W
+                    assert 0 <= y1 <= H
+                    assert 0 <= x2 <= W
+                    assert 0 <= y2 <= H
+                except Exception as e:
+                    logger.info(e)
+                    continue
+
                 bbox = (x1, y1, x2, y2)
 
-                text = reader.readtext(self._imcrop(image, bbox), detail=0)
+                try:
+                    text = reader.readtext(self._imcrop(image, bbox), detail=0)
+                except Exception as e:
+                    logger.info(
+                        f"Exception found in label row {iterator.label_hash}, data unit {iterator.du_hash} and object hash {obj['objectHash']}"
+                    )
+                    continue
                 char_cnt = sum(map(len, text))
                 writer.write(char_cnt, obj)
                 found_any = True
