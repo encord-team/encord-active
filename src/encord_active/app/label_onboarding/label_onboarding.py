@@ -1,6 +1,5 @@
 from enum import Enum
 from pathlib import Path
-from typing import Dict
 
 import streamlit as st
 
@@ -9,9 +8,11 @@ from encord_active.lib.labels.classification import (
     create_ontology_structure,
     update_label_row_with_classification,
 )
-from encord_active.lib.metrics.execute import get_metrics, load_metric, run_metrics
+from encord_active.lib.metrics.execute import (
+    execute_metrics,
+    get_metrics_by_embedding_type,
+)
 from encord_active.lib.metrics.metric import EmbeddingType
-from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.project.project import Project
 
 
@@ -77,7 +78,8 @@ def label_onboarding_page():
         )
         st.expander("Ontology structure").json(ontology.to_dict())
         with st.expander("What metrics do you want to run on your labels?"):
-            selected_metrics = render_metric_selection(label_type)
+            metrics = get_metrics_by_embedding_type(LABEL_TYPE_EMBEDDING_MAPPING[label_type])
+            metric_selection = {metric: st.checkbox(metric.TITLE, True) for metric in metrics}
 
         if st.form_submit_button("Import Labels"):
             with st.spinner():
@@ -90,27 +92,6 @@ def label_onboarding_page():
                     )
                     project.save_label_row(updated_label_row)
 
-                selected_metric_titles = [title for title, should_run in selected_metrics.items() if should_run]
-                run_metrics(
-                    lambda metric: metric.TITLE in selected_metric_titles,
-                    data_dir=get_state().project_paths.project_dir,
-                    use_cache_only=True,
-                )
+                selected_metrics = [metric for metric, should_run in metric_selection.items() if should_run]
+                execute_metrics(selected_metrics, data_dir=get_state().project_paths.project_dir, use_cache_only=True)
             st.experimental_rerun()
-
-
-def render_metric_selection(label_type: LabelType):
-    metrics = map(load_metric, get_metrics())
-    selected_metrics: Dict[str, bool] = {}
-    for metric in metrics:
-        if not metric.ANNOTATION_TYPE:
-            continue
-
-        annotation_type = (
-            metric.ANNOTATION_TYPE if isinstance(metric.ANNOTATION_TYPE, list) else [metric.ANNOTATION_TYPE]
-        )
-        embedding_type = get_embedding_type(metric.TITLE, [a for a in annotation_type if a])
-        if embedding_type == LABEL_TYPE_EMBEDDING_MAPPING[label_type]:
-            selected_metrics[metric.TITLE] = st.checkbox(metric.TITLE, True)
-
-    return selected_metrics
