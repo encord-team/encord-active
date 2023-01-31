@@ -77,7 +77,13 @@ class DatasetIterator(Iterator):
                 for data_unit in data_units:
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
-                    yield data_unit, self.project.image_paths[label_hash][self.du_hash]
+                    try:
+                        yield data_unit, self.project.image_paths[label_hash][self.du_hash]
+                    except KeyError:
+                        logger.error(
+                            f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
+                        )
+                        continue
                     pbar.update(1)
             elif label_row.data_type == "video":
                 data_unit, *_ = label_row["data_units"].values()
