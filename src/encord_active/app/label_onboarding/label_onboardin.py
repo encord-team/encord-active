@@ -39,29 +39,47 @@ def label_onboarding_page():
     if not label_type:
         return
     elif label_type == LabelType.CLASSIFICATION:
-        st.info("For classifications we only support datasets where the data is split accros class directories.")
+        st.info(
+            """
+            For classifications, we only support datasets where the data is split accros class directories.
+            For example, the classes `cat`, `dog`, and `horse` would be picked up from this file structure:
+            ```
+            ├── cat/
+            │   ├── 0.png
+            │   └── ...
+            ├── dog/
+            │   ├── 0.png
+            │   └── ...
+            └── horse/
+                ├── 0.png
+                └── ...
+            ```
+            """
+        )
 
         project = Project(get_state().project_paths.project_dir).load()
         lr_data_units = [lr["data_units"] for lr in project.label_rows.values()]
         paths = [Path(data_unit["data_link"]) for data_units in lr_data_units for data_unit in data_units.values()]
         image_to_class_map = {path.name: path.parent.stem for path in paths}
         classes = set(image_to_class_map.values())
-        class_names_string = ", ".join(f'"{name}"' for name in classes)
+        class_names_string = ", ".join(f"`{name}`" for name in classes)
 
         ontology = create_ontology_structure(classes)
 
         st.subheader(f"We have identified {len(classes)} classes: {class_names_string}")
     else:
-        st.warning(f"We currently don't support {label_type}")
+        st.warning(f"We currently don't support easy import for {label_type}")
         return
 
     with st.form("label_import_form"):
-        st.write("Press submit if you would like to continue with these classes and create the following things:")
+        st.write(
+            'Press "Import Labels" if you would like to continue with these classes and create the following things:'
+        )
         st.expander("Ontology structure").json(ontology.to_dict())
-        with st.expander("Metrics that will be executed"):
+        with st.expander("What metrics do you want to run on your labels?"):
             selected_metrics = render_metric_selection(label_type)
 
-        if st.form_submit_button("Generate Labels"):
+        if st.form_submit_button("Import Labels"):
             with st.spinner():
                 project.save_ontology(ontology)
 
