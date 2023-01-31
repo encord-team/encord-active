@@ -82,7 +82,7 @@ class EncordActions:
         label_row_hash: str,
         data_unit_hash: str,
         data_unit_hashes: set[str],
-        new_du_to_original
+        new_du_to_original: dict[str, LabelRowDataUnit],
     ) -> Optional[str]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
@@ -151,13 +151,16 @@ class EncordActions:
                     # Since create_image_group does not return info related to the uploaded images, we should find its
                     # data_hash in a hacky way
                     new_data_unit_hash = self._upload_item(
-                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original)
+                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original
+                    )
                     uploaded_data_units.add(data_unit_hash)
                     if not new_data_unit_hash:
                         raise Exception("Data unit upload failed")
 
                     new_du_to_original[new_data_unit_hash] = LabelRowDataUnit(label_row_hash, data_unit_hash)
-                    lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit("", new_data_unit_hash)
+                    lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit(
+                        "", new_data_unit_hash
+                    )
                     uploaded_data_units.add(data_unit_hash)
 
                 if progress_callback:
@@ -196,11 +199,11 @@ class EncordActions:
 
             new_label_row_hash = initiated_label_row["label_hash"]
             new_data_unit_hash = dataset_creation_result.lr_du_mapping[original_data].data_unit
-            dataset_creation_result.lr_du_mapping[original_data] = LabelRowDataUnit(new_label_row_hash, new_data_unit_hash)
+            dataset_creation_result.lr_du_mapping[original_data] = LabelRowDataUnit(
+                new_label_row_hash, new_data_unit_hash
+            )
             original_label_row = json.loads(
-                self.project_file_structure.label_row_structure(
-                    original_data.label_row
-                ).label_row_file.read_text(
+                self.project_file_structure.label_row_structure(original_data.label_row).label_row_file.read_text(
                     encoding="utf-8",
                 )
             )
@@ -262,8 +265,13 @@ class EncordActions:
         updated_collection = [fix_pickle_file(up, renaming_map) for up in collection]
         save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
 
-    def replace_uids(self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str):
-        renaming_map = {self.project_meta["project_hash"]: project_hash}
+    def replace_uids(
+        self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
+    ):
+        label_row_meta = json.loads(self.project_file_structure.label_row_meta.read_text(encoding="utf-8"))
+        original_dataset_hash = next(iter(label_row_meta.values()))["dataset_hash"]
+
+        renaming_map = {self.project_meta["project_hash"]: project_hash, original_dataset_hash: dataset_hash}
 
         for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
             old_lr_path = self.project_file_structure.data / old_lr

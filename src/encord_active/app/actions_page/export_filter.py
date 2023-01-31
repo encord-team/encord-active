@@ -1,4 +1,3 @@
-import dataclasses
 import json
 from datetime import datetime
 from typing import NamedTuple, Optional, Tuple, cast
@@ -109,7 +108,7 @@ class InputItem(NamedTuple):
     description: str
 
 
-class dada(NamedTuple):
+class RenderItems(NamedTuple):
     dataset: InputItem
     project: InputItem
     ontology: Optional[InputItem] = None
@@ -117,20 +116,16 @@ class dada(NamedTuple):
 
 def _get_column(col, item, num_rows) -> InputItem:
     return InputItem(
-        col.text_input(f"{item} title",
-                       value=f"Subset: {get_state().project_paths.project_dir.name} ({num_rows})"),
-        col.text_area(f"{item} description")
+        col.text_input(f"{item} title", value=f"Subset: {get_state().project_paths.project_dir.name} ({num_rows})"),
+        col.text_area(f"{item} description"),
     )
 
 
-def _get_columns(needs_ontology: bool, num_rows: int) -> dada:
+def _get_columns(needs_ontology: bool, num_rows: int) -> RenderItems:
     items_to_render = ["Dataset", "Project"] if needs_ontology else ["Dataset", "Project", "Ontology"]
     form_columns = st.columns(len(items_to_render))
 
-    return dada(
-        *[_get_column(col, item, num_rows)
-          for item, col in zip(items_to_render, form_columns)]
-    )
+    return RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
 
 
 def export_filter():
@@ -250,8 +245,8 @@ community</a>
 
             if not st.form_submit_button("➕ Create"):
                 return
-            for item, (title, _) in zip(cols._fields, cols):
-                if title == "":
+            for item, render_item in zip(cols._fields, cols):
+                if render_item and render_item.title == "":
                     st.error(f"{item.capitalize()} title cannot be empty!")
                     return
 
@@ -264,15 +259,17 @@ community</a>
             clear()
             label.text("Step 2/2: Uploading labels...")
             ontology_hash = (
-                action_utils.original_project.get_project().ontology_hash
-                if has_original_project and cols.ontology
-                else action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
+                action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
+                if not has_original_project and cols.ontology
+                else action_utils.original_project.get_project().ontology_hash
             )
             new_project = action_utils.create_project(
                 dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
             )
 
-            action_utils.replace_uids(dataset_creation_result.lr_du_mapping, new_project.project_hash)
+            action_utils.replace_uids(
+                dataset_creation_result.lr_du_mapping, new_project.project_hash, dataset_creation_result.hash
+            )
             clear()
             label.info("🎉 New project is created!")
 
