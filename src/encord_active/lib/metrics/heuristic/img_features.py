@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.common.utils import get_du_size
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
@@ -230,36 +231,39 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 class AspectRatioMetric(Metric):
     TITLE = "Aspect Ratio"
     SHORT_DESCRIPTION = "Ranks images by their aspect ratio (width/height)."
-    LONG_DESCRIPTION = r"""Ranks images by their aspect ratio (width/height).
+    LONG_DESCRIPTION = r"""Ranks images by their aspect ratio.
 
-Aspect ratio is computed as the ratio of image width to image height.
+Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
 """
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
 
-    @staticmethod
-    def rank_by_aspect_ratio(image):
-        return image.shape[1] / image.shape[0]
-
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_aspect_ratio, self.TITLE)
+        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.TITLE}"):
+            size = get_du_size(data_unit, img_pth)
+            if not size:
+                continue
+            img_h, img_w = size
+            aspect_ratio = img_w / img_h
+            writer.write(aspect_ratio)
 
 
 class AreaMetric(Metric):
     TITLE = "Area"
     SHORT_DESCRIPTION = "Ranks images by their area (width*height)."
-    LONG_DESCRIPTION = r"""Ranks images by their area (width*height).
+    LONG_DESCRIPTION = r"""Ranks images by their area.
 
-Area is computed as the product of image width and image height.
+Area is computed as the product of image width and image height ($width \times height$).
 """
     METRIC_TYPE = MetricType.HEURISTIC
     DATA_TYPE = DataType.IMAGE
     ANNOTATION_TYPE = AnnotationType.NONE
 
-    @staticmethod
-    def rank_by_area(image):
-        return image.shape[0] * image.shape[1]
-
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_area, self.TITLE)
+        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.TITLE}"):
+            size = get_du_size(data_unit, img_pth)
+            if not size:
+                continue
+            image_area = size[0] * size[1]  # H * W
+            writer.write(image_area)
