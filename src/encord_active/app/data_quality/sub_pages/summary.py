@@ -8,7 +8,7 @@ from encord_active.app.common.components.metric_summary import (
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.label_onboarding.label_onboardin import label_onboarding_page
+from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.dataset.outliers import MetricWithDistanceSchema
 from encord_active.lib.metrics.utils import MetricScope, load_available_metrics
 
