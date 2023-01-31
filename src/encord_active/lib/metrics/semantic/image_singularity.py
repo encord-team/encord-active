@@ -18,12 +18,6 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
 
-# For more information why we set the below threshold
-# see here: https://github.com/facebookresearch/faiss/wiki/Implementation-notes#matrix-multiplication-to-do-many-l2-distance-computations
-# If the 2nd approach is used, identical images have distance more than zero
-# which affects this metric
-# faiss.cvar.distance_compute_blas_threshold = sys.maxsize
-
 
 @dataclass
 class DataUnitInfo:
@@ -34,13 +28,11 @@ class DataUnitInfo:
 class ImageSingularity(Metric):
     TITLE = "Image Singularity"
     SHORT_DESCRIPTION = "Finds duplicate and near-duplicate images"
-    LONG_DESCRIPTION = r"""This metric gives a score for each image that shows the uniqueness of each image.
-    A score of zero means that the image has duplicates in the dataset, on the other hand, a score close to one
-     represents that image in quite unique. Among the duplicate images we only give
-    a non-zero score to single image, and the rest will have a score of zero.    
-    For example, if there are 5 exactly the same image, only 4 of the will have a score of zero. This way, these 
-    duplicate samples can be easily tagged and removed from the project.  
-    Images that are near-duplicates of each other will be shown side-by-side. 
+    LONG_DESCRIPTION = r"""
+    This metric gives a score to each image that shows the uniqueness of each image.        
+    - A score of zero means that the image has duplicates in the dataset, on the other hand, a score close to one represents that image is quite unique. Among the duplicate images we only give a non-zero score to single image, and the rest will have a score of zero.     
+    - For example, if there are 5 identical images, only 4 of the will have a score of zero. This way, these duplicate samples can be easily tagged and removed from the project.    
+    - Images that are near-duplicates of each other will be shown side-by-side. 
             """
     NEEDS_IMAGES = True
     ANNOTATION_TYPE = None
@@ -48,7 +40,7 @@ class ImageSingularity(Metric):
     METRIC_TYPE = MetricType.SEMANTIC
     DATA_TYPE = DataType.IMAGE
 
-    def __init__(self, near_duplicate_threshold=0.1):
+    def __init__(self, near_duplicate_threshold=0.95):
         super(ImageSingularity, self).__init__()
         self.collections: List[LabelEmbedding] = {}
         self.scores: dict[str, DataUnitInfo] = {}
@@ -76,16 +68,16 @@ class ImageSingularity(Metric):
                 self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(0.0, "duplicate image")
                 continue
             for j in range(1, nearest_items.shape[1]):
-                if nearest_distances[i, j] == 0.0:
+                if abs(1.0 - nearest_distances[i, j]) < 1e-5:
                     previous_duplicates.add(nearest_items[i, j])
                 else:
-                    if nearest_distances[i, j] < self.near_duplicate_threshold:
+                    if (nearest_distances[i, j] + 1) / 2 > self.near_duplicate_threshold:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            nearest_distances[i, j], "Near duplicate image"
+                            1 - (nearest_distances[i, j] + 1) / 2, "Near duplicate image"
                         )
                     else:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            nearest_distances[i, j], ""
+                            1 - (nearest_distances[i, j] + 1) / 2, ""
                         )
                     break
 
