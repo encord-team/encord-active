@@ -42,6 +42,12 @@ class MetricWithDistanceSchema(MetricSchema):
     outliers_status: Optional[Series[str]] = pa.Field()
 
 
+class AllMetricsOutlierSchema(pa.SchemaModel):
+    metric_name: Series[str] = pa.Field()
+    total_severe_outliers: Series[int] = pa.Field()
+    total_moderate_outliers: Series[int] = pa.Field()
+
+
 _COLUMNS = MetricWithDistanceSchema
 
 
@@ -88,7 +94,13 @@ def get_iqr_outliers(
 
 
 def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
-    all_metrics_outliers = pd.DataFrame(columns=["metric", "total_severe_outliers", "total_moderate_outliers"])
+    all_metrics_outliers = pd.DataFrame(
+        columns=[
+            AllMetricsOutlierSchema.metric_name,
+            AllMetricsOutlierSchema.total_severe_outliers,
+            AllMetricsOutlierSchema.total_moderate_outliers,
+        ]
+    )
     for item in metrics_data_summary.metrics.values():
         all_metrics_outliers = pd.concat(
             [
