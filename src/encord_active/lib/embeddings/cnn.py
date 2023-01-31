@@ -292,9 +292,10 @@ def generate_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, t
     else:
         raise ValueError(f"Unsupported embedding type {embedding_type}")
 
-    target_path = Path(target)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_bytes(pickle.dumps(cnn_embeddings))
+    if cnn_embeddings:
+        target_path = Path(target)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(pickle.dumps(cnn_embeddings))
 
     logger.info("Done!")
 
