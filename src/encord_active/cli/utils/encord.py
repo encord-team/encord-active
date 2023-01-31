@@ -4,18 +4,17 @@ from typing import Optional
 import encord.exceptions
 import rich
 import yaml
-from encord import EncordUserClient
 from rich.markup import escape
 from rich.panel import Panel
 
-from encord_active.lib.encord.utils import get_encord_projects
+from encord_active.lib.encord.utils import get_client, get_encord_projects
 from encord_active.lib.metrics.execute import run_metrics
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
 def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]) -> Path:
-    client = EncordUserClient.create_with_ssh_private_key(ssh_key_path.read_text(encoding="utf-8"))
+    client = get_client(ssh_key_path)
 
     if encord_project_hash:
         project_hash = encord_project_hash

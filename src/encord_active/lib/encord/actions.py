@@ -11,6 +11,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.lib.common.utils import fetch_project_meta
+from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project import ProjectFileStructure
 
 
@@ -37,9 +38,7 @@ class EncordActions:
         if not ssh_key_path.is_file():
             raise FileNotFoundError(f"No SSH file in location: {ssh_key_path}")
 
-        self.user_client = EncordUserClient.create_with_ssh_private_key(
-            Path(ssh_key_path).expanduser().read_text(encoding="utf-8"),
-        )
+        self.user_client = get_client(Path(ssh_key_path).expanduser())
 
         self.original_project = self.user_client.get_project(original_project_hash)
         try:
