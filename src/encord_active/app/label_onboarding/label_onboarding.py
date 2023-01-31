@@ -96,7 +96,6 @@ def label_onboarding_page():
                     data_dir=get_state().project_paths.project_dir,
                     use_cache_only=True,
                 )
-            st.balloons()
             st.experimental_rerun()
 
 
