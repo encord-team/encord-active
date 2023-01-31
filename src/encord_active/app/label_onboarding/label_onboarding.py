@@ -4,6 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.app.common.state import get_state
+from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
 from encord_active.lib.labels.classification import (
     create_ontology_structure,
     update_label_row_with_classification,
@@ -28,6 +29,13 @@ LABEL_TYPE_EMBEDDING_MAPPING = {
 
 
 SUPPORTED_LABEL_TYPES = [LabelType.CLASSIFICATION]
+
+
+def update_merged_metrics():
+    merged_metrics = build_merged_metrics(get_state().project_paths.metrics)
+    merged_metrics.update(get_state().merged_metrics.tags)
+    get_state().merged_metrics = merged_metrics
+    MergedMetrics().replace_all(merged_metrics)
 
 
 def label_onboarding_page():
@@ -94,4 +102,5 @@ def label_onboarding_page():
 
                 selected_metrics = [metric for metric, should_run in metric_selection.items() if should_run]
                 execute_metrics(selected_metrics, data_dir=get_state().project_paths.project_dir, use_cache_only=True)
+                update_merged_metrics()
             st.experimental_rerun()
