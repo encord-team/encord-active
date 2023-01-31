@@ -20,7 +20,7 @@ class IqrOutliers(NamedTuple):
 
 class MetricOutlierInfo(NamedTuple):
     metric: MetricData
-    df: pd.DataFrame
+    df: DataFrame[MetricSchema]
     iqr_outliers: IqrOutliers
 
 
@@ -43,9 +43,9 @@ class MetricWithDistanceSchema(MetricSchema):
 
 
 class AllMetricsOutlierSchema(pa.SchemaModel):
-    metric_name: Series[str] = pa.Field()
-    total_severe_outliers: Series[int] = pa.Field()
-    total_moderate_outliers: Series[int] = pa.Field()
+    metric_name: Series[str]
+    total_severe_outliers: Series[int] = pa.Field(coerce=True)
+    total_moderate_outliers: Series[int] = pa.Field(coerce=True)
 
 
 _COLUMNS = MetricWithDistanceSchema
@@ -93,7 +93,7 @@ def get_iqr_outliers(
     return (df, IqrOutliers(n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub))
 
 
-def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFrame:
+def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> DataFrame[AllMetricsOutlierSchema]:
     all_metrics_outliers = pd.DataFrame(
         columns=[
             AllMetricsOutlierSchema.metric_name,
@@ -107,15 +107,15 @@ def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> pd.DataFr
                 all_metrics_outliers,
                 pd.DataFrame(
                     {
-                        "metric": [item.metric.name],
-                        "total_severe_outliers": [item.iqr_outliers.n_severe_outliers],
-                        "total_moderate_outliers": [item.iqr_outliers.n_moderate_outliers],
+                        AllMetricsOutlierSchema.metric_name: [item.metric.name],
+                        AllMetricsOutlierSchema.total_severe_outliers: [item.iqr_outliers.n_severe_outliers],
+                        AllMetricsOutlierSchema.total_moderate_outliers: [item.iqr_outliers.n_moderate_outliers],
                     }
                 ),
             ],
             axis=0,
         )
 
-    all_metrics_outliers.sort_values(by=["total_severe_outliers"], ascending=False, inplace=True)
+    all_metrics_outliers.sort_values(by=[AllMetricsOutlierSchema.total_severe_outliers], ascending=False, inplace=True)
 
-    return all_metrics_outliers
+    return all_metrics_outliers.pipe(DataFrame[AllMetricsOutlierSchema])

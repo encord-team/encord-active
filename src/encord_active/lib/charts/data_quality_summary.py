@@ -5,6 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pandera.typing import DataFrame, Series
 
+from encord_active.lib.dataset.outliers import AllMetricsOutlierSchema
+from encord_active.lib.metrics.utils import MetricSchema
+
 
 class LabelStatisticsSchema(pa.SchemaModel):
     name: Series[str] = pa.Field()
@@ -12,22 +15,30 @@ class LabelStatisticsSchema(pa.SchemaModel):
     status: Series[bool] = pa.Field()
 
 
+class CrossMetricSchema(pa.SchemaModel):
+    identifier: Series[str]
+    x: Series[float] = pa.Field(coerce=True)
+    y: Series[float] = pa.Field(coerce=True)
+
+
 def create_outlier_distribution_chart(
-    all_metrics_outliers_summary: pd.DataFrame, severe_outlier_color: str, moderate_outlier_color: str
+    all_metrics_outliers_summary: DataFrame[AllMetricsOutlierSchema],
+    severe_outlier_color: str,
+    moderate_outlier_color: str,
 ) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(
         go.Bar(
-            x=all_metrics_outliers_summary["metric"],
-            y=all_metrics_outliers_summary["total_severe_outliers"],
+            x=all_metrics_outliers_summary[AllMetricsOutlierSchema.metric_name],
+            y=all_metrics_outliers_summary[AllMetricsOutlierSchema.total_severe_outliers],
             name="Severe outliers",
             marker_color=severe_outlier_color,
         )
     )
     fig.add_trace(
         go.Bar(
-            x=all_metrics_outliers_summary["metric"],
-            y=all_metrics_outliers_summary["total_moderate_outliers"],
+            x=all_metrics_outliers_summary[AllMetricsOutlierSchema.metric_name],
+            y=all_metrics_outliers_summary[AllMetricsOutlierSchema.total_moderate_outliers],
             name="Moderate outliers",
             marker_color=moderate_outlier_color,
         )
@@ -96,22 +107,24 @@ def create_image_size_distribution_chart(image_sizes: np.ndarray) -> go.Figure:
     return fig
 
 
-def create_2d_metric_chart(metrics_df: pd.DataFrame, show_trendline: bool = True) -> go.Figure:
+def create_2d_metric_chart(
+    metrics_df: DataFrame[CrossMetricSchema], x_axis_title: str, y_axis_title: str, show_trendline: bool = True
+) -> go.Figure:
     """
     This function expects a dataframe where its columns are [identifier, x_value, y_value]
     """
     fig = px.scatter(
         metrics_df,
-        x=metrics_df.columns[1],
-        y=metrics_df.columns[2],
+        x=metrics_df[CrossMetricSchema.x],
+        y=metrics_df[CrossMetricSchema.y],
         hover_data=["identifier"],
         trendline="ols" if show_trendline else None,
         trendline_color_override="black",
     )
     fig.update_layout(
-        title=f"{metrics_df.columns[1]} vs. {metrics_df.columns[2]}",
-        xaxis_title=metrics_df.columns[1],
-        yaxis_title=metrics_df.columns[2],
+        title=f"{x_axis_title} vs. {y_axis_title}",
+        xaxis_title=x_axis_title,
+        yaxis_title=y_axis_title,
     )
 
     return fig

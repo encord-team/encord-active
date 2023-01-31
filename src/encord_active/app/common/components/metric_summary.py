@@ -10,6 +10,7 @@ from encord_active.app.common.components.data_quality_summary import summary_ite
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
+    CrossMetricSchema,
     create_2d_metric_chart,
     create_image_size_distribution_chart,
     create_labels_distribution_chart,
@@ -17,6 +18,7 @@ from encord_active.lib.charts.data_quality_summary import (
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
+    AllMetricsOutlierSchema,
     IqrOutliers,
     MetricsSeverity,
     MetricWithDistanceSchema,
@@ -42,9 +44,11 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
     with st.expander("2D metrics view", True):
         metric_selection_col, scatter_plot_col = st.columns([2, 5])
         metric_names = [metric_name for metric_name in metrics_data_summary.metrics.keys()]
+
         if len(metric_names) < 2:
             st.info("You need at least two metrics to plot 2D metric view.")
             return
+
         x_metric_name = metric_selection_col.selectbox("x axis", metric_names, index=0)
         y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
         trend_selected = metric_selection_col.checkbox(
@@ -86,18 +90,24 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
 
             merged_metrics.pop("identifier_rest")
 
-        fig = create_2d_metric_chart(merged_metrics, trend_selected)
+        merged_metrics.rename(
+            columns={x_metric_name: CrossMetricSchema.x, y_metric_name: CrossMetricSchema.y}, inplace=True
+        )
+
+        fig = create_2d_metric_chart(
+            merged_metrics.pipe(DataFrame[CrossMetricSchema]), x_metric_name, y_metric_name, trend_selected
+        )
         scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
 
-def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
+def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator):
     st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")
 
     for counter, (_, row) in enumerate(metrics.iterrows()):
         st_col.metric(
-            f"{counter + 1}. {row['metric']} outliers",
-            row["total_severe_outliers"],
-            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+            f"{counter + 1}. {row[AllMetricsOutlierSchema.metric_name]} outliers",
+            row[AllMetricsOutlierSchema.total_severe_outliers],
+            help=f"Go to Explorer page and chose {row[AllMetricsOutlierSchema.metric_name]} metric to spot these outliers.",
         )
 
 
@@ -156,7 +166,9 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     fig = create_image_size_distribution_chart(get_state().image_sizes)
     plots_col.plotly_chart(fig, use_container_width=True)
 
-    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    metrics_with_severe_outliers = all_metrics_outliers[
+        all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
+    ]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
 
     render_2d_metric_plots(get_state().metrics_data_summary)
@@ -243,7 +255,9 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
             )
             st.plotly_chart(fig, use_container_width=True)
 
-    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    metrics_with_severe_outliers = all_metrics_outliers[
+        all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
+    ]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
     render_2d_metric_plots(get_state().metrics_label_summary)
 
