@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Find Similar Images
+# Identifying Similar Images
 
 **Mine edge cases, duplicates, and check the quality of your labels with visual similarity search**
 

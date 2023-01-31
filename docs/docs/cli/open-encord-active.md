@@ -4,7 +4,7 @@ sidebar_position: 7
 
 import Link from '@docusaurus/Link';
 
-# Open Encord Active
+# Opening Encord Active
 
 :::info
 
