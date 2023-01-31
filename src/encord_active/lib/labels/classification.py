@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import asdict, dataclass, field
-from typing import List, Set, Union
+from typing import List, Optional, Set, Union
 
 from encord.objects.common import NestableOption, RadioAttribute
 from encord.objects.ontology_structure import Classification, OntologyStructure
@@ -62,28 +62,29 @@ def build_classification_answer(
 
 
 def update_label_row_with_classification(
-    label_row: LabelRow, classification: Classification, image_class: str
+    label_row: LabelRow, classification: Classification, image_class: str, data_hashes: Optional[List[str]] = None
 ) -> LabelRow:
     attribute = classification.attributes[0]
     classification_hash = str(uuid.uuid4())[:8]
-    data_hash = list(label_row["data_units"].keys())[0]
-    label_classification = build_label_classification(classification)
 
-    label_row["data_units"][data_hash]["labels"]["classifications"] = [
-        {**asdict(label_classification), "classificationHash": classification_hash}
-    ]
+    for data_hash in data_hashes or label_row["data_units"].keys():
+        label_classification = build_label_classification(classification)
 
-    if not isinstance(attribute, RadioAttribute):
-        raise ValueError("Classification attribute should be radio attribute")
+        label_row["data_units"][data_hash]["labels"]["classifications"] = [
+            {**asdict(label_classification), "classificationHash": classification_hash}
+        ]
 
-    option, *_ = [option for option in attribute.options if option.value == image_class]
+        if not isinstance(attribute, RadioAttribute):
+            raise ValueError("Classification attribute should be radio attribute")
 
-    label_row["classification_answers"] = {
-        classification_hash: {
-            "classificationHash": classification_hash,
-            "classifications": [asdict(build_classification_answer(label_classification, option, attribute))],
+        option, *_ = [option for option in attribute.options if option.value == image_class]
+
+        label_row["classification_answers"] = {
+            classification_hash: {
+                "classificationHash": classification_hash,
+                "classifications": [asdict(build_classification_answer(label_classification, option, attribute))],
+            }
         }
-    }
 
     return label_row
 
