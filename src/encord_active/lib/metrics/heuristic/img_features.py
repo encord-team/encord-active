@@ -230,7 +230,7 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
 class AspectRatioMetric(Metric):
     TITLE = "Aspect Ratio"
-    SHORT_DESCRIPTION = r"Ranks images by their aspect ratio (width/height)."
+    SHORT_DESCRIPTION = "Ranks images by their aspect ratio (width/height)."
     LONG_DESCRIPTION = r"""Ranks images by their aspect ratio.
 
 Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
@@ -251,7 +251,7 @@ Aspect ratio is computed as the ratio of image width to image height ($\frac{wid
 
 class AreaMetric(Metric):
     TITLE = "Area"
-    SHORT_DESCRIPTION = r"Ranks images by their area (width*height)."
+    SHORT_DESCRIPTION = "Ranks images by their area (width*height)."
     LONG_DESCRIPTION = r"""Ranks images by their area.
 
 Area is computed as the product of image width and image height ($width \times height$).
