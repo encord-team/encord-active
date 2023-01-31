@@ -42,6 +42,9 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
     with st.expander("2D metrics view", True):
         metric_selection_col, scatter_plot_col = st.columns([2, 5])
         metric_names = [metric_name for metric_name in metrics_data_summary.metrics.keys()]
+        if len(metric_names) < 2:
+            st.info("You need at least two metrics to plot 2D metric view.")
+            return
         x_metric_name = metric_selection_col.selectbox("x axis", metric_names, index=0)
         y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
         trend_selected = metric_selection_col.checkbox(
