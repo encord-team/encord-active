@@ -19,13 +19,12 @@ import os
 import random
 import shutil
 import string
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, TypedDict, Union
 from uuid import uuid4
 
-from encord.dataset import DataRow
 from encord.exceptions import (
     FileTypeNotSupportedError as EncordFiletypeNotSupportedError,
 )
@@ -72,31 +71,14 @@ class DataRowMedia:
         self.path = self.path.resolve()
 
 
-class LocalDataRow(DataRow):
-    def __init__(
-        self,
-        uid: str,
-        label_hash: str,
-        title: str,
-        data_type: DataType,
-        media: Union[DataRowMedia, List[DataRowMedia]],
-    ):
-        """
-        Mimics the Encord DataRow but with two additional parameters `path` and
-        `label_hash` to ease implementation.
-
-        Args:
-            uid: The data hash
-            label_hash: The hash of the associated label row in the `LocalProject`.
-            title: The title of the Data row.
-            data_type: The data type of the DataRow.
-            media: The local path(s) and uids of the media asset(s).
-        """
-        created_at: datetime = datetime.now()
-        super(LocalDataRow, self).__init__(uid=uid, title=title, data_type=data_type, created_at=created_at)  # type: ignore
-
-        self.media = [media] if isinstance(media, DataRowMedia) else media
-        self.label_hash = label_hash
+@dataclass
+class LocalDataRow:
+    uid: str
+    label_hash: str
+    title: str
+    data_type: DataType
+    media: List[DataRowMedia]
+    created_at: datetime = field(default_factory=datetime.now)
 
 
 def get_mimetype(path: Path) -> str:
@@ -293,7 +275,7 @@ class LocalDataset:
             title = _uri.name
 
         data_row = LocalDataRow(
-            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=dr_media
+            uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=[dr_media]
         )
         self._data_rows[data_hash] = data_row
 
