@@ -89,14 +89,14 @@ def upload_annotation(
     data_row: LocalDataRow,
     id_to_obj: Dict[int, Object],
 ):
-    data_hash = data_row["data_hash"]
+    data_hash = data_row.uid
     lr_dict = project.create_label_row(data_hash)
     label_hash = lr_dict["label_hash"]
     lr = project.get_label_row(label_hash, get_signed_url=False)
     try:
-        annotation_list = annotations[int(data_row["data_title"])]
+        annotation_list = annotations[int(data_row.title)]
     except KeyError:
-        print(f"No annotations for {data_row['data_title']}")
+        print(f"No annotations for {data_row.title}")
         annotation_list = []
     data_unit = lr["data_units"][data_hash]
     img_w, img_h = data_unit["width"], data_unit["height"]

@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Find Outliers
+# Finding Outliers
 
 **Use Encord Active to find label outliers in your dataset**
 
