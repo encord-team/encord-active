@@ -110,9 +110,7 @@ def create_image_size_distribution_chart(image_sizes: np.ndarray) -> go.Figure:
 def create_2d_metric_chart(
     metrics_df: DataFrame[CrossMetricSchema], x_axis_title: str, y_axis_title: str, show_trendline: bool = True
 ) -> go.Figure:
-    """
-    This function expects a dataframe where its columns are [identifier, x_value, y_value]
-    """
+
     fig = px.scatter(
         metrics_df,
         x=metrics_df[CrossMetricSchema.x],
