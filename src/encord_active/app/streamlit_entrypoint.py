@@ -18,7 +18,6 @@ from encord_active.app.model_quality.sub_pages.performance_by_metric import (
     PerformanceMetric,
 )
 from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
-from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.common.utils import fetch_project_meta
@@ -28,7 +27,6 @@ from encord_active.lib.metrics.utils import MetricScope
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
 
 pages: Pages = {
-    "Encord Active": landing_page,
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
     "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
     "Model Quality": {
@@ -77,7 +75,7 @@ def main(project_path: str):
         key = pages_menu(items=items)
         path = key.split(SEPARATOR) if key else []
 
-    render = reduce(dict.__getitem__, path, pages) if path else pages["Encord Active"]  # type: ignore
+    render = reduce(dict.__getitem__, path, pages) if path else pages["Label Quality"]["Summary"]  # type: ignore
     if callable(render):
         render()
 
