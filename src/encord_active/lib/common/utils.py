@@ -312,7 +312,7 @@ def binary_mask_to_rle(mask: np.ndarray) -> RLEData:
     return {"size": list(mask.shape), "counts": rle.tolist()}
 
 
-def rle_to_binary_mask(rle: Dict[str, list]) -> np.ndarray:
+def rle_to_binary_mask(rle: RLEData) -> np.ndarray:
     """
     RLE to binary mask.
 
@@ -342,7 +342,7 @@ def mask_iou(m1: np.ndarray, m2: np.ndarray) -> float:
     return intersection / union
 
 
-def __rle_iou(rle1: dict, rle2: dict) -> float:
+def __rle_iou(rle1: RLEData, rle2: RLEData) -> float:
     """
     Compute intersection over union for rle dictionaries.
     """
@@ -351,7 +351,7 @@ def __rle_iou(rle1: dict, rle2: dict) -> float:
     return mask_iou(m1, m2)
 
 
-def rle_iou(rle1: Union[dict, list[dict]], rle2: Union[dict, list[dict]]) -> np.ndarray:
+def rle_iou(rle1: Union[RLEData, list[RLEData]], rle2: Union[RLEData, list[RLEData]]) -> np.ndarray:
     """
     Compute intersection over union for rle dictionaries.
     """
