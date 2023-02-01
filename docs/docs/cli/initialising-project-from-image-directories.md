@@ -39,7 +39,7 @@ You have some additional options to tailor the initialisation of the project for
 
 #### `--glob` (or `-g`)
 
-> **Default:** `"**/*.jpg"`, `"**/*.png"`, `"**/*.jpeg"`, `"**/*.tiff"`.
+> **Default:** `"**/*.jpg"`, `"**/*.jpeg"`, `"**/*.png"`, `"**/*.tiff"`.
 
 Glob patterns are used to choose files.
 You can specify multiple options if you wish to include files from specific subdirectories.
