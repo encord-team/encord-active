@@ -287,7 +287,12 @@ def fix_duplicate_image_orders_in_knn_graph_single_row(row_no: int, nearest_item
         return nearest_items
 
 
-def binary_mask_to_rle(mask: np.ndarray) -> Dict[str, list]:
+class RLEData(TypedDict):
+    size: List[int]
+    counts: List[int]
+
+
+def binary_mask_to_rle(mask: np.ndarray) -> RLEData:
     """
     Converts a binary mask into a Run-length Encoding (RLE).
 

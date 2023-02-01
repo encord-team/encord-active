@@ -34,10 +34,10 @@ class LabelSchema(IdentifierSchema):
     url: Series[str] = pa.Field()
     img_id: Series[padt.Int64] = pa.Field(coerce=True)
     class_id: Series[padt.Int64] = pa.Field(coerce=True)
-    x1: Series[padt.Int64] = pa.Field(coerce=True)
-    y1: Series[padt.Int64] = pa.Field(coerce=True)
-    x2: Series[padt.Int64] = pa.Field(coerce=True)
-    y2: Series[padt.Int64] = pa.Field(coerce=True)
+    x1: Series[padt.Float64] = pa.Field(coerce=True)
+    y1: Series[padt.Float64] = pa.Field(coerce=True)
+    x2: Series[padt.Float64] = pa.Field(coerce=True)
+    y2: Series[padt.Float64] = pa.Field(coerce=True)
     rle: Series[object] = pa.Field(nullable=True, coerce=True)
 
 
