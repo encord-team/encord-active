@@ -26,7 +26,7 @@ class MetricOutlierInfo(NamedTuple):
 
 @dataclass
 class MetricsSeverity:
-    metrics: dict[str, MetricOutlierInfo] = field(default_factory=dict)
+    metrics: list[MetricOutlierInfo] = field(default_factory=list)
     total_unique_moderate_outliers: Optional[int] = None
     total_unique_severe_outliers: Optional[int] = None
 
@@ -101,7 +101,7 @@ def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> DataFrame
             AllMetricsOutlierSchema.total_moderate_outliers,
         ]
     )
-    for item in metrics_data_summary.metrics.values():
+    for item in metrics_data_summary.metrics:
         all_metrics_outliers = pd.concat(
             [
                 all_metrics_outliers,
