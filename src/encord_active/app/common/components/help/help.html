@@ -1,0 +1,20 @@
+<script>
+  const st = window.parent;
+  let sidebar = st.document.querySelector('[data-testid="stSidebar"]');
+  sidebar = sidebar.firstChild.lastChild;
+  sidebar.style.height = "100%";
+
+  let verticalBlock = sidebar.querySelector('[data-testid="stVerticalBlock"]');
+
+  verticalBlock.removeChild(verticalBlock.firstChild);
+  target = verticalBlock.firstChild;
+
+  verticalBlock.removeChild(target);
+  let targetParent = verticalBlock.parentElement.parentElement.parentElement;
+  targetParent.appendChild(target);
+
+  targetParent.style.display = "flex";
+  targetParent.style.flexDirection = "column";
+  targetParent.style.gap = "2rem";
+  targetParent.style.paddingBottom = "2rem";
+</script>
