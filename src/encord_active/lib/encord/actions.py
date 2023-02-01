@@ -9,6 +9,7 @@ from encord.constants.enums import DataType
 from encord.exceptions import AuthorisationError
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.dataset import StorageLocation
+from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
@@ -172,6 +173,41 @@ class EncordActions:
         ontology_structure = OntologyStructure.from_dict(ontology_dict)
         return self.user_client.create_ontology(title, structure=ontology_structure, description=description)
 
+    @staticmethod
+    def prepare_label_row(
+        original_label_row: dict, initiated_label_row: dict, new_label_row: dict, original_du: str
+    ) -> LabelRow:
+        if initiated_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
+            original_labels = original_label_row["data_units"][original_du]["labels"]
+            initiated_label_row["data_units"][new_label_row["data_hash"]]["labels"] = original_labels
+            initiated_label_row["object_answers"] = original_label_row["object_answers"]
+            initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
+
+        elif initiated_label_row["data_type"] == DataType.IMG_GROUP.value:
+            object_hashes: set = set()
+            classification_hashes: set = set()
+
+            # Currently img_groups are matched using data_title, it should be fixed after SDK update
+            for data_unit in initiated_label_row["data_units"].values():
+                for original_data in original_label_row["data_units"].values():
+                    if original_data["data_hash"] == data_unit["data_title"].split(".")[0]:
+                        data_unit["labels"] = original_data["labels"]
+                        for obj in data_unit["labels"].get("objects", []):
+                            object_hashes.add(obj["objectHash"])
+                        for classification in data_unit["labels"].get("classifications", []):
+                            classification_hashes.add(classification["classificationHash"])
+
+            initiated_label_row["object_answers"] = original_label_row["object_answers"]
+            initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
+
+            # Remove unused object/classification answers
+            for object_hash in object_hashes:
+                initiated_label_row["object_answers"].pop(object_hash)
+
+            for classification_hash in classification_hashes:
+                initiated_label_row["classification_answers"].pop(classification_hash)
+        return construct_answer_dictionaries(initiated_label_row)
+
     def create_project(
         self,
         dataset_creation_result: DatasetCreationResult,
@@ -195,57 +231,23 @@ class EncordActions:
         all_new_label_rows = new_project.label_rows
         for counter, new_label_row in enumerate(all_new_label_rows):
             initiated_label_row: dict = new_project.create_label_row(new_label_row["data_hash"])
-            original_data = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
+            original_lr_du = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
 
             new_label_row_hash = initiated_label_row["label_hash"]
-            new_data_unit_hash = dataset_creation_result.lr_du_mapping[original_data].data_unit
-            dataset_creation_result.lr_du_mapping[original_data] = LabelRowDataUnit(
+            new_data_unit_hash = dataset_creation_result.lr_du_mapping[original_lr_du].data_unit
+            dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
                 new_label_row_hash, new_data_unit_hash
             )
             original_label_row = json.loads(
-                self.project_file_structure.label_row_structure(original_data.label_row).label_row_file.read_text(
+                self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
                     encoding="utf-8",
                 )
             )
-
-            if initiated_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
-                original_labels = original_label_row["data_units"][original_data.data_unit]["labels"]
-                initiated_label_row["data_units"][new_label_row["data_hash"]]["labels"] = original_labels
-                initiated_label_row["object_answers"] = original_label_row["object_answers"]
-                initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
-
-                if original_labels != {}:
-                    initiated_label_row = construct_answer_dictionaries(initiated_label_row)
-                    new_project.save_label_row(initiated_label_row["label_hash"], initiated_label_row)
-
-            elif initiated_label_row["data_type"] == DataType.IMG_GROUP.value:
-                object_hashes: set = set()
-                classification_hashes: set = set()
-
-                # Currently img_groups are matched using data_title, it should be fixed after SDK update
-                for data_unit in initiated_label_row["data_units"].values():
-                    for original_data in original_label_row["data_units"].values():
-                        if original_data["data_hash"] == data_unit["data_title"].split(".")[0]:
-                            data_unit["labels"] = original_data["labels"]
-                            for obj in data_unit["labels"].get("objects", []):
-                                object_hashes.add(obj["objectHash"])
-                            for classification in data_unit["labels"].get("classifications", []):
-                                classification_hashes.add(classification["classificationHash"])
-
-                initiated_label_row["object_answers"] = original_label_row["object_answers"]
-                initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
-
-                # Remove unused object/classification answers
-                for object_hash in object_hashes:
-                    initiated_label_row["object_answers"].pop(object_hash)
-
-                for classification_hash in classification_hashes:
-                    initiated_label_row["classification_answers"].pop(classification_hash)
-
-                initiated_label_row = construct_answer_dictionaries(initiated_label_row)
-                new_project.save_label_row(initiated_label_row["label_hash"], initiated_label_row)
-
-                # remove unused object and classification answers
+            label_row = self.prepare_label_row(
+                original_label_row, initiated_label_row, new_label_row, original_lr_du.data_unit
+            )
+            if any((data_unit["labels"] for data_unit in label_row.values())):
+                new_project.save_label_row(label_row["label_hash"], label_row)
 
             if progress_callback:
                 progress_callback((counter + 1) / len(all_new_label_rows))
