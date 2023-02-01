@@ -76,11 +76,9 @@ class ObjectCharacterCountDifference(Metric):
                     )
                     continue
                 char_cnt = sum(map(len, text))
-                writer.write(char_cnt, obj)
+                du_hash_and_obj_hash_to_char_count[(iterator.du_hash, obj["objectHash"])] = char_cnt
+                label_hash_to_char_count_list[iterator.label_hash].append(char_cnt)
                 found_any = True
-
-            du_hash_and_obj_hash_to_char_count[(iterator.du_hash, obj["objectHash"])] = char_cnt
-            label_hash_to_char_count_list[iterator.label_hash].append(char_cnt)
 
         # Calculate average number of text characters across all objects belonging to the same task (label_hash)
         label_hash_to_avg_char_count = {
@@ -96,7 +94,7 @@ class ObjectCharacterCountDifference(Metric):
                         du_hash_and_obj_hash_to_char_count[compound_hash]
                         - label_hash_to_avg_char_count[iterator.label_hash]
                     )
-                    writer.write(abs_diff)
+                    writer.write(abs_diff, obj)
 
         if not found_any:
             logger.info(
