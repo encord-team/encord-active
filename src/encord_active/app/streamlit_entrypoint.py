@@ -7,6 +7,7 @@ import streamlit as st
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
+from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.frontend_components import pages_menu
@@ -58,6 +59,7 @@ def to_items(d: dict, parent_key: Optional[str] = None):
 
 def main(project_path: str):
     set_page_config()
+    render_help()
 
     project_dir = Path(project_path).expanduser().absolute()
     st.session_state.project_dir = project_dir
