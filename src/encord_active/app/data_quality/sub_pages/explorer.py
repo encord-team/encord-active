@@ -1,6 +1,5 @@
 import re
-from enum import Enum
-from typing import Any, List, Optional
+from typing import List
 
 import pandas as pd
 import streamlit as st
@@ -28,18 +27,20 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
+from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
-from encord_active.lib.metrics.metric import AnnotationType, EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
     MetricScope,
     get_annotator_level_info,
+    get_embedding_type,
     load_metric_dataframe,
 )
 
@@ -51,8 +52,7 @@ class ExplorerPage(Page):
         tag_creator()
 
         if not available_metrics:
-            st.error("Your data has not been indexed. Make sure you have imported your data correctly.")
-            st.stop()
+            return label_onboarding_page()
 
         non_empty_metrics = [
             metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
@@ -127,16 +127,6 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
-# TODO: move me to lib
-def get_embedding_type(metric_title: str, annotation_type: Optional[List[Any]]) -> EmbeddingType:
-    if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
-        return EmbeddingType.IMAGE
-    elif len(annotation_type) == 1 and annotation_type[0] == str(AnnotationType.CLASSIFICATION.RADIO.value):
-        return EmbeddingType.CLASSIFICATION
-    else:
-        return EmbeddingType.OBJECT
-
-
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -186,11 +176,6 @@ def fill_data_quality_window(
 
             with cols.pop(0):
                 build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
-
-
-class LabelType(Enum):
-    OBJECT = "object"
-    CLASSIFICATION = "classification"
 
 
 def build_card(

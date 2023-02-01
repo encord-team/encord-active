@@ -56,7 +56,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
             main_df_objects.rename(columns={"score": f"{meta['title']}"}, inplace=True)
 
     main_df = pd.concat([main_df_images, main_df_objects, main_df_image_quality])
-    main_df["tags"] = None
+    main_df["tags"] = [[] for _ in range(len(main_df))]
     main_df.set_index("identifier", inplace=True)
     return main_df
 

@@ -85,7 +85,7 @@ class Project:
         self.encord_project = encord_project
 
         self.__save_project_meta(encord_project)
-        self.__save_ontology(encord_project)
+        self.save_ontology(OntologyStructure.from_dict(encord_project.ontology))
         self.__save_label_row_meta(encord_project)
         self.__download_and_save_label_rows(encord_project)
 
@@ -116,9 +116,9 @@ class Project:
         )
         project_meta_file_path.write_text(yaml.safe_dump(self.project_meta), encoding="utf-8")
 
-    def __save_ontology(self, encord_project: EncordProject):
+    def save_ontology(self, ontology: OntologyStructure):
         ontology_file_path = self.file_structure.ontology
-        ontology_file_path.write_text(json.dumps(self.encord_project.ontology, indent=2), encoding="utf-8")
+        ontology_file_path.write_text(json.dumps(ontology.to_dict(), indent=2), encoding="utf-8")
 
     def __load_ontology(self):
         ontology_file_path = self.file_structure.ontology
@@ -141,6 +141,10 @@ class Project:
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
         }
+
+    def save_label_row(self, label_row: LabelRow):
+        lr_structure = self.file_structure.label_row_structure(label_row["label_hash"])
+        lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
         label_rows = download_label_rows(encord_project, self.file_structure)

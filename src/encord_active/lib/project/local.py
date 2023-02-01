@@ -13,7 +13,8 @@ from encord_active.lib.encord.local_sdk import (
     LocalUserClient,
     get_mimetype,
 )
-from encord_active.lib.metrics.execute import run_metrics
+from encord_active.lib.metrics.execute import run_metrics_by_embedding_type
+from encord_active.lib.metrics.metric import EmbeddingType
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
@@ -136,5 +137,5 @@ def init_local_project(
 
     (project_dir / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
 
-    run_metrics(data_dir=client.project_path, use_cache_only=True)
+    run_metrics_by_embedding_type(EmbeddingType.IMAGE, data_dir=client.project_path, use_cache_only=True)
     return project_path
