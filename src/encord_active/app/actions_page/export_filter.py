@@ -10,6 +10,7 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
+from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
@@ -195,7 +196,7 @@ community</a>
                 return
 
             try:
-                action_utils = EncordActions(st.session_state.project_dir)
+                action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
                 label = st.empty()
                 progress, clear = render_progress_bar()
                 label.text("Step 1/2: Uploading data...")

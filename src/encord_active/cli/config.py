@@ -2,11 +2,8 @@ import rich
 import toml
 import typer
 
-from encord_active.app.app_config import CONFIG_PROPERTIES, AppConfig
+from encord_active.app.app_config import CONFIG_PROPERTIES, app_config
 
-APP_NAME = "encord-active"
-
-app_config = AppConfig(APP_NAME)
 config_cli = typer.Typer(rich_markup_mode="markdown")
 
 
