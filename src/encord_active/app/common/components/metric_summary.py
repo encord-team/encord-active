@@ -62,11 +62,15 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
 
-        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
-        x_metric_df.rename(columns={MetricSchema.score: f"{CrossMetricSchema.x}"}, inplace=True)
+        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+        ]
+        x_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.x}"}, inplace=True)
 
-        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
-        y_metric_df.rename(columns={MetricSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
+        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+        ]
+        y_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
 
         if x_metric_df.shape[0] == 0:
             st.info(f'Score file of metric "{x_metric_name}" is empty, please run this metric again.')
@@ -76,29 +80,29 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             st.info(f'Score file of metric "{y_metric_name}" is empty, please run this metric again.')
             return
 
-        if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == len(
-            y_metric_df.iloc[0][MetricSchema.identifier].split("_")
+        if len(x_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")) == len(
+            y_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")
         ):
-            merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on=MetricSchema.identifier)
+            merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on=MetricWithDistanceSchema.identifier)
         else:
             x_changed, to_be_parsed_df = (
                 (True, x_metric_df.copy(deep=True))
-                if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == 4
+                if len(x_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")) == 4
                 else (False, y_metric_df.copy(deep=True))
             )
 
-            to_be_parsed_df[[MetricSchema.identifier, "identifier_rest"]] = to_be_parsed_df[
-                MetricSchema.identifier
+            to_be_parsed_df[[MetricWithDistanceSchema.identifier, "identifier_rest"]] = to_be_parsed_df[
+                MetricWithDistanceSchema.identifier
             ].str.rsplit("_", n=1, expand=True)
 
             merged_metrics = pd.merge(
                 to_be_parsed_df if x_changed else x_metric_df,
                 y_metric_df if x_changed else to_be_parsed_df,
                 how="inner",
-                on=MetricSchema.identifier,
+                on=MetricWithDistanceSchema.identifier,
             )
-            merged_metrics[MetricSchema.identifier] = (
-                merged_metrics[MetricSchema.identifier] + "_" + merged_metrics["identifier_rest"]
+            merged_metrics[MetricWithDistanceSchema.identifier] = (
+                merged_metrics[MetricWithDistanceSchema.identifier] + "_" + merged_metrics["identifier_rest"]
             )
 
             merged_metrics.pop("identifier_rest")
