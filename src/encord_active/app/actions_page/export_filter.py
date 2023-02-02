@@ -122,7 +122,7 @@ def _get_column(col, item, num_rows) -> InputItem:
 
 
 def _get_columns(needs_ontology: bool, num_rows: int) -> RenderItems:
-    items_to_render = ["Dataset", "Project"] if needs_ontology else ["Dataset", "Project", "Ontology"]
+    items_to_render = ["Dataset", "Project", "Ontology"] if needs_ontology else ["Dataset", "Project"]
     form_columns = st.columns(len(items_to_render))
 
     return RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
@@ -236,12 +236,14 @@ community</a>
                 ```
                 """
                 )
+                return
             except Exception as e:
                 st.error(str(e))
+                return
 
             st.subheader("Create a new project with the selected items")
 
-            cols = _get_columns(has_original_project, filtered_df.shape[0])
+            cols = _get_columns(needs_ontology=not has_original_project, num_rows=filtered_df.shape[0])
 
             if not st.form_submit_button("➕ Create"):
                 return
