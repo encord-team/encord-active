@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 from pandera.typing import DataFrame, Series
 
 from encord_active.lib.dataset.outliers import AllMetricsOutlierSchema
-from encord_active.lib.metrics.utils import MetricSchema
 
 
 class LabelStatisticsSchema(pa.SchemaModel):
