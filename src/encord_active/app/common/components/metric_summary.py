@@ -32,7 +32,6 @@ from encord_active.lib.dataset.summary_utils import (
 )
 from encord_active.lib.metrics.utils import (
     MetricData,
-    MetricSchema,
     MetricScope,
     load_available_metrics,
 )
