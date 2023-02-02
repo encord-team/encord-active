@@ -221,8 +221,7 @@ community</a>
 
     if get_clone_button():
         try:
-            with st.spinner("Loading..."):
-                action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
+            action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
             has_original_project = bool(action_utils.original_project)
         except ProjectNotFound as e:
             st.markdown(
