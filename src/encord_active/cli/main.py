@@ -309,7 +309,7 @@ def metricize(
 
     # (interactive) User chooses some metrics via CLI prompt selection
     elif not metric_names:
-        choices = list(map(lambda m: Choice(m, name=m.TITLE), metrics))
+        choices = list(map(lambda m: Choice(m, name=m.metadata.title), metrics))
         Options = TypedDict("Options", {"message": str, "choices": List[Choice], "vi_mode": bool})
         options: Options = {
             "message": "What metrics would you like to run?",
@@ -325,7 +325,7 @@ def metricize(
 
     # (non-interactive) User chooses some metrics via --add (-a) option
     else:
-        metric_name_to_cls = {m.TITLE: m for m in metrics}
+        metric_name_to_cls = {m.metadata.title: m for m in metrics}
         used_metric_names = set()
         selected_metrics = []
         unknown_metric_names = []

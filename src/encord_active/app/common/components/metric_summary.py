@@ -281,7 +281,7 @@ def render_metric_summary(
     n_rows = get_state().page_grid_settings.rows
     page_size = n_cols * n_rows
 
-    st.markdown(metric.meta["long_description"])
+    st.markdown(metric.meta.long_description)
 
     if iqr_outliers.n_severe_outliers + iqr_outliers.n_moderate_outliers == 0:
         st.success("No outliers found!")

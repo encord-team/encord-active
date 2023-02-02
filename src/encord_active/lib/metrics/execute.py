@@ -1,3 +1,4 @@
+import dataclasses
 import inspect
 import json
 import logging
@@ -17,11 +18,14 @@ from encord_active.lib.metrics.metric import (
     DataType,
     EmbeddingType,
     Metric,
+    MetricMetadata,
     MetricType,
     ObjectShape,
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
+
+logger = logger.opt(colors=True)
 
 
 def get_metrics(module: Optional[Union[str, list[str]]] = None, filter_func=lambda x: True):
@@ -86,7 +90,7 @@ def run_all_polygon_metrics():
 def run_all_prediction_metrics(**kwargs):
     # Return all metrics that apply to objects.
     def filter(m: Metric):
-        at = m.ANNOTATION_TYPE
+        at = m.metadata.annotation_type
         if isinstance(at, list):
             for t in at:
                 if isinstance(t, ObjectShape):
@@ -114,16 +118,20 @@ def __get_value(o):
         return __get_value(o.value)
     if isinstance(o, (list, tuple)):
         return [__get_value(v) for v in o]
+    if isinstance(o, MetricMetadata):
+        return {k: __get_value(v) for k, v in dataclasses.asdict(o).items()}
     return None
 
 
 def __get_object_attributes(obj: Any):
     metric_properties = {v.lower(): __get_value(getattr(obj, v)) for v in dir(obj)}
+    if "metadata" in metric_properties:
+        metric_properties.update(metric_properties["metadata"])
+        del metric_properties["metadata"]
     metric_properties = {k: v for k, v in metric_properties.items() if (v is not None or k == "annotation_type")}
     return metric_properties
 
 
-logger = logger.opt(colors=True)
 
 
 @logger.catch()
@@ -139,8 +147,8 @@ def execute_metrics(
     cache_dir = iterator.update_cache_dir(data_dir)
 
     for metric in metrics:
-        logger.info(f"Running Metric <blue>{metric.TITLE.title()}</blue>")
-        unique_metric_name = metric.get_unique_name()
+        logger.info(f"Running Metric <blue>{metric.metadata.title}</blue>")
+        unique_metric_name = metric.metadata.get_unique_name()
 
         stats = StatisticsObserver()
         with CSVMetricWriter(cache_dir, iterator, prefix=unique_metric_name) as writer:
