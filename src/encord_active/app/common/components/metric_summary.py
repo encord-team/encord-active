@@ -43,7 +43,7 @@ _COLUMNS = MetricWithDistanceSchema
 def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
     with st.expander("2D metrics view", True):
         metric_selection_col, scatter_plot_col = st.columns([2, 5])
-        metric_names = [metric_info.metric.name for metric_info in metrics_data_summary.metrics]
+        metric_names = sorted([metric_key for metric_key in metrics_data_summary.metrics.keys()])
 
         if len(metric_names) < 2:
             st.info("You need at least two metrics to plot 2D metric view.")
@@ -57,10 +57,10 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
 
-        x_metric_df = metrics_data_summary.metrics[0].df[[MetricSchema.identifier, MetricSchema.score]]
+        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
         x_metric_df.rename(columns={MetricSchema.score: f"{CrossMetricSchema.x}"}, inplace=True)
 
-        y_metric_df = metrics_data_summary.metrics[1].df[[MetricSchema.identifier, MetricSchema.score]]
+        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
         y_metric_df.rename(columns={MetricSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
 
         if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == len(
@@ -90,8 +90,9 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
 
             merged_metrics.pop("identifier_rest")
 
+        st.write(merged_metrics)
         fig = create_2d_metric_chart(
-            merged_metrics.pipe(DataFrame[CrossMetricSchema]), x_metric_name, y_metric_name, trend_selected
+            merged_metrics.pipe(DataFrame[CrossMetricSchema]), str(x_metric_name), str(y_metric_name), trend_selected
         )
         scatter_plot_col.plotly_chart(fig, use_container_width=True)
 

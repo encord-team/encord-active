@@ -9,6 +9,11 @@ from pandera.typing import DataFrame, Series
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
 
 
+class MetricWithDistanceSchema(MetricSchema):
+    dist_to_iqr: Optional[Series[float]] = pa.Field()
+    outliers_status: Optional[Series[str]] = pa.Field()
+
+
 class IqrOutliers(NamedTuple):
     n_moderate_outliers: int
     n_severe_outliers: int
@@ -20,13 +25,13 @@ class IqrOutliers(NamedTuple):
 
 class MetricOutlierInfo(NamedTuple):
     metric: MetricData
-    df: DataFrame[MetricSchema]
+    df: DataFrame[MetricWithDistanceSchema]
     iqr_outliers: IqrOutliers
 
 
 @dataclass
 class MetricsSeverity:
-    metrics: list[MetricOutlierInfo] = field(default_factory=list)
+    metrics: dict[str, MetricOutlierInfo] = field(default_factory=dict)
     total_unique_moderate_outliers: Optional[int] = None
     total_unique_severe_outliers: Optional[int] = None
 
@@ -35,11 +40,6 @@ class Severity(str, Enum):
     severe = "Severe"
     moderate = "Moderate"
     low = "Low"
-
-
-class MetricWithDistanceSchema(MetricSchema):
-    dist_to_iqr: Optional[Series[float]] = pa.Field()
-    outliers_status: Optional[Series[str]] = pa.Field()
 
 
 class AllMetricsOutlierSchema(pa.SchemaModel):
@@ -101,7 +101,7 @@ def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> DataFrame
             AllMetricsOutlierSchema.total_moderate_outliers,
         ]
     )
-    for item in metrics_data_summary.metrics:
+    for item in metrics_data_summary.metrics.values():
         all_metrics_outliers = pd.concat(
             [
                 all_metrics_outliers,
