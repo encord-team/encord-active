@@ -278,7 +278,8 @@ class EncordActions:
 
         for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
             old_lr_path = self.project_file_structure.data / old_lr
-            (old_lr_path / "images" / f"{old_du}.jpg").rename(old_lr_path / "images" / f"{new_du}.jpg")
+            for old_du_f in old_lr_path.glob(f"**/{old_du}.*"):
+                old_du_f.rename(old_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
             renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
         dir_renames = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
