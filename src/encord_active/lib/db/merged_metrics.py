@@ -11,10 +11,6 @@ from encord_active.lib.db.tags import Tag, TagScope
 TABLE_NAME = "merged_metrics"
 
 
-def rename_identifiers(mappings):
-    MergedMetrics().replace_identifiers(mappings)
-
-
 def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
     main_df_images = pd.DataFrame(columns=["identifier"])
     main_df_objects = pd.DataFrame(columns=["identifier"])
@@ -116,7 +112,7 @@ class MergedMetrics(object):
 
     @ensure_initialised
     def replace_identifiers(self, mappings: dict[str, str]):
-        def _replace_identifiers(id):
+        def _replace_identifiers(id: str):
             lr, du, *rest = id.split("_")
             mappedlr, mappeddu = mappings[lr], mappings[du]
             return "_".join([mappedlr, mappeddu, *rest])

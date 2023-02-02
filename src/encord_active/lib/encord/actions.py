@@ -14,7 +14,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.lib.common.utils import fetch_project_meta
-from encord_active.lib.db.merged_metrics import rename_identifiers
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
     load_collections,
@@ -175,7 +175,7 @@ class EncordActions:
 
     @staticmethod
     def prepare_label_row(
-        original_label_row: dict, initiated_label_row: dict, new_label_row: dict, original_du: str
+        original_label_row: LabelRow, initiated_label_row: LabelRow, new_label_row: LabelRow, original_du: str
     ) -> LabelRow:
         if initiated_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
             original_labels = original_label_row["data_units"][original_du]["labels"]
@@ -184,8 +184,8 @@ class EncordActions:
             initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
 
         elif initiated_label_row["data_type"] == DataType.IMG_GROUP.value:
-            object_hashes: set = set()
-            classification_hashes: set = set()
+            object_hashes: set[str] = set()
+            classification_hashes: set[str] = set()
 
             # Currently img_groups are matched using data_title, it should be fixed after SDK update
             for data_unit in initiated_label_row["data_units"].values():
@@ -228,9 +228,8 @@ class EncordActions:
         # Copy labels from old project to new project
         # Three things to copy: labels, object_answers, classification_answers
 
-        all_new_label_rows = new_project.label_rows
-        for counter, new_label_row in enumerate(all_new_label_rows):
-            initiated_label_row: dict = new_project.create_label_row(new_label_row["data_hash"])
+        for counter, new_label_row in enumerate(new_project.label_rows):
+            initiated_label_row: LabelRow = new_project.create_label_row(new_label_row["data_hash"])
             original_lr_du = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
 
             new_label_row_hash = initiated_label_row["label_hash"]
@@ -250,12 +249,12 @@ class EncordActions:
                 new_project.save_label_row(label_row["label_hash"], label_row)
 
             if progress_callback:
-                progress_callback((counter + 1) / len(all_new_label_rows))
+                progress_callback((counter + 1) / len(new_project.label_rows))
 
         return new_project
 
-    def fix_pickle_files(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
-        def fix_pickle_file(embedding: LabelEmbedding, renaming_map: dict[str, str]):
+    def update_embedding_identifiers(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
+        def _update_identifiers(embedding: LabelEmbedding, renaming_map: dict[str, str]):
             embedding["label_row"] = renaming_map[embedding["label_row"]]
             embedding["data_unit"] = renaming_map[embedding["data_unit"]]
             url_without_extension, extension = embedding["url"].split(".")
@@ -264,7 +263,7 @@ class EncordActions:
             return embedding
 
         collection = load_collections(embedding_type, self.project_file_structure.embeddings)
-        updated_collection = [fix_pickle_file(up, renaming_map) for up in collection]
+        updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
         save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
 
     def replace_uids(
@@ -284,13 +283,13 @@ class EncordActions:
         for (old_lr, new_lr) in dir_renames.items():
             (self.project_file_structure.data / old_lr).rename(self.project_file_structure.data / new_lr)
 
-        rename_identifiers(renaming_map)
+        MergedMetrics().replace_identifiers(renaming_map)
         for old, new in renaming_map.items():
             cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' 's/{old}/{new}/g' {{}} +"
             subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-            self.fix_pickle_files(embedding_type, renaming_map)
+            self.update_embedding_identifiers(embedding_type, renaming_map)
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
