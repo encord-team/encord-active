@@ -145,7 +145,7 @@ class EncordActions:
             label_row_hash, data_unit_hash, *_ = str(item["identifier"]).split("_")
             label_hash_to_data_units.setdefault(label_row_hash, set()).add(data_unit_hash)
 
-        uploaded_data_units: set = set()
+        uploaded_data_units: set[str] = set()
         for label_row_hash, data_hashes in label_hash_to_data_units.items():
             for data_unit_hash in data_hashes:
                 if data_unit_hash not in uploaded_data_units:
@@ -175,20 +175,20 @@ class EncordActions:
 
     @staticmethod
     def prepare_label_row(
-        original_label_row: LabelRow, initiated_label_row: LabelRow, new_label_row: LabelRow, original_du: str
+        original_label_row: LabelRow, new_label_row: LabelRow, new_label_row_data_unit_hash: str, original_du: str
     ) -> LabelRow:
-        if initiated_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
+        if new_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
             original_labels = original_label_row["data_units"][original_du]["labels"]
-            initiated_label_row["data_units"][new_label_row["data_hash"]]["labels"] = original_labels
-            initiated_label_row["object_answers"] = original_label_row["object_answers"]
-            initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
+            new_label_row["data_units"][new_label_row_data_unit_hash]["labels"] = original_labels
+            new_label_row["object_answers"] = original_label_row["object_answers"]
+            new_label_row["classification_answers"] = original_label_row["classification_answers"]
 
-        elif initiated_label_row["data_type"] == DataType.IMG_GROUP.value:
+        elif new_label_row["data_type"] == DataType.IMG_GROUP.value:
             object_hashes: set[str] = set()
             classification_hashes: set[str] = set()
 
             # Currently img_groups are matched using data_title, it should be fixed after SDK update
-            for data_unit in initiated_label_row["data_units"].values():
+            for data_unit in new_label_row["data_units"].values():
                 for original_data in original_label_row["data_units"].values():
                     if original_data["data_hash"] == data_unit["data_title"].split(".")[0]:
                         data_unit["labels"] = original_data["labels"]
@@ -197,16 +197,16 @@ class EncordActions:
                         for classification in data_unit["labels"].get("classifications", []):
                             classification_hashes.add(classification["classificationHash"])
 
-            initiated_label_row["object_answers"] = original_label_row["object_answers"]
-            initiated_label_row["classification_answers"] = original_label_row["classification_answers"]
+            new_label_row["object_answers"] = original_label_row["object_answers"]
+            new_label_row["classification_answers"] = original_label_row["classification_answers"]
 
             # Remove unused object/classification answers
             for object_hash in object_hashes:
-                initiated_label_row["object_answers"].pop(object_hash)
+                new_label_row["object_answers"].pop(object_hash)
 
             for classification_hash in classification_hashes:
-                initiated_label_row["classification_answers"].pop(classification_hash)
-        return construct_answer_dictionaries(initiated_label_row)
+                new_label_row["classification_answers"].pop(classification_hash)
+        return construct_answer_dictionaries(new_label_row)
 
     def create_project(
         self,
@@ -228,14 +228,13 @@ class EncordActions:
         # Copy labels from old project to new project
         # Three things to copy: labels, object_answers, classification_answers
 
-        for counter, new_label_row in enumerate(new_project.label_rows):
-            initiated_label_row: LabelRow = new_project.create_label_row(new_label_row["data_hash"])
-            original_lr_du = dataset_creation_result.du_original_mapping[new_label_row["data_hash"]]
+        for counter, new_label_row_metadata in enumerate(new_project.label_rows):
+            new_label_data_unit_hash = new_label_row_metadata["data_hash"]
+            new_label_row = new_project.create_label_row(new_label_data_unit_hash)
+            original_lr_du = dataset_creation_result.du_original_mapping[new_label_data_unit_hash]
 
-            new_label_row_hash = initiated_label_row["label_hash"]
-            new_data_unit_hash = dataset_creation_result.lr_du_mapping[original_lr_du].data_unit
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
-                new_label_row_hash, new_data_unit_hash
+                new_label_row["label_hash"], new_label_data_unit_hash
             )
             original_label_row = json.loads(
                 self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
@@ -243,7 +242,7 @@ class EncordActions:
                 )
             )
             label_row = self.prepare_label_row(
-                original_label_row, initiated_label_row, new_label_row, original_lr_du.data_unit
+                original_label_row, new_label_row, new_label_data_unit_hash, original_lr_du.data_unit
             )
             if any(
                 data_unit["labels"]["objects"] or data_unit["labels"]["classifications"]
