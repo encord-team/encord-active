@@ -62,12 +62,15 @@ def build_classification_answer(
 
 
 def update_label_row_with_classification(
-    label_row: LabelRow, classification: Classification, image_class: str, data_hashes: Optional[List[str]] = None
+    label_row: LabelRow,
+    classification: Classification,
+    image_class_map: dict[str, str],
+    data_units: Optional[List[dict]] = None,
 ) -> LabelRow:
     attribute = classification.attributes[0]
     classification_hash = str(uuid.uuid4())[:8]
 
-    for data_hash in data_hashes or label_row["data_units"].keys():
+    for data_hash, data_unit in data_units or label_row["data_units"].items():
         label_classification = build_label_classification(classification)
 
         label_row["data_units"][data_hash]["labels"]["classifications"] = [
@@ -77,6 +80,7 @@ def update_label_row_with_classification(
         if not isinstance(attribute, RadioAttribute):
             raise ValueError("Classification attribute should be radio attribute")
 
+        image_class = image_class_map[data_unit["data_link"]]
         option, *_ = [option for option in attribute.options if option.value == image_class]
 
         label_row["classification_answers"] = {
