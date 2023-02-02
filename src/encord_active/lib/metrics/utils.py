@@ -55,12 +55,8 @@ def load_metric_dataframe(
     df = pd.read_csv(metric.path).sort_values([sorting_key, "identifier"], ascending=True).reset_index()
 
     if normalize:
-        min_val = metric.meta.get("min_value")
-        max_val = metric.meta.get("max_value")
-        if min_val is None:
-            min_val = df["score"].min()
-        if max_val is None:
-            max_val = df["score"].max()
+        min_val = df["score"].min()
+        max_val = df["score"].max()
 
         diff = max_val - min_val
         if diff == 0:  # Avoid dividing by zero
