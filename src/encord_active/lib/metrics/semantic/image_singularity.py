@@ -41,7 +41,7 @@ This metric gives each image a score that shows each image's uniqueness.
     METRIC_TYPE = MetricType.SEMANTIC
     DATA_TYPE = DataType.IMAGE
 
-    def __init__(self, near_duplicate_threshold=0.95):
+    def __init__(self, near_duplicate_threshold=0.97):
         super(ImageSingularity, self).__init__()
         self.collections: List[LabelEmbedding] = []
         self.scores: dict[str, DataUnitInfo] = {}
@@ -73,7 +73,7 @@ This metric gives each image a score that shows each image's uniqueness.
                 if abs(1.0 - nearest_distances[i, j]) < 1e-5:
                     previous_duplicates[nearest_items[i, j]] = nearest_items[i, 0]
                 else:
-                    if (nearest_distances[i, j] + 1) / 2 > self.near_duplicate_threshold:
+                    if (nearest_distances[i, j] + 1) / 2 >= self.near_duplicate_threshold:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
                             1 - (nearest_distances[i, j] + 1) / 2, "Near duplicate image"
                         )
