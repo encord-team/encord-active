@@ -69,7 +69,7 @@ def label_onboarding_page():
         project = Project(get_state().project_paths.project_dir).load()
         lr_data_units = [lr["data_units"] for lr in project.label_rows.values()]
         paths = [Path(data_unit["data_link"]) for data_units in lr_data_units for data_unit in data_units.values()]
-        image_to_class_map = {path.name: path.parent.stem for path in paths}
+        image_to_class_map = {path.expanduser().resolve().as_posix(): path.parent.stem for path in paths}
         classes = set(image_to_class_map.values())
         class_names_string = ", ".join(f"`{name}`" for name in classes)
 
@@ -94,9 +94,8 @@ def label_onboarding_page():
                 project.save_ontology(ontology)
 
                 for label_row in project.label_rows.values():
-                    image_class = image_to_class_map[label_row["data_title"]]
                     updated_label_row = update_label_row_with_classification(
-                        label_row, ontology.classifications[0], image_class
+                        label_row, ontology.classifications[0], image_to_class_map
                     )
                     project.save_label_row(updated_label_row)
 
