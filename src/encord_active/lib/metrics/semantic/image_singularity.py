@@ -29,11 +29,13 @@ class ImageSingularity(Metric):
     TITLE = "Image Singularity"
     SHORT_DESCRIPTION = "Finds duplicate and near-duplicate images"
     LONG_DESCRIPTION = r"""
-    This metric gives a score to each image that shows the uniqueness of each image.        
-    - A score of zero means that the image has duplicates in the dataset, on the other hand, a score close to one represents that image is quite unique. Among the duplicate images we only give a non-zero score to single image, and the rest will have a score of zero.     
-    - For example, if there are 5 identical images, only 4 of the will have a score of zero. This way, these duplicate samples can be easily tagged and removed from the project.    
-    - Images that are near-duplicates of each other will be shown side-by-side. 
-            """
+This metric gives each image a score that shows each image's uniqueness.  
+- A score of zero means that the image has duplicates in the dataset; on the other hand, a score close to one represents that image is quite unique. Among the duplicate images, we only give a non-zero score to a single image, and the rest will have a score of zero (for example, if there are five identical images, only four will have a score of zero). This way, these duplicate samples can be easily tagged and removed from the project.    
+- Images that are near duplicates of each other will be shown side by side. 
+### Possible actions
+- **To delete duplicate images:** You can set the quality filter to cover only zero values (that ends up with all the duplicate images), then use bulk tagging (e.g., with a tag like `Duplicate`) to tag all images.
+- **To mark duplicate images:** Near duplicate images are shown side by side. Navigate through these images and mark whichever is of interest to you.
+"""
     NEEDS_IMAGES = True
     ANNOTATION_TYPE = None
     EMBEDDING_TYPE = EmbeddingType.CLASSIFICATION
@@ -60,16 +62,20 @@ class ImageSingularity(Metric):
     def get_identifier_from_collection_item(self, item):
         return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}'
 
-    def score_images(self, nearest_distances: np.ndarray, nearest_items: np.ndarray):
-        previous_duplicates = set()
+    def score_images(self, project_hash: str, nearest_distances: np.ndarray, nearest_items: np.ndarray):
+        previous_duplicates = {}
 
         for i in range(nearest_items.shape[0]):
             if nearest_items[i, 0] in previous_duplicates:
-                self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(0.0, "duplicate image")
+                original_item = self.collections[previous_duplicates[nearest_items[i, 0]]]
+                self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
+                    0.0,
+                    f"Duplicate image. To see the original check [here](https://app.encord.com/label_editor/{original_item['data_unit']}&{project_hash}/{original_item['frame']}).",
+                )
                 continue
             for j in range(1, nearest_items.shape[1]):
                 if abs(1.0 - nearest_distances[i, j]) < 1e-5:
-                    previous_duplicates.add(nearest_items[i, j])
+                    previous_duplicates[nearest_items[i, j]] = nearest_items[i, 0]
                 else:
                     if (nearest_distances[i, j] + 1) / 2 > self.near_duplicate_threshold:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
@@ -97,7 +103,7 @@ class ImageSingularity(Metric):
             )  # pylint: disable=no-value-for-parameter
             nearest_items = fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items)
 
-            self.score_images(nearest_distances, nearest_items)
+            self.score_images(iterator.project.project_hash, nearest_distances, nearest_items)
 
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
