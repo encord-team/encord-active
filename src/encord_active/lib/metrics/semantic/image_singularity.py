@@ -59,7 +59,7 @@ This metric gives each image a score that shows each image's uniqueness.
         return embeddings_normalized, db_index
 
     def score_images(self, project_hash: str, nearest_distances: np.ndarray, nearest_items: np.ndarray):
-        previous_duplicates = {}
+        previous_duplicates: dict[int, int] = {}
 
         for i in range(nearest_items.shape[0]):
             if nearest_items[i, 0] in previous_duplicates:
