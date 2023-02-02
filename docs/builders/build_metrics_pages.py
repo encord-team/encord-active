@@ -69,7 +69,11 @@ def fix_strings(row: List[Any]) -> List[str]:
 for submodule, metrics_list in zip(submodules, ms):
     rows = []
     for m in metrics_list:
-        rows.append(fix_strings([m.metadata.title, m.metadata.short_description, m.metadata.data_type, m.metadata.annotation_type]))
+        rows.append(
+            fix_strings(
+                [m.metadata.title, m.metadata.short_description, m.metadata.data_type, m.metadata.annotation_type]
+            )
+        )
     markdown_table = tabulate(
         rows,
         headers=["Title", "Metric Type", "Data Type", "Annotation Type"],
@@ -79,7 +83,11 @@ for submodule, metrics_list in zip(submodules, ms):
     md = ""
     for metric in metrics_list:
         url = f"{GITHUB_URL}/blob/main/{type(metric).__module__.replace('.', '/')}.py"
-        md += f"\n## {metric.metadata.title}  \n" f"{metric.metadata.long_description}  \n\n" f"Implementation on [GitHub]({url})\n"
+        md += (
+            f"\n## {metric.metadata.title}  \n"
+            f"{metric.metadata.long_description}  \n\n"
+            f"Implementation on [GitHub]({url})\n"
+        )
 
     markdown_file = docs_root / "docs" / "metrics" / f"{submodule}.md"
     with markdown_file.open("w", encoding="utf-8") as f:

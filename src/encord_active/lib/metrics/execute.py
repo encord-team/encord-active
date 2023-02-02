@@ -132,8 +132,6 @@ def __get_object_attributes(obj: Any):
     return metric_properties
 
 
-
-
 @logger.catch()
 def execute_metrics(
     metrics: List[Metric],

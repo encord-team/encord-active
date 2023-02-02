@@ -67,23 +67,21 @@ class MetricMetadata:
     embedding_type: Optional[EmbeddingType] = None
 
     def get_unique_name(self):
-        name_hash = md5(
-            (self.title + self.short_description + self.long_description).encode()
-        ).hexdigest()
+        name_hash = md5((self.title + self.short_description + self.long_description).encode()).hexdigest()
         return f"{name_hash[:8]}_{self.title.lower().replace(' ', '_')}"
 
 
 class Metric(ABC):
     def __init__(
-            self,
-            title: str,
-            short_description: str,
-            long_description: str,
-            metric_type: MetricType,
-            data_type: DataType,
-            annotation_type: Optional[List[AnnotationTypeUnion]],
-            embedding_type: Optional[EmbeddingType] = None,
-            needs_images: bool = False
+        self,
+        title: str,
+        short_description: str,
+        long_description: str,
+        metric_type: MetricType,
+        data_type: DataType,
+        annotation_type: List[Union[ObjectShape, ClassificationType]],
+        embedding_type: Optional[EmbeddingType] = None,
+        needs_images: bool = False,
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -93,7 +91,7 @@ class Metric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
-            needs_images=False if not needs_images and metric_type == MetricType.GEOMETRIC else True
+            needs_images=False if not needs_images and metric_type == MetricType.GEOMETRIC else True,
         )
 
     @abstractmethod

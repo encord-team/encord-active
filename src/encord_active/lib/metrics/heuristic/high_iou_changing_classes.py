@@ -14,7 +14,6 @@ logger = logger.opt(colors=True)
 
 
 class HighIOUChangingClasses(Metric):
-
     def __init__(self, threshold: float = 0.8):
         super(HighIOUChangingClasses, self).__init__(
             title="Inconsistent Object Classification and Track IDs",

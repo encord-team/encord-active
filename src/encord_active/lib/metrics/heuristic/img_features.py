@@ -164,7 +164,7 @@ Brightness is computed as the average (normalized) pixel value across each image
 """,
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
-            annotation_type=AnnotationType.NONE
+            annotation_type=AnnotationType.NONE,
         )
 
     @staticmethod
