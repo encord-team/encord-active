@@ -44,9 +44,13 @@ def draw_object(
     _color: Tuple[int, ...] = hex_to_rgb(hex_color)
     _color_outline: Tuple[int, ...] = hex_to_rgb(hex_color, lighten=-0.5)
 
-    if with_box or not isinstance(row["rle"], str):
+    box_only = not isinstance(row["rle"], str)
+    if with_box or box_only:
         box = get_bbox_csv(row)
-        return cv2.polylines(image, [box], isClosed, _color, thickness, lineType=cv2.LINE_8)
+        image = cv2.polylines(image, [box], isClosed, _color, thickness, lineType=cv2.LINE_8)
+
+    if box_only:
+        return image
 
     mask = rle_to_binary_mask(eval(row["rle"]))
 

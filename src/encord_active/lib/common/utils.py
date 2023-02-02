@@ -13,11 +13,13 @@ import cv2
 import numpy as np
 import requests
 import yaml
-from encord import EncordUserClient, Project
+from encord import Project
 from loguru import logger
 from shapely.errors import ShapelyDeprecationWarning
 from shapely.geometry import Polygon
 from tqdm.auto import tqdm
+
+from encord_active.lib.encord.utils import get_client
 
 # Silence shapely deprecation warnings from v1.* to v2.0
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
@@ -70,9 +72,7 @@ def fetch_project_info(data_dir: Path) -> Project:
         raise ValueError("SSH Key path missing in project metadata.")
 
     private_key_file = Path(project_meta["ssh_key_path"]).expanduser().absolute()
-    with private_key_file.open("r", encoding="utf-8") as f:
-        private_key = f.read()
-    client = EncordUserClient.create_with_ssh_private_key(private_key)
+    client = get_client(private_key_file)
 
     # == Project hash == #
     if "project_hash" not in project_meta:

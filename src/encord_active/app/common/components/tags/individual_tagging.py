@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import streamlit as st
 from pandas import Series
@@ -10,11 +10,16 @@ from encord_active.lib.db.tags import METRIC_SCOPE_TAG_SCOPES, Tag, TagScope
 from encord_active.lib.metrics.utils import MetricScope
 
 
-def target_identifier(identifier: str, scope: TagScope) -> str:
+def target_identifier(identifier: str, scope: TagScope) -> Optional[str]:
+    parts = identifier.split("_")
+    data, object = parts[:3], parts[3:]
+
     if scope == TagScope.DATA:
-        return "_".join(identifier.split("_")[:3])
-    else:
+        return "_".join(data)
+    elif scope == TagScope.LABEL and object:
         return identifier
+    else:
+        return None
 
 
 def update_tags(identifier: str, key: str):
@@ -23,7 +28,8 @@ def update_tags(identifier: str, key: str):
     targeted_tags: Dict[str, List[Tag]] = {}
     for scope in TagScope:
         target_id = target_identifier(identifier, scope)
-        targeted_tags[target_id] = [tag for tag in tags_for_update if tag.scope == scope]
+        if target_id:
+            targeted_tags[target_id] = [tag for tag in tags_for_update if tag.scope == scope]
 
     for id, tags in targeted_tags.items():
         get_state().merged_metrics.at[id, "tags"] = tags

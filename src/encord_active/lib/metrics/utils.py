@@ -11,7 +11,12 @@ from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
 from encord_active.lib.common.utils import load_json
-from encord_active.lib.metrics.metric import MetricMetadata
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    AnnotationTypeUnion,
+    EmbeddingType,
+    MetricMetadata,
+)
 
 
 @dataclass
@@ -154,3 +159,12 @@ def is_multiclass_ontology(ontology: OntologyStructure):
     num_of_classifications = len(list(radio_classifications))
 
     return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)
+
+
+def get_embedding_type(metric_title: str, annotation_type: Optional[List[AnnotationTypeUnion]]) -> EmbeddingType:
+    if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
+        return EmbeddingType.IMAGE
+    elif len(annotation_type) == 1 and annotation_type[0] == AnnotationType.CLASSIFICATION.RADIO:
+        return EmbeddingType.CLASSIFICATION
+    else:
+        return EmbeddingType.OBJECT

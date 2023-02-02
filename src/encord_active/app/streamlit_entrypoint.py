@@ -7,6 +7,7 @@ import streamlit as st
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
+from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.frontend_components import pages_menu
@@ -17,7 +18,6 @@ from encord_active.app.model_quality.sub_pages.performance_by_metric import (
     PerformanceMetric,
 )
 from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
-from encord_active.app.views.landing_page import landing_page
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.common.utils import fetch_project_meta
@@ -27,7 +27,6 @@ from encord_active.lib.metrics.utils import MetricScope
 Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
 
 pages: Pages = {
-    "Encord Active": landing_page,
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
     "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
     "Model Quality": {
@@ -58,6 +57,7 @@ def to_items(d: dict, parent_key: Optional[str] = None):
 
 def main(project_path: str):
     set_page_config()
+    render_help()
 
     project_dir = Path(project_path).expanduser().absolute()
     st.session_state.project_dir = project_dir
@@ -75,7 +75,7 @@ def main(project_path: str):
         key = pages_menu(items=items)
         path = key.split(SEPARATOR) if key else []
 
-    render = reduce(dict.__getitem__, path, pages) if path else pages["Encord Active"]  # type: ignore
+    render = reduce(dict.__getitem__, path, pages) if path else pages["Label Quality"]["Summary"]  # type: ignore
     if callable(render):
         render()
 

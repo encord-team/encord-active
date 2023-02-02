@@ -7,7 +7,6 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
-from encord.project_ontology.object_type import ObjectShape
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
@@ -16,9 +15,12 @@ from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
+    EmbeddingType,
     Metric,
     MetricType,
+    ObjectShape,
 )
+from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
@@ -50,6 +52,23 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
                     metrics.append((f"{base_module_name}{module_name}.{file.split('.')[0]}", f"{cls[0]}"))
 
     return metrics
+
+
+def is_metric_matching_embedding(embedding_type: EmbeddingType, metric: Metric):
+    if metric.ANNOTATION_TYPE is None or isinstance(metric.ANNOTATION_TYPE, list):
+        return embedding_type == get_embedding_type(metric.TITLE, metric.ANNOTATION_TYPE)
+    else:
+        return embedding_type == get_embedding_type(metric.TITLE, [metric.ANNOTATION_TYPE])
+
+
+def get_metrics_by_embedding_type(embedding_type: EmbeddingType):
+    metrics = map(load_metric, get_metrics())
+    return [metric for metric in metrics if is_metric_matching_embedding(embedding_type, metric)]
+
+
+def run_metrics_by_embedding_type(embedding_type: EmbeddingType, **kwargs):
+    metrics = get_metrics_by_embedding_type(embedding_type)
+    execute_metrics(metrics, **kwargs)
 
 
 def run_all_heuristic_metrics():

@@ -1,20 +1,12 @@
 import uuid
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 
-import pytz
 from pycocotools.mask import decode, frPyObjects, merge
 
-GMT_TIMEZONE = pytz.timezone("GMT")
-DATETIME_STRING_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+from encord_active.lib.common.time import get_timestamp
+
 Point = Tuple[float, float]
 BBOX_KEYS = {"x", "y", "h", "w"}
-
-
-def __get_timestamp():
-    now = datetime.now()
-    new_timezone_timestamp = now.astimezone(GMT_TIMEZONE)
-    return new_timezone_timestamp.strftime(DATETIME_STRING_FORMAT)
 
 
 def __lower_snake_case(s: str):
@@ -53,7 +45,7 @@ def make_object_dict(
     if object_hash is None:
         object_hash = str(uuid.uuid4())[:8]
 
-    timestamp: str = __get_timestamp()
+    timestamp: str = get_timestamp()
     shape: str = ontology_object["shape"]
 
     object_dict = {

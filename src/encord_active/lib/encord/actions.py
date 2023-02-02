@@ -11,6 +11,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.lib.common.utils import fetch_project_meta
+from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project import ProjectFileStructure
 
 
@@ -24,22 +25,27 @@ class ProjectCreationResult(NamedTuple):
 
 
 class EncordActions:
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Path, fallback_ssh_key_path: Optional[Path] = None):
+        self._original_project = None
         self.project_meta = fetch_project_meta(project_dir)
         self.project_file_structure = ProjectFileStructure(project_dir)
 
         try:
-            ssh_key_path = Path(self.project_meta["ssh_key_path"]).resolve()
             original_project_hash = self.project_meta["project_hash"]
         except Exception as e:
             raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
 
+        try:
+            ssh_key_path = Path(self.project_meta["ssh_key_path"]).resolve()
+        except Exception as e:
+            if not fallback_ssh_key_path:
+                raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
+            ssh_key_path = fallback_ssh_key_path
+
         if not ssh_key_path.is_file():
             raise FileNotFoundError(f"No SSH file in location: {ssh_key_path}")
 
-        self.user_client = EncordUserClient.create_with_ssh_private_key(
-            Path(ssh_key_path).expanduser().read_text(encoding="utf-8"),
-        )
+        self.user_client = get_client(ssh_key_path.expanduser())
 
         self.original_project = self.user_client.get_project(original_project_hash)
         try:

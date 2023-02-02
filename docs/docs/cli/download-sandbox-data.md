@@ -78,7 +78,7 @@ Sample pictures:
 - **Read More:** [Webpage](https://www.cosmiqworks.org/rareplanes/)
 
 Sample pictures:
-![Rareplanes dataset](../images/rareplanes.png)
+![Rareplanes dataset](../images/Rareplanes.png)
 
 ## TACO Dataset
 

@@ -10,7 +10,8 @@ from typer.core import TyperGroup
 
 import encord_active.app.conf  # pylint: disable=unused-import
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
-from encord_active.cli.config import APP_NAME, config_cli
+from encord_active.app.app_config import APP_NAME
+from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
@@ -47,10 +48,10 @@ If you don't find the information you need here, we recommend that you visit
 our main documentation: [blue]{ea_constants.DOCS_URL}[/blue]
 """,
     epilog=f"""
-Made by Encord. [bold]Get in touch[/bold]: 
+Made by Encord. [bold]Get in touch[/bold]:
 
 
-:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]   
+:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]
 
 :e-mail: Email: [blue]{ea_constants.ENCORD_EMAIL}[/blue]
 
