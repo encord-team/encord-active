@@ -70,3 +70,7 @@ Don't know this? Please see our documentation on the topic to get more help.
         self.save()
 
         return ssh_key_path
+
+
+APP_NAME = "encord-active"
+app_config = AppConfig("encord-active")
