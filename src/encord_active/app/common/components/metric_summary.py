@@ -72,7 +72,7 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             st.info(f'Score file of metric "{x_metric_name}" is empty, please run this metric again.')
             return
 
-        if y_metric_df.shape[1] == 0:
+        if y_metric_df.shape[0] == 0:
             st.info(f'Score file of metric "{y_metric_name}" is empty, please run this metric again.')
             return
 
