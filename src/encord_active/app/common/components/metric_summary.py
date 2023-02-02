@@ -43,7 +43,12 @@ _COLUMNS = MetricWithDistanceSchema
 def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
     with st.expander("2D metrics view", True):
         metric_selection_col, scatter_plot_col = st.columns([2, 5])
-        metric_names = sorted([metric_key for metric_key in metrics_data_summary.metrics.keys()])
+
+        # Annotation Duplicates has different identifier structures than the other metrics: therefore, it is
+        # excluded from the 2D metric view for now.
+        metric_names = sorted(
+            [metric_key for metric_key in metrics_data_summary.metrics.keys() if metric_key != "Annotation Duplicates"]
+        )
 
         if len(metric_names) < 2:
             st.info("You need at least two metrics to plot 2D metric view.")
@@ -62,6 +67,14 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
 
         y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[[MetricSchema.identifier, MetricSchema.score]]
         y_metric_df.rename(columns={MetricSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
+
+        if x_metric_df.shape[0] == 0:
+            st.info(f'Score file of metric "{x_metric_name}" is empty, please run this metric again.')
+            return
+
+        if y_metric_df.shape[1] == 0:
+            st.info(f'Score file of metric "{y_metric_name}" is empty, please run this metric again.')
+            return
 
         if len(x_metric_df.iloc[0][MetricSchema.identifier].split("_")) == len(
             y_metric_df.iloc[0][MetricSchema.identifier].split("_")
