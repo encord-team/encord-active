@@ -1,4 +1,3 @@
-import sys
 from dataclasses import dataclass
 from typing import List
 
@@ -44,7 +43,7 @@ This metric gives each image a score that shows each image's uniqueness.
 
     def __init__(self, near_duplicate_threshold=0.95):
         super(ImageSingularity, self).__init__()
-        self.collections: List[LabelEmbedding] = {}
+        self.collections: List[LabelEmbedding] = []
         self.scores: dict[str, DataUnitInfo] = {}
         self.near_duplicate_threshold = near_duplicate_threshold
 
@@ -58,9 +57,6 @@ This metric gives each image a score that shows each image's uniqueness.
 
         db_index.add(embeddings_normalized)  # pylint: disable=no-value-for-parameter
         return embeddings_normalized, db_index
-
-    def get_identifier_from_collection_item(self, item):
-        return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}'
 
     def score_images(self, project_hash: str, nearest_distances: np.ndarray, nearest_items: np.ndarray):
         previous_duplicates = {}
