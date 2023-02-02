@@ -220,27 +220,28 @@ community</a>
         set_clone_button(False)
 
     if get_clone_button():
-        with st.form("new_project_form"):
-            try:
+        try:
+            with st.spinner("Loading..."):
                 action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
-                has_original_project = bool(action_utils.original_project)
-            except ProjectNotFound as e:
-                st.markdown(
-                    f"""
-                ❌ No `project_meta.yaml` file in the project folder.
-                Please create `project_meta.yaml` file in **{e.project_dir}** folder with the following content
-                and try again:
-                ``` yaml
-                project_hash: <project_hash>
-                ssh_key_path: /path/to/your/encord/ssh_key
-                ```
-                """
-                )
-                return
-            except Exception as e:
-                st.error(str(e))
-                return
+            has_original_project = bool(action_utils.original_project)
+        except ProjectNotFound as e:
+            st.markdown(
+                f"""
+            ❌ No `project_meta.yaml` file in the project folder.
+            Please create `project_meta.yaml` file in **{e.project_dir}** folder with the following content
+            and try again:
+            ``` yaml
+            project_hash: <project_hash>
+            ssh_key_path: /path/to/your/encord/ssh_key
+            ```
+            """
+            )
+            return
+        except Exception as e:
+            st.error(str(e))
+            return
 
+        with st.form("new_project_form"):
             st.subheader("Create a new project with the selected items")
 
             cols = _get_columns(needs_ontology=not has_original_project, num_rows=filtered_df.shape[0])
