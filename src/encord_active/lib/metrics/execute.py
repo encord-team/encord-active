@@ -7,7 +7,6 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
-from encord.project_ontology.object_type import ObjectShape
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
@@ -19,6 +18,7 @@ from encord_active.lib.metrics.metric import (
     EmbeddingType,
     Metric,
     MetricType,
+    ObjectShape,
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
