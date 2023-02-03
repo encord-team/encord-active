@@ -10,13 +10,17 @@ from encord_active.app.common.components.data_quality_summary import summary_ite
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.data_quality_summary import (
+    CrossMetricSchema,
+    create_2d_metric_chart,
     create_image_size_distribution_chart,
     create_labels_distribution_chart,
     create_outlier_distribution_chart,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
+    AllMetricsOutlierSchema,
     IqrOutliers,
+    MetricsSeverity,
     MetricWithDistanceSchema,
     get_all_metrics_outliers,
 )
@@ -35,14 +39,87 @@ from encord_active.lib.metrics.utils import (
 _COLUMNS = MetricWithDistanceSchema
 
 
-def render_issues_pane(metrics: pd.DataFrame, st_col: DeltaGenerator):
+def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
+    with st.expander("2D metrics view", True):
+        metric_selection_col, scatter_plot_col = st.columns([2, 5])
+
+        # Annotation Duplicates has different identifier structures than the other metrics: therefore, it is
+        # excluded from the 2D metric view for now.
+        metric_names = sorted(
+            [metric_key for metric_key in metrics_data_summary.metrics.keys() if metric_key != "Annotation Duplicates"]
+        )
+
+        if len(metric_names) < 2:
+            st.info("You need at least two metrics to plot 2D metric view.")
+            return
+
+        x_metric_name = metric_selection_col.selectbox("x axis", metric_names, index=0)
+        y_metric_name = metric_selection_col.selectbox("y axis", metric_names, index=1)
+        trend_selected = metric_selection_col.checkbox(
+            "Show trend",
+            value=True,
+            help="Draws a trend line to demonstrate the relationship between the two metrics.",
+        )
+
+        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+        ]
+        x_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.x}"}, inplace=True)
+
+        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+        ]
+        y_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
+
+        if x_metric_df.shape[0] == 0:
+            st.info(f'Score file of metric "{x_metric_name}" is empty, please run this metric again.')
+            return
+
+        if y_metric_df.shape[0] == 0:
+            st.info(f'Score file of metric "{y_metric_name}" is empty, please run this metric again.')
+            return
+
+        if len(x_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")) == len(
+            y_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")
+        ):
+            merged_metrics = pd.merge(x_metric_df, y_metric_df, how="inner", on=MetricWithDistanceSchema.identifier)
+        else:
+            x_changed, to_be_parsed_df = (
+                (True, x_metric_df.copy(deep=True))
+                if len(x_metric_df.iloc[0][MetricWithDistanceSchema.identifier].split("_")) == 4
+                else (False, y_metric_df.copy(deep=True))
+            )
+
+            to_be_parsed_df[[MetricWithDistanceSchema.identifier, "identifier_rest"]] = to_be_parsed_df[
+                MetricWithDistanceSchema.identifier
+            ].str.rsplit("_", n=1, expand=True)
+
+            merged_metrics = pd.merge(
+                to_be_parsed_df if x_changed else x_metric_df,
+                y_metric_df if x_changed else to_be_parsed_df,
+                how="inner",
+                on=MetricWithDistanceSchema.identifier,
+            )
+            merged_metrics[MetricWithDistanceSchema.identifier] = (
+                merged_metrics[MetricWithDistanceSchema.identifier] + "_" + merged_metrics["identifier_rest"]
+            )
+
+            merged_metrics.pop("identifier_rest")
+
+        fig = create_2d_metric_chart(
+            merged_metrics.pipe(DataFrame[CrossMetricSchema]), str(x_metric_name), str(y_metric_name), trend_selected
+        )
+        scatter_plot_col.plotly_chart(fig, use_container_width=True)
+
+
+def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator):
     st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")
 
     for counter, (_, row) in enumerate(metrics.iterrows()):
         st_col.metric(
-            f"{counter + 1}. {row['metric']} outliers",
-            row["total_severe_outliers"],
-            help=f'Go to Explorer page and chose {row["metric"]} metric to spot these outliers.',
+            f"{counter + 1}. {row[AllMetricsOutlierSchema.metric_name]} outliers",
+            row[AllMetricsOutlierSchema.total_severe_outliers],
+            help=f"Go to Explorer page and chose {row[AllMetricsOutlierSchema.metric_name]} metric to spot these outliers.",
         )
 
 
@@ -101,12 +178,15 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     fig = create_image_size_distribution_chart(get_state().image_sizes)
     plots_col.plotly_chart(fig, use_container_width=True)
 
-    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    metrics_with_severe_outliers = all_metrics_outliers[
+        all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
+    ]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
+
+    render_2d_metric_plots(get_state().metrics_data_summary)
 
 
 def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
-
     if get_state().annotation_sizes is None:
         get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths)
 
@@ -187,8 +267,11 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
             )
             st.plotly_chart(fig, use_container_width=True)
 
-    metrics_with_severe_outliers = all_metrics_outliers[all_metrics_outliers["total_severe_outliers"] > 0]
+    metrics_with_severe_outliers = all_metrics_outliers[
+        all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
+    ]
     render_issues_pane(metrics_with_severe_outliers, issues_col)
+    render_2d_metric_plots(get_state().metrics_label_summary)
 
 
 def render_metric_summary(
