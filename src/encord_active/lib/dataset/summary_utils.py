@@ -7,7 +7,6 @@ from encord.constants.enums import DataType
 from encord.objects.ontology_structure import OntologyStructure
 from pandera.typing import DataFrame
 
-from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.project import ProjectFileStructure
 
 
@@ -140,7 +139,7 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
                 total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
 
         metric_severity.metrics[metric.name] = MetricOutlierInfo(
-            metric=metric, df=DataFrame[MetricSchema](df), iqr_outliers=iqr_outliers
+            metric=metric, df=DataFrame[MetricWithDistanceSchema](df), iqr_outliers=iqr_outliers
         )
 
     metric_severity.total_unique_severe_outliers = len(total_unique_severe_outliers)
