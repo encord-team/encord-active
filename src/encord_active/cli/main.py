@@ -230,7 +230,7 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="visualize")
 @bypass_streamlit_question
 @ensure_project
-def visualise(
+def visualize(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
     ),
