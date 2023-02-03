@@ -58,6 +58,9 @@ This metric gives each image a score that shows each image's uniqueness.
         db_index.add(embeddings_normalized)  # pylint: disable=no-value-for-parameter
         return embeddings_normalized, db_index
 
+    def scale_cos_score_to_0_1(self, score: float) -> float:
+        return (score + 1) / 2
+
     def score_images(self, project_hash: str, nearest_distances: np.ndarray, nearest_items: np.ndarray):
         previous_duplicates: dict[int, int] = {}
 
@@ -73,13 +76,13 @@ This metric gives each image a score that shows each image's uniqueness.
                 if abs(1.0 - nearest_distances[i, j]) < 1e-5:
                     previous_duplicates[nearest_items[i, j]] = nearest_items[i, 0]
                 else:
-                    if (nearest_distances[i, j] + 1) / 2 >= self.near_duplicate_threshold:
+                    if self.scale_cos_score_to_0_1(nearest_distances[i, j]) >= self.near_duplicate_threshold:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            1 - (nearest_distances[i, j] + 1) / 2, "Near duplicate image"
+                            1 - self.scale_cos_score_to_0_1(nearest_distances[i, j]), "Near duplicate image"
                         )
                     else:
                         self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            1 - (nearest_distances[i, j] + 1) / 2, ""
+                            1 - self.scale_cos_score_to_0_1(nearest_distances[i, j]), ""
                         )
                     break
 
