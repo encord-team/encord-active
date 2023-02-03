@@ -75,7 +75,7 @@ def main(project_path: str):
         key = pages_menu(items=items)
         path = key.split(SEPARATOR) if key else []
 
-    render = reduce(dict.__getitem__, path, pages) if path else pages["Label Quality"]["Summary"]  # type: ignore
+    render = reduce(dict.__getitem__, path, pages) if path else pages["Data Quality"]["Summary"]  # type: ignore
     if callable(render):
         render()
 
