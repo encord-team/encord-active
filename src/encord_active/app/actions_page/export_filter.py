@@ -118,26 +118,50 @@ def export_filter():
     st.markdown(f"**Total row:** {row_count}")
     st.dataframe(filtered_df, use_container_width=True)
 
-    action_columns = st.columns((3, 3, 2, 2, 2, 2, 2))
-    is_pressed = action_columns[0].button(
-        "🌀 Generate COCO file",
-        help="Generate COCO file with filtered data",
+    action_columns = st.columns((3, 3, 1, 2, 2, 2, 2))
+    file_prefix = get_state().project_paths.project_dir.name
+
+    csv_placeholder = action_columns[0].empty()
+    generate_csv = csv_placeholder.button(
+        "🌀 Generate CSV",
+        help="Generate CSV file with filtered data to enable CSV download.",
     )
 
-    with st.spinner(text="Generating COCO file"):
-        coco_json = (
-            generate_coco_file(filtered_df, get_state().project_paths.project_dir, get_state().project_paths.ontology)
-            if is_pressed
-            else ""
+    if generate_csv:
+        with st.spinner(text="Generating CSV file"):
+            csv_content = filtered_df.to_csv().encode("utf-8") if generate_csv else ""
+            csv_placeholder.empty()
+
+        csv_placeholder.download_button(
+            "⬇ Download CSV",
+            data=csv_content,
+            file_name=f"{file_prefix}-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.csv",
+            help="Ensure you have generated an updated COCO file before downloading",
         )
 
-    action_columns[1].download_button(
-        "⬇ Download filtered data",
-        json.dumps(coco_json, indent=2),
-        file_name=f"encord-active-coco-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.json",
-        disabled=not is_pressed,
-        help="Ensure you have generated an updated COCO file before downloading",
+    coco_placeholder = action_columns[1].empty()
+    generate_coco = coco_placeholder.button(
+        "🌀 Generate COCO",
+        help="Generate COCO file with filtered data to enable COCO download.",
     )
+
+    if generate_coco:
+        with st.spinner(text="Generating COCO file"):
+            coco_json = (
+                generate_coco_file(
+                    filtered_df, get_state().project_paths.project_dir, get_state().project_paths.ontology
+                )
+                if generate_coco
+                else ""
+            )
+            coco_placeholder.empty()
+
+        coco_placeholder.download_button(
+            "⬇ Download COCO",
+            json.dumps(coco_json, indent=2),
+            file_name=f"{file_prefix}-coco-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.json",
+            help="Ensure you have generated an updated COCO file before downloading",
+        )
 
     action_columns[3].button(
         "🏗 Clone",
