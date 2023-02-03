@@ -73,7 +73,7 @@ def ensure_initialised(fn):
     def wrapper(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
-        except:
+        except Exception as e:
             merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
             MergedMetrics().replace_all(merged_metrics)
             return fn(*args, **kwargs)
@@ -109,3 +109,15 @@ class MergedMetrics(object):
             copy = df.copy()
             copy.tags = copy.tags.apply(marshall_tags)
             copy.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
+
+    @ensure_initialised
+    def replace_identifiers(self, mappings: dict[str, str]):
+        def _replace_identifiers(id: str):
+            lr, du, *rest = id.split("_")
+            mappedlr, mappeddu = mappings[lr], mappings[du]
+            return "_".join([mappedlr, mappeddu, *rest])
+
+        with DBConnection() as conn:
+            df = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
+            df.index = df.index.map(_replace_identifiers)
+            df.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
