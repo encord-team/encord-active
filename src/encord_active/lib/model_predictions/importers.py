@@ -17,6 +17,14 @@ from pandas.errors import EmptyDataError
 from PIL import Image
 from tqdm.auto import tqdm
 
+from encord_active.lib.db.predictions import (
+    BoundingBox,
+    Format,
+    ObjectDetection,
+    Prediction,
+    RelativeFloat,
+)
+from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project import Project
 
@@ -169,7 +177,17 @@ def import_mask_predictions(
                         _mask = np.zeros_like(mask)
                         _mask = cv2.fillPoly(_mask, [contour], 1)
 
-                        prediction_writer.add_prediction(du_hash, class_hash, confidence_score=1.0, polygon=_mask)
+                        prediction_writer.add_prediction(
+                            Prediction(
+                                data_hash=du_hash,
+                                class_id=class_hash,
+                                confidence=1.0,
+                                object=ObjectDetection(
+                                    format=Format.POLYGON,
+                                    data=_mask,
+                                ),
+                            )
+                        )
 
                 pbar.update(1)
 
@@ -211,11 +229,28 @@ def import_KITTI_labels(
 
         for _, row in df.iterrows():
             class_name = cast(str, hash_lookup[row["class_name"]])
-            bbox = {
-                "x": row["xmin"],
-                "y": row["ymin"],
-                "w": row["xmax"] - row["xmin"],
-                "h": row["ymax"] - row["ymin"],
-            }
-            conf = row["undefined0"]
-            prediction_writer.add_prediction(data_hash, class_name, confidence_score=conf, bbox=bbox)
+            bbox = BoundingBox(
+                x=float(row["xmin"]),
+                y=float(row["ymin"]),
+                w=row["xmax"] - row["xmin"],
+                h=row["ymax"] - row["ymin"],
+            )
+            prediction_writer.add_prediction(
+                Prediction(
+                    data_hash=data_hash,
+                    class_id=class_name,
+                    confidence=float(row["undefined0"]),
+                    object=ObjectDetection(
+                        format=Format.BOUNDING_BOX,
+                        data=BoundingBox.parse_obj(bbox),
+                    ),
+                )
+            )
+
+
+def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
+    with PredictionWriter(project) as writer:
+        for pred in predictions:
+            writer.add_prediction(pred)
+
+    run_all_prediction_metrics(data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True)
