@@ -121,8 +121,10 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
         return out
 
     for p, n, m, l in zip(paths, names, meta_data, levels):
-        if m is None or not l or not is_valid_annotation_type(m.get("annotation_type"), metric_scope):
+        if n in {"Object Count", "Frame Object Density"}:
+            continue
 
+        if m is None or not l or not is_valid_annotation_type(m.get("annotation_type"), metric_scope):
             continue
 
         out.append(MetricData(name=n, path=p, meta=MetricMetadata(**m), level=l))  # type: ignore
