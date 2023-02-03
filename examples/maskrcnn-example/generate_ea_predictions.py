@@ -10,7 +10,7 @@ from utils.encord_dataset import EncordMaskRCNNDataset
 from utils.model_libs import get_model_instance_segmentation
 from utils.provider import get_config, get_transform
 
-from encord_active.lib.db.predictions import Format, Prediction
+from encord_active.lib.db.predictions import Format, ObjectDetection, Prediction
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -49,8 +49,10 @@ with torch.no_grad():
                     data_hash=img_metadata[0]["data_hash"],
                     class_id=encord_ontology["objects"][la.item() - 1]["featureNodeHash"],
                     confidence=sc.item(),
-                    format=Format.POLYGON,
-                    data=contour,
+                    object=ObjectDetection(
+                        format=Format.POLYGON,
+                        data=contour,
+                    ),
                 )
                 predictions_to_store.append(prediction)
 

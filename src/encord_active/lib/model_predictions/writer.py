@@ -14,6 +14,7 @@ from torchvision.ops import box_iou
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import RLEData, binary_mask_to_rle, rle_iou
+from encord_active.lib.db.predictions import Prediction
 from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
@@ -351,35 +352,14 @@ class PredictionWriter:
             raise ValueError("Bbox coordinates should be floats")
         return True
 
-    def add_prediction(
-        self,
-        data_hash: str,
-        class_uid: str,
-        confidence_score: float,
-        bbox: Optional[Dict[str, Union[float, int]]] = None,
-        polygon: Optional[Union[np.ndarray, List[Tuple[int, int]]]] = None,
-        frame: Optional[int] = None,
-    ) -> None:
+    def add_prediction(self, prediction: Prediction) -> None:
         """
         Add a prediction to en encord-active project.
-        Note that only one bounding box or polygon can be specified in any given call to this function.
 
-        :param data_hash: The ``data_hash`` of the data unit that the prediction belongs to.
-        :param class_uid: The ``featureNodeHash`` of the ontology object corresponding to the class of the prediction.
-        :param confidence_score: The model confidence score.
-        :param bbox: A bounding box prediction. This should be a dict with the format::
-
-                {
-                    'x': 0.1  # normalized x-coordinate of the top-left corner of the bounding box.
-                    'y': 0.2  # normalized y-coordinate of the top-left corner of the bounding box.
-                    'w': 0.3  # normalized width of the bounding box.
-                    'h': 0.1  # normalized height of the bounding box.
-                }
-
-        :param polygon: A polygon represented either as a list of points or a mask of size [h, w].
-        :param frame: If predictions are associated with a video, then the frame number should be provided.
+        :param prediction: The `prediction` to write.
         """
         rle = None
+        data_hash = prediction.data_hash
         label_hash = self.lr_lookup.get(data_hash)
         if not label_hash:
             logger.warning(f"Couldn't match data hash `{data_hash}` to any label row")
@@ -390,11 +370,12 @@ class PredictionWriter:
         width = int(du["width"])
         height = int(du["height"])
 
-        ptype: PredictionType
-        if bbox is None and polygon is None:
+        if not prediction.object:
             raise NotImplementedError("Frame level classifications are not supported at the moment.")
             # ptype = PredictionType.FRAME
-        elif bbox is None and isinstance(polygon, (np.ndarray, list)):
+
+        if isinstance(prediction.object.data, np.ndarray):
+            polygon = prediction.object.data
             ptype = PredictionType.POLYGON
             if isinstance(polygon, list):
                 polygon = np.array(polygon)
@@ -415,20 +396,18 @@ class PredictionWriter:
             x2, y2 = x1 + w, y1 + h
             rle = binary_mask_to_rle(np_mask)
 
-        elif isinstance(bbox, dict) and polygon is None:
-            ptype = PredictionType.BBOX
-            self.__check_bbox(bbox)
-            x1 = bbox["x"] * width
-            y1 = bbox["y"] * height
-            x2 = (bbox["x"] + bbox["w"]) * width
-            y2 = (bbox["y"] + bbox["h"]) * height
         else:
-            raise ValueError(
-                "Something seems wrong. Did you use the wrong types or did you parse both a bbox and polygon?"
-            )
+            bbox = prediction.object.data
+            ptype = PredictionType.BBOX
+            # TODO: move me to the prediction model
+            self.__check_bbox(bbox)
+            x1 = bbox.x * width
+            y1 = bbox.y * height
+            x2 = (bbox.x + bbox.w) * width
+            y2 = (bbox.y + bbox.h) * height
 
         _frame = 0
-        if not frame:  # Try to infer frame number from data hash.
+        if not prediction.frame:  # Try to infer frame number from data hash.
             label_row = self.project.label_rows[label_hash]
             data_unit = label_row["data_units"][data_hash]
             if "data_sequence" in data_unit:
@@ -436,7 +415,7 @@ class PredictionWriter:
 
         object_hash = self.__get_unique_object_hash()
 
-        class_id = self.object_class_id_lookup.get(class_uid)
+        class_id = self.object_class_id_lookup.get(prediction.class_id)
         if class_id is None:
             raise ValueError(
                 f"`class_uid` didn't match any key in the "
@@ -444,7 +423,7 @@ class PredictionWriter:
                 f"Options are: [{', '.join(self.object_class_id_lookup.keys())}]"
             )
 
-        ontology_object = self.object_lookup[class_uid]
+        ontology_object = self.object_lookup[prediction.class_id]
         if ontology_object.shape.value != ptype.value:
             raise ValueError(
                 f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
@@ -456,7 +435,7 @@ class PredictionWriter:
                 url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}",
                 img_id=get_image_identifier(data_hash, _frame),
                 class_id=class_id,
-                confidence=confidence_score,
+                confidence=prediction.confidence,
                 x1=x1,
                 y1=y1,
                 x2=x2,
