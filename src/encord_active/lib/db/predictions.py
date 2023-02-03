@@ -73,7 +73,7 @@ class Prediction(BaseModel):
 
 
 def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
-    with PredictionWriter(data_dir, project) as writer:
+    with PredictionWriter(project) as writer:
         for pred in predictions:
             data: Dict[str, Any] = {}
 
