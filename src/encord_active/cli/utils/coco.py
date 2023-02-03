@@ -6,7 +6,12 @@ import numpy as np
 from encord_active.cli.config import app_config
 from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME, CocoImporter
 from encord_active.lib.coco.parsers import parse_results
-from encord_active.lib.db.predictions import BoundingBox, Format, Prediction
+from encord_active.lib.db.predictions import (
+    BoundingBox,
+    Format,
+    ObjectDetection,
+    Prediction,
+)
 from encord_active.lib.metrics.execute import run_metrics
 
 
@@ -40,8 +45,10 @@ def import_coco_predictions(
                 data_hash=image["data_hash"],
                 class_id=category_to_hash[str(res.category_id)],
                 confidence=res.score,
-                format=format,
-                data=data,
+                object=ObjectDetection(
+                    format=format,
+                    data=data,
+                ),
             )
         )
 

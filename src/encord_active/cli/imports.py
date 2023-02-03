@@ -38,7 +38,7 @@ def import_predictions(
         with open(predictions_path, "rb") as f:
             predictions = pickle.load(f)
 
-    from encord_active.lib.db.predictions import (
+    from encord_active.lib.model_predictions.importers import (
         import_predictions as app_import_predictions,
     )
 
