@@ -44,8 +44,8 @@ class Severity(str, Enum):
 
 class AllMetricsOutlierSchema(pa.SchemaModel):
     metric_name: Series[str]
-    total_severe_outliers: Series[int] = pa.Field(coerce=True)
-    total_moderate_outliers: Series[int] = pa.Field(coerce=True)
+    total_severe_outliers: Series[int] = pa.Field(ge=0, coerce=True)
+    total_moderate_outliers: Series[int] = pa.Field(ge=0, coerce=True)
 
 
 _COLUMNS = MetricWithDistanceSchema
