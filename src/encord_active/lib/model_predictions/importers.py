@@ -17,6 +17,7 @@ from pandas.errors import EmptyDataError
 from PIL import Image
 from tqdm.auto import tqdm
 
+from encord_active.lib.labels.object import BoxShapes
 from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project import Project
 
@@ -188,7 +189,7 @@ def import_KITTI_labels(
         label_name_map = json.load(f)
 
     object_name_to_hash = {
-        o["name"]: o["featureNodeHash"] for o in project.ontology["objects"] if o["shape"] == "bounding_box"
+        o["name"]: o["featureNodeHash"] for o in project.ontology["objects"] if o["shape"] in BoxShapes
     }
     hash_lookup: Dict[str, Optional[str]] = {v: object_name_to_hash.get(k) for k, v in label_name_map.items()}
 

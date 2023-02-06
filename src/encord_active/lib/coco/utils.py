@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from pycocotools.mask import decode, frPyObjects, merge
 
 from encord_active.lib.common.time import get_timestamp
+from encord_active.lib.labels.object import BoxShapes, ObjectShape
 
 Point = Tuple[float, float]
 BBOX_KEYS = {"x", "y", "h", "w"}
@@ -64,13 +65,13 @@ def make_object_dict(
         "reviews": [],
     }
 
-    if shape in ["polygon", "polyline"] and object_data:
+    if shape in [ObjectShape.POLYGON, ObjectShape.POLYLINE] and object_data:
         if not isinstance(object_data, list):
             raise ValueError(f"The `object_data` for {shape} should be a list of points.")
 
         object_dict[shape] = {str(i): {"x": round(x, 4), "y": round(y, 4)} for i, (x, y) in enumerate(object_data)}
 
-    elif shape == "point":
+    elif shape == ObjectShape.KEY_POINT:
         if not isinstance(object_data, tuple):
             raise ValueError(f"The `object_data` for {shape} should be a tuple.")
         if len(object_data) != 2:
@@ -80,15 +81,23 @@ def make_object_dict(
 
         object_dict[shape] = {"0": {"x": round(object_data[0], 4), "y": round(object_data[1], 4)}}
 
-    elif shape == "bounding_box":
+    elif shape in BoxShapes:
         if not isinstance(object_data, dict):
             raise ValueError(f"The `object_data` for {shape} should be a dictionary.")
-        if len(BBOX_KEYS.union(set(object_data.keys()))) != 4:
+        if len(BBOX_KEYS.intersection(object_data.keys())) != 4:
+            __import__("ipdb").set_trace()
             raise ValueError(f"The `object_data` for {shape} should have keys {BBOX_KEYS}.")
         if not isinstance(object_data["x"], float):
             raise ValueError(f"The `object_data` for {shape} should float values.")
 
-        object_dict["boundingBox"] = {k: round(v, 4) for k, v in object_data.items()}
+        box = {k: round(v, 4) for k, v in object_data.items()}
+        if shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
+            if "theta" not in object_data:
+                raise ValueError(f"The `object_data` for {shape} should contain a `theta` field.")
+
+            object_dict["rotatableBoundingBox"] = {**box, "theta": object_data["theta"]}
+        else:
+            object_dict["boundingBox"] = box
 
     return object_dict
 

@@ -8,16 +8,18 @@ from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.labels.classification import ClassificationType
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-class MetricType(Enum):
+class MetricType(str, Enum):
     SEMANTIC = "semantic"
     GEOMETRIC = "geometric"
     HEURISTIC = "heuristic"
 
 
-class DataType(Enum):
+class DataType(str, Enum):
     IMAGE = "image"
     SEQUENCE = "sequence"
 

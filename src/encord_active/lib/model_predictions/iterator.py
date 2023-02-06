@@ -17,6 +17,7 @@ from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import rle_to_binary_mask
+from encord_active.lib.labels.object import BoxShapes, ObjectShape
 
 logger = logging.getLogger(__name__)
 GMT_TIMEZONE = pytz.timezone("GMT")
@@ -125,9 +126,12 @@ class PredictionIterator(Iterator):
             "reviews": [],
         }
 
-        if shape == "bounding_box":
+        if shape == ObjectShape.BOUNDING_BOX:
             object_dict["boundingBox"] = {k: round(v, 4) for k, v in object_data.items()}
-        elif shape == "polygon":
+        elif shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
+            box = {k: round(v, 4) for k, v in object_data.items()}
+            object_dict["rotatableBoundingBox"] = {**box, "theta": object_data["theta"]}
+        elif shape == ObjectShape.POLYGON:
             object_dict["polygon"] = object_data
 
         return object_dict

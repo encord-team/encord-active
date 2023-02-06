@@ -7,14 +7,17 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 from pandera.typing import DataFrame
+from shapely.affinity import rotate
+from shapely.geometry import Polygon
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 
 
 def get_polygon_thickness(img_w: int):
-    t = max(1, int(img_w / 100))
+    t = max(1, int(img_w / 500))
     return t
 
 
@@ -176,10 +179,10 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
     :return: The polygon coordinates
     """
 
-    if obj["shape"] == "polygon":
+    if obj["shape"] == ObjectShape.POLYGON:
         p = obj["polygon"]
         polygon = np.array([[p[str(i)]["x"] * img_w, p[str(i)]["y"] * img_h] for i in range(len(p))])
-    elif obj["shape"] == "bounding_box":
+    elif obj["shape"] == ObjectShape.BOUNDING_BOX:
         b = obj["boundingBox"]
         polygon = np.array(
             [
@@ -189,6 +192,16 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
                 [b["x"] * img_w, (b["y"] + b["h"]) * img_h],
             ]
         )
+    elif obj["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
+        b = obj["rotatableBoundingBox"]
+        top_left = [b["x"] * img_w, b["y"] * img_h]
+        top_right = [(b["x"] + b["w"]) * img_w, b["y"] * img_h]
+        bottom_right = [(b["x"] + b["w"]) * img_w, (b["y"] + b["h"]) * img_h]
+        bottom_left = [b["x"] * img_w, (b["y"] + b["h"]) * img_h]
+        polygon = rotate(Polygon([top_left, top_right, bottom_right, bottom_left]), b["theta"])
+        if not polygon.exterior:
+            return None
+        polygon = np.array(list(polygon.exterior.coords))
     else:
         return None
 
@@ -231,7 +244,7 @@ def get_geometries(
     else:
         # Get all geometries
         for obj in objects:
-            if obj["shape"] not in {"polygon", "bounding_box"}:
+            if obj["shape"] not in {ObjectShape.POLYGON, ObjectShape.BOUNDING_BOX, ObjectShape.ROTATABLE_BOUNDING_BOX}:
                 continue
             geometries.append(__get_geometry(obj, img_h=img_h, img_w=img_w))
 

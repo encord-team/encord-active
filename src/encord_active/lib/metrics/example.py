@@ -28,7 +28,11 @@ $$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
 """,
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):

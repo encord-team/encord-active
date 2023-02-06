@@ -5,12 +5,12 @@ sidebar_position: 5
 # Write Your Own Metric
 
 :::tip
-If you are more comfortable with the notebooks, we have a 
-[Google Colab notebook](https://colab.research.google.com/drive/1tAqGGSY0sZfwec2Vp4ThvgLKIefy3-4b?usp=sharing) 
-for writing your own metric.  
+If you are more comfortable with the notebooks, we have a
+[Google Colab notebook](https://colab.research.google.com/drive/1tAqGGSY0sZfwec2Vp4ThvgLKIefy3-4b?usp=sharing)
+for writing your own metric.
 :::
 
-Create a new python file in the `<your_custom_metrics_folder>` directory and use the template provided in 
+Create a new python file in the `<your_custom_metrics_folder>` directory and use the template provided in
 `libs/encord_active/metrics/example.py`. The subdirectory within `libs/encord_active/metrics` is dictated by what
 information the metric employs:
 
@@ -44,7 +44,7 @@ $$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
 """,
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
         )
 
     def test(self, iterator: Iterator, writer: CSVMetricWriter):

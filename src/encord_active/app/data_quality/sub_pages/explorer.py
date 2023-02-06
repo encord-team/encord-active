@@ -182,9 +182,9 @@ def fill_data_quality_window(
     if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
         st.write("Image-level embedding file is not available for this project.")
         return
-    if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
-        st.write("Object-level embedding file is not available for this project.")
-        return
+    # if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
+    #     st.write("Object-level embedding file is not available for this project.")
+    #     return
 
     n_cols = get_state().page_grid_settings.columns
     n_rows = get_state().page_grid_settings.rows

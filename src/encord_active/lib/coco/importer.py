@@ -22,6 +22,7 @@ from encord_active.lib.coco.parsers import (
     parse_info,
 )
 from encord_active.lib.coco.utils import make_object_dict
+from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalDataRow,
@@ -104,9 +105,19 @@ def upload_annotation(
     objects = []
     for annot in annotation_list:
         obj = id_to_obj[annot.category_id]
-        polygon = annot.segmentation
-        polygon_points = [(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
-        objects.append(make_object_dict(ontology_object=obj.to_dict(), object_data=polygon_points))
+        if annot.segmentation:
+            obj = id_to_obj[annot.category_id]
+            polygon = annot.segmentation
+            polygon_points = [(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
+            objects.append(make_object_dict(ontology_object=obj.to_dict(), object_data=polygon_points))
+        elif len(annot.bbox or []) == 4:
+            x, y, w, h = annot.bbox
+            x = max(0.0, x)
+            y = max(0.0, y)
+            bounding_box = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
+            if annot.rotation is not None:
+                bounding_box.theta = annot.rotation
+            objects.append(make_object_dict(ontology_object=obj.to_dict(), object_data=bounding_box.dict()))
 
     lr["data_units"][data_hash]["labels"] = {"objects": objects, "classifications": []}
     updated_lr = label_utilities.construct_answer_dictionaries(lr)
@@ -162,7 +173,7 @@ class CocoImporter:
         print(f"Creating a new dataset: {self.title}")
         ontology_structure = OntologyStructure()
         for cat in self.categories:
-            ontology_structure.add_object(name=cat.name, shape=Shape.POLYGON, uid=cat.id_)
+            ontology_structure.add_object(name=cat.name, shape=Shape.ROTATABLE_BOUNDING_BOX, uid=cat.id_)
 
         ontology: LocalOntology = self.user_client.create_ontology(
             self.title,
