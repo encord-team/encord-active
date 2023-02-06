@@ -150,8 +150,11 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
+    chart_left, chart_right = st.columns(2)
+    chart_left.write("2d Embedding plot")
+
     chart = get_histogram(current_df, "score", metric.name)
-    st.altair_chart(chart, use_container_width=True)
+    chart_right.altair_chart(chart, use_container_width=True)
     subset = render_df_slicer(current_df, "score")
 
     st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} annotations")

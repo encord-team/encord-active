@@ -75,6 +75,8 @@ EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images.pkl",
     EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
     EmbeddingType.OBJECT: "cnn_objects.pkl",
+    "image_reduced": "cnn_images_reduced.pkl",
+    "objects_reduced": "cnn_objects_reduced.pkl",
 }
 
 
