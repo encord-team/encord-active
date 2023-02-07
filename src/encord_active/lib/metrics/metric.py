@@ -4,7 +4,10 @@ from enum import Enum
 from hashlib import md5
 from typing import List, Optional, Union
 
+from pydantic import BaseModel
+
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
@@ -53,25 +56,31 @@ class AnnotationType:
     ALL = [*OBJECT, *CLASSIFICATION]
 
 
-@dataclass
-class StatsMetadata:
-    threshold: float
+class StatsMetadata(BaseModel):
+    min_value: float
     max_value: float
     mean_value: float
-    min_value: float
     num_rows: int
 
+    @classmethod
+    def from_stats_observer(cls, stats_observer: StatisticsObserver):
+        return cls(
+            min_value=stats_observer.min_value,
+            max_value=stats_observer.max_value,
+            mean_value=stats_observer.mean_value,
+            num_rows=stats_observer.num_rows,
+        )
 
-@dataclass
-class MetricMetadata:
+
+class MetricMetadata(BaseModel):
     title: str
     short_description: str
     long_description: str
     metric_type: MetricType
     data_type: DataType
-    needs_images: bool
     annotation_type: List[AnnotationTypeUnion]
     embedding_type: Optional[EmbeddingType] = None
+    stats: Optional[StatsMetadata] = None
 
     def get_unique_name(self):
         name_hash = md5((self.title + self.short_description + self.long_description).encode()).hexdigest()
@@ -88,7 +97,6 @@ class Metric(ABC):
         data_type: DataType,
         annotation_type: List[Union[ObjectShape, ClassificationType]],
         embedding_type: Optional[EmbeddingType] = None,
-        needs_images: bool = False,
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -98,7 +106,6 @@ class Metric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
-            needs_images=False if not needs_images and metric_type == MetricType.GEOMETRIC else True,
         )
 
     @abstractmethod

@@ -7,6 +7,7 @@ from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.tags import Tag, TagScope
+from encord_active.lib.metrics.metric import MetricMetadata
 
 TABLE_NAME = "merged_metrics"
 
@@ -21,8 +22,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
         if not meta_pth.is_file():
             continue
 
-        with meta_pth.open("r", encoding="utf-8") as f:
-            meta = json.load(f)
+        meta = MetricMetadata.parse_file(meta_pth)
 
         metric_scores = pd.read_csv(index)
         if metric_scores.shape[0] == 0:
@@ -30,12 +30,12 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
 
         if len(metric_scores["identifier"][0].split("_")) != 3:
             if (
-                meta["annotation_type"][0] == ClassificationType.RADIO.value
-                and meta["data_type"] == "image"
-                and meta["embedding_type"] == "classification"
+                meta.annotation_type[0] == ClassificationType.RADIO.value
+                and meta.data_type == "image"
+                and meta.embedding_type == "classification"
             ):
                 main_df_image_quality = metric_scores
-                main_df_image_quality.rename(columns={"score": f"{meta['title']}"}, inplace=True)
+                main_df_image_quality.rename(columns={"score": f"{meta.title}"}, inplace=True)
                 continue
 
             # Object-level index
@@ -44,7 +44,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
             else:
                 columns_to_merge = metric_scores[["identifier", "score"]]
             main_df_objects = pd.merge(main_df_objects, columns_to_merge, how="outer", on="identifier")
-            main_df_objects.rename(columns={"score": f"{meta['title']}"}, inplace=True)
+            main_df_objects.rename(columns={"score": f"{meta.title}"}, inplace=True)
 
     main_df = pd.concat([main_df_images, main_df_objects, main_df_image_quality])
     main_df["tags"] = [[] for _ in range(len(main_df))]

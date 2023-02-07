@@ -44,7 +44,6 @@ class ObjectEmbeddingSimilarityTest(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
             embedding_type=EmbeddingType.OBJECT,
-            needs_images=True,
         )
         self.collections: dict[str, LabelEmbedding] = {}
         self.featureNodeHash_to_index: dict[str, int] = {}

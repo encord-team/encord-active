@@ -21,6 +21,7 @@ from encord_active.lib.metrics.metric import (
     MetricMetadata,
     MetricType,
     ObjectShape,
+    StatsMetadata,
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
@@ -159,13 +160,7 @@ def execute_metrics(
 
         # Store meta-data about the scores.
         meta_file = (cache_dir / "metrics" / f"{unique_metric_name}.meta.json").expanduser()
+        metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
 
         with meta_file.open("w") as f:
-            json.dump(
-                {
-                    **__get_object_attributes(metric),
-                    **__get_object_attributes(stats),
-                },
-                f,
-                indent=2,
-            )
+            f.write(metric.metadata.json())

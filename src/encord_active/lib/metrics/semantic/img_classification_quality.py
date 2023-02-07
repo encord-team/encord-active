@@ -58,7 +58,6 @@ class ImageLevelQualityTest(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[AnnotationType.CLASSIFICATION.RADIO],
             embedding_type=EmbeddingType.CLASSIFICATION,
-            needs_images=True,
         )
         self.collections: list[LabelEmbedding] = []
         self.featureNodeHash_to_index: dict[str, dict] = {}
