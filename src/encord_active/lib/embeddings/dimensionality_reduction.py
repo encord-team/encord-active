@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -5,7 +6,7 @@ import umap
 from sklearn.preprocessing import StandardScaler
 
 from encord_active.lib.embeddings.utils import (
-    EMBEDDING_TYPE_TO_FILENAME,
+    EMBEDDING_REDUCED_TO_FILENAME,
     EmbeddingType,
     load_collections,
 )
@@ -18,9 +19,8 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
 
     collections = load_collections(embedding_type, project_dir / "embeddings")
     embeddings = np.array([collection["embedding"] for collection in collections])
-    embeddings = StandardScaler().fit_transform(embeddings)
 
-    reducer = umap.UMAP()
+    reducer = umap.UMAP(random_state=0)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection = {}
@@ -31,3 +31,5 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
             "x": embeddings_2d[:, 0],
             "y": embeddings_2d[:, 1],
         }
+    target_path = Path(project_dir / "embeddings" / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.IMAGE])
+    target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
