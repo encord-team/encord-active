@@ -63,6 +63,7 @@ class State:
     annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
+    selected_points_from_embeddings: Optional[list] = None
 
     @classmethod
     def init(cls, project_dir: Path):

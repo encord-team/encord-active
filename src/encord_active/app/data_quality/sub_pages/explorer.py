@@ -141,6 +141,10 @@ def get_selected_identifiers(embeddings_2d: DataFrame[Embedding2DSchema], select
     return selected_rows
 
 
+def reset_embedding_selection():
+    get_state().selected_points_from_embeddings = None
+
+
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -165,22 +169,21 @@ def fill_data_quality_window(
         return
 
     st.markdown("""---""")
-    chart_left, chart_right = st.columns(2)
 
     embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, metric_scope)
-    with chart_left:
-        if embedding_2d is None:
-            st.info("There is no 2D embedding file to display.")
-        else:
-            fig = px.scatter(embedding_2d, x=Embedding2DSchema.x, y=Embedding2DSchema.y)
-            selected_points = plotly_events(fig, click_event=False, select_event=True)
-            selected_rows = get_selected_identifiers(embedding_2d, selected_points)
-            current_df = current_df[
-                current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
-            ]
+
+    if embedding_2d is None:
+        st.info("There is no 2D embedding file to display.")
+    else:
+        fig = px.scatter(embedding_2d, x=Embedding2DSchema.x, y=Embedding2DSchema.y, title="2D embedding plot")
+        selection = plotly_events(fig, click_event=False, select_event=True)
+
+        selected_rows = get_selected_identifiers(embedding_2d, selection)
+        current_df = current_df[current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
+    st.button("Reset selection", on_click=reset_embedding_selection)
 
     chart = get_histogram(current_df, "score", metric.name)
-    chart_right.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
     subset = render_df_slicer(current_df, "score")
 
     st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} annotations")
