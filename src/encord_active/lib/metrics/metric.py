@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from enum import Enum
 from hashlib import md5
 from typing import List, Optional, Union

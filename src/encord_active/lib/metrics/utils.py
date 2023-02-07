@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict
 
 import pandas as pd
 import pandera as pa
@@ -10,14 +10,11 @@ from encord.ontology import OntologyStructure
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.common.utils import load_json
-from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     AnnotationTypeUnion,
     EmbeddingType,
     MetricMetadata,
-    StatsMetadata,
 )
 
 
