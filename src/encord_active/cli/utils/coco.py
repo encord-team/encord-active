@@ -43,9 +43,9 @@ def import_coco_predictions(
         predictions.append(
             Prediction(
                 data_hash=image["data_hash"],
-                class_id=category_to_hash[str(res.category_id)],
                 confidence=res.score,
                 object=ObjectDetection(
+                    object_class_hash=category_to_hash[str(res.category_id)],
                     format=format,
                     data=data,
                 ),

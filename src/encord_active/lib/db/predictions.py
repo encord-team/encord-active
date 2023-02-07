@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Annotated, NamedTuple, Optional, Union
 
 import numpy as np
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
 
 RelativeFloat = Annotated[float, Field(ge=0, le=1)]
 DegreeFloat = Annotated[float, Field(ge=0, le=360)]
@@ -31,6 +31,7 @@ class Point(NamedTuple):
 class ObjectDetection(BaseModel):
     format: Format
     data: Union[BoundingBox, np.ndarray]
+    object_class_hash: str
     track_id: Optional[Union[str, int]] = None
 
     @validator("data", pre=True)
@@ -64,9 +65,23 @@ class ObjectDetection(BaseModel):
         json_encoders = {np.ndarray: lambda v: json.dumps(v.tolist())}
 
 
+class FrameClassification(BaseModel, frozen=True):
+    classification_hash: str
+    attribute_hash: str
+    option_hash: str
+
+
 class Prediction(BaseModel):
     data_hash: str
     frame: Optional[int] = 0
-    class_id: str
     confidence: float
-    object: Optional[ObjectDetection]
+    object: Optional[ObjectDetection] = None
+    classification: Optional[FrameClassification] = None
+
+    @root_validator(pre=True)
+    def check_card_number_omitted(cls, values):  # pylint: disable=no-self-argument
+        object = values.get("object")
+        classification = values.get("classification")
+        exactly_one_of = (object and not classification) or (classification and not object)
+        assert exactly_one_of, "Prediction must have exactly one of `object` or `classification"
+        return values
