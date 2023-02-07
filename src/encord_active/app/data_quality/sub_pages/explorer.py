@@ -2,11 +2,13 @@ import re
 from typing import List
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 from natsort import natsorted
 from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
+from streamlit_plotly_events import plotly_events
 
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.annotator_statistics import (
@@ -33,7 +35,8 @@ from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
-from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
+from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
@@ -127,6 +130,17 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
+def get_selected_identifiers(embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]):
+    selected_points_merged = [str(item["x"] * 1000)[:4] + "-" + str(item["y"] * 1000)[:4] for item in selected_points]
+    embeddings_2d["x-y"] = (
+        (embeddings_2d[Embedding2DSchema.x] * 1000).astype(str).str.slice(0, 4)
+        + "-"
+        + (embeddings_2d[Embedding2DSchema.y] * 1000).astype(str).str.slice(0, 4)
+    )
+    selected_rows = embeddings_2d[embeddings_2d["x-y"].isin(selected_points_merged)]
+    return selected_rows
+
+
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -150,8 +164,20 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
+    st.markdown("""---""")
     chart_left, chart_right = st.columns(2)
-    chart_left.write("2d Embedding plot")
+
+    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, metric_scope)
+    with chart_left:
+        if embedding_2d is None:
+            st.info("There is no 2D embedding file to display.")
+        else:
+            fig = px.scatter(embedding_2d, x=Embedding2DSchema.x, y=Embedding2DSchema.y)
+            selected_points = plotly_events(fig, click_event=False, select_event=True)
+            selected_rows = get_selected_identifiers(embedding_2d, selected_points)
+            current_df = current_df[
+                current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
+            ]
 
     chart = get_histogram(current_df, "score", metric.name)
     chart_right.altair_chart(chart, use_container_width=True)
