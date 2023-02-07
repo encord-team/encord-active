@@ -47,11 +47,11 @@ with torch.no_grad():
                 contour = contour.reshape(contour.shape[0], 2) / np.array([[ma.shape[2], ma.shape[1]]])
                 prediction = Prediction(
                     data_hash=img_metadata[0]["data_hash"],
-                    class_id=encord_ontology["objects"][la.item() - 1]["featureNodeHash"],
                     confidence=sc.item(),
                     object=ObjectDetection(
                         format=Format.POLYGON,
                         data=contour,
+                        object_class_hash=encord_ontology["objects"][la.item() - 1]["featureNodeHash"],
                     ),
                 )
                 predictions_to_store.append(prediction)

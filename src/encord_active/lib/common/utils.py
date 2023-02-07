@@ -4,9 +4,20 @@ import shutil
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
+from functools import reduce
 from itertools import product
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import (
+    Any,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
 import av
 import cv2

@@ -25,6 +25,7 @@ from encord_active.lib.db.predictions import (
     RelativeFloat,
 )
 from encord_active.lib.metrics.execute import run_all_prediction_metrics
+from encord_active.lib.model_predictions.iterator import PredictionIterator
 from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project import Project
 
@@ -180,11 +181,11 @@ def import_mask_predictions(
                         prediction_writer.add_prediction(
                             Prediction(
                                 data_hash=du_hash,
-                                class_id=class_hash,
                                 confidence=1.0,
                                 object=ObjectDetection(
                                     format=Format.POLYGON,
                                     data=_mask,
+                                    object_class_hash=class_hash,
                                 ),
                             )
                         )
@@ -238,11 +239,9 @@ def import_KITTI_labels(
             prediction_writer.add_prediction(
                 Prediction(
                     data_hash=data_hash,
-                    class_id=class_name,
                     confidence=float(row["undefined0"]),
                     object=ObjectDetection(
-                        format=Format.BOUNDING_BOX,
-                        data=BoundingBox.parse_obj(bbox),
+                        format=Format.BOUNDING_BOX, data=BoundingBox.parse_obj(bbox), object_class_hash=class_name
                     ),
                 )
             )
