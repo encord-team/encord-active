@@ -221,7 +221,7 @@ def import_local_project(
             run_metrics_by_embedding_type(EmbeddingType.IMAGE, **metricize_options)
         else:
             # NOTE: we need to compute at  least one metric otherwise everything breaks
-            run_metrics(filter_func=lambda x: x.TITLE == AreaMetric.TITLE, **metricize_options)
+            run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
 
         success_with_visualise_command(project_path, "Project initialised :+1:")
 

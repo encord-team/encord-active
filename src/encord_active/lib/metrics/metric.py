@@ -46,6 +46,13 @@ class ObjectShape(str, Enum):
 AnnotationTypeUnion = Union[ObjectShape, ClassificationType]
 
 
+class AnnotationType:
+    NONE: List[AnnotationTypeUnion] = []
+    OBJECT = ObjectShape
+    CLASSIFICATION = ClassificationType
+    ALL = [*OBJECT, *CLASSIFICATION]
+
+
 @dataclass
 class StatsMetadata:
     threshold: float
@@ -63,7 +70,7 @@ class MetricMetadata:
     metric_type: MetricType
     data_type: DataType
     needs_images: bool
-    annotation_type: Optional[List[AnnotationTypeUnion]]
+    annotation_type: List[AnnotationTypeUnion]
     embedding_type: Optional[EmbeddingType] = None
 
     def get_unique_name(self):

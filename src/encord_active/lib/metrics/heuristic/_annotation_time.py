@@ -13,14 +13,17 @@ logger = logger.opt(colors=True)
 
 
 class AnnotationTimeMetric(Metric):
-    TITLE = "Annotation Time"
-    SHORT_DESCRIPTION = "Ranks annotations by the time it took to make them."
-    LONG_DESCRIPTION = r"""Ranks annotations by the time it took to make them.
+    def __init__(self):
+        super().__init__(
+            title="Annotation Time",
+            short_description="Ranks annotations by the time it took to make them.",
+            long_description=r"""Ranks annotations by the time it took to make them.
 
-If no logs are available for a particular object, it will get score 0."""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.ALL
+If no logs are available for a particular object, it will get score 0.""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.ALL,
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         found_any = False

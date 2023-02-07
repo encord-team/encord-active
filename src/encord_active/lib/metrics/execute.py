@@ -59,10 +59,10 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
 
 
 def is_metric_matching_embedding(embedding_type: EmbeddingType, metric: Metric):
-    if metric.ANNOTATION_TYPE is None or isinstance(metric.ANNOTATION_TYPE, list):
-        return embedding_type == get_embedding_type(metric.TITLE, metric.ANNOTATION_TYPE)
+    if metric.metadata.annotation_type is None or isinstance(metric.metadata.annotation_type, list):
+        return embedding_type == get_embedding_type(metric.metadata.title, metric.metadata.annotation_type)
     else:
-        return embedding_type == get_embedding_type(metric.TITLE, [metric.ANNOTATION_TYPE])
+        return embedding_type == get_embedding_type(metric.metadata.title, [metric.metadata.annotation_type])
 
 
 def get_metrics_by_embedding_type(embedding_type: EmbeddingType):
@@ -76,15 +76,15 @@ def run_metrics_by_embedding_type(embedding_type: EmbeddingType, **kwargs):
 
 
 def run_all_heuristic_metrics():
-    run_metrics(filter_func=lambda x: x.METRIC_TYPE == MetricType.HEURISTIC)
+    run_metrics(filter_func=lambda x: x.metadata.metric_type == MetricType.HEURISTIC)
 
 
 def run_all_image_metrics():
-    run_metrics(filter_func=lambda x: x.DATA_TYPE == DataType.IMAGE)
+    run_metrics(filter_func=lambda x: x.metadata.data_type == DataType.IMAGE)
 
 
 def run_all_polygon_metrics():
-    run_metrics(filter_func=lambda x: x.ANNOTATION_TYPE in [AnnotationType.OBJECT.POLYGON, AnnotationType.ALL])
+    run_metrics(filter_func=lambda x: x.metadata.annotation_type in [AnnotationType.OBJECT.POLYGON, AnnotationType.ALL])
 
 
 def run_all_prediction_metrics(**kwargs):
@@ -102,7 +102,7 @@ def run_all_prediction_metrics(**kwargs):
     run_metrics(filter_func=filter, **kwargs)
 
 
-def run_metrics(filter_func: Callable = lambda x: True, **kwargs):
+def run_metrics(filter_func: Callable[[Metric], bool] = lambda x: True, **kwargs):
     metrics = list(map(load_metric, get_metrics(filter_func=filter_func)))
     execute_metrics(metrics, **kwargs)
 

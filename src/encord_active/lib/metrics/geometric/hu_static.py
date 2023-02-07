@@ -33,17 +33,20 @@ def compute_cls_distances(embeddings: np.ndarray, labels: np.ndarray) -> np.ndar
 
 
 class HuMomentsStatic(Metric):
-    TITLE = "Shape outlier detection"
-    SHORT_DESCRIPTION = "Calculates potential outliers by polygon shape."
-    LONG_DESCRIPTION = r"""Computes the Euclidean distance between the polygons'
+    def __init__(self):
+        super().__init__(
+            title="Shape outlier detection",
+            short_description="Calculates potential outliers by polygon shape.",
+            long_description=r"""Computes the Euclidean distance between the polygons'
     [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and
-    the prototypical class moments."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]
+    the prototypical class moments.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.POLYGON],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         hu_moments_df = get_hu_embeddings(iterator, force=True)
 
         moments_list: List[np.ndarray] = []

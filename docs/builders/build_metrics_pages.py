@@ -28,7 +28,7 @@ ms = cast(  # rename to avoid conflict with metrics module
     [
         sorted(
             [import_module(m1).__getattribute__(m2)() for m1, m2 in run_all.get_metrics(submodule)],
-            key=lambda m: m.TITLE,
+            key=lambda m: m.metadata.title,
         )
         for submodule in submodules
     ],

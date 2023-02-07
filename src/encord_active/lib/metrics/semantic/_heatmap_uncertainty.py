@@ -196,14 +196,15 @@ def train_model(model, model_path, batches):
 
 
 class EntropyHeatmapMetric(Metric):
-    TITLE = "Heatmap uncertainty"
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.ALL
-    SHORT_DESCRIPTION = (
-        "Estimates the uncertainty of the segmentation through the entropy of the pixelwise class distribution"
-    )
-    LONG_DESCRIPTION = r""""""
+    def __init__(self):
+        super().__init__(
+            title="Heatmap uncertainty",
+            short_description="Estimates the uncertainty of the segmentation through the entropy of the pixelwise class distribution",
+            long_description=r"""""",
+            metric_type=MetricType.SEMANTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.ALL,
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         model_path = os.path.join(iterator.cache_dir, "models", f"{Path(__file__).stem}_model.pt")

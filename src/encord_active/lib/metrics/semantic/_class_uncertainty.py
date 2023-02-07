@@ -190,13 +190,16 @@ def preliminaries(iterator):
 
 
 class EntropyMetric(Metric):
-    TITLE = "Class Entropy"
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-    SHORT_DESCRIPTION = "Estimates the uncertainty of the assigned label through the distribution entropy"
-    LONG_DESCRIPTION = r"""Uses the entropy of the distribution over labels from a lightweight classifier neural
-network and Monte-Carlo Dropout to estimate the uncertainty of the label. """
+    def __init__(self):
+        super().__init__(
+            title="Class Entropy",
+            short_description="Estimates the uncertainty of the assigned label through the distribution entropy",
+            long_description=r"""Uses the entropy of the distribution over labels from a lightweight classifier neural
+network and Monte-Carlo Dropout to estimate the uncertainty of the label.""",
+            metric_type=MetricType.SEMANTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)
@@ -218,12 +221,15 @@ network and Monte-Carlo Dropout to estimate the uncertainty of the label. """
 
 
 class ConfidenceScoreMetric(Metric):
-    TITLE = "Class Confidence Score"
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-    SHORT_DESCRIPTION = "Estimates the confidence of the assigned label."
-    LONG_DESCRIPTION = r"""Estimates the confidence of the assigned label as the probability of the assigned label."""
+    def __init__(self):
+        super().__init__(
+            title="Class Confidence Score",
+            short_description="Estimates the confidence of the assigned label.",
+            long_description=r"""Estimates the confidence of the assigned label as the probability of the assigned label.""",
+            metric_type=MetricType.SEMANTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)

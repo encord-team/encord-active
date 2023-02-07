@@ -28,16 +28,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
         if metric_scores.shape[0] == 0:
             continue
 
-        if len(metric_scores["identifier"][0].split("_")) == 3:
-            # Image-level index
-            if main_df_images.shape[0] == 0:
-                columns_to_merge = metric_scores[["identifier", "url", "score"]]
-            else:
-                columns_to_merge = metric_scores[["identifier", "score"]]
-            main_df_images = pd.merge(main_df_images, columns_to_merge, how="outer", on="identifier")
-            main_df_images.rename(columns={"score": f"{meta['title']}"}, inplace=True)
-        else:
-            # Image-level quality index
+        if len(metric_scores["identifier"][0].split("_")) != 3:
             if (
                 meta["annotation_type"][0] == ClassificationType.RADIO.value
                 and meta["data_type"] == "image"
