@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -9,12 +10,14 @@ from encord.objects.common import PropertyType
 from encord.ontology import OntologyStructure
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
+from pydantic import ValidationError
 
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     AnnotationTypeUnion,
     EmbeddingType,
     MetricMetadata,
+    StatsMetadata,
 )
 
 
@@ -99,6 +102,38 @@ def is_valid_annotation_type(
         return True
 
 
+def load_metric_metadata(meta_pth) -> MetricMetadata:
+    # TODO Remove after a few releases when it can be safely assumed all metadata files have been updated
+    try:
+        return MetricMetadata.parse_file(meta_pth)
+    except ValidationError:
+        with meta_pth.open("r", encoding="utf-8") as f:
+            old_meta = json.load(f)
+
+        if "min_value" in old_meta:
+            stats = StatsMetadata(
+                min_value=old_meta["min_value"],
+                max_value=old_meta["max_value"],
+                num_rows=old_meta["num_rows"],
+                mean_value=old_meta["mean_value"],
+            )
+        else:
+            stats = StatsMetadata()
+        metadata = MetricMetadata(
+            title=old_meta["title"],
+            short_description=old_meta["short_description"],
+            long_description=old_meta["long_description"],
+            data_type=old_meta["data_type"],
+            metric_type=old_meta["metric_type"],
+            embedding_type=old_meta["embedding_type"] if "embedding_type" in old_meta else None,
+            annotation_type=old_meta["annotation_type"] if old_meta["annotation_type"] else [],
+            stats=stats,
+        )
+        with meta_pth.open("w") as f:
+            f.write(metadata.json())
+        return metadata
+
+
 def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope] = None) -> List[MetricData]:
     if not metric_dir.is_dir():
         return []
@@ -108,7 +143,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
 
     make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").title()
     names = [f"{make_name(p)}" for p, l in zip(paths, levels)]
-    meta_data = [MetricMetadata.parse_file(f.with_suffix(".meta.json")) for f in paths]
+    meta_data = [load_metric_metadata(f.with_suffix(".meta.json")) for f in paths]
 
     out: List[MetricData] = []
 

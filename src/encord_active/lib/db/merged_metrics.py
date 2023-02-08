@@ -4,10 +4,11 @@ from typing import List
 
 import pandas as pd
 from encord.project_ontology.classification_type import ClassificationType
+from pydantic import ValidationError
 
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.tags import Tag, TagScope
-from encord_active.lib.metrics.metric import MetricMetadata
+from encord_active.lib.metrics.utils import load_metric_metadata
 
 TABLE_NAME = "merged_metrics"
 
@@ -22,7 +23,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
         if not meta_pth.is_file():
             continue
 
-        meta = MetricMetadata.parse_file(meta_pth)
+        meta = load_metric_metadata(meta_pth)
 
         metric_scores = pd.read_csv(index)
         if metric_scores.shape[0] == 0:

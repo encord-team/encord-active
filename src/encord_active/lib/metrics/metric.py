@@ -56,10 +56,10 @@ class AnnotationType:
 
 
 class StatsMetadata(BaseModel):
-    min_value: float
-    max_value: float
-    mean_value: float
-    num_rows: int
+    min_value: float = 0.0
+    max_value: float = 0.0
+    mean_value: float = 0.0
+    num_rows: int = 0
 
     @classmethod
     def from_stats_observer(cls, stats_observer: StatisticsObserver):
@@ -79,7 +79,7 @@ class MetricMetadata(BaseModel):
     data_type: DataType
     annotation_type: List[AnnotationTypeUnion]
     embedding_type: Optional[EmbeddingType] = None
-    stats: Optional[StatsMetadata] = None
+    stats: StatsMetadata
 
     def get_unique_name(self):
         name_hash = md5((self.title + self.short_description + self.long_description).encode()).hexdigest()
@@ -105,6 +105,7 @@ class Metric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            stats=StatsMetadata(),
         )
 
     @abstractmethod
