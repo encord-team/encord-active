@@ -22,7 +22,6 @@ from encord_active.lib.db.predictions import (
     Format,
     ObjectDetection,
     Prediction,
-    RelativeFloat,
 )
 from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.iterator import PredictionIterator

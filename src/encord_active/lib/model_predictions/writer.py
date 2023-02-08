@@ -1,10 +1,9 @@
 import json
 import logging
 from base64 import b64encode
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from functools import reduce
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict
 from uuid import uuid4
 
 import cv2
