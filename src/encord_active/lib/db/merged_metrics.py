@@ -36,16 +36,16 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
             else:
                 columns_to_merge = metric_scores[["identifier", "score"]]
             main_df_images = pd.merge(main_df_images, columns_to_merge, how="outer", on="identifier")
-            main_df_images.rename(columns={"score": f"{meta['title']}"}, inplace=True)
+            main_df_images.rename(columns={"score": f"{meta.title}"}, inplace=True)
         else:
             # Image-level quality index
             if (
-                meta["annotation_type"][0] == ClassificationType.RADIO.value
-                and meta["data_type"] == "image"
-                and meta["embedding_type"] == "classification"
+                meta.annotation_type[0] == ClassificationType.RADIO.value
+                and meta.data_type == "image"
+                and meta.embedding_type == "classification"
             ):
                 main_df_image_quality = metric_scores
-                main_df_image_quality.rename(columns={"score": f"{meta['title']}"}, inplace=True)
+                main_df_image_quality.rename(columns={"score": f"{meta.title}"}, inplace=True)
                 continue
 
             # Object-level index
@@ -54,7 +54,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
             else:
                 columns_to_merge = metric_scores[["identifier", "score"]]
             main_df_objects = pd.merge(main_df_objects, columns_to_merge, how="outer", on="identifier")
-            main_df_objects.rename(columns={"score": f"{meta['title']}"}, inplace=True)
+            main_df_objects.rename(columns={"score": f"{meta.title}"}, inplace=True)
 
     main_df = pd.concat([main_df_images, main_df_objects, main_df_image_quality])
     main_df["tags"] = [[] for _ in range(len(main_df))]
