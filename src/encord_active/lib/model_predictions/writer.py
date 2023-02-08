@@ -175,6 +175,8 @@ def precompute_MAP_features(
             matches = ground_truths_matched.get(entry.class_id, {}).get(entry.img_id)
             for match in matches or []:
                 match["pidxs"].append(pidx)
+                # NOTE: we deeply rely on IOUs in the model prediction pages
+                ious[pidx] = np.Infinity
 
         if detections:
             img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
