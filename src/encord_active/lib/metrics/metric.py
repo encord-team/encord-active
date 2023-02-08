@@ -86,6 +86,32 @@ class MetricMetadata(BaseModel):
         return f"{name_hash[:8]}_{self.title.lower().replace(' ', '_')}"
 
 
+class SimpleMetric(ABC):
+    def __init__(
+        self,
+        title: str,
+        short_description: str,
+        long_description: str,
+        metric_type: MetricType,
+        data_type: DataType,
+        annotation_type: List[Union[ObjectShape, ClassificationType]],
+        embedding_type: Optional[EmbeddingType] = None,
+    ):
+        self.metadata = MetricMetadata(
+            title=title,
+            short_description=short_description,
+            long_description=long_description,
+            metric_type=metric_type,
+            data_type=data_type,
+            annotation_type=annotation_type,
+            embedding_type=embedding_type,
+        )
+
+    @abstractmethod
+    def execute(self, image, writer):
+        pass
+
+
 class Metric(ABC):
     def __init__(
         self,

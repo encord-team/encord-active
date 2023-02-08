@@ -5,6 +5,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Type, Union
 
+import cv2
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
@@ -17,6 +18,7 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
     ObjectShape,
+    SimpleMetric,
     StatsMetadata,
 )
 from encord_active.lib.metrics.utils import get_embedding_type
@@ -108,20 +110,17 @@ def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
     return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
 
 
-@logger.catch()
-def execute_metrics(
-    metrics: List[Metric],
-    data_dir: Path,
-    iterator_cls: Type[Iterator] = DatasetIterator,
-    use_cache_only: bool = False,
-    **kwargs,
-):
-    project = None if use_cache_only else fetch_project_info(data_dir)
-    iterator = iterator_cls(data_dir, project=project, **kwargs)
-    cache_dir = iterator.update_cache_dir(data_dir)
+def _write_meta_file(cache_dir, metric, stats):
+    meta_file = (cache_dir / "metrics" / f"{metric.get_unique_name()}.meta.json").expanduser()
+    metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
 
+    with meta_file.open("w") as f:
+        f.write(metric.metadata.json())
+
+
+def _execute_metrics(cache_dir, iterator, metrics: list[Metric]):
     for metric in metrics:
-        logger.info(f"Running Metric <blue>{metric.metadata.title}</blue>")
+        logger.info(f"Running Metric <blue>{metric.metadata.title.title()}</blue>")
         unique_metric_name = metric.metadata.get_unique_name()
 
         stats = StatisticsObserver()
@@ -133,9 +132,41 @@ def execute_metrics(
             except Exception as e:
                 logging.critical(e, exc_info=True)
 
-        # Store meta-data about the scores.
-        meta_file = (cache_dir / "metrics" / f"{unique_metric_name}.meta.json").expanduser()
-        metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
+        _write_meta_file(cache_dir, metric, stats)
 
-        with meta_file.open("w") as f:
-            f.write(metric.metadata.json())
+
+def _execute_simple_metrics(cache_dir, iterator, metrics: list[SimpleMetric]):
+    csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
+    stats_observers = [StatisticsObserver() for _ in metrics]
+    for csv_w, stats in zip(csv_writers, stats_observers):
+        csv_w.attach(stats)
+    for data_unit, img_pth in iterator.iterate():
+        if img_pth is None:
+            continue
+        try:
+            image = cv2.imread(img_pth.as_posix())
+            for metric, csv_w in zip(metrics, csv_writers):
+                metric.execute(image, csv_w)
+        except Exception as e:
+            logging.critical(e, exc_info=True)
+    for metric, stats in zip(metrics, stats_observers):
+        _write_meta_file(cache_dir, metric, stats)
+
+
+@logger.catch()
+def execute_metrics(
+    selected_metrics: List[Union[Metric, SimpleMetric]],
+    data_dir: Path,
+    iterator_cls: Type[Iterator] = DatasetIterator,
+    use_cache_only: bool = False,
+    **kwargs,
+):
+    project = None if use_cache_only else fetch_project_info(data_dir)
+    iterator = iterator_cls(data_dir, project=project, **kwargs)
+    cache_dir = iterator.update_cache_dir(data_dir)
+
+    simple_metrics = [m for m in selected_metrics if isinstance(m, SimpleMetric)]
+    metrics = [m for m in selected_metrics if isinstance(m, Metric)]
+
+    _execute_metrics(cache_dir, iterator, metrics)
+    _execute_simple_metrics(cache_dir, iterator, simple_metrics)

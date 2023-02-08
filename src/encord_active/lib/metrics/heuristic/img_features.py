@@ -10,29 +10,25 @@ from encord_active.lib.metrics.metric import (
     DataType,
     Metric,
     MetricType,
+    SimpleMetric,
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-def iterate_with_rank_fn(
-    iterator: Iterator,
+def execute_helper(
+    image,
     writer: CSVMetricWriter,
     rank_fn: Callable,
-    name: str,
     color_space: int = cv2.COLOR_BGR2RGB,
 ):
-    for data_unit, img_pth in iterator.iterate(desc=f"Looking for {name}"):
-        if img_pth is None:
-            continue
-        try:
-            image = cv2.imread(img_pth.as_posix())
-            image = cv2.cvtColor(image, color_space)
-        except Exception:
-            continue
+    try:
+        image = cv2.cvtColor(image, color_space)
         writer.write(rank_fn(image))
+    except Exception:
+        return
 
 
-class ContrastMetric(Metric):
+class ContrastMetric(SimpleMetric):
     def __init__(self):
         super().__init__(
             title="Contrast",
@@ -46,12 +42,11 @@ Contrast is computed as the standard deviation of the pixel values.
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_contrast(image):
+    def rank(self, image):
         return image.std() / 255
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_contrast, self.metadata.title)
+    def execute(self, image, writer: CSVMetricWriter):
+        execute_helper(image, writer, self.rank_by_contrast)
 
 
 class Wrapper:  # we can't have a non-default-constructible Metric implementation at module level
@@ -102,7 +97,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                     out.append(item)
             return out
 
-        def rank_by_hsv_filtering(self, image):
+        def rank(self, image):
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
                     image,
@@ -128,10 +123,8 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
 
             return ratio
 
-        def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-            return iterate_with_rank_fn(
-                iterator, writer, self.rank_by_hsv_filtering, self.metadata.title, color_space=cv2.COLOR_BGR2HSV
-            )
+        def execute(self, image, writer: CSVMetricWriter):
+            execute_helper(image, writer, self.rank)
 
 
 # Inputs for new color algorithm
@@ -167,12 +160,11 @@ Brightness is computed as the average (normalized) pixel value across each image
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_brightness(image):
+    def rank(self, image):
         return image.mean() / 255
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_brightness, self.metadata.title)
+    def execute(self, image, writer: CSVMetricWriter):
+        execute_helper(image, writer, self.rank)
 
 
 class SharpnessMetric(Metric):
@@ -195,12 +187,11 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_sharpness(image):
+    def rank(self, image):
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_sharpness, self.metadata.title)
+    def execute(self, image, writer: CSVMetricWriter):
+        execute_helper(image, writer, self.rank)
 
 
 class BlurMetric(Metric):
@@ -223,12 +214,11 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_blur(image):
+    def rank(self, image):
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_blur, self.metadata.title)
+    def execute(self, image, writer: CSVMetricWriter):
+        execute_helper(image, writer, self.rank)
 
 
 class AspectRatioMetric(Metric):
