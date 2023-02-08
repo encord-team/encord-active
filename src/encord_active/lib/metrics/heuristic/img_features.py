@@ -42,7 +42,8 @@ Contrast is computed as the standard deviation of the pixel values.
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image):
+    @staticmethod
+    def rank_by_contrast(image):
         return image.std() / 255
 
     def execute(self, image, writer: CSVMetricWriter):
@@ -50,7 +51,7 @@ Contrast is computed as the standard deviation of the pixel values.
 
 
 class Wrapper:  # we can't have a non-default-constructible Metric implementation at module level
-    class ColorMetric(Metric):
+    class ColorMetric(SimpleMetric):
         def __init__(
             self,
             color_name: str,
@@ -97,7 +98,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                     out.append(item)
             return out
 
-        def rank(self, image):
+        def rank_by_hsv_filtering(self, image):
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
                     image,
@@ -124,7 +125,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             return ratio
 
         def execute(self, image, writer: CSVMetricWriter):
-            execute_helper(image, writer, self.rank)
+            execute_helper(image, writer, self.rank_by_hsv_filtering)
 
 
 # Inputs for new color algorithm
@@ -160,14 +161,15 @@ Brightness is computed as the average (normalized) pixel value across each image
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image):
+    @staticmethod
+    def rank_by_brightness(image):
         return image.mean() / 255
 
     def execute(self, image, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank)
+        execute_helper(image, writer, self.rank_by_brightness)
 
 
-class SharpnessMetric(Metric):
+class SharpnessMetric(SimpleMetric):
     def __init__(self):
         super().__init__(
             title="Sharpness",
@@ -187,14 +189,15 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image):
+    @staticmethod
+    def rank_by_sharpness(image):
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
     def execute(self, image, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank)
+        execute_helper(image, writer, self.rank_by_sharpness)
 
 
-class BlurMetric(Metric):
+class BlurMetric(SimpleMetric):
     def __init__(self):
         super().__init__(
             title="Blur",
@@ -214,11 +217,12 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image):
+    @staticmethod
+    def rank_by_blur(image):
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
     def execute(self, image, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank)
+        execute_helper(image, writer, self.rank_by_blur)
 
 
 class AspectRatioMetric(Metric):

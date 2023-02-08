@@ -40,7 +40,7 @@ def update_merged_metrics():
 
 def label_onboarding_page():
     st.header("Importing labels flow")
-    st.info("This is a questionaire that will help us import your labels")
+    st.info("This is a questionnaire that will help us import your labels")
     st.write("")
 
     label_type = st.selectbox("1. What is the label type?", [v.value for v in LabelType])

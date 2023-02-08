@@ -3,7 +3,7 @@ import logging
 import os
 from importlib import import_module
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, Type, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
 import cv2
 from loguru import logger
@@ -51,7 +51,7 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
                 import_module(f"{base_module_name}{module_name}.{file.split('.')[0]}"), inspect.isclass
             )
             for cls in clsmembers:
-                if issubclass(cls[1], Metric) and cls[1] != Metric and filter_func(cls[1]):
+                if (issubclass(cls[1], SimpleMetric) and cls[1] != SimpleMetric) or (issubclass(cls[1], Metric) and cls[1] != Metric) and filter_func(cls[1]):
                     metrics.append((f"{base_module_name}{module_name}.{file.split('.')[0]}", f"{cls[0]}"))
 
     return metrics
@@ -111,7 +111,7 @@ def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
 
 
 def _write_meta_file(cache_dir, metric, stats):
-    meta_file = (cache_dir / "metrics" / f"{metric.get_unique_name()}.meta.json").expanduser()
+    meta_file = (cache_dir / "metrics" / f"{metric.metadata.get_unique_name()}.meta.json").expanduser()
     metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
 
     with meta_file.open("w") as f:
@@ -136,6 +136,7 @@ def _execute_metrics(cache_dir, iterator, metrics: list[Metric]):
 
 
 def _execute_simple_metrics(cache_dir, iterator, metrics: list[SimpleMetric]):
+    logger.info(f"Running Metrics <blue>{', '.join(metric.metadata.title.title() for metric in metrics)}</blue>")
     csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):
@@ -155,7 +156,7 @@ def _execute_simple_metrics(cache_dir, iterator, metrics: list[SimpleMetric]):
 
 @logger.catch()
 def execute_metrics(
-    selected_metrics: List[Union[Metric, SimpleMetric]],
+    selected_metrics: Sequence[Union[Metric, SimpleMetric]],
     data_dir: Path,
     iterator_cls: Type[Iterator] = DatasetIterator,
     use_cache_only: bool = False,
