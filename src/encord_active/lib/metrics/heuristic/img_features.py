@@ -16,7 +16,7 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 def execute_helper(
-    image,
+    image: np.ndarray,
     writer: CSVMetricWriter,
     rank_fn: Callable,
     color_space: int = cv2.COLOR_BGR2RGB,
@@ -46,7 +46,7 @@ Contrast is computed as the standard deviation of the pixel values.
     def rank_by_contrast(image):
         return image.std() / 255
 
-    def execute(self, image, writer: CSVMetricWriter):
+    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
         execute_helper(image, writer, self.rank_by_contrast)
 
 
@@ -124,7 +124,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
 
             return ratio
 
-        def execute(self, image, writer: CSVMetricWriter):
+        def execute(self, image: np.ndarray, writer: CSVMetricWriter):
             execute_helper(image, writer, self.rank_by_hsv_filtering)
 
 
@@ -165,7 +165,7 @@ Brightness is computed as the average (normalized) pixel value across each image
     def rank_by_brightness(image):
         return image.mean() / 255
 
-    def execute(self, image, writer: CSVMetricWriter):
+    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
         execute_helper(image, writer, self.rank_by_brightness)
 
 
@@ -193,7 +193,7 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
     def rank_by_sharpness(image):
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def execute(self, image, writer: CSVMetricWriter):
+    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
         execute_helper(image, writer, self.rank_by_sharpness)
 
 
@@ -221,7 +221,7 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
     def rank_by_blur(image):
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
-    def execute(self, image, writer: CSVMetricWriter):
+    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
         execute_helper(image, writer, self.rank_by_blur)
 
 

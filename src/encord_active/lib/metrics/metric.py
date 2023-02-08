@@ -3,6 +3,7 @@ from enum import Enum
 from hashlib import md5
 from typing import List, Optional, Union
 
+import numpy as np
 from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
@@ -109,7 +110,7 @@ class SimpleMetric(ABC):
         )
 
     @abstractmethod
-    def execute(self, image, writer: CSVMetricWriter):
+    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
         pass
 
 
