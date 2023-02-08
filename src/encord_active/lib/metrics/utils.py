@@ -95,7 +95,7 @@ def is_valid_annotation_type(
     annotation_type: List[AnnotationTypeUnion], metric_scope: Optional[MetricScope] = None
 ) -> bool:
     if metric_scope == MetricScope.DATA_QUALITY:
-        return annotation_type is None
+        return not annotation_type
     elif metric_scope == MetricScope.LABEL_QUALITY:
         return isinstance(annotation_type, list)
     else:
