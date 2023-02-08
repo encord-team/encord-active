@@ -3,17 +3,15 @@ import logging
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime
-from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Generator, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import pandas as pd
 import pytz
-from encord.objects.common import NestableOption, RadioAttribute, Shape
+from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
-from encord.objects.ontology_structure import Classification
 from pandas import Series
 from tqdm.auto import tqdm
 
