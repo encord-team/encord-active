@@ -88,7 +88,7 @@ def update_label_row_with_classification(
         label_row["classification_answers"] = {
             classification_hash: {
                 "classificationHash": classification_hash,
-                "classifications": [asdict(build_classification_answer(label_classification, option, attribute))],
+                "classifications": [build_classification_answer(label_classification, option, attribute).dict()],
             }
         }
 
