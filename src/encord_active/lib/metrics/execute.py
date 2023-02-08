@@ -110,7 +110,7 @@ def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
     return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
 
 
-def _write_meta_file(cache_dir, metric, stats):
+def _write_meta_file(cache_dir: Path, metric: Union[Metric, SimpleMetric], stats: StatisticsObserver):
     meta_file = (cache_dir / "metrics" / f"{metric.metadata.get_unique_name()}.meta.json").expanduser()
     metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
 
@@ -118,7 +118,7 @@ def _write_meta_file(cache_dir, metric, stats):
         f.write(metric.metadata.json())
 
 
-def _execute_metrics(cache_dir, iterator, metrics: list[Metric]):
+def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric]):
     for metric in metrics:
         logger.info(f"Running Metric <blue>{metric.metadata.title.title()}</blue>")
         unique_metric_name = metric.metadata.get_unique_name()
@@ -135,7 +135,7 @@ def _execute_metrics(cache_dir, iterator, metrics: list[Metric]):
         _write_meta_file(cache_dir, metric, stats)
 
 
-def _execute_simple_metrics(cache_dir, iterator, metrics: list[SimpleMetric]):
+def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[SimpleMetric]):
     logger.info(f"Running Metrics <blue>{', '.join(metric.metadata.title.title() for metric in metrics)}</blue>")
     csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
     stats_observers = [StatisticsObserver() for _ in metrics]

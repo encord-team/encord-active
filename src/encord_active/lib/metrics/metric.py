@@ -109,7 +109,7 @@ class SimpleMetric(ABC):
         )
 
     @abstractmethod
-    def execute(self, image, writer):
+    def execute(self, image, writer: CSVMetricWriter):
         pass
 
 
