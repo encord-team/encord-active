@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from random import random, uniform
 from typing import Callable, Dict, List, Optional, Tuple, cast
 
 import cv2
@@ -20,13 +21,19 @@ from tqdm.auto import tqdm
 from encord_active.lib.db.predictions import (
     BoundingBox,
     Format,
+    FrameClassification,
     ObjectDetection,
     Prediction,
 )
 from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.model_predictions.writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import (
+    ClassificationAttributeOption,
+    PredictionWriter,
+    iterate_classification_attribute_options,
+)
 from encord_active.lib.project import Project
+from encord_active.lib.project.local import file_glob
 
 logger = logging.getLogger(__name__)
 KITTI_COLUMNS = [
@@ -246,9 +253,90 @@ def import_KITTI_labels(
             )
 
 
-def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
+def import_predictions(project: Project, predictions: List[Prediction]):
     with PredictionWriter(project) as writer:
         for pred in predictions:
             writer.add_prediction(pred)
 
-    run_all_prediction_metrics(data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True)
+    run_all_prediction_metrics(
+        data_dir=project.file_structure.project_dir, iterator_cls=PredictionIterator, use_cache_only=True
+    )
+
+
+def import_predictions_from_file_structure(root: Path, project: Project):
+    # WARN: this doesn't work, since prediction file names don't match label file names (different paths)
+    raise NotImplementedError()
+    project.load()
+    glob_result = file_glob(root, ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"], images_only=True)
+    image_to_class_map = {path.expanduser().resolve().as_posix(): path.parent.stem for path in glob_result.matched}
+    file_path_to_data_hash = {du["data_link"]: du["data_hash"] for _, du in project.iterate_data_units()}
+
+    option_occurances: Dict[str, List[ClassificationAttributeOption]] = {}
+    for classification_attribute_option in iterate_classification_attribute_options(project.ontology):
+        occurances = option_occurances.setdefault(classification_attribute_option.option.label, [])
+        occurances.append(classification_attribute_option)
+
+    if any([len(occurances) > 1 for occurances in option_occurances]):
+        logger.warning(
+            "Classification options are not unique accross the ontology. Predictions will match against the first matching option."
+        )
+
+    predictions = []
+    for file_name, classname in image_to_class_map.items():
+        data_hash = file_path_to_data_hash[file_name]
+        mathing_options = option_occurances.get(classname)
+        if not mathing_options:
+            logger.error(f'The predicted class "{classname}" isn\'t in the ontology classification options')
+        else:
+            classification, attribute, option = mathing_options[0]
+            predictions.append(
+                Prediction(
+                    data_hash=data_hash,
+                    confidence=random.uniform(0.3, 1.0),  # Not sure what to add here
+                    classification=FrameClassification(
+                        classification_hash=classification.feature_node_hash,
+                        attribute_hash=attribute.feature_node_hash,
+                        option_hash=option.feature_node_hash,
+                    ),
+                )
+            )
+
+    import_predictions(project, predictions)
+
+
+def import_predictions_from_predictions_json(predictions_path: Path, project: Project):
+    project.load()
+    file_path_to_data_hash = {du["data_link"]: du["data_hash"] for _, du in project.iterate_data_units()}
+
+    predictions_mapping: Dict[str, str] = json.loads(predictions_path.read_text(encoding="utf-8"))
+
+    option_occurances: Dict[str, List[ClassificationAttributeOption]] = {}
+    for classification_attribute_option in iterate_classification_attribute_options(project.ontology):
+        occurances = option_occurances.setdefault(classification_attribute_option.option.label, [])
+        occurances.append(classification_attribute_option)
+
+    if any([len(occurances) > 1 for occurances in option_occurances]):
+        logger.warning(
+            "Classification options are not unique accross the ontology. Predictions will match against the first matching option."
+        )
+
+    predictions: List[Prediction] = []
+    for path, predicted_class in predictions_mapping.items():
+        mathing_options = option_occurances.get(predicted_class)
+        if not mathing_options:
+            logger.error(f'The predicted class "{predicted_class}" isn\'t in the ontology classification options')
+        else:
+            classification, attribute, option = mathing_options[0]
+            predictions.append(
+                Prediction(
+                    data_hash=file_path_to_data_hash[path],
+                    confidence=uniform(0.3, 1.0),  # Not sure what to add here
+                    classification=FrameClassification(
+                        classification_hash=classification.feature_node_hash,
+                        attribute_hash=attribute.feature_node_hash,
+                        option_hash=option.feature_node_hash,
+                    ),
+                )
+            )
+
+    import_predictions(project, predictions)
