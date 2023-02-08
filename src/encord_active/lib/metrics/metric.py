@@ -105,6 +105,7 @@ class SimpleMetric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            stats=StatsMetadata(),
         )
 
     @abstractmethod
