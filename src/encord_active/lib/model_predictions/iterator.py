@@ -66,7 +66,7 @@ class PredictionIterator(Iterator):
         # Class index
         class_idx_file = cache_dir / "predictions" / "class_idx.json"
         with class_idx_file.open("r", encoding="utf-8") as f:
-            class_idx: Dict[ClassID, dict] = json.load(f)
+            class_idx: Dict[ClassID, dict] = {ClassID(k): v for k, v in json.load(f).items()}
 
         object_lookup = {obj.feature_node_hash: obj for obj in self.project.ontology.objects}
         classification_lookup = {
@@ -201,7 +201,7 @@ class PredictionIterator(Iterator):
                 classifications = []
 
                 for _, prediction in fr_preds.iterrows():
-                    class_id = str(prediction.class_id)
+                    class_id = prediction.class_id
                     if class_id in self.ontology_objects:
                         objects.append(
                             self.get_encord_object(prediction, width, height, self.ontology_objects[class_id])
