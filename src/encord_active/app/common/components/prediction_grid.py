@@ -34,7 +34,7 @@ def build_card_for_labels(
     data_dir: Path,
     label_color: Color = Color.RED,
 ):
-    class_colors = {int(k): idx["color"] for k, idx in get_state().predictions.all_classes.items()}
+    class_colors = {int(k): idx.get("color", Color.RED) for k, idx in get_state().predictions.all_classes.items()}
     image = show_image_with_predictions_and_label(
         label, predictions, data_dir, label_color=label_color, class_colors=class_colors
     )
