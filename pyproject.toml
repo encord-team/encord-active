@@ -70,7 +70,6 @@ jupyterlab = {version = "^3.5.2", optional = true}
 ipywidgets = {version = "^8.0.4", optional = true}
 inquirerpy = "^0.3.4"
 statsmodels = "^0.13.5"
-jupyter = "^1.0.0"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
@@ -93,6 +92,7 @@ ipdb = "^0.13.9"
 types-toml = "^0.10.8"
 tuna = "^0.5.11"
 poethepoet = "^0.16.5"
+jupyter = "^1.0.0"
 
 [tool.poe.tasks]
 importtime = { shell = "python -X importtime -c 'import encord_active.cli.main' 2> imports.prof && python -m tuna imports.prof" }
