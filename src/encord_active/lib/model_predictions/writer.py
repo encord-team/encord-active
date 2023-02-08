@@ -3,6 +3,7 @@ import logging
 from base64 import b64encode
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import reduce
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
 from uuid import uuid4
 
@@ -60,6 +61,10 @@ class LabelEntry:
     @property
     def bbox_list(self):
         return [self.x1, self.y1, self.x2, self.y2]
+
+    @property
+    def has_object(self):
+        return None not in [self.x1, self.y1, self.x2, self.y2] or self.rle
 
 
 @dataclass
@@ -150,22 +155,36 @@ def precompute_MAP_features(
         )
 
     ious: torch.Tensor = torch.zeros(len(pred_boxes), dtype=float)  # type: ignore
-    for (img_id, pred_cls), detections in tqdm(predictions.items(), desc="Matching predictions to labels", leave=True):
+    for (img_id, pred_cls), prediction_entries_with_index in tqdm(
+        predictions.items(), desc="Matching predictions to labels", leave=True
+    ):
         ground_truth_img = ground_truths.get((img_id, pred_cls))
         label_matches = ground_truths_matched.get(pred_cls, {}).get(img_id, [])
 
         if not ground_truth_img:
             continue
 
-        img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
-        best_gt_idxs = torch.argmax(img_ious, dim=1, keepdim=False)
-        best_ious = torch.amax(img_ious, dim=1, keepdim=False)
+        detections: ImgClsPredictions = []
+        classifications: ImgClsPredictions = []
+        for pred in prediction_entries_with_index:
+            target = detections if pred.entry.has_object else classifications
+            target.append(pred)
 
-        for i, (best_gt_idx, best_iou) in enumerate(zip(best_gt_idxs, best_ious)):
-            if best_iou > 0:
-                pidx = detections[i].pidx
-                label_matches[best_gt_idx]["pidxs"].append(pidx)
-                ious[pidx] = best_iou
+        for pidx, entry in classifications:
+            matches = ground_truths_matched.get(entry.class_id, {}).get(entry.img_id)
+            for match in matches or []:
+                match["pidxs"].append(pidx)
+
+        if detections:
+            img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
+            best_gt_idxs = torch.argmax(img_ious, dim=1, keepdim=False)
+            best_ious = torch.amax(img_ious, dim=1, keepdim=False)
+
+            for i, (best_gt_idx, best_iou) in enumerate(zip(best_gt_idxs, best_ious)):
+                if best_iou > 0:
+                    pidx = detections[i].pidx
+                    label_matches[best_gt_idx]["pidxs"].append(pidx)
+                    ious[pidx] = best_iou
 
     return ious, ground_truths_matched
 
@@ -182,7 +201,7 @@ class ClassificationAttributeOption(NamedTuple):
     option: NestableOption
 
 
-def iterate_ontology_classifications(ontology: OntologyStructure):
+def iterate_classification_attribute_options(ontology: OntologyStructure):
     for classification in ontology.classifications:
         for attribute in classification.attributes:
             if isinstance(attribute, RadioAttribute):
@@ -211,7 +230,7 @@ class PredictionWriter:
                 attribute_hash=attribute.feature_node_hash,
                 option_hash=option.feature_node_hash,
             ): option
-            for classification, attribute, option in iterate_ontology_classifications(self.project.ontology)
+            for classification, attribute, option in iterate_classification_attribute_options(self.project.ontology)
         }
 
         self.label_row_meta = self.project.label_row_metas
@@ -251,7 +270,7 @@ class PredictionWriter:
                 self.object_class_id_lookup[obj.feature_node_hash] = len(self.object_class_id_lookup)
 
         self.classification_class_id_lookup: Dict[FrameClassification, ClassID] = {}
-        for classification, attribute, option in iterate_ontology_classifications(self.project.ontology):
+        for classification, attribute, option in iterate_classification_attribute_options(self.project.ontology):
             key = FrameClassification(
                 classification_hash=classification.feature_node_hash,
                 attribute_hash=attribute.feature_node_hash,
@@ -374,7 +393,9 @@ class PredictionWriter:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Do the matching computations
-        ious, ground_truths_matched = precompute_MAP_features(self.predictions, self.object_labels)
+        ious, ground_truths_matched = precompute_MAP_features(
+            self.predictions, self.object_labels + self.classification_labels
+        )
 
         # 0. The predictions
         pred_df = pd.DataFrame(self.predictions)
@@ -464,10 +485,7 @@ class PredictionWriter:
         if prediction.classification:
             class_id = self.classification_class_id_lookup.get(prediction.classification)
             ptype = PredictionType.FRAME
-            x1 = None
-            y1 = None
-            x2 = None
-            y2 = None
+            x1, y1, x2, y2 = [None, None, None, None]
         elif prediction.object:
             if isinstance(prediction.object.data, np.ndarray):
                 class_id = self.object_class_id_lookup.get(prediction.object.object_class_hash)

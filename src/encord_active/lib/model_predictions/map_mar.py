@@ -20,7 +20,7 @@ class GtMatchEntry(TypedDict):
 
 GtMatchCollection = Dict[str, Dict[str, List[GtMatchEntry]]]
 """
-Collection of lists of labels and what predictions of the same class they match with. 
+Collection of lists of labels and what predictions of the same class they match with.
 First-level key is `class_id`, second-level is `img_id`
 """
 
