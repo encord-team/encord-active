@@ -205,7 +205,7 @@ class PredictionIterator(Iterator):
                 classifications = []
 
                 for _, prediction in fr_preds.iterrows():
-                    class_id = prediction.class_id
+                    class_id = str(prediction.class_id)
                     if class_id in self.ontology_objects:
                         objects.append(
                             self.get_encord_object(prediction, width, height, self.ontology_objects[class_id])
