@@ -4,7 +4,6 @@ import shutil
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
-from functools import reduce
 from itertools import product
 from pathlib import Path
 from typing import (
@@ -16,7 +15,6 @@ from typing import (
     Sequence,
     Tuple,
     TypedDict,
-    TypeVar,
     Union,
 )
 
