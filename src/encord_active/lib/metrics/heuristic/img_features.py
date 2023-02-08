@@ -147,7 +147,7 @@ class BlueMetric(Wrapper.ColorMetric):
         super(BlueMetric, self).__init__("Blue", hue_filters=[90, 130])
 
 
-class BrightnessMetric(Metric):
+class BrightnessMetric(SimpleMetric):
     def __init__(self):
         super().__init__(
             title="Brightness",
