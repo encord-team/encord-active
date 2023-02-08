@@ -25,7 +25,7 @@ from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.writer import (
     ClassID,
     ClassificationAttributeOption,
-    iterate_ontology_classifications,
+    iterate_classification_attribute_options,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class PredictionIterator(Iterator):
                 attribute_hash=classification_attribute_option.attribute.feature_node_hash,
                 option_hash=classification_attribute_option.option.feature_node_hash,
             ): classification_attribute_option
-            for classification_attribute_option in iterate_ontology_classifications(self.project.ontology)
+            for classification_attribute_option in iterate_classification_attribute_options(self.project.ontology)
         }
 
         self.ontology_objects: Dict[ClassID, Object] = {}
