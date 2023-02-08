@@ -1,11 +1,9 @@
-import dataclasses
 import inspect
 import logging
 import os
-from enum import Enum
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Callable, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -17,7 +15,6 @@ from encord_active.lib.metrics.metric import (
     DataType,
     EmbeddingType,
     Metric,
-    MetricMetadata,
     MetricType,
     ObjectShape,
     StatsMetadata,
@@ -109,27 +106,6 @@ def run_metrics(filter_func: Callable[[Metric], bool] = lambda x: True, **kwargs
 
 def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
     return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
-
-
-def __get_value(o):
-    if isinstance(o, (float, int, str)):
-        return o
-    if isinstance(o, Enum):
-        return __get_value(o.value)
-    if isinstance(o, (list, tuple)):
-        return [__get_value(v) for v in o]
-    if isinstance(o, MetricMetadata):
-        return {k: __get_value(v) for k, v in dataclasses.asdict(o).items()}
-    return None
-
-
-def __get_object_attributes(obj: Any):
-    metric_properties = {v.lower(): __get_value(getattr(obj, v)) for v in dir(obj)}
-    if "metadata" in metric_properties:
-        metric_properties.update(metric_properties["metadata"])
-        del metric_properties["metadata"]
-    metric_properties = {k: v for k, v in metric_properties.items() if (v is not None or k == "annotation_type")}
-    return metric_properties
 
 
 @logger.catch()
