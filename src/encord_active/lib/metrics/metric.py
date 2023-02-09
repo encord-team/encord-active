@@ -18,7 +18,7 @@ class DataType(Enum):
     SEQUENCE = "sequence"
 
 
-class EmbeddingType(Enum):
+class EmbeddingType(str, Enum):
     CLASSIFICATION = "classification"
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
