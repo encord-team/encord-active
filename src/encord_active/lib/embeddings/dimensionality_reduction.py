@@ -24,7 +24,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     collections = load_collections(embedding_type, project_dir / "embeddings")
     embeddings = np.array([collection["embedding"] for collection in collections])
 
-    reducer = umap.UMAP(random_state=0)
+    reducer = umap.UMAP(random_state=0, verbose=True)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection = {"identifier": [], "x": [], "y": [], "label": []}
@@ -66,6 +66,11 @@ def get_2d_embedding_data(
         cnn_embeddings = pickle.load(f)
 
     df = pd.DataFrame(cnn_embeddings)
+    df["x_y"] = (
+        (df[Embedding2DSchema.x] * 1000).astype(int).astype(str)
+        + "-"
+        + (df[Embedding2DSchema.y] * 1000).astype(int).astype(str)
+    )
     df = DataFrame[Embedding2DSchema](df)
 
     return df

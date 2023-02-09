@@ -91,6 +91,7 @@ class Embedding2DSchema(IdentifierSchema):
     x: Series[float] = pa.Field(coerce=True)
     y: Series[float] = pa.Field(coerce=True)
     label: Series[str]
+    x_y: Series[str]
 
 
 def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:

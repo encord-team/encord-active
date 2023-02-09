@@ -131,14 +131,17 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
-def get_selected_identifiers(embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]):
-    selected_points_merged = [str(item["x"] * 1000)[:4] + "-" + str(item["y"] * 1000)[:4] for item in selected_points]
-    embeddings_2d["x-y"] = (
-        (embeddings_2d[Embedding2DSchema.x] * 1000).astype(str).str.slice(0, 4)
-        + "-"
-        + (embeddings_2d[Embedding2DSchema.y] * 1000).astype(str).str.slice(0, 4)
-    )
-    selected_rows = embeddings_2d[embeddings_2d["x-y"].isin(selected_points_merged)]
+def get_selected_identifiers(
+    embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
+) -> DataFrame[Embedding2DSchema]:
+    """
+    Selected points from the plotly graph only have x and y values, so we need a hacky way to identify selected points
+    Here, we just create and additional column by merging x and y points, so that we can get the selected points'
+    identifiers for filtering.
+    """
+    selected_points_merged = [str(int(item["x"] * 1000)) + "-" + str(int(item["y"] * 1000)) for item in selected_points]
+
+    selected_rows = embeddings_2d[embeddings_2d[Embedding2DSchema.x_y].isin(selected_points_merged)]
     return selected_rows
 
 
@@ -191,12 +194,16 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
-    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, embedding_type)
+    if get_state().reduced_embeddings[embedding_type] is None:
+        get_state().reduced_embeddings[embedding_type] = get_2d_embedding_data(
+            get_state().project_paths.embeddings, embedding_type
+        )
 
-    if embedding_2d is None:
+    if get_state().reduced_embeddings[embedding_type] is None:
         st.info("There is no 2D embedding file to display.")
     else:
-        selected_rows = render_plotly_events(embedding_2d)
+
+        selected_rows = render_plotly_events(get_state().reduced_embeddings[embedding_type])
 
         if selected_rows is not None:
             current_df = current_df[

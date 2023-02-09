@@ -11,6 +11,8 @@ from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
+from encord_active.lib.embeddings.utils import Embedding2DSchema
+from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.project import ProjectFileStructure
@@ -63,7 +65,13 @@ class State:
     annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
-    selected_points_from_embeddings: Optional[list] = None
+    reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(
+        default_factory=lambda: {
+            EmbeddingType.CLASSIFICATION: None,
+            EmbeddingType.OBJECT: None,
+            EmbeddingType.IMAGE: None,
+        }
+    )
 
     @classmethod
     def init(cls, project_dir: Path):
