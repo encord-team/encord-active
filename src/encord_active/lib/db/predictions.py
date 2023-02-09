@@ -63,10 +63,13 @@ class ObjectDetection(BaseModel):
         json_encoders = {np.ndarray: lambda v: json.dumps(v.tolist())}
 
 
-class FrameClassification(BaseModel, frozen=True):
+class FrameClassification(BaseModel):
     classification_hash: str
     attribute_hash: str
     option_hash: str
+
+    class Config:
+        frozen = True
 
 
 class Prediction(BaseModel):
