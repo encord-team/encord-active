@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import plotly.express as px
@@ -29,6 +29,7 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import use_state
 from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
@@ -141,8 +142,30 @@ def get_selected_identifiers(embeddings_2d: DataFrame[Embedding2DSchema], select
     return selected_rows
 
 
-def reset_embedding_selection():
-    get_state().selected_points_from_embeddings = None
+def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
+    get_should_select, set_should_select = use_state(True)
+    get_selection, set_selection = use_state([])
+    fig = px.scatter(
+        embedding_2d,
+        x=Embedding2DSchema.x,
+        y=Embedding2DSchema.y,
+        color=Embedding2DSchema.label,
+        title="2D embedding plot",
+    )
+
+    new_selection = plotly_events(fig, click_event=False, select_event=True)
+
+    if new_selection != get_selection():
+        set_should_select(True)
+        set_selection(new_selection)
+
+    if st.button("Reset selection"):
+        set_should_select(False)
+
+    if get_should_select():
+        return get_selected_identifiers(embedding_2d, new_selection)
+    else:
+        return None
 
 
 def fill_data_quality_window(
@@ -168,19 +191,16 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
-    st.markdown("""---""")
-
-    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, metric_scope)
+    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, metric_scope, embedding_type)
 
     if embedding_2d is None:
         st.info("There is no 2D embedding file to display.")
     else:
-        fig = px.scatter(embedding_2d, x=Embedding2DSchema.x, y=Embedding2DSchema.y, title="2D embedding plot")
-        selection = plotly_events(fig, click_event=False, select_event=True)
-
-        selected_rows = get_selected_identifiers(embedding_2d, selection)
-        current_df = current_df[current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
-    st.button("Reset selection", on_click=reset_embedding_selection)
+        selected_rows = render_plotly_events(embedding_2d)
+        if selected_rows is not None:
+            current_df = current_df[
+                current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
+            ]
 
     chart = get_histogram(current_df, "score", metric.name)
     st.altair_chart(chart, use_container_width=True)

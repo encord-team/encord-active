@@ -82,6 +82,7 @@ EMBEDDING_TYPE_TO_FILENAME = {
 
 EMBEDDING_REDUCED_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images_reduced.pkl",
+    EmbeddingType.CLASSIFICATION: "cnn_classifications_reduced.pkl",
     EmbeddingType.OBJECT: "cnn_objects_reduced.pkl",
 }
 
@@ -89,6 +90,7 @@ EMBEDDING_REDUCED_TO_FILENAME = {
 class Embedding2DSchema(IdentifierSchema):
     x: Series[float] = pa.Field(coerce=True)
     y: Series[float] = pa.Field(coerce=True)
+    label: Series[str]
 
 
 def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:

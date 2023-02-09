@@ -27,27 +27,55 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     reducer = umap.UMAP(random_state=0)
     embeddings_2d = reducer.fit_transform(embeddings)
 
-    embeddings_2d_collection = {"identifier": [], "x": [], "y": []}
+    embeddings_2d_collection = {"identifier": [], "x": [], "y": [], "label": []}
     for counter, collection in enumerate(collections):
-        embeddings_2d_collection["identifier"].append(
-            f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}'
-        )
+        if embedding_type == EmbeddingType.IMAGE:
+            embeddings_2d_collection["identifier"].append(
+                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}'
+            )
+            embeddings_2d_collection["label"].append("No label")
+        elif embedding_type == EmbeddingType.OBJECT:
+            embeddings_2d_collection["identifier"].append(
+                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
+            )
+            embeddings_2d_collection["label"].append(collection["name"])
+        elif embedding_type == EmbeddingType.CLASSIFICATION:
+            # Due to the following line, currently there is only one classification answer
+            # https://github.com/encord-team/encord-active/blob/2e09cedf1c07eb89c91cad928113b1b51fc8dc7f/src/encord_active/lib/embeddings/cnn.py#L238
+            embeddings_2d_collection["identifier"].append(
+                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
+            )
+            embeddings_2d_collection["label"].append(collection["classification_answers"]["answer_name"])
+
         embeddings_2d_collection["x"].append(embeddings_2d[counter, 0]),
         embeddings_2d_collection["y"].append(embeddings_2d[counter, 1]),
 
-    target_path = Path(project_dir / "embeddings" / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.IMAGE])
+    target_path = Path(project_dir / "embeddings" / EMBEDDING_REDUCED_TO_FILENAME[embedding_type])
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
 
 
-def get_2d_embedding_data(embeddings_path: Path, metric_scope: MetricScope) -> Optional[DataFrame[Embedding2DSchema]]:
+def get_2d_embedding_data(
+    embeddings_path: Path, metric_scope: MetricScope, embedding_type: EmbeddingType
+) -> Optional[DataFrame[Embedding2DSchema]]:
+
     if metric_scope == MetricScope.DATA_QUALITY:
         embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.IMAGE]
-        if not embedding_file_path.exists():
+    elif metric_scope == MetricScope.LABEL_QUALITY:
+        if embedding_type == EmbeddingType.OBJECT:
+            embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.OBJECT]
+        elif embedding_type == EmbeddingType.CLASSIFICATION:
+            embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.CLASSIFICATION]
+        else:
             return None
-        with open(embedding_file_path, "rb") as f:
-            cnn_embeddings = pickle.load(f)
+    else:
+        return None
 
-        df = pd.DataFrame(cnn_embeddings)
-        df = DataFrame[Embedding2DSchema](df)
+    if not embedding_file_path.exists():
+        return None
+    with open(embedding_file_path, "rb") as f:
+        cnn_embeddings = pickle.load(f)
 
-        return df
+    df = pd.DataFrame(cnn_embeddings)
+    df = DataFrame[Embedding2DSchema](df)
+
+    return df
