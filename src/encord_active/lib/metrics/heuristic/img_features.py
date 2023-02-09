@@ -33,30 +33,29 @@ def iterate_with_rank_fn(
 
 
 class ContrastMetric(Metric):
-    TITLE = "Contrast"
-    SHORT_DESCRIPTION = "Ranks images by their contrast."
-    LONG_DESCRIPTION = r"""Ranks images by their contrast.
+    def __init__(self):
+        super().__init__(
+            title="Contrast",
+            short_description="Ranks images by their contrast.",
+            long_description=r"""Ranks images by their contrast.
 
 Contrast is computed as the standard deviation of the pixel values.
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     @staticmethod
     def rank_by_contrast(image):
         return image.std() / 255
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_contrast, self.TITLE)
+        return iterate_with_rank_fn(iterator, writer, self.rank_by_contrast, self.metadata.title)
 
 
 class Wrapper:  # we can't have a non-default-constructible Metric implementation at module level
     class ColorMetric(Metric):
-        METRIC_TYPE = MetricType.HEURISTIC
-        DATA_TYPE = DataType.IMAGE
-        ANNOTATION_TYPE = AnnotationType.NONE
-
         def __init__(
             self,
             color_name: str,
@@ -64,11 +63,18 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             saturation_filters=[50, 255],
             value_filters=[20, 255],
         ):
+
+            super().__init__(
+                title=f"{color_name} Values".title(),
+                short_description=f"Ranks images by how {color_name.lower()} the average value of the image is.",
+                long_description=f"""Ranks images by how {color_name.lower()} the average value of the
+                    image is.""",
+                metric_type=MetricType.HEURISTIC,
+                data_type=DataType.IMAGE,
+                annotation_type=AnnotationType.NONE,
+            )
+
             self.color_name = color_name
-            self._title = f"{color_name} Values".title()
-            self._short_description = f"Ranks images by how {color_name.lower()} the average value of the image is."
-            self._long_description = f"""Ranks images by how {color_name.lower()} the average value of the
-                    image is."""
             self.hue_filters = hue_filters
             self.saturation_filters = saturation_filters
             self.value_filters = value_filters
@@ -84,18 +90,6 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             value_test = all(0 <= item <= 255 for item in value_filters)
             if not value_test:
                 raise ValueError("Value parameter should be in [0, 255]")
-
-        @property
-        def TITLE(self) -> str:
-            return self._title
-
-        @property
-        def SHORT_DESCRIPTION(self) -> str:
-            return self._short_description
-
-        @property
-        def LONG_DESCRIPTION(self) -> str:
-            return self._long_description
 
         def __flatten_nested_lists(self, nested_list):
             out = []
@@ -136,7 +130,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
 
         def execute(self, iterator: Iterator, writer: CSVMetricWriter):
             return iterate_with_rank_fn(
-                iterator, writer, self.rank_by_hsv_filtering, self.TITLE, color_space=cv2.COLOR_BGR2HSV
+                iterator, writer, self.rank_by_hsv_filtering, self.metadata.title, color_space=cv2.COLOR_BGR2HSV
             )
 
 
@@ -160,28 +154,33 @@ class BlueMetric(Wrapper.ColorMetric):
 
 
 class BrightnessMetric(Metric):
-    TITLE = "Brightness"
-    SHORT_DESCRIPTION = "Ranks images by their brightness."
-    LONG_DESCRIPTION = r"""Ranks images their brightness.
+    def __init__(self):
+        super().__init__(
+            title="Brightness",
+            short_description="Ranks images by their brightness.",
+            long_description=r"""Ranks images their brightness.
 
 Brightness is computed as the average (normalized) pixel value across each image.
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     @staticmethod
     def rank_by_brightness(image):
         return image.mean() / 255
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_brightness, self.TITLE)
+        return iterate_with_rank_fn(iterator, writer, self.rank_by_brightness, self.metadata.title)
 
 
 class SharpnessMetric(Metric):
-    TITLE = "Sharpness"
-    SHORT_DESCRIPTION = "Ranks images by their sharpness."
-    LONG_DESCRIPTION = r"""Ranks images by their sharpness.
+    def __init__(self):
+        super().__init__(
+            title="Sharpness",
+            short_description="Ranks images by their sharpness.",
+            long_description=r"""Ranks images by their sharpness.
 
 Sharpness is computed by applying a Laplacian filter to each image and computing the
 variance of the output. In short, the score computes "the amount of edges" in each
@@ -190,23 +189,26 @@ image.
 ```python
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     @staticmethod
     def rank_by_sharpness(image):
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_sharpness, self.TITLE)
+        return iterate_with_rank_fn(iterator, writer, self.rank_by_sharpness, self.metadata.title)
 
 
 class BlurMetric(Metric):
-    TITLE = "Blur"
-    SHORT_DESCRIPTION = "Ranks images by their blurriness."
-    LONG_DESCRIPTION = r"""Ranks images by their blurriness.
+    def __init__(self):
+        super().__init__(
+            title="Blur",
+            short_description="Ranks images by their blurriness.",
+            long_description=r"""Ranks images by their blurriness.
 
 Blurriness is computed by applying a Laplacian filter to each image and computing the
 variance of the output. In short, the score computes "the amount of edges" in each
@@ -215,32 +217,36 @@ image. Note that this is $1 - \text{sharpness}$.
 ```python
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     @staticmethod
     def rank_by_blur(image):
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return iterate_with_rank_fn(iterator, writer, self.rank_by_blur, self.TITLE)
+        return iterate_with_rank_fn(iterator, writer, self.rank_by_blur, self.metadata.title)
 
 
 class AspectRatioMetric(Metric):
-    TITLE = "Aspect Ratio"
-    SHORT_DESCRIPTION = "Ranks images by their aspect ratio (width/height)."
-    LONG_DESCRIPTION = r"""Ranks images by their aspect ratio.
+    def __init__(self):
+        super().__init__(
+            title="Aspect Ratio",
+            short_description="Ranks images by their aspect ratio (width/height).",
+            long_description=r"""Ranks images by their aspect ratio.
 
 Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.TITLE}"):
+        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.metadata.title}"):
             size = get_du_size(data_unit, img_pth)
             if not size:
                 continue
@@ -250,18 +256,21 @@ Aspect ratio is computed as the ratio of image width to image height ($\frac{wid
 
 
 class AreaMetric(Metric):
-    TITLE = "Area"
-    SHORT_DESCRIPTION = "Ranks images by their area (width*height)."
-    LONG_DESCRIPTION = r"""Ranks images by their area.
+    def __init__(self):
+        super().__init__(
+            title="Area",
+            short_description="Ranks images by their areawidth/height).",
+            long_description=r"""Ranks images by their area.
 
 Area is computed as the product of image width and image height ($width \times height$).
-"""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.NONE
+    """,
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.TITLE}"):
+        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.metadata.title}"):
             size = get_du_size(data_unit, img_pth)
             if not size:
                 continue

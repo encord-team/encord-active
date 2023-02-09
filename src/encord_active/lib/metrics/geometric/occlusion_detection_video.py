@@ -16,14 +16,6 @@ logger = logger.opt(colors=True)
 
 
 class OcclusionDetectionOnVideo(Metric):
-    TITLE = "Detect Occlusion in Video"
-    SHORT_DESCRIPTION = "Tracks objects and detect outliers"
-    LONG_DESCRIPTION = r"""This metric collects information related to object size and aspect ratio for each track
- and find outliers among them."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.SEQUENCE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX]
-
     def __init__(
         self,
         low_threshold: float = 0.3,
@@ -31,7 +23,15 @@ class OcclusionDetectionOnVideo(Metric):
         high_threshold: float = 0.7,
         min_samples: int = 5,
     ):
-        super().__init__()
+        super().__init__(
+            title="Detect Occlusion in Video",
+            short_description="Tracks objects and detect outliers",
+            long_description=r"""This metric collects information related to object size and aspect ratio for each track
+ and find outliers among them.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.SEQUENCE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX],
+        )
         self.low_threshold = low_threshold
         self.medium_threshold = medium_threshold
         self.high_threshold = high_threshold
@@ -49,7 +49,7 @@ class OcclusionDetectionOnVideo(Metric):
             return "There is no occlusion"
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
         videos: dict[str, dict[str, dict]] = {}
         for label_row_hash, label_row in tqdm(iterator.label_rows.items(), desc="Looking for occlusions", leave=False):

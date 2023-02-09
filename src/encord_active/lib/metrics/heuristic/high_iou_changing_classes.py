@@ -14,12 +14,11 @@ logger = logger.opt(colors=True)
 
 
 class HighIOUChangingClasses(Metric):
-    TITLE = "Inconsistent Object Classification and Track IDs"
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.SEQUENCE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-    SHORT_DESCRIPTION = "Looks for overlapping objects with different classes (across frames)."
-    LONG_DESCRIPTION = r"""This algorithm looks for overlapping objects in consecutive
+    def __init__(self, threshold: float = 0.8):
+        super(HighIOUChangingClasses, self).__init__(
+            title="Inconsistent Object Classification and Track IDs",
+            short_description="Looks for overlapping objects with different classes (across frames).",
+            long_description=r"""This algorithm looks for overlapping objects in consecutive
 frames that have different classes. Furthermore, if classes are the same for overlapping objects but have different
 track-ids, they will be flagged as potential inconsistencies in tracks.
 
@@ -54,14 +53,15 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 ```
 `Cat:2` will be flagged as potentially having a broken track, because track ids `1` and `2` doesn't match.
 
-"""
-
-    def __init__(self, threshold: float = 0.8):
-        super(HighIOUChangingClasses, self).__init__()
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.SEQUENCE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
         self.threshold = threshold
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
         found_valid = False
 

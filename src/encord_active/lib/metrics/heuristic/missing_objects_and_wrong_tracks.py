@@ -35,12 +35,11 @@ class ErrorStore:
 
 
 class MissingObjectsMetric(Metric):
-    TITLE = "Missing Objects and Broken Tracks"
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.SEQUENCE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-    SHORT_DESCRIPTION = "Identifies missing objects and broken tracks based on object overlaps."
-    LONG_DESCRIPTION = r"""Identifies missing objects by comparing object overlaps based
+    def __init__(self, threshold: float = 0.5):
+        super().__init__(
+            title="Missing Objects and Broken Tracks",
+            short_description="Identifies missing objects and broken tracks based on object overlaps.",
+            long_description=r"""Identifies missing objects by comparing object overlaps based
 on a running window.
 
 **Case 1:**
@@ -80,14 +79,15 @@ hash, they will be flagged as a potentially broken track.
 └───────────────────┘        └───────────────────┘        └───────────────────┘
 ```
 `CAT:2` will be marked as potentially having a wrong track id.
-"""
-
-    def __init__(self, threshold: float = 0.5):
-        super().__init__()
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.SEQUENCE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
         self.threshold = threshold
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
         found_valid = False
         found_sequential = False

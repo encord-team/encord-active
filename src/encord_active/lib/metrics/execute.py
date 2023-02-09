@@ -1,11 +1,9 @@
 import inspect
-import json
 import logging
 import os
-from enum import Enum
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Callable, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -19,9 +17,12 @@ from encord_active.lib.metrics.metric import (
     Metric,
     MetricType,
     ObjectShape,
+    StatsMetadata,
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
+
+logger = logger.opt(colors=True)
 
 
 def get_metrics(module: Optional[Union[str, list[str]]] = None, filter_func=lambda x: True):
@@ -55,10 +56,10 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
 
 
 def is_metric_matching_embedding(embedding_type: EmbeddingType, metric: Metric):
-    if metric.ANNOTATION_TYPE is None or isinstance(metric.ANNOTATION_TYPE, list):
-        return embedding_type == get_embedding_type(metric.TITLE, metric.ANNOTATION_TYPE)
+    if metric.metadata.annotation_type is None or isinstance(metric.metadata.annotation_type, list):
+        return embedding_type == get_embedding_type(metric.metadata.title, metric.metadata.annotation_type)
     else:
-        return embedding_type == get_embedding_type(metric.TITLE, [metric.ANNOTATION_TYPE])
+        return embedding_type == get_embedding_type(metric.metadata.title, [metric.metadata.annotation_type])
 
 
 def get_metrics_by_embedding_type(embedding_type: EmbeddingType):
@@ -72,21 +73,21 @@ def run_metrics_by_embedding_type(embedding_type: EmbeddingType, **kwargs):
 
 
 def run_all_heuristic_metrics():
-    run_metrics(filter_func=lambda x: x.METRIC_TYPE == MetricType.HEURISTIC)
+    run_metrics(filter_func=lambda x: x.metadata.metric_type == MetricType.HEURISTIC)
 
 
 def run_all_image_metrics():
-    run_metrics(filter_func=lambda x: x.DATA_TYPE == DataType.IMAGE)
+    run_metrics(filter_func=lambda x: x.metadata.data_type == DataType.IMAGE)
 
 
 def run_all_polygon_metrics():
-    run_metrics(filter_func=lambda x: x.ANNOTATION_TYPE in [AnnotationType.OBJECT.POLYGON, AnnotationType.ALL])
+    run_metrics(filter_func=lambda x: x.metadata.annotation_type in [AnnotationType.OBJECT.POLYGON, AnnotationType.ALL])
 
 
 def run_all_prediction_metrics(**kwargs):
     # Return all metrics that apply to objects.
     def filter(m: Metric):
-        at = m.ANNOTATION_TYPE
+        at = m.metadata.annotation_type
         if isinstance(at, list):
             for t in at:
                 if isinstance(t, ObjectShape):
@@ -98,32 +99,13 @@ def run_all_prediction_metrics(**kwargs):
     run_metrics(filter_func=filter, **kwargs)
 
 
-def run_metrics(filter_func: Callable = lambda x: True, **kwargs):
+def run_metrics(filter_func: Callable[[Metric], bool] = lambda x: True, **kwargs):
     metrics = list(map(load_metric, get_metrics(filter_func=filter_func)))
     execute_metrics(metrics, **kwargs)
 
 
 def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
     return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
-
-
-def __get_value(o):
-    if isinstance(o, (float, int, str)):
-        return o
-    if isinstance(o, Enum):
-        return __get_value(o.value)
-    if isinstance(o, (list, tuple)):
-        return [__get_value(v) for v in o]
-    return None
-
-
-def __get_object_attributes(obj: Any):
-    metric_properties = {v.lower(): __get_value(getattr(obj, v)) for v in dir(obj)}
-    metric_properties = {k: v for k, v in metric_properties.items() if (v is not None or k == "annotation_type")}
-    return metric_properties
-
-
-logger = logger.opt(colors=True)
 
 
 @logger.catch()
@@ -139,8 +121,8 @@ def execute_metrics(
     cache_dir = iterator.update_cache_dir(data_dir)
 
     for metric in metrics:
-        logger.info(f"Running Metric <blue>{metric.TITLE.title()}</blue>")
-        unique_metric_name = metric.get_unique_name()
+        logger.info(f"Running Metric <blue>{metric.metadata.title}</blue>")
+        unique_metric_name = metric.metadata.get_unique_name()
 
         stats = StatisticsObserver()
         with CSVMetricWriter(cache_dir, iterator, prefix=unique_metric_name) as writer:
@@ -153,13 +135,7 @@ def execute_metrics(
 
         # Store meta-data about the scores.
         meta_file = (cache_dir / "metrics" / f"{unique_metric_name}.meta.json").expanduser()
+        metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
 
         with meta_file.open("w") as f:
-            json.dump(
-                {
-                    **__get_object_attributes(metric),
-                    **__get_object_attributes(stats),
-                },
-                f,
-                indent=2,
-            )
+            f.write(metric.metadata.json())

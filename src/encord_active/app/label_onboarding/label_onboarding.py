@@ -87,7 +87,7 @@ def label_onboarding_page():
         st.expander("Ontology structure").json(ontology.to_dict())
         with st.expander("What metrics do you want to run on your labels?"):
             metrics = get_metrics_by_embedding_type(LABEL_TYPE_EMBEDDING_MAPPING[label_type])
-            metric_selection = {metric: st.checkbox(metric.TITLE, True) for metric in metrics}
+            metric_selection = {metric: st.checkbox(metric.metadata.title, True) for metric in metrics}
 
         if st.form_submit_button("Import Labels"):
             with st.spinner():

@@ -29,16 +29,26 @@ from encord_active.lib.metrics.metric import AnnotationType, DataType, MetricTyp
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 class ExampleMetric(Metric):
-    TITLE = "Example Title"
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-    SHORT_DESCRIPTION = "A short description of your metric."
-    LONG_DESCRIPTION = "A longer and more detailed description. " \
-                       "I can use Markdown to _format_ the text."
+    def __init__(self):
+        super().__init__(
+            title="Example Title",
+            short_description="Assigns same value and description to all objects.",
+            long_description=r"""For long descriptions, I can use Markdown to _format_ the text.
+
+I can, e.g., make a
+[hyperlink](https://memegenerator.net/instance/74454868/europe-its-the-final-markdown)
+to the awesome paper that proposed the method.
+
+Or use math to better explain the method:
+$$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
+""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
 
     def test(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
         for data_unit, img_pth in iterator.iterate(desc="Progress bar description"):
             # Frame level score (data quality)

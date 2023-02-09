@@ -9,12 +9,15 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 class ObjectsCountMetric(Metric):
-    TITLE = "Object Count"
-    SHORT_DESCRIPTION = "Counts number of objects in the image"
-    LONG_DESCRIPTION = r"""Counts number of objects in the image."""
-    METRIC_TYPE = MetricType.HEURISTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = AnnotationType.ALL
+    def __init__(self):
+        super().__init__(
+            title="Object Count",
+            short_description="Counts number of objects in the image",
+            long_description=r"""Counts number of objects in the image.""",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.ALL,
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if not iterator.project.ontology.objects:

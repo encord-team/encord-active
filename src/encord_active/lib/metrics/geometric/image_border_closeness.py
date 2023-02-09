@@ -14,21 +14,24 @@ logger = logger.opt(colors=True)
 
 
 class ImageBorderCloseness(Metric):
-    TITLE = "Annotation closeness to image borders"
-    SHORT_DESCRIPTION = "Ranks annotations by how close they are to image borders."
-    LONG_DESCRIPTION = r"""This metric ranks annotations by how close they are to image borders."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-        AnnotationType.OBJECT.POLYLINE,
-        AnnotationType.OBJECT.KEY_POINT,
-        AnnotationType.OBJECT.SKELETON,
-    ]
+    def __init__(self):
+        super().__init__(
+            title="Annotation closeness to image borders",
+            short_description="Ranks annotations by how close they are to image borders.",
+            long_description=r"""This metric ranks annotations by how close they are to image borders.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+                AnnotationType.OBJECT.POLYLINE,
+                AnnotationType.OBJECT.KEY_POINT,
+                AnnotationType.OBJECT.SKELETON,
+            ],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, _ in iterator.iterate(desc="Computing closeness to border"):
