@@ -29,7 +29,7 @@ Contrast is computed as the standard deviation of the pixel values.
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image: np.ndarray):
+    def execute(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image.std() / 255
 
@@ -82,7 +82,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                     out.append(item)
             return out
 
-        def rank(self, image):
+        def execute(self, image):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
@@ -143,7 +143,7 @@ Brightness is computed as the average (normalized) pixel value across each image
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image: np.ndarray):
+    def execute(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image.mean() / 255
 
@@ -168,7 +168,7 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image: np.ndarray):
+    def execute(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return cv2.Laplacian(image, cv2.CV_64F).var()
 
@@ -193,7 +193,7 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    def rank(self, image: np.ndarray):
+    def execute(self, image: np.ndarray):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 

@@ -151,7 +151,7 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
         try:
             image = cv2.imread(img_pth.as_posix())
             for metric, csv_w in zip(metrics, csv_writers):
-                rank = metric.rank(image)
+                rank = metric.execute(image)
                 csv_w.write(rank)
         except Exception as e:
             logging.critical(e, exc_info=True)

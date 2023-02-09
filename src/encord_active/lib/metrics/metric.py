@@ -110,7 +110,7 @@ class SimpleMetric(ABC):
         )
 
     @abstractmethod
-    def rank(self, image: np.ndarray):
+    def execute(self, image: np.ndarray):
         pass
 
 
