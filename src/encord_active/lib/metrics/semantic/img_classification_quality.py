@@ -271,9 +271,9 @@ class ImageLevelQualityTest(Metric):
         generate_2d_embedding_data(EmbeddingType.IMAGE, iterator.cache_dir)
 
         self.collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.CLASSIFICATION)
-        generate_2d_embedding_data(EmbeddingType.CLASSIFICATION, iterator.cache_dir)
 
         if len(self.collections) > 0:
+            generate_2d_embedding_data(EmbeddingType.CLASSIFICATION, iterator.cache_dir)
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)
