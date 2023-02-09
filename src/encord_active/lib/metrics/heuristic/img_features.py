@@ -15,19 +15,6 @@ from encord_active.lib.metrics.metric import (
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-def execute_helper(
-    image: np.ndarray,
-    writer: CSVMetricWriter,
-    rank_fn: Callable,
-    color_space: int = cv2.COLOR_BGR2RGB,
-):
-    try:
-        image = cv2.cvtColor(image, color_space)
-        writer.write(rank_fn(image))
-    except Exception:
-        return
-
-
 class ContrastMetric(SimpleMetric):
     def __init__(self):
         super().__init__(
@@ -42,12 +29,9 @@ Contrast is computed as the standard deviation of the pixel values.
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_contrast(image):
+    def rank(self, image: np.ndarray):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image.std() / 255
-
-    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank_by_contrast)
 
 
 class Wrapper:  # we can't have a non-default-constructible Metric implementation at module level
@@ -98,7 +82,8 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                     out.append(item)
             return out
 
-        def rank_by_hsv_filtering(self, image):
+        def rank(self, image):
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
                     image,
@@ -123,9 +108,6 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                 ratio = np.sum(mask > 0) / (image.shape[0] * image.shape[1])
 
             return ratio
-
-        def execute(self, image: np.ndarray, writer: CSVMetricWriter):
-            execute_helper(image, writer, self.rank_by_hsv_filtering)
 
 
 # Inputs for new color algorithm
@@ -161,12 +143,9 @@ Brightness is computed as the average (normalized) pixel value across each image
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_brightness(image):
+    def rank(self, image: np.ndarray):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image.mean() / 255
-
-    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank_by_brightness)
 
 
 class SharpnessMetric(SimpleMetric):
@@ -189,12 +168,9 @@ score = cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_sharpness(image):
+    def rank(self, image: np.ndarray):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return cv2.Laplacian(image, cv2.CV_64F).var()
-
-    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank_by_sharpness)
 
 
 class BlurMetric(SimpleMetric):
@@ -217,12 +193,9 @@ score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
             annotation_type=AnnotationType.NONE,
         )
 
-    @staticmethod
-    def rank_by_blur(image):
+    def rank(self, image: np.ndarray):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return 1 - cv2.Laplacian(image, cv2.CV_64F).var()
-
-    def execute(self, image: np.ndarray, writer: CSVMetricWriter):
-        execute_helper(image, writer, self.rank_by_blur)
 
 
 class AspectRatioMetric(Metric):
