@@ -3,6 +3,7 @@ from enum import Enum
 from hashlib import md5
 from typing import List, Optional, Union
 
+import numpy as np
 from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
@@ -84,6 +85,33 @@ class MetricMetadata(BaseModel):
     def get_unique_name(self):
         name_hash = md5((self.title + self.short_description + self.long_description).encode()).hexdigest()
         return f"{name_hash[:8]}_{self.title.lower().replace(' ', '_')}"
+
+
+class SimpleMetric(ABC):
+    def __init__(
+        self,
+        title: str,
+        short_description: str,
+        long_description: str,
+        metric_type: MetricType,
+        data_type: DataType,
+        annotation_type: List[Union[ObjectShape, ClassificationType]],
+        embedding_type: Optional[EmbeddingType] = None,
+    ):
+        self.metadata = MetricMetadata(
+            title=title,
+            short_description=short_description,
+            long_description=long_description,
+            metric_type=metric_type,
+            data_type=data_type,
+            annotation_type=annotation_type,
+            embedding_type=embedding_type,
+            stats=StatsMetadata(),
+        )
+
+    @abstractmethod
+    def execute(self, image: np.ndarray):
+        pass
 
 
 class Metric(ABC):
