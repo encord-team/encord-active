@@ -13,12 +13,11 @@ from encord_active.lib.embeddings.utils import (
     EmbeddingType,
     load_collections,
 )
-from encord_active.lib.metrics.utils import MetricScope
 
 
 def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path):
     """
-    This function transforms high dimensional embedding data to 2D
+    This function transforms high dimensional embedding data to 2D and saves it to a file
     """
 
     collections = load_collections(embedding_type, project_dir / "embeddings")
@@ -27,7 +26,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     reducer = umap.UMAP(random_state=0, verbose=True)
     embeddings_2d = reducer.fit_transform(embeddings)
 
-    embeddings_2d_collection = {"identifier": [], "x": [], "y": [], "label": []}
+    embeddings_2d_collection: dict[str, list] = {"identifier": [], "x": [], "y": [], "label": []}
     for counter, collection in enumerate(collections):
         if embedding_type == EmbeddingType.IMAGE:
             embeddings_2d_collection["identifier"].append(
@@ -45,10 +44,14 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
             embeddings_2d_collection["identifier"].append(
                 f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
             )
-            embeddings_2d_collection["label"].append(collection["classification_answers"]["answer_name"])
+            embeddings_2d_collection["label"].append(
+                collection["classification_answers"]["answer_name"]
+                if collection["classification_answers"] is not None
+                else "No label"
+            )
 
-        embeddings_2d_collection["x"].append(embeddings_2d[counter, 0]),
-        embeddings_2d_collection["y"].append(embeddings_2d[counter, 1]),
+        embeddings_2d_collection["x"].append(embeddings_2d[counter, 0])
+        embeddings_2d_collection["y"].append(embeddings_2d[counter, 1])
 
     target_path = Path(project_dir / "embeddings" / EMBEDDING_REDUCED_TO_FILENAME[embedding_type])
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
@@ -66,6 +69,10 @@ def get_2d_embedding_data(
         cnn_embeddings = pickle.load(f)
 
     df = pd.DataFrame(cnn_embeddings)
+    """
+    plotly_events component only return x and y values for the selected points, therefore, we need to add
+    the following additional columns to filter out selected points
+    """
     df["x_y"] = (
         (df[Embedding2DSchema.x] * 1000).astype(int).astype(str)
         + "-"

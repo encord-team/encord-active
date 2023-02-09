@@ -202,9 +202,7 @@ def fill_data_quality_window(
     if get_state().reduced_embeddings[embedding_type] is None:
         st.info("There is no 2D embedding file to display.")
     else:
-
         selected_rows = render_plotly_events(get_state().reduced_embeddings[embedding_type])
-
         if selected_rows is not None:
             current_df = current_df[
                 current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
