@@ -10,8 +10,8 @@ from encord_active.lib.metrics.utils import MetricData, MetricSchema
 
 
 class MetricWithDistanceSchema(MetricSchema):
-    dist_to_iqr: Optional[Series[float]] = pa.Field()
-    outliers_status: Optional[Series[str]] = pa.Field()
+    dist_to_iqr: Optional[Series[float]] = pa.Field(coerce=True)
+    outliers_status: Optional[Series[str]] = pa.Field(coerce=True)
 
 
 class IqrOutliers(NamedTuple):
@@ -44,8 +44,8 @@ class Severity(str, Enum):
 
 class AllMetricsOutlierSchema(pa.SchemaModel):
     metric_name: Series[str]
-    total_severe_outliers: Series[int] = pa.Field(coerce=True)
-    total_moderate_outliers: Series[int] = pa.Field(coerce=True)
+    total_severe_outliers: Series[int] = pa.Field(ge=0, coerce=True)
+    total_moderate_outliers: Series[int] = pa.Field(ge=0, coerce=True)
 
 
 _COLUMNS = MetricWithDistanceSchema

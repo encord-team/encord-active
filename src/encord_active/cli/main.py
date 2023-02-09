@@ -17,6 +17,9 @@ from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib import constants as ea_constants
+from encord_active.lib.metrics.execute import run_metrics, run_metrics_by_embedding_type
+from encord_active.lib.metrics.heuristic.img_features import AreaMetric
+from encord_active.lib.metrics.metric import EmbeddingType
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -147,6 +150,10 @@ def import_local_project(
         False,
         help="Print the files that will be imported WITHOUT importing them.",
     ),
+    metrics: bool = typer.Option(
+        True,
+        help="Run the metrics on the initiated project.",
+    ),
 ):
     """
     [green bold]Initialize[/green bold] a project from your local file system :seedling:
@@ -208,6 +215,14 @@ def import_local_project(
         project_path = init_local_project(
             files=glob_result.matched, target=target, project_name=project_name, symlinks=symlinks
         )
+
+        metricize_options = {"data_dir": project_path, "use_cache_only": True}
+        if metrics:
+            run_metrics_by_embedding_type(EmbeddingType.IMAGE, **metricize_options)
+        else:
+            # NOTE: we need to compute at  least one metric otherwise everything breaks
+            run_metrics(filter_func=lambda x: x.TITLE == AreaMetric.TITLE, **metricize_options)
+
         success_with_visualise_command(project_path, "Project initialised :+1:")
 
     except ProjectExistsError as e:
@@ -230,7 +245,7 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="visualize")
 @bypass_streamlit_question
 @ensure_project
-def visualise(
+def visualize(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
     ),
