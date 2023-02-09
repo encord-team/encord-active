@@ -55,20 +55,10 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
 
 
 def get_2d_embedding_data(
-    embeddings_path: Path, metric_scope: MetricScope, embedding_type: EmbeddingType
+    embeddings_path: Path, embedding_type: EmbeddingType
 ) -> Optional[DataFrame[Embedding2DSchema]]:
 
-    if metric_scope == MetricScope.DATA_QUALITY:
-        embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.IMAGE]
-    elif metric_scope == MetricScope.LABEL_QUALITY:
-        if embedding_type == EmbeddingType.OBJECT:
-            embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.OBJECT]
-        elif embedding_type == EmbeddingType.CLASSIFICATION:
-            embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[EmbeddingType.CLASSIFICATION]
-        else:
-            return None
-    else:
-        return None
+    embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
 
     if not embedding_file_path.exists():
         return None

@@ -144,7 +144,7 @@ def get_selected_identifiers(embeddings_2d: DataFrame[Embedding2DSchema], select
 
 def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
     get_should_select, set_should_select = use_state(True)
-    get_selection, set_selection = use_state([])
+    get_selection, set_selection = use_state(None)
     fig = px.scatter(
         embedding_2d,
         x=Embedding2DSchema.x,
@@ -162,7 +162,7 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
     if st.button("Reset selection"):
         set_should_select(False)
 
-    if get_should_select():
+    if get_should_select() and len(new_selection) > 0:
         return get_selected_identifiers(embedding_2d, new_selection)
     else:
         return None
@@ -191,12 +191,13 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
-    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, metric_scope, embedding_type)
+    embedding_2d = get_2d_embedding_data(get_state().project_paths.embeddings, embedding_type)
 
     if embedding_2d is None:
         st.info("There is no 2D embedding file to display.")
     else:
         selected_rows = render_plotly_events(embedding_2d)
+
         if selected_rows is not None:
             current_df = current_df[
                 current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
