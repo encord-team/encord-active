@@ -88,15 +88,18 @@ After selecting the project you want to print mapping for via the command line, 
 
 ```
 {
-  "cat": "OTK8MrM3",
-  "dog": "Nr52O8Ex",
-  "horse": "MjkXn2Mx"
+  "objects": {
+    "cat": "OTK8MrM3",
+    "dog": "Nr52O8Ex",
+    "horse": "MjkXn2Mx"
+  }
+  "classifications":
 }
 ```
 
 :::tip
 
-To store the ontology as `ontology.json` in the current working directory, you can do
+To store the ontology as `ontology_output.json` in the current working directory, you can do
 
 ```shell
 encord-active print --json ontology
