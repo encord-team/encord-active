@@ -261,8 +261,7 @@ class EncordActions:
             new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
             embedding["label_row"] = new_lr
             embedding["data_unit"] = new_du
-            if not embedding["url"].startswith("http"):
-                embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
+            embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
             return embedding
 
         collection = load_collections(embedding_type, self.project_file_structure.embeddings)
