@@ -128,6 +128,28 @@ def _get_columns(needs_ontology: bool, num_rows: int) -> RenderItems:
     return RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
 
 
+def _get_project():
+    try:
+        action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
+        return action_utils, bool(action_utils.original_project)
+    except ProjectNotFound as e:
+        st.markdown(
+            f"""
+        ❌ No `project_meta.yaml` file in the project folder.
+        Please create `project_meta.yaml` file in **{e.project_dir}** folder with the following content
+        and try again:
+        ``` yaml
+        project_hash: <project_hash>
+        ssh_key_path: /path/to/your/encord/ssh_key
+        ```
+        """
+        )
+        raise e
+    except Exception as e:
+        st.error(str(e))
+        raise e
+
+
 def export_filter():
     get_filtered_row_count, set_filtered_row_count = use_state(0)
     get_clone_button, set_clone_button = use_state(False)
@@ -136,7 +158,7 @@ def export_filter():
     message_placeholder = st.empty()
 
     st.header("Filter & Export")
-
+    action_utils, has_original_project = _get_project()
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
@@ -188,16 +210,21 @@ def export_filter():
             help="Ensure you have generated an updated COCO file before downloading",
         )
 
+    if get_filtered_row_count() != row_count:
+        set_filtered_row_count(row_count)
+        set_clone_button(False)
+
     action_columns[3].button(
-        "🏗 Clone",
+        "🏗 Clone" if has_original_project else "🏗 Export to Encord",
         on_click=lambda: set_clone_button(True),
+        disabled=get_filtered_row_count() != row_count,
         help="Clone the filtered data into a new Encord dataset and project",
     )
     delete_btn = action_columns[4].button("👀 Review", help="Assign the filtered data for review on the Encord platform")
     edit_btn = action_columns[5].button(
         "🖋 Re-label", help="Assign the filtered data for relabelling on the Encord platform"
     )
-    augment_btn = action_columns[6].button("➕ Augment", help="Augment your dataset based on the filered data")
+    augment_btn = action_columns[6].button("➕ Augment", help="Augment your dataset based on the filtered data")
 
     if any([delete_btn, edit_btn, augment_btn]):
         set_clone_button(False)
@@ -214,32 +241,7 @@ community</a>
             unsafe_allow_html=True,
         )
 
-    prev_row_count = get_filtered_row_count()
-    if prev_row_count != row_count:
-        set_filtered_row_count(row_count)
-        set_clone_button(False)
-
     if get_clone_button():
-        try:
-            action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
-            has_original_project = bool(action_utils.original_project)
-        except ProjectNotFound as e:
-            st.markdown(
-                f"""
-            ❌ No `project_meta.yaml` file in the project folder.
-            Please create `project_meta.yaml` file in **{e.project_dir}** folder with the following content
-            and try again:
-            ``` yaml
-            project_hash: <project_hash>
-            ssh_key_path: /path/to/your/encord/ssh_key
-            ```
-            """
-            )
-            return
-        except Exception as e:
-            st.error(str(e))
-            return
-
         with st.form("new_project_form"):
             st.subheader("Create a new project with the selected items")
 
@@ -263,15 +265,18 @@ community</a>
             ontology_hash = (
                 action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
                 if not has_original_project and cols.ontology
-                else action_utils.original_project.get_project().ontology_hash
+                else action_utils.original_project.get_project().ontology_Ïhash
             )
             new_project = action_utils.create_project(
                 dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
             )
 
-            action_utils.replace_uids(
-                dataset_creation_result.lr_du_mapping, new_project.project_hash, dataset_creation_result.hash
-            )
+            try:
+                action_utils.replace_uids(
+                    dataset_creation_result.lr_du_mapping, new_project.project_hash, dataset_creation_result.hash
+                )
+            except Exception as e:
+                st.error(str(e))
             clear()
             label.info("🎉 New project is created!")
 

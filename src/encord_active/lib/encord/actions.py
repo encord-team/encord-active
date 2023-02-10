@@ -13,7 +13,7 @@ from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.common.utils import fetch_project_meta
+from encord_active.lib.common.utils import chunker, fetch_project_meta
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
@@ -257,42 +257,56 @@ class EncordActions:
 
     def update_embedding_identifiers(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
         def _update_identifiers(embedding: LabelEmbedding, renaming_map: dict[str, str]):
-            embedding["label_row"] = renaming_map[embedding["label_row"]]
-            embedding["data_unit"] = renaming_map[embedding["data_unit"]]
-            url_without_extension, extension = embedding["url"].split(".")
-            changed_parts = [renaming_map[x] if x in renaming_map else x for x in url_without_extension.split("/")]
-            embedding["url"] = "/".join(changed_parts) + "." + extension
+            old_lr, old_du = embedding["label_row"], embedding["data_unit"]
+            new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
+            embedding["label_row"] = new_lr
+            embedding["data_unit"] = new_du
+            if not embedding["url"].startswith("http"):
+                embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
             return embedding
 
         collection = load_collections(embedding_type, self.project_file_structure.embeddings)
         updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
         save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
 
+    def _rename_files(self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit]):
+        for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
+            old_lr_path = self.project_file_structure.data / old_lr
+            new_lr_path = self.project_file_structure.data / new_lr
+            if old_lr_path.exists() and not new_lr_path.exists():
+                old_lr_path.rename(new_lr_path)
+            for old_du_f in new_lr_path.glob(f"**/{old_du}.*"):
+                old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
+
+    def _replace_in_files(self, renaming_map):
+        for subs in chunker(renaming_map.items(), 100):
+            substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
+            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
+            subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
+
     def replace_uids(
         self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
     ):
         label_row_meta = json.loads(self.project_file_structure.label_row_meta.read_text(encoding="utf-8"))
         original_dataset_hash = next(iter(label_row_meta.values()))["dataset_hash"]
-
         renaming_map = {self.project_meta["project_hash"]: project_hash, original_dataset_hash: dataset_hash}
-
         for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            old_lr_path = self.project_file_structure.data / old_lr
-            for old_du_f in old_lr_path.glob(f"**/{old_du}.*"):
-                old_du_f.rename(old_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
             renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
-        dir_renames = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
-        for (old_lr, new_lr) in dir_renames.items():
-            (self.project_file_structure.data / old_lr).rename(self.project_file_structure.data / new_lr)
-
-        MergedMetrics().replace_identifiers(renaming_map)
-        for old, new in renaming_map.items():
-            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' 's/{old}/{new}/g' {{}} +"
-            subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
-
-        for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-            self.update_embedding_identifiers(embedding_type, renaming_map)
+        try:
+            self._rename_files(file_mappings)
+            self._replace_in_files(renaming_map)
+            MergedMetrics().replace_identifiers(renaming_map)
+            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
+                self.update_embedding_identifiers(embedding_type, renaming_map)
+        except Exception as e:
+            rev_renaming_map = {v: k for k, v in renaming_map.items()}
+            self._rename_files({v: k for k, v in file_mappings.items()})
+            self._replace_in_files(rev_renaming_map)
+            MergedMetrics().replace_identifiers(rev_renaming_map)
+            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
+                self.update_embedding_identifiers(embedding_type, rev_renaming_map)
+            raise e
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:

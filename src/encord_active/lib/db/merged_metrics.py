@@ -81,6 +81,10 @@ def ensure_initialised(fn):
     return wrapper
 
 
+class DBIdentifiersReplacementException(Exception):
+    pass
+
+
 class MergedMetrics(object):
     def __new__(cls):
         if not hasattr(cls, "instance"):
@@ -114,8 +118,8 @@ class MergedMetrics(object):
     def replace_identifiers(self, mappings: dict[str, str]):
         def _replace_identifiers(id: str):
             lr, du, *rest = id.split("_")
-            mappedlr, mappeddu = mappings[lr], mappings[du]
-            return "_".join([mappedlr, mappeddu, *rest])
+            mapped_lr, mapped_du = mappings.get(lr, lr), mappings.get(du, du)
+            return "_".join([mapped_lr, mapped_du, *rest])
 
         with DBConnection() as conn:
             df = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
