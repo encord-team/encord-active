@@ -62,14 +62,14 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
         )
 
         x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[
-            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score].copy()
         ]
-        x_metric_df.columns = x_metric_df.columns.str.replace(f'{MetricWithDistanceSchema.score}', f'{CrossMetricSchema.x}')
+        x_metric_df.columns.str.rename(f'{MetricWithDistanceSchema.score}', f'{CrossMetricSchema.x}', inplace=True)
 
         y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[
-            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
+            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score].copy()
         ]
-        y_metric_df.columns = y_metric_df.columns.str.replace(f'{MetricWithDistanceSchema.score}', f'{CrossMetricSchema.y}')
+        y_metric_df.columns.str.rename(f'{MetricWithDistanceSchema.score}', f'{CrossMetricSchema.y}', inplace=True)
 
         if x_metric_df.shape[0] == 0:
             st.info(f'Score file of metric "{x_metric_name}" is empty, please run this metric again.')
