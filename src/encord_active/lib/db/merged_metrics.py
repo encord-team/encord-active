@@ -81,10 +81,6 @@ def ensure_initialised(fn):
     return wrapper
 
 
-class DBIdentifiersReplacementException(Exception):
-    pass
-
-
 class MergedMetrics(object):
     def __new__(cls):
         if not hasattr(cls, "instance"):

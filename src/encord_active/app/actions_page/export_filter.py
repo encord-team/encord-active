@@ -265,7 +265,7 @@ community</a>
             ontology_hash = (
                 action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
                 if not has_original_project and cols.ontology
-                else action_utils.original_project.get_project().ontology_Ïhash
+                else action_utils.original_project.get_project().ontology_hash
             )
             new_project = action_utils.create_project(
                 dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
