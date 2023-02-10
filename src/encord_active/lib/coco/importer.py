@@ -31,7 +31,6 @@ from encord_active.lib.encord.local_sdk import (
     LocalProject,
     LocalUserClient,
 )
-from encord_active.lib.labels.object import ObjectShape
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 

@@ -31,23 +31,6 @@ class EmbeddingType(str, Enum):
     IMAGE = "image"
 
 
-# copy from encord but as a string enum
-class ClassificationType(str, Enum):
-    RADIO = "radio"
-    TEXT = "text"
-    CHECKLIST = "checklist"
-
-
-# copy from encord but as a string enum
-class ObjectShape(str, Enum):
-    POLYGON = "polygon"
-    POLYLINE = "polyline"
-    BOUNDING_BOX = "bounding_box"
-    KEY_POINT = "point"
-    SKELETON = "skeleton"
-    ROTATABLE_BOUNDING_BOX = "rotatable_bounding_box"
-
-
 AnnotationTypeUnion = Union[ObjectShape, ClassificationType]
 
 

@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import rle_to_binary_mask
-from encord_active.lib.labels.object import BoxShapes, ObjectShape
+from encord_active.lib.labels.object import ObjectShape
 
 logger = logging.getLogger(__name__)
 GMT_TIMEZONE = pytz.timezone("GMT")

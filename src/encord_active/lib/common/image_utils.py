@@ -198,10 +198,10 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
         top_right = [(b["x"] + b["w"]) * img_w, b["y"] * img_h]
         bottom_right = [(b["x"] + b["w"]) * img_w, (b["y"] + b["h"]) * img_h]
         bottom_left = [b["x"] * img_w, (b["y"] + b["h"]) * img_h]
-        polygon = rotate(Polygon([top_left, top_right, bottom_right, bottom_left]), b["theta"])
-        if not polygon.exterior:
+        rotated_polygon = rotate(Polygon([top_left, top_right, bottom_right, bottom_left]), b["theta"])
+        if not rotated_polygon or not rotated_polygon.exterior:
             return None
-        polygon = np.array(list(polygon.exterior.coords))
+        polygon = np.array(list(rotated_polygon.exterior.coords))
     else:
         return None
 
