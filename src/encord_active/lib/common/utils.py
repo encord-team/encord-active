@@ -6,7 +6,17 @@ from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 from itertools import product
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import (
+    Any,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+)
 
 import av
 import cv2
@@ -428,3 +438,7 @@ def download_file(
                 f.flush()
 
     return destination
+
+
+def iterate_in_batches(seq: Sequence, size: int):
+    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
