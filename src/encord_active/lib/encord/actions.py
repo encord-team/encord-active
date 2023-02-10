@@ -13,7 +13,7 @@ from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.common.utils import chunker, fetch_project_meta
+from encord_active.lib.common.utils import fetch_project_meta, iterate_in_batches
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
@@ -278,7 +278,7 @@ class EncordActions:
                 old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
 
     def _replace_in_files(self, renaming_map):
-        for subs in chunker(renaming_map.items(), 100):
+        for subs in iterate_in_batches(renaming_map.items(), 100):
             substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
             cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
             subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
@@ -305,7 +305,7 @@ class EncordActions:
             MergedMetrics().replace_identifiers(rev_renaming_map)
             for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
                 self.update_embedding_identifiers(embedding_type, rev_renaming_map)
-            raise e
+            raise Exception("UID replacement failed")
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:

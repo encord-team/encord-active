@@ -440,5 +440,5 @@ def download_file(
     return destination
 
 
-def chunker(seq: Sequence, size: int):
+def iterate_in_batches(seq: Sequence, size: int):
     return (seq[pos : pos + size] for pos in range(0, len(seq), size))

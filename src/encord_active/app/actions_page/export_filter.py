@@ -144,10 +144,8 @@ def _get_project():
         ```
         """
         )
-        raise e
     except Exception as e:
         st.error(str(e))
-        raise e
 
 
 def export_filter():
