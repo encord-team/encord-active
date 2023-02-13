@@ -46,7 +46,6 @@ class HuMomentsStatic(Metric):
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        return
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         hu_moments_df = get_hu_embeddings(iterator, force=True)
 
