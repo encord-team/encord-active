@@ -194,7 +194,7 @@ def fill_data_quality_window(
         st.error("Metric not selected.")
         return
 
-    if get_state().reduced_embeddings[embedding_type] is None:
+    if embedding_type not in get_state().reduced_embeddings:
         get_state().reduced_embeddings[embedding_type] = get_2d_embedding_data(
             get_state().project_paths.embeddings, embedding_type
         )

@@ -65,13 +65,7 @@ class State:
     annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
-    reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(
-        default_factory=lambda: {
-            EmbeddingType.CLASSIFICATION: None,
-            EmbeddingType.OBJECT: None,
-            EmbeddingType.IMAGE: None,
-        }
-    )
+    reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
     def init(cls, project_dir: Path):
