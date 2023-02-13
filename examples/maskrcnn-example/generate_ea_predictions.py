@@ -28,7 +28,7 @@ dataset_validation = EncordMaskRCNNDataset(
 )
 
 model = get_model_instance_segmentation(len(dataset_validation.coco.cats) + 1)
-model.load_state_dict(torch.load(params.inference.model_checkpoint_path))
+model.load_state_dict(torch.load(params.inference.model_checkpoint_path, map_location=device))
 model.to(device)
 
 model.eval()
