@@ -122,7 +122,7 @@ class Metric(ABC):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        annotation_type: List[Union[ObjectShape, ClassificationType]],
+        annotation_type: Optional[List[Union[ObjectShape, ClassificationType]]],
         embedding_type: Optional[EmbeddingType] = None,
     ):
         self.metadata = MetricMetadata(

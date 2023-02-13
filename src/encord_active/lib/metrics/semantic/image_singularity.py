@@ -25,24 +25,23 @@ class DataUnitInfo:
 
 
 class ImageSingularity(Metric):
-    TITLE = "Image Singularity"
-    SHORT_DESCRIPTION = "Finds duplicate and near-duplicate images"
-    LONG_DESCRIPTION = r"""
+    def __init__(self, near_duplicate_threshold=0.97):
+        super(ImageSingularity, self).__init__(
+            title="Image Singularity",
+            short_description="Finds duplicate and near-duplicate images",
+            long_description=r"""
 This metric gives each image a score that shows each image's uniqueness.  
 - A score of zero means that the image has duplicates in the dataset; on the other hand, a score close to one represents that image is quite unique. Among the duplicate images, we only give a non-zero score to a single image, and the rest will have a score of zero (for example, if there are five identical images, only four will have a score of zero). This way, these duplicate samples can be easily tagged and removed from the project.    
 - Images that are near duplicates of each other will be shown side by side. 
 ### Possible actions
 - **To delete duplicate images:** You can set the quality filter to cover only zero values (that ends up with all the duplicate images), then use bulk tagging (e.g., with a tag like `Duplicate`) to tag all images.
 - **To mark duplicate images:** Near duplicate images are shown side by side. Navigate through these images and mark whichever is of interest to you.
-"""
-    NEEDS_IMAGES = True
-    ANNOTATION_TYPE = None
-    EMBEDDING_TYPE = EmbeddingType.CLASSIFICATION
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-
-    def __init__(self, near_duplicate_threshold=0.97):
-        super(ImageSingularity, self).__init__()
+""",
+            metric_type=MetricType.SEMANTIC,
+            data_type=DataType.IMAGE,
+            embedding_type=EmbeddingType.CLASSIFICATION,
+            annotation_type=None,
+        )
         self.collections: List[LabelEmbedding] = []
         self.scores: dict[str, DataUnitInfo] = {}
         self.near_duplicate_threshold = near_duplicate_threshold
