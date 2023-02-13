@@ -40,7 +40,6 @@ This metric gives each image a score that shows each image's uniqueness.
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.CLASSIFICATION,
-            annotation_type=None,
         )
         self.collections: List[LabelEmbedding] = []
         self.scores: dict[str, DataUnitInfo] = {}
