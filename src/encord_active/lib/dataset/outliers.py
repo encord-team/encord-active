@@ -90,7 +90,7 @@ def get_iqr_outliers(
 
     n_severe_outliers = ((df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub)).sum()
 
-    return (df, IqrOutliers(n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub))
+    return df, IqrOutliers(n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub)
 
 
 def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> DataFrame[AllMetricsOutlierSchema]:

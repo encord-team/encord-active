@@ -5,9 +5,12 @@ from typing import Dict, List, Optional, TypedDict
 
 import faiss
 import numpy as np
+import pandera as pa
 from faiss import IndexFlatL2
+from pandera.typing import Series
 
 from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.utils import IdentifierSchema
 
 
 class ClassificationAnswer(TypedDict):
@@ -76,6 +79,19 @@ EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
     EmbeddingType.OBJECT: "cnn_objects.pkl",
 }
+
+EMBEDDING_REDUCED_TO_FILENAME = {
+    EmbeddingType.IMAGE: "cnn_images_reduced.pkl",
+    EmbeddingType.CLASSIFICATION: "cnn_classifications_reduced.pkl",
+    EmbeddingType.OBJECT: "cnn_objects_reduced.pkl",
+}
+
+
+class Embedding2DSchema(IdentifierSchema):
+    x: Series[float] = pa.Field(coerce=True)
+    y: Series[float] = pa.Field(coerce=True)
+    label: Series[str]
+    x_y: Series[str]
 
 
 def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:

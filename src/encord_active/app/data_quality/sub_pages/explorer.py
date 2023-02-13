@@ -1,12 +1,14 @@
 import re
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 from natsort import natsorted
 from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
+from streamlit_plotly_events import plotly_events
 
 from encord_active.app.common.components import build_data_tags
 from encord_active.app.common.components.annotator_statistics import (
@@ -27,13 +29,15 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import use_state
 from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     load_or_fill_image,
     show_image_and_draw_polygons,
 )
-from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
+from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
@@ -127,6 +131,46 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
+def get_selected_rows(
+    embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
+) -> DataFrame[Embedding2DSchema]:
+    """
+    Selected points from the plotly graph only have x and y values, so we need a hacky way to identify selected points
+    Here, we just create and additional column by merging x and y points, so that we can get the selected points'
+    identifiers for filtering.
+    """
+    selected_points_merged = [str(int(item["x"] * 1000)) + "-" + str(int(item["y"] * 1000)) for item in selected_points]
+
+    selected_rows = embeddings_2d[embeddings_2d[Embedding2DSchema.x_y].isin(selected_points_merged)]
+    return selected_rows
+
+
+def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
+    get_should_select, set_should_select = use_state(True)
+    get_selection, set_selection = use_state(None)
+    fig = px.scatter(
+        embedding_2d,
+        x=Embedding2DSchema.x,
+        y=Embedding2DSchema.y,
+        color=Embedding2DSchema.label,
+        title="2D embedding plot",
+    )
+
+    new_selection = plotly_events(fig, click_event=False, select_event=True)
+
+    if new_selection != get_selection():
+        set_should_select(True)
+        set_selection(new_selection)
+
+    if st.button("Reset selection"):
+        set_should_select(False)
+
+    if get_should_select() and len(new_selection) > 0:
+        return get_selected_rows(embedding_2d, new_selection)
+    else:
+        return None
+
+
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -149,6 +193,25 @@ def fill_data_quality_window(
     if not metric:
         st.error("Metric not selected.")
         return
+
+    if embedding_type not in get_state().reduced_embeddings:
+        get_state().reduced_embeddings[embedding_type] = get_2d_embedding_data(
+            get_state().project_paths.embeddings, embedding_type
+        )
+
+    if get_state().reduced_embeddings[embedding_type] is None:
+        st.info("There is no 2D embedding file to display.")
+    else:
+        # Apply if a high level filter (class or annotator) is applied
+        current_reduced_embedding = get_state().reduced_embeddings[embedding_type]
+        reduced_embedding_filtered = current_reduced_embedding[
+            current_reduced_embedding[Embedding2DSchema.identifier].isin(current_df[MetricSchema.identifier])
+        ]
+        selected_rows = render_plotly_events(reduced_embedding_filtered)
+        if selected_rows is not None:
+            current_df = current_df[
+                current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
+            ]
 
     chart = get_histogram(current_df, "score", metric.name)
     st.altair_chart(chart, use_container_width=True)

@@ -10,6 +10,9 @@ from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.dimensionality_reduction import (
+    generate_2d_embedding_data,
+)
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import (
     AnnotationType,
@@ -264,9 +267,12 @@ class ImageLevelQualityTest(Metric):
 
         # TODO: move me somewhere else, this is here to ensure the generation of image embeddings
         get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+        generate_2d_embedding_data(EmbeddingType.IMAGE, iterator.cache_dir)
 
         self.collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.CLASSIFICATION)
+
         if len(self.collections) > 0:
+            generate_2d_embedding_data(EmbeddingType.CLASSIFICATION, iterator.cache_dir)
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)

@@ -11,6 +11,9 @@ from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
 from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.dimensionality_reduction import (
+    generate_2d_embedding_data,
+)
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import (
     AnnotationType,
@@ -109,6 +112,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             return
 
         collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.OBJECT)
+        generate_2d_embedding_data(EmbeddingType.OBJECT, iterator.cache_dir)
         if len(collections) > 0:
             embedding_identifiers = [self.get_identifier_from_collection_item(item) for item in collections]
 
