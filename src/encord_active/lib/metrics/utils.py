@@ -97,7 +97,7 @@ def is_valid_annotation_type(
     if metric_scope == MetricScope.DATA_QUALITY:
         return not annotation_type
     elif metric_scope == MetricScope.LABEL_QUALITY:
-        return isinstance(annotation_type, list)
+        return bool(annotation_type) and isinstance(annotation_type, list)
     else:
         return True
 
