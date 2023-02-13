@@ -274,7 +274,7 @@ class PredictionWriter:
 
                 if "im" in data_type:  # img_group or image
                     frame = int(du["data_sequence"])
-                    for obj in du["labels"]["objects"]:
+                    for obj in du["labels"].get("objects", []):
                         append_object_label(du_hash, frame, obj, width, height)
                 else:  # Video
                     for fr, labels in du["labels"].items():
