@@ -28,18 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class ObjectEmbeddingSimilarityTest(Metric):
-    TITLE = "Object Annotation Quality"
-    SHORT_DESCRIPTION = "Compares object annotations against similar image crops"
-    LONG_DESCRIPTION = r"""This metric transforms polygons into bounding boxes
-    and an embedding for each bounding box is extracted. Then, these embeddings are compared
-    with their neighbors. If the neighbors are annotated differently, a low score is given to it.
-    """
-    NEEDS_IMAGES = True
-    EMBEDDING_TYPE = EmbeddingType.OBJECT
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON]
-
     def __init__(self, num_nearest_neighbors: int = 10, certainty_ratio: float = 0.6, project_dataset_name: str = ""):
         """
         :param num_nearest_neighbors: determines how many nearest neighbors' labels should be checked for the quality.
@@ -48,7 +36,18 @@ class ObjectEmbeddingSimilarityTest(Metric):
         :param project_dataset_name: if QM is wanted to be run on specific dataset, name should be given here. If it is
          empty, it means evaluate all datasets in the project
         """
-        super(ObjectEmbeddingSimilarityTest, self).__init__()
+        super(ObjectEmbeddingSimilarityTest, self).__init__(
+            title="Object Annotation Quality",
+            short_description="Compares object annotations against similar image crops",
+            long_description=r"""This metric transforms polygons into bounding boxes
+    and an embedding for each bounding box is extracted. Then, these embeddings are compared
+    with their neighbors. If the neighbors are annotated differently, a low score is given to it.
+    """,
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            embedding_type=EmbeddingType.OBJECT,
+        )
         self.collections: dict[str, LabelEmbedding] = {}
         self.featureNodeHash_to_index: dict[str, int] = {}
         self.index_to_object_name: dict[int, str] = {}
@@ -132,7 +131,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             label_matches = np.equal(nearest_labels_except_self, np.expand_dims(noisy_labels, axis=-1))
             collections_scores = label_matches.mean(axis=-1)
 
-            valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+            valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
             for data_unit, img_pth in iterator.iterate(desc="Storing index"):
                 for obj in data_unit["labels"].get("objects", []):
                     if obj["shape"] not in valid_annotation_types:

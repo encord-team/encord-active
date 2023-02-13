@@ -61,14 +61,18 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             help="Draws a trend line to demonstrate the relationship between the two metrics.",
         )
 
-        x_metric_df = metrics_data_summary.metrics[str(x_metric_name)].df[
-            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
-        ]
+        x_metric_df = (
+            metrics_data_summary.metrics[str(x_metric_name)]
+            .df[[MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]]
+            .copy()
+        )
         x_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.x}"}, inplace=True)
 
-        y_metric_df = metrics_data_summary.metrics[str(y_metric_name)].df[
-            [MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]
-        ]
+        y_metric_df = (
+            metrics_data_summary.metrics[str(y_metric_name)]
+            .df[[MetricWithDistanceSchema.identifier, MetricWithDistanceSchema.score]]
+            .copy()
+        )
         y_metric_df.rename(columns={MetricWithDistanceSchema.score: f"{CrossMetricSchema.y}"}, inplace=True)
 
         if x_metric_df.shape[0] == 0:
@@ -281,7 +285,7 @@ def render_metric_summary(
     n_rows = get_state().page_grid_settings.rows
     page_size = n_cols * n_rows
 
-    st.markdown(metric.meta["long_description"])
+    st.markdown(metric.meta.long_description)
 
     if iqr_outliers.n_severe_outliers + iqr_outliers.n_moderate_outliers == 0:
         st.success("No outliers found!")

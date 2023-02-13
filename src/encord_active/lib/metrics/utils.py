@@ -1,7 +1,8 @@
+import json
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict
 
 import pandas as pd
 import pandera as pa
@@ -9,13 +10,14 @@ from encord.objects.common import PropertyType
 from encord.ontology import OntologyStructure
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
+from pydantic import ValidationError
 
-from encord_active.lib.common.utils import load_json
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     AnnotationTypeUnion,
     EmbeddingType,
     MetricMetadata,
+    StatsMetadata,
 )
 
 
@@ -55,12 +57,8 @@ def load_metric_dataframe(
     df = pd.read_csv(metric.path).sort_values([sorting_key, "identifier"], ascending=True).reset_index()
 
     if normalize:
-        min_val = metric.meta.get("min_value")
-        max_val = metric.meta.get("max_value")
-        if min_val is None:
-            min_val = df["score"].min()
-        if max_val is None:
-            max_val = df["score"].max()
+        min_val = metric.meta.stats.min_value if metric.meta.stats else df["score"].min()
+        max_val = metric.meta.stats.max_value if metric.meta.stats else df["score"].max()
 
         diff = max_val - min_val
         if diff == 0:  # Avoid dividing by zero
@@ -94,14 +92,46 @@ def get_metric_operation_level(pth: Path) -> str:
 
 
 def is_valid_annotation_type(
-    annotation_type: Union[None, List[str]], metric_scope: Optional[MetricScope] = None
+    annotation_type: List[AnnotationTypeUnion], metric_scope: Optional[MetricScope] = None
 ) -> bool:
     if metric_scope == MetricScope.DATA_QUALITY:
-        return annotation_type is None
+        return not annotation_type
     elif metric_scope == MetricScope.LABEL_QUALITY:
-        return isinstance(annotation_type, list)
+        return bool(annotation_type) and isinstance(annotation_type, list)
     else:
         return True
+
+
+def load_metric_metadata(meta_pth) -> MetricMetadata:
+    # TODO Remove after a few releases when it can be safely assumed all metadata files have been updated
+    try:
+        return MetricMetadata.parse_file(meta_pth)
+    except ValidationError:
+        with meta_pth.open("r", encoding="utf-8") as f:
+            old_meta = json.load(f)
+
+        if "min_value" in old_meta:
+            stats = StatsMetadata(
+                min_value=old_meta["min_value"],
+                max_value=old_meta["max_value"],
+                num_rows=old_meta["num_rows"],
+                mean_value=old_meta["mean_value"],
+            )
+        else:
+            stats = StatsMetadata()
+        metadata = MetricMetadata(
+            title=old_meta["title"],
+            short_description=old_meta["short_description"],
+            long_description=old_meta["long_description"],
+            data_type=old_meta["data_type"],
+            metric_type=old_meta["metric_type"],
+            embedding_type=old_meta["embedding_type"] if "embedding_type" in old_meta else None,
+            annotation_type=old_meta["annotation_type"] if old_meta["annotation_type"] else [],
+            stats=stats,
+        )
+        with meta_pth.open("w") as f:
+            f.write(metadata.json())
+        return metadata
 
 
 def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope] = None) -> List[MetricData]:
@@ -113,7 +143,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
 
     make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").title()
     names = [f"{make_name(p)}" for p, l in zip(paths, levels)]
-    meta_data = [load_json(f.with_suffix(".meta.json")) for f in paths]
+    meta_data = [load_metric_metadata(f.with_suffix(".meta.json")) for f in paths]
 
     out: List[MetricData] = []
 
@@ -124,10 +154,10 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
         if n in {"Object Count", "Frame Object Density"}:
             continue
 
-        if m is None or not l or not is_valid_annotation_type(m.get("annotation_type"), metric_scope):
+        if m is None or not l or not is_valid_annotation_type(m.annotation_type, metric_scope):
             continue
 
-        out.append(MetricData(name=n, path=p, meta=MetricMetadata(**m), level=l))  # type: ignore
+        out.append(MetricData(name=n, path=p, meta=m, level=l))  # type: ignore
 
     out = natsorted(out, key=lambda i: (i.level, i.name))  # type: ignore
     return out

@@ -100,8 +100,6 @@ def import_project(
     from encord_active.lib.common.utils import ProjectMeta
     from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
-    ssh_key_path = app_config.get_or_query_ssh_key()
-
     file_structure = ProjectFileStructure(target)
     if file_structure.project_meta.exists():
         project_meta: ProjectMeta = yaml.safe_load(file_structure.project_meta.read_text())
@@ -138,6 +136,8 @@ def import_project(
         project_path = import_coco_project(images, annotations, target, use_symlinks=symlinks)
     else:
         from encord_active.cli.utils.encord import import_encord_project
+
+        ssh_key_path = app_config.get_or_query_ssh_key()
 
         project_path = import_encord_project(ssh_key_path, target, encord_project_hash)
 

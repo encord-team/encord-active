@@ -46,17 +46,20 @@ class MomentStore:
 
 
 class HuMomentsTemporalMetric(Metric):
-    TITLE = "Polygon Shape Similarity"
-    SHORT_DESCRIPTION = "Ranks objects by how similar they are to their instances in previous frames."
-    LONG_DESCRIPTION = r"""Ranks objects by how similar they are to their instances in previous frames
+    def __init__(self):
+        super().__init__(
+            title="Polygon Shape Similarity",
+            short_description="Ranks objects by how similar they are to their instances in previous frames.",
+            long_description=r"""Ranks objects by how similar they are to their instances in previous frames
 based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes,
-the lower its score will be."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.SEQUENCE
-    ANNOTATION_TYPE = [AnnotationType.OBJECT.POLYGON]
+the lower its score will be.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.SEQUENCE,
+            annotation_type=[AnnotationType.OBJECT.POLYGON],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         moment_store = MomentStore()

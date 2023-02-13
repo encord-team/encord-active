@@ -117,8 +117,8 @@ class ExplorerPage(Page):
             return
 
         st.markdown(f"# {self.title}")
-        st.markdown(f"## {selected_metric.meta['title']}")
-        st.markdown(selected_metric.meta["long_description"])
+        st.markdown(f"## {selected_metric.meta.title}")
+        st.markdown(selected_metric.meta.long_description)
 
         if selected_df.empty:
             return
@@ -175,7 +175,7 @@ def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
     meta = selected_metric.meta
-    embedding_type = get_embedding_type(meta["title"], meta["annotation_type"])
+    embedding_type = get_embedding_type(meta.title, meta.annotation_type)
     embeddings_dir = get_state().project_paths.embeddings
     embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
 

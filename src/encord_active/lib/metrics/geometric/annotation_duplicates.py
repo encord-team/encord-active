@@ -14,26 +14,23 @@ logger = logger.opt(colors=True)
 
 
 class AnnotationDuplicates(Metric):
-    TITLE = "Annotation Duplicates"
-    SHORT_DESCRIPTION = "Ranks annotations by how likely they are to represent the same object"
-    LONG_DESCRIPTION = r"""Ranks annotations by how likely they are to represent the same object.
-> [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index)
-is used to measure closeness of two annotations."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-    ]
-
     def __init__(self, threshold: float = 0.6):
         # todo expose additional parameters along with their meaning
         # threshold: used along with Jaccard similarity coefficient to calculate likelihood of duplicates in annotations
-        super().__init__()
+        super().__init__(
+            title="Annotation Duplicates",
+            short_description="Ranks annotations by how likely they are to represent the same object",
+            long_description=r"""Ranks annotations by how likely they are to represent the same object.
+> [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index)
+is used to measure closeness of two annotations.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+        )
         self.threshold = threshold
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, _ in iterator.iterate(desc="Looking for duplicates"):

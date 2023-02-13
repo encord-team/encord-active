@@ -29,18 +29,21 @@ def get_area(obj: dict) -> float:
 
 
 class RelativeObjectAreaMetric(Metric):
-    TITLE = "Object Area - Relative"
-    SHORT_DESCRIPTION = "Computes object area as a percentage of total image area"
-    LONG_DESCRIPTION = r"""Computes object area as a percentage of total image area."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-    ]
+    def __init__(self):
+        super().__init__(
+            title="Object Area - Relative",
+            short_description="Computes object area as a percentage of total image area.",
+            long_description=r"""Computes object area as a percentage of total image area.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, _ in iterator.iterate(desc="Computing object area"):
@@ -58,21 +61,24 @@ class RelativeObjectAreaMetric(Metric):
 
 
 class OccupiedTotalAreaMetric(Metric):
-    TITLE = "Frame object density"
-    SHORT_DESCRIPTION = "Computes the percentage of image area that's occupied by objects"
-    LONG_DESCRIPTION = r"""Computes the percentage of image area that's occupied by objects."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-    ]
+    def __init__(self):
+        super().__init__(
+            title="Frame object density",
+            short_description="Computes the percentage of image area that's occupied by objects.",
+            long_description=r"""Computes the percentage of image area that's occupied by objects.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if not iterator.project.ontology.objects:
             return
 
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, _ in iterator.iterate(desc="Computing total object area"):
@@ -97,18 +103,21 @@ class OccupiedTotalAreaMetric(Metric):
 
 
 class AbsoluteObjectAreaMetric(Metric):
-    TITLE = "Object Area - Absolute"
-    SHORT_DESCRIPTION = "Computes object area in amount of pixels"
-    LONG_DESCRIPTION = r"""Computes object area in amount of pixels."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-    ]
+    def __init__(self):
+        super().__init__(
+            title="Object Area - Absolute",
+            short_description="Computes object area in amount of pixels",
+            long_description=r"""Computes object area in amount of pixels.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, img_pth in iterator.iterate(desc="Computing pixel area"):
@@ -133,18 +142,21 @@ class AbsoluteObjectAreaMetric(Metric):
 
 
 class ObjectAspectRatioMetric(Metric):
-    TITLE = "Object Aspect Ratio"
-    SHORT_DESCRIPTION = "Computes aspect ratios of objects"
-    LONG_DESCRIPTION = r"""Computes aspect ratios ($width/height$) of objects."""
-    METRIC_TYPE = MetricType.GEOMETRIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [
-        AnnotationType.OBJECT.BOUNDING_BOX,
-        AnnotationType.OBJECT.POLYGON,
-    ]
+    def __init__(self):
+        super().__init__(
+            title="Object Aspect Ratio",
+            short_description="Computes aspect ratios of objects",
+            long_description=r"""Computes aspect ratios ($width/height$) of objects.""",
+            metric_type=MetricType.GEOMETRIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
+        )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        valid_annotation_types = {annotation_type.value for annotation_type in self.ANNOTATION_TYPE}
+        valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         for data_unit, img_pth in iterator.iterate(desc="Computing aspect ratio"):

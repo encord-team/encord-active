@@ -42,17 +42,6 @@ class ClassificationInfo(DescriptionInfo):
 
 
 class ImageLevelQualityTest(Metric):
-    TITLE = "Image-level Annotation Quality"
-    SHORT_DESCRIPTION = "Compares image classifications against similar images"
-    LONG_DESCRIPTION = r"""This metric creates embeddings from images. Then, these embeddings are used to build
-    nearest neighbor graph. Similar embeddings' classifications are compared against each other.
-        """
-    NEEDS_IMAGES = True
-    EMBEDDING_TYPE = EmbeddingType.CLASSIFICATION
-    METRIC_TYPE = MetricType.SEMANTIC
-    DATA_TYPE = DataType.IMAGE
-    ANNOTATION_TYPE = [AnnotationType.CLASSIFICATION.RADIO]
-
     def __init__(self, num_nearest_neighbors: int = 10, certainty_ratio: float = 0.60):
         """
 
@@ -62,7 +51,17 @@ class ImageLevelQualityTest(Metric):
         :param certainty_ratio: ratio to determine if the annotation is mislabeled or there is a different problem in
         the annotation
         """
-        super(ImageLevelQualityTest, self).__init__()
+        super(ImageLevelQualityTest, self).__init__(
+            title="Image-level Annotation Quality",
+            short_description="Compares image classifications against similar images",
+            long_description=r"""This metric creates embeddings from images. Then, these embeddings are used to build
+    nearest neighbor graph. Similar embeddings' classifications are compared against each other.
+        """,
+            metric_type=MetricType.SEMANTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=[AnnotationType.CLASSIFICATION.RADIO],
+            embedding_type=EmbeddingType.CLASSIFICATION,
+        )
         self.collections: list[LabelEmbedding] = []
         self.featureNodeHash_to_index: dict[str, dict] = {}
         self.featureNodeHash_to_name: dict[str, dict] = {}
