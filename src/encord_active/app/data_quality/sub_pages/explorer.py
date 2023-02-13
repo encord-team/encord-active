@@ -131,7 +131,7 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
 
-def get_selected_identifiers(
+def get_selected_rows(
     embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
 ) -> DataFrame[Embedding2DSchema]:
     """
@@ -166,7 +166,7 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         set_should_select(False)
 
     if get_should_select() and len(new_selection) > 0:
-        return get_selected_identifiers(embedding_2d, new_selection)
+        return get_selected_rows(embedding_2d, new_selection)
     else:
         return None
 
