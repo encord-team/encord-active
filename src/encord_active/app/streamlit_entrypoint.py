@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Callable, Dict, Optional, Union
 
 import streamlit as st
+from encord_active_components import MenuItem, pages_menu
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
 from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State
 from encord_active.app.common.utils import set_page_config
-from encord_active.app.frontend_components import pages_menu
 from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
 from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
 from encord_active.app.model_quality.sub_pages.metrics import MetricsPage
@@ -45,7 +45,7 @@ SEPARATOR = "#"
 def to_item(k, v, parent_key: Optional[str] = None):
     # NOTE: keys must be unique for the menu to render properly
     composite_key = SEPARATOR.join(filter(None, [parent_key, k]))
-    item = {"key": composite_key, "label": k}
+    item = MenuItem(key=composite_key, label=k, children=None)
     if isinstance(v, dict):
         item["children"] = to_items(v, parent_key=composite_key)
     return item
@@ -72,7 +72,7 @@ def main(project_path: str):
         project_meta = fetch_project_meta(project_dir)
         st.subheader(project_meta.get("project_title", project_dir.name))
         items = to_items(pages)
-        key = pages_menu(items=items)
+        key = pages_menu(items)
         path = key.split(SEPARATOR) if key else []
 
     render = reduce(dict.__getitem__, path, pages) if path else pages["Data Quality"]["Summary"]  # type: ignore

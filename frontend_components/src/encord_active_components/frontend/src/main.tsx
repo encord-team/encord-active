@@ -9,11 +9,12 @@ import { StreamlitProvider } from "./streamlit/StreamlitProvider";
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <StreamlitProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="pages-menu" element={<PagesMenu />} />
-        </Routes>
-      </BrowserRouter>
+      {/* <BrowserRouter> */}
+      {/*   <Routes> */}
+      {/* <Route path="pages-menu" element={<PagesMenu />} /> */}
+      <PagesMenu />
+      {/*   </Routes> */}
+      {/* </BrowserRouter> */}
     </StreamlitProvider>
   </React.StrictMode>
 );

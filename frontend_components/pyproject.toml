@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "encord-active-components"
+version = "0.0.4"
+description = "Frontend components used by Encord Active"
+authors = ["Cord Technologies Limited <hello@encord.com>"]
+license = "Apache-2.0"
+
+packages = [{include = "encord_active_components", from = "src"}]
+include = ["src/encord_active_components/frontend/dist/**/*"]
+exclude = [
+  "src/encord_active_components/frontend/node_modules/**/*",
+  "src/encord_active_components/frontend/src/**/*"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+streamlit = "^1.13.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
