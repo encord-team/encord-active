@@ -87,7 +87,7 @@ def get_batches(iterator, batch_size=6):
     for du, img_pth in iterator.iterate(desc="Loading data"):
         img_mask = np.zeros((height, width), dtype=np.uint8)
 
-        for obj in du["labels"]["objects"]:
+        for obj in du["labels"].get("objects", []):
             if obj["shape"] != "polygon":
                 continue
 

@@ -279,7 +279,7 @@ class PredictionWriter:
                 else:  # Video
                     for fr, labels in du["labels"].items():
                         frame = int(fr)
-                        for obj in labels["objects"]:
+                        for obj in labels.get("objects", []):
                             append_object_label(du_hash, frame, obj, width, height)
 
     def get_class_id(self, obj_dict) -> Optional[int]:

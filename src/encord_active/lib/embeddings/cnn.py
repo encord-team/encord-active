@@ -139,7 +139,7 @@ def generate_cnn_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
         embeddings = feature_extractor(batches)["my_avgpool"]
         embeddings_torch = torch.flatten(embeddings, start_dim=1).cpu().detach().numpy()
 
-        for obj, emb in zip(data_unit["labels"]["objects"], embeddings_torch):
+        for obj, emb in zip(data_unit["labels"].get("objects", []), embeddings_torch):
             if obj["shape"] in [ObjectShape.POLYGON.value, ObjectShape.BOUNDING_BOX.value]:
 
                 last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
