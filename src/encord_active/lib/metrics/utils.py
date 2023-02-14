@@ -119,14 +119,17 @@ def load_metric_metadata(meta_pth) -> MetricMetadata:
             )
         else:
             stats = StatsMetadata()
+        annotation_type = old_meta.get("annotation_type", []) or []
+        if annotation_type == [None, None]:
+            annotation_type = AnnotationType.ALL
         metadata = MetricMetadata(
             title=old_meta["title"],
             short_description=old_meta["short_description"],
             long_description=old_meta["long_description"],
             data_type=old_meta["data_type"],
-            metric_type=old_meta["metric_type"],
-            embedding_type=old_meta["embedding_type"] if "embedding_type" in old_meta else None,
-            annotation_type=old_meta["annotation_type"] if old_meta["annotation_type"] else [],
+            metric_type=old_meta.get("metric_type", old_meta.get("index_type")),
+            embedding_type=old_meta.get("embedding_type", None),
+            annotation_type=annotation_type,
             stats=stats,
         )
         with meta_pth.open("w") as f:
