@@ -124,7 +124,7 @@ def load_metric_metadata(meta_pth) -> MetricMetadata:
             short_description=old_meta["short_description"],
             long_description=old_meta["long_description"],
             data_type=old_meta["data_type"],
-            metric_type=old_meta["metric_type"] if "metric_type" in old_meta else old_meta["index_type"],
+            metric_type=old_meta.get("metric_type", old_meta.get("index_type")),
             embedding_type=old_meta["embedding_type"] if "embedding_type" in old_meta else None,
             annotation_type=old_meta["annotation_type"] if old_meta["annotation_type"] else [],
             stats=stats,
