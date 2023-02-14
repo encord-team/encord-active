@@ -120,6 +120,8 @@ def load_metric_metadata(meta_pth) -> MetricMetadata:
         else:
             stats = StatsMetadata()
         annotation_type = old_meta.get("annotation_type", [])
+        if not annotation_type:
+            annotation_type = []
         if annotation_type == [None, None]:
             annotation_type = AnnotationType.ALL
         metadata = MetricMetadata(
