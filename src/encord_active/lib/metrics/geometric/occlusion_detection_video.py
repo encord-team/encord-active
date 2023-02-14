@@ -58,7 +58,7 @@ class OcclusionDetectionOnVideo(Metric):
 
                 data_unit = list(label_row["data_units"].values())[0]
                 for label in data_unit["labels"]:
-                    for obj in data_unit["labels"][label]["objects"]:
+                    for obj in data_unit["labels"][label].get("objects", []):
                         if obj["shape"] not in valid_annotation_types:
                             continue
 
