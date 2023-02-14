@@ -69,13 +69,10 @@ Couldn't identify a project ontology. The reason for this may be that you have a
 
     ontology_structure = OntologyStructure.from_dict(json.loads(fs.ontology.read_text()))
 
-    classifications = {}
-    for classification, attribute, option in iterate_classification_attribute_options(ontology_structure):
-        classifications[option.value] = {
-            "classification_hash": classification.feature_node_hash,
-            "attribute_hash": attribute.feature_node_hash,
-            "option_hash": option.feature_node_hash,
-        }
+    classifications = {
+        option.value: hashes.dict()
+        for (hashes, (_, _, option)) in iterate_classification_attribute_options(ontology_structure)
+    }
 
     objects = {o.name.lower(): o.feature_node_hash for o in ontology_structure.objects}
 

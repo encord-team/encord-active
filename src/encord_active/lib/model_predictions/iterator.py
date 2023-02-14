@@ -69,12 +69,7 @@ class PredictionIterator(Iterator):
 
         object_lookup = {obj.feature_node_hash: obj for obj in self.project.ontology.objects}
         classification_lookup = {
-            FrameClassification(
-                classification_hash=classification_attribute_option.classification.feature_node_hash,
-                attribute_hash=classification_attribute_option.attribute.feature_node_hash,
-                option_hash=classification_attribute_option.option.feature_node_hash,
-            ): classification_attribute_option
-            for classification_attribute_option in iterate_classification_attribute_options(self.project.ontology)
+            hashes: items for hashes, items in iterate_classification_attribute_options(self.project.ontology)
         }
 
         self.ontology_objects: Dict[ClassID, Object] = {}

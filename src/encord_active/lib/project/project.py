@@ -62,10 +62,6 @@ class Project:
 
         return self
 
-    def iterate_data_units(self):
-        for label_row in self.label_rows.values():
-            for data_unit in label_row["data_units"].values():
-                yield label_row, data_unit
 
     def from_encord_project(self, encord_project: EncordProject) -> Project:
         """

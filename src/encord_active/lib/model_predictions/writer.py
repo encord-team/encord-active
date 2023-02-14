@@ -208,7 +208,11 @@ def iterate_classification_attribute_options(ontology: OntologyStructure):
         for attribute in classification.attributes:
             if isinstance(attribute, RadioAttribute):
                 for option in attribute.options:
-                    yield ClassificationAttributeOption(classification, attribute, option)
+                    yield FrameClassification(
+                        classification_hash=classification.feature_node_hash,
+                        attribute_hash=attribute.feature_node_hash,
+                        option_hash=option.feature_node_hash,
+                    ), ClassificationAttributeOption(classification, attribute, option)
 
 
 class PredictionWriter:
@@ -227,12 +231,7 @@ class PredictionWriter:
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
         self.classification_lookup = {
-            FrameClassification(
-                classification_hash=classification.feature_node_hash,
-                attribute_hash=attribute.feature_node_hash,
-                option_hash=option.feature_node_hash,
-            ): option
-            for classification, attribute, option in iterate_classification_attribute_options(self.project.ontology)
+            hashes: option for hashes, (_, _, option) in iterate_classification_attribute_options(self.project.ontology)
         }
 
         self.label_row_meta = self.project.label_row_metas
@@ -271,14 +270,9 @@ class PredictionWriter:
             for obj in self.project.ontology.objects:
                 self.object_class_id_lookup[obj.feature_node_hash] = len(self.object_class_id_lookup)
 
-        self.classification_class_id_lookup: Dict[FrameClassification, ClassID] = {}
-        for classification, attribute, option in iterate_classification_attribute_options(self.project.ontology):
-            key = FrameClassification(
-                classification_hash=classification.feature_node_hash,
-                attribute_hash=attribute.feature_node_hash,
-                option_hash=option.feature_node_hash,
-            )
-            self.classification_class_id_lookup[key] = len(self.classification_class_id_lookup)
+        self.classification_class_id_lookup = {
+            key: index for index, (key, _) in enumerate(iterate_classification_attribute_options(self.project.ontology))
+        }
 
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
