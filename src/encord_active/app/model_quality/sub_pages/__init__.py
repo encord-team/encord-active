@@ -83,4 +83,4 @@ class ModelQualityPage(Page):
 
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")
-            st.markdown(metric_data.meta["long_description"])
+            st.markdown(metric_data.meta.long_description)
