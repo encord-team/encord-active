@@ -486,8 +486,8 @@ class PredictionWriter:
             ptype = PredictionType.FRAME
             x1, y1, x2, y2 = [None, None, None, None]
         elif prediction.object:
+            class_id = self.object_class_id_lookup.get(prediction.object.object_class_hash)
             if isinstance(prediction.object.data, np.ndarray):
-                class_id = self.object_class_id_lookup.get(prediction.object.object_class_hash)
                 polygon = prediction.object.data
                 ptype = PredictionType.POLYGON
                 if isinstance(polygon, list):
@@ -510,11 +510,8 @@ class PredictionWriter:
                 rle = binary_mask_to_rle(np_mask)
 
             else:
-                class_id = self.object_class_id_lookup.get(prediction.object.object_class_hash)
                 bbox = prediction.object.data
                 ptype = PredictionType.BBOX
-                # TODO: move me to the prediction model
-                self.__check_bbox(bbox)
                 x1 = bbox.x * width
                 y1 = bbox.y * height
                 x2 = (bbox.x + bbox.w) * width
