@@ -46,6 +46,12 @@ class HuMomentsStatic(Metric):
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+        # Patching sklearn to use numpy's linalg as scipy's one causes segfaults
+        import sklearn.decomposition._pca as module_to_patch
+
+        original_lin_alg = module_to_patch.linalg
+        module_to_patch.linalg = np.linalg
+
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         hu_moments_df = get_hu_embeddings(iterator, force=True)
 
@@ -104,3 +110,6 @@ class HuMomentsStatic(Metric):
                         continue
 
                     coords_writer.write(pca_coordinates[index].tolist(), obj, label_class=cls_list[index])
+
+        # Restore back the original linalg module
+        module_to_patch.linalg = original_lin_alg
