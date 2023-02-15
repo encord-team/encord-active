@@ -16,7 +16,11 @@ from torchvision.ops import box_iou
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import RLEData, binary_mask_to_rle, rle_iou
-from encord_active.lib.db.predictions import FrameClassification, Prediction
+from encord_active.lib.db.predictions import (
+    BoundingBox,
+    FrameClassification,
+    Prediction,
+)
 from encord_active.lib.labels.classification import (
     ClassificationAnswer,
     LabelClassification,
@@ -57,6 +61,7 @@ class LabelEntry:
     x2: Optional[float] = None
     y2: Optional[float] = None
     rle: Optional[RLEData] = None
+    theta: Optional[float] = None
 
     @property
     def bbox_list(self):
@@ -319,18 +324,18 @@ class PredictionWriter:
             )
 
             if o["shape"] in BoxShapes:
-                bbox = o.get("boundingBox") or o.get("rotatableBoundingBox")
-                if not (bbox and self.__check_bbox(bbox)):
+                try:
+                    bbox = BoundingBox.parse_obj(o.get("boundingBox"))
+                except:
                     return  # Invalid bounding box object
 
                 if o["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
-                    label_entry.theta = bbox["theta"]
+                    label_entry.theta = bbox.theta
 
-                x, y, w, h = [bbox[k] for k in ["x", "y", "w", "h"]]
-                label_entry.x1 = round(x * width, 2)
-                label_entry.y1 = round(y * height, 2)
-                label_entry.x2 = round((x + w) * width, 2)
-                label_entry.y2 = round((y + h) * height, 2)
+                label_entry.x1 = round(bbox.x * width, 2)
+                label_entry.y1 = round(bbox.y * height, 2)
+                label_entry.x2 = round((bbox.x + bbox.w) * width, 2)
+                label_entry.y2 = round((bbox.y + bbox.h) * height, 2)
             elif o["shape"] == ObjectShape.POLYGON:
                 points = polyobj_to_nparray(o, width=width, height=height)
                 if points.size == 0:
@@ -453,15 +458,6 @@ class PredictionWriter:
             object_hash = self.__generate_hash()
         self.uuids.add(object_hash)
         return object_hash
-
-    @staticmethod
-    def __check_bbox(bbox):
-        bbox_keys = set(bbox.keys())
-        if not len(bbox_keys.intersection(BBOX_KEYS)) == 4:
-            raise ValueError(f"Bbox dict keys were {bbox_keys} but should be {BBOX_KEYS}")
-        if not all([isinstance(v, (int, float)) for v in bbox.values()]):
-            raise ValueError("Bbox coordinates should be floats")
-        return True
 
     def add_prediction(self, prediction: Prediction) -> None:
         """
