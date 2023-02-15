@@ -156,7 +156,7 @@ def export_filter():
 
     st.header("Filter & Export")
     action_utils = _get_action_utils()
-    project_has_remote = action_utils.project_meta.get("has_remote", False)
+    project_has_remote = action_utils.project_meta.get("has_remote", False) if action_utils else False
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
@@ -215,7 +215,7 @@ def export_filter():
     action_columns[3].button(
         "🏗 Clone" if project_has_remote else "🏗 Export to Encord",
         on_click=lambda: set_clone_button(True),
-        disabled=get_filtered_row_count() != row_count,
+        disabled=(get_filtered_row_count() != row_count) or not action_utils,
         help="Clone the filtered data into a new Encord dataset and project",
     )
     delete_btn = action_columns[4].button("👀 Review", help="Assign the filtered data for review on the Encord platform")
