@@ -467,5 +467,4 @@ def patch_sklearn_linalg(func):
 
         module_to_patch1.linalg, module_to_patch1.linalg = original_lin_alg1, original_lin_alg1
 
-
     return wrap
