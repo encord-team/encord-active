@@ -141,7 +141,6 @@ def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric])
 
 def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[SimpleMetric]):
     if len(metrics) == 0:
-        logger.info("No metric was chosen to run.")
         return
     logger.info(f"Running metrics <blue>{', '.join(metric.metadata.title for metric in metrics)}</blue>")
     csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
