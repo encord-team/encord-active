@@ -452,3 +452,20 @@ def download_file(
 
 def iterate_in_batches(seq: Sequence, size: int):
     return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+
+
+def patch_sklearn_linalg(func):
+    # Patching sklearn to use numpy's linalg as scipy's one causes segfaults
+    def wrap(*args, **kwargs):
+        import sklearn.decomposition._pca as module_to_patch1
+        import sklearn.utils.extmath as module_to_patch2
+
+        original_lin_alg1, original_lin_alg2 = module_to_patch1.linalg, module_to_patch2.linalg
+        module_to_patch1.linalg, module_to_patch2.linalg = np.linalg, np.linalg
+
+        func(*args, **kwargs)
+
+        module_to_patch1.linalg, module_to_patch1.linalg = original_lin_alg1, original_lin_alg1
+
+
+    return wrap
