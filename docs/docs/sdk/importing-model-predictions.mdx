@@ -66,7 +66,7 @@ We support predictions for classifications and object detections.
 
 All predictions need a unique identifier of the data unit (the `data_hash` and potentially a `frame`) and model `confidence` score
 
-In addition to the above, a **classification** prediction contains 3 identifiers, `classification_hash` `attribute_hash` and `option_hash` while an **object detection** prediction contains the `object_class_hash`, the actual prediction `data`, and the `format` of that data.
+In addition to the above, a **classification** prediction contains 3 identifiers, `classification_hash` `attribute_hash` and `option_hash` while an **object detection** prediction contains the `feature_hash`, the actual prediction `data`, and the `format` of that data.
 
 #### Creating a `Prediction` Object
 
@@ -118,7 +118,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.BOUNDING_BOX,
         # Your bounding box coordinates in relative terms (% of image width/height).
@@ -152,7 +152,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.MASK,
         # _binary_ np.ndarray of shape [h, w] and dtype np.uint8
@@ -188,7 +188,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.POLYGON,
         # np.ndarray of shape [n, 2] and dtype float in range [0,1]
