@@ -51,7 +51,7 @@ with torch.no_grad():
                     object=ObjectDetection(
                         format=Format.POLYGON,
                         data=contour,
-                        object_class_hash=encord_ontology["objects"][la.item() - 1]["featureNodeHash"],
+                        feature_hash=encord_ontology["objects"][la.item() - 1]["featureNodeHash"],
                     ),
                 )
                 predictions_to_store.append(prediction)
