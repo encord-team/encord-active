@@ -1,8 +1,8 @@
 import json
 import logging
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import datetime
-from functools import partial
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
@@ -17,7 +17,14 @@ from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import rle_to_binary_mask
+from encord_active.lib.db.predictions import FrameClassification
+from encord_active.lib.labels.classification import LabelClassification
 from encord_active.lib.labels.object import ObjectShape
+from encord_active.lib.model_predictions.writer import (
+    ClassID,
+    ClassificationAttributeOption,
+    iterate_classification_attribute_options,
+)
 
 logger = logging.getLogger(__name__)
 GMT_TIMEZONE = pytz.timezone("GMT")
@@ -58,12 +65,26 @@ class PredictionIterator(Iterator):
         # Class index
         class_idx_file = cache_dir / "predictions" / "class_idx.json"
         with class_idx_file.open("r", encoding="utf-8") as f:
-            class_idx = json.load(f)
+            class_idx: Dict[ClassID, dict] = {ClassID(k): v for k, v in json.load(f).items()}
 
-        self.ontology_objects: Dict[int, Object] = {
-            int(k): next(o for o in self.project.ontology.objects if v["featureHash"] == o.feature_node_hash)
-            for k, v in class_idx.items()
+        object_lookup = {obj.feature_node_hash: obj for obj in self.project.ontology.objects}
+        classification_lookup = {
+            hashes: items for hashes, items in iterate_classification_attribute_options(self.project.ontology)
         }
+
+        self.ontology_objects: Dict[ClassID, Object] = {}
+        self.ontology_classifications: Dict[ClassID, ClassificationAttributeOption] = {}
+        for class_id, label in class_idx.items():
+            if label["featureHash"] in object_lookup:
+                self.ontology_objects[class_id] = object_lookup[label["featureHash"]]
+            else:
+                key = FrameClassification(
+                    classification_hash=label["featureHash"],
+                    attribute_hash=label["attributeHash"],
+                    option_hash=label["optionHash"],
+                )
+                self.ontology_classifications[class_id] = classification_lookup[key]
+
         self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Path]]] = []
 
     def get_image_path(self, pred: Series) -> Optional[Path]:
@@ -78,11 +99,9 @@ class PredictionIterator(Iterator):
                 return re_matches[0]
         return None
 
-    def get_encord_object(self, pred: Tuple[Any, Series], width: int, height: int):
-        _pred = pred[1]
-        ontology_object: Object = self.ontology_objects[_pred["class_id"]]
+    def get_encord_object(self, pred: Series, width: int, height: int, ontology_object: Object):
         if ontology_object.shape == Shape.BOUNDING_BOX:
-            x1, y1, x2, y2 = _pred["x1"], _pred["y1"], _pred["x2"], _pred["y2"]
+            x1, y1, x2, y2 = pred["x1"], pred["y1"], pred["x2"], pred["y2"]
             object_data = {
                 "x": x1 / width,
                 "y": y1 / height,
@@ -90,7 +109,7 @@ class PredictionIterator(Iterator):
                 "h": (y2 - y1) / height,
             }
         else:
-            mask = rle_to_binary_mask(eval(_pred["rle"]))
+            mask = rle_to_binary_mask(eval(pred["rle"]))
             # Note: This approach may generate invalid polygons (self crossing) :-(
             contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
             if len(contours) > 1:
@@ -106,7 +125,7 @@ class PredictionIterator(Iterator):
                 str(i): {"x": round(c[0] / width, 4), "y": round(c[1] / height, 4)} for i, c in enumerate(contour)
             }
 
-        object_hash = _pred["identifier"].rsplit("_", 1)[1]
+        object_hash = pred["identifier"].rsplit("_", 1)[1]
         timestamp: str = get_timestamp()
         shape: str = ontology_object.shape.value
 
@@ -116,7 +135,7 @@ class PredictionIterator(Iterator):
             "value": lower_snake_case(ontology_object.name),
             "createdAt": timestamp,
             "createdBy": "model_predictions@encord.com",
-            "confidence": _pred["confidence"],
+            "confidence": pred["confidence"],
             "objectHash": object_hash,
             "featureHash": ontology_object.feature_node_hash,
             "lastEditedAt": timestamp,
@@ -135,6 +154,21 @@ class PredictionIterator(Iterator):
             object_dict["polygon"] = object_data
 
         return object_dict
+
+    def get_encord_classification(self, pred: Series, ontology_classification: ClassificationAttributeOption):
+        classification_hash = pred["identifier"].rsplit("_", 1)[1]
+
+        return LabelClassification(
+            name=ontology_classification.attribute.name,
+            value=ontology_classification.attribute.name.lower(),
+            reviews=[],
+            createdAt=get_timestamp(),
+            createdBy="model_predictions@encord.com",
+            confidence=pred["confidence"],
+            featureHash=ontology_classification.classification.feature_node_hash,
+            classificationHash=classification_hash,
+            manualAnnotation=False,
+        )
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Path]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
@@ -160,12 +194,23 @@ class PredictionIterator(Iterator):
                 width = int(du["width"])
                 height = int(du["height"])
 
-                du["labels"] = {
-                    "objects": list(
-                        map(partial(self.get_encord_object, width=width, height=height), fr_preds.iterrows())
-                    ),
-                    "classifications": [],
-                }
+                objects = []
+                classifications = []
+
+                for _, prediction in fr_preds.iterrows():
+                    class_id = prediction.class_id
+                    if class_id in self.ontology_objects:
+                        objects.append(
+                            self.get_encord_object(prediction, width, height, self.ontology_objects[class_id])
+                        )
+                    elif class_id in self.ontology_classifications:
+                        classifications.append(
+                            asdict(self.get_encord_classification(prediction, self.ontology_classifications[class_id]))
+                        )
+                    else:
+                        logger.error("The prediction is not in the ontology objects or classifications")
+
+                du["labels"] = {"objects": objects, "classifications": classifications}
                 pth = self.get_image_path(fr_preds.iloc[0])
                 yield du, pth
                 self.row_cache.append((self.label_hash, self.du_hash, self.frame, du, pth))

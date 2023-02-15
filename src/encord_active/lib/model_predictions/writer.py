@@ -3,17 +3,28 @@ import logging
 from base64 import b64encode
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict
 from uuid import uuid4
 
 import cv2
 import numpy as np
 import pandas as pd
 import torch
+from encord.objects.common import NestableOption, RadioAttribute
+from encord.objects.ontology_structure import Classification, OntologyStructure
 from torchvision.ops import box_iou
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import RLEData, binary_mask_to_rle, rle_iou
+from encord_active.lib.db.predictions import (
+    BoundingBox,
+    FrameClassification,
+    Prediction,
+)
+from encord_active.lib.labels.classification import (
+    ClassificationAnswer,
+    LabelClassification,
+)
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
 from encord_active.lib.project import Project
 
@@ -22,7 +33,7 @@ BBOX_KEYS = {"x", "y", "w", "h"}
 BASE_URL = "https://app.encord.com/label_editor/"
 
 
-class PredictionType(Enum):
+class PredictionType(str, Enum):
     FRAME = "frame"
     BBOX = "bounding_box"
     POLYGON = "polygon"
@@ -45,16 +56,20 @@ class LabelEntry:
     url: str
     img_id: ImageIdentifier
     class_id: ClassID  # TODO remove this stupid legacy thing.
-    x1: float = 0.0
-    y1: float = 0.0
-    x2: float = 0.0
-    y2: float = 0.0
-    theta: float = 0.0
+    x1: Optional[float] = None
+    y1: Optional[float] = None
+    x2: Optional[float] = None
+    y2: Optional[float] = None
     rle: Optional[RLEData] = None
+    theta: Optional[float] = None
 
     @property
     def bbox_list(self):
         return [self.x1, self.y1, self.x2, self.y2]
+
+    @property
+    def has_object(self):
+        return None not in [self.x1, self.y1, self.x2, self.y2] or self.rle
 
 
 @dataclass
@@ -145,22 +160,38 @@ def precompute_MAP_features(
         )
 
     ious: torch.Tensor = torch.zeros(len(pred_boxes), dtype=float)  # type: ignore
-    for (img_id, pred_cls), detections in tqdm(predictions.items(), desc="Matching predictions to labels", leave=True):
+    for (img_id, pred_cls), prediction_entries_with_index in tqdm(
+        predictions.items(), desc="Matching predictions to labels", leave=True
+    ):
         ground_truth_img = ground_truths.get((img_id, pred_cls))
         label_matches = ground_truths_matched.get(pred_cls, {}).get(img_id, [])
 
         if not ground_truth_img:
             continue
 
-        img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
-        best_gt_idxs = torch.argmax(img_ious, dim=1, keepdim=False)
-        best_ious = torch.amax(img_ious, dim=1, keepdim=False)
+        detections: ImgClsPredictions = []
+        classifications: ImgClsPredictions = []
+        for pred in prediction_entries_with_index:
+            target = detections if pred.entry.has_object else classifications
+            target.append(pred)
 
-        for i, (best_gt_idx, best_iou) in enumerate(zip(best_gt_idxs, best_ious)):
-            if best_iou > 0:
-                pidx = detections[i].pidx
-                label_matches[best_gt_idx]["pidxs"].append(pidx)
-                ious[pidx] = best_iou
+        for pidx, entry in classifications:
+            matches = ground_truths_matched.get(entry.class_id, {}).get(entry.img_id)
+            for match in matches or []:
+                match["pidxs"].append(pidx)
+                # NOTE: we deeply rely on IOUs in the model prediction pages
+                ious[pidx] = 1
+
+        if detections:
+            img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
+            best_gt_idxs = torch.argmax(img_ious, dim=1, keepdim=False)
+            best_ious = torch.amax(img_ious, dim=1, keepdim=False)
+
+            for i, (best_gt_idx, best_iou) in enumerate(zip(best_gt_idxs, best_ious)):
+                if best_iou > 0:
+                    pidx = detections[i].pidx
+                    label_matches[best_gt_idx]["pidxs"].append(pidx)
+                    ious[pidx] = best_iou
 
     return ious, ground_truths_matched
 
@@ -169,6 +200,24 @@ PREDICTIONS_FILENAME = "predictions.csv"
 LABELS_FILE = "labels.csv"
 GROUND_TRUTHS_MATCHED_FILE = "ground_truths_matched.json"
 CLASS_INDEX_FILE = "class_idx.json"
+
+
+class ClassificationAttributeOption(NamedTuple):
+    classification: Classification
+    attribute: RadioAttribute
+    option: NestableOption
+
+
+def iterate_classification_attribute_options(ontology: OntologyStructure):
+    for classification in ontology.classifications:
+        for attribute in classification.attributes:
+            if isinstance(attribute, RadioAttribute):
+                for option in attribute.options:
+                    yield FrameClassification(
+                        feature_hash=classification.feature_node_hash,
+                        attribute_hash=attribute.feature_node_hash,
+                        option_hash=option.feature_node_hash,
+                    ), ClassificationAttributeOption(classification, attribute, option)
 
 
 class PredictionWriter:
@@ -183,8 +232,12 @@ class PredictionWriter:
 
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-        self.object_predictions: List[PredictionEntry] = []
+        self.predictions: List[PredictionEntry] = []
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
+
+        self.classification_lookup = {
+            hashes: option for hashes, (_, _, option) in iterate_classification_attribute_options(self.project.ontology)
+        }
 
         self.label_row_meta = self.project.label_row_metas
         self.uuids: Set[str] = set()
@@ -196,7 +249,7 @@ class PredictionWriter:
         self.__prepare_class_id_lookups(custom_object_map)
         self.__prepare_label_list()
 
-    def __prepare_class_id_lookups(self, custom_map: Optional[Dict[str, int]]):
+    def __prepare_class_id_lookups(self, custom_map: Optional[Dict[str, ClassID]]):
         """
         TODO: Clean this up. One option is to just have one mapping for everything into a common space.
         So for example a json file describing pairs of "from" -> "to" of class ids.
@@ -222,16 +275,43 @@ class PredictionWriter:
             for obj in self.project.ontology.objects:
                 self.object_class_id_lookup[obj.feature_node_hash] = len(self.object_class_id_lookup)
 
-        self.classification_class_id_lookup: Dict[str, ClassID] = {}
-        for obj in self.project.ontology.classifications:
-            self.classification_class_id_lookup[obj.feature_node_hash] = len(self.classification_class_id_lookup)
+        self.classification_class_id_lookup = {
+            key: index for index, (key, _) in enumerate(iterate_classification_attribute_options(self.project.ontology))
+        }
 
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
         self.object_labels: List[LabelEntry] = []
+        self.classification_labels: List[LabelEntry] = []
+
+        def append_classification_label(du_hash: str, frame: int, classification_dict: dict, answers_dict: dict):
+            label_hash = self.lr_lookup[du_hash]
+            classification = LabelClassification(**classification_dict)
+
+            classification_answers = answers_dict.get(classification.classificationHash, {}).get("classifications", [])
+            if not classification_answers:
+                return None
+            elif len(classification_answers) > 1:
+                logger.error(
+                    f'Found multiple classifications for label row "{label_hash}" and classification hash "{classification.classificationHash}'
+                )
+
+            classification_answer = ClassificationAnswer.parse_obj(classification_answers[0])
+            class_id = self.get_classification_class_id(classification, classification_answer)
+            if class_id is None:  # Ignore unwanted classes (defined by what is in `self.object_class_id_lookup`)
+                return
+
+            label_entry = LabelEntry(
+                identifier=f"{label_hash}_{du_hash}_{frame:05d}_{classification.classificationHash}",
+                url=f"{BASE_URL}{self.project.label_row_metas[label_hash].data_hash}&{self.project.project_hash}/{frame}",
+                img_id=get_image_identifier(du_hash, frame),
+                class_id=class_id,
+            )
+
+            self.classification_labels.append(label_entry)
 
         def append_object_label(du_hash: str, frame: int, o: dict, width: int, height: int):
-            class_id = self.get_class_id(o)
+            class_id = self.get_object_class_id(o)
             if class_id is None:  # Ignore unwanted classes (defined by what is in `self.object_class_id_lookup`)
                 return
 
@@ -244,18 +324,18 @@ class PredictionWriter:
             )
 
             if o["shape"] in BoxShapes:
-                bbox = o.get("boundingBox") or o.get("rotatableBoundingBox")
-                if not (bbox and self.__check_bbox(bbox)):
+                try:
+                    bbox = BoundingBox.parse_obj(o.get("boundingBox"))
+                except:
                     return  # Invalid bounding box object
 
                 if o["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
-                    label_entry.theta = bbox["theta"]
+                    label_entry.theta = bbox.theta
 
-                x, y, w, h = [bbox[k] for k in ["x", "y", "w", "h"]]
-                label_entry.x1 = round(x * width, 2)
-                label_entry.y1 = round(y * height, 2)
-                label_entry.x2 = round((x + w) * width, 2)
-                label_entry.y2 = round((y + h) * height, 2)
+                label_entry.x1 = round(bbox.x * width, 2)
+                label_entry.y1 = round(bbox.y * height, 2)
+                label_entry.x2 = round((bbox.x + bbox.w) * width, 2)
+                label_entry.y2 = round((bbox.y + bbox.h) * height, 2)
             elif o["shape"] == ObjectShape.POLYGON:
                 points = polyobj_to_nparray(o, width=width, height=height)
                 if points.size == 0:
@@ -273,48 +353,68 @@ class PredictionWriter:
 
         for lr in tqdm(self.project.label_rows.values(), desc="Preparing labels", leave=True):
             data_type = lr["data_type"]
+            answers = lr["classification_answers"]
             for du_hash, du in lr["data_units"].items():
                 height = int(du["height"])
                 width = int(du["width"])
 
-                if "im" in data_type:  # img_group or image
+                if data_type in ["img_group", "image"]:
                     frame = int(du["data_sequence"])
-                    for obj in du["labels"]["objects"]:
-                        append_object_label(du_hash, frame, obj, width, height)
+                    for label in du["labels"].get("objects", []):
+                        append_object_label(du_hash, frame, label, width, height)
+                    for label in du["labels"].get("classifications", []):
+                        append_classification_label(du_hash, frame, label, answers)
                 else:  # Video
                     for fr, labels in du["labels"].items():
                         frame = int(fr)
-                        for obj in labels["objects"]:
-                            append_object_label(du_hash, frame, obj, width, height)
+                        for label in labels.get("objects", []):
+                            append_object_label(du_hash, frame, label, width, height)
+                        for label in labels.get("classifications", []):
+                            append_classification_label(du_hash, frame, label, answers)
 
-    def get_class_id(self, obj_dict) -> Optional[int]:
+    def get_object_class_id(self, obj_dict) -> Optional[ClassID]:
         fh = obj_dict["featureHash"]
         if "objectHash" in obj_dict and fh in self.object_class_id_lookup:
             return self.object_class_id_lookup[fh]
-        elif "classificationHash" in obj_dict and fh in self.classification_class_id_lookup:
-            return self.classification_class_id_lookup[fh]
         return None
+
+    def get_classification_class_id(
+        self, classification: LabelClassification, classification_answer: ClassificationAnswer
+    ) -> Optional[ClassID]:
+        if len(classification_answer.answers) == 0:
+            return None
+
+        key = FrameClassification(
+            feature_hash=classification.featureHash,
+            attribute_hash=classification_answer.featureHash,
+            # NOTE: since we only support radion buttons, at this point we should have only one answer
+            option_hash=classification_answer.answers[0].featureHash,
+        )
+        return self.classification_class_id_lookup.get(key)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Do the matching computations
-        ious, ground_truths_matched = precompute_MAP_features(self.object_predictions, self.object_labels)
+        ious, ground_truths_matched = precompute_MAP_features(
+            self.predictions, self.object_labels + self.classification_labels
+        )
 
         # 0. The predictions
-        pred_df = pd.DataFrame(self.object_predictions)
+        pred_df = pd.DataFrame(self.predictions)
         # TODO change bbox to coordinate columns
 
         pred_df["iou"] = ious
         pred_df.to_csv(self.storage_dir / PREDICTIONS_FILENAME)
 
         # 1. The labels
-        df = pd.DataFrame(self.object_labels)
+        df = pd.DataFrame(self.object_labels + self.classification_labels)
         # TODO change bbox to coordinate columns
-        df["rle"] = df["rle"].map(
-            lambda x: " ".join(x.reshape(-1).astype(str).tolist()) if isinstance(x, np.ndarray) else x
-        )
+        if "rle" in df:
+            df["rle"] = df["rle"].map(
+                lambda x: " ".join(x.reshape(-1).astype(str).tolist()) if isinstance(x, np.ndarray) else x
+            )
         df.to_csv(self.storage_dir / LABELS_FILE)
 
         # 2. The GT matches
@@ -333,6 +433,18 @@ class PredictionWriter:
                 "color": self.object_lookup[k].color,
             }
 
+        for frame_classification, class_id in self.classification_class_id_lookup.items():
+            if class_id in class_index or frame_classification not in self.classification_lookup:
+                continue
+
+            selected_option = self.classification_lookup[frame_classification]
+            class_index[class_id] = {
+                "featureHash": frame_classification.feature_hash,
+                "attributeHash": frame_classification.attribute_hash,
+                "optionHash": selected_option.feature_node_hash,
+                "name": selected_option.label,
+            }
+
         with (self.storage_dir / CLASS_INDEX_FILE).open("w") as f:
             json.dump(class_index, f)
 
@@ -347,44 +459,14 @@ class PredictionWriter:
         self.uuids.add(object_hash)
         return object_hash
 
-    @staticmethod
-    def __check_bbox(bbox):
-        bbox_keys = set(bbox.keys())
-        if not len(bbox_keys.intersection(BBOX_KEYS)) == 4:
-            raise ValueError(f"Bbox dict keys were {bbox_keys} but should be {BBOX_KEYS}")
-        if not all([isinstance(v, (int, float)) for v in bbox.values()]):
-            raise ValueError("Bbox coordinates should be floats")
-        return True
-
-    def add_prediction(
-        self,
-        data_hash: str,
-        class_uid: str,
-        confidence_score: float,
-        bbox: Optional[Dict[str, Union[float, int]]] = None,
-        polygon: Optional[Union[np.ndarray, List[Tuple[int, int]]]] = None,
-        frame: Optional[int] = None,
-    ) -> None:
+    def add_prediction(self, prediction: Prediction) -> None:
         """
         Add a prediction to en encord-active project.
-        Note that only one bounding box or polygon can be specified in any given call to this function.
 
-        :param data_hash: The ``data_hash`` of the data unit that the prediction belongs to.
-        :param class_uid: The ``featureNodeHash`` of the ontology object corresponding to the class of the prediction.
-        :param confidence_score: The model confidence score.
-        :param bbox: A bounding box prediction. This should be a dict with the format::
-
-                {
-                    'x': 0.1  # normalized x-coordinate of the top-left corner of the bounding box.
-                    'y': 0.2  # normalized y-coordinate of the top-left corner of the bounding box.
-                    'w': 0.3  # normalized width of the bounding box.
-                    'h': 0.1  # normalized height of the bounding box.
-                }
-
-        :param polygon: A polygon represented either as a list of points or a mask of size [h, w].
-        :param frame: If predictions are associated with a video, then the frame number should be provided.
+        :param prediction: The `prediction` to write.
         """
         rle = None
+        data_hash = prediction.data_hash
         label_hash = self.lr_lookup.get(data_hash)
         if not label_hash:
             logger.warning(f"Couldn't match data hash `{data_hash}` to any label row")
@@ -395,45 +477,52 @@ class PredictionWriter:
         width = int(du["width"])
         height = int(du["height"])
 
-        ptype: PredictionType
-        if bbox is None and polygon is None:
-            raise NotImplementedError("Frame level classifications are not supported at the moment.")
-            # ptype = PredictionType.FRAME
-        elif bbox is None and isinstance(polygon, (np.ndarray, list)):
-            ptype = PredictionType.POLYGON
-            if isinstance(polygon, list):
-                polygon = np.array(polygon)
+        if prediction.classification:
+            class_id = self.classification_class_id_lookup.get(prediction.classification)
+            ptype = PredictionType.FRAME
+            x1, y1, x2, y2 = [None, None, None, None]
+        elif prediction.object:
+            class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
+            if isinstance(prediction.object.data, np.ndarray):
+                polygon = prediction.object.data
+                ptype = PredictionType.POLYGON
+                if isinstance(polygon, list):
+                    polygon = np.array(polygon)
 
-            if polygon.ndim != 2:
-                raise ValueError("Polygon argument should have just 2 dimensions: [h, w] or [N, 2]")
+                if polygon.ndim != 2:
+                    raise ValueError("Polygon argument should have just 2 dimensions: [h, w] or [N, 2]")
 
-            if polygon.shape[1] != 2:  # Polygon is mask
-                np_mask = polygon
-                x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
-            else:  # Polygon is points
-                # Read image size from label row
-                if np.issubdtype(polygon.dtype, np.integer):
-                    polygon = polygon.astype(float) / np.array([[width, height]])
+                if polygon.shape[1] != 2:  # Polygon is mask
+                    np_mask = polygon
+                    x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
+                else:  # Polygon is points
+                    # Read image size from label row
+                    if np.issubdtype(polygon.dtype, np.integer):
+                        polygon = polygon.astype(float) / np.array([[width, height]])
 
-                np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
-                x1, y1, w, h = cv2.boundingRect((polygon * np.array([[width, height]])).reshape(-1, 1, 2).astype(int))  # type: ignore
-            x2, y2 = x1 + w, y1 + h
-            rle = binary_mask_to_rle(np_mask)
+                    np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
+                    x1, y1, w, h = cv2.boundingRect((polygon * np.array([[width, height]])).reshape(-1, 1, 2).astype(int))  # type: ignore
+                x2, y2 = x1 + w, y1 + h
+                rle = binary_mask_to_rle(np_mask)
 
-        elif isinstance(bbox, dict) and polygon is None:
-            ptype = PredictionType.BBOX
-            self.__check_bbox(bbox)
-            x1 = bbox["x"] * width
-            y1 = bbox["y"] * height
-            x2 = (bbox["x"] + bbox["w"]) * width
-            y2 = (bbox["y"] + bbox["h"]) * height
+            else:
+                bbox = prediction.object.data
+                ptype = PredictionType.BBOX
+                x1 = bbox.x * width
+                y1 = bbox.y * height
+                x2 = (bbox.x + bbox.w) * width
+                y2 = (bbox.y + bbox.h) * height
+
+            ontology_object = self.object_lookup[prediction.object.feature_hash]
+            if ontology_object.shape.value != ptype.value:
+                raise ValueError(
+                    f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
+                )
         else:
-            raise ValueError(
-                "Something seems wrong. Did you use the wrong types or did you parse both a bbox and polygon?"
-            )
+            raise ValueError("Prediction must have exactly one of `object` or `classification`")
 
         _frame = 0
-        if not frame:  # Try to infer frame number from data hash.
+        if not prediction.frame:  # Try to infer frame number from data hash.
             label_row = self.project.label_rows[label_hash]
             data_unit = label_row["data_units"][data_hash]
             if "data_sequence" in data_unit:
@@ -441,7 +530,6 @@ class PredictionWriter:
 
         object_hash = self.__get_unique_object_hash()
 
-        class_id = self.object_class_id_lookup.get(class_uid)
         if class_id is None:
             raise ValueError(
                 f"`class_uid` didn't match any key in the "
@@ -449,19 +537,13 @@ class PredictionWriter:
                 f"Options are: [{', '.join(self.object_class_id_lookup.keys())}]"
             )
 
-        ontology_object = self.object_lookup[class_uid]
-        if ontology_object.shape.value != ptype.value:
-            raise ValueError(
-                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
-            )
-
-        self.object_predictions.append(
+        self.predictions.append(
             PredictionEntry(
                 identifier=f"{label_hash}_{data_hash}_{_frame:05d}_{object_hash}",
                 url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}",
                 img_id=get_image_identifier(data_hash, _frame),
                 class_id=class_id,
-                confidence=confidence_score,
+                confidence=prediction.confidence,
                 x1=x1,
                 y1=y1,
                 x2=x2,
