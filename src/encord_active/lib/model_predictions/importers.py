@@ -233,16 +233,14 @@ def import_KITTI_labels(
             bbox = BoundingBox(
                 x=float(row["xmin"]),
                 y=float(row["ymin"]),
-                w=row["xmax"] - row["xmin"],
-                h=row["ymax"] - row["ymin"],
+                w=float(row["xmax"] - row["xmin"]),
+                h=float(row["ymax"] - row["ymin"]),
             )
             prediction_writer.add_prediction(
                 Prediction(
                     data_hash=data_hash,
                     confidence=float(row["undefined0"]),
-                    object=ObjectDetection(
-                        format=Format.BOUNDING_BOX, data=BoundingBox.parse_obj(bbox), object_class_hash=class_name
-                    ),
+                    object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, object_class_hash=class_name),
                 )
             )
 
