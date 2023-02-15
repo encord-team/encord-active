@@ -12,6 +12,7 @@ from shapely.geometry import Polygon
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
+from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 
@@ -183,22 +184,11 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
         p = obj["polygon"]
         polygon = np.array([[p[str(i)]["x"] * img_w, p[str(i)]["y"] * img_h] for i in range(len(p))])
     elif obj["shape"] == ObjectShape.BOUNDING_BOX:
-        b = obj["boundingBox"]
-        polygon = np.array(
-            [
-                [b["x"] * img_w, b["y"] * img_h],
-                [(b["x"] + b["w"]) * img_w, b["y"] * img_h],
-                [(b["x"] + b["w"]) * img_w, (b["y"] + b["h"]) * img_h],
-                [b["x"] * img_w, (b["y"] + b["h"]) * img_h],
-            ]
-        )
+        b = BoundingBox.parse_obj(obj["boundingBox"])
+        polygon = np.array(__to_absolute_points(b, img_h, img_w))
     elif obj["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
-        b = obj["rotatableBoundingBox"]
-        top_left = [b["x"] * img_w, b["y"] * img_h]
-        top_right = [(b["x"] + b["w"]) * img_w, b["y"] * img_h]
-        bottom_right = [(b["x"] + b["w"]) * img_w, (b["y"] + b["h"]) * img_h]
-        bottom_left = [b["x"] * img_w, (b["y"] + b["h"]) * img_h]
-        rotated_polygon = rotate(Polygon([top_left, top_right, bottom_right, bottom_left]), b["theta"])
+        b = BoundingBox.parse_obj(obj["rotatableBoundingBox"])
+        rotated_polygon = rotate(Polygon(__to_absolute_points(b, img_h, img_w)), b.theta)
         if not rotated_polygon or not rotated_polygon.exterior:
             return None
         polygon = np.array(list(rotated_polygon.exterior.coords))
@@ -207,6 +197,15 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
 
     polygon = polygon.reshape((-1, 1, 2)).astype(int)
     return obj.get("color", Color.PURPLE.value), polygon
+
+
+def __to_absolute_points(bounding_box: BoundingBox, height: int, width: int):
+    return [
+        [bounding_box.x * width, bounding_box.y * height],
+        [(bounding_box.x + bounding_box.w) * width, bounding_box.y * height],
+        [(bounding_box.x + bounding_box.w) * width, (bounding_box.y + bounding_box.h) * height],
+        [bounding_box.x * width, (bounding_box.y + bounding_box.h) * height],
+    ]
 
 
 def get_geometries(
