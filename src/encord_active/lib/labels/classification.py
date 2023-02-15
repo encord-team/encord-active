@@ -24,8 +24,8 @@ class LabelClassification:
     value: str
     createdAt: str
     createdBy: str
-    lastEditedAt: str
-    lastEditedBy: str
+    lastEditedAt: Optional[str] = None
+    lastEditedBy: Optional[str] = None
     confidence: float
     featureHash: str
     manualAnnotation: bool
