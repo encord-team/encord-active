@@ -214,6 +214,7 @@ class CocoImporter:
             "project_title": project.title,
             "project_description": project.description,
             "project_hash": project.project_hash,
+            "has_remote": False,
         }
         if ssh_key_path:
             project_meta["ssh_key_path"] = ssh_key_path.as_posix()

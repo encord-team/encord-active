@@ -112,6 +112,7 @@ class Project:
                 "project_title": encord_project.title,
                 "project_description": encord_project.description,
                 "project_hash": encord_project.project_hash,
+                "has_remote": True,
             }
         )
         project_meta_file_path.write_text(yaml.safe_dump(self.project_meta), encoding="utf-8")

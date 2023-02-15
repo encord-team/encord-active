@@ -53,6 +53,7 @@ class ProjectMeta(TypedDict):
     project_hash: str
     project_title: str
     ssh_key_path: str
+    has_remote: bool
 
 
 class ProjectNotFound(Exception):
@@ -74,6 +75,11 @@ def fetch_project_meta(data_dir: Path) -> ProjectMeta:
 
     with meta_file.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def update_project_meta(data_dir: Path, updated_meta: ProjectMeta):
+    meta_file_path = data_dir / "project_meta.yaml"
+    meta_file_path.write_text(yaml.safe_dump(updated_meta), encoding="utf-8")
 
 
 def fetch_project_info(data_dir: Path) -> Project:

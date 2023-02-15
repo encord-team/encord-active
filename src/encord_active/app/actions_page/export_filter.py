@@ -128,10 +128,9 @@ def _get_columns(needs_ontology: bool, num_rows: int) -> RenderItems:
     return RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
 
 
-def _get_project():
+def _get_action_utils():
     try:
-        action_utils = EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
-        return action_utils, bool(action_utils.original_project)
+        return EncordActions(get_state().project_paths.project_dir, app_config.get_ssh_key())
     except ProjectNotFound as e:
         st.markdown(
             f"""
@@ -156,7 +155,8 @@ def export_filter():
     message_placeholder = st.empty()
 
     st.header("Filter & Export")
-    action_utils, has_original_project = _get_project()
+    action_utils = _get_action_utils()
+    project_has_remote = action_utils.project_meta.get("has_remote", False) if action_utils else False
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
@@ -213,9 +213,9 @@ def export_filter():
         set_clone_button(False)
 
     action_columns[3].button(
-        "🏗 Clone" if has_original_project else "🏗 Export to Encord",
+        "🏗 Clone" if project_has_remote else "🏗 Export to Encord",
         on_click=lambda: set_clone_button(True),
-        disabled=get_filtered_row_count() != row_count,
+        disabled=(get_filtered_row_count() != row_count) or not action_utils,
         help="Clone the filtered data into a new Encord dataset and project",
     )
     delete_btn = action_columns[4].button("👀 Review", help="Assign the filtered data for review on the Encord platform")
@@ -243,7 +243,7 @@ community</a>
         with st.form("new_project_form"):
             st.subheader("Create a new project with the selected items")
 
-            cols = _get_columns(needs_ontology=not has_original_project, num_rows=filtered_df.shape[0])
+            cols = _get_columns(needs_ontology=not project_has_remote, num_rows=filtered_df.shape[0])
 
             if not st.form_submit_button("➕ Create"):
                 return
@@ -262,7 +262,7 @@ community</a>
             label.text("Step 2/2: Uploading labels...")
             ontology_hash = (
                 action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
-                if not has_original_project and cols.ontology
+                if not project_has_remote and cols.ontology
                 else action_utils.original_project.get_project().ontology_hash
             )
             new_project = action_utils.create_project(
