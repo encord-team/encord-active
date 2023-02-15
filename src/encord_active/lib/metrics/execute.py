@@ -54,8 +54,7 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
                 if (
                     (issubclass(cls[1], SimpleMetric) and cls[1] != SimpleMetric)
                     or (issubclass(cls[1], Metric) and cls[1] != Metric)
-                    and filter_func(cls[1])
-                ):
+                ) and filter_func(cls[1]):
                     metrics.append((f"{base_module_name}{module_name}.{file.split('.')[0]}", f"{cls[0]}"))
 
     return metrics
@@ -92,8 +91,9 @@ def run_all_polygon_metrics():
 
 def run_all_prediction_metrics(**kwargs):
     # Return all metrics that apply to objects.
-    def filter(m: Metric):
-        at = m.metadata.annotation_type
+    def filter(m: Type[Metric]):
+        # TODO: find a better way to resolve this, only leaf children of `Metric` don't expect arguments
+        at = m().metadata.annotation_type  # type: ignore
         if isinstance(at, list):
             for t in at:
                 if isinstance(t, ObjectShape):

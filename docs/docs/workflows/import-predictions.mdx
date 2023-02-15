@@ -86,17 +86,45 @@ encord-active print ontology
 
 After selecting the project you want to print mapping for via the command line, it will display a JSON object similar to the following with key-value pairs of (object name, `class_id`):
 
-```
+```json
 {
-  "cat": "OTK8MrM3",
-  "dog": "Nr52O8Ex",
-  "horse": "MjkXn2Mx"
+  "objects": {
+    "cat": "OTK8MrM3",
+    "dog": "Nr52O8Ex",
+    "horse": "MjkXn2Mx"
+  },
+  "classifications": {}
+}
+```
+
+Or if the ontology is made of classifications
+
+```json
+{
+  "objects": {},
+  "classifications": {
+    "horses": {
+      "classification_hash": "55eab8b3",
+      "attribute_hash": "d446851e",
+      "option_hash": "376b9761"
+    },
+    "cats": {
+      "classification_hash": "55eab8b3",
+      "attribute_hash": "d446851e",
+      "option_hash": "d8e85460"
+    },
+    "dogs": {
+      "classification_hash": "55eab8b3",
+      "attribute_hash": "d446851e",
+      "option_hash": "e5264a59"
+    }
+  }
 }
 ```
 
 :::tip
 
-To store the ontology as `ontology.json` in the current working directory, you can do
+To store the ontology as `ontology_output.json` in the current working directory, you can do
 
 ```shell
 encord-active print --json ontology
@@ -115,6 +143,33 @@ A prediction object holds a unique identifier of the data unit (the `data_hash` 
 Below, you find examples of how to create an object of each of the three supported types.
 
 <Tabs groupId="data-type">
+  <TabItem value="classification" label="Classification" default>
+
+Since we can have multiple classifications for for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
+
+```python
+prediction = Prediction(
+    data_hash="<your_data_hash>",
+    frame = 3,  # optional frame for videos
+    confidence = 0.8,
+    classification=FrameClassification(
+        feature_hash="<your_feature_hash>",
+        attribute_hash="<your_attribute_hash>",
+        option_hash="<your_option_hash>",
+    ),
+)
+```
+
+:::tip
+To find the three hashes, we can inspect the ontology by running
+
+```shell
+encord-active print ontology
+```
+
+:::
+
+  </TabItem>
   <TabItem value="bbox" label="Bounding Box" default>
 
 You should specify your `BoundingBox` with relative coordinates and dimensions.
@@ -126,18 +181,20 @@ That is:
 - `h`: box pixel height / image height
 
 ```python
-from encord_active.lib.db.predictions import BoundingBox, Prediction, Format
+from encord_active.lib.db.predictions import BoundingBox, Prediction, Format, ObjectDetection
 
 prediction = Prediction(
-    data_hash =  "<your_data_hash>",
+    data_hash="<your_data_hash>",
     frame = 3,  # optional frame for videos
-    class_id = "<the_class_id>",
     confidence = 0.8,
-    format = Format.BOUNDING_BOX,
-    # highlight-start
-    # Your bounding box coordinates in relative terms (% of image width/height).
-    data = BoundingBox(x=0.2, y=0.3, w=0.1, h=0.4)
-    # highlight-end
+    object=ObjectDetection(
+        object_class_hash="<the_class_id>",
+        # highlight-start
+        format = Format.BOUNDING_BOX,
+        # Your bounding box coordinates in relative terms (% of image width/height).
+        data = BoundingBox(x=0.2, y=0.3, w=0.1, h=0.4),
+        # highlight-end
+    ),
 )
 ```
 
@@ -163,12 +220,15 @@ from encord_active.lib.db.predictions import Prediction, Format
 prediction = Prediction(
     data_hash =  "<your_data_hash>",
     frame = 3,  # optional frame for videos
-    class_id = "<the_class_id>",
     confidence = 0.8,
-    # highlight-start
-    format = Format.MASK,
-    data = mask  # _binary_ np.ndarray of shape [h, w] and dtype np.uint8
-    # highlight-end
+    object=ObjectDetection(
+        object_class_hash="<the_class_id>",
+        # highlight-start
+        format = Format.MASK,
+        # _binary_ np.ndarray of shape [h, w] and dtype np.uint8
+        data = mask
+        # highlight-end
+    ),
 )
 ```
 
@@ -196,12 +256,15 @@ polygon = np.array([
 prediction = Prediction(
     data_hash =  "<your_data_hash>",
     frame = 3,  # optional frame for videos
-    class_id = "<the_class_id>",
     confidence = 0.8,
-    # highlight-start
-    format = Format.POLYGON,
-    data = polygon  # np.ndarray of shape [n, 2] and dtype float in range [0,1]
-    # highlight-end
+    object=ObjectDetection(
+        object_class_hash="<the_class_id>",
+        # highlight-start
+        format = Format.POLYGON,
+        # np.ndarray of shape [n, 2] and dtype float in range [0,1]
+        data = polygon
+        # highlight-end
+    ),
 )
 ```
 

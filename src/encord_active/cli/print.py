@@ -5,10 +5,14 @@ from typing import Any, Dict, Optional
 
 import rich
 import typer
+from encord.ontology import OntologyStructure
 from rich.markup import escape
 
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
+from encord_active.lib.model_predictions.writer import (
+    iterate_classification_attribute_options,
+)
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -63,14 +67,20 @@ Couldn't identify a project ontology. The reason for this may be that you have a
 
         raise typer.Exit()
 
-    objects = json.loads(fs.ontology.read_text())["objects"]
+    ontology_structure = OntologyStructure.from_dict(json.loads(fs.ontology.read_text()))
 
-    ontology = {o["name"].lower(): o["featureNodeHash"] for o in objects}
-    json_ontology = json.dumps(ontology, indent=2)
+    classifications = {
+        option.value: hashes.dict()
+        for (hashes, (_, _, option)) in iterate_classification_attribute_options(ontology_structure)
+    }
+
+    objects = {o.name.lower(): o.feature_node_hash for o in ontology_structure.objects}
+
+    json_ontology = json.dumps({"objects": objects, "classifications": classifications}, indent=2)
 
     if state.get("json_output"):
-        Path("./ontology.json").write_text(json_ontology, encoding="utf-8")
-        rich.print("Stored mapping in [blue]`./ontology.json`")
+        Path("./ontology_output.json").write_text(json_ontology, encoding="utf-8")
+        rich.print("Stored mapping in [blue]`./ontology_output.json`")
     else:
         rich.print(escape(json_ontology))
 
