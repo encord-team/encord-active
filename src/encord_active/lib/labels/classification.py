@@ -24,13 +24,13 @@ class LabelClassification:
     value: str
     createdAt: str
     createdBy: str
-    lastEditedAt: Optional[str] = None
-    lastEditedBy: Optional[str] = None
     confidence: float
     featureHash: str
     manualAnnotation: bool
     classificationHash: str
     reviews: List[Any] = field(default_factory=list)
+    lastEditedAt: Optional[str] = None
+    lastEditedBy: Optional[str] = None
 
 
 class Answer(BaseModel):
