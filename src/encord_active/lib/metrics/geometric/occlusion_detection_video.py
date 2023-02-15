@@ -30,7 +30,7 @@ class OcclusionDetectionOnVideo(Metric):
  and find outliers among them.""",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.SEQUENCE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX],
+            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX],
         )
         self.low_threshold = low_threshold
         self.medium_threshold = medium_threshold

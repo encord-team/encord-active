@@ -12,6 +12,7 @@ from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project import Project
 
 RelativeFloat = Annotated[float, Field(ge=0, le=1)]
+DegreeFloat = Annotated[float, Field(ge=0, le=360)]
 
 
 class Format(str, Enum):
@@ -25,6 +26,7 @@ class BoundingBox(BaseModel):
     y: RelativeFloat
     h: RelativeFloat
     w: RelativeFloat
+    theta: DegreeFloat = 0.0
 
 
 class Point(NamedTuple):

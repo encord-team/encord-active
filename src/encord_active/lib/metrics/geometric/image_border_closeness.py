@@ -23,6 +23,7 @@ class ImageBorderCloseness(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[
                 AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
                 AnnotationType.OBJECT.POLYGON,
                 AnnotationType.OBJECT.POLYLINE,
                 AnnotationType.OBJECT.KEY_POINT,

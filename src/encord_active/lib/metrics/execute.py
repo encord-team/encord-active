@@ -11,13 +11,13 @@ from loguru import logger
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.utils import fetch_project_info
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
     Metric,
     MetricType,
-    ObjectShape,
     SimpleMetric,
     StatsMetadata,
 )
@@ -124,7 +124,7 @@ def _write_meta_file(cache_dir: Path, metric: Union[Metric, SimpleMetric], stats
 
 def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric]):
     for metric in metrics:
-        logger.info(f"Running Metric <blue>{metric.metadata.title.title()}</blue>")
+        logger.info(f"Running metric <blue>{metric.metadata.title}</blue>")
         unique_metric_name = metric.metadata.get_unique_name()
 
         stats = StatisticsObserver()
@@ -140,7 +140,9 @@ def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric])
 
 
 def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[SimpleMetric]):
-    logger.info(f"Running Metrics <blue>{', '.join(metric.metadata.title.title() for metric in metrics)}</blue>")
+    if len(metrics) == 0:
+        return
+    logger.info(f"Running metrics <blue>{', '.join(metric.metadata.title for metric in metrics)}</blue>")
     csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):

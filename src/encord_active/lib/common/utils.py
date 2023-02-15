@@ -30,6 +30,7 @@ from shapely.geometry import Polygon
 from tqdm.auto import tqdm
 
 from encord_active.lib.encord.utils import get_client
+from encord_active.lib.labels.object import BoxShapes, ObjectShape, SimpleShapes
 
 # Silence shapely deprecation warnings from v1.* to v2.0
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
@@ -113,11 +114,20 @@ def get_object_coordinates(o: dict) -> Optional[list[tuple[Any, Any]]]:
     :param o: the Encord object dict.
     :return: the list of coordinates.
     """
-    if o["shape"] in ["polygon", "polyline", "point", "skeleton"]:
+    if o["shape"] in SimpleShapes:
         points_dict = o[o["shape"]]
         points = [(points_dict[str(i)]["x"], points_dict[str(i)]["y"]) for i in range(len(points_dict))]
-    elif o["shape"] == "bounding_box":
+    elif o["shape"] == ObjectShape.BOUNDING_BOX:
         bbox = o["boundingBox"]
+        points = [
+            (bbox["x"], bbox["y"]),
+            (bbox["x"] + bbox["w"], bbox["y"]),
+            (bbox["x"] + bbox["w"], bbox["y"] + bbox["h"]),
+            (bbox["x"], bbox["y"] + bbox["h"]),
+        ]
+    elif o["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
+        bbox = o["rotatableBoundingBox"]
+        theta = o.get("theta")
         points = [
             (bbox["x"], bbox["y"]),
             (bbox["x"] + bbox["w"], bbox["y"]),
@@ -137,7 +147,7 @@ def get_polygon(o: dict) -> Optional[Polygon]:
     :param o: the Encord object dict.
     :return: The polygon object.
     """
-    if o["shape"] in ["bounding_box", "polygon"]:
+    if o["shape"] in {*BoxShapes, ObjectShape.POLYGON}:
         points = get_object_coordinates(o)
     else:
         logger.warning(f"Unknown shape {o['shape']} in get_polygon function")

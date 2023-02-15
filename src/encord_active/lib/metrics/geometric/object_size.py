@@ -7,6 +7,7 @@ from encord_active.lib.common.utils import (
     get_du_size,
     get_polygon,
 )
+from encord_active.lib.labels.object import BoxShapes, ObjectShape
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
@@ -19,7 +20,7 @@ logger = logger.opt(colors=True)
 
 
 def get_area(obj: dict) -> float:
-    if obj["shape"] in {"bounding_box", "polygon"}:
+    if obj["shape"] in {*BoxShapes, ObjectShape.POLYGON}:
         polygon = get_polygon(obj)
         area = 0.0 if polygon is None else polygon.area
     else:
@@ -38,6 +39,7 @@ class RelativeObjectAreaMetric(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[
                 AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
                 AnnotationType.OBJECT.POLYGON,
             ],
         )
@@ -70,6 +72,7 @@ class OccupiedTotalAreaMetric(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[
                 AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
                 AnnotationType.OBJECT.POLYGON,
             ],
         )
@@ -112,6 +115,7 @@ class AbsoluteObjectAreaMetric(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[
                 AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
                 AnnotationType.OBJECT.POLYGON,
             ],
         )
@@ -151,6 +155,7 @@ class ObjectAspectRatioMetric(Metric):
             data_type=DataType.IMAGE,
             annotation_type=[
                 AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
                 AnnotationType.OBJECT.POLYGON,
             ],
         )
