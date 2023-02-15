@@ -114,6 +114,7 @@ profile = "black"
 
 [tool.mypy]
 ignore_missing_imports = true
+enable_recursive_aliases = true
 exclude = ['examples/']
 
 [tool.pylint.'MASTER']
