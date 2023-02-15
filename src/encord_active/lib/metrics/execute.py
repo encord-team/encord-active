@@ -11,13 +11,13 @@ from loguru import logger
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.utils import fetch_project_info
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
     Metric,
     MetricType,
-    ObjectShape,
     SimpleMetric,
     StatsMetadata,
 )

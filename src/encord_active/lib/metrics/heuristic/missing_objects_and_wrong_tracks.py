@@ -82,7 +82,11 @@ hash, they will be flagged as a potentially broken track.
 """,
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.SEQUENCE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
         self.threshold = threshold
 

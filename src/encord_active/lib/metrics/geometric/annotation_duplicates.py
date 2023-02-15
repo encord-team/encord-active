@@ -25,7 +25,11 @@ class AnnotationDuplicates(Metric):
 is used to measure closeness of two annotations.""",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
         self.threshold = threshold
 

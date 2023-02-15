@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from typing import List, Optional, Set, Union
 
 from encord.objects.common import NestableOption, RadioAttribute
@@ -7,6 +8,13 @@ from encord.objects.ontology_structure import Classification, OntologyStructure
 from encord.orm.label_row import LabelRow
 
 from encord_active.lib.common.time import get_timestamp
+
+
+# copy from encord but as a string enum
+class ClassificationType(str, Enum):
+    RADIO = "radio"
+    TEXT = "text"
+    CHECKLIST = "checklist"
 
 
 @dataclass

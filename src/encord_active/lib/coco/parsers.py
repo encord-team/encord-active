@@ -42,8 +42,8 @@ def parse_images(images: Dict) -> Dict[str, CocoImage]:
             height=image["height"],
             width=image["width"],
             file_name=image["file_name"],
-            coco_url=image["coco_url"],
-            flickr_url=image["flickr_url"],
+            coco_url=image.get("coco_url"),
+            flickr_url=image.get("flickr_url"),
         )
         for image in tqdm(images, desc="Parsing images")
     }
@@ -57,7 +57,9 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
 
         segmentations = annotation["segmentation"]
 
-        if isinstance(segmentations, list) and not isinstance(segmentations[0], list):
+        if not segmentations:
+            segmentations = [[]]
+        elif isinstance(segmentations, list) and not isinstance(segmentations[0], list):
             segmentations = [segmentations]
         elif isinstance(segmentations, dict):
             h, w = segmentations["size"]
@@ -80,6 +82,7 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
                     image_id=annotation["image_id"],
                     iscrowd=annotation["iscrowd"],
                     segmentation=segment,
+                    rotation=annotation.get("attributes", {}).get("rotation"),
                 )
             )
 
