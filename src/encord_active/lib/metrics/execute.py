@@ -176,5 +176,7 @@ def execute_metrics(
     simple_metrics = [m for m in selected_metrics if isinstance(m, SimpleMetric)]
     metrics = [m for m in selected_metrics if isinstance(m, Metric)]
 
-    _execute_metrics(cache_dir, iterator, metrics)
-    _execute_simple_metrics(cache_dir, iterator, simple_metrics)
+    if metrics:
+        _execute_metrics(cache_dir, iterator, metrics)
+    if simple_metrics:
+        _execute_simple_metrics(cache_dir, iterator, simple_metrics)
