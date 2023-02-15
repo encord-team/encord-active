@@ -24,6 +24,8 @@ class LabelClassification:
     value: str
     createdAt: str
     createdBy: str
+    lastEditedAt: str
+    lastEditedBy: str
     confidence: float
     featureHash: str
     manualAnnotation: bool
