@@ -62,7 +62,6 @@ class Project:
 
         return self
 
-
     def from_encord_project(self, encord_project: EncordProject) -> Project:
         """
         Initialize a project from Encord platform.
