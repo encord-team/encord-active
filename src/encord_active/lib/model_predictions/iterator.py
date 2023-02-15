@@ -79,7 +79,7 @@ class PredictionIterator(Iterator):
                 self.ontology_objects[class_id] = object_lookup[label["featureHash"]]
             else:
                 key = FrameClassification(
-                    classification_hash=label["featureHash"],
+                    feature_hash=label["featureHash"],
                     attribute_hash=label["attributeHash"],
                     option_hash=label["optionHash"],
                 )
