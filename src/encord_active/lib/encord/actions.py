@@ -13,7 +13,11 @@ from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.common.utils import fetch_project_meta, iterate_in_batches
+from encord_active.lib.common.utils import (
+    fetch_project_meta,
+    iterate_in_batches,
+    update_project_meta,
+)
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
@@ -252,7 +256,8 @@ class EncordActions:
 
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
-
+        self.project_meta["has_remote"] = True
+        update_project_meta(self.project_file_structure.project_dir, self.project_meta)
         return new_project
 
     def update_embedding_identifiers(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):

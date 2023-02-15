@@ -61,6 +61,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "project_description": project.description,
         "project_hash": project.project_hash,
         "ssh_key_path": ssh_key_path.as_posix(),
+        "has_remote": True,
     }
     meta_file_path = project_path / "project_meta.yaml"
     yaml_str = yaml.dump(meta_data)

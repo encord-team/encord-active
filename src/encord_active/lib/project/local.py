@@ -109,6 +109,7 @@ def init_local_project(
         "project_title": project.title,
         "project_description": project.description,
         "project_hash": project.project_hash,
+        "has_remote": False,
     }
     meta_file_path = project_dir / "project_meta.yaml"
     meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
