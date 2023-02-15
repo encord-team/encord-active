@@ -353,7 +353,7 @@ class PredictionWriter:
                 height = int(du["height"])
                 width = int(du["width"])
 
-                if data_type in ["image_group", "image"]:
+                if data_type in ["img_group", "image"]:
                     frame = int(du["data_sequence"])
                     for label in du["labels"]["objects"]:
                         append_object_label(du_hash, frame, label, width, height)
