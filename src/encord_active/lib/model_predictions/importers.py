@@ -185,7 +185,7 @@ def import_mask_predictions(
                                 object=ObjectDetection(
                                     format=Format.POLYGON,
                                     data=_mask,
-                                    object_class_hash=class_hash,
+                                    feature_hash=class_hash,
                                 ),
                             )
                         )
@@ -240,7 +240,7 @@ def import_KITTI_labels(
                 Prediction(
                     data_hash=data_hash,
                     confidence=float(row["undefined0"]),
-                    object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, object_class_hash=class_name),
+                    object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=class_name),
                 )
             )
 

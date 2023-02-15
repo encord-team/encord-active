@@ -214,7 +214,7 @@ def iterate_classification_attribute_options(ontology: OntologyStructure):
             if isinstance(attribute, RadioAttribute):
                 for option in attribute.options:
                     yield FrameClassification(
-                        classification_hash=classification.feature_node_hash,
+                        feature_hash=classification.feature_node_hash,
                         attribute_hash=attribute.feature_node_hash,
                         option_hash=option.feature_node_hash,
                     ), ClassificationAttributeOption(classification, attribute, option)
@@ -385,7 +385,7 @@ class PredictionWriter:
             return None
 
         key = FrameClassification(
-            classification_hash=classification.featureHash,
+            feature_hash=classification.featureHash,
             attribute_hash=classification_answer.featureHash,
             # NOTE: since we only support radion buttons, at this point we should have only one answer
             option_hash=classification_answer.answers[0].featureHash,
@@ -439,7 +439,7 @@ class PredictionWriter:
 
             selected_option = self.classification_lookup[frame_classification]
             class_index[class_id] = {
-                "featureHash": frame_classification.classification_hash,
+                "featureHash": frame_classification.feature_hash,
                 "attributeHash": frame_classification.attribute_hash,
                 "optionHash": selected_option.feature_node_hash,
                 "name": selected_option.label,
@@ -482,7 +482,7 @@ class PredictionWriter:
             ptype = PredictionType.FRAME
             x1, y1, x2, y2 = [None, None, None, None]
         elif prediction.object:
-            class_id = self.object_class_id_lookup.get(prediction.object.object_class_hash)
+            class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
             if isinstance(prediction.object.data, np.ndarray):
                 polygon = prediction.object.data
                 ptype = PredictionType.POLYGON
@@ -513,7 +513,7 @@ class PredictionWriter:
                 x2 = (bbox.x + bbox.w) * width
                 y2 = (bbox.y + bbox.h) * height
 
-            ontology_object = self.object_lookup[prediction.object.object_class_hash]
+            ontology_object = self.object_lookup[prediction.object.feature_hash]
             if ontology_object.shape.value != ptype.value:
                 raise ValueError(
                     f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"

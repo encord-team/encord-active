@@ -31,7 +31,7 @@ class Point(NamedTuple):
 class ObjectDetection(BaseModel):
     format: Format
     data: Union[BoundingBox, np.ndarray]
-    object_class_hash: str
+    feature_hash: str
     track_id: Optional[Union[str, int]] = None
 
     @validator("data", pre=True)
@@ -66,7 +66,7 @@ class ObjectDetection(BaseModel):
 
 
 class FrameClassification(BaseModel):
-    classification_hash: str
+    feature_hash: str
     attribute_hash: str
     option_hash: str
 
