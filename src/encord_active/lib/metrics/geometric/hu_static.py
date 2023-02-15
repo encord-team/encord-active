@@ -48,7 +48,7 @@ class HuMomentsStatic(Metric):
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         # Patching sklearn to use numpy's linalg as scipy's one causes segfaults
         import sklearn.decomposition._pca as module_to_patch
-        
+
         original_lin_alg = module_to_patch.linalg
         module_to_patch.linalg = np.linalg
 
