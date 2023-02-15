@@ -85,7 +85,6 @@ def make_object_dict(
         if not isinstance(object_data, dict):
             raise ValueError(f"The `object_data` for {shape} should be a dictionary.")
         if len(BBOX_KEYS.intersection(object_data.keys())) != 4:
-            __import__("ipdb").set_trace()
             raise ValueError(f"The `object_data` for {shape} should have keys {BBOX_KEYS}.")
         if not isinstance(object_data["x"], float):
             raise ValueError(f"The `object_data` for {shape} should float values.")
