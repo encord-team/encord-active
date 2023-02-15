@@ -21,6 +21,9 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     """
 
     collections = load_collections(embedding_type, project_dir / "embeddings")
+    if not collections:
+        return
+
     embeddings = np.array([collection["embedding"] for collection in collections])
 
     reducer = umap.UMAP(random_state=0, verbose=True)

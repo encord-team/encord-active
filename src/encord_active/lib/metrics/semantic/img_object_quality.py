@@ -1,9 +1,9 @@
-import logging
 from collections import Counter
 from typing import List
 
 import faiss
 import numpy as np
+from loguru import logger
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
@@ -24,7 +24,7 @@ from encord_active.lib.metrics.metric import (
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
-logger = logging.getLogger(__name__)
+logger = logger.opt(colors=True)
 
 
 class ObjectEmbeddingSimilarityTest(Metric):
@@ -116,8 +116,9 @@ class ObjectEmbeddingSimilarityTest(Metric):
             return
 
         collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.OBJECT)
-        generate_2d_embedding_data(EmbeddingType.OBJECT, iterator.cache_dir)
+
         if len(collections) > 0:
+            generate_2d_embedding_data(EmbeddingType.OBJECT, iterator.cache_dir)
             embedding_identifiers = [self.get_identifier_from_collection_item(item) for item in collections]
 
             self.unpack_collections(collections)
