@@ -68,7 +68,11 @@ def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[
     img_batch: List[torch.Tensor] = []
 
     for obj in data_unit["labels"].get("objects", []):
-        if obj["shape"] in [ObjectShape.POLYGON.value, ObjectShape.BOUNDING_BOX.value]:
+        if obj["shape"] in [
+            ObjectShape.POLYGON.value,
+            ObjectShape.BOUNDING_BOX.value,
+            ObjectShape.ROTATABLE_BOUNDING_BOX.value,
+        ]:
             try:
                 out = get_bbox_from_encord_label_object(
                     obj,
@@ -140,7 +144,11 @@ def generate_cnn_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
         embeddings_torch = torch.flatten(embeddings, start_dim=1).cpu().detach().numpy()
 
         for obj, emb in zip(data_unit["labels"]["objects"], embeddings_torch):
-            if obj["shape"] in [ObjectShape.POLYGON.value, ObjectShape.BOUNDING_BOX.value]:
+            if obj["shape"] in [
+                ObjectShape.POLYGON.value,
+                ObjectShape.BOUNDING_BOX.value,
+                ObjectShape.ROTATABLE_BOUNDING_BOX.value,
+            ]:
 
                 last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
 
@@ -277,6 +285,7 @@ def get_cnn_embeddings(
                 cnn_embeddings = pickle.load(f)
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
+
             cnn_embeddings = generate_cnn_embeddings(iterator, embedding_type, embedding_path)
 
     return cnn_embeddings

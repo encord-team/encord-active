@@ -14,6 +14,7 @@ from torchvision.ops import box_iou
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import RLEData, binary_mask_to_rle, rle_iou
+from encord_active.lib.labels.object import BoxShapes, ObjectShape
 from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class LabelEntry:
     y1: float = 0.0
     x2: float = 0.0
     y2: float = 0.0
+    theta: float = 0.0
     rle: Optional[RLEData] = None
 
     @property
@@ -241,17 +243,20 @@ class PredictionWriter:
                 class_id=class_id,
             )
 
-            if o["shape"] == "bounding_box":
-                bbox = o.get("boundingBox")
+            if o["shape"] in BoxShapes:
+                bbox = o.get("boundingBox") or o.get("rotatableBoundingBox")
                 if not (bbox and self.__check_bbox(bbox)):
                     return  # Invalid bounding box object
+
+                if o["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
+                    label_entry.theta = bbox["theta"]
 
                 x, y, w, h = [bbox[k] for k in ["x", "y", "w", "h"]]
                 label_entry.x1 = round(x * width, 2)
                 label_entry.y1 = round(y * height, 2)
                 label_entry.x2 = round((x + w) * width, 2)
                 label_entry.y2 = round((y + h) * height, 2)
-            elif o["shape"] == "polygon":
+            elif o["shape"] == ObjectShape.POLYGON:
                 points = polyobj_to_nparray(o, width=width, height=height)
                 if points.size == 0:
                     return

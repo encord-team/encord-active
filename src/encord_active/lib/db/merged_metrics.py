@@ -3,10 +3,11 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from encord.project_ontology.classification_type import ClassificationType
 
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.tags import Tag, TagScope
+from encord_active.lib.labels.classification import ClassificationType
+from encord_active.lib.metrics.metric import DataType, EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_metadata
 
 TABLE_NAME = "merged_metrics"
@@ -39,9 +40,9 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
         else:
             # Image-level quality index
             if (
-                meta.annotation_type[0] == ClassificationType.RADIO.value
-                and meta.data_type == "image"
-                and meta.embedding_type == "classification"
+                meta.annotation_type[0] == ClassificationType.RADIO
+                and meta.data_type == DataType.IMAGE
+                and meta.embedding_type == EmbeddingType.CLASSIFICATION
             ):
                 main_df_image_quality = metric_scores
                 main_df_image_quality.rename(columns={"score": f"{meta.title}"}, inplace=True)

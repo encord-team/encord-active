@@ -56,12 +56,17 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 """,
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.SEQUENCE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
         self.threshold = threshold
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
+        found_sequence = False
         found_any = False
         found_valid = False
 
@@ -74,6 +79,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
             if not (data_type == "video" or (data_type == "img_group" and len(label_row["data_units"]) > 1)):
                 # Not a sequence
                 continue
+            found_sequence = True
 
             objects = [o for o in data_unit["labels"]["objects"] if o["shape"] in valid_annotation_types]
             polygons = list(map(get_polygon, objects))
@@ -132,7 +138,9 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
             previous_polygons = polygons
             previous_objects = objects
 
-        if not found_any:
+        if not found_sequence:
+            logger.info("<yellow>[Skipping]</yellow> No sequential data found.")
+        elif not found_any:
             logger.info(
                 f"<yellow>[Skipping]</yellow> No object labels of types {{{', '.join(valid_annotation_types)}}}."
             )

@@ -198,7 +198,11 @@ class EntropyMetric(Metric):
 network and Monte-Carlo Dropout to estimate the uncertainty of the label.""",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
@@ -228,7 +232,11 @@ class ConfidenceScoreMetric(Metric):
             long_description=r"""Estimates the confidence of the assigned label as the probability of the assigned label.""",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],
+            annotation_type=[
+                AnnotationType.OBJECT.BOUNDING_BOX,
+                AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX,
+                AnnotationType.OBJECT.POLYGON,
+            ],
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):

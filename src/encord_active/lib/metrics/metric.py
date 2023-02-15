@@ -8,16 +8,18 @@ from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.labels.classification import ClassificationType
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-class MetricType(Enum):
+class MetricType(str, Enum):
     SEMANTIC = "semantic"
     GEOMETRIC = "geometric"
     HEURISTIC = "heuristic"
 
 
-class DataType(Enum):
+class DataType(str, Enum):
     IMAGE = "image"
     SEQUENCE = "sequence"
 
@@ -27,23 +29,6 @@ class EmbeddingType(str, Enum):
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
     IMAGE = "image"
-
-
-# copy from encord but as a string enum
-class ClassificationType(str, Enum):
-    RADIO = "radio"
-    TEXT = "text"
-    CHECKLIST = "checklist"
-
-
-# copy from encord but as a string enum
-class ObjectShape(str, Enum):
-    POLYGON = "polygon"
-    POLYLINE = "polyline"
-    BOUNDING_BOX = "bounding_box"
-    KEY_POINT = "point"
-    SKELETON = "skeleton"
-    ROTATABLE_BOUNDING_BOX = "rotatable_bounding_box"
 
 
 AnnotationTypeUnion = Union[ObjectShape, ClassificationType]
