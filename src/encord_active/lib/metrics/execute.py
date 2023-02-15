@@ -54,8 +54,7 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
                 if (
                     (issubclass(cls[1], SimpleMetric) and cls[1] != SimpleMetric)
                     or (issubclass(cls[1], Metric) and cls[1] != Metric)
-                    and filter_func(cls[1])
-                ):
+                ) and filter_func(cls[1]):
                     metrics.append((f"{base_module_name}{module_name}.{file.split('.')[0]}", f"{cls[0]}"))
 
     return metrics
