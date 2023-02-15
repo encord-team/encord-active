@@ -5,14 +5,10 @@ from typing import Any, Dict, Optional
 
 import rich
 import typer
-from encord.ontology import OntologyStructure
 from rich.markup import escape
 
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.model_predictions.writer import (
-    iterate_classification_attribute_options,
-)
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -48,8 +44,12 @@ def print_ontology(
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
+    from encord.ontology import OntologyStructure
     from rich.panel import Panel
 
+    from encord_active.lib.model_predictions.writer import (
+        iterate_classification_attribute_options,
+    )
     from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     fs = ProjectFileStructure(target)

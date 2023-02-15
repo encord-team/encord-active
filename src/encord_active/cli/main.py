@@ -17,9 +17,6 @@ from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib import constants as ea_constants
-from encord_active.lib.metrics.execute import run_metrics, run_metrics_by_embedding_type
-from encord_active.lib.metrics.heuristic.img_features import AreaMetric
-from encord_active.lib.metrics.metric import EmbeddingType
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -162,6 +159,12 @@ def import_local_project(
 
     By default, all jpeg, jpg, png, and tiff files will be matched.
     """
+    from encord_active.lib.metrics.execute import (
+        run_metrics,
+        run_metrics_by_embedding_type,
+    )
+    from encord_active.lib.metrics.heuristic.img_features import AreaMetric
+    from encord_active.lib.metrics.metric import EmbeddingType
     from encord_active.lib.project.local import (
         NoFilesFoundError,
         ProjectExistsError,
