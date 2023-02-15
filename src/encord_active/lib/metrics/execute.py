@@ -93,7 +93,7 @@ def run_all_polygon_metrics():
 def run_all_prediction_metrics(**kwargs):
     # Return all metrics that apply to objects.
     def filter(m: Metric):
-        at = m.metadata.annotation_type
+        at = m().metadata.annotation_type
         if isinstance(at, list):
             for t in at:
                 if isinstance(t, ObjectShape):

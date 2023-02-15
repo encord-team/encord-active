@@ -175,7 +175,7 @@ def precompute_MAP_features(
             for match in matches or []:
                 match["pidxs"].append(pidx)
                 # NOTE: we deeply rely on IOUs in the model prediction pages
-                ious[pidx] = np.Infinity
+                ious[pidx] = 1
 
         if detections:
             img_ious = get_img_ious(detections, ground_truth_img)  # type: ignore
