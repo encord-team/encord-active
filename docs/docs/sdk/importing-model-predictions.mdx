@@ -78,15 +78,14 @@ Below, you find examples of how to create an object of each of the three support
 Since we can have multiple classifications for for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
 
 ```python
-
 prediction = Prediction(
     data_hash="<your_data_hash>",
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     classification=FrameClassification(
-        classification_hash="<your_classification_hash>"
-        attribute_hash="<your_attribute_hash>"
-        option_hash="<your_option_hash>"
+        classification_hash="<your_classification_hash>",
+        attribute_hash="<your_attribute_hash>",
+        option_hash="<your_option_hash>",
     ),
 )
 ```
