@@ -355,16 +355,16 @@ class PredictionWriter:
 
                 if data_type in ["img_group", "image"]:
                     frame = int(du["data_sequence"])
-                    for label in du["labels"]["objects"]:
+                    for label in du["labels"].get("objects", []):
                         append_object_label(du_hash, frame, label, width, height)
-                    for label in du["labels"]["classifications"]:
+                    for label in du["labels"].get("classifications", []):
                         append_classification_label(du_hash, frame, label, answers)
                 else:  # Video
                     for fr, labels in du["labels"].items():
                         frame = int(fr)
-                        for label in labels["objects"]:
+                        for label in labels.get("objects", []):
                             append_object_label(du_hash, frame, label, width, height)
-                        for label in labels["classifications"]:
+                        for label in labels.get("classifications", []):
                             append_classification_label(du_hash, frame, label, answers)
 
     def get_object_class_id(self, obj_dict) -> Optional[ClassID]:
