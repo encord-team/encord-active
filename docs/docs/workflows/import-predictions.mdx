@@ -188,7 +188,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.BOUNDING_BOX,
         # Your bounding box coordinates in relative terms (% of image width/height).
@@ -222,7 +222,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.MASK,
         # _binary_ np.ndarray of shape [h, w] and dtype np.uint8
@@ -258,7 +258,7 @@ prediction = Prediction(
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        object_class_hash="<the_class_id>",
+        feature_hash="<the_class_id>",
         # highlight-start
         format = Format.POLYGON,
         # np.ndarray of shape [n, 2] and dtype float in range [0,1]
