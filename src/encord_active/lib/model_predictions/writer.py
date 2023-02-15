@@ -555,9 +555,3 @@ class PredictionWriter:
                 rle=rle,
             )
         )
-
-    def add_object_prediction(self):
-        pass
-
-    def add_classification_prediction(self):
-        pass
