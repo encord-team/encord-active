@@ -161,8 +161,9 @@ class CocoImporter:
         self.category_shapes = _infer_category_shapes(self.annotations)
         self.id_mappings: Dict[Tuple[int, Shape], int] = {}
 
-        title = self.info.description.replace(" ", "-")
-        self.title = f"[EA] {title}"
+        title = self.info.description or "new project"
+        self.title = f"[EA] {title}".replace(" ", "-")
+
         self.project_dir = destination_dir / self.title
 
         self.user_client = LocalUserClient(self.project_dir)
