@@ -1,9 +1,12 @@
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
 import pandas as pd
+import yaml
 from encord import Dataset, EncordUserClient, Project
 from encord.constants.enums import DataType
 from encord.exceptions import AuthorisationError
@@ -13,11 +16,13 @@ from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
+from encord_active.app.common.state import get_state
 from encord_active.lib.common.utils import (
     fetch_project_meta,
     iterate_in_batches,
     update_project_meta,
 )
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
@@ -25,7 +30,7 @@ from encord_active.lib.embeddings.utils import (
     save_collections,
 )
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType, MetricMetadata
 from encord_active.lib.project import ProjectFileStructure
 
 
@@ -42,6 +47,126 @@ class DatasetCreationResult(NamedTuple):
 
 class ProjectCreationResult(NamedTuple):
     hash: str
+
+
+def create_filtered_embeddings(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_label_rows,
+    filtered_data_hashes,
+    filtered_df: pd.DataFrame,
+):
+    if not target_project_structure.embeddings.exists():
+        os.mkdir(target_project_structure.embeddings)
+    for csv_embedding_file in curr_project_structure.embeddings.glob("*.csv"):
+        csv_df = pd.read_csv(csv_embedding_file, index_col=0)
+        filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
+        filtered_csv_df.to_csv(target_project_structure.embeddings / csv_embedding_file.name)
+    for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
+        collection = load_collections(embedding_type, (curr_project_structure.embeddings))
+        collection = [
+            c for c in collection if c["label_row"] in filtered_label_rows and c["data_unit"] in filtered_data_hashes
+        ]
+        save_collections(embedding_type, target_project_structure.embeddings, collection)
+
+
+def copy_filtered_data(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_label_rows,
+    filtered_data_hashes,
+    filtered_objects,
+):
+    if not target_project_structure.data.is_dir():
+        os.mkdir(target_project_structure.data)
+    for label_row, data_unit in zip(filtered_label_rows, filtered_data_hashes):
+        if not (curr_project_structure.data / label_row).is_dir():
+            continue
+        if not (target_project_structure.data / label_row).is_dir():
+            os.mkdir(target_project_structure.data / label_row)
+            os.mkdir(target_project_structure.data / label_row / "images")
+        for curr_file in (curr_project_structure.data / label_row / "images").glob(f"{data_unit}.*"):
+            if not (target_project_structure.data / label_row / "images" / curr_file.name).exists():
+                os.symlink(curr_file, target_project_structure.data / label_row / "images" / curr_file.name)
+
+        lr_js = json.loads((curr_project_structure.data / label_row / "label_row.json").read_text())
+        lr_js["data_units"] = {k: v for k, v in lr_js["data_units"].items() if k in filtered_data_hashes}
+        for data_unit_hash, v in lr_js["data_units"].items():
+            lr_js["data_units"][data_unit_hash]["labels"]["objects"] = [
+                obj
+                for obj in lr_js["data_units"][data_unit_hash]["labels"]["objects"]
+                if obj["objectHash"] in filtered_objects
+            ]
+        lr_js["object_answers"] = {k: v for k, v in lr_js["object_answers"].items() if k in filtered_objects}
+        (target_project_structure.data / label_row / "label_row.json").write_text(json.dumps(lr_js))
+
+
+def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
+    to_save_df = filtered_df.set_index("identifier")
+    curr_project_dir = DBConnection.project_file_structure().project_dir
+    DBConnection.set_project_path(target_project_dir)
+    MergedMetrics().replace_all(to_save_df)
+    DBConnection.set_project_path(curr_project_dir)
+    return curr_project_dir
+
+
+def create_filtered_metrics(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
+):
+    if not target_project_structure.metrics.is_dir():
+        os.mkdir(target_project_structure.metrics)
+    for csv_metric_file in curr_project_structure.metrics.glob("*.csv"):
+        csv_df = pd.read_csv(csv_metric_file, index_col=0)
+        filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
+        filtered_csv_df.to_csv(target_project_structure.metrics / csv_metric_file.name)
+
+        metric_json_path = Path(csv_metric_file.as_posix().rsplit(".", 1)[0] + ".meta.json")
+        metric_meta = MetricMetadata.parse_file(metric_json_path)
+        metric_meta.stats.num_rows = filtered_csv_df.shape[0]
+        metric_meta.stats.min_value = float(filtered_csv_df["score"].min())
+        metric_meta.stats.max_value = float(filtered_csv_df["score"].max())
+        mm_js = metric_meta.json()
+        (target_project_structure.metrics / metric_json_path.name).write_text(mm_js)
+
+
+def create_local_copy(project_name: str, filtered_df: pd.DataFrame):
+    curr_project_structure = get_state().project_paths
+    target_project_dir = curr_project_structure.project_dir.parent / project_name
+    target_project_structure = ProjectFileStructure(target_project_dir)
+    os.mkdir(target_project_dir)
+
+    ids_df = filtered_df["identifier"].str.split("_", n=3, expand=True)
+    filtered_label_rows = ids_df[0].unique()
+    filtered_data_hashes = ids_df[1].unique()
+    filtered_objects = ids_df[2].unique()
+
+    curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
+
+    idu_js = json.loads(curr_project_structure.image_data_unit.read_text())
+    filtered_idu_js = {k: v for k, v in idu_js.items() if v["data_hash"] in filtered_data_hashes}
+    target_project_structure.image_data_unit.write_text(json.dumps(filtered_idu_js))
+
+    lrm_js = json.loads(curr_project_structure.label_row_meta.read_text())
+    filtered_lrm_js = {k: v for k, v in lrm_js.items() if k in filtered_label_rows}
+    target_project_structure.label_row_meta.write_text(json.dumps(filtered_idu_js))
+
+    shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
+
+    project_meta = fetch_project_meta(curr_project_structure.project_dir)
+    project_meta["project_title"] = project_name
+    target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
+
+    create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
+
+    copy_filtered_data(
+        curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_objects
+    )
+
+    create_filtered_embeddings(
+        curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
+    )
 
 
 class EncordActions:

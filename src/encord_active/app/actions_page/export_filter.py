@@ -42,10 +42,11 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         columns_to_filter = [tags_column] + columns_to_filter
 
         to_filter_columns = st.multiselect("Filter dataframe on", columns_to_filter)
-        if to_filter_columns:
-            df = df.copy()
+        filtered = df.copy()
 
         for column in to_filter_columns:
+            non_applicable = filtered[pd.isna(filtered[column])]
+
             left, right = st.columns((1, 20))
             left.write("↳")
             key = f"filter-select-{column.replace(' ', '_').lower()}"
@@ -54,24 +55,24 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 tag_filters = right.multiselect(
                     "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
                 )
-                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in df["tags"]]
-                df = df.loc[filtered_rows]
+                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in filtered["tags"]]
+                filtered = filtered.loc[filtered_rows]
 
             # Treat columns with < 10 unique values as categorical
-            elif is_categorical_dtype(df[column]) or df[column].nunique() < 10:
-                if df[column].isnull().sum() != df.shape[0]:
+            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
+                if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
-                        df[column].dropna().unique().tolist(),
-                        default=df[column].dropna().unique().tolist(),
+                        filtered[column].dropna().unique().tolist(),
+                        default=filtered[column].dropna().unique().tolist(),
                         key=key,
                     )
-                    df = df[df[column].isin(user_cat_input)]
+                    filtered = filtered[filtered[column].isin(user_cat_input)]
                 else:
                     right.markdown(f"For column *{column}*, all values are NaN")
-            elif is_numeric_dtype(df[column]):
-                _min = float(df[column].min())
-                _max = float(df[column].max())
+            elif is_numeric_dtype(filtered[column]):
+                _min = float(filtered[column].min())
+                _max = float(filtered[column].max())
                 step = (_max - _min) / 100
                 user_num_input = right.slider(
                     f"Values for {column}",
@@ -81,26 +82,32 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     step=step,
                     key=key,
                 )
-                df = df[df[column].between(*user_num_input)]
-            elif is_datetime64_any_dtype(df[column]):
-                first = df[column].min()
-                last = df[column].max()
+                filtered = filtered[filtered[column].between(*user_num_input)]
+            elif is_datetime64_any_dtype(filtered[column]):
+                first = filtered[column].min()
+                last = filtered[column].max()
                 res = right.date_input(
                     f"Values for {column}", min_value=first, max_value=last, value=(first, last), key=key
                 )
                 if isinstance(res, tuple) and len(res) == 2:
                     res = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
                     start_date, end_date = res
-                    df = df.loc[df[column].between(start_date, end_date)]
+                    filtered = filtered.loc[filtered[column].between(start_date, end_date)]
             else:
                 user_text_input = right.text_input(
                     f"Substring or regex in {column}",
                     key=key,
                 )
                 if user_text_input:
-                    df = df[df[column].astype(str).str.contains(user_text_input)]
+                    filtered = filtered[filtered[column].astype(str).str.contains(user_text_input)]
 
-    return df
+            non_applicable["data_row_id"] = non_applicable.index.str.rsplit("_", n=1, expand=True).droplevel(1)
+            filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered.index)].drop(
+                ["data_row_id"], axis=1
+            )
+
+            filtered = pd.concat([filtered, filtered_objects_df])
+    return filtered
 
 
 class InputItem(NamedTuple):
@@ -145,6 +152,28 @@ def _get_action_utils():
         )
     except Exception as e:
         st.error(str(e))
+
+
+def create_project(action_utils, cols: RenderItems, filtered_df, project_has_remote: bool):
+    label = st.empty()
+    progress, clear = render_progress_bar()
+    label.text("Step 1/2: Uploading data...")
+    dataset_creation_result = action_utils.create_dataset(
+        cols.dataset.title, cols.dataset.description, filtered_df, progress
+    )
+    clear()
+    label.text("Step 2/2: Uploading labels...")
+    ontology_hash = (
+        action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
+        if not project_has_remote and cols.ontology
+        else action_utils.original_project.get_project().ontology_hash
+    )
+    new_project = action_utils.create_project(
+        dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
+    )
+    clear()
+
+    return new_project, dataset_creation_result
 
 
 def export_filter():
@@ -252,30 +281,15 @@ community</a>
                     st.error(f"{item.capitalize()} title cannot be empty!")
                     return
 
-            label = st.empty()
-            progress, clear = render_progress_bar()
-            label.text("Step 1/2: Uploading data...")
-            dataset_creation_result = action_utils.create_dataset(
-                cols.dataset.title, cols.dataset.description, filtered_df, progress
-            )
-            clear()
-            label.text("Step 2/2: Uploading labels...")
-            ontology_hash = (
-                action_utils.create_ontology(cols.ontology.title, cols.ontology.description).ontology_hash
-                if not project_has_remote and cols.ontology
-                else action_utils.original_project.get_project().ontology_hash
-            )
-            new_project = action_utils.create_project(
-                dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
-            )
-
+            create_local_copy(project_name=cols.project.title, filtered_df=filtered_df)
+            new_project, dataset_creation_result = create_project(action_utils, cols, filtered_df, project_has_remote)
             try:
                 action_utils.replace_uids(
                     dataset_creation_result.lr_du_mapping, new_project.project_hash, dataset_creation_result.hash
                 )
             except Exception as e:
                 st.error(str(e))
-            clear()
+            label = st.empty()
             label.info("🎉 New project is created!")
 
             new_project_link = f"https://app.encord.com/projects/view/{new_project.project_hash}/summary"
