@@ -25,7 +25,7 @@ def render_help():
             f"""
             <div style="display: flex; flex-direction: column; padding: 1rem">
                 <span style="font-size: 1.2rem">Need help?</span>
-                {link("Join our slack community", SLACK_INVITE_URL, SLACK_ICON)}
+                {link("Join our Slack community", SLACK_INVITE_URL, SLACK_ICON)}
                 {link("Documentation", DOCS_URL, DOCS_ICON)}
             </div>""",
             unsafe_allow_html=True,
