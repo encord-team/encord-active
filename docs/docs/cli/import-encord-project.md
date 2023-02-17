@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Importing Encord Project
 
-If you already have a project on the Encord platform, you can import that project with the following command:
+If you already have a project on [Encord Annotate](https://app.encord.com), you can import that project with the following command:
 
 ```
 encord-active import project
@@ -18,15 +18,13 @@ This will import a project to new folder in your current working directory. If y
 encord-active import project --targe /path/to/store/project
 ```
 
+This will import the project into a subdirectory of `/path/to/store/project`.
+
 :::
 
 :::tip
 
-If you don't have an Encord project already, you can either
-
-1. [Initialise a project from a local data directory](/cli/initialising-project-from-image-directories)
-2. [Migrating data and labels to Encord](sdk/migrating-data) before calling this command
-3. [Download one of our sandbox datasets](/cli/download-sandbox-data)
+If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](/workflows/importing-data-and-labels).
 
 :::
 
@@ -44,8 +42,5 @@ The command will ask you:
 2. `What project would you like to import?`: here, you can (fuzzy) search for the project title that you would like to import. Hit <kbd>enter</kbd> when your desired project is highlighted.
 
 Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
-
-Downloading the data and computing the metrics may take a while.
-Bare with us, it is worth the wait.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
