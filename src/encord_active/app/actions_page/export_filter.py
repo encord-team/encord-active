@@ -281,7 +281,7 @@ community</a>
                     st.error(f"{item.capitalize()} title cannot be empty!")
                     return
 
-            create_local_copy(project_name=cols.project.title, filtered_df=filtered_df)
+            action_utils.create_local_copy(project_name=cols.project.title, filtered_df=filtered_df)
             new_project, dataset_creation_result = create_project(action_utils, cols, filtered_df, project_has_remote)
             try:
                 action_utils.replace_uids(
