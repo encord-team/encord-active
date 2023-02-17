@@ -98,7 +98,7 @@ class HuMomentsStatic(Metric):
                 if "objects" not in data_unit["labels"]:
                     continue
 
-                for obj in data_unit["labels"]["objects"]:
+                for obj in data_unit["labels"].get("objects", []):
                     try:
                         index = obj_hashes.index(obj["objectHash"])
                     except:

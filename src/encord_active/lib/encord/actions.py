@@ -249,7 +249,7 @@ class EncordActions:
                 original_label_row, new_label_row, new_label_data_unit_hash, original_lr_du.data_unit
             )
             if any(
-                data_unit["labels"]["objects"] or data_unit["labels"]["classifications"]
+                data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
                 for data_unit in label_row["data_units"].values()
             ):
                 new_project.save_label_row(label_row["label_hash"], label_row)

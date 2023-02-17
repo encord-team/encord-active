@@ -81,7 +81,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
                 continue
             found_sequence = True
 
-            objects = [o for o in data_unit["labels"]["objects"] if o["shape"] in valid_annotation_types]
+            objects = [o for o in data_unit["labels"].get("objects", []) if o["shape"] in valid_annotation_types]
             polygons = list(map(get_polygon, objects))
             found_any |= len(polygons) > 0
 
