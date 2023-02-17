@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Importing Encord Project
 
-> For projects already in the Encord platform.
+> For projects already in the Encord Annotate platform.
 
-This workflow will get you through importing your data from Encord into a local Encord Active project.
+This workflow will get you through importing your data from Encord Annotate to a local Encord Active project.
 You will get a directory containing all the data, labels, and [metrics](/category/metrics) of the project.
 
 To import your project, run this command:

@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# Initializing from Image Directory
+# Initializing from an Image Directory
 
 > Grep arbitrary images from within a dataset directory.
 

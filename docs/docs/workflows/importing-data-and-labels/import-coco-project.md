@@ -4,9 +4,9 @@ sidebar_position: 2
 
 # Importing COCO Project
 
-> Import COCO Images and anotations stored on your local file system.
+> Import a dataset and annotations which are stored in COCO format on your local file system.
 
-This requires you to have a coco project on your local machine with images and an annotations JSON file.
+This requires you to have a COCO project on your local machine with images and an annotations JSON file.
 
 To import the project, run
 
