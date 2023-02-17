@@ -16,7 +16,7 @@ In the situation where you have a custom data and label structure, you have two 
 :::info
 
 We are working hard on a smoother data onboarding process so you won't need an Encord account and won't have to ship your data anywhere.
-If you want to know more, please contact us via the [slack community][slack-invite] or by sending us an email on [active@encord.com](mailto:active@encord.com).
+If you want to know more, please contact us via the [Slack community][slack-invite] or by sending us an email on [active@encord.com](mailto:active@encord.com).
 
 :::
 
