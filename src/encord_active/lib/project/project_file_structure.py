@@ -37,6 +37,10 @@ class ProjectFileStructure:
         return self.project_dir / "label_row_meta.json"
 
     @property
+    def image_data_unit(self) -> Path:
+        return self.project_dir / "image_data_unit.json"
+
+    @property
     def ontology(self) -> Path:
         return self.project_dir / "ontology.json"
 
