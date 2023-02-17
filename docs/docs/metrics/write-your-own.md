@@ -93,14 +93,16 @@ Before running your own custom metric, make sure that you have `project_meta.yam
 To run your metric from the root directory, use:
 
 ```shell
-(ea-venv)$ python your_metric_file.py /path/to/your/data/dir
+# within venv
+python your_metric_file.py /path/to/your/data/dir
 ```
 
 You can check the generated metric file in your `<data root dir>/metrics`, its name should be `<hash>_example_title.csv` .
-When you have run your metric, you can visualise your results by running:
+When you have run your metric, you can visualize your results by running:
 
 ```shell
-(ea-venv)$ encord-active visualise
+# within venv
+encord-active visualize
 ```
 
 Now, you can improve your data/labels/model by choosing your own custom metric in the app.
