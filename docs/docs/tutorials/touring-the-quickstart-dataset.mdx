@@ -29,7 +29,7 @@ $ encord-active quickstart
 
 Now `encord-active` will download the dataset and open the UI in your browser.
 
-![Encord Active Landing page](/img/tutorials/landing-page.png)
+![Encord Active Landing page](../../static/img/tutorials/landing-page.png)
 
 :::caution
 
@@ -51,13 +51,13 @@ When you open Encord Active, you will start on the landing page.
 
 Expand the "Data Quality" tab in the left sidebar and click the "Summary" page:
 
-![Data Quality Summary Page](/img/tutorials/quickstart-data-quality-summary.png)
+![Data Quality Summary Page](../../static/img/tutorials/quickstart-data-quality-summary.png)
 
 On the summary page, you can see all the outliers that Encord Active automatically found based on all the [metrics](category/metrics) that were computed for the images. The individual dropdown menus will show you how this metric was computed, how many outliers were found and some of the most severe outliers.
 
 Scroll down on the main view and click the "Red Values Outliers" section and expand it:
 
-![Red Values Outliers](/img/tutorials/quickstart-data-quality-outliers.gif)
+![Red Values Outliers](../../static/img/tutorials/quickstart-data-quality-outliers.gif)
 
 
 
@@ -73,7 +73,7 @@ To tag an image identified as an outlier, you first need to add a new tag by typ
 
 Afterwards, you can add the tag to the images you see in the outlier pane by selecting the tag from the drop-down below each image:
 
-![Tag an image](/img/tutorials/quickstart-data-quality-tagging.png)
+![Tag an image](../../static/img/tutorials/quickstart-data-quality-tagging.png)
 
 Once you are satisfied with your tagged subset of images move on to exporting.
 
@@ -82,7 +82,7 @@ Once you are satisfied with your tagged subset of images move on to exporting.
 Suppose you have now tagged all the images that you would like to export for re-labeling or other actions.
 Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created.
 
-![Select images with the `label_duplication` tag](/img/tutorials/quickstart-data-quality-export.png)
+![Select images with the `label_duplication` tag](../../static/img/tutorials/quickstart-data-quality-export.png)
 
 _Note how your data has been filtered to only the rows that you tagged._
 
@@ -108,7 +108,7 @@ First, navigate to the _Model Quality_ > _Metrics_ page where you find multiple 
 
 The first section will give you the _mean Average Precision (mAP)_ and the _mean Average Recall (mAR)_ of your model based on the IOU threshold set in the top of the page.
 
-![mAP and mAR scored](/img/tutorials/quickstart-metrics.png)
+![mAP and mAR scored](../../static/img/tutorials/quickstart-metrics.png)
 
 If you drag the slider, you will notice how the score changes.
 You can also choose to see the aggregate score for certain classes by selecting them in the drop-down to the left.
@@ -117,7 +117,7 @@ You can also choose to see the aggregate score for certain classes by selecting 
 
 In the next section (the _Metric Importance_), you will find importances and correlations of your model performance as function of metrics.
 
-![Metric Importances](/img/tutorials/quickstart-metrics-importance.png)
+![Metric Importances](../../static/img/tutorials/quickstart-metrics-importance.png)
 
 From this overview, you can see that, e.g., "Object Area - Relative (P)" has a high importance for the model performance.
 
@@ -136,7 +136,7 @@ You can skip straight ahead to the [Inspecting Model Performance for a Specific 
 Before jumping into specific metrics, we want to show you the decomposition of the model performance based on individual classes.
 If you look in the _Subset selection scores_ section, you will find the average precision (AP) and average recall (AR) scores for each individual class.
 
-![AP and AR scores decomposed based on classes](/img/tutorials/quickstart-metrics-subset.png)
+![AP and AR scores decomposed based on classes](../../static/img/tutorials/quickstart-metrics-subset.png)
 
 :::note
 
@@ -157,7 +157,7 @@ To learn more about how the specific metric affects the model performance you:
 1. Click the _Performance By Metric_ tab in the sidebar.
 2. Select the "Object Area - Relative (P)" metric in the settings in the top.
 
-![Performance by Metric page](/img/tutorials/performance-by-object-area-coco.png)
+![Performance by Metric page](../../static/img/tutorials/performance-by-object-area-coco.png)
 
 The plot shows the true positive rate and the false negative rate as a function of the selected metric; the "Object Area - Relative (P)" in this case.
 We can see how when the model predictions are small in terms of the absolute area, then the true-positive rate is low (bad), while larger predictions are more often correct (good).
@@ -165,7 +165,7 @@ Similarly, when labels are small, the false negative rate is high (bad), while l
 
 The performance graphs can be showed by each metric and are easy to interact with using the cursor and scroll function:
 
-![Performance by Metric page gif](/img/tutorials/quickstart-performance-by-metric.gif)
+![Performance by Metric page gif](../../static/img/tutorials/quickstart-performance-by-metric.gif)
 
 ## 5. Summary
 

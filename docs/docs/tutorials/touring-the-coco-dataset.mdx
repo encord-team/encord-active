@@ -56,31 +56,31 @@ You will carry out this process in two steps.
 
 When you open Encord Active, you should see a page like this
 
-![Encord Active Landing page](/img/tutorials/landing-page.png)
+![Encord Active Landing page](../../static/img/tutorials/landing-page.png)
 
 Expand the "Label Quality" tab in the left sidebar and click the "Summary" page.
 The page should look like this:
 
-![Label Quality Summary Page](/img/tutorials/data-quality-summary-entry.png)
+![Label Quality Summary Page](../../static/img/tutorials/data-quality-summary-entry.png)
 
 In the summary page, you will find all the outliers that Encord Active automatically found based on all the [metrics](category/metrics) that were computed for the labels.
 
 Scroll down on the main view and expand the "Annotation Duplicates Outliers" section and expand it.
 The page should look similar to this:
 
-![Annotation Duplicates Outliers](/img/tutorials/annotation-duplicate-outlier-summary.png)
+![Annotation Duplicates Outliers](../../static/img/tutorials/annotation-duplicate-outlier-summary.png)
 
 The page will show you how this metric was computed, how many outliers were found and some of the most severe outliers.
 
 If you hover the image with the oranges, you can click the expand button as indicated here:
 
-![Expand the image](/img/tutorials/expand-image-oranges.png)
+![Expand the image](../../static/img/tutorials/expand-image-oranges.png)
 
 When clicking the button and taking a closer look at the image, you will see that there are two overlapping annotations on the orange.
 
 <div style={{ textAlign: "center" }}>
   <img
-    src="/img/tutorials/duplicated-annotation-orange.jpeg"
+    src="../../static/img/tutorials/duplicated-annotation-orange.jpeg"
     alt="Duplicated annotations"
     width={300}
   />
@@ -101,7 +101,7 @@ If you look at the other images displayed, you will notice similar issues.
 >
   <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
     <img
-      src="/img/tutorials/duplicated-annotation-skiing.jpeg"
+      src="../../static/img/tutorials/duplicated-annotation-skiing.jpeg"
       alt="Duplicated annotations"
       width={300}
       style={{ display: "block", width: "100%", height: "auto" }}
@@ -109,7 +109,7 @@ If you look at the other images displayed, you will notice similar issues.
   </div>
   <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
     <img
-      src="/img/tutorials/duplicated-annotation-broccoli.jpeg"
+      src="../../static/img/tutorials/duplicated-annotation-broccoli.jpeg"
       alt="Duplicated annotations"
       width={300}
       style={{ display: "block", width: "100%", height: "auto" }}
@@ -117,7 +117,7 @@ If you look at the other images displayed, you will notice similar issues.
   </div>
   <div style={{ textAlign: "center", display: "table-cell", padding: "5px" }}>
     <img
-      src="/img/tutorials/duplicated-annotation-fridge.jpeg"
+      src="../../static/img/tutorials/duplicated-annotation-fridge.jpeg"
       alt="Duplicated annotations"
       width={300}
       style={{ display: "block", width: "100%", height: "auto" }}
@@ -135,18 +135,18 @@ You can find other sources of label errors by inspecting the other tabs. Good pl
 
 To tag the images with the identified label errors, you first add a new tag by typing in the tag name in the left sidebar and hitting enter.
 
-![Add new tag](/img/tutorials/label_duplicate_tag_add.png)
+![Add new tag](../../static/img/tutorials/label_duplicate_tag_add.png)
 
 Afterwards, you can add the tag to the images you see in the outlier pane by selecting the tag from the drop-down below each image:
 
-![Tag an image](/img/tutorials/tag-added-for-oranges.png)
+![Tag an image](../../static/img/tutorials/tag-added-for-oranges.png)
 
 ### Exporting labels for re-labeling
 
 Suppose you have now tagged all the duplicated annotations that you would like to export for re-labeling.
 Then, you go to the _Actions_ -> _Filter & Export_ tab in the left sidebar and filter by the tag that you created (as indicated by the purple arrows).
 
-![Select images with the `label_duplication` tag](/img/tutorials/export-duplication-tag.png)
+![Select images with the `label_duplication` tag](../../static/img/tutorials/export-duplication-tag.png)
 
 _Note how your data has been filtered to only the rows that you tagged._
 
@@ -172,7 +172,7 @@ First, navigate to the _Model Quality_ > _Metrics_ page to find sections that au
 
 The first section will give you the _mean Average Precision (mAP)_ and the _mean Average Recall (mAR)_ of your model based on the IOU threshold set in the top of the page.
 
-![mAP and mAR scored](/img/tutorials/map-mar-fragment.png)
+![mAP and mAR scored](../../static/img/tutorials/map-mar-fragment.png)
 
 If you drag the slider, you will notice how the score changes.
 You can also choose to see the aggregate score for certain classes by selecting them in the drop-down to the left.
@@ -181,7 +181,7 @@ You can also choose to see the aggregate score for certain classes by selecting 
 
 In the next section (the _Metric Importance_), you will find importances and correlations of your model performance as function of metrics.
 
-![Metric Importances](/img/tutorials/importance-and-correlations.png)
+![Metric Importances](../../static/img/tutorials/importance-and-correlations.png)
 
 From this section, you quickly find that, e.g., "Object Area - Relative (P)" has a high importance for the model performance.
 
@@ -200,7 +200,7 @@ You can skip straight ahead to the [Inspecting Model Performance for a Specific 
 Before jumping into specific metrics, we want to show you the decomposition of the model performance based on individual classes.
 If you look in the _Subset selection scores_ section, you will find the average precision (AP) and average recall (AR) scores for each individual class.
 
-![AP and AR scores decomposed based on classes](/img/tutorials/precision-recall-coco.png)
+![AP and AR scores decomposed based on classes](../../static/img/tutorials/precision-recall-coco.png)
 
 :::note
 
@@ -223,7 +223,7 @@ To learn more about how the specific metric affects the model performance you:
 
 You should now see a page similar to this:
 
-![Performance by Metric page](/img/tutorials/performance-by-object-area-coco.png)
+![Performance by Metric page](../../static/img/tutorials/performance-by-object-area-coco.png)
 
 The plot shows the true positive rate and the false negative rate as a function of the selected metric; the "Object Area - Relative (P)" in this case.
 We can see how when the model predictions are small in terms of the absolute area, then the true-positive rate is low (bad), while larger predictions are more often correct (good).
