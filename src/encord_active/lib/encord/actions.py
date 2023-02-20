@@ -283,7 +283,7 @@ class EncordActions:
                 old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
 
     def _replace_in_files(self, renaming_map):
-        for subs in iterate_in_batches(renaming_map.items(), 100):
+        for subs in iterate_in_batches(list(renaming_map.items()), 100):
             substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
             cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
             subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
