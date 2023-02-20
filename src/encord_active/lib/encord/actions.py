@@ -131,44 +131,6 @@ def create_filtered_metrics(
         (target_project_structure.metrics / metric_json_path.name).write_text(mm_js)
 
 
-def create_local_copy(project_name: str, filtered_df: pd.DataFrame):
-    curr_project_structure = get_state().project_paths
-    target_project_dir = curr_project_structure.project_dir.parent / project_name
-    target_project_structure = ProjectFileStructure(target_project_dir)
-    os.mkdir(target_project_dir)
-
-    ids_df = filtered_df["identifier"].str.split("_", n=3, expand=True)
-    filtered_label_rows = ids_df[0].unique()
-    filtered_data_hashes = ids_df[1].unique()
-    filtered_objects = ids_df[2].unique()
-
-    curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
-
-    idu_js = json.loads(curr_project_structure.image_data_unit.read_text())
-    filtered_idu_js = {k: v for k, v in idu_js.items() if v["data_hash"] in filtered_data_hashes}
-    target_project_structure.image_data_unit.write_text(json.dumps(filtered_idu_js))
-
-    lrm_js = json.loads(curr_project_structure.label_row_meta.read_text())
-    filtered_lrm_js = {k: v for k, v in lrm_js.items() if k in filtered_label_rows}
-    target_project_structure.label_row_meta.write_text(json.dumps(filtered_idu_js))
-
-    shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
-
-    project_meta = fetch_project_meta(curr_project_structure.project_dir)
-    project_meta["project_title"] = project_name
-    target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
-
-    create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
-
-    copy_filtered_data(
-        curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_objects
-    )
-
-    create_filtered_embeddings(
-        curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
-    )
-
-
 class EncordActions:
     def __init__(self, project_dir: Path, fallback_ssh_key_path: Optional[Path] = None):
         self._original_project = None
@@ -436,6 +398,47 @@ class EncordActions:
             for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
                 self.update_embedding_identifiers(embedding_type, rev_renaming_map)
             raise Exception("UID replacement failed")
+
+    def create_local_copy(self, project_name: str, filtered_df: pd.DataFrame):
+        curr_project_structure = get_state().project_paths
+        target_project_dir = curr_project_structure.project_dir.parent / project_name
+        target_project_structure = ProjectFileStructure(target_project_dir)
+        os.mkdir(target_project_dir)
+
+        ids_df = filtered_df["identifier"].str.split("_", n=3, expand=True)
+        filtered_label_rows = ids_df[0].unique()
+        filtered_data_hashes = ids_df[1].unique()
+        filtered_objects = ids_df[2].unique()
+
+        curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
+
+        idu_js = json.loads(curr_project_structure.image_data_unit.read_text())
+        filtered_idu_js = {k: v for k, v in idu_js.items() if v["data_hash"] in filtered_data_hashes}
+        target_project_structure.image_data_unit.write_text(json.dumps(filtered_idu_js))
+
+        lrm_js = json.loads(curr_project_structure.label_row_meta.read_text())
+        filtered_lrm_js = {k: v for k, v in lrm_js.items() if k in filtered_label_rows}
+        target_project_structure.label_row_meta.write_text(json.dumps(filtered_idu_js))
+
+        shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
+
+        project_meta = fetch_project_meta(curr_project_structure.project_dir)
+        project_meta["project_title"] = project_name
+        target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
+
+        create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
+
+        copy_filtered_data(
+            curr_project_structure,
+            target_project_structure,
+            filtered_label_rows,
+            filtered_data_hashes,
+            filtered_objects,
+        )
+
+        create_filtered_embeddings(
+            curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
+        )
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
