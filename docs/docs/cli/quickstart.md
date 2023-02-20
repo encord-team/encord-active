@@ -11,4 +11,4 @@ To get started quickly, you run the following command.
 encord-active quickstart
 ```
 
-The script will download a small example project to your a subdirectory called `quickstart` in current working directory and open the application straight away.
+The script will download a small example project to a subdirectory called `quickstart` in current working directory and open the application straight away.
