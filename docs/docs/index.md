@@ -1,6 +1,5 @@
 ---
 sidebar_position: 1
-slug: /
 ---
 
 import Tabs from '@theme/Tabs';
@@ -59,7 +58,7 @@ encord-active download
 
 This will allow you to choose a dataset to download. When the download process is complete, you visualize the results by following the printed instructions.
 
-:::tip  
+:::tip
 You can follow the [COCO sandbox dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features of Encord Active.
 :::
 
