@@ -10,7 +10,7 @@ Box-plot outlier technique is used to identify outliers and according to its dis
 into two category: **Severe** outlier and **moderate** outlier.  
 
 On this page, images are ranked according to their distance to the IQR (between 25th and 75th percentiles).  
-[Tagging](/workflows/tags.mdx) feature is available on this page to tag images of interest and take action on them.
+[Tagging](../../workflows/tags.mdx) feature is available on this page to tag images of interest and take action on them.
 
 
 ![Label Quality Summary page](../../gifs/label-quality-summary.gif)
