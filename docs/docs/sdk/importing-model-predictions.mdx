@@ -41,7 +41,7 @@ from encord import EncordUserClient
 # highlight-next-line
 data_dir = Path("/path/to/the/data")
 
-meta = yaml.save_load((data_dir / "project_meta.yaml").read_text())
+meta = yaml.safe_load((data_dir / "project_meta.yaml").read_text())
 private_key = Path(meta["ssh_key_path"]).read_text()
 
 client = EncordUserClient.create_with_ssh_private_key(private_key)
