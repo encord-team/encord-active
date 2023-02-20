@@ -57,7 +57,8 @@ def upload_img(
         return None
     img_exif = img.getexif()
     if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
-        temp_file_name = "temp_image" + file_path.suffix
+        # temp_file_name = "temp_image" + file_path.suffix
+        temp_file_name = file_path.name
         img = ImageOps.exif_transpose(img)
         img.save(temp_file_name)
 
@@ -69,8 +70,8 @@ def upload_img(
         except FileTypeNotSupportedError as e:
             print(f"{file_path} will be skipped as it doesn't seem to be an image.")
             encord_image = None
-        finally:
-            os.remove(temp_file_name)
+        # finally:
+        #     os.remove(temp_file_name)
 
         return encord_image
     else:
