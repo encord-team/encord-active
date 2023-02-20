@@ -6,8 +6,9 @@ import TOCInline from "@theme/TOCInline";
 
 # Migrating Data to Encord
 
-Although we plan to fix this very soon, Encord Active is currently dependent on [Encord](https://www.encord.com) Projects.
-If you haven't got such a project, you have a couple of options to migrate your data to the Encord platform:
+If the [standard solutions for importing data](/workflows/importing-data-and-labels) do not fit your use-case, your best option is to migrate your data to the [Encord Annotate](https://app.encord.com) before importing it into Encord Active.
+
+There are a couple of options for doing this:
 
 <TOCInline toc={toc} />
 
@@ -20,9 +21,9 @@ will be happy to provide you with an account to get you started.
 
 :::
 
-## Import data from CVAT/COCO
+## Import data from CVAT
 
-If you have a CVAT/COCO project already, you can import your data into Encord easily by following these steps:
+If you have a CVAT project already, you can import your data into Encord easily by following these steps:
 
 1. [Set up public key authentication with Encord](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)
 2. [Import CVAT project via the SDK](https://python.docs.encord.com/tutorials/projects.html#cvat-integration) or [Import COCO using Encord Active](/cli/import-coco-project)
@@ -33,7 +34,7 @@ Again, if you need help, don't be shy to reach out on the [Slack community](http
 
 :::caution
 
-This is less straight forward and will require some coding!
+:fire: This is less straight forward and will require some coding!
 
 :::
 
