@@ -24,7 +24,7 @@ This will import the project into a subdirectory of `/path/to/store/project`.
 
 :::tip
 
-If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](/workflows/importing-data-and-labels).
+If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](../workflows/importing-data-and-labels).
 
 :::
 
@@ -43,4 +43,4 @@ The command will ask you:
 
 Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./open-encord-active) page.

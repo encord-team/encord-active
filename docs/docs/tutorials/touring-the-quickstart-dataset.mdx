@@ -15,7 +15,7 @@ You will go through the following steps:
 
 :::note
 
-This tutorial assumes that you have [installed](/installation) `encord-active`.
+This tutorial assumes that you have [installed](../installation) `encord-active`.
 
 :::
 
@@ -38,10 +38,10 @@ If the command hangs and nothing happens in your browser, go to <Link to={"http:
 :::
 
 ### About the dataset
+
 The Quickstart dataset contains images and labels for 200 random samples from the [COCO 2017 validation set](https://cocodataset.org/#download) with a pre-trained [MASK R-CNN RESNET50 FPN V2](https://arxiv.org/abs/1703.06870) model.
 
 First thing we try is to find, tag, and export image outliers.
-
 
 ## 2. Finding and tagging outliers {#find-and-tag-outliers}
 
@@ -58,8 +58,6 @@ On the summary page, you can see all the outliers that Encord Active automatical
 Scroll down on the main view and click the "Red Values Outliers" section and expand it:
 
 ![Red Values Outliers](../../static/img/tutorials/quickstart-data-quality-outliers.gif)
-
-
 
 :::tip
 
@@ -144,10 +142,10 @@ We've choosen a subset of classes [`person`, `cat`, `dog`, `bus`] in the setting
 
 :::
 
-* From the left plot (Mean scores), we can see the AP and the AR for each individual class.
-* The right plot shows the precision-recall curves for each of the classes.
-* From these plots, we learn that the model performs better on the `dog` class than it does on, e.g., the `bus` class.
-* To learn for which instances the model works and for which it doesn't, you can look in the _True Positives_, _False Positives_, and _False Negatives_ tabs to see concrete instances of the three success/failure modes.
+- From the left plot (Mean scores), we can see the AP and the AR for each individual class.
+- The right plot shows the precision-recall curves for each of the classes.
+- From these plots, we learn that the model performs better on the `dog` class than it does on, e.g., the `bus` class.
+- To learn for which instances the model works and for which it doesn't, you can look in the _True Positives_, _False Positives_, and _False Negatives_ tabs to see concrete instances of the three success/failure modes.
 
 ### Inspecting model performance for a specific metric
 
@@ -174,7 +172,7 @@ By now, you should have a good idea about how Encord Active can be used to under
 
 ### Next steps
 
-- We have only covered a few of the page in the app briefly in this tutorial. To learn more about what information you can find in each page, please refer to the [Pages](/category/pages) section.
-- To learn more about concrete actionable steps you can take to improve your model performance, we suggest that you have a look at the [Workflow section](/category/workflows).
-- If you want to learn more about the existing metrics or want to build your own metric function, the [Metrics section](/category/metrics) is where you should continue reading.
-- Finally, we have also included some in-depth descriptions the [Command Line Interface](/category/command-line-interface).
+- We have only covered a few of the page in the app briefly in this tutorial. To learn more about what information you can find in each page, please refer to the [Pages](category/pages) section.
+- To learn more about concrete actionable steps you can take to improve your model performance, we suggest that you have a look at the [Workflow section](category/workflows).
+- If you want to learn more about the existing metrics or want to build your own metric function, the [Metrics section](category/metrics) is where you should continue reading.
+- Finally, we have also included some in-depth descriptions the [Command Line Interface](category/command-line-interface).
