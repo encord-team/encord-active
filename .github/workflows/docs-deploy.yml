@@ -79,3 +79,11 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENCORD_ACTIVE_FRONTEND }}
           PROJECT_PATH: ./${{ env.SRC_FOLDER }}
+
+      - name: Trigger global docs rebuild
+        run: |
+          curl -X POST \
+          -H "Authorization: Bearer ${{secrets.AUTOMATION_BOT_ACCESS_TOKEN}}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/encord-team/cord-docs/actions/workflows/docs-deploy.yml/dispatches \
+          -d '{"ref": "main"}'
