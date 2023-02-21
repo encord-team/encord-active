@@ -6,7 +6,7 @@ sidebar_position: 2
 
 **Visualise the relationship between your model performance and metrics**
 
-With this workflow, you will be able to identify the most important [metrics](/category/metrics) for your model performance and prioritise further data exploration and actions.
+With this workflow, you will be able to identify the most important [metrics](category/metrics) for your model performance and prioritise further data exploration and actions.
 
 `Prerequisites:` Dataset, Labels, Predictions
 
@@ -15,8 +15,8 @@ With this workflow, you will be able to identify the most important [metrics](/c
 1. Navigate to the _Model Quality_ > _Metrics_ tab.
 2. Select label classes to include in the top left drop down menu.
 3. Determine IoU threshold using the slider in the top bar. By default, IoU threshold is set to 0.50.
-4. Next, Encord Active automatically computes mAP, mAR, [Metric Importance](/pages/model-quality/metrics), and
-   [Metric Correlation](/pages/model-quality/metrics).
+4. Next, Encord Active automatically computes mAP, mAR, [Metric Importance](../../pages/model-quality/metrics), and
+   [Metric Correlation](../../pages/model-quality/metrics).
 
    **Metric importance**: Measures the _strength_ of the dependency between a metric and model
    performance. A high value means that the model performance would be strongly affected by

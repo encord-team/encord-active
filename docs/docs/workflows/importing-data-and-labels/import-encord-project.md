@@ -7,7 +7,7 @@ sidebar_position: 1
 > For projects already in the Encord platform.
 
 This workflow will get you through importing your data from Encord into a local Encord Active project.
-You will get a directory containing all the data, labels, and [metrics](/category/metrics) of the project.
+You will get a directory containing all the data, labels, and [metrics](category/metrics) of the project.
 
 To import your project, run this command:
 
@@ -34,7 +34,7 @@ This will let you choose your newly imported project and open the app.
 
 :::info
 
-For the full documentation of importing Encord projects, please see [here](/cli/import-encord-project).
+For the full documentation of importing Encord projects, please see [here](../../cli/import-encord-project).
 
 :::
 
