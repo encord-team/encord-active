@@ -8,7 +8,7 @@
 
 <h1 align="center">
   <p align="center">Encord Active</p>
-  <a href="https://encord.com"><img src="src/encord_active/app/assets/encord_2_02.png" width="150" alt="Encord logo"/></a>
+  <a href="https://encord.com"><img src="docs/static/img/icons/encord_logo.png" width="150" alt="Encord logo"/></a>
 </h1>
 
 [![PRs-Welcome][contribute-image]][contribute-url]
@@ -27,7 +27,7 @@
 
 Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
-![video](resources/ea-demo.gif)
+![video](docs/static/gifs/ea-demo.gif)
 
 ## 💡 When to use Encord Active?
 
@@ -35,7 +35,7 @@ Encord Active helps you understand and improve your data, labels, and models at 
 
 Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
 
-![encord active diagram](resources/process-chart-ea.webp)
+![encord active diagram](docs/static/img/process-chart-ea.webp)
 
 ## 🔖 Documentation
 
@@ -92,7 +92,7 @@ The app should then open in the browser.
 If not, navigate to [`localhost:8501`](http://localhost:8501).
 Our [docs][encord-active-docs] contains more information about what you can see in the page.
 
-## <img width="24" height="24" src="resources/logo.png"/> Import your dataset
+## <img width="24" height="24" src="docs/static/img/icons/encord_icon.png"/> Import your dataset
 
 ### Quick import Dataset
 
@@ -174,13 +174,13 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
-| Data   |     | Labels          |     | Project sizes |                |
-| ------ | --- | --------------- | --- | ------------- | -------------- |
-| `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 100.000        |
-| `png`  | ✅  | Polygons        | ✅  | Videos        | 100.000 frames |
-| `tiff` | ✅  | Segmentation    | ✅  |               |                |
-| `mp4`  | ✅  | Classifications | 🟡  |               |                |
-|        |     | Polylines       | 🟡  |               |                |
+| Data Types |     | Labels          |     | Project sizes |                |
+| ---------- | --- | --------------- | --- | ------------- | -------------- |
+| `jpg`      | ✅  | Bounding Boxes  | ✅  | Images        | 100.000        |
+| `png`      | ✅  | Polygons        | ✅  | Videos        | 100.000 frames |
+| `tiff`     | ✅  | Segmentation    | ✅  |               |                |
+| `mp4`      | ✅  | Classifications | ✅  |               |                |
+|            |     | Polylines       | 🟡  |               |                |
 
 ## 🧑🏽‍💻Development
 
