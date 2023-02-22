@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from natsort import natsorted
-from pandas import Series
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_plotly_events import plotly_events
@@ -37,7 +36,12 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
 )
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
+from encord_active.lib.embeddings.utils import (
+    Embedding2DSchema,
+    PointSchema2D,
+    PointSelectionSchema,
+    SimilaritiesFinder,
+)
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
@@ -134,15 +138,13 @@ class ExplorerPage(Page):
 def get_selected_rows(
     embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
 ) -> DataFrame[Embedding2DSchema]:
-    """
-    Selected points from the plotly graph only have x and y values, so we need a hacky way to identify selected points
-    Here, we just create and additional column by merging x and y points, so that we can get the selected points'
-    identifiers for filtering.
-    """
-    selected_points_merged = [str(int(item["x"] * 1000)) + "-" + str(int(item["y"] * 1000)) for item in selected_points]
-
-    selected_rows = embeddings_2d[embeddings_2d[Embedding2DSchema.x_y].isin(selected_points_merged)]
-    return selected_rows
+    selection_raw = DataFrame[PointSelectionSchema](pd.DataFrame(selected_points))
+    selected_rows = embeddings_2d.copy().merge(
+        selection_raw[[PointSchema2D.x, PointSchema2D.y]],
+        on=[PointSchema2D.x, PointSchema2D.y],
+        how="inner",
+    )
+    return DataFrame[Embedding2DSchema](selected_rows)
 
 
 def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
@@ -245,7 +247,7 @@ def fill_data_quality_window(
 def build_card(
     embedding_information: SimilaritiesFinder,
     card_no: int,
-    row: Series,
+    row: pd.Series,
     similarity_expanders: list[DeltaGenerator],
     metric_scope: MetricScope,
     metric: MetricData,

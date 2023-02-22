@@ -72,15 +72,4 @@ def get_2d_embedding_data(
         cnn_embeddings = pickle.load(f)
 
     df = pd.DataFrame(cnn_embeddings)
-    """
-    plotly_events component only return x and y values for the selected points, therefore, we need to add
-    the following additional columns to filter out selected points
-    """
-    df["x_y"] = (
-        (df[Embedding2DSchema.x] * 1000).astype(int).astype(str)
-        + "-"
-        + (df[Embedding2DSchema.y] * 1000).astype(int).astype(str)
-    )
-    df = DataFrame[Embedding2DSchema](df)
-
-    return df
+    return DataFrame[Embedding2DSchema](df)

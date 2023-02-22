@@ -87,11 +87,19 @@ EMBEDDING_REDUCED_TO_FILENAME = {
 }
 
 
-class Embedding2DSchema(IdentifierSchema):
+class PointSchema2D(pa.SchemaModel):
     x: Series[float] = pa.Field(coerce=True)
     y: Series[float] = pa.Field(coerce=True)
+
+
+class PointSelectionSchema(PointSchema2D):
+    curveNumber: Series[float] = pa.Field(coerce=True)
+    pointNumber: Series[float] = pa.Field(coerce=True)
+    pointIndex: Series[float] = pa.Field(coerce=True)
+
+
+class Embedding2DSchema(IdentifierSchema, PointSchema2D):
     label: Series[str]
-    x_y: Series[str]
 
 
 def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:
