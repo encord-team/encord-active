@@ -99,8 +99,6 @@ class PointSelectionSchema(PointSchema2D):
 
 
 class Embedding2DSchema(IdentifierSchema, PointSchema2D):
-    x: Series[float] = pa.Field(coerce=True)
-    y: Series[float] = pa.Field(coerce=True)
     label: Series[str]
 
 
