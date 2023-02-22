@@ -116,8 +116,15 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
         scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
 
-def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator):
-    st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your dataset")
+def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator, metric_scope: MetricScope):
+    if metric_scope == MetricScope.DATA_QUALITY:
+        issue_context = "data"
+    elif metric_scope == MetricScope.LABEL_QUALITY:
+        issue_context = "labels"
+    else:
+        issue_context = "project"
+
+    st_col.subheader(f":triangular_flag_on_post: {metrics.shape[0]} issues to fix in your {issue_context}")
 
     for counter, (_, row) in enumerate(metrics.iterrows()):
         st_col.metric(
@@ -185,7 +192,7 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     metrics_with_severe_outliers = all_metrics_outliers[
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
-    render_issues_pane(metrics_with_severe_outliers, issues_col)
+    render_issues_pane(metrics_with_severe_outliers, issues_col, MetricScope.DATA_QUALITY)
 
     render_2d_metric_plots(get_state().metrics_data_summary)
 
@@ -274,7 +281,7 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
     metrics_with_severe_outliers = all_metrics_outliers[
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
-    render_issues_pane(metrics_with_severe_outliers, issues_col)
+    render_issues_pane(metrics_with_severe_outliers, issues_col, MetricScope.LABEL_QUALITY)
     render_2d_metric_plots(get_state().metrics_label_summary)
 
 
