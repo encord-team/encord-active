@@ -62,11 +62,11 @@ class SubsetCreationResult(NamedTuple):
 
 
 def create_filtered_embeddings(
-        curr_project_structure: ProjectFileStructure,
-        target_project_structure: ProjectFileStructure,
-        filtered_label_rows,
-        filtered_data_hashes,
-        filtered_df: pd.DataFrame,
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_label_rows,
+    filtered_data_hashes,
+    filtered_df: pd.DataFrame,
 ):
     if not target_project_structure.embeddings.exists():
         os.mkdir(target_project_structure.embeddings)
@@ -83,11 +83,11 @@ def create_filtered_embeddings(
 
 
 def copy_filtered_data(
-        curr_project_structure: ProjectFileStructure,
-        target_project_structure: ProjectFileStructure,
-        filtered_label_rows,
-        filtered_data_hashes,
-        filtered_objects,
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_label_rows,
+    filtered_data_hashes,
+    filtered_objects,
 ):
     if not target_project_structure.data.is_dir():
         os.mkdir(target_project_structure.data)
@@ -123,9 +123,9 @@ def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
 
 
 def create_filtered_metrics(
-        curr_project_structure: ProjectFileStructure,
-        target_project_structure: ProjectFileStructure,
-        filtered_df: pd.DataFrame,
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
 ):
     if not target_project_structure.metrics.is_dir():
         os.mkdir(target_project_structure.metrics)
@@ -181,12 +181,12 @@ class EncordActions:
         return self._original_project
 
     def _upload_item(
-            self,
-            dataset: Dataset,
-            label_row_hash: str,
-            data_unit_hash: str,
-            data_unit_hashes: set[str],
-            new_du_to_original: dict[str, LabelRowDataUnit],
+        self,
+        dataset: Dataset,
+        label_row_hash: str,
+        data_unit_hash: str,
+        data_unit_hashes: set[str],
+        new_du_to_original: dict[str, LabelRowDataUnit],
     ) -> Optional[str]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
@@ -221,11 +221,11 @@ class EncordActions:
             raise Exception(f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}')
 
     def create_dataset(
-            self,
-            dataset_title: str,
-            dataset_description: str,
-            dataset_df: pd.DataFrame,
-            progress_callback: Optional[Callable] = None,
+        self,
+        dataset_title: str,
+        dataset_description: str,
+        dataset_df: pd.DataFrame,
+        progress_callback: Optional[Callable] = None,
     ):
         datasets_with_same_title = self.user_client.get_datasets(title_eq=dataset_title)
         if len(datasets_with_same_title) > 0:
@@ -278,7 +278,7 @@ class EncordActions:
 
     @staticmethod
     def prepare_label_row(
-            original_label_row: LabelRow, new_label_row: LabelRow, new_label_row_data_unit_hash: str, original_du: str
+        original_label_row: LabelRow, new_label_row: LabelRow, new_label_row_data_unit_hash: str, original_du: str
     ) -> LabelRow:
         if new_label_row["data_type"] in [DataType.IMAGE.value, DataType.VIDEO.value]:
             original_labels = original_label_row["data_units"][original_du]["labels"]
@@ -312,12 +312,12 @@ class EncordActions:
         return construct_answer_dictionaries(new_label_row)
 
     def create_project(
-            self,
-            dataset_creation_result: DatasetCreationResult,
-            project_title: str,
-            project_description: str,
-            ontology_hash: str,
-            progress_callback: Optional[Callable] = None,
+        self,
+        dataset_creation_result: DatasetCreationResult,
+        project_title: str,
+        project_description: str,
+        ontology_hash: str,
+        progress_callback: Optional[Callable] = None,
     ):
         new_project_hash: str = self.user_client.create_project(
             project_title=project_title,
@@ -348,8 +348,8 @@ class EncordActions:
                 original_label_row, new_label_row, new_label_data_unit_hash, original_lr_du.data_unit
             )
             if any(
-                    data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
-                    for data_unit in label_row["data_units"].values()
+                data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
+                for data_unit in label_row["data_units"].values()
             ):
                 new_project.save_label_row(label_row["label_hash"], label_row)
 
@@ -388,7 +388,7 @@ class EncordActions:
             subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
 
     def replace_uids(
-            self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
+        self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
     ):
         label_row_meta = json.loads(self.project_file_structure.label_row_meta.read_text(encoding="utf-8"))
         original_dataset_hash = next(iter(label_row_meta.values()))["dataset_hash"]
@@ -411,7 +411,9 @@ class EncordActions:
                 self.update_embedding_identifiers(embedding_type, rev_renaming_map)
             raise Exception("UID replacement failed")
 
-    def create_local_subset(self, project_title: str, project_description: str, filtered_df: pd.DataFrame) -> SubsetCreationResult:
+    def create_local_subset(
+        self, project_title: str, project_description: str, filtered_df: pd.DataFrame
+    ) -> SubsetCreationResult:
         curr_project_structure = get_state().project_paths
         target_project_dir = curr_project_structure.project_dir.parent / project_title
         target_project_structure = ProjectFileStructure(target_project_dir)
@@ -438,15 +440,12 @@ class EncordActions:
         dataset_hash_map: dict[str, set[str]] = {}
         label_rows = set()
         for k, v in filtered_lrm_js.items():
-            dataset_hash_map.setdefault(v['dataset_hash'], set()).add(v['data_hash'])
+            dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
             label_rows.add(k)
 
         creation_result = SubsetCreationResult(
-            label_rows=list(label_rows),
-            dataset_to_data_hash_map={k: list(v) for k, v in dataset_hash_map.items()}
+            label_rows=list(label_rows), dataset_to_data_hash_map={k: list(v) for k, v in dataset_hash_map.items()}
         )
-
-
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
@@ -454,7 +453,7 @@ class EncordActions:
         project_meta["project_title"] = project_title
         project_meta["project_description"] = project_description
         project_meta["has_remote"] = False
-        project_meta["project_hash"] = ''
+        project_meta["project_hash"] = ""
         target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
@@ -472,8 +471,15 @@ class EncordActions:
         )
         return creation_result
 
-    def clone_remote_copy(self, creation_result: SubsetCreationResult, project_name: str, project_description: str, dataset_title: str,
-                          dataset_description: str, filtered_df: pd.DataFrame):
+    def clone_remote_copy(
+        self,
+        creation_result: SubsetCreationResult,
+        project_name: str,
+        project_description: str,
+        dataset_title: str,
+        dataset_description: str,
+        filtered_df: pd.DataFrame,
+    ):
         self.original_project.copy_project(
             new_title=project_name,
             new_description=project_description,
@@ -486,8 +492,8 @@ class EncordActions:
             ),
             copy_labels=CopyLabelsOptions(
                 accepted_label_statuses=[state for state in ReviewApprovalState],
-                accepted_label_hashes=creation_result.label_rows
-            )
+                accepted_label_hashes=creation_result.label_rows,
+            ),
         )
 
 

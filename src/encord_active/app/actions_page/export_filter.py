@@ -229,11 +229,19 @@ def export_filter():
         close_all_forms()
 
     if not project_has_remote:
-        render_export_button(action_columns[3], action_utils, close_all_forms, get_export_form_button, set_export_form_button)
+        render_export_button(
+            action_columns[3], action_utils, close_all_forms, get_export_form_button, set_export_form_button
+        )
 
     if row_count != original_row_count:
         render_subset_button(
-            action_columns[4], action_utils, filtered_df, project_has_remote, close_all_forms, get_clone_form_button, set_clone_form_button
+            action_columns[4],
+            action_utils,
+            filtered_df,
+            project_has_remote,
+            close_all_forms,
+            get_clone_form_button,
+            set_clone_form_button,
         )
 
 
@@ -252,7 +260,13 @@ def generate_create_project_form(header: str, num_rows: int, items_to_render: li
 
 
 def render_subset_button(
-    render_col, action_utils: EncordActions, filtered_df, project_has_remote: bool, close_forms, get_create_button, set_create_button
+    render_col,
+    action_utils: EncordActions,
+    filtered_df,
+    project_has_remote: bool,
+    close_forms,
+    get_create_button,
+    set_create_button,
 ):
     render_col.button(
         "🏗 Create Subset",
@@ -271,11 +285,22 @@ def render_subset_button(
 
         with st.spinner("Creating Project Subset..."):
             try:
-                created_dir = action_utils.create_local_subset(project_title=cols.project.title, project_description=cols.project.description, filtered_df=filtered_df)
+                created_dir = action_utils.create_local_subset(
+                    project_title=cols.project.title,
+                    project_description=cols.project.description,
+                    filtered_df=filtered_df,
+                )
             except Exception as e:
                 st.error(str(e))
-            if project_has_remote:
-                action_utils.clone_remote_copy(created_dir, cols.project.title, cols.project.description, cols.dataset.title, cols.dataset.description, filtered_df)
+            if project_has_remote and cols.dataset:
+                action_utils.clone_remote_copy(
+                    created_dir,
+                    cols.project.title,
+                    cols.project.description,
+                    cols.dataset.title,
+                    cols.dataset.description,
+                    filtered_df,
+                )
         label = st.empty()
         label.info("🎉 Project subset has been created!")
         st.markdown(created_dir)
