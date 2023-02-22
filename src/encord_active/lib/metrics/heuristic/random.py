@@ -24,7 +24,7 @@ class RandomeImageMetric(Metric):
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
-        for _ in iterator.iterate(desc="Progress bar description"):
+        for _ in iterator.iterate(desc="Assigning random values to images"):
             writer.write(np.random.uniform())
 
 
