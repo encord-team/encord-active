@@ -34,7 +34,7 @@ class ObjectDetection(BaseModel):
     feature_hash: str
     track_id: Optional[Union[str, int]] = None
 
-    @validator("data", pre=True)
+    @validator("data", pre=True, allow_reuse=True)
     def transform(v):  # pylint: disable=no-self-argument
         if isinstance(v, str):
             v = json.loads(v)
@@ -43,7 +43,7 @@ class ObjectDetection(BaseModel):
 
         return v
 
-    @validator("data")
+    @validator("data", allow_reuse=True)
     def format_and_data_valid(cls, v, values):  # pylint: disable=no-self-argument
         format = values.get("format")
         if format == Format.BOUNDING_BOX:
@@ -81,8 +81,8 @@ class Prediction(BaseModel):
     object: Optional[ObjectDetection] = None
     classification: Optional[FrameClassification] = None
 
-    @root_validator(pre=True)
-    def check_card_number_omitted(cls, values):  # pylint: disable=no-self-argument
+    @root_validator(pre=True, allow_reuse=True)
+    def one_of_object_classification(cls, values):  # pylint: disable=no-self-argument
         object = values.get("object")
         classification = values.get("classification")
         exactly_one_of = (object and not classification) or (classification and not object)
