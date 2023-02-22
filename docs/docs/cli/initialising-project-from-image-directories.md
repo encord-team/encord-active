@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Initialising from Image Directory
 
-If you have an image dataset stored on your local system already, you can initialise an Encord Project from that dataset with the `init` command.
+If you have an image dataset stored on your local system already, you can initialise a project from that dataset with the `init` command.
 The command will automatically run all the existing metrics on your data.
 
 :::info

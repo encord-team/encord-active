@@ -217,7 +217,8 @@ def fill_data_quality_window(
     st.altair_chart(chart, use_container_width=True)
     subset = render_df_slicer(current_df, "score")
 
-    st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} annotations")
+    showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
+    st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} {showing_description}")
 
     paginated_subset = render_pagination(subset, n_cols, n_rows, "score")
 

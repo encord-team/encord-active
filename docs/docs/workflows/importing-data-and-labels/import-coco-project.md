@@ -25,6 +25,6 @@ This will let you choose your newly imported project and open the app.
 
 :::info
 
-For the full documentation of importing COCO projects, please see [here](/cli/import-coco-project).
+For the full documentation of importing COCO projects, please see [here](../../cli/import-coco-project).
 
 :::

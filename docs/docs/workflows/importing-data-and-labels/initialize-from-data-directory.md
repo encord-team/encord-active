@@ -38,6 +38,6 @@ This will let you choose your newly imported project and open the app.
 
 :::info
 
-For the full documentation of initializing a project from an image directory, please see [here](/cli/initialising-project-from-image-directories).
+For the full documentation of initializing a project from an image directory, please see [here](../../cli/initialising-project-from-image-directories).
 
 :::

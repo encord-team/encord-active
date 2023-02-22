@@ -7,16 +7,17 @@ sidebar_position: 2
 **Use Encord Active to find label outliers in your dataset**
 
 With Encord Active, you can quickly find image outliers for pre-defined metrics, custom metrics, and label classes.
-Encord Active finds outliers using precomputed [Interquartile ranges](/pages/data-quality/summary). 
+Encord Active finds outliers using precomputed [Interquartile ranges](../../pages/data-quality/summary).
 
- `Prerequisites:` Dataset & Labels
+`Prerequisites:` Dataset & Labels
 
 ### Setup
-If you haven't installed Encord Active, visit [installation](/installation). In this workflow we will be using the COCO validation dataset.
 
+If you haven't installed Encord Active, visit [installation](../../installation). In this workflow we will be using the COCO validation dataset.
 
 ### Steps
-Navigate to the _Label Quality_ > _Summary_ tab. Here each [metric](/category/metrics) will be presented as an expandable panes.
+
+Navigate to the _Label Quality_ > _Summary_ tab. Here each [metric](category/metrics) will be presented as an expandable panes.
 
 ![label-quality-outliers.png](../../images/label-quality-outliers.png)
 
@@ -26,7 +27,7 @@ Next, you can use the slider to navigate your data from most severe outlier to l
 
 ![label-quality-outliers-slider.png](../../images/label-quality-outliers-slider.png)
 
-When you have identified outliers of interest use the [tagging](/workflows/tags) or [bulk tagging](/workflows/tags) feature to select a group of images.
+When you have identified outliers of interest use the [tagging](../../workflows/tags) or [bulk tagging](../../workflows/tags) feature to select a group of images.
 After creating a tagged image group, you can access it at the bottom of the left sidebar in the _Actions_ tab.
 
 ![label-quality-outliers-tagging.png](../../images/label-quality-outliers-tagging.png)

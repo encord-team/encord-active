@@ -5,7 +5,7 @@ sidebar_position: 5
 # Importing Coco Project
 
 :::info
-Make sure you have installed Encord Active with the `coco` [extras](/installation#coco-extras).
+Make sure you have installed Encord Active with the `coco` [extras](../installation#coco-extras).
 :::
 
 If you already have a project on your local machine using the COCO data format, you can import that project with the following command:
@@ -54,10 +54,10 @@ to tell Encord Active to use symlinks instead of copying files. But be aware tha
 The whole flow might take a while depending on the size of your dataset.
 Bare with us, it is worth the wait.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./open-encord-active) page.
 
 :::info
 
-If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](/pages/export/filter_export#export-to-encord).
+If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](../pages/export/filter_export#export-to-encord).
 
 :::

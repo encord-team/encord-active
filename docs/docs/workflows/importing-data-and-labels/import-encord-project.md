@@ -34,7 +34,7 @@ This will let you choose your newly imported project and open the app.
 
 :::info
 
-For the full documentation of importing Encord projects, please see [here](/cli/import-encord-project).
+For the full documentation of importing Encord projects, please see [here](../../cli/import-encord-project).
 
 :::
 
