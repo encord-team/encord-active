@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -36,9 +35,7 @@ IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
 
 def upload_img(
-    dataset_tmp: LocalDataset,
-    coco_image: CocoImage,
-    image_path: Path,
+    dataset_tmp: LocalDataset, coco_image: CocoImage, image_path: Path, temp_folder: Path
 ) -> Optional[Image]:
     file_path = image_path / coco_image.file_name
 
@@ -57,20 +54,18 @@ def upload_img(
         return None
     img_exif = img.getexif()
     if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
-        temp_file_name = "temp_image" + file_path.suffix
+        temp_file_name = file_path.name
         img = ImageOps.exif_transpose(img)
-        img.save(temp_file_name)
+        img.save(temp_folder / temp_file_name)
 
         try:
             encord_image = dataset_tmp.upload_image(
                 title=str(coco_image.id_),
-                file_path=temp_file_name,
+                file_path=temp_folder / temp_file_name,
             )
         except FileTypeNotSupportedError as e:
             print(f"{file_path} will be skipped as it doesn't seem to be an image.")
             encord_image = None
-        finally:
-            os.remove(temp_file_name)
 
         return encord_image
     else:
@@ -168,12 +163,12 @@ class CocoImporter:
 
         self.user_client = LocalUserClient(self.project_dir)
 
-    def create_dataset(self) -> LocalDataset:
+    def create_dataset(self, temp_folder: Path) -> LocalDataset:
         print(f"Creating a new dataset: {self.title}")
         dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
         for _, coco_image in tqdm(self.images.items(), desc="Uploading images"):
-            upload_img(dataset, coco_image, self.images_dir)
+            upload_img(dataset, coco_image, self.images_dir, temp_folder)
 
         return dataset
 

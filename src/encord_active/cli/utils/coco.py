@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
@@ -72,13 +73,16 @@ def import_coco_project(images_dir: Path, annotations_file: Path, target: Path, 
         use_symlinks=use_symlinks,
     )
 
-    dataset = coco_importer.create_dataset()
-    ontology = coco_importer.create_ontology()
-    coco_importer.create_project(
-        dataset=dataset,
-        ontology=ontology,
-        ssh_key_path=app_config.get_ssh_key(),
-    )
+    with TemporaryDirectory() as temp_dir:
+        temp_folder = Path(temp_dir)
+
+        dataset = coco_importer.create_dataset(temp_folder)
+        ontology = coco_importer.create_ontology()
+        coco_importer.create_project(
+            dataset=dataset,
+            ontology=ontology,
+            ssh_key_path=app_config.get_ssh_key(),
+        )
 
     run_metrics(data_dir=coco_importer.project_dir, use_cache_only=True)
 
