@@ -14,7 +14,7 @@ encord-active download
 The script will ask you to choose a project, navigate the options with <kbd>↑</kbd> and <kbd>↓</kbd> and hit <kbd>enter</kbd>.
 
 When the download process is complete, you visualize the results by following the printed instructions.
-For more details, see the [Open Encord Active](/cli/open-encord-active) page.
+For more details, see the [Open Encord Active](./open-encord-active) page.
 
 If you have a dataset you'd like us to include in the sandbox please submit an issue on Github or contact us directly. We'd love to help!
 

@@ -10,6 +10,7 @@ from rich.panel import Panel
 
 class ConfigProperties(str, Enum):
     SSH_KEY_PATH = "ssh_key_path"
+    DEV = "dev"
 
 
 CONFIG_PROPERTIES = [p.value for p in ConfigProperties]
@@ -35,6 +36,10 @@ class AppConfig:
             self.config_file.touch()
 
         self.contents = toml.load(self.config_file)
+
+    @property
+    def is_dev(self) -> bool:
+        return self.contents.get(ConfigProperties.DEV.value, False)
 
     def get_ssh_key(self) -> Optional[Path]:
         if ConfigProperties.SSH_KEY_PATH.value in self.contents:

@@ -212,6 +212,13 @@ git commit -m "<COMMIT-TYPE>: <COMMIT-MESSAGE>"
 git push -u origin <NEW-BRANCH-NAME>
 ```
 
+:::tip
+
+If you are making changes to the frontend, you can run `encord-active config set dev true` to enable file watchers.
+This will make the UI detect code changes and suggest to (auto) refresh the page.
+
+:::
+
 ### 7. Open a pull request
 
 You can now create a pull request on the GitHub webpage of your repository. The source branch is `<NEW-BRANCH-NAME>` of your repository and the target branch should be `main` of `encord-team/encord-active`. After creating this pull request, you should be able to see it [here](https://github.com/encord-team/encord-active/pulls).

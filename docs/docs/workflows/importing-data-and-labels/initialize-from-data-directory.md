@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# Initializing from Image Directory
+# Initializing from an Image Directory
 
 > Grep arbitrary images from within a dataset directory.
 
@@ -38,6 +38,6 @@ This will let you choose your newly imported project and open the app.
 
 :::info
 
-For the full documentation of initializing a project from an image directory, please see [here](/cli/initialising-project-from-image-directories).
+For the full documentation of initializing a project from an image directory, please see [here](../../cli/initialising-project-from-image-directories).
 
 :::

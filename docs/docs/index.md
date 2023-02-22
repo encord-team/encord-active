@@ -1,6 +1,5 @@
 ---
 sidebar_position: 1
-slug: /
 ---
 
 import Tabs from '@theme/Tabs';
@@ -59,7 +58,7 @@ encord-active download
 
 This will allow you to choose a dataset to download. When the download process is complete, you visualize the results by following the printed instructions.
 
-:::tip  
+:::tip
 You can follow the [COCO sandbox dataset tutorial](tutorials/touring-the-coco-dataset.mdx) to learn the features of Encord Active.
 :::
 
@@ -89,11 +88,11 @@ cd /path/to/project
 encord-active visualise
 ```
 
-You can find more details on the `init` command in the [CLI section](cli/initialising-project-from-image-directories).
+You can find more details on the `init` command in the [CLI section](./cli/initialising-project-from-image-directories).
 
 ## Import an Encord Project
 
-If you are an Encord user, you can directly [import](cli/import-encord-project) your own projects into Encord Active easily.
+If you are an Encord user, you can directly [import](./cli/import-encord-project) your own projects into Encord Active easily.
 
 ```shell
 # within venv
@@ -103,9 +102,9 @@ encord-active import project
 This will import your encord project to a new directory in your current working directory.
 If you don't have an Encord project ready, you can either
 
-1. [Initialise a project from a local data directory](/cli/initialising-project-from-image-directories)
-2. [Migrating data and labels to Encord](sdk/migrating-data) before calling this command
-3. [Download one of our sandbox datasets](/cli/download-sandbox-data)
+1. [Initialise a project from a local data directory](./cli/initialising-project-from-image-directories)
+2. [Migrating data and labels to Encord](./sdk/migrating-data) before calling this command
+3. [Download one of our sandbox datasets](./cli/download-sandbox-data)
 
 :::info
 
@@ -125,7 +124,7 @@ Next, `encord-active` will fetch your data and labels before computing all the [
 Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](/cli/open-encord-active) page.
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./cli/open-encord-active) page.
 
 ## Running the App
 
@@ -150,11 +149,11 @@ If the script just seems to hang and nothing happens in your browser, try visiti
 We recommend to take a look at one of the [tutorials](category/tutorials) that demonstrate Encord Active's capabilities and the [workflows](category/workflows) section to learn about importing your model predictions and improving your model performance.
 A couple of example references are:
 
-1. [Import your model predictions](workflows/import-predictions)
-2. Find outliers in your [data](workflows/improve-your-data/identify-outliers-edge-cases) or your [labels](workflows/improve-your-labels/identify-outliers)
-3. [Identify metrics](workflows/improve-your-models/metric-importance) that are important for your model performance
+1. [Import your model predictions](./workflows/import-predictions)
+2. Find outliers in your [data](./workflows/improve-your-data/identify-outliers-edge-cases) or your [labels](./workflows/improve-your-labels/identify-outliers)
+3. [Identify metrics](./workflows/improve-your-models/metric-importance) that are important for your model performance
 
-You can also have a look at how to [write custom metrics](/metrics/write-your-own) and how to use the [command line interface](https://encord-active-docs.web.app/category/command-line-interface).
+You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](category/command-line-interface).
 
 ### Need Support?
 

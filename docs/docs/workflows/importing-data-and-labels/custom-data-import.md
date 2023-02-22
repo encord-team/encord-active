@@ -8,9 +8,9 @@ sidebar_position: 4
 
 In the situation where you have a custom data and label structure, you have two options:
 
-1. [Migrate your data to Encord](/sdk/migrating-data) before [importing](./import-encord-project) it with  
+1. [Migrate your data to Encord](../../sdk/migrating-data) before [importing](./import-encord-project) it with
    `encord-active import project`
-2. Convert your data and labels to the [COCO data format][coco-format] before [importing](./import-coco-project) it with  
+2. Convert your data and labels to the [COCO data format][coco-format] before [importing](./import-coco-project) it with
    `encord-active import project --coco -i ./images -a ./annotations.json`.
 
 :::info
