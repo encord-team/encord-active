@@ -110,12 +110,18 @@ def create_2d_metric_chart(
     metrics_df: DataFrame[CrossMetricSchema], x_axis_title: str, y_axis_title: str, show_trendline: bool = True
 ) -> go.Figure:
 
+    trendline = None
+    if show_trendline:  # Check that it's possible to compute a trend line.
+        trendline = (
+            "ols" if metrics_df[CrossMetricSchema.x].var() > 0 or metrics_df[CrossMetricSchema.y].var() > 0 else None
+        )
+
     fig = px.scatter(
         metrics_df,
         x=metrics_df[CrossMetricSchema.x],
         y=metrics_df[CrossMetricSchema.y],
         hover_data=["identifier"],
-        trendline="ols" if show_trendline else None,
+        trendline=trendline,
         trendline_color_override="black",
     )
     fig.update_layout(
