@@ -21,7 +21,7 @@ information the metric employs:
 - **Heuristic:** Any other metrics. For example, brightness, sharpness, object counts, etc.
 
 You can use the following template to get started with writing your own metric.
-Your implementation should call `writer.write(<object_score>, <object>)` for every object in the iterator or use `writer.write(<frame_score>)` for every data unit in the iterator.
+Your implementation should call `writer.write(<object_score>, <object>)` for every object in the iterator **OR** use `writer.write(<frame_score>)` for every data unit in the iterator.
 
 ```python
 from loguru import logger
@@ -40,7 +40,7 @@ class ExampleMetric(Metric):
             short_description="Assigns same value and description to all objects.",
             long_description=r"""For long descriptions, you can use Markdown to _format_ the text.
 
-E.g. you can make a
+For example, you can make a
 [hyperlink](https://memegenerator.net/instance/74454868/europe-its-the-final-markdown)
 to the awesome paper that proposed the method.
 

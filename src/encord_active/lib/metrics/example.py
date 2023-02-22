@@ -19,7 +19,7 @@ class ExampleMetric(Metric):
             short_description="Assigns same value and description to all objects.",
             long_description=r"""For long descriptions, you can use Markdown to _format_ the text.
 
-E.g. you can make a
+For example, you can make a
 [hyperlink](https://memegenerator.net/instance/74454868/europe-its-the-final-markdown)
 to the awesome paper that proposed the method.
 
