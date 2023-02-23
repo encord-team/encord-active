@@ -6,6 +6,7 @@ from typing import Callable, Optional
 import rich
 import typer
 from loguru import logger
+from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
 from encord_active.lib.common.utils import fetch_project_meta, update_project_meta
@@ -13,6 +14,7 @@ from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
 logger = logger.opt(colors=True)
+SIMPLE_HEAD_BOX = box.Box("    \n    \n -  \n    \n    \n    \n    \n    \n")
 
 
 @metric_cli.command(name="add", short_help="Add metrics.")
@@ -95,7 +97,16 @@ def list_metrics(
 
     Metrics are listed in a case-insensitive sorted order.
     """
-    pass
+    project_meta = fetch_project_meta(target)
+    project_metrics = project_meta.setdefault("metrics", dict())
+    sorted_names = sorted(project_metrics.keys(), key=lambda x: x.lower())
+
+    table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0)
+    table.add_column("Metric")
+    table.add_column("Editable metric location")
+    for m_name in sorted_names:
+        table.add_row(m_name, project_metrics[m_name])
+    rich.print(table)
 
 
 @metric_cli.command(name="remove", short_help="Remove metrics.")
