@@ -9,6 +9,7 @@ from pandas.api.types import (
     is_datetime64_any_dtype,
     is_numeric_dtype,
 )
+from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state
@@ -152,15 +153,13 @@ def _get_action_utils():
         st.error(str(e))
 
 
-def create_and_sync_remote_project(action_utils, cols: RenderItems, filtered_df):
+def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItems, df: pd.DataFrame):
     if not cols.dataset or not cols.project:
         return
     label = st.empty()
     progress, clear = render_progress_bar()
     label.text("Step 1/2: Uploading data...")
-    dataset_creation_result = action_utils.create_dataset(
-        cols.dataset.title, cols.dataset.description, filtered_df, progress
-    )
+    dataset_creation_result = action_utils.create_dataset(cols.dataset.title, cols.dataset.description, df, progress)
     clear()
     label.text("Step 2/2: Uploading labels...")
     ontology_hash = (
@@ -260,13 +259,13 @@ def generate_create_project_form(header: str, num_rows: int, items_to_render: li
 
 
 def render_subset_button(
-    render_col,
+    render_col: DeltaGenerator,
     action_utils: EncordActions,
-    filtered_df,
+    subset_df: pd.DataFrame,
     project_has_remote: bool,
-    close_forms,
-    get_create_button,
-    set_create_button,
+    close_forms: Callable,
+    get_create_button: Callable,
+    set_create_button: Callable,
 ):
     render_col.button(
         "🏗 Create Subset",
@@ -278,7 +277,7 @@ def render_subset_button(
     if get_create_button():
         items_to_render = ["Project"] if not project_has_remote else ["Dataset", "Project"]
         cols = generate_create_project_form(
-            "Create a subset with the selected items", filtered_df.shape[0], items_to_render
+            "Create a subset with the selected items", subset_df.shape[0], items_to_render
         )
         if not cols or not cols.project:
             return
@@ -288,7 +287,7 @@ def render_subset_button(
                 created_dir = action_utils.create_local_subset(
                     project_title=cols.project.title,
                     project_description=cols.project.description,
-                    filtered_df=filtered_df,
+                    filtered_df=subset_df,
                 )
             except Exception as e:
                 st.error(str(e))
@@ -299,14 +298,20 @@ def render_subset_button(
                     cols.project.description,
                     cols.dataset.title,
                     cols.dataset.description,
-                    filtered_df,
+                    subset_df,
                 )
         label = st.empty()
         label.info("🎉 Project subset has been created!")
         st.markdown(created_dir)
 
 
-def render_export_button(render_col, action_utils, close_forms, get_export_button, set_export_button):
+def render_export_button(
+    render_col: DeltaGenerator,
+    action_utils: EncordActions,
+    close_forms: Callable,
+    get_export_button: Callable,
+    set_export_button: Callable,
+):
     export_button = render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: (close_forms(curr_form=set_export_button), set_export_button(True)),
@@ -327,7 +332,11 @@ def render_export_button(render_col, action_utils, close_forms, get_export_butto
 
 
 def render_unimplemented_buttons(
-    delete_button_column, edit_button_column, augment_button_column, message_placeholder, close_all_forms
+    delete_button_column: DeltaGenerator,
+    edit_button_column: DeltaGenerator,
+    augment_button_column: DeltaGenerator,
+    message_placeholder: DeltaGenerator,
+    close_all_forms: Callable,
 ):
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
@@ -352,7 +361,7 @@ community</a>
         )
 
 
-def render_generate_coco(render_column, file_prefix, filtered_df):
+def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
     coco_placeholder = render_column.empty()
     generate_coco = coco_placeholder.button(
         "🌀 Generate COCO",
@@ -377,7 +386,7 @@ def render_generate_coco(render_column, file_prefix, filtered_df):
         )
 
 
-def render_generate_csv(render_column, file_prefix, filtered_df):
+def render_generate_csv(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
     csv_placeholder = render_column.empty()
     generate_csv = csv_placeholder.button(
         "🌀 Generate CSV",
