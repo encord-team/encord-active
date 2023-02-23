@@ -3,7 +3,7 @@ from pandera.typing import DataFrame
 
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
-from encord_active.lib.charts.precision_recall import create_pr_charts
+from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
@@ -103,5 +103,6 @@ class MetricsPage(ModelQualityPage):
 
         st.subheader("Subset selection scores")
         with st.container():
-            chart = create_pr_charts(metrics, precisions)
-            st.altair_chart(chart, use_container_width=True)
+
+            chart = create_pr_chart_plotly(metrics, precisions, get_state().project_paths.ontology)
+            st.plotly_chart(chart, use_container_width=True)
