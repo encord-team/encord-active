@@ -1,0 +1,104 @@
+---
+sidebar_position: 1
+title: Welcome
+slug: /
+---
+
+import Link from "@docusaurus/Link";
+
+<table>
+  <tr style={{ border: "none" }}>
+    <td style={{ border: "none" }}>
+      <a href="https://github.com/encord-team/encord-active" target="_blank">
+        <img
+          style={{ marginRight: 5 }}
+          alt="View on Github"
+          src="https://img.shields.io/badge/github-view_code-green?logo=github"
+        />
+      </a>
+      <a
+        href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing"
+        target="_blank"
+      >
+        <img
+          style={{ marginRight: 5 }}
+          alt="Open In Colab"
+          src="https://colab.research.google.com/assets/colab-badge.svg"
+        />
+      </a>
+      <a
+        href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q"
+        target="_blank"
+      >
+        <img
+          style={{ marginRight: 5 }}
+          alt="Join us on Slack"
+          src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white&message=join_community"
+        />
+      </a>
+      <a href="https://twitter.com/encord_team" target="_blank">
+        <img
+          style={{ marginRight: 5 }}
+          alt="Twitter Follow"
+          src="https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social"
+        />
+      </a>
+    </td>
+    <td style={{ border: "none" }}>
+      <img
+        style={{ marginRight: 5 }}
+        alt="PyPi version"
+        src="https://img.shields.io/pypi/pyversions/encord-active"
+      />
+      <a href="https://pypi.org/project/encord-active/" target="_blank">
+        <img
+          style={{ marginRight: 5 }}
+          alt="PyPi project"
+          src="https://img.shields.io/pypi/v/encord-active"
+        />
+      </a>
+      <a href="/contributing" target="_blank">
+        <img
+          style={{ marginRight: 5 }}
+          alt="PRs-Welcome"
+          src="https://img.shields.io/badge/PRs-welcome-blue.svg"
+        />
+      </a>
+      <img
+        style={{ marginRight: 5 }}
+        alt="Licence"
+        src="https://img.shields.io/github/license/encord-team/encord-active"
+      />
+    </td>
+  </tr>
+</table>
+
+## ❓ What is Encord Active?
+
+[Encord Active][encord-active-landing] is an open-source active learning tookit that helps you find failure modes in your models and improve your data quality and model performance.
+
+Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
+
+![video](../static/gifs/ea-demo.gif)
+
+## 💡 When to use Encord Active?
+
+Encord Active helps you understand and improve your data, labels, and models at all stages of your computer vision journey.
+
+Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
+
+![encord active diagram](../static/img/process-chart-ea.webp)
+
+## 🖼️ What Data does Encord Active Support?
+
+| Data Types                                   |     | Labels          |     | Project sizes                                 |                |
+| -------------------------------------------- | --- | --------------- | --- | --------------------------------------------- | -------------- |
+| `jpg`                                        | ✅  | Bounding Boxes  | ✅  | Images                                        | 100.000        |
+| `png`                                        | ✅  | Polygons        | ✅  | Videos <span style={{color: "red"}}>\*</span> | 100.000 frames |
+| `tiff`                                       | ✅  | Segmentation    | ✅  |                                               |                |
+| `mp4` <span style={{color: "red"}}>\*</span> | ✅  | Classifications | ✅  |                                               |                |
+|                                              |     | Polylines       | 🟡  |                                               |                |
+
+<span style={{ color: "red" }}>*</span> Requires an Encord Annotate account
+
+[encord-active-landing]: https://encord.com/encord-active/

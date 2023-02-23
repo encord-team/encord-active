@@ -1,0 +1,227 @@
+---
+sidebar_position: 11
+title: FAQ
+---
+
+## Can I use Encord active without an Encord account
+
+You certainly can.
+Encord Active is an open source project aimed to support all computer vision based active learning projects.
+You can, for example, use the [`init`](./cli/initialising-project-from-image-directories) command to initialize a project from an image directory.
+You can also [import a COCO project](./cli/import-coco-project).
+
+The [Importing Data and Labels][importing-data] is a great resource for more information on your possibilities.
+
+---
+
+## Does data stay within my local environment?
+
+**Yes!** - period.
+
+Everything you do with this library stays within your local machine.
+No statistics, data or other information will be send elsewhere.
+
+---
+
+## Is there a deployed version of Encord Active?
+
+No - at least not yet.
+We are, however, working on building a hosted version packed with additional features.
+
+---
+
+## What do I do if I have issues with the installation?
+
+Get in touch with us!
+You can contact us via [slack][join-slack] or by [email][ea-email].
+
+---
+
+## What is a quality metric?
+
+You can think of a metric as any function you can apply to your data, labels, and model predictions to rank/index them.
+From the metrics, Encord Active will automatically decompose and analyze your data, labels, and model predictions.
+
+Here is a [blog][ea-intro-blogpost] post on how we like to think about quality metrics.
+
+Quality metrics are not only limited to those that ship with Encord Active.
+In fact, the power lies in defining your own quality metrics for indexing your data just right.
+[Here][write-metric] is the documentation for writing your own metrics.
+
+---
+
+## How do I import my model predictions?
+
+You build a list of `encord_active.lib.db.Prediction` objects, store them in a pickle file and run `encord-active import predictions /path/to/your/file.pkl`.
+Here is the [workflow description](./workflows/import-predictions) for importing model predictions.
+
+---
+
+## How do I write my own quality metrics?
+
+[Here][write-metric] is the documentation for writing your own metrics.
+
+---
+
+## Initializing Encord Active is taking a long time, what should I do?
+
+For larger projects, initialization can take a while.
+While we're working on improving the efficiency, there are a couple of tricks that you can do.
+
+1. As soon as the metric metric computations have started (indicated by Encord Active printing a line containing `Running metric`) you can open a new terminal and run `encord-active visualize`.
+   This will allow you to continuously see what have been computed so far.
+   Refresh the browser once in a while when new metrics are done computing in your first terminal.
+
+2. You can also kill the import process as soon as metrics have started to compute. This will leave you with a project containing less metrics. As a consequence, you will not be able to see as many insights as if the process is allowed to finish. However, you can always use the `encord-active metricize` command to run metrics that are missing.
+
+---
+
+## How do I add my own embeddings?
+
+This is currently not an easy task.
+
+You will have to create a list of `encord_active.lib.embeddings.utils.LabelEmbedding` objects.
+The objects need to contain your custom (flat) embeddings as numpy arrays and point to the data or labels that you embedded.
+Store the list as a pickle file in
+
+- `project/path/embeddings/cnn_images.pkl` if you do image level embeddings
+- `project/path/embeddings/cnn_objects.pkl` if you do object level embeddings
+- `project/path/embeddings/cnn_objects_reduced.pkl` if you do 2D embeddings for similarity search.
+
+We're working on making this much easier (and documented).
+
+---
+
+## Can I use Encord Active without a UI?
+
+You can.
+We are working on including code snippets in the UI for you to copy code directly into your pipeline.
+Meanwhile, you will have to dig in a bit deeper into the code of Encord Active to see how to use it without the UI.
+
+The code base is structured such that all data operations live in [`encord_active.lib`][ea-lib] which serves as the "backend" for the UI.
+As such, everything you can do with the UI can also be done by code.
+
+The UI/frontend is built in [streamlit](https://streamlit.io/) which is a python based frontend library.
+Therefor, you can find many good examples in the [`encord_active.app`][ea-app] code for how to operate with the project data via python.
+
+Other good resources can be found in our [example notebooks][ea-examples].
+
+---
+
+## How does Encord Active integrate without the Encord annotation platform?
+
+There are multiple ways in which you can integrate your data with Encord Active.
+We have described how to import data [here][importing-data].
+To also integrate model predictions, you can read more [here][importing-predictions].
+Exporting data back into the rest of your pipeline can be done via the [export pages][export-data].
+
+---
+
+## How can I do dataset management with Encord Active?
+
+Dataset management can be done in two ways.
+
+1. You can [tag][tagging] your data to keep track of subsets (or versions) of your dataset.
+2. If you are planning to do more involved changes to your dataset and you want the ability to go back, your best option is to use the _Clone_ button on the [filter and export][filter-and-export] page.---
+   This will create a clone of your entire project and you will always be able to come back to the old project.
+
+:::info
+
+We have project versioning on the roadmap and expect the first version to be available during early spring.
+
+:::
+
+---
+
+## How do I version my data and labels through Encord Active?
+
+The best way to version your project is to tag your data with the [tagging][tagging] feature as you go.
+
+Alternatively, you can use `git`.
+To do that, we suggest adding a `.gitignore` file with the following content:
+
+```gitignore
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/**/*.tiff
+data/**/*.mp4
+```
+
+Next, run `git add .; git commit -am "Initial commit"`.
+
+---
+
+## What is the tagging feature?
+
+Throughout the [Data Quality][data-quality-page], [Label Quality][label-quality-page], and [Model Quality][model-quality-page] pages, you can tag your data.
+There are two different levels at which you can tag data; the data level which applies to the raw images/video frames and the label level which applies to the classifications and objects associated to each image.
+
+You can use the tags to, e.g., [filter and export][filter-and-export] your data for further processing like re-labeling, training models, or inspecting model performance based on a specific subset of your data.
+
+[Here][tagging] is some more documentation on using the tagging feature.
+
+---
+
+## How do I use Encord Active to find label errors?
+
+[Here][finding-label-errors] is a blog post on how to find and fix label errors.
+
+---
+
+## How do I use Encord Active for active learning?
+
+Encord Active supports the active learning process by allowing you to
+
+1. Explore your data to select what to label next
+2. Find label errors that potentially harm your model performance
+3. Automatically decompose your model performance to help you determine where to put your focus for the next model iteration
+4. Tag subsets of data to set aside test sets for specific edge cases for which you want to maintain your model performance between each production model
+
+---
+
+## How do I upload my data and labels to Encord Annotate?
+
+Uploading your data to Encord Annotate is as simple as clicking the _Export to Encord_ button on the [Filter and Export][filter-and-export] page.
+This will create an ontology, a dataset, and a project on Encord Annotate and provide you with links to the three.
+
+:::tip
+
+This require you to have an ssh-key associated with Encord Active:
+
+1. [Add your public][ssh-key-association] key to Encord Annotate
+2. Associate the private key with Encord Active:
+
+```shell
+encord-active config set ssh-key-pash /path/to/private/key
+```
+
+:::
+
+---
+
+## What should I do if I see an error?
+
+If you see an error, we're here to help.
+Get in touch with us on [slack][join-slack] or shoot us an [email][ea-email] and we'll get back to you.
+
+We would also love if you wouldn't mind [reporting an issue][report-issue] on GitHub.
+
+[data-quality-page]: category/data-quality
+[label-quality-page]: category/label-quality
+[model-quality-page]: category/model-quality
+[ea-app]: https://github.com/encord-team/encord-active/tree/main/src/encord_active/app
+[ea-examples]: https://github.com/encord-team/encord-active/tree/main/examples
+[ea-intro-blogpost]: https://encord.com/blog/closing-the-ai-production-gap-encord-active-a-new/
+[ea-lib]: https://github.com/encord-team/encord-active/tree/main/src/encord_active/lib
+[export-data]: category/export
+[filter-and-export]: ./pages/export/filter_export
+[importing-data]: ./workflows/importing-data-and-labels
+[importing-predictions]: ./workflows/import-predictions
+[join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-fzj1eeahoqu91sz0cx0a7q
+[tagging]: ./workflows/tags
+[write-metric]: ./metrics/write-your-own
+[finding-label-errors]: https://encord.com/blog/how-to-find-and-fix-label-errors-with-encord-active/
+[ssh-key-association]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
+[ea-email]: mailto:active@encord.com

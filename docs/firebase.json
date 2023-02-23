@@ -6,7 +6,7 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "redirects": [
         {
-          "source": "/docs/getting-started",
+          "source": "/docs/welcome",
           "destination": "/",
           "type": 301
         }
