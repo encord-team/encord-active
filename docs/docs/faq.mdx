@@ -7,7 +7,7 @@ title: FAQ
 
 You certainly can.
 Encord Active is an open source project aimed to support all computer vision based active learning projects.
-You can, for example, use the [`initialize`](./cli/initialising-project-from-image-directories) command to initialize a project from an image directory.
+You can, for example, use the [`init`](./cli/initialising-project-from-image-directories) command to initialize a project from an image directory.
 You can also [import a COCO project](./cli/import-coco-project).
 
 The [Importing Data and Labels][importing-data] is a great resource for more information on your possibilities.
@@ -70,7 +70,7 @@ While we're working on improving the efficiency, there are a couple of tricks th
 
 1. As soon as the metric metric computations have started (indicated by Encord Active printing a line containing `Running metric`) you can open a new terminal and run `encord-active visualize`.
    This will allow you to continuously see what have been computed so far.
-   Do a browser refresh once in a while when new metrics are done computing in your first terminal.
+   Refresh the browser once in a while when new metrics are done computing in your first terminal.
 
 2. You can also kill the import process as soon as metrics have started to compute. This will leave you with a project containing less metrics. As a consequence, you will not be able to see as many insights as if the process is allowed to finish. However, you can always use the `encord-active metricize` command to run metrics that are missing.
 
@@ -174,7 +174,7 @@ You can use the tags to, e.g., [filter and export][filter-and-export] your data 
 Encord Active supports the active learning process by allowing you to
 
 1. Explore your data to select what to label next
-2. Finding label errors that potentially harm your model performance
+2. Find label errors that potentially harm your model performance
 3. Automatically decompose your model performance to help you determine where to put your focus for the next model iteration
 4. Tag subsets of data to set aside test sets for specific edge cases for which you want to maintain your model performance between each production model
 
@@ -182,7 +182,7 @@ Encord Active supports the active learning process by allowing you to
 
 ## How do I upload my data and labels to Encord Annotate?
 
-Uploading your data to Encord Annotate is as simple as clicking the _Clone_ button on the [Filter and Export][filter-and-export] page.
+Uploading your data to Encord Annotate is as simple as clicking the _Export to Encord_ button on the [Filter and Export][filter-and-export] page.
 This will create an ontology, a dataset, and a project on Encord Annotate and provide you with links to the three.
 
 :::tip
