@@ -269,7 +269,7 @@ def render_subset_button(
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: (close_forms(curr_form=set_create_button), set_create_button(True)),
+        on_click=lambda: (close_forms(curr_form=set_create_button), set_create_button(True)), # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
@@ -314,7 +314,7 @@ def render_export_button(
 ):
     export_button = render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: (close_forms(curr_form=set_export_button), set_export_button(True)),
+        on_click=lambda: (close_forms(curr_form=set_export_button), set_export_button(True)), # type: ignore
         disabled=not action_utils,
         help="Export to an Encord dataset and project",
     )
