@@ -53,10 +53,10 @@ def create_pr_chart_plotly(
     fig.add_trace(
         go.Bar(
             x=[
-                _metrics.loc[_metrics["group"] == "mAP"][_M_COLS.value].mean(),
                 _metrics.loc[_metrics["group"] == "mAR"][_M_COLS.value].mean(),
+                _metrics.loc[_metrics["group"] == "mAP"][_M_COLS.value].mean(),
             ],
-            y=["AP_average", "AR_average"],
+            y=["AR_average", "AP_average"],
             orientation="h",
             name="Average",
             legendgroup="Average",
