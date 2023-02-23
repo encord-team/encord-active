@@ -79,7 +79,7 @@ def add_metrics(
             rich.print(f"[red]ERROR: No matching metric found for {m_name} [/red]")
             has_conflicts = True
 
-    # store updated metric dependencies in project_meta.yaml
+    # update metric dependencies in project_meta.yaml
     update_project_meta(target, project_meta)
     if has_conflicts:
         rich.print("[yellow]Errors were found. Not all metrics were successfully added.[/yellow]")
@@ -116,7 +116,24 @@ def remove_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Remove metrics from the project."""
-    pass
+    project_meta = fetch_project_meta(target)
+    project_metrics = project_meta.setdefault("metrics", dict())
+
+    for m_name in metric_name:
+        if m_name in project_metrics:
+            rich.print(f"Found existing metric: {m_name}")
+            rich.print(f"Removing {m_name}:")
+            rich.print(f"  Would detach:")
+            rich.print(f"    {project_metrics[m_name]}")
+            ok_remove = typer.confirm("Proceed?")
+            if ok_remove:
+                project_metrics.pop(m_name)
+                rich.print(f"Successfully removed {m_name}")
+        else:
+            rich.print(f"[yellow]WARNING: Skipping {m_name} as it is not attached to the project.[/yellow]")
+
+    # update metric dependencies in project_meta.yaml
+    update_project_meta(target, project_meta)
 
 
 @metric_cli.command(name="show", short_help="Show information about available metrics.")
