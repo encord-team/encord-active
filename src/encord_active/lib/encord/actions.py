@@ -151,13 +151,13 @@ class EncordActions:
         try:
             original_project_hash = self.project_meta["project_hash"]
         except Exception as e:
-            raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
+            raise MissingProjectMetaAttribute(e.args[0], self.project_file_structure.project_meta)
 
         try:
             ssh_key_path = Path(self.project_meta["ssh_key_path"]).resolve()
         except Exception as e:
             if not fallback_ssh_key_path:
-                raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
+                raise MissingProjectMetaAttribute(e.args[0], self.project_file_structure.project_meta)
             ssh_key_path = fallback_ssh_key_path
 
         if not ssh_key_path.is_file():
@@ -422,8 +422,9 @@ class EncordActions:
         os.mkdir(target_project_dir)
 
         ids_df = filtered_df["identifier"].str.split("_", n=3, expand=True)
-        filtered_label_rows = ids_df[0].unique()
-        filtered_data_hashes = ids_df[1].unique()
+        filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
+        filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
+        filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
         filtered_objects = ids_df[2].unique()
 
         curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
@@ -504,7 +505,7 @@ def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out
     return None
 
 
-class MissingProjectMetaAttribure(Exception):
+class MissingProjectMetaAttribute(Exception):
     """Exception raised when project metadata doesn't contain an attribute
 
     Attributes:
