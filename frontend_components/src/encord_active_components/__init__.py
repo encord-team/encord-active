@@ -20,8 +20,8 @@ else:
     _pages_menu = components.declare_component("pages-menu", url="http://localhost:5173")
 
 
-def pages_menu(items: List[MenuItem]) -> str:
-    return _pages_menu(items=items)
+def pages_menu(menu_items: List[MenuItem]) -> str:
+    return _pages_menu(items=menu_items)
 
 
 if __name__ == "__main__":
