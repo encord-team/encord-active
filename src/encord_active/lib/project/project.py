@@ -18,9 +18,9 @@ from loguru import logger
 from encord_active.lib.common.utils import (
     collect_async,
     download_file,
-    fetch_project_meta,
     slice_video_into_frames,
 )
+from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)

@@ -97,7 +97,7 @@ def import_project(
 
     Confirm with each help panel what information you will have to provide.
     """
-    from encord_active.lib.common.utils import ProjectMeta
+    from encord_active.lib.project.metadata import ProjectMeta
     from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     file_structure = ProjectFileStructure(target)

@@ -9,8 +9,8 @@ from loguru import logger
 from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.common.utils import fetch_project_meta, update_project_meta
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
+from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
 logger = logger.opt(colors=True)
