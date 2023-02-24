@@ -1,7 +1,7 @@
 import importlib.util
 import inspect
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import rich
 import typer
@@ -9,6 +9,7 @@ from loguru import logger
 from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
+from encord_active.lib.metrics.io import get_module_metrics
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
@@ -144,33 +145,3 @@ def show_metrics(
 ):
     """Show information about one or more available metrics in the project."""
     pass
-
-
-def load_module(module_path: Path):
-    # Load the module from its full path
-    if module_path.suffix != ".py":
-        logger.warning(f"Module '{module_path.as_posix()}' doesn't have a valid python module extension (py).")
-        return None
-    try:
-        spec = importlib.util.spec_from_file_location(module_path.stem, module_path.as_posix())
-        mod = importlib.util.module_from_spec(spec)  # type: ignore
-        spec.loader.exec_module(mod)  # type: ignore
-    except Exception as e:
-        logger.warning(f"Module '{module_path.as_posix()}' is ill-formed. Exception: {e}")
-        return None
-    return mod
-
-
-def get_module_metrics(module_path: Path, filter_func: Callable) -> Optional[list[str]]:
-    mod = load_module(module_path)
-    if mod is None:
-        return None
-    cls_members = inspect.getmembers(mod, inspect.isclass)
-    metrics = []
-    for cls_name, cls_obj in cls_members:
-        if (
-            (issubclass(cls_obj, Metric) and cls_obj != Metric)
-            or (issubclass(cls_obj, SimpleMetric) and cls_obj != SimpleMetric)
-        ) and filter_func(cls_obj):
-            metrics.append(cls_name)
-    return metrics

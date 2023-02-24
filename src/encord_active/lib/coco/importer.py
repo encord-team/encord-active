@@ -30,6 +30,7 @@ from encord_active.lib.encord.local_sdk import (
     LocalProject,
     LocalUserClient,
 )
+from encord_active.lib.metrics.io import fill_project_meta_with_builtin_metrics
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
@@ -212,6 +213,7 @@ class CocoImporter:
             "project_hash": project.project_hash,
             "has_remote": False,
         }
+        fill_project_meta_with_builtin_metrics(project_meta)
         if ssh_key_path:
             project_meta["ssh_key_path"] = ssh_key_path.as_posix()
         meta_file_path = self.project_dir / "project_meta.yaml"

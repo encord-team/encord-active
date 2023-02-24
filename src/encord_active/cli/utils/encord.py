@@ -9,6 +9,7 @@ from rich.panel import Panel
 
 from encord_active.lib.encord.utils import get_client, get_encord_projects
 from encord_active.lib.metrics.execute import run_metrics
+from encord_active.lib.metrics.io import fill_project_meta_with_builtin_metrics
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
@@ -63,13 +64,16 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "ssh_key_path": ssh_key_path.as_posix(),
         "has_remote": True,
     }
+    fill_project_meta_with_builtin_metrics(meta_data)
     meta_file_path = project_path / "project_meta.yaml"
     yaml_str = yaml.dump(meta_data)
     with meta_file_path.open("w", encoding="utf-8") as f:
         f.write(yaml_str)
 
+    # drop metrics data to avoid spam information
+    meta_data.pop("metrics", None)
     rich.print("Stored the following data:")
-    rich.print(f"[magenta]{escape(yaml_str)}")
+    rich.print(f"[magenta]{escape(yaml.dump(meta_data))}")
     rich.print(f'In file: [blue]"{escape(meta_file_path.as_posix())}"')
     rich.print()
     rich.print("Now downloading data and running metrics")
