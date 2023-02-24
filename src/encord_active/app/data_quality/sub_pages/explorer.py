@@ -9,7 +9,7 @@ from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_plotly_events import plotly_events
 
-from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
@@ -237,6 +237,8 @@ def fill_data_quality_window(
         similarity_expanders = []
         for i, (_, row) in enumerate(paginated_subset.iterrows()):
             if not cols:
+                if i:
+                    divider()
                 cols = list(st.columns(n_cols))
                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
@@ -271,16 +273,6 @@ def build_card(
         return
 
     st.image(image)
-    multiselect_tag(row, "explorer", metric_scope)
-
-    target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
-
-    st.button(
-        str(button_name),
-        key=f"similarity_button_{row['identifier']}",
-        on_click=show_similarities,
-        args=(identifier, target_expander, embedding_information),
-    )
 
     # === Write scores and link to editor === #
     tags_row = row.copy()
@@ -295,3 +287,14 @@ def build_card(
         # Hacky way for now (with incorrect rounding)
         description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
         st.write(f"Description: {description}")
+
+    multiselect_tag(row, "explorer", metric_scope)
+
+    target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
+
+    st.button(
+        str(button_name),
+        key=f"similarity_button_{row['identifier']}",
+        on_click=show_similarities,
+        args=(identifier, target_expander, embedding_information),
+    )

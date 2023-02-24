@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
-from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.paginator import render_pagination
 from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
@@ -104,7 +104,7 @@ def prediction_grid(
         st.error("No data in selected quality interval")
     else:
         cols: List = []
-        for _, row in paginated_subset.iterrows():
+        for i, (_, row) in enumerate(paginated_subset.iterrows()):
             frame_additionals: Optional[DataFrame[PredictionMatchSchema]] = None
             if additionals is not None:
                 frame_additionals = additionals[
@@ -112,6 +112,8 @@ def prediction_grid(
                 ]
 
             if not cols:
+                if i:
+                    divider()
                 cols = list(st.columns(n_cols))
             with cols.pop(0):
                 build_card(row, frame_additionals, data_dir, box_color=box_color)
