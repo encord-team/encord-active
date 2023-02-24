@@ -22,10 +22,20 @@ source ea-venv/bin/activate
 pip install encord-active
 ```
 
-:::tip
+:::info
 
 `encord-active` requires [python3.9](https://www.python.org/downloads/release/python-3915/) or above.
 If you have trouble installing `encord-active`, you can find more detailed instructions on installing it [here](./installation).
+
+:::
+
+:::tip
+
+You can also run the docker image instead of install Encord Active
+
+```shell
+docker run -it -p 8501:8501 -v ${PWD}:/data encord/encord-active <command>
+```
 
 :::
 
