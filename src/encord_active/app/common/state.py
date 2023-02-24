@@ -69,7 +69,7 @@ class State:
 
     @classmethod
     def init(cls, project_dir: Path):
-        if GLOBAL_STATE in st.session_state:
+        if GLOBAL_STATE in st.session_state and project_dir == get_state().project_paths.project_dir:
             return
 
         st.session_state[GLOBAL_STATE] = State(
