@@ -29,7 +29,7 @@ poetry version [patch|minor|major]
 Build the package
 
 ```shell
-RELEASE=TRUE poetry build
+poetry build
 ```
 
 Publish the built package
@@ -40,3 +40,13 @@ poetry config pypi-token.pypi <PYPY_TOKEN>
 
 poetry publish
 ```
+
+After publishing, we need to update the dependency in the the main project.
+
+From the root of Encord Active project run:
+
+```shell
+poetry add encord-active-components@latest
+```
+
+This will update both `pyproject.toml` and `poetry.lock` to the latest version available.
