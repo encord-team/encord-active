@@ -2,6 +2,8 @@
 
 This website is built using [Docusaurus 2](https://docusaurus.io/), a modern static website generator.
 
+> **&#9432;** Note: The working directory in the terminal must be '/docs/' and you may need to update your node.js version. 
+
 ### Installation
 
 ```
