@@ -7,7 +7,6 @@ from loguru import logger
 from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.metrics.io import get_metrics, get_module_metrics
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
@@ -33,6 +32,9 @@ def add_metrics(
     If no metric title is provided then all metrics found in the python module will be added to the project.
     """
     rich.print("Inspecting provided module ...")
+
+    from encord_active.lib.metrics.io import get_metrics, get_module_metrics
+
     full_module_path = module_path.expanduser().resolve()
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
