@@ -44,7 +44,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
         to_filter_columns = st.multiselect("Filter dataframe on", columns_to_filter)
         filtered = df.copy()
-
+        filtered['data_row_id'] = filtered.index.str.split('_', n=2).str[0:2].str.join('_')
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
@@ -101,14 +101,10 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 )
                 if user_text_input:
                     filtered = filtered[filtered[column].astype(str).str.contains(user_text_input)]
-
-            non_applicable["data_row_id"] = non_applicable.index.str.rsplit("_", n=1, expand=True).droplevel(1)
-            filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered.index)].drop(
-                ["data_row_id"], axis=1
-            )
-
-            filtered = pd.concat([filtered, filtered_objects_df])
-    return filtered
+            if not non_applicable.empty:
+                filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered['data_row_id'])]
+                filtered = pd.concat([filtered, filtered_objects_df])
+    return filtered.drop("data_row_id", axis=1)
 
 
 class InputItem(NamedTuple):
