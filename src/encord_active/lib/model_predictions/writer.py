@@ -51,6 +51,14 @@ LabelIndex = int
 
 
 @dataclass
+class ClassificationLabelEntry:
+    identifier: str
+    url: str
+    img_id: ImageIdentifier
+    class_id: ClassID  # TODO remove this stupid legacy thing.
+
+
+@dataclass
 class LabelEntry:
     identifier: str
     url: str
@@ -74,6 +82,11 @@ class LabelEntry:
 
 @dataclass
 class PredictionEntry(LabelEntry):
+    confidence: float = 0.0
+
+
+@dataclass
+class ClassificationPredictionEntry(ClassificationLabelEntry):
     confidence: float = 0.0
 
 
@@ -230,9 +243,7 @@ class PredictionWriter:
         self.project = project.load()
         self.storage_dir = project.file_structure.predictions
 
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
-
-        self.predictions: List[PredictionEntry] = []
+        self.predictions: List[Optional[PredictionEntry, ClassificationPredictionEntry]] = []
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
         self.classification_lookup = {
@@ -396,57 +407,75 @@ class PredictionWriter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Do the matching computations
-        ious, ground_truths_matched = precompute_MAP_features(
-            self.predictions, self.object_labels + self.classification_labels
-        )
 
-        # 0. The predictions
-        pred_df = pd.DataFrame(self.predictions)
-        # TODO change bbox to coordinate columns
+        if isinstance(self.predictions[0], ClassificationPredictionEntry):
+            storage_folder = self.storage_dir / "classifications"
+            storage_folder.mkdir(parents=True, exist_ok=True)
 
-        pred_df["iou"] = ious
-        pred_df.to_csv(self.storage_dir / PREDICTIONS_FILENAME)
+            # 0. The predictions
+            pred_df = pd.DataFrame(self.predictions)
 
-        # 1. The labels
-        df = pd.DataFrame(self.object_labels + self.classification_labels)
-        # TODO change bbox to coordinate columns
-        if "rle" in df:
-            df["rle"] = df["rle"].map(
-                lambda x: " ".join(x.reshape(-1).astype(str).tolist()) if isinstance(x, np.ndarray) else x
+            pred_df.to_csv(storage_folder / PREDICTIONS_FILENAME)
+
+            # 1. The labels
+            df = pd.DataFrame(self.object_labels + self.classification_labels)
+            df.to_csv(storage_folder / LABELS_FILE)
+
+        elif isinstance(self.predictions[0], PredictionEntry):
+            storage_folder = self.storage_dir / "objects"
+            storage_folder.mkdir(parents=True, exist_ok=True)
+
+            # Do the matching computations
+            ious, ground_truths_matched = precompute_MAP_features(
+                self.predictions, self.object_labels + self.classification_labels
             )
-        df.to_csv(self.storage_dir / LABELS_FILE)
 
-        # 2. The GT matches
-        with (self.storage_dir / GROUND_TRUTHS_MATCHED_FILE).open("w") as f:
-            json.dump(ground_truths_matched, f)
+            # 0. The predictions
+            pred_df = pd.DataFrame(self.predictions)
+            # TODO change bbox to coordinate columns
 
-        # 3. The class idx map
-        class_index = {}
-        for k, v in self.object_class_id_lookup.items():
-            if k[0] == "_" or v in class_index:
-                continue
+            pred_df["iou"] = ious
+            pred_df.to_csv(storage_folder / PREDICTIONS_FILENAME)
 
-            class_index[v] = {
-                "featureHash": k,
-                "name": self.object_lookup[k].name,
-                "color": self.object_lookup[k].color,
-            }
+            # 1. The labels
+            df = pd.DataFrame(self.object_labels + self.classification_labels)
+            # TODO change bbox to coordinate columns
+            if "rle" in df:
+                df["rle"] = df["rle"].map(
+                    lambda x: " ".join(x.reshape(-1).astype(str).tolist()) if isinstance(x, np.ndarray) else x
+                )
+            df.to_csv(storage_folder / LABELS_FILE)
 
-        for frame_classification, class_id in self.classification_class_id_lookup.items():
-            if class_id in class_index or frame_classification not in self.classification_lookup:
-                continue
+            # 2. The GT matches
+            with (storage_folder / GROUND_TRUTHS_MATCHED_FILE).open("w") as f:
+                json.dump(ground_truths_matched, f)
 
-            selected_option = self.classification_lookup[frame_classification]
-            class_index[class_id] = {
-                "featureHash": frame_classification.feature_hash,
-                "attributeHash": frame_classification.attribute_hash,
-                "optionHash": selected_option.feature_node_hash,
-                "name": selected_option.label,
-            }
+            # 3. The class idx map
+            class_index = {}
+            for k, v in self.object_class_id_lookup.items():
+                if k[0] == "_" or v in class_index:
+                    continue
 
-        with (self.storage_dir / CLASS_INDEX_FILE).open("w") as f:
-            json.dump(class_index, f)
+                class_index[v] = {
+                    "featureHash": k,
+                    "name": self.object_lookup[k].name,
+                    "color": self.object_lookup[k].color,
+                }
+
+            for frame_classification, class_id in self.classification_class_id_lookup.items():
+                if class_id in class_index or frame_classification not in self.classification_lookup:
+                    continue
+
+                selected_option = self.classification_lookup[frame_classification]
+                class_index[class_id] = {
+                    "featureHash": frame_classification.feature_hash,
+                    "attributeHash": frame_classification.attribute_hash,
+                    "optionHash": selected_option.feature_node_hash,
+                    "name": selected_option.label,
+                }
+
+            with (storage_folder / CLASS_INDEX_FILE).open("w") as f:
+                json.dump(class_index, f)
 
     @staticmethod
     def __generate_hash() -> str:
@@ -459,67 +488,73 @@ class PredictionWriter:
         self.uuids.add(object_hash)
         return object_hash
 
-    def add_prediction(self, prediction: Prediction) -> None:
-        """
-        Add a prediction to en encord-active project.
+    def __add_classification_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
 
-        :param prediction: The `prediction` to write.
-        """
+        class_id = self.classification_class_id_lookup.get(prediction.classification)
+        ptype = PredictionType.FRAME
+
+        _frame = 0
+        if not prediction.frame:  # Try to infer frame number from data hash.
+            label_row = self.project.label_rows[label_hash]
+            data_unit = label_row["data_units"][data_hash]
+            if "data_sequence" in data_unit:
+                _frame = int(data_unit["data_sequence"])
+
+        self.predictions.append(
+            ClassificationPredictionEntry(
+                identifier=f"{label_hash}_{data_hash}_{_frame:05d}",
+                url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}",
+                img_id=get_image_identifier(data_hash, _frame),
+                class_id=class_id,
+                confidence=prediction.confidence,
+            )
+        )
+
+    def __add_object_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
         rle = None
-        data_hash = prediction.data_hash
-        label_hash = self.lr_lookup.get(data_hash)
-        if not label_hash:
-            logger.warning(f"Couldn't match data hash `{data_hash}` to any label row")
-            return
-
         du = self.project.label_rows[label_hash]["data_units"][data_hash]
 
         width = int(du["width"])
         height = int(du["height"])
 
-        if prediction.classification:
-            class_id = self.classification_class_id_lookup.get(prediction.classification)
-            ptype = PredictionType.FRAME
-            x1, y1, x2, y2 = [None, None, None, None]
-        elif prediction.object:
-            class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
-            if isinstance(prediction.object.data, np.ndarray):
-                polygon = prediction.object.data
-                ptype = PredictionType.POLYGON
-                if isinstance(polygon, list):
-                    polygon = np.array(polygon)
+        class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
+        if isinstance(prediction.object.data, np.ndarray):
+            polygon = prediction.object.data
+            ptype = PredictionType.POLYGON
+            if isinstance(polygon, list):
+                polygon = np.array(polygon)
 
-                if polygon.ndim != 2:
-                    raise ValueError("Polygon argument should have just 2 dimensions: [h, w] or [N, 2]")
+            if polygon.ndim != 2:
+                raise ValueError("Polygon argument should have just 2 dimensions: [h, w] or [N, 2]")
 
-                if polygon.shape[1] != 2:  # Polygon is mask
-                    np_mask = polygon
-                    x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
-                else:  # Polygon is points
-                    # Read image size from label row
-                    if np.issubdtype(polygon.dtype, np.integer):
-                        polygon = polygon.astype(float) / np.array([[width, height]])
+            if polygon.shape[1] != 2:  # Polygon is mask
+                np_mask = polygon
+                x1, y1, w, h = cv2.boundingRect(polygon)  # type: ignore
+            else:  # Polygon is points
+                # Read image size from label row
+                if np.issubdtype(polygon.dtype, np.integer):
+                    polygon = polygon.astype(float) / np.array([[width, height]])
 
-                    np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
-                    x1, y1, w, h = cv2.boundingRect((polygon * np.array([[width, height]])).reshape(-1, 1, 2).astype(int))  # type: ignore
-                x2, y2 = x1 + w, y1 + h
-                rle = binary_mask_to_rle(np_mask)
+                np_mask = points_to_mask(polygon, width=width, height=height)  # type: ignore
+                x1, y1, w, h = cv2.boundingRect(
+                    (polygon * np.array([[width, height]])).reshape(-1, 1, 2).astype(int)
+                )  # type: ignore
+            x2, y2 = x1 + w, y1 + h
+            rle = binary_mask_to_rle(np_mask)
 
-            else:
-                bbox = prediction.object.data
-                ptype = PredictionType.BBOX
-                x1 = bbox.x * width
-                y1 = bbox.y * height
-                x2 = (bbox.x + bbox.w) * width
-                y2 = (bbox.y + bbox.h) * height
-
-            ontology_object = self.object_lookup[prediction.object.feature_hash]
-            if ontology_object.shape.value != ptype.value:
-                raise ValueError(
-                    f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
-                )
         else:
-            raise ValueError("Prediction must have exactly one of `object` or `classification`")
+            bbox = prediction.object.data
+            ptype = PredictionType.BBOX
+            x1 = bbox.x * width
+            y1 = bbox.y * height
+            x2 = (bbox.x + bbox.w) * width
+            y2 = (bbox.y + bbox.h) * height
+
+        ontology_object = self.object_lookup[prediction.object.feature_hash]
+        if ontology_object.shape.value != ptype.value:
+            raise ValueError(
+                f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
+            )
 
         _frame = 0
         if not prediction.frame:  # Try to infer frame number from data hash.
@@ -551,3 +586,23 @@ class PredictionWriter:
                 rle=rle,
             )
         )
+
+    def add_prediction(self, prediction: Prediction) -> None:
+        """
+        Add a prediction to en encord-active project.
+
+        :param prediction: The `prediction` to write.
+        """
+
+        data_hash = prediction.data_hash
+        label_hash = self.lr_lookup.get(data_hash)
+        if not label_hash:
+            logger.warning(f"Couldn't match data hash `{data_hash}` to any label row")
+            return
+
+        if prediction.classification:
+            self.__add_classification_prediction(prediction, label_hash, data_hash)
+        elif prediction.object:
+            self.__add_object_prediction(prediction, label_hash, data_hash)
+        else:
+            raise ValueError("Prediction must have exactly one of `object` or `classification`")
