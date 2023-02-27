@@ -1,7 +1,5 @@
-import importlib.util
-import inspect
 from pathlib import Path
-from typing import Callable, Optional, TypedDict, Union
+from typing import Optional, TypedDict
 
 import rich
 import typer
@@ -9,8 +7,7 @@ from loguru import logger
 from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.metrics.io import get_module_metrics
-from encord_active.lib.metrics.metric import Metric, SimpleMetric
+from encord_active.lib.metrics.io import get_metrics, get_module_metrics
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
@@ -21,10 +18,10 @@ SIMPLE_HEAD_BOX = box.Box("    \n    \n -  \n    \n    \n    \n    \n    \n")
 @metric_cli.command(name="add", short_help="Add metrics.")
 @ensure_project
 def add_metrics(
-    metric_path: Path = typer.Argument(
+    module_path: Path = typer.Argument(
         ..., help="Path to the python module where the metric resides.", exists=True, dir_okay=False
     ),
-    metric_name: Optional[list[str]] = typer.Argument(None, help="Name of the metric. Can be used multiple times."),
+    metric_title: Optional[list[str]] = typer.Argument(None, help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """
@@ -33,51 +30,49 @@ def add_metrics(
     Add metrics from:
     - local source python modules
 
-    If no metric name is provided then all metrics found in the python module will be added to the project.
+    If no metric title is provided then all metrics found in the python module will be added to the project.
     """
     rich.print("Inspecting provided module ...")
-    metric_names = [] if metric_name is None else metric_name
-    metric_names_set = set(metric_names)
-    expanded_metric_path = metric_path.expanduser().resolve()
+    full_module_path = module_path.expanduser().resolve()
+    metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
     project_meta = fetch_project_meta(target)
     project_metrics = project_meta.setdefault("metrics", dict())  # ensure backwards compatibility
 
-    found_metrics = get_module_metrics(
-        expanded_metric_path, lambda x: len(metric_names) == 0 or x.__name__ in metric_names_set
-    )
+    add_all_metrics = len(metric_titles) == 0
+    if add_all_metrics:
+        # extract all metrics from the module as no metric title was provided
+        found_metrics = get_module_metrics(full_module_path, lambda x: True)
+    else:
+        # faster extraction of selected metrics from the module
+        found_metrics = get_metrics(list(metric_titles.items()))
     if found_metrics is None:
         rich.print("[red]Error: Provided module path doesn't comply with expected format. Check the logs.[/red]")
         return
-    found_metrics_set = set(found_metrics)
 
-    # add all metrics from the python module if the input doesn't contain any metric name.
-    if len(metric_names) == 0:
-        metric_names = found_metrics.copy()
-        metric_names_set = found_metrics_set.copy()
+    found_metric_titles = dict.fromkeys((metric.metadata.title for metric in found_metrics), full_module_path)
+    if add_all_metrics:
+        metric_titles = found_metric_titles.copy()
 
     has_conflicts = False
-    for m_name in metric_names:
-        # discard repeated occurrences of an already processed metric
-        if m_name not in metric_names_set:
-            continue
-        metric_names_set.discard(m_name)
-
-        if m_name in found_metrics_set:
-            # input metric name was found in the python module
-            if m_name in project_metrics:
-                old_metric_path = project_metrics[m_name]
-                if expanded_metric_path == Path(old_metric_path).expanduser().resolve():
-                    rich.print(f"Requirement already satisfied: {m_name} in '{metric_path.as_posix()}'")
+    for title in metric_titles:
+        if title in found_metric_titles:
+            # input metric title was found in the python module
+            if title in project_metrics:
+                old_module_path = project_metrics[title]
+                if full_module_path == Path(old_module_path).expanduser().resolve():
+                    rich.print(f"Requirement already satisfied: '{title}' in '{module_path.as_posix()}'.")
                 else:
-                    rich.print(f"[red]ERROR: Conflict found in metric {m_name}. It points to {old_metric_path}'[/red]")
+                    rich.print(
+                        f"[red]ERROR: Conflict found in metric '{title}'. It points to '{old_module_path}'.[/red]"
+                    )
                     has_conflicts = True
             else:
-                project_metrics[m_name] = metric_path.as_posix()
-                rich.print(f"Adding {m_name}")
+                project_metrics[title] = module_path.as_posix()
+                rich.print(f"Adding '{title}'")
         else:
-            # input metric name was not found in the python module
-            rich.print(f"[red]ERROR: No matching metric found for {m_name} [/red]")
+            # input metric title was not found in the python module
+            rich.print(f"[red]ERROR: No matching metric found for '{title}'.[/red]")
             has_conflicts = True
 
     # update metric dependencies in project_meta.yaml
