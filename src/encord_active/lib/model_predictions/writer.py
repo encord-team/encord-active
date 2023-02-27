@@ -298,7 +298,7 @@ class PredictionWriter:
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
         self.object_labels: List[LabelEntry] = []
-        self.classification_labels: List[LabelEntry] = []
+        self.classification_labels: List[ClassificationLabelEntry] = []
 
         def append_classification_label(du_hash: str, frame: int, classification_dict: dict, answers_dict: dict):
             label_hash = self.lr_lookup[du_hash]
@@ -317,7 +317,7 @@ class PredictionWriter:
             if class_id is None:  # Ignore unwanted classes (defined by what is in `self.object_class_id_lookup`)
                 return
 
-            label_entry = LabelEntry(
+            label_entry = ClassificationLabelEntry(
                 identifier=f"{label_hash}_{du_hash}_{frame:05d}_{classification.classificationHash}",
                 url=f"{BASE_URL}{self.project.label_row_metas[label_hash].data_hash}&{self.project.project_hash}/{frame}",
                 img_id=get_image_identifier(du_hash, frame),
@@ -423,7 +423,7 @@ class PredictionWriter:
             pred_df.to_csv(storage_folder / PREDICTIONS_FILENAME)
 
             # 1. The labels
-            df = pd.DataFrame(self.object_labels + self.classification_labels)
+            df = pd.DataFrame(self.classification_labels)
             df.to_csv(storage_folder / LABELS_FILE)
 
         elif isinstance(self.predictions[0], PredictionEntry):
