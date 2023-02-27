@@ -39,6 +39,11 @@ class PredictionType(str, Enum):
     POLYGON = "polygon"
 
 
+class MainPredictionType(str, Enum):
+    CLASSIFICATION = "classification"
+    OBJECT = "object"
+
+
 ImageIdentifier = int
 # This is a hack to not break backward compatibility
 def get_image_identifier(data_hash: str, frame: int) -> ImageIdentifier:
@@ -398,7 +403,7 @@ class PredictionWriter:
         key = FrameClassification(
             feature_hash=classification.featureHash,
             attribute_hash=classification_answer.featureHash,
-            # NOTE: since we only support radion buttons, at this point we should have only one answer
+            # NOTE: since we only support radio buttons, at this point we should have only one answer
             option_hash=classification_answer.answers[0].featureHash,
         )
         return self.classification_class_id_lookup.get(key)
@@ -409,7 +414,7 @@ class PredictionWriter:
     def __exit__(self, exc_type, exc_val, exc_tb):
 
         if isinstance(self.predictions[0], ClassificationPredictionEntry):
-            storage_folder = self.storage_dir / "classifications"
+            storage_folder = self.storage_dir / MainPredictionType.CLASSIFICATION.value
             storage_folder.mkdir(parents=True, exist_ok=True)
 
             # 0. The predictions
@@ -422,7 +427,7 @@ class PredictionWriter:
             df.to_csv(storage_folder / LABELS_FILE)
 
         elif isinstance(self.predictions[0], PredictionEntry):
-            storage_folder = self.storage_dir / "objects"
+            storage_folder = self.storage_dir / MainPredictionType.OBJECT.value
             storage_folder.mkdir(parents=True, exist_ok=True)
 
             # Do the matching computations
