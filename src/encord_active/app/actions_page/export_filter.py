@@ -48,8 +48,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
-            left, right = st.columns((1, 20))
-            left.write("↳")
+            right, cross = st.columns((20, 1))
             key = f"filter-select-{column.replace(' ', '_').lower()}"
 
             if column == "tags":
@@ -63,7 +62,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
                 if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
-                        f"Values for {column}",
+                        column,
                         filtered[column].dropna().unique().tolist(),
                         default=filtered[column].dropna().unique().tolist(),
                         key=key,
@@ -76,7 +75,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 _max = float(filtered[column].max())
                 step = (_max - _min) / 100
                 user_num_input = right.slider(
-                    f"Values for {column}",
+                    column,
                     min_value=_min,
                     max_value=_max,
                     value=(_min, _max),
@@ -88,7 +87,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 first = filtered[column].min()
                 last = filtered[column].max()
                 res = right.date_input(
-                    f"Values for {column}", min_value=first, max_value=last, value=(first, last), key=key
+                    column, min_value=first, max_value=last, value=(first, last), key=key
                 )
                 if isinstance(res, tuple) and len(res) == 2:
                     res = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
@@ -190,6 +189,7 @@ def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItem
 
 
 def export_filter():
+    main_content, right_sidebar = st.columns([5, 2])
     original_row_count = get_state().merged_metrics.shape[0]
     get_filtered_row_count, set_filtered_row_count = use_state(0)
 
@@ -203,45 +203,63 @@ def export_filter():
                 form(False)
 
     setup_page()
-    message_placeholder = st.empty()
 
-    st.header("Filter & Export")
     action_utils = _get_action_utils()
     project_has_remote = action_utils.project_meta.get("has_remote", False) if action_utils else False
-    filtered_df = filter_dataframe(get_state().merged_metrics.copy())
-    filtered_df.reset_index(inplace=True)
-    row_count = filtered_df.shape[0]
-    st.markdown(f"**Total row:** {row_count}")
-    st.dataframe(filtered_df, use_container_width=True)
 
-    action_columns = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
-    file_prefix = get_state().project_paths.project_dir.name
+    with main_content:
+        message_placeholder = st.empty()
 
-    render_generate_csv(action_columns[0], file_prefix, filtered_df)
-    render_generate_coco(action_columns[1], file_prefix, filtered_df)
-    render_unimplemented_buttons(
-        action_columns[5], action_columns[6], action_columns[7], message_placeholder, close_all_forms
-    )
+    with right_sidebar:
+        view_tab, actions_tab, export_tab, code_tab = st.tabs(["View", "Actions", "Export", "Code"])
+        with view_tab:
+            filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+            filtered_df.reset_index(inplace=True)
+            row_count = filtered_df.shape[0]
 
-    if get_filtered_row_count() != row_count:
-        set_filtered_row_count(row_count)
-        close_all_forms()
+        with actions_tab:
+            file_prefix = get_state().project_paths.project_dir.name
 
-    if not project_has_remote:
-        render_export_button(
-            action_columns[3], action_utils, close_all_forms, get_export_form_button, set_export_form_button
-        )
+            render_unimplemented_buttons(
+                message_placeholder, close_all_forms
+            )
+            if row_count != original_row_count:
+                render_subset_button(
+                    action_utils,
+                    filtered_df,
+                    project_has_remote,
+                    close_all_forms,
+                    get_clone_form_button,
+                    set_clone_form_button,
+                )
 
-    if row_count != original_row_count:
-        render_subset_button(
-            action_columns[4],
-            action_utils,
-            filtered_df,
-            project_has_remote,
-            close_all_forms,
-            get_clone_form_button,
-            set_clone_form_button,
-        )
+        if get_filtered_row_count() != row_count:
+            set_filtered_row_count(row_count)
+            close_all_forms()
+
+        with export_tab:
+            render_generate_csv(file_prefix, filtered_df)
+            render_generate_coco(file_prefix, filtered_df)
+
+            if not project_has_remote:
+                render_export_button(
+                    action_utils, close_all_forms, get_export_form_button, set_export_form_button
+                )
+        with code_tab:
+            st.code("""
+from encord_active.lib.project import Project
+
+project = Project("{{PROJECT_DIR}}")
+
+            
+""".replace("{{PROJECT_DIR}}", get_state().project_paths.project_dir.__str__()))
+
+    with main_content:
+        st.header("Filter & Export")
+        row_count = filtered_df.shape[0]
+        st.markdown(f"**Total row:** {row_count}")
+        st.dataframe(filtered_df, use_container_width=True)
+
 
 
 def generate_create_project_form(header: str, num_rows: int, items_to_render: list[str]) -> Optional[RenderItems]:
@@ -259,15 +277,14 @@ def generate_create_project_form(header: str, num_rows: int, items_to_render: li
 
 
 def render_subset_button(
-    render_col: DeltaGenerator,
-    action_utils: EncordActions,
-    subset_df: pd.DataFrame,
-    project_has_remote: bool,
-    close_forms: Callable,
-    get_create_button: Callable,
-    set_create_button: Callable,
+        action_utils: EncordActions,
+        subset_df: pd.DataFrame,
+        project_has_remote: bool,
+        close_forms: Callable,
+        get_create_button: Callable,
+        set_create_button: Callable,
 ):
-    render_col.button(
+    st.button(
         "🏗 Create Subset",
         on_click=lambda: (close_forms(curr_form=set_create_button), set_create_button(True)),  # type: ignore
         disabled=not action_utils,
@@ -306,13 +323,12 @@ def render_subset_button(
 
 
 def render_export_button(
-    render_col: DeltaGenerator,
     action_utils: EncordActions,
     close_forms: Callable,
     get_export_button: Callable,
     set_export_button: Callable,
 ):
-    export_button = render_col.button(
+    export_button = st.button(
         "🏗 Export to Encord",
         on_click=lambda: (close_forms(curr_form=set_export_button), set_export_button(True)),  # type: ignore
         disabled=not action_utils,
@@ -332,19 +348,16 @@ def render_export_button(
 
 
 def render_unimplemented_buttons(
-    delete_button_column: DeltaGenerator,
-    edit_button_column: DeltaGenerator,
-    augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
     close_all_forms: Callable,
 ):
-    delete_btn = delete_button_column.button(
+    delete_btn = st.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
     )
-    edit_btn = edit_button_column.button(
+    edit_btn = st.button(
         "🖋 Re-label", help="Assign the filtered data for relabelling on the Encord platform"
     )
-    augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
+    augment_btn = st.button("➕ Augment", help="Augment your dataset based on the filtered data")
     if any([delete_btn, edit_btn, augment_btn]):
         close_all_forms()
         message_placeholder.markdown(
@@ -361,8 +374,8 @@ community</a>
         )
 
 
-def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
-    coco_placeholder = render_column.empty()
+def render_generate_coco(file_prefix: str, filtered_df: pd.DataFrame):
+    coco_placeholder = st.empty()
     generate_coco = coco_placeholder.button(
         "🌀 Generate COCO",
         help="Generate COCO file with filtered data to enable COCO download.",
@@ -386,8 +399,8 @@ def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filter
         )
 
 
-def render_generate_csv(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
-    csv_placeholder = render_column.empty()
+def render_generate_csv(file_prefix: str, filtered_df: pd.DataFrame):
+    csv_placeholder = st.empty()
     generate_csv = csv_placeholder.button(
         "🌀 Generate CSV",
         help="Generate CSV file with filtered data to enable CSV download.",

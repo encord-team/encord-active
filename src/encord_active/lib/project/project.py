@@ -21,6 +21,7 @@ from encord_active.lib.common.utils import (
     fetch_project_meta,
     slice_video_into_frames,
 )
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
@@ -142,6 +143,9 @@ class Project:
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
         }
+
+    def __load_db(self):
+        self.df = MergedMetrics().all()
 
     def save_label_row(self, label_row: LabelRow):
         lr_structure = self.file_structure.label_row_structure(label_row["label_hash"])
