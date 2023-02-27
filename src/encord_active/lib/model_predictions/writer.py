@@ -3,7 +3,7 @@ import logging
 from base64 import b64encode
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict
 from uuid import uuid4
 
 import cv2
@@ -33,22 +33,10 @@ BBOX_KEYS = {"x", "y", "w", "h"}
 BASE_URL = "https://app.encord.com/label_editor/"
 
 
-class OntologyClassificationJSON(TypedDict):
-    featureHash: str
-    attributeHash: str
-    optionHash: str
-    name: str
-
-
 class PredictionType(str, Enum):
     FRAME = "frame"
     BBOX = "bounding_box"
     POLYGON = "polygon"
-
-
-class MainPredictionType(str, Enum):
-    CLASSIFICATION = "classification"
-    OBJECT = "object"
 
 
 ImageIdentifier = int
@@ -255,7 +243,7 @@ class PredictionWriter:
         self.project = project.load()
         self.storage_dir = project.file_structure.predictions
 
-        self.predictions: List[Union[PredictionEntry, ClassificationPredictionEntry]] = []
+        self.predictions: List[Optional[PredictionEntry, ClassificationPredictionEntry]] = []
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
         self.classification_lookup = {
@@ -305,7 +293,7 @@ class PredictionWriter:
     def __prepare_label_list(self):
         logger.debug("Preparing label list")
         self.object_labels: List[LabelEntry] = []
-        self.classification_labels: List[ClassificationLabelEntry] = []
+        self.classification_labels: List[LabelEntry] = []
 
         def append_classification_label(du_hash: str, frame: int, classification_dict: dict, answers_dict: dict):
             label_hash = self.lr_lookup[du_hash]
@@ -324,7 +312,7 @@ class PredictionWriter:
             if class_id is None:  # Ignore unwanted classes (defined by what is in `self.object_class_id_lookup`)
                 return
 
-            label_entry = ClassificationLabelEntry(
+            label_entry = LabelEntry(
                 identifier=f"{label_hash}_{du_hash}_{frame:05d}_{classification.classificationHash}",
                 url=f"{BASE_URL}{self.project.label_row_metas[label_hash].data_hash}&{self.project.project_hash}/{frame}",
                 img_id=get_image_identifier(du_hash, frame),
@@ -410,7 +398,7 @@ class PredictionWriter:
         key = FrameClassification(
             feature_hash=classification.featureHash,
             attribute_hash=classification_answer.featureHash,
-            # NOTE: since we only support radio buttons, at this point we should have only one answer
+            # NOTE: since we only support radion buttons, at this point we should have only one answer
             option_hash=classification_answer.answers[0].featureHash,
         )
         return self.classification_class_id_lookup.get(key)
@@ -421,7 +409,7 @@ class PredictionWriter:
     def __exit__(self, exc_type, exc_val, exc_tb):
 
         if isinstance(self.predictions[0], ClassificationPredictionEntry):
-            storage_folder = self.storage_dir / MainPredictionType.CLASSIFICATION.value
+            storage_folder = self.storage_dir / "classifications"
             storage_folder.mkdir(parents=True, exist_ok=True)
 
             # 0. The predictions
@@ -430,28 +418,11 @@ class PredictionWriter:
             pred_df.to_csv(storage_folder / PREDICTIONS_FILENAME)
 
             # 1. The labels
-            df = pd.DataFrame(self.classification_labels)
+            df = pd.DataFrame(self.object_labels + self.classification_labels)
             df.to_csv(storage_folder / LABELS_FILE)
 
-            # 3. The class idx map
-            class_index: Dict[str, OntologyClassificationJSON] = {}
-            for frame_classification, class_id in self.classification_class_id_lookup.items():
-                if class_id in class_index or frame_classification not in self.classification_lookup:
-                    continue
-
-                selected_option = self.classification_lookup[frame_classification]
-                class_index[class_id] = OntologyClassificationJSON(
-                    featureHash=frame_classification.feature_hash,
-                    attributeHash=frame_classification.attribute_hash,
-                    optionHash=selected_option.feature_node_hash,
-                    name=selected_option.label,
-                )
-
-            with (storage_folder / CLASS_INDEX_FILE).open("w") as f:
-                json.dump(class_index, f)
-
         elif isinstance(self.predictions[0], PredictionEntry):
-            storage_folder = self.storage_dir / MainPredictionType.OBJECT.value
+            storage_folder = self.storage_dir / "objects"
             storage_folder.mkdir(parents=True, exist_ok=True)
 
             # Do the matching computations
@@ -520,10 +491,7 @@ class PredictionWriter:
     def __add_classification_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
 
         class_id = self.classification_class_id_lookup.get(prediction.classification)
-        if class_id is None:
-            raise AttributeError(
-                f"classification_class_id_lookup does not have the classification key: '{prediction.classification}'"
-            )
+        ptype = PredictionType.FRAME
 
         _frame = 0
         if not prediction.frame:  # Try to infer frame number from data hash.
@@ -549,15 +517,7 @@ class PredictionWriter:
         width = int(du["width"])
         height = int(du["height"])
 
-        if prediction.object is None:
-            raise ValueError(f"prediction.object property is None for object with data hash '{prediction.data_hash}'")
         class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
-
-        # if class_id == -1:
-        #     raise AttributeError(
-        #         f"object_class_id_lookup does not have the object feature_hash key: '{prediction.object.feature_hash}'"
-        #     )
-
         if isinstance(prediction.object.data, np.ndarray):
             polygon = prediction.object.data
             ptype = PredictionType.POLYGON
