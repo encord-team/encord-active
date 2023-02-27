@@ -175,7 +175,11 @@ def execute_metrics(
 ):
     project = None if use_cache_only else fetch_project_info(data_dir)
     iterator = iterator_cls(data_dir, project=project, **kwargs)
-    cache_dir = iterator.update_cache_dir(data_dir)
+
+    if "prediction_type" in kwargs:
+        cache_dir = data_dir / "predictions" / kwargs["prediction_type"]
+    else:
+        cache_dir = data_dir
 
     simple_metrics = [m for m in selected_metrics if isinstance(m, SimpleMetric)]
     metrics = [m for m in selected_metrics if isinstance(m, Metric)]

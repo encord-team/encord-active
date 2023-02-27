@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, cast
 
@@ -26,7 +27,10 @@ from encord_active.lib.db.predictions import (
 from encord_active.lib.labels.object import BoxShapes
 from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.model_predictions.writer import PredictionWriter
+from encord_active.lib.model_predictions.writer import (
+    MainPredictionType,
+    PredictionWriter,
+)
 from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
@@ -250,4 +254,13 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
         for pred in predictions:
             writer.add_prediction(pred)
 
-    run_all_prediction_metrics(data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True)
+    if predictions[0].classification:
+        prediction_type = MainPredictionType.CLASSIFICATION.value
+    elif predictions[0].object:
+        prediction_type = MainPredictionType.OBJECT.value
+    else:
+        raise EmptyDataError(f"Prediction data does not exist!")
+
+    run_all_prediction_metrics(
+        data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True, prediction_type=prediction_type
+    )
