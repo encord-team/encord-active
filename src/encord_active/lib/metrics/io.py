@@ -51,7 +51,7 @@ def get_module_metrics(
             (issubclass(cls_obj, Metric) and cls_obj != Metric)
             or (issubclass(cls_obj, SimpleMetric) and cls_obj != SimpleMetric)
         ) and filter_func(cls_obj):
-            metrics.append(cls_obj)
+            metrics.append(cls_obj())
     return metrics
 
 
