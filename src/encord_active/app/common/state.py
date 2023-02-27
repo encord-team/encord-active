@@ -24,7 +24,7 @@ GLOBAL_STATE = "global_state"
 @dataclass
 class MetricNames:
     predictions: Dict[str, MetricData] = field(default_factory=dict)
-    selected_predicion: Optional[str] = None
+    selected_prediction: Optional[str] = None
     labels: Dict[str, MetricData] = field(default_factory=dict)
     selected_label: Optional[str] = None
 
@@ -32,8 +32,8 @@ class MetricNames:
 @dataclass
 class PredictionsState:
     decompose_classes = False
-    metric_datas: MetricNames = field(default_factory=lambda: MetricNames())
-    all_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    metric_datas = MetricNames()
+    all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     selected_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None
     nbins: int = 50

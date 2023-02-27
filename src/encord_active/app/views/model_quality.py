@@ -13,76 +13,167 @@ from encord_active.lib.model_predictions.filters import (
     prediction_and_label_filtering,
 )
 from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 def model_quality(page: Page):
     def render():
         setup_page()
 
-        if not reader.check_model_prediction_availability(get_state().project_paths.predictions):
-            st.markdown(
-                "# Missing Model Predictions\n"
-                "This project does not have any imported predictions. "
-                "Please refer to the "
-                f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
-                "section of the documentation to learn how to import your predictions."
+        object_tab, classification_tab = st.tabs(["Objects", "Classifications"])
+
+        with object_tab:
+            if not reader.check_model_prediction_availability(
+                get_state().project_paths.predictions / MainPredictionType.OBJECT.value
+            ):
+                st.markdown(
+                    "# Missing Model Predictions for the objects\n"
+                    "This project does not have any imported predictions for the objects. "
+                    "Please refer to the "
+                    f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
+                    "section of the documentation to learn how to import your predictions."
+                )
+                return
+
+            predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
+            metrics_dir = get_state().project_paths.metrics
+
+            predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+            label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
+            model_predictions = use_memo(
+                lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas)
             )
-            return
+            labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
 
-        predictions_dir = get_state().project_paths.predictions
-        metrics_dir = get_state().project_paths.metrics
+            if model_predictions is None:
+                st.error("Couldn't load model predictions")
+                return
 
-        predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
-        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
-        labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
+            if labels is None:
+                st.error("Couldn't load labels properly")
+                return
 
-        if model_predictions is None:
-            st.error("Couldn't load model predictions")
-            return
+            matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+            get_state().predictions.metric_datas = MetricNames(
+                predictions={m.name: m for m in predictions_metric_datas},
+                labels={m.name: m for m in label_metric_datas},
+            )
 
-        if labels is None:
-            st.error("Couldn't load labels properly")
-            return
+            if not matched_gt:
+                st.error("Couldn't match ground truths")
+                return
 
-        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
-        get_state().predictions.metric_datas = MetricNames(
-            predictions={m.name: m for m in predictions_metric_datas},
-            labels={m.name: m for m in label_metric_datas},
-        )
+            with sticky_header():
+                common_settings()
+                page.sidebar_options()
 
-        if not matched_gt:
-            st.error("Couldn't match groung truths")
-            return
+            (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
+                model_predictions,
+                labels,
+                matched_gt,
+                get_state().predictions.all_classes_objects,
+                iou_threshold=get_state().iou_threshold,
+                ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
+            )
 
-        with sticky_header():
-            common_settings()
-            page.sidebar_options()
+            # Sort predictions and labels according to selected metrics.
+            pred_sort_column = (
+                get_state().predictions.metric_datas.selected_prediction or predictions_metric_datas[0].name
+            )
+            sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
 
-        (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
-            model_predictions,
-            labels,
-            matched_gt,
-            get_state().predictions.all_classes,
-            iou_threshold=get_state().iou_threshold,
-            ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
-        )
+            label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
+            sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
 
-        # Sort predictions and labels according to selected metrics.
-        pred_sort_column = get_state().predictions.metric_datas.selected_predicion or predictions_metric_datas[0].name
-        sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
+            if get_state().ignore_frames_without_predictions:
+                matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
+            else:
+                matched_labels = sorted_labels
 
-        label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
-        sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
+            _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
+                get_state().predictions.selected_classes, matched_labels, metrics, sorted_model_predictions, precisions
+            )
+            page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
 
-        if get_state().ignore_frames_without_predictions:
-            matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
-        else:
-            matched_labels = sorted_labels
+        with classification_tab:
+            if not reader.check_model_prediction_availability(
+                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+            ):
+                st.markdown(
+                    "# Missing Model Predictions for the classifications\n"
+                    "This project does not have any imported predictions for the classifications. "
+                    "Please refer to the "
+                    f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
+                    "section of the documentation to learn how to import your predictions."
+                )
+                return
 
-        _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
-            get_state().predictions.selected_classes, matched_labels, metrics, sorted_model_predictions, precisions
-        )
-        page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
+        # OLD CODE
+
+        # if not reader.check_model_prediction_availability_objects(get_state().project_paths.predictions):
+        #     st.markdown(
+        #         "# Missing Model Predictions\n"
+        #         "This project does not have any imported predictions. "
+        #         "Please refer to the "
+        #         f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
+        #         "section of the documentation to learn how to import your predictions."
+        #     )
+        #     return
+        #
+        # predictions_dir = get_state().project_paths.predictions
+        # metrics_dir = get_state().project_paths.metrics
+        #
+        # predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+        # label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
+        # model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
+        # labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
+        #
+        # if model_predictions is None:
+        #     st.error("Couldn't load model predictions")
+        #     return
+        #
+        # if labels is None:
+        #     st.error("Couldn't load labels properly")
+        #     return
+        #
+        # matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+        # get_state().predictions.metric_datas = MetricNames(
+        #     predictions={m.name: m for m in predictions_metric_datas},
+        #     labels={m.name: m for m in label_metric_datas},
+        # )
+        #
+        # if not matched_gt:
+        #     st.error("Couldn't match groung truths")
+        #     return
+        #
+        # with sticky_header():
+        #     common_settings()
+        #     page.sidebar_options()
+        #
+        # (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
+        #     model_predictions,
+        #     labels,
+        #     matched_gt,
+        #     get_state().predictions.all_classes,
+        #     iou_threshold=get_state().iou_threshold,
+        #     ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
+        # )
+        #
+        # # Sort predictions and labels according to selected metrics.
+        # pred_sort_column = get_state().predictions.metric_datas.selected_predicion or predictions_metric_datas[0].name
+        # sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
+        #
+        # label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
+        # sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
+        #
+        # if get_state().ignore_frames_without_predictions:
+        #     matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
+        # else:
+        #     matched_labels = sorted_labels
+        #
+        # _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
+        #     get_state().predictions.selected_classes, matched_labels, metrics, sorted_model_predictions, precisions
+        # )
+        # page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
 
     return render

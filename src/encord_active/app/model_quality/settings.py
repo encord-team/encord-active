@@ -6,15 +6,18 @@ import streamlit as st
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.state import State, get_state
 from encord_active.lib.model_predictions.reader import get_class_idx
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 def common_settings():
     tag_creator()
 
-    if not get_state().predictions.all_classes:
-        get_state().predictions.all_classes = get_class_idx(get_state().project_paths.predictions)
+    if not get_state().predictions.all_classes_objects:
+        get_state().predictions.all_classes_objects = get_class_idx(
+            get_state().project_paths.predictions / MainPredictionType.OBJECT.value
+        )
 
-    all_classes = get_state().predictions.all_classes
+    all_classes = get_state().predictions.all_classes_objects
     col1, col2, col3 = st.columns([4, 4, 3])
 
     with col1:

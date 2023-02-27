@@ -62,7 +62,7 @@ class ModelQualityPage(Page):
         """
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
         column_names = list(state.get_state().predictions.metric_datas.predictions.keys())
-        state.get_state().predictions.metric_datas.selected_predicion = st.selectbox(
+        state.get_state().predictions.metric_datas.selected_prediction = st.selectbox(
             "Select metric for your predictions",
             column_names + list(fixed_options.keys()),
             format_func=lambda s: fixed_options.get(s, s),
@@ -72,7 +72,7 @@ class ModelQualityPage(Page):
 
     @staticmethod
     def metric_details_description():
-        metric_name = state.get_state().predictions.metric_datas.selected_predicion
+        metric_name = state.get_state().predictions.metric_datas.selected_prediction
         if not metric_name:
             return
 

@@ -92,7 +92,7 @@ on your labels are used for the "False Negative Rate" plot.
             st.write("No predictions of the given class(es).")
             return
 
-        metric_name = state.get_state().predictions.metric_datas.selected_predicion
+        metric_name = state.get_state().predictions.metric_datas.selected_prediction
         if not metric_name:
             # This shouldn't happen with the current flow. The only way a user can do this
             # is if he/she write custom code to bypass running the metrics. In this case,

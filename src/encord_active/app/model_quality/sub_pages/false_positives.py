@@ -32,7 +32,7 @@ class FalsePositivesPage(ModelQualityPage):
         metrics: DataFrame[PerformanceMetricSchema],
         precisions: DataFrame[PrecisionRecallSchema],
     ):
-        metric_name = get_state().predictions.metric_datas.selected_predicion
+        metric_name = get_state().predictions.metric_datas.selected_prediction
         if not metric_name:
             st.error("No prediction metric selected")
             return
