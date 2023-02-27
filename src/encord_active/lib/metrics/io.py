@@ -9,10 +9,10 @@ from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 def fill_project_meta_with_builtin_metrics(project_meta: dict):
     project_metrics = project_meta.setdefault("metrics", dict())
-    project_metrics.update((m_name, module_path.as_posix()) for m_name, module_path in get_builtin_metrics())
+    project_metrics.update((metric.__name__, module_path.as_posix()) for metric, module_path in get_builtin_metrics())
 
 
-def get_builtin_metrics() -> list[str, Path]:
+def get_builtin_metrics() -> list[tuple[Union[Metric, SimpleMetric], Path]]:
     metrics = []
     module_dirs = ["geometric", "heuristic", "semantic"]
     for dir_name in module_dirs:
@@ -25,7 +25,10 @@ def get_builtin_metrics() -> list[str, Path]:
     return metrics
 
 
-def get_metrics(modules: list[tuple[str, Path]], filter_func=lambda x: True):
+def get_metrics(
+    modules: list[tuple[str, Union[str, Path]]], filter_func=lambda x: True
+) -> list[Union[Metric, SimpleMetric]]:
+    # can be improved using module.__getattribute__(class_name)
     metrics = []
     for metric_name, module_path in modules:
         module_metrics = get_module_metrics(module_path, lambda x: x.__name__ == metric_name and filter_func(x))
@@ -35,7 +38,9 @@ def get_metrics(modules: list[tuple[str, Path]], filter_func=lambda x: True):
     return metrics
 
 
-def get_module_metrics(module_path: Path, filter_func: Callable) -> Optional[list[str]]:
+def get_module_metrics(
+    module_path: Union[str, Path], filter_func: Callable
+) -> Optional[list[Union[Metric, SimpleMetric]]]:
     mod = load_module(module_path)
     if mod is None:
         return None
@@ -46,7 +51,7 @@ def get_module_metrics(module_path: Path, filter_func: Callable) -> Optional[lis
             (issubclass(cls_obj, Metric) and cls_obj != Metric)
             or (issubclass(cls_obj, SimpleMetric) and cls_obj != SimpleMetric)
         ) and filter_func(cls_obj):
-            metrics.append(cls_name)
+            metrics.append(cls_obj)
     return metrics
 
 
