@@ -5,7 +5,7 @@ import streamlit as st
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
-from encord_active.app.common.components import build_data_tags
+from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
@@ -315,8 +315,10 @@ def render_metric_summary(
     selected_df: DataFrame[MetricWithDistanceSchema] = df[df[_COLUMNS.dist_to_iqr] <= value][:page_size]
 
     cols: List = []
-    for _, row in selected_df.iterrows():
+    for i, (_, row) in enumerate(selected_df.iterrows()):
         if not cols:
+            if i:
+                divider()
             cols = list(st.columns(n_cols))
 
         with cols.pop(0):

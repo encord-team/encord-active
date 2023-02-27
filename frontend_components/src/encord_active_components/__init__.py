@@ -25,7 +25,7 @@ def pages_menu(items: List[MenuItem]) -> str:
 
 
 if __name__ == "__main__":
-    items: List[MenuItem] = [
+    ITEMS: List[MenuItem] = [
         {
             "key": "Example 1",
             "label": "Example 1",
@@ -43,4 +43,4 @@ if __name__ == "__main__":
             ],
         },
     ]
-    key = pages_menu(items)
+    key = pages_menu(ITEMS)
