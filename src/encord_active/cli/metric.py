@@ -37,7 +37,8 @@ def add_metrics(
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
     project_meta = fetch_project_meta(target)
-    project_metrics = project_meta.setdefault("metrics", dict())  # ensure backwards compatibility
+    # dict.setdefault ensures backwards compatibility on projects without registered metrics
+    project_metrics = project_meta.setdefault("metrics", dict())
 
     add_all_metrics = len(metric_titles) == 0
     if add_all_metrics:
@@ -61,18 +62,16 @@ def add_metrics(
             if title in project_metrics:
                 old_module_path = project_metrics[title]
                 if full_module_path == Path(old_module_path).expanduser().resolve():
-                    rich.print(f"Requirement already satisfied: '{title}' in '{module_path.as_posix()}'.")
+                    rich.print(f"Requirement already satisfied: {title} in '{module_path.as_posix()}'.")
                 else:
-                    rich.print(
-                        f"[red]ERROR: Conflict found in metric '{title}'. It points to '{old_module_path}'.[/red]"
-                    )
+                    rich.print(f"[red]ERROR: Conflict found in metric {title}. It points to '{old_module_path}'.[/red]")
                     has_conflicts = True
             else:
                 project_metrics[title] = module_path.as_posix()
-                rich.print(f"Adding '{title}'")
+                rich.print(f"Adding {title}")
         else:
             # input metric title was not found in the python module
-            rich.print(f"[red]ERROR: No matching metric found for '{title}'.[/red]")
+            rich.print(f"[red]ERROR: No matching metric found for {title}.[/red]")
             has_conflicts = True
 
     # update metric dependencies in project_meta.yaml
@@ -83,50 +82,52 @@ def add_metrics(
         rich.print("[green]Successfully added all metrics.[/green]")
 
 
-@metric_cli.command(name="list", short_help="List available metrics.")
+@metric_cli.command(name="list", short_help="List metrics.")
 @ensure_project
 def list_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """
-    List available metrics in the project, including editables.
+    List metrics in the project, including editables.
 
     Metrics are listed in a case-insensitive sorted order.
     """
     project_meta = fetch_project_meta(target)
-    project_metrics = project_meta.setdefault("metrics", dict())  # ensure backwards compatibility
-    sorted_names = sorted(project_metrics.keys(), key=lambda x: x.lower())
+    # dict.setdefault ensures backwards compatibility on projects without registered metrics
+    project_metrics = project_meta.setdefault("metrics", dict())
+    sorted_titles = sorted(project_metrics.keys(), key=lambda x: x.lower())
 
     table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0)
-    table.add_column("Metric")
+    table.add_column("Metric Title")
     table.add_column("Editable metric location")
-    for m_name in sorted_names:
-        table.add_row(m_name, project_metrics[m_name])
+    for title in sorted_titles:
+        table.add_row(title, project_metrics[title])
     rich.print(table)
 
 
 @metric_cli.command(name="remove", short_help="Remove metrics.")
 @ensure_project
 def remove_metrics(
-    metric_name: list[str] = typer.Argument(..., help="Name of the metric. Can be used multiple times."),
+    metric_title: list[str] = typer.Argument(..., help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Remove metrics from the project."""
     project_meta = fetch_project_meta(target)
-    project_metrics = project_meta.setdefault("metrics", dict())  # ensure backwards compatibility
+    # dict.setdefault ensures backwards compatibility on projects without registered metrics
+    project_metrics = project_meta.setdefault("metrics", dict())
 
-    for m_name in metric_name:
-        if m_name in project_metrics:
-            rich.print(f"Found existing metric: {m_name}")
-            rich.print(f"Removing {m_name}:")
-            rich.print(f"  Would detach:")
-            rich.print(f"    {project_metrics[m_name]}")
+    for title in metric_title:
+        if title in project_metrics:
+            rich.print(f"Found existing metric: {title}")
+            rich.print(f"Removing {title}:")
+            rich.print("  Would detach:")
+            rich.print(f"    {project_metrics[title]}")
             ok_remove = typer.confirm("Proceed?")
             if ok_remove:
-                project_metrics.pop(m_name)
-                rich.print(f"Successfully removed {m_name}")
+                project_metrics.pop(title)
+                rich.print(f"Successfully removed {title}")
         else:
-            rich.print(f"[yellow]WARNING: Skipping {m_name} as it is not attached to the project.[/yellow]")
+            rich.print(f"[yellow]WARNING: Skipping {title} as it is not attached to the project.[/yellow]")
 
     # update metric dependencies in project_meta.yaml
     update_project_meta(target, project_meta)
@@ -150,7 +151,8 @@ def run_metrics(
     from encord_active.lib.metrics.io import get_metrics
 
     project_meta = fetch_project_meta(target)
-    project_metrics = project_meta.setdefault("metrics", dict())  # ensure backwards compatibility
+    # dict.setdefault ensures backwards compatibility on projects without registered metrics
+    project_metrics = project_meta.setdefault("metrics", dict())
 
     metrics = get_metrics(project_metrics.items())
     if run_all:  # User chooses to run all available metrics
