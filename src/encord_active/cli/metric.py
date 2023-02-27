@@ -136,7 +136,7 @@ def remove_metrics(
 @metric_cli.command(name="run", short_help="Run metrics.")
 @ensure_project
 def run_metrics(
-    metric_name: Optional[list[str]] = typer.Argument(None, help="Name of the metric. Can be used multiple times."),
+    metric_title: Optional[list[str]] = typer.Argument(None, help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
     run_all: bool = typer.Option(False, "--all", help="Run all metrics."),
     fuzzy: bool = typer.Option(
@@ -154,12 +154,12 @@ def run_metrics(
     # dict.setdefault ensures backwards compatibility on projects without registered metrics
     project_metrics = project_meta.setdefault("metrics", dict())
 
-    metrics = get_metrics(project_metrics.items())
+    metrics = get_metrics(list(project_metrics.items()))
     if run_all:  # User chooses to run all available metrics
         selected_metrics = metrics
 
     # (interactive) User chooses some metrics via CLI prompt selection
-    elif not metric_name:
+    elif not metric_title:
         choices = list(map(lambda m: Choice(m, name=m.metadata.title), metrics))
         Options = TypedDict("Options", {"message": str, "choices": list[Choice], "vi_mode": bool})
         options: Options = {
@@ -176,25 +176,25 @@ def run_metrics(
 
     # (non-interactive) User chooses some metrics via CLI argument
     else:
-        metric_name_to_cls = {m.metadata.title: m for m in metrics}
-        used_metric_names = set()
+        metric_title_to_cls = {m.metadata.title: m for m in metrics}
+        used_metric_titles = set()
         selected_metrics = []
-        unknown_metric_names = []
-        for name in metric_name:
-            if name in used_metric_names:  # ignore repeated metric names in the CLI argument
+        unknown_metric_titles = []
+        for title in metric_title:
+            if title in used_metric_titles:  # ignore repeated metric titles in the CLI argument
                 continue
-            used_metric_names.add(name)
+            used_metric_titles.add(title)
 
-            metric_cls = metric_name_to_cls.get(name, None)
-            if metric_cls is None:  # unknown and/or wrong metric name in user selection
-                unknown_metric_names.append(name)
+            metric_cls = metric_title_to_cls.get(title, None)
+            if metric_cls is None:  # unknown and/or wrong metric title in user selection
+                unknown_metric_titles.append(title)
             else:
                 selected_metrics.append(metric_cls)
 
-        if len(unknown_metric_names) > 0:
-            rich.print("No available metric has this name:")
-            for name in unknown_metric_names:
-                rich.print(f"[yellow]{name}[/yellow]")
+        if len(unknown_metric_titles) > 0:
+            rich.print("No available metric with this title:")
+            for title in unknown_metric_titles:
+                rich.print(f"[yellow]{title}[/yellow]")
             raise typer.Abort()
 
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
@@ -203,7 +203,7 @@ def run_metrics(
 @metric_cli.command(name="show", short_help="Show information about available metrics.")
 @ensure_project
 def show_metrics(
-    metric_name: list[str] = typer.Argument(..., help="Name of the metric. Can be used multiple times."),
+    metric_title: list[str] = typer.Argument(..., help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Show information about one or more available metrics in the project."""
