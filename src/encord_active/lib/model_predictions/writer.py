@@ -426,6 +426,23 @@ class PredictionWriter:
             df = pd.DataFrame(self.classification_labels)
             df.to_csv(storage_folder / LABELS_FILE)
 
+            # 3. The class idx map
+            class_index = {}
+            for frame_classification, class_id in self.classification_class_id_lookup.items():
+                if class_id in class_index or frame_classification not in self.classification_lookup:
+                    continue
+
+                selected_option = self.classification_lookup[frame_classification]
+                class_index[class_id] = {
+                    "featureHash": frame_classification.feature_hash,
+                    "attributeHash": frame_classification.attribute_hash,
+                    "optionHash": selected_option.feature_node_hash,
+                    "name": selected_option.label,
+                }
+
+            with (storage_folder / CLASS_INDEX_FILE).open("w") as f:
+                json.dump(class_index, f)
+
         elif isinstance(self.predictions[0], PredictionEntry):
             storage_folder = self.storage_dir / MainPredictionType.OBJECT.value
             storage_folder.mkdir(parents=True, exist_ok=True)
