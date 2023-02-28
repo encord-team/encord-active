@@ -733,7 +733,7 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
         ontology=OntologyStructure.from_dict(ontology_dict),
     )
     coco_json = encoder.encode(
-        download_files=False,
+        download_files=True,
         download_file_path=project_dir,
     )
 
