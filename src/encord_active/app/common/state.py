@@ -34,7 +34,9 @@ class PredictionsState:
     decompose_classes = False
     metric_datas = MetricNames()
     all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
-    selected_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    all_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    selected_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None
     nbins: int = 50
 
@@ -56,6 +58,14 @@ class State:
     project_paths: ProjectFileStructure
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
+    ignore_frames_without_predictions = False
+    iou_threshold = 0.5
+    binary_confidence_threshold = 0.5
+    selected_metric: Optional[MetricData] = None
+    page_grid_settings = PageGridSettings()
+    predictions = PredictionsState()
+    similarities_count = 8
+    image_sizes: Optional[np.ndarray] = None
     annotation_sizes: Optional[AnnotationStatistics] = None
     ignore_frames_without_predictions = False
     image_sizes: Optional[np.ndarray] = None

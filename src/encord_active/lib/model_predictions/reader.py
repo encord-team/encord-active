@@ -30,6 +30,16 @@ class MetricEntryPoint:
     filter_fn: Optional[Callable[[MetricData], Any]] = None
 
 
+class ClassificationLabelSchema(IdentifierSchema):
+    url: Series[str] = pa.Field()
+    img_id: Series[padt.Int64] = pa.Field(coerce=True)
+    class_id: Series[padt.Int64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionSchema(ClassificationLabelSchema):
+    confidence: Series[padt.Float64] = pa.Field(coerce=True)
+
+
 class LabelSchema(IdentifierSchema):
     url: Series[str] = pa.Field()
     img_id: Series[padt.Int64] = pa.Field(coerce=True)
@@ -167,3 +177,13 @@ def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
 def get_class_idx(predictions_dir: Path) -> dict[str, OntologyObjectJSON]:
     class_idx_pth = predictions_dir / "class_idx.json"
     return load_json(class_idx_pth) or {}
+
+
+def get_classification_labels(predictions_dir: Path) -> Optional[DataFrame[ClassificationLabelSchema]]:
+    predictions = pd.read_csv(predictions_dir / "labels.csv")
+    return predictions.pipe(DataFrame[ClassificationLabelSchema])
+
+
+def get_classification_predictions(predictions_dir: Path) -> Optional[DataFrame[ClassificationPredictionSchema]]:
+    labels = pd.read_csv(predictions_dir / "predictions.csv")
+    return labels.pipe(DataFrame[ClassificationPredictionSchema])
