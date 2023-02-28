@@ -37,7 +37,7 @@ def print_encord_projects(
 
 
 @print_cli.command(name="ontology")
-@ensure_project
+@ensure_project()
 def print_ontology(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
 ):
@@ -86,7 +86,7 @@ Couldn't identify a project ontology. The reason for this may be that you have a
 
 
 @print_cli.command(name="data-mapping")
-@ensure_project
+@ensure_project()
 def print_data_mapping(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
     limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes"),

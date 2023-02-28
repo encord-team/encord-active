@@ -16,7 +16,7 @@ import_cli = typer.Typer(rich_markup_mode="markdown")
 
 
 @import_cli.command(name="predictions")
-@ensure_project
+@ensure_project()
 def import_predictions(
     predictions_path: Path = typer.Argument(..., help="Path to a predictions file.", dir_okay=False, exists=True),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),

@@ -20,7 +20,11 @@ from encord_active.app.model_quality.sub_pages.performance_by_metric import (
 from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
-from encord_active.lib.common.utils import fetch_project_meta
+from encord_active.cli.utils.decorators import (
+    find_child_projects,
+    is_project,
+    try_find_parent_project,
+)
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 
@@ -55,25 +59,40 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
-def main(project_path: str):
+def main(target: str):
     set_page_config()
     render_help()
+    target_path = Path(target)
+
+    if is_project(target_path):
+        projects = [target_path]
+    else:
+        parent_project = try_find_parent_project(target_path)
+        if parent_project:
+            projects = [parent_project]
+        else:
+            projects = find_child_projects(target_path)
+
+    with st.sidebar:
+        project_path = st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
+        if project_path:
+            items = to_items(pages)
+            key = pages_menu(items)
+            path = key.split(SEPARATOR) if key else []
+
+    if not project_path:
+        st.info("Please choose a project")
+        return
 
     project_dir = Path(project_path).expanduser().absolute()
     st.session_state.project_dir = project_dir
+
     if not st.session_state.project_dir.is_dir():
         st.error(f"Project not found for directory `{project_path}`.")
         st.stop()
 
     DBConnection.set_project_path(project_dir)
     State.init(project_dir)
-
-    with st.sidebar:
-        project_meta = fetch_project_meta(project_dir)
-        st.subheader(project_meta.get("project_title", project_dir.name))
-        items = to_items(pages)
-        key = pages_menu(items)
-        path = key.split(SEPARATOR) if key else []
 
     render = reduce(dict.__getitem__, path, pages) if path else pages["Data Quality"]["Summary"]  # type: ignore
     if callable(render):
