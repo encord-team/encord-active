@@ -111,12 +111,12 @@ def ensure_project(*, allow_multi=False):
                 raise typer.Exit()
 
             if not allow_multi:
-                choosen_target = choose_project(child_projects)
-                if not choosen_target:
+                chosen_target = choose_project(child_projects)
+                if not chosen_target:
                     rich.print("No project was selected. Aborting.")
                     raise typer.Exit()
 
-                kwargs["target"] = choosen_target
+                kwargs["target"] = chosen_target
 
             return fn(*args, **kwargs)
 
