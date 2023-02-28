@@ -20,4 +20,4 @@ You need to have a results JSON file following the [COCO results format](https:/
 encord-active import predictions --coco results.json
 ```
 
-After the execution is done you should be ready to view your [model quality metrics](category/model-quality).
+After the execution is done you should be ready to view your [model quality metrics](/category/model-quality).

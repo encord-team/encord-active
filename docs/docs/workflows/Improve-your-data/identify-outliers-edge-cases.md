@@ -19,7 +19,7 @@ If you haven't installed Encord Active, visit [installation](../../installation)
 
 ### 1. Find outliers
 
-Navigate to the _Data Quality_ > _Summary_ tab. Here, the [metrics](category/metrics) will be presented as expandable panes.
+Navigate to the _Data Quality_ > _Summary_ tab. Here, the [metrics](/category/metrics) will be presented as expandable panes.
 
 Click on a metric to get deeper insight into _moderate outliers_ and _severe outliers_. The most severe outliers are presented first in the pane.
 
