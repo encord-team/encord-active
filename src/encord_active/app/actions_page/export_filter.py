@@ -198,7 +198,7 @@ def export_filter():
 
     st.header("Filter & Export")
     action_utils = _get_action_utils()
-    project_has_remote = action_utils.project_meta.get("has_remote", False) if action_utils else False
+    project_has_remote = bool(action_utils.project_meta.get("has_remote", False)) if action_utils else False
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
@@ -236,9 +236,14 @@ def export_filter():
         )
 
 
-def generate_create_project_form(header: str, num_rows: int, items_to_render: list[str]) -> Optional[RenderItems]:
+def generate_create_project_form(header: str, num_rows: int, dataset: bool, ontology: bool) -> Optional[RenderItems]:
     with st.form("new_project_form"):
         st.subheader(header)
+        items_to_render = ["Project"]
+        if dataset:
+            items_to_render.append("Dataset")
+        if ontology:
+            items_to_render.append("Ontology")
 
         form_columns = st.columns(len(items_to_render))
         cols = RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
@@ -268,9 +273,11 @@ def render_subset_button(
     )
 
     if get_current_form() == CurrentForm.CLONE:
-        items_to_render = ["Project"] if not project_has_remote else ["Dataset", "Project"]
         cols = generate_create_project_form(
-            "Create a subset with the selected items", subset_df.shape[0], items_to_render
+            "Create a subset with the selected items",
+            subset_df.shape[0],
+            dataset=not project_has_remote,
+            ontology=False,
         )
         if not cols or not cols.project:
             return
@@ -279,7 +286,7 @@ def render_subset_button(
             try:
                 created_dir = action_utils.create_subset(
                     filtered_df=subset_df,
-                    remote_copy=bool(project_has_remote and cols.dataset),
+                    remote_copy=bool(project_has_remote),
                     project_title=cols.project.title,
                     project_description=cols.project.description,
                     dataset_title=cols.dataset.title if cols.dataset else None,
@@ -307,9 +314,8 @@ def render_export_button(
     df = get_state().merged_metrics
 
     if get_current_form() == CurrentForm.EXPORT:
-        items_to_render = ["Dataset", "Project", "Ontology"]
         cols = generate_create_project_form(
-            "Create a new project with the current dataset", df.shape[0], items_to_render
+            "Create a new project with the current dataset", df.shape[0], dataset=True, ontology=True
         )
         if not cols:
             return
