@@ -16,6 +16,7 @@ from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.versioning.git import Version
 
 GLOBAL_STATE = "global_state"
 
@@ -69,15 +70,23 @@ class State:
 
     @classmethod
     def init(cls, project_dir: Path):
-        if GLOBAL_STATE in st.session_state and project_dir == get_state().project_paths.project_dir:
-            return
+        if GLOBAL_STATE not in st.session_state or project_dir != get_state().project_paths.project_dir:
+            st.session_state[GLOBAL_STATE] = State(
+                project_paths=ProjectFileStructure(project_dir),
+                merged_metrics=MergedMetrics().all(),
+                all_tags=Tags().all(),
+            )
 
-        st.session_state[GLOBAL_STATE] = State(
-            project_paths=ProjectFileStructure(project_dir),
-            merged_metrics=MergedMetrics().all(),
-            all_tags=Tags().all(),
-        )
+    @classmethod
+    def clear(cls) -> None:
+        del st.session_state[GLOBAL_STATE]
 
 
 def get_state() -> State:
     return st.session_state.get(GLOBAL_STATE)  # type: ignore
+
+
+def refresh(clear_state=False):
+    if clear_state:
+        State.clear()
+    st.experimental_rerun()

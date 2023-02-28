@@ -2132,7 +2132,7 @@ docs = ["ipykernel", "jupyter-client", "matplotlib", "nbconvert", "nbformat", "n
 
 [[package]]
 name = "streamlit"
-version = "1.13.0"
+version = "1.19.0"
 description = "The fastest way to build data apps in Python"
 category = "main"
 optional = false
@@ -2147,9 +2147,9 @@ gitpython = "!=3.1.19"
 importlib-metadata = ">=1.4"
 numpy = "*"
 packaging = ">=14.1"
-pandas = ">=0.21.0"
+pandas = ">=0.25"
 pillow = ">=6.2.0"
-protobuf = ">=3.12,<3.20.2 || >3.20.2,<4"
+protobuf = ">=3.12,<4"
 pyarrow = ">=4.0"
 pydeck = ">=0.1.dev5"
 pympler = ">=0.9"
@@ -2158,11 +2158,14 @@ requests = ">=2.4"
 rich = ">=10.11.0"
 semver = "*"
 toml = "*"
-tornado = ">=5.0"
+tornado = ">=6.0.3"
 typing-extensions = ">=3.10.0.0"
 tzlocal = ">=1.1"
 validators = ">=0.2"
 watchdog = {version = "*", markers = "platform_system != \"Darwin\""}
+
+[package.extras]
+snowflake = ["snowflake-snowpark-python"]
 
 [[package]]
 name = "streamlit-nested-layout"
@@ -2647,7 +2650,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "9b8486db1df3aa87c8f69e6cc625bcb7e2d7166a65d6e219f0270c50bc1ab09c"
+content-hash = "cd8863dd95a1166d494d45205e5997a717838006313f6bc19ac8aebae818ee3a"
 
 [metadata.files]
 altair = [
@@ -4270,8 +4273,8 @@ statsmodels = [
     {file = "statsmodels-0.13.5.tar.gz", hash = "sha256:593526acae1c0fda0ea6c48439f67c3943094c542fe769f8b90fe9e6c6cc4871"},
 ]
 streamlit = [
-    {file = "streamlit-1.13.0-py2.py3-none-any.whl", hash = "sha256:3231a6f424f8a7f365dc9e46d4fbb66a3634fd570c74769b8a69f792d9285d3a"},
-    {file = "streamlit-1.13.0.tar.gz", hash = "sha256:eb178dc87d9f01e2be11ee9e4d55f79a678597ece56cacbfe5a9236d768d48da"},
+    {file = "streamlit-1.19.0-py2.py3-none-any.whl", hash = "sha256:5387c89a9e930b97d46446516cf43f9156e1863713867050c7021cf97f10c0b3"},
+    {file = "streamlit-1.19.0.tar.gz", hash = "sha256:e9793d351af5d4f7821c2ea81babf1c78cdbba69f057cf80d602dec56c4408f1"},
 ]
 streamlit-nested-layout = [
     {file = "streamlit-nested-layout-0.1.1.tar.gz", hash = "sha256:8b7ce4d90b76ff8f4fff2cf7b30ae262cd2c068722e5439a3618f9a412ed82fb"},
