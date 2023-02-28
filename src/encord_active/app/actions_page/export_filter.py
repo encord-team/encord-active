@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from enum import Enum
 from typing import Callable, NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
@@ -24,6 +25,12 @@ from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_
 from encord_active.lib.project.metadata import ProjectNotFound
 
 
+class CurrentForm(str, Enum):
+    NONE = "none"
+    EXPORT = "export"
+    CLONE = "clone"
+
+
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Adds a UI on top of a dataframe to let apps filter columns
@@ -44,7 +51,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
         to_filter_columns = st.multiselect("Filter dataframe on", columns_to_filter)
         filtered = df.copy()
-        filtered['data_row_id'] = filtered.index.str.split('_', n=2).str[0:2].str.join('_')
+        filtered["data_row_id"] = filtered.index.str.split("_", n=2).str[0:2].str.join("_")
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
@@ -102,7 +109,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 if user_text_input:
                     filtered = filtered[filtered[column].astype(str).str.contains(user_text_input)]
             if not non_applicable.empty:
-                filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered['data_row_id'])]
+                filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
                 filtered = pd.concat([filtered, filtered_objects_df])
     return filtered.drop("data_row_id", axis=1)
 
@@ -113,8 +120,8 @@ class InputItem(NamedTuple):
 
 
 class RenderItems(NamedTuple):
-    dataset: Optional[InputItem] = None
     project: Optional[InputItem] = None
+    dataset: Optional[InputItem] = None
     ontology: Optional[InputItem] = None
 
 
@@ -123,11 +130,6 @@ def _get_column(col, item, num_rows) -> InputItem:
         col.text_input(f"{item} title", value=f"Subset: {get_state().project_paths.project_dir.name} ({num_rows})"),
         col.text_area(f"{item} description"),
     )
-
-
-def _get_columns(num_rows: int, items_to_render: list[str]) -> RenderItems:
-    form_columns = st.columns(len(items_to_render))
-    return RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
 
 
 def _get_action_utils():
@@ -189,14 +191,7 @@ def export_filter():
     original_row_count = get_state().merged_metrics.shape[0]
     get_filtered_row_count, set_filtered_row_count = use_state(0)
 
-    get_export_form_button, set_export_form_button = use_state(False)
-    get_clone_form_button, set_clone_form_button = use_state(False)
-
-    def close_all_forms(curr_form: Optional[Callable] = None):
-        form_controls = [set_export_form_button, set_clone_form_button]
-        for form in form_controls:
-            if form != curr_form:
-                form(False)
+    get_current_form, set_current_form = use_state(CurrentForm.NONE)
 
     setup_page()
     message_placeholder = st.empty()
@@ -210,33 +205,34 @@ def export_filter():
     st.markdown(f"**Total row:** {row_count}")
     st.dataframe(filtered_df, use_container_width=True)
 
-    action_columns = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
+    (
+        generate_csv_col,
+        generate_coco_col,
+        _,
+        export_button_col,
+        subset_button_col,
+        delete_button_col,
+        edit_button_col,
+        augment_button_col,
+    ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
-    render_generate_csv(action_columns[0], file_prefix, filtered_df)
-    render_generate_coco(action_columns[1], file_prefix, filtered_df)
+    render_generate_csv(generate_csv_col, file_prefix, filtered_df)
+    render_generate_coco(generate_coco_col, file_prefix, filtered_df)
     render_unimplemented_buttons(
-        action_columns[5], action_columns[6], action_columns[7], message_placeholder, close_all_forms
+        delete_button_col, edit_button_col, augment_button_col, message_placeholder, set_current_form
     )
 
     if get_filtered_row_count() != row_count:
         set_filtered_row_count(row_count)
-        close_all_forms()
+        set_current_form(CurrentForm.NONE)
 
     if not project_has_remote:
-        render_export_button(
-            action_columns[3], action_utils, close_all_forms, get_export_form_button, set_export_form_button
-        )
+        render_export_button(export_button_col, action_utils, get_current_form, set_current_form)
 
     if row_count != original_row_count:
         render_subset_button(
-            action_columns[4],
-            action_utils,
-            filtered_df,
-            project_has_remote,
-            close_all_forms,
-            get_clone_form_button,
-            set_clone_form_button,
+            subset_button_col, action_utils, filtered_df, project_has_remote, get_current_form, set_current_form
         )
 
 
@@ -244,7 +240,9 @@ def generate_create_project_form(header: str, num_rows: int, items_to_render: li
     with st.form("new_project_form"):
         st.subheader(header)
 
-        cols = _get_columns(num_rows, items_to_render)
+        form_columns = st.columns(len(items_to_render))
+        cols = RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
+
         if not st.form_submit_button("➕ Create"):
             return None
         for item, render_item in zip(cols._fields, cols):
@@ -259,18 +257,17 @@ def render_subset_button(
     action_utils: EncordActions,
     subset_df: pd.DataFrame,
     project_has_remote: bool,
-    close_forms: Callable,
-    get_create_button: Callable,
-    set_create_button: Callable,
+    get_current_form: Callable,
+    set_current_form: Callable,
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: (close_forms(curr_form=set_create_button), set_create_button(True)),  # type: ignore
+        on_click=lambda: set_current_form(CurrentForm.CLONE),  # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
 
-    if get_create_button():
+    if get_current_form() == CurrentForm.CLONE:
         items_to_render = ["Project"] if not project_has_remote else ["Dataset", "Project"]
         cols = generate_create_project_form(
             "Create a subset with the selected items", subset_df.shape[0], items_to_render
@@ -280,43 +277,36 @@ def render_subset_button(
 
         with st.spinner("Creating Project Subset..."):
             try:
-                created_dir = action_utils.create_local_subset(
+                created_dir = action_utils.create_subset(
+                    filtered_df=subset_df,
+                    remote_copy=bool(project_has_remote and cols.dataset),
                     project_title=cols.project.title,
                     project_description=cols.project.description,
-                    filtered_df=subset_df,
+                    dataset_title=cols.dataset.title if cols.dataset else None,
+                    dataset_description=cols.dataset.description if cols.dataset else None,
                 )
             except Exception as e:
                 st.error(str(e))
-            if project_has_remote and cols.dataset:
-                action_utils.clone_remote_copy(
-                    created_dir,
-                    cols.project.title,
-                    cols.project.description,
-                    cols.dataset.title,
-                    cols.dataset.description,
-                    subset_df,
-                )
+                return
         label = st.empty()
-        label.info("🎉 Project subset has been created!")
-        st.markdown(created_dir)
+        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()}")
 
 
 def render_export_button(
     render_col: DeltaGenerator,
     action_utils: EncordActions,
-    close_forms: Callable,
-    get_export_button: Callable,
-    set_export_button: Callable,
+    get_current_form: Callable,
+    set_current_form: Callable,
 ):
     export_button = render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: (close_forms(curr_form=set_export_button), set_export_button(True)),  # type: ignore
+        on_click=lambda: set_current_form(CurrentForm.EXPORT),  # type: ignore
         disabled=not action_utils,
         help="Export to an Encord dataset and project",
     )
     df = get_state().merged_metrics
 
-    if get_export_button():
+    if get_current_form() == CurrentForm.EXPORT:
         items_to_render = ["Dataset", "Project", "Ontology"]
         cols = generate_create_project_form(
             "Create a new project with the current dataset", df.shape[0], items_to_render
@@ -332,7 +322,7 @@ def render_unimplemented_buttons(
     edit_button_column: DeltaGenerator,
     augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
-    close_all_forms: Callable,
+    set_current_form: Callable,
 ):
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
@@ -342,7 +332,7 @@ def render_unimplemented_buttons(
     )
     augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
     if any([delete_btn, edit_btn, augment_btn]):
-        close_all_forms()
+        set_current_form(CurrentForm.NONE)
         message_placeholder.markdown(
             f"""
 <div class="encord-active-info-box">
