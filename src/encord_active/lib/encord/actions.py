@@ -55,26 +55,21 @@ class ProjectCreationResult(NamedTuple):
     hash: str
 
 
-class SubsetCreationResult(NamedTuple):
-    dataset_to_data_hash_map: dict[str, list[str]]
-    label_rows: list[str]
-
-
 def create_filtered_embeddings(
     curr_project_structure: ProjectFileStructure,
     target_project_structure: ProjectFileStructure,
-    filtered_label_rows,
-    filtered_data_hashes,
+    filtered_label_rows: set[str],
+    filtered_data_hashes: set[str],
     filtered_df: pd.DataFrame,
 ):
-    if not target_project_structure.embeddings.exists():
-        os.mkdir(target_project_structure.embeddings)
+    os.mkdir(target_project_structure.embeddings)
+    target_project_structure.embeddings.mkdir(parents=True, exist_ok=True)
     for csv_embedding_file in curr_project_structure.embeddings.glob("*.csv"):
         csv_df = pd.read_csv(csv_embedding_file, index_col=0)
         filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
         filtered_csv_df.to_csv(target_project_structure.embeddings / csv_embedding_file.name)
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-        collection = load_collections(embedding_type, (curr_project_structure.embeddings))
+        collection = load_collections(embedding_type, curr_project_structure.embeddings)
         collection = [
             c for c in collection if c["label_row"] in filtered_label_rows and c["data_unit"] in filtered_data_hashes
         ]
@@ -84,32 +79,42 @@ def create_filtered_embeddings(
 def copy_filtered_data(
     curr_project_structure: ProjectFileStructure,
     target_project_structure: ProjectFileStructure,
-    filtered_label_rows,
-    filtered_data_hashes,
-    filtered_objects,
+    filtered_label_rows: set[str],
+    filtered_data_hashes: set[str],
+    filtered_labels: set[tuple[str, str, str]],
 ):
-    if not target_project_structure.data.is_dir():
-        os.mkdir(target_project_structure.data)
-    for label_row, data_unit in zip(filtered_label_rows, filtered_data_hashes):
-        if not (curr_project_structure.data / label_row).is_dir():
+    target_project_structure.data.mkdir(parents=True, exist_ok=True)
+    for label_row_hash, data_unit in zip(filtered_label_rows, filtered_data_hashes):
+        if not (curr_project_structure.data / label_row_hash).is_dir():
             continue
-        if not (target_project_structure.data / label_row).is_dir():
-            os.mkdir(target_project_structure.data / label_row)
-            os.mkdir(target_project_structure.data / label_row / "images")
-        for curr_file in (curr_project_structure.data / label_row / "images").glob(f"{data_unit}.*"):
-            if not (target_project_structure.data / label_row / "images" / curr_file.name).exists():
-                os.symlink(curr_file, target_project_structure.data / label_row / "images" / curr_file.name)
+        (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
+        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"{data_unit}.*"):
+            if not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists():
+                (target_project_structure.data / label_row_hash / "images" / curr_file.name).symlink_to(curr_file)
 
-        lr_js = json.loads((curr_project_structure.data / label_row / "label_row.json").read_text())
-        lr_js["data_units"] = {k: v for k, v in lr_js["data_units"].items() if k in filtered_data_hashes}
-        for data_unit_hash, v in lr_js["data_units"].items():
-            lr_js["data_units"][data_unit_hash]["labels"]["objects"] = [
+        label_row = json.loads((curr_project_structure.data / label_row_hash / "label_row.json").read_text())
+        label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
+        for data_unit_hash, v in label_row["data_units"].items():
+            label_row["data_units"][data_unit_hash]["labels"]["objects"] = [
                 obj
-                for obj in lr_js["data_units"][data_unit_hash]["labels"]["objects"]
-                if obj["objectHash"] in filtered_objects
+                for obj in v["labels"]["objects"]
+                if (label_row_hash, data_unit_hash, obj["objectHash"]) in filtered_labels
             ]
-        lr_js["object_answers"] = {k: v for k, v in lr_js["object_answers"].items() if k in filtered_objects}
-        (target_project_structure.data / label_row / "label_row.json").write_text(json.dumps(lr_js))
+
+            label_row["data_units"][data_unit_hash]["labels"]["classifications"] = [
+                obj
+                for obj in v["labels"]["classifications"]
+                if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels
+            ]
+
+        filtered_label_hashes = {f[2] for f in filtered_labels}
+        label_row["object_answers"] = {
+            k: v for k, v in label_row["object_answers"].items() if k in filtered_label_hashes
+        }
+        label_row["classification_answers"] = {
+            k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
+        }
+        (target_project_structure.data / label_row_hash / "label_row.json").write_text(json.dumps(label_row))
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
@@ -126,8 +131,7 @@ def create_filtered_metrics(
     target_project_structure: ProjectFileStructure,
     filtered_df: pd.DataFrame,
 ):
-    if not target_project_structure.metrics.is_dir():
-        os.mkdir(target_project_structure.metrics)
+    target_project_structure.metrics.mkdir(parents=True, exist_ok=True)
     for csv_metric_file in curr_project_structure.metrics.glob("*.csv"):
         csv_df = pd.read_csv(csv_metric_file, index_col=0)
         filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
@@ -410,9 +414,15 @@ class EncordActions:
                 self.update_embedding_identifiers(embedding_type, rev_renaming_map)
             raise Exception("UID replacement failed")
 
-    def create_local_subset(
-        self, project_title: str, project_description: str, filtered_df: pd.DataFrame
-    ) -> SubsetCreationResult:
+    def create_subset(
+        self,
+        filtered_df: pd.DataFrame,
+        project_title: str,
+        project_description: str,
+        dataset_title: Optional[str] = None,
+        dataset_description: Optional[str] = None,
+        remote_copy: bool = False,
+    ) -> Path:
         curr_project_structure = get_state().project_paths
         target_project_dir = curr_project_structure.project_dir.parent / project_title
         target_project_structure = ProjectFileStructure(target_project_dir)
@@ -421,31 +431,30 @@ class EncordActions:
             raise Exception("Subset with the same title already exists")
         os.mkdir(target_project_dir)
 
-        ids_df = filtered_df["identifier"].str.split("_", n=3, expand=True)
+        ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
         filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
         filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
         filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
-        filtered_objects = ids_df[2].unique()
+        filtered_labels = {(ids[1][0], ids[1][1], ids[1][3]) for ids in ids_df.iterrows()}
 
         curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
 
-        idu_js = json.loads(curr_project_structure.image_data_unit.read_text())
-        filtered_idu_js = {k: v for k, v in idu_js.items() if v["data_hash"] in filtered_data_hashes}
-        target_project_structure.image_data_unit.write_text(json.dumps(filtered_idu_js))
+        if curr_project_structure.image_data_unit.exists():
+            image_data_unit = json.loads(curr_project_structure.image_data_unit.read_text())
+            filtered_image_data_unit = {
+                k: v for k, v in image_data_unit.items() if v["data_hash"] in filtered_data_hashes
+            }
+            target_project_structure.image_data_unit.write_text(json.dumps(filtered_image_data_unit))
 
-        lrm_js = json.loads(curr_project_structure.label_row_meta.read_text())
-        filtered_lrm_js = {k: v for k, v in lrm_js.items() if k in filtered_label_rows}
-        target_project_structure.label_row_meta.write_text(json.dumps(filtered_lrm_js))
+        label_row_meta = json.loads(curr_project_structure.label_row_meta.read_text())
+        filtered_label_row_meta = {k: v for k, v in label_row_meta.items() if k in filtered_label_rows}
+        target_project_structure.label_row_meta.write_text(json.dumps(filtered_label_row_meta))
 
         dataset_hash_map: dict[str, set[str]] = {}
         label_rows = set()
-        for k, v in filtered_lrm_js.items():
+        for k, v in filtered_label_row_meta.items():
             dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
             label_rows.add(k)
-
-        creation_result = SubsetCreationResult(
-            label_rows=list(label_rows), dataset_to_data_hash_map={k: list(v) for k, v in dataset_hash_map.items()}
-        )
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
@@ -463,38 +472,30 @@ class EncordActions:
             target_project_structure,
             filtered_label_rows,
             filtered_data_hashes,
-            filtered_objects,
+            filtered_labels,
         )
 
         create_filtered_embeddings(
             curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
         )
-        return creation_result
 
-    def clone_remote_copy(
-        self,
-        creation_result: SubsetCreationResult,
-        project_name: str,
-        project_description: str,
-        dataset_title: str,
-        dataset_description: str,
-        filtered_df: pd.DataFrame,
-    ):
-        self.original_project.copy_project(
-            new_title=project_name,
-            new_description=project_description,
-            copy_collaborators=True,
-            copy_datasets=CopyDatasetOptions(
-                action=CopyDatasetAction.CLONE,
-                dataset_title=dataset_title,
-                dataset_description=dataset_description,
-                datasets_to_data_hashes_map=creation_result.dataset_to_data_hash_map,
-            ),
-            copy_labels=CopyLabelsOptions(
-                accepted_label_statuses=[state for state in ReviewApprovalState],
-                accepted_label_hashes=creation_result.label_rows,
-            ),
-        )
+        if remote_copy:
+            self.original_project.copy_project(
+                new_title=project_title,
+                new_description=project_description,
+                copy_collaborators=True,
+                copy_datasets=CopyDatasetOptions(
+                    action=CopyDatasetAction.CLONE,
+                    dataset_title=dataset_title,
+                    dataset_description=dataset_description,
+                    datasets_to_data_hashes_map={k: list(v) for k, v in dataset_hash_map.items()},
+                ),
+                copy_labels=CopyLabelsOptions(
+                    accepted_label_statuses=[state for state in ReviewApprovalState],
+                    accepted_label_hashes=list(label_rows),
+                ),
+            )
+        return target_project_structure.project_dir
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
