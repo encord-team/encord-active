@@ -5,7 +5,7 @@ title: FAQ
 
 ## Can I use Encord active without an Encord account
 
-You certainly can.
+You can.
 Encord Active is an open source project aimed to support all computer vision based active learning projects.
 You can, for example, use the [`init`](./cli/initialising-project-from-image-directories) command to initialize a project from an image directory.
 You can also [import a COCO project](./cli/import-coco-project).
@@ -20,13 +20,6 @@ The [Importing Data and Labels][importing-data] is a great resource for more inf
 
 Everything you do with this library stays within your local machine.
 No statistics, data or other information will be send elsewhere.
-
----
-
-## Is there a deployed version of Encord Active?
-
-No - at least not yet.
-We are, however, working on building a hosted version packed with additional features.
 
 ---
 
@@ -78,8 +71,6 @@ While we're working on improving the efficiency, there are a couple of tricks th
 
 ## How do I add my own embeddings?
 
-This is currently not an easy task.
-
 You will have to create a list of `encord_active.lib.embeddings.utils.LabelEmbedding` objects.
 The objects need to contain your custom (flat) embeddings as numpy arrays and point to the data or labels that you embedded.
 Store the list as a pickle file in
@@ -88,15 +79,11 @@ Store the list as a pickle file in
 - `project/path/embeddings/cnn_objects.pkl` if you do object level embeddings
 - `project/path/embeddings/cnn_objects_reduced.pkl` if you do 2D embeddings for similarity search.
 
-We're working on making this much easier (and documented).
-
 ---
 
 ## Can I use Encord Active without a UI?
 
 You can.
-We are working on including code snippets in the UI for you to copy code directly into your pipeline.
-Meanwhile, you will have to dig in a bit deeper into the code of Encord Active to see how to use it without the UI.
 
 The code base is structured such that all data operations live in [`encord_active.lib`][ea-lib] which serves as the "backend" for the UI.
 As such, everything you can do with the UI can also be done by code.
@@ -122,14 +109,8 @@ Exporting data back into the rest of your pipeline can be done via the [export p
 Dataset management can be done in two ways.
 
 1. You can [tag][tagging] your data to keep track of subsets (or versions) of your dataset.
-2. If you are planning to do more involved changes to your dataset and you want the ability to go back, your best option is to use the _Clone_ button on the [filter and export][filter-and-export] page.---
+2. If you are planning to do more involved changes to your dataset and you want the ability to go back, your best option is to use the _Clone_ button on the [filter and export][filter-and-export] page.
    This will create a clone of your entire project and you will always be able to come back to the old project.
-
-:::info
-
-We have project versioning on the roadmap and expect the first version to be available during early spring.
-
-:::
 
 ---
 
