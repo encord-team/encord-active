@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -62,7 +61,7 @@ def create_filtered_embeddings(
     filtered_data_hashes: set[str],
     filtered_df: pd.DataFrame,
 ):
-    os.mkdir(target_project_structure.embeddings)
+    target_project_structure.embeddings.mkdir()
     target_project_structure.embeddings.mkdir(parents=True, exist_ok=True)
     for csv_embedding_file in curr_project_structure.embeddings.glob("*.csv"):
         csv_df = pd.read_csv(csv_embedding_file, index_col=0)
@@ -429,7 +428,7 @@ class EncordActions:
 
         if target_project_dir.exists():
             raise Exception("Subset with the same title already exists")
-        os.mkdir(target_project_dir)
+        target_project_dir.mkdir()
 
         ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
         filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
