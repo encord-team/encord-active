@@ -45,7 +45,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
             # Due to the following line, currently there is only one classification answer
             # https://github.com/encord-team/encord-active/blob/2e09cedf1c07eb89c91cad928113b1b51fc8dc7f/src/encord_active/lib/embeddings/cnn.py#L238
             embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
+                f'{collection["label_row"]}_{collection["data_unit"]}_{int(collection["frame"]):05d}_{collection["labelHash"]}'
             )
             embeddings_2d_collection["label"].append(
                 collection["classification_answers"]["answer_name"]
