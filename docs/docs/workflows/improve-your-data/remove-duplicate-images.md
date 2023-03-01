@@ -38,7 +38,7 @@ There are approximately 200 duplicate images in this example.
 
 ![remove-duplicateimages-2](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-2.png)
 
-Go a little bit down and see the duplicate images. If you click **show similar images** button, you should see at least
+Scroll down to see the duplicate images. If you click the **show similar images** button, you should see at least
 one image in the similar ones. If you have [Encord Annotate](https://encord.com/) account, you can directly inspect the other image via
 the link in the description.
 
