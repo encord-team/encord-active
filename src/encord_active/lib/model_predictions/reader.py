@@ -25,6 +25,13 @@ class OntologyObjectJSON(TypedDict):
     color: str
 
 
+class OntologyClassificationJSON(TypedDict):
+    featureHash: str
+    attributeHash: str
+    optionHash: str
+    name: str
+
+
 @dataclass
 class MetricEntryPoint:
     metric_path: Path
