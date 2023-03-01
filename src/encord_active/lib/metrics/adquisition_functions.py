@@ -84,8 +84,7 @@ class LeastConfidence(AcquisitionFunction):
         )
 
     def score_predictions(self, predictions: np.ndarray) -> float:
-        with np.errstate(divide="ignore"):
-            return (1 - predictions.max(axis=1)).mean()
+        return (1 - predictions.max(axis=1)).mean()
 
 
 class Margin(AcquisitionFunction):
