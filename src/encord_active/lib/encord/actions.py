@@ -1,6 +1,5 @@
 import json
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -27,21 +26,16 @@ from encord_active.lib.common.utils import (
     iterate_in_batches,
     update_project_meta,
 )
-from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.embeddings.utils import (
-    LabelEmbedding,
-    load_collections,
-    save_collections,
+from encord_active.lib.encord.project_sync import (
+    LabelRowDataUnit,
+    copy_filtered_data,
+    create_filtered_db,
+    create_filtered_embeddings,
+    create_filtered_metrics,
+    replace_uids,
 )
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.metrics.metric import EmbeddingType, MetricMetadata
 from encord_active.lib.project import ProjectFileStructure
-
-
-class LabelRowDataUnit(NamedTuple):
-    label_row: str
-    data_unit: str
 
 
 class DatasetCreationResult(NamedTuple):
@@ -52,97 +46,6 @@ class DatasetCreationResult(NamedTuple):
 
 class ProjectCreationResult(NamedTuple):
     hash: str
-
-
-def create_filtered_embeddings(
-    curr_project_structure: ProjectFileStructure,
-    target_project_structure: ProjectFileStructure,
-    filtered_label_rows: set[str],
-    filtered_data_hashes: set[str],
-    filtered_df: pd.DataFrame,
-):
-    target_project_structure.embeddings.mkdir()
-    target_project_structure.embeddings.mkdir(parents=True, exist_ok=True)
-    for csv_embedding_file in curr_project_structure.embeddings.glob("*.csv"):
-        csv_df = pd.read_csv(csv_embedding_file, index_col=0)
-        filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
-        filtered_csv_df.to_csv(target_project_structure.embeddings / csv_embedding_file.name)
-    for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-        collection = load_collections(embedding_type, curr_project_structure.embeddings)
-        collection = [
-            c for c in collection if c["label_row"] in filtered_label_rows and c["data_unit"] in filtered_data_hashes
-        ]
-        save_collections(embedding_type, target_project_structure.embeddings, collection)
-
-
-def copy_filtered_data(
-    curr_project_structure: ProjectFileStructure,
-    target_project_structure: ProjectFileStructure,
-    filtered_label_rows: set[str],
-    filtered_data_hashes: set[str],
-    filtered_labels: set[tuple[str, str, str]],
-):
-    target_project_structure.data.mkdir(parents=True, exist_ok=True)
-    for label_row_hash, data_unit in zip(filtered_label_rows, filtered_data_hashes):
-        if not (curr_project_structure.data / label_row_hash).is_dir():
-            continue
-        (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
-        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"{data_unit}.*"):
-            if not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists():
-                (target_project_structure.data / label_row_hash / "images" / curr_file.name).symlink_to(curr_file)
-
-        label_row = json.loads((curr_project_structure.data / label_row_hash / "label_row.json").read_text())
-        label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
-        for data_unit_hash, v in label_row["data_units"].items():
-            label_row["data_units"][data_unit_hash]["labels"]["objects"] = [
-                obj
-                for obj in v["labels"]["objects"]
-                if (label_row_hash, data_unit_hash, obj["objectHash"]) in filtered_labels
-            ]
-
-            label_row["data_units"][data_unit_hash]["labels"]["classifications"] = [
-                obj
-                for obj in v["labels"]["classifications"]
-                if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels
-            ]
-
-        filtered_label_hashes = {f[2] for f in filtered_labels}
-        label_row["object_answers"] = {
-            k: v for k, v in label_row["object_answers"].items() if k in filtered_label_hashes
-        }
-        label_row["classification_answers"] = {
-            k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
-        }
-        (target_project_structure.data / label_row_hash / "label_row.json").write_text(json.dumps(label_row))
-
-
-def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
-    to_save_df = filtered_df.set_index("identifier")
-    curr_project_dir = DBConnection.project_file_structure().project_dir
-    DBConnection.set_project_path(target_project_dir)
-    MergedMetrics().replace_all(to_save_df)
-    DBConnection.set_project_path(curr_project_dir)
-    return curr_project_dir
-
-
-def create_filtered_metrics(
-    curr_project_structure: ProjectFileStructure,
-    target_project_structure: ProjectFileStructure,
-    filtered_df: pd.DataFrame,
-):
-    target_project_structure.metrics.mkdir(parents=True, exist_ok=True)
-    for csv_metric_file in curr_project_structure.metrics.glob("*.csv"):
-        csv_df = pd.read_csv(csv_metric_file, index_col=0)
-        filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
-        filtered_csv_df.to_csv(target_project_structure.metrics / csv_metric_file.name)
-
-        metric_json_path = Path(csv_metric_file.as_posix().rsplit(".", 1)[0] + ".meta.json")
-        metric_meta = MetricMetadata.parse_file(metric_json_path)
-        metric_meta.stats.num_rows = filtered_csv_df.shape[0]
-        metric_meta.stats.min_value = float(filtered_csv_df["score"].min())
-        metric_meta.stats.max_value = float(filtered_csv_df["score"].max())
-        mm_js = metric_meta.json()
-        (target_project_structure.metrics / metric_json_path.name).write_text(mm_js)
 
 
 class EncordActions:
@@ -359,59 +262,16 @@ class EncordActions:
                 progress_callback((counter + 1) / len(new_project.label_rows))
         self.project_meta["has_remote"] = True
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
+
+        replace_uids(
+            self.project_file_structure,
+            dataset_creation_result.lr_du_mapping,
+            self.project_meta["project_hash"],
+            new_project.project_hash,
+            dataset_creation_result.hash,
+        )
+
         return new_project
-
-    def update_embedding_identifiers(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
-        def _update_identifiers(embedding: LabelEmbedding, renaming_map: dict[str, str]):
-            old_lr, old_du = embedding["label_row"], embedding["data_unit"]
-            new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
-            embedding["label_row"] = new_lr
-            embedding["data_unit"] = new_du
-            embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
-            return embedding
-
-        collection = load_collections(embedding_type, self.project_file_structure.embeddings)
-        updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
-        save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
-
-    def _rename_files(self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit]):
-        for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            old_lr_path = self.project_file_structure.data / old_lr
-            new_lr_path = self.project_file_structure.data / new_lr
-            if old_lr_path.exists() and not new_lr_path.exists():
-                old_lr_path.rename(new_lr_path)
-            for old_du_f in new_lr_path.glob(f"**/{old_du}.*"):
-                old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
-
-    def _replace_in_files(self, renaming_map):
-        for subs in iterate_in_batches(list(renaming_map.items()), 100):
-            substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
-            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
-            subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
-
-    def replace_uids(
-        self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
-    ):
-        label_row_meta = json.loads(self.project_file_structure.label_row_meta.read_text(encoding="utf-8"))
-        original_dataset_hash = next(iter(label_row_meta.values()))["dataset_hash"]
-        renaming_map = {self.project_meta["project_hash"]: project_hash, original_dataset_hash: dataset_hash}
-        for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
-
-        try:
-            self._rename_files(file_mappings)
-            self._replace_in_files(renaming_map)
-            MergedMetrics().replace_identifiers(renaming_map)
-            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-                self.update_embedding_identifiers(embedding_type, renaming_map)
-        except Exception as e:
-            rev_renaming_map = {v: k for k, v in renaming_map.items()}
-            self._rename_files({v: k for k, v in file_mappings.items()})
-            self._replace_in_files(rev_renaming_map)
-            MergedMetrics().replace_identifiers(rev_renaming_map)
-            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-                self.update_embedding_identifiers(embedding_type, rev_renaming_map)
-            raise Exception("UID replacement failed")
 
     def create_subset(
         self,
@@ -479,7 +339,7 @@ class EncordActions:
         )
 
         if remote_copy:
-            self.original_project.copy_project(
+            cloned_project_hash = self.original_project.copy_project(
                 new_title=project_title,
                 new_description=project_description,
                 copy_collaborators=True,
@@ -494,6 +354,22 @@ class EncordActions:
                     accepted_label_hashes=list(label_rows),
                 ),
             )
+            cloned_project = self.user_client.get_project(cloned_project_hash)
+            du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project.label_rows}
+            filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
+            lr_du_mapping = {
+                LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
+                for cdu, clr in du_lr_mapping.items()
+            }
+
+            replace_uids(
+                target_project_structure,
+                lr_du_mapping,
+                self.original_project.project_hash,
+                cloned_project_hash,
+                cloned_project.datasets[0]["dataset_hash"],
+            )
+
         return target_project_structure.project_dir
 
 
