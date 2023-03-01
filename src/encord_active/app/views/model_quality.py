@@ -134,7 +134,12 @@ def model_quality(page: Page):
             with sticky_header():
                 common_settings_classifications()
 
-            # The followings will be moved into page.build() method
+            # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
+            sorted_class_ids = sorted([k for k, v in get_state().predictions.all_classes_classifications.items()])
+            class_names = [
+                get_state().predictions.all_classes_classifications[class_id]["name"] for class_id in sorted_class_ids
+            ]
+
             y_true, y_pred = list(predictions[reader.ClassificationLabelSchema.class_id]), list(
                 labels[reader.ClassificationPredictionSchema.class_id]
             )
@@ -147,12 +152,10 @@ def model_quality(page: Page):
             col_rec.metric("Mean Recall", f"{recall.mean():.2f}")
             col_f1.metric("Mean F1", f"{f1.mean():.2f}")
 
-
-
             confusion_matrix = get_confusion_matrix(
                 y_true,
                 y_pred,
-                get_state().predictions.all_classes_classifications,
+                class_names,
             )
             st.plotly_chart(confusion_matrix)
 

@@ -9,15 +9,11 @@ from sklearn import metrics
 from encord_active.lib.model_predictions.reader import OntologyClassificationJSON
 
 
-def get_confusion_matrix(
-    labels: list, predictions: list, class_names: Dict[str, OntologyClassificationJSON]
-) -> go.Figure:
+def get_confusion_matrix(labels: list, predictions: list, class_names: List[str]) -> go.Figure:
     cm = metrics.confusion_matrix(labels, predictions)
-    sorted_class_ids = sorted([k for k, v in class_names.items()])
-    axis_names = [class_names[class_id]["name"] for class_id in sorted_class_ids]
 
     fig = px.imshow(
-        cm, text_auto=True, labels=dict(x="Predicted", y="Real", color="Bluered"), x=axis_names, y=axis_names
+        cm, text_auto=True, labels=dict(x="Predicted", y="Real", color="Bluered"), x=class_names, y=class_names
     )
 
     return fig
@@ -31,4 +27,6 @@ def get_precision_recall_f1(labels: list, predictions: list) -> List[float]:
 def get_accuracy(labels: list, predictions: list) -> float:
     return metrics.accuracy_score(labels, predictions)
 
-def get_
+
+def get_roc_curve(labels: list, predictions: list, probs: list) -> go.Figure:
+    pass
