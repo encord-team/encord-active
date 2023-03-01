@@ -53,8 +53,8 @@ Create a **data tag** in the **Tags** section on the left sidebar.
 
 ![remove-duplicate-images-4.png](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-4.png)
 
-Go to **Bulk Tagging** section in the main view and assign the tag to all images. You should select **Level** as **Range** and 
-**Action** as **Add**.
+Go to **Bulk Tagging** section in the main view and assign the tag to all images. Select **Range** and 
+**Add**.
 
 ![remove-duplicate-images-10](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-10.png)
 
