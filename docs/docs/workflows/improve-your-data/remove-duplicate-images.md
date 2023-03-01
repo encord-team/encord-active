@@ -44,7 +44,7 @@ the link in the description.
 
 ![remove-duplicate-images-3](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-3.png)
 
-Now we want to remove all these duplicate images and imporve the quality of our dataset. To do that, first we will 
+Now, you want to remove all these duplicate images and improve the quality of our dataset. To do that, first we will 
 create a tag and assign it to all images, then we will remove it from the ones with a zero value. 
 Finally, we will use the **Actions** => **Filter & Export** tab to export
 only the ones with the tag. Let's start.
