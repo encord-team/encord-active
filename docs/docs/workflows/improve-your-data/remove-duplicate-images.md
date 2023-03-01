@@ -53,12 +53,12 @@ Create a **data tag** in the **Tags** section on the left sidebar.
 
 ![remove-duplicate-images-4.png](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-4.png)
 
-Go to **Bulk Tagging** section in the main view and assign the tag to all images. You should select **Level** as **Range** and 
-**Action** as **Add**.
+Go to **Bulk Tagging** section in the main view and assign the tag to all images. Select **Range** and 
+**Add**.
 
 ![remove-duplicate-images-10](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-10.png)
 
-When you click **Submit**, all images will be tagged instantly.
+When you click **Submit**, all images will be tagged with the tag you chose.
 
 ![remove-duplicate-images-6](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-6.png)
 
@@ -82,8 +82,8 @@ _An example of near duplicate image pairs detected with Encord Active_
 ![remove-duplicate-images-11](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-11.png)
 
 
-Near duplicate images are the ones where one image is a slightly shifted/blurred/distorted version of the other. So, they 
-should also be removed from the dataset; however, this time you now need to choose which one to stay and which to go. They 
+Near duplicate images are the ones where one image is a slightly shifted/blurred/distorted version of the other. So, they
+should also be removed from the dataset; however, this time you need to decide which sample gets to stay and which has to go. They
 have scores slightly more than 0 and are shown side by side in the grid view, so it is easy to match them.
 
 Move the right end of the **Choose quality** slider to somewhere around 0.05 so that we are only left with images with
