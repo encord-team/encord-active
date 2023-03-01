@@ -60,6 +60,34 @@ class Entropy(AcquisitionFunction):
             return -np.multiply(predictions, np.log2(predictions)).sum(axis=1).mean()
 
 
+class LeastConfidence(AcquisitionFunction):
+    def __init__(self):
+        super().__init__(
+            title="Least Confidence",
+            short_description="Ranks images by their least confidence score.",
+            long_description=(
+                "Ranks images by their least confidence score. \n \n"
+                "**Least confidence** (**LC**) score of a model's prediction is the difference between 1 "
+                "(100% confidence) and its most confidently predicted class label. The higher the **LC** score, the "
+                'more "uncertain" the model\'s prediction. \n \n'
+                "The mathematical formula of the **LC** score of a model's prediction $x$ is: "
+                r"$H(p) = 1 - \underset{y}{\max}(P(y|x))$"
+                " \n \nIt can be used to define a heuristic that measures a model’s uncertainty about the classes in "
+                "an image using the average of the **LC** score of the predicted classes' instances. "
+                "Like before, the "
+                'higher the image **LC** score, the more "confused" the model is. As a result, data samples with '
+                "higher **LC** score should be offered for annotation."
+            ),
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+        )
+
+    def score_predictions(self, predictions: np.ndarray) -> float:
+        with np.errstate(divide="ignore"):
+            return (1 - predictions.max(axis=1)).mean()
+
+
 class Margin(AcquisitionFunction):
     def __init__(self):
         super().__init__(
