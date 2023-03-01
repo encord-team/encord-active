@@ -39,10 +39,17 @@ class Entropy(AcquisitionFunction):
         super().__init__(
             title="Entropy",
             short_description="Ranks images by their entropy.",
-            long_description=r"""Ranks images by their entropy.
-
-The mathematical formula for entropy calculation is:
-$$H(p) = -\sum{_i=1}{N} p_i \log{_2}{p_i}$$""",
+            long_description=(
+                "Ranks images by their entropy. \n \n"
+                'In information theory, the entropy of a random variable is the average level of "information", '
+                '"surprise", or "uncertainty" inherent to the variable\'s possible outcomes. '
+                'The higher the entropy, the more "uncertain" the variable outcome. \n \n'
+                r"The mathematical formula of entropy is: $H(p) = -\sum_{i=1}^{N} p_i \log_{2}{p_i}$"
+                " \n \nIt can be used to define a heuristic that measures a model’s uncertainty about the classes in "
+                "an image using the average of the entropies of the classes. As before, the higher the entropy, the "
+                'more "confused" the model is. As a result, data samples with higher entropy '
+                "should be offered for annotation."
+            ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
