@@ -21,11 +21,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.utils import (
-    fetch_project_meta,
-    iterate_in_batches,
-    update_project_meta,
-)
+from encord_active.lib.common.utils import fetch_project_meta, update_project_meta
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
     copy_filtered_data,
