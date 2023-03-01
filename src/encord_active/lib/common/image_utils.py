@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -17,6 +18,13 @@ from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 
 
+@dataclass
+class ObjectDrawingConfigurations:
+    draw_objects: bool = True
+    outline_width: int = 3
+    opacity: float = 0.3
+
+
 def get_polygon_thickness(img_w: int):
     t = max(1, int(img_w / 500))
     return t
@@ -31,10 +39,31 @@ def get_bbox_csv(row: pd.Series) -> np.ndarray:
     return np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]).reshape((-1, 1, 2)).astype(int)
 
 
+def draw_object_with_background_color(
+    image: np.ndarray,
+    geometry: Union[np.ndarray, list],
+    color: Union[Color, str],
+    draw_configurations: ObjectDrawingConfigurations,
+):
+    if len(geometry) != 1:
+        geometry = [geometry]
+
+    """
+        img_w_poly = cv2.fillPoly(image.copy(), [geometry], hex_to_rgb(color, lighten=0.5))
+        image = cv2.addWeighted(image, 1 - draw_configurations.opacity, img_w_poly, draw_configurations.opacity, 1.0)
+        image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), draw_configurations.outline_width)
+    """
+
+    hex_color = color.value if isinstance(color, Color) else color
+    img_w_poly = cv2.fillPoly(image.copy(), geometry, hex_to_rgb(hex_color, lighten=0.5))
+    image = cv2.addWeighted(image, 1 - draw_configurations.opacity, img_w_poly, draw_configurations.opacity, 1.0)
+    return cv2.polylines(image, geometry, True, hex_to_rgb(hex_color), draw_configurations.outline_width)
+
+
 def draw_object(
     image: np.ndarray,
     row: pd.Series,
-    mask_opacity: float = 0.5,
+    draw_configuration: Optional[ObjectDrawingConfigurations] = None,
     color: Union[Color, str] = Color.PURPLE,
     with_box: bool = False,
 ):
@@ -42,41 +71,33 @@ def draw_object(
     The input should be a row from a LabelSchema (or descendants thereof).
     """
     isClosed = True
-    thickness = get_polygon_thickness(image.shape[1])
-
-    hex_color = color.value if isinstance(color, Color) else color
-    _color: Tuple[int, ...] = hex_to_rgb(hex_color)
-    _color_outline: Tuple[int, ...] = hex_to_rgb(hex_color, lighten=-0.5)
+    _color = hex_to_rgb(color.value if isinstance(color, Color) else color)
+    if draw_configuration is None:
+        draw_configuration = ObjectDrawingConfigurations()
 
     box_only = not isinstance(row["rle"], str)
-    if with_box or box_only:
-        box = get_bbox_csv(row)
-        image = cv2.polylines(image, [box], isClosed, _color, thickness, lineType=cv2.LINE_8)
+    box = get_bbox_csv(row)
 
     if box_only:
-        return image
+        return draw_object_with_background_color(image, box, color, draw_configuration)
+
+    import streamlit as st
+
+    if with_box:
+        image = cv2.polylines(image, [box], isClosed, _color, draw_configuration.outline_width, lineType=cv2.LINE_8)
 
     mask = rle_to_binary_mask(eval(row["rle"]))
-
-    # Draw contour line
     contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-    image = cv2.polylines(image, contours, isClosed, _color_outline, thickness, lineType=cv2.LINE_8)
 
-    # Fill polygon with opacity
-    patch = np.zeros_like(image)
-    mask_select = mask == 1
-    patch[mask_select] = _color
-    image[mask_select] = cv2.addWeighted(image, (1 - mask_opacity), patch, mask_opacity, 0)[mask_select]
-
-    return image
+    return draw_object_with_background_color(image, contours, color, draw_configuration)
 
 
 def show_image_with_predictions_and_label(
     label: pd.Series,
     predictions: DataFrame[PredictionMatchSchema],
     data_dir: Path,
+    draw_configurations: Optional[ObjectDrawingConfigurations] = None,
     label_color: Color = Color.RED,
-    mask_opacity=0.5,
     class_colors: Optional[Dict[int, str]] = None,
 ):
     """
@@ -96,26 +117,26 @@ def show_image_with_predictions_and_label(
 
     for _, pred in predictions.iterrows():
         color = class_colors.get(pred["class_id"], Color.PURPLE)
-        image = draw_object(image, pred, mask_opacity=mask_opacity, color=color)
+        image = draw_object(image, pred, draw_configurations, color=color)
 
-    return draw_object(image, label, mask_opacity=mask_opacity, color=label_color, with_box=True)
+    return draw_object(image, label, draw_configuration=draw_configurations, color=label_color, with_box=True)
 
 
 def show_image_and_draw_polygons(
-    row: Union[Series, str], data_dir: Path, draw_polygons: bool = True, skip_object_hash: bool = False
+    row: Union[Series, str],
+    data_dir: Path,
+    draw_configurations: Optional[ObjectDrawingConfigurations] = None,
+    skip_object_hash: bool = False,
 ) -> np.ndarray:
     image = load_or_fill_image(row, data_dir)
 
-    if not draw_polygons:
-        return image
+    if draw_configurations is None:
+        draw_configurations = ObjectDrawingConfigurations()
 
-    is_closed = True
-    thickness = get_polygon_thickness(image.shape[1])
-
-    img_h, img_w = image.shape[:2]
-    for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
-        image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), thickness)
-
+    if draw_configurations.draw_objects:
+        img_h, img_w = image.shape[:2]
+        for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
+            image = draw_object_with_background_color(image, geometry, color, draw_configurations)
     return image
 
 

@@ -5,6 +5,7 @@ from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
+from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
@@ -28,7 +29,7 @@ class FalseNegativesPage(ModelQualityPage):
             help="The data in the main view will be sorted by the selected metric. "
             "(F) := frame scores, (O) := object scores.",
         )
-        self.row_col_settings_in_sidebar()
+        self.display_settings(MetricScope.MODEL_QUALITY)
 
     def build(
         self,

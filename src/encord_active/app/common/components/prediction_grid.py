@@ -51,8 +51,9 @@ def build_card_for_labels(
 
 
 def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.GREEN):
-    image = show_image_and_draw_polygons(row, data_dir, draw_polygons=True, skip_object_hash=True)
-    image = draw_object(image, row, color=box_color, with_box=True)
+    conf = get_state().object_drawing_configurations
+    image = show_image_and_draw_polygons(row, data_dir, draw_configurations=conf, skip_object_hash=True)
+    image = draw_object(image, row, draw_configuration=conf, color=box_color, with_box=True)
     st.image(image)
     multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
 
