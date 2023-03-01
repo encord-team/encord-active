@@ -13,7 +13,7 @@ embedding plot for the COCO 2017 validation set.
 
 ![using-2d-embeddings-1](../images/workflows/using-2d-embeddings/using-2d-embeddings-1.png)
 
-You see how images can be clustered around certain regions. In order to visualize images in these clusters and learn
+Notice how images are clustered around certain regions. In order to visualize images in these clusters and learn
 what is common among these samples, you can use Box or Lasso Select on the upper right corner of the plot.
 
 ![using-2d-embeddings-2](../images/workflows/using-2d-embeddings/using-2d-embeddings-2.gif)
