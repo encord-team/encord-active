@@ -83,7 +83,7 @@ _An example of near duplicate image pairs detected with Encord Active_
 
 
 Near duplicate images are the ones where one image is a slightly shifted/blurred/distorted version of the other. So, they 
-should also be removed from the dataset; however, this time you now need to choose which one to stay and which to go. They 
+should also be removed from the dataset; however, this time you need to decide which sample gets to stay and which has to go. They 
 have scores slightly more than 0 and are shown side by side in the grid view, so it is easy to match them.
 
 Move the right end of the **Choose quality** slider to somewhere around 0.05 so that we are only left with images with
