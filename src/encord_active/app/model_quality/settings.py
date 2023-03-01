@@ -62,39 +62,39 @@ def common_settings_classifications():
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
         )
 
-    all_classes = get_state().predictions.all_classes_classifications
-    col1, col2, col3 = st.columns([4, 4, 3])
-
-    with col1:
-        selected_classes = st.multiselect(
-            "Filter by class",
-            list(all_classes.items()),
-            format_func=lambda x: x[1]["name"],
-            help="""
-            With this selection, you can choose which classes to include in the main page.\n
-            This acts as a filter, i.e. when nothing is selected all classes are included.
-            """,
-        )
-
-    get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
-
-    with col2:
-        # Confidence threshold
-        get_state().iou_threshold = st.slider(
-            "Confidence threshold",
-            min_value=0.0,
-            max_value=1.0,
-            value=State.binary_confidence_threshold,
-            help="Only applicable to binary classification",
-        )
-
-    with col3:
-        st.write("")
-        st.write("")
-        # Ignore unmatched frames
-        get_state().ignore_frames_without_predictions = st.checkbox(
-            "Ignore frames without predictions",
-            value=State.ignore_frames_without_predictions,
-            help="If there are frames in the dataset for which there "
-            "exist no predictions. With this flag, you can ignore those.",
-        )
+    # all_classes = get_state().predictions.all_classes_classifications
+    # col1, col2, col3 = st.columns([4, 4, 3])
+    #
+    # with col1:
+    #     selected_classes = st.multiselect(
+    #         "Filter by class",
+    #         list(all_classes.items()),
+    #         format_func=lambda x: x[1]["name"],
+    #         help="""
+    #         With this selection, you can choose which classes to include in the main page.\n
+    #         This acts as a filter, i.e. when nothing is selected all classes are included.
+    #         """,
+    #     )
+    #
+    # get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
+    #
+    # with col2:
+    #     # Confidence threshold
+    #     get_state().iou_threshold = st.slider(
+    #         "Confidence threshold",
+    #         min_value=0.0,
+    #         max_value=1.0,
+    #         value=State.binary_confidence_threshold,
+    #         help="Only applicable to binary classification.",
+    #     )
+    #
+    # with col3:
+    #     st.write("")
+    #     st.write("")
+    #     # Ignore unmatched frames
+    #     get_state().ignore_frames_without_predictions = st.checkbox(
+    #         "Ignore frames without predictions",
+    #         value=State.ignore_frames_without_predictions,
+    #         help="If there are frames in the dataset for which there "
+    #         "exist no predictions, with this flag, you can ignore those.",
+    #     )

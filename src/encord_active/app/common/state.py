@@ -15,7 +15,11 @@ from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
+from encord_active.lib.model_predictions.reader import (
+    LabelSchema,
+    OntologyClassificationJSON,
+    OntologyObjectJSON,
+)
 from encord_active.lib.project import ProjectFileStructure
 
 GLOBAL_STATE = "global_state"
@@ -34,7 +38,7 @@ class PredictionsState:
     decompose_classes = False
     metric_datas = MetricNames()
     all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
-    all_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    all_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
     selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     selected_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None

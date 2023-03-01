@@ -11,7 +11,11 @@ from encord_active.app.model_quality.settings import (
     common_settings_objects,
 )
 from encord_active.app.model_quality.sub_pages import Page
-from encord_active.lib.charts.classification_metrics import get_confusion_matrix
+from encord_active.lib.charts.classification_metrics import (
+    get_accuracy,
+    get_confusion_matrix,
+    get_precision_recall_f1,
+)
 from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
@@ -129,79 +133,27 @@ def model_quality(page: Page):
 
             with sticky_header():
                 common_settings_classifications()
-            # The following plots will be moved into page.build() method
+
+            # The followings will be moved into page.build() method
+            y_true, y_pred = list(predictions[reader.ClassificationLabelSchema.class_id]), list(
+                labels[reader.ClassificationPredictionSchema.class_id]
+            )
+            precision, recall, f1, _ = get_precision_recall_f1(y_true, y_pred)
+            accuracy = get_accuracy(y_true, y_pred)
+
+            col_acc, col_prec, col_rec, col_f1 = st.columns(4)
+            col_acc.metric("Accuracy", f"{accuracy:.2f}")
+            col_prec.metric("Mean Precision", f"{precision.mean():.2f}")
+            col_rec.metric("Mean Recall", f"{recall.mean():.2f}")
+            col_f1.metric("Mean F1", f"{f1.mean():.2f}")
+
+
 
             confusion_matrix = get_confusion_matrix(
-                predictions[reader.ClassificationLabelSchema.class_id],
-                labels[reader.ClassificationPredictionSchema.class_id],
+                y_true,
+                y_pred,
+                get_state().predictions.all_classes_classifications,
             )
-
-        # OLD CODE
-
-        # if not reader.check_model_prediction_availability_objects(get_state().project_paths.predictions):
-        #     st.markdown(
-        #         "# Missing Model Predictions\n"
-        #         "This project does not have any imported predictions. "
-        #         "Please refer to the "
-        #         f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
-        #         "section of the documentation to learn how to import your predictions."
-        #     )
-        #     return
-        #
-        # predictions_dir = get_state().project_paths.predictions
-        # metrics_dir = get_state().project_paths.metrics
-        #
-        # predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
-        # label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        # model_predictions = use_memo(lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas))
-        # labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
-        #
-        # if model_predictions is None:
-        #     st.error("Couldn't load model predictions")
-        #     return
-        #
-        # if labels is None:
-        #     st.error("Couldn't load labels properly")
-        #     return
-        #
-        # matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
-        # get_state().predictions.metric_datas = MetricNames(
-        #     predictions={m.name: m for m in predictions_metric_datas},
-        #     labels={m.name: m for m in label_metric_datas},
-        # )
-        #
-        # if not matched_gt:
-        #     st.error("Couldn't match groung truths")
-        #     return
-        #
-        # with sticky_header():
-        #     common_settings()
-        #     page.sidebar_options()
-        #
-        # (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
-        #     model_predictions,
-        #     labels,
-        #     matched_gt,
-        #     get_state().predictions.all_classes,
-        #     iou_threshold=get_state().iou_threshold,
-        #     ignore_unmatched_frames=get_state().ignore_frames_without_predictions,
-        # )
-        #
-        # # Sort predictions and labels according to selected metrics.
-        # pred_sort_column = get_state().predictions.metric_datas.selected_predicion or predictions_metric_datas[0].name
-        # sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
-        #
-        # label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
-        # sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
-        #
-        # if get_state().ignore_frames_without_predictions:
-        #     matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
-        # else:
-        #     matched_labels = sorted_labels
-        #
-        # _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
-        #     get_state().predictions.selected_classes, matched_labels, metrics, sorted_model_predictions, precisions
-        # )
-        # page.build(model_predictions=_model_pred, labels=_labels, metrics=_metrics, precisions=_precisions)
+            st.plotly_chart(confusion_matrix)
 
     return render
