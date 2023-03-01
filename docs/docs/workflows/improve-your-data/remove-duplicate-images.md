@@ -21,7 +21,7 @@ their uniqueness.
 - A zero value indicates that this image has at least one identical image in this dataset. In the case of _N_ 
 duplicate images, we assign a value of zero to _N-1_ of them (only one of them will have a nonzero value) so that they
 can be excluded from the dataset immediately.
-- In the case of duplicate images, _N-1_ image will be linked to a single image among those and this image can be 
+- In the case of duplicate images, _N-1_ images will be linked to a single image among those and this image can be 
 visualized using the `Description` field under each image.
 - Near duplicate images are labeled as `Near duplicate image` and shown side by side in the grid view. So that
 users can choose which one to keep and which to remove.
