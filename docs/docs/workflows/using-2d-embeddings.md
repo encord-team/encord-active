@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Using 2D Embeddings
 
-**Use 2D embeddings to leverage your active learning cycle**
+**Use 2D embeddings to improve your active learning cycle**
 
 Encord Active presents you 2D embedding plot for all the images in your project. You can use it to find interesting 
 clusters, understand your data better, weakly label your images, remove detrimental images and many more. 2D 
