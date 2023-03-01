@@ -125,9 +125,12 @@ class RenderItems(NamedTuple):
     ontology: Optional[InputItem] = None
 
 
-def _get_column(col, item, num_rows) -> InputItem:
+def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool) -> InputItem:
     return InputItem(
-        col.text_input(f"{item} title", value=f"Subset: {get_state().project_paths.project_dir.name} ({num_rows})"),
+        col.text_input(
+            f"{item} title",
+            value=f"{'Subset: ' if subset else ''}{get_state().project_paths.project_dir.name} ({num_rows})",
+        ),
         col.text_area(f"{item} description"),
     )
 
@@ -165,18 +168,16 @@ def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItem
         if cols.ontology
         else action_utils.original_project.get_project().ontology_hash
     )
-    new_project = action_utils.create_project(
-        dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
-    )
-    clear()
-    label.empty()
+
     try:
-        action_utils.replace_uids(
-            dataset_creation_result.lr_du_mapping, new_project.project_hash, dataset_creation_result.hash
+        new_project = action_utils.create_project(
+            dataset_creation_result, cols.project.title, cols.project.description, ontology_hash, progress
         )
     except Exception as e:
         st.error(str(e))
         return False
+    clear()
+    label.empty()
     label = st.empty()
     label.info("🎉 New project is created!")
 
@@ -236,7 +237,9 @@ def export_filter():
         )
 
 
-def generate_create_project_form(header: str, num_rows: int, dataset: bool, ontology: bool) -> Optional[RenderItems]:
+def generate_create_project_form(
+    header: str, num_rows: int, dataset: bool, ontology: bool, subset: bool
+) -> Optional[RenderItems]:
     with st.form("new_project_form"):
         st.subheader(header)
         items_to_render = ["Project"]
@@ -246,7 +249,9 @@ def generate_create_project_form(header: str, num_rows: int, dataset: bool, onto
             items_to_render.append("Ontology")
 
         form_columns = st.columns(len(items_to_render))
-        cols = RenderItems(*[_get_column(col, item, num_rows) for item, col in zip(items_to_render, form_columns)])
+        cols = RenderItems(
+            *[_get_column(col, item, num_rows, subset) for item, col in zip(items_to_render, form_columns)]
+        )
 
         if not st.form_submit_button("➕ Create"):
             return None
@@ -276,8 +281,9 @@ def render_subset_button(
         cols = generate_create_project_form(
             "Create a subset with the selected items",
             subset_df.shape[0],
-            dataset=not project_has_remote,
+            dataset=project_has_remote,
             ontology=False,
+            subset=True,
         )
         if not cols or not cols.project:
             return
@@ -315,7 +321,7 @@ def render_export_button(
 
     if get_current_form() == CurrentForm.EXPORT:
         cols = generate_create_project_form(
-            "Create a new project with the current dataset", df.shape[0], dataset=True, ontology=True
+            "Create a new project with the current dataset", df.shape[0], dataset=True, ontology=True, subset=False
         )
         if not cols:
             return
