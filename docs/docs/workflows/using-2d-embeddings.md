@@ -32,7 +32,7 @@ selected ones so that you can create a new version of your dataset without them.
 for the images that you think including them will be detrimental.
 
 Samples in the 2D embedding plot in the **Data Quality => Summary** page have no label information; therefore, they all share
-the same color. On the other hand, it is colored according to labels on the **Label Quality => Summary** page. 
+the same color. On the other hand, points colored according to labels on the **Label Quality => Summary** page. 
 
 ![using-2d-embeddings-4](../images/workflows/using-2d-embeddings/using-2d-embeddings-4.png)
 
