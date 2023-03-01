@@ -24,7 +24,7 @@ can be excluded from the dataset immediately.
 - In the case of duplicate images, _N-1_ images will be linked to a single image among those and this image can be 
 visualized using the `Description` field under each image.
 - Near duplicate images are labeled as `Near duplicate image` and shown side by side in the grid view. So that
-users can choose which one to keep and which to remove.
+you can choose which one to keep and which to remove.
 
 ## Steps
 Navigate to the _Data Quality_ > _Explorer_  tab and select the **Image Singularity** quality metric in the top left 
