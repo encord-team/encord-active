@@ -58,7 +58,7 @@ Go to **Bulk Tagging** section in the main view and assign the tag to all images
 
 ![remove-duplicate-images-10](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-10.png)
 
-When you click **Submit**, all images will be tagged instantly.
+When you click **Submit**, all images will be tagged with the tag you chose.
 
 ![remove-duplicate-images-6](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-6.png)
 
