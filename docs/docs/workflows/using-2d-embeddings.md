@@ -8,7 +8,7 @@ sidebar_position: 3
 
 Encord Active presents you with a 2D embedding plot for all the images in your project. You can use it to find interesting 
 clusters, understand your data better, weakly label your images, remove detrimental images, etc. The 2D 
-embedding plot can be visualized in the **Explorer** pages of the **Data Quality** and **Label Quality** sections. Here is an example
+embedding plot can be found in the **Explorer** pages of the **Data Quality** and **Label Quality** sections. Here is an example
 embedding plot for the COCO 2017 validation set.
 
 ![using-2d-embeddings-1](../images/workflows/using-2d-embeddings/using-2d-embeddings-1.png)
