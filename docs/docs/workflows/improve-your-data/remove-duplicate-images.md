@@ -28,7 +28,7 @@ you can choose which one to keep and which to remove.
 
 ## Steps
 Navigate to the _Data Quality_ > _Explorer_  tab and select the **Image Singularity** quality metric in the top left 
-combobox to order your data. 
+dropdown to order your data. 
 
 ![remove-duplicateimages-1](../../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-1.png)
 
