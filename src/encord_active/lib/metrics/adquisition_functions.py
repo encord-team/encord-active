@@ -51,11 +51,11 @@ class Entropy(AcquisitionFunction):
                 "In information theory, the **entropy** of a random variable is the average level of “information”, "
                 "“surprise”, or “uncertainty” inherent to the variable's possible outcomes. "
                 "The higher the entropy, the more “uncertain” the variable outcome. \n \n"
-                r"The mathematical formula of entropy is: $H(p) = -\sum_{i=1}^{N} p_i \log_{2}{p_i}$"
+                r"The mathematical formula of entropy is: $H(p) = -\sum_{i=1}^{n} p_i \log_{2}{p_i}$"
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the entropies of the predictions in the image. "
-                "Like before, the higher the image's entropy, the more “confused” the model is. "
-                "As a result, data samples with higher entropy should be offered for annotation."
+                "Like before, the higher the image's score, the more “confused” the model is. "
+                "As a result, data samples with higher entropy score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
@@ -83,7 +83,7 @@ class LeastConfidence(AcquisitionFunction):
                 r"$H(p) = 1 - \underset{y}{\max}(P(y|x))$"
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the **LC** score of the predictions in the image. "
-                "Like before, the higher the image's **LC** score, the more “confused” the model is. "
+                "Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher **LC** score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
@@ -106,8 +106,8 @@ class Margin(AcquisitionFunction):
                 "probabilities. The lower the margin score, the more “uncertain” the prediction. \n \n"
                 "It can be employed to define a heuristic that measures a model’s uncertainty about the classes in "
                 "an image using the average of the margin score of the predictions in the image. "
-                "Like before, the lower the image's margin score, the more “confused” the model is. "
-                "As a result, data samples with higher margin score should be offered for annotation."
+                "Like before, the lower the image's score, the more “confused” the model is. "
+                "As a result, data samples with lower margin score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
@@ -124,8 +124,19 @@ class Variance(AcquisitionFunction):
     def __init__(self):
         super().__init__(
             title="Variance",
-            short_description="",
-            long_description=r"""""",
+            short_description="Ranks images by their variance.",
+            long_description=(
+                "Ranks images by their variance. \n \n"
+                "Variance is a measure of dispersion that takes into account the spread of all data points in a "
+                "data set. The variance is the mean squared difference between each data point and the centre of the "
+                "distribution measured by the mean. The lower the variance, the more “clustered” the data points. \n \n"
+                "The mathematical formula of variance of a data set is: \n"
+                r"$Var(X) = \frac{1}{n} \sum_{i=1}^{n}(x_i - \mu)^2, \text{where} \mu = \frac{1}{n} \sum_{i=1}^{n}x_i$"
+                " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
+                "in an image using the average of the variance of the predictions in the image. "
+                "Like before, the lower the image's score, the more “confused” the model is. "
+                "As a result, data samples with lower variance score should be offered for annotation."
+            ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
