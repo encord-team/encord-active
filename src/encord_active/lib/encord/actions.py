@@ -341,14 +341,14 @@ class EncordActions:
 
     def create_and_sync_subset_clone(
         self,
-        target_project_structure,
-        project_title,
-        project_description,
-        dataset_title,
-        dataset_description,
-        label_rows,
-        filtered_lr_du,
-        filtered_label_row_meta,
+        target_project_structure: ProjectFileStructure,
+        project_title: str,
+        project_description: str,
+        dataset_title: str,
+        dataset_description: str,
+        label_rows: set[str],
+        filtered_lr_du: set[LabelRowDataUnit],
+        filtered_label_row_meta: dict,
     ):
         dataset_hash_map: dict[str, set[str]] = {}
         for k, v in filtered_label_row_meta.items():
