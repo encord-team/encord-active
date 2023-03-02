@@ -51,10 +51,10 @@ class GitVersioner:
 
     def jump_to(self, version: Union[Version, Literal["latest"]]):
         if version == "latest" or version.id == self.repo.heads.main.commit.hexsha and not self.is_latest():
-            self.repo.head.reference = self.repo.heads.main
+            self.repo.head.reference = self.repo.heads.main  # type: ignore
             self.discard_changes()
         elif self.repo.head.commit.hexsha != version.id:
-            self.repo.head.reference = self.repo.rev_parse(version.id)  # type: ignore  # type: ignore
+            self.repo.head.reference = self.repo.rev_parse(version.id)  # type: ignore
 
     def discard_changes(self):
         self.repo.head.reset(index=True, working_tree=True)

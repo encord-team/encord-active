@@ -16,7 +16,6 @@ from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.project import ProjectFileStructure
-from encord_active.lib.versioning.git import Version
 
 GLOBAL_STATE = "global_state"
 
