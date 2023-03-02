@@ -10,9 +10,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from encord.objects import Classification
 from encord.objects.common import NestableOption, RadioAttribute
-from encord.objects.ontology_structure import OntologyStructure
+from encord.objects.ontology_structure import Classification, OntologyStructure
 from torchvision.ops import box_iou
 from tqdm.auto import tqdm
 
