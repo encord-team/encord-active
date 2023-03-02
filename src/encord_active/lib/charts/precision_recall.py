@@ -26,7 +26,7 @@ def create_pr_chart_plotly(
 
     _metrics.sort_values(by=["group", _M_COLS.value], ascending=[False, True], inplace=True)
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=("AP and AR", "Precision-Recall Curve"))
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("Per class Average Precision and Recall", "Precision-Recall Curve"))
 
     project_ontology = json.loads(ontology_path.read_text(encoding="utf-8"))
 
