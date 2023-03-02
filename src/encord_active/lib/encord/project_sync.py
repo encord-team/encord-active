@@ -33,7 +33,9 @@ def rename_files(project_file_structure: ProjectFileStructure, file_mappings: di
             old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
 
 
-def update_embedding_identifiers(project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
+def update_embedding_identifiers(
+    project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, renaming_map: dict[str, str]
+):
     def _update_identifiers(embedding: LabelEmbedding, renaming_map: dict[str, str]):
         old_lr, old_du = embedding["label_row"], embedding["data_unit"]
         new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
@@ -55,7 +57,11 @@ def replace_in_files(project_file_structure: ProjectFileStructure, renaming_map)
 
 
 def replace_uids(
-    project_file_structure: ProjectFileStructure, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], old_project_hash: str, new_project_hash: str, dataset_hash: str
+    project_file_structure: ProjectFileStructure,
+    file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit],
+    old_project_hash: str,
+    new_project_hash: str,
+    dataset_hash: str,
 ):
     label_row_meta = json.loads(project_file_structure.label_row_meta.read_text(encoding="utf-8"))
 
@@ -181,7 +187,12 @@ def create_filtered_metrics(
         (target_project_structure.metrics / metric_json_path.name).write_text(mm_js)
 
 
-def copy_project_meta(curr_project_structure: ProjectFileStructure, target_project_structure: ProjectFileStructure, project_title: str, project_description: str):
+def copy_project_meta(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    project_title: str,
+    project_description: str,
+):
     project_meta = fetch_project_meta(curr_project_structure.project_dir)
     project_meta["project_title"] = project_title
     project_meta["project_description"] = project_description
@@ -190,15 +201,21 @@ def copy_project_meta(curr_project_structure: ProjectFileStructure, target_proje
     target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
 
 
-def copy_image_data_unit_json(curr_project_structure: ProjectFileStructure, target_project_structure: ProjectFileStructure, filtered_data_hashes):
+def copy_image_data_unit_json(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_data_hashes: set[str],
+):
     image_data_unit = json.loads(curr_project_structure.image_data_unit.read_text())
-    filtered_image_data_unit = {
-        k: v for k, v in image_data_unit.items() if v["data_hash"] in filtered_data_hashes
-    }
+    filtered_image_data_unit = {k: v for k, v in image_data_unit.items() if v["data_hash"] in filtered_data_hashes}
     target_project_structure.image_data_unit.write_text(json.dumps(filtered_image_data_unit))
 
 
-def copy_label_row_meta_json(curr_project_structure: ProjectFileStructure, target_project_structure: ProjectFileStructure, filtered_label_rows):
+def copy_label_row_meta_json(
+    curr_project_structure: ProjectFileStructure,
+    target_project_structure: ProjectFileStructure,
+    filtered_label_rows: set[str],
+) -> dict:
     label_row_meta = json.loads(curr_project_structure.label_row_meta.read_text())
     filtered_label_row_meta = {k: v for k, v in label_row_meta.items() if k in filtered_label_rows}
     target_project_structure.label_row_meta.write_text(json.dumps(filtered_label_row_meta))
