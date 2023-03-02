@@ -100,12 +100,25 @@ class Margin(AcquisitionFunction):
     def __init__(self):
         super().__init__(
             title="Margin",
-            short_description="",
-            long_description=r"""""",
+            short_description="Ranks images by their margin score.",
+            long_description=(
+                "Ranks images by their margin score. \n \n"
+                "**Margin** score of a model's prediction is the difference between the two classes with the highest "
+                "probabilities. The lower the margin score, the more “uncertain” the prediction. \n \n"
+                "It can be employed to define a heuristic that measures a model’s uncertainty about the classes in "
+                "an image using the average of the margin score of the predictions in the image. "
+                "Like before, the lower the image's margin score, the more “confused” the model is. "
+                "As a result, data samples with higher margin score should be offered for annotation."
+            ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
         )
+
+    def score_predictions(self, predictions: np.ndarray) -> float:
+        # put the second highest and highest class prediction values in the last two columns respectively
+        preds = np.partition(predictions, -2)
+        return (preds[:, -1] - preds[:, -2]).mean()
 
 
 class Variance(AcquisitionFunction):
