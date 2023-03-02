@@ -27,9 +27,8 @@ snowy images.
 Now you can perform several actions with the selected group:
 - You can tag and export them in the **Actions** => **Filter & Export** page so that you can label these images 
 automatically via a script.
-- If you do not want them in your dataset for some reason, you can tag all the images and remove the tags from the
-selected ones so that you can create a new version of your dataset without them. You can specifically apply this step
-for the images that you think including them will be detrimental.
+- You can explore the performance of the selected samples in the model performance page.
+- You can create different subsets like these and compare them.
 
 Samples in the 2D embedding plot in the **Data Quality => Summary** page have no label information; therefore, they all share
 the same color. On the other hand, points colored according to labels on the **Label Quality => Summary** page. 
