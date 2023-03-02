@@ -25,6 +25,9 @@ from encord_active.lib.common.utils import fetch_project_meta, update_project_me
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
     copy_filtered_data,
+    copy_image_data_unit_json,
+    copy_label_row_meta_json,
+    copy_project_meta,
     create_filtered_db,
     create_filtered_embeddings,
     create_filtered_metrics,
@@ -296,30 +299,17 @@ class EncordActions:
         curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
 
         if curr_project_structure.image_data_unit.exists():
-            image_data_unit = json.loads(curr_project_structure.image_data_unit.read_text())
-            filtered_image_data_unit = {
-                k: v for k, v in image_data_unit.items() if v["data_hash"] in filtered_data_hashes
-            }
-            target_project_structure.image_data_unit.write_text(json.dumps(filtered_image_data_unit))
+            copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
 
-        label_row_meta = json.loads(curr_project_structure.label_row_meta.read_text())
-        filtered_label_row_meta = {k: v for k, v in label_row_meta.items() if k in filtered_label_rows}
-        target_project_structure.label_row_meta.write_text(json.dumps(filtered_label_row_meta))
+        filtered_label_row_meta = copy_label_row_meta_json(
+            curr_project_structure, target_project_structure, filtered_label_rows
+        )
 
-        dataset_hash_map: dict[str, set[str]] = {}
-        label_rows = set()
-        for k, v in filtered_label_row_meta.items():
-            dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
-            label_rows.add(k)
+        label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
-        project_meta = fetch_project_meta(curr_project_structure.project_dir)
-        project_meta["project_title"] = project_title
-        project_meta["project_description"] = project_description
-        project_meta["has_remote"] = False
-        project_meta["project_hash"] = ""
-        target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
+        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 
@@ -336,38 +326,63 @@ class EncordActions:
         )
 
         if remote_copy:
-            cloned_project_hash = self.original_project.copy_project(
-                new_title=project_title,
-                new_description=project_description,
-                copy_collaborators=True,
-                copy_datasets=CopyDatasetOptions(
-                    action=CopyDatasetAction.CLONE,
-                    dataset_title=dataset_title,
-                    dataset_description=dataset_description,
-                    datasets_to_data_hashes_map={k: list(v) for k, v in dataset_hash_map.items()},
-                ),
-                copy_labels=CopyLabelsOptions(
-                    accepted_label_statuses=[state for state in ReviewApprovalState],
-                    accepted_label_hashes=list(label_rows),
-                ),
-            )
-            cloned_project = self.user_client.get_project(cloned_project_hash)
-            du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project.label_rows}
-            filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
-            lr_du_mapping = {
-                LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
-                for cdu, clr in du_lr_mapping.items()
-            }
-
-            replace_uids(
+            self.create_and_sync_subset_clone(
                 target_project_structure,
-                lr_du_mapping,
-                self.original_project.project_hash,
-                cloned_project_hash,
-                cloned_project.datasets[0]["dataset_hash"],
+                project_title,
+                project_description,
+                dataset_title,
+                dataset_description,
+                label_rows,
+                filtered_lr_du,
+                filtered_label_row_meta,
             )
 
         return target_project_structure.project_dir
+
+    def create_and_sync_subset_clone(
+        self,
+        target_project_structure,
+        project_title,
+        project_description,
+        dataset_title,
+        dataset_description,
+        label_rows,
+        filtered_lr_du,
+        filtered_label_row_meta,
+    ):
+        dataset_hash_map: dict[str, set[str]] = {}
+        for k, v in filtered_label_row_meta.items():
+            dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
+
+        cloned_project_hash = self.original_project.copy_project(
+            new_title=project_title,
+            new_description=project_description,
+            copy_collaborators=True,
+            copy_datasets=CopyDatasetOptions(
+                action=CopyDatasetAction.CLONE,
+                dataset_title=dataset_title,
+                dataset_description=dataset_description,
+                datasets_to_data_hashes_map={k: list(v) for k, v in dataset_hash_map.items()},
+            ),
+            copy_labels=CopyLabelsOptions(
+                accepted_label_statuses=[state for state in ReviewApprovalState],
+                accepted_label_hashes=list(label_rows),
+            ),
+        )
+        cloned_project = self.user_client.get_project(cloned_project_hash)
+        du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project.label_rows}
+        filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
+        lr_du_mapping = {
+            LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
+            for cdu, clr in du_lr_mapping.items()
+        }
+        replace_uids(
+            target_project_structure,
+            lr_du_mapping,
+            self.original_project.project_hash,
+            cloned_project_hash,
+            cloned_project.datasets[0]["dataset_hash"],
+        )
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
