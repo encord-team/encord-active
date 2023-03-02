@@ -17,6 +17,8 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 class AcquisitionFunction(Metric):
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         for _, img_pth in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
+            if img_pth is None:
+                continue
             img = self.read_image(img_pth)
             if img is None:
                 continue
