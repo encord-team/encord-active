@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 
@@ -17,16 +18,20 @@ class AcquisitionFunction(Metric):
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         for _, img_pth in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             img = self.read_image(img_pth)
+            if img is None:
+                continue
             preds = self.get_predictions(img)
-            score = self.score_acquisition_function(preds)
+            if preds is None:
+                continue
+            score = self.score_predictions(preds)
             writer.write(score)
 
     @abstractmethod
-    def get_predictions(self, image) -> np.ndarray:
+    def get_predictions(self, image) -> Optional[np.ndarray]:
         pass
 
     @abstractmethod
-    def read_image(self, image_path: Path):
+    def read_image(self, image_path: Path) -> Optional[Any]:
         pass
 
     @abstractmethod
