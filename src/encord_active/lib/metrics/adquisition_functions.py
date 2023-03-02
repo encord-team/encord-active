@@ -48,14 +48,14 @@ class Entropy(AcquisitionFunction):
             short_description="Ranks images by their entropy.",
             long_description=(
                 "Ranks images by their entropy. \n \n"
-                "In information theory, the entropy of a random variable is the average level of “information”, "
+                "In information theory, the **entropy** of a random variable is the average level of “information”, "
                 "“surprise”, or “uncertainty” inherent to the variable's possible outcomes. "
                 "The higher the entropy, the more “uncertain” the variable outcome. \n \n"
                 r"The mathematical formula of entropy is: $H(p) = -\sum_{i=1}^{N} p_i \log_{2}{p_i}$"
-                " \n \nIt can be used to define a heuristic that measures a model’s uncertainty about the classes in "
-                "an image using the average of the entropies of the predicted classes' instances. Like before, the "
-                "higher the entropy, the more “confused” the model is. As a result, data samples with higher entropy "
-                "should be offered for annotation."
+                " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
+                "in an image using the average of the entropies of the predictions in the image. "
+                "Like before, the higher the image's entropy, the more “confused” the model is. "
+                "As a result, data samples with higher entropy should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
@@ -78,14 +78,13 @@ class LeastConfidence(AcquisitionFunction):
                 "Ranks images by their least confidence score. \n \n"
                 "**Least confidence** (**LC**) score of a model's prediction is the difference between 1 "
                 "(100% confidence) and its most confidently predicted class label. The higher the **LC** score, the "
-                "more “uncertain” the model's prediction. \n \n"
+                "more “uncertain” the prediction. \n \n"
                 "The mathematical formula of the **LC** score of a model's prediction $x$ is: "
                 r"$H(p) = 1 - \underset{y}{\max}(P(y|x))$"
-                " \n \nIt can be used to define a heuristic that measures a model’s uncertainty about the classes in "
-                "an image using the average of the **LC** score of the predicted classes' instances. "
-                "Like before, the "
-                "higher the image **LC** score, the more “confused” the model is. As a result, data samples with "
-                "higher **LC** score should be offered for annotation."
+                " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
+                "in an image using the average of the **LC** score of the predictions in the image. "
+                "Like before, the higher the image's **LC** score, the more “confused” the model is. "
+                "As a result, data samples with higher **LC** score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
