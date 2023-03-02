@@ -326,7 +326,7 @@ class EncordActions:
         )
 
         if remote_copy:
-            self.create_and_sync_subset_clone(
+            self._create_and_sync_subset_clone(
                 target_project_structure,
                 project_title,
                 project_description,
@@ -339,13 +339,13 @@ class EncordActions:
 
         return target_project_structure.project_dir
 
-    def create_and_sync_subset_clone(
+    def _create_and_sync_subset_clone(
         self,
         target_project_structure: ProjectFileStructure,
         project_title: str,
         project_description: str,
-        dataset_title: str,
-        dataset_description: str,
+        dataset_title: Optional[str],
+        dataset_description: Optional[str],
         label_rows: set[str],
         filtered_lr_du: set[LabelRowDataUnit],
         filtered_label_row_meta: dict,
