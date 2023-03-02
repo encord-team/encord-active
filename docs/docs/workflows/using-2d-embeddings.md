@@ -36,6 +36,6 @@ the same color. On the other hand, points colored according to labels on the **L
 ![using-2d-embeddings-4](../images/workflows/using-2d-embeddings/using-2d-embeddings-4.png)
 
 Now you can:
-- check which classes are confused with each other
-- spot wrongly labeled samples (e.g., a different class inside the large cluster of another class)
-- detect outliers and remove them from the dataset
+- Check which classes are confused with each other
+- Spot wrongly labeled samples (e.g., a different class inside the large cluster of another class)
+- Detect outliers and remove them from the dataset
