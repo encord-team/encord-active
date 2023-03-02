@@ -61,8 +61,10 @@ class Entropy(AcquisitionFunction):
         )
 
     def score_predictions(self, predictions: np.ndarray) -> float:
-        with np.errstate(divide="ignore"):
-            return -np.multiply(predictions, np.log2(predictions)).sum(axis=1).mean()
+        # silence divide by zero warning as the result will be correct (log2(0) is -inf, when multiplied by 0 gives 0)
+        # raise exception if invalid (negative) values are found in the predictions
+        with np.errstate(divide="ignore", invalid="raise"):
+            return -np.multiply(predictions, np.nan_to_num(np.log2(predictions))).sum(axis=1).mean()
 
 
 class LeastConfidence(AcquisitionFunction):
