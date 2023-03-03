@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 from plotly.subplots import make_subplots
