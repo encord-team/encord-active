@@ -154,9 +154,6 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
         return out
 
     for p, n, m, l in zip(paths, names, meta_data, levels):
-        if n in {"Object Count", "Frame Object Density"}:
-            continue
-
         if m is None or not l or not is_valid_annotation_type(m.annotation_type, metric_scope):
             continue
 
@@ -196,8 +193,8 @@ def is_multiclass_ontology(ontology: OntologyStructure):
     return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)
 
 
-def get_embedding_type(metric_title: str, annotation_type: Optional[List[AnnotationTypeUnion]]) -> EmbeddingType:
-    if not annotation_type or (metric_title in ["Frame object density", "Object Count"]):
+def get_embedding_type(annotation_type: Optional[List[AnnotationTypeUnion]]) -> EmbeddingType:
+    if not annotation_type:
         return EmbeddingType.IMAGE
     elif len(annotation_type) == 1 and annotation_type[0] == AnnotationType.CLASSIFICATION.RADIO:
         return EmbeddingType.CLASSIFICATION
