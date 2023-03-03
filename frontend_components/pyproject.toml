@@ -14,7 +14,7 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
-streamlit = "^1.13.0"
+streamlit = "^1.19.0"
 
 
 [build-system]
