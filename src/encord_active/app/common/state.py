@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.lib.common.filter import FilterConfig
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.merged_metrics import MergedMetrics
@@ -66,6 +67,7 @@ class State:
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
+    filter_config: Optional[FilterConfig] = None
 
     @classmethod
     def init(cls, project_dir: Path):

@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 import streamlit as st
 
 from encord_active.app.common.state import State, get_state
+from encord_active.lib.common.filter import FilterConfig
+from encord_active.lib.db.tags import Tags
 
 
 class Page(ABC):
@@ -31,6 +33,8 @@ class Page(ABC):
     @staticmethod
     def row_col_settings_in_sidebar():
         col_default_max, row_default_max = 10, 5
+
+        all_tags = Tags().all()
 
         with st.expander("Settings"):
             setting_columns = st.columns(3)
@@ -64,3 +68,24 @@ class Page(ABC):
                     help="Number of the most similar images to show",
                 )
             )
+
+        with st.expander("Filter"):
+            columns = st.columns(2)
+            if not get_state().filter_config:
+                get_state().filter_config = FilterConfig()
+
+            get_state().filter_config.data_tags = columns[0].multiselect(
+                    "Data Tags",
+                    options=[tag for tag in all_tags if tag.scope == 'Data'],
+                    format_func=lambda x: x.name,
+                    key='filter-select-global-data-tags'
+                )
+
+            get_state().filter_config.label_tags = columns[1].multiselect(
+                    "Label Tags",
+                    options=[tag for tag in all_tags if tag.scope == 'Label'],
+                    format_func=lambda x: x.name,
+                    key='filter-select-global-label-tags'
+            )
+
+

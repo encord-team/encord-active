@@ -12,6 +12,7 @@ from natsort import natsorted
 from pandera.typing import DataFrame, Series
 from pydantic import ValidationError
 
+from encord_active.lib.common.filter import FilterConfig
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     AnnotationTypeUnion,
@@ -44,7 +45,7 @@ class MetricSchema(IdentifierSchema):
 
 
 def load_metric_dataframe(
-    metric: MetricData, normalize: bool = False, *, sorting_key="score"
+    metric: MetricData, normalize: bool = False, *, sorting_key="score", filter_config: Optional[FilterConfig] = None
 ) -> DataFrame[MetricSchema]:
     """
     Load and sort the selected csv file and cache it, so we don't need to perform this
@@ -52,6 +53,7 @@ def load_metric_dataframe(
     :param metric: The metric to load data from.
     :param normalize: whether to apply normalisation to the scores or not.
     :param sorting_key: key by which to sort dataframe (default: "score")
+    :param filter_config: #TODO
     :return: a pandas data frame with all the scores.
     """
     df = pd.read_csv(metric.path).sort_values([sorting_key, "identifier"], ascending=True).reset_index()
