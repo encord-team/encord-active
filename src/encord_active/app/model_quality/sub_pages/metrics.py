@@ -1,3 +1,5 @@
+import json
+
 import streamlit as st
 from pandera.typing import DataFrame
 
@@ -103,6 +105,6 @@ class MetricsPage(ModelQualityPage):
 
         st.subheader("Subset selection scores")
         with st.container():
-
-            chart = create_pr_chart_plotly(metrics, precisions, get_state().project_paths.ontology)
+            project_ontology = json.loads(get_state().project_paths.ontology.read_text(encoding="utf-8"))
+            chart = create_pr_chart_plotly(metrics, precisions, project_ontology["objects"])
             st.plotly_chart(chart, use_container_width=True)
