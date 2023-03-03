@@ -15,7 +15,9 @@ _M_COLS = PerformanceMetricSchema
 
 
 def create_pr_chart_plotly(
-    metrics: DataFrame[PerformanceMetricSchema], precisions: DataFrame[PrecisionRecallSchema], ontology_path: Path
+    metrics: DataFrame[PerformanceMetricSchema],
+    precisions: DataFrame[PrecisionRecallSchema],
+    annotation_colors: list[dict],
 ):
     _metrics: DataFrame[PerformanceMetricSchema] = metrics[~metrics[_M_COLS.metric].isin({"mAR", "mAP"})].copy()
 
@@ -26,12 +28,12 @@ def create_pr_chart_plotly(
 
     _metrics.sort_values(by=["group", _M_COLS.value], ascending=[False, True], inplace=True)
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=("Per class Average Precision and Recall", "Precision-Recall Curve"))
-
-    project_ontology = json.loads(ontology_path.read_text(encoding="utf-8"))
+    fig = make_subplots(
+        rows=1, cols=2, subplot_titles=("Per class Average Precision and Recall", "Precision-Recall Curve")
+    )
 
     colors = {}
-    for obj in project_ontology["objects"]:
+    for obj in annotation_colors:
         colors[obj["name"]] = obj["color"]
 
     for class_name in _metrics[PerformanceMetricSchema.class_name].unique():
