@@ -228,7 +228,6 @@ This repository is published under the Apache 2.0 licence.
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
 [slack-community]: https://encord-active.slack.com
-[youtube-tutorial]: https://www.youtube.com/watch?v=q7ZoBqM8WVE&ab_channel=Encord
 [twitter-url]: https://twitter.com/encord_team
 [colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
