@@ -256,4 +256,7 @@ def model_quality(page: Page):
                 # value for the predicted class.
                 # roc_graph = get_roc_curve(y_true, y_prob)
 
+                pr_graph = get_precision_recall_graph(precision, recall, class_names)
+                st.plotly_chart(pr_graph)
+
     return render

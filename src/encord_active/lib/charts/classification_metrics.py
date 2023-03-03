@@ -11,7 +11,7 @@ def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> 
     cm = metrics.confusion_matrix(labels, predictions)
 
     cm = metrics.confusion_matrix(labels, predictions)
-    class_names = sorted(list(set(labels).union(predictions)))
+    # class_names = sorted(list(set(labels).union(predictions)))
     fig = px.imshow(
         cm,
         text_auto=True,
