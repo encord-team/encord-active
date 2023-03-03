@@ -22,14 +22,14 @@ class AcquisitionFunction(Metric):
             img = self.read_image(img_pth)
             if img is None:
                 continue
-            preds = self.get_predictions(img)
-            if preds is None:
+            pred_probs = self.get_predicted_class_probabilities(img)
+            if pred_probs is None:
                 continue
-            score = self.score_predictions(preds)
+            score = self.score_predicted_class_probabilities(pred_probs)
             writer.write(score)
 
     @abstractmethod
-    def get_predictions(self, image) -> Optional[np.ndarray]:
+    def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         pass
 
     @abstractmethod
@@ -37,7 +37,7 @@ class AcquisitionFunction(Metric):
         pass
 
     @abstractmethod
-    def score_predictions(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
         pass
 
 
@@ -53,8 +53,8 @@ class Entropy(AcquisitionFunction):
                 "The higher the entropy, the more “uncertain” the variable outcome. \n \n"
                 r"The mathematical formula of entropy is: $H(p) = -\sum_{i=1}^{n} p_i \log_{2}{p_i}$"
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
-                "in an image using the average of the entropies of the predictions in the image. "
-                "Like before, the higher the image's score, the more “confused” the model is. "
+                "in an image using the average of the entropies of the model-predicted class probabilities in the "
+                "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher entropy score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
@@ -62,7 +62,7 @@ class Entropy(AcquisitionFunction):
             annotation_type=AnnotationType.NONE,
         )
 
-    def score_predictions(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
         # silence divide by zero warning as the result will be correct (log2(0) is -inf, when multiplied by 0 gives 0)
         # raise exception if invalid (negative) values are found in the predictions
         with np.errstate(divide="ignore", invalid="raise"):
@@ -82,8 +82,8 @@ class LeastConfidence(AcquisitionFunction):
                 "The mathematical formula of the **LC** score of a model's prediction $x$ is: "
                 r"$H(p) = 1 - \underset{y}{\max}(P(y|x))$"
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
-                "in an image using the average of the **LC** score of the predictions in the image. "
-                "Like before, the higher the image's score, the more “confused” the model is. "
+                "in an image using the average of the **LC** score of the model-predicted class probabilities in the "
+                "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher **LC** score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
@@ -91,7 +91,7 @@ class LeastConfidence(AcquisitionFunction):
             annotation_type=AnnotationType.NONE,
         )
 
-    def score_predictions(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
         return (1 - predictions.max(axis=1)).mean()
 
 
@@ -104,9 +104,9 @@ class Margin(AcquisitionFunction):
                 "Ranks images by their margin score. \n \n"
                 "**Margin** score of a model's prediction is the difference between the two classes with the highest "
                 "probabilities. The lower the margin score, the more “uncertain” the prediction. \n \n"
-                "It can be employed to define a heuristic that measures a model’s uncertainty about the classes in "
-                "an image using the average of the margin score of the predictions in the image. "
-                "Like before, the lower the image's score, the more “confused” the model is. "
+                "It can be employed to define a heuristic that measures a model’s uncertainty about the classes "
+                "in an image using the average of the margin score of the model-predicted class probabilities in the"
+                " image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower margin score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
@@ -114,8 +114,8 @@ class Margin(AcquisitionFunction):
             annotation_type=AnnotationType.NONE,
         )
 
-    def score_predictions(self, predictions: np.ndarray) -> float:
-        # put the second highest and highest class prediction values in the last two columns respectively
+    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
+        # move the second highest and highest class prediction values to the last two columns respectively
         preds = np.partition(predictions, -2)
         return (preds[:, -1] - preds[:, -2]).mean()
 
@@ -131,13 +131,16 @@ class Variance(AcquisitionFunction):
                 "data set. The variance is the mean squared difference between each data point and the centre of the "
                 "distribution measured by the mean. The lower the variance, the more “clustered” the data points. \n \n"
                 "The mathematical formula of variance of a data set is: \n"
-                r"$Var(X) = \frac{1}{n} \sum_{i=1}^{n}(x_i - \mu)^2, \text{where} \mu = \frac{1}{n} \sum_{i=1}^{n}x_i$"
+                r"$Var(X) = \frac{1}{n} \sum_{i=1}^{n}(x_i - \mu)^2, \text{where } \mu = \frac{1}{n} \sum_{i=1}^{n}x_i$"
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
-                "in an image using the average of the variance of the predictions in the image. "
-                "Like before, the lower the image's score, the more “confused” the model is. "
+                "in an image using the average of the variance of the model-predicted class probabilities in the "
+                "image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower variance score should be offered for annotation."
             ),
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
         )
+
+    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
+        return predictions.var(axis=1).mean()
