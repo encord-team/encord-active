@@ -3,7 +3,7 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack Community</a>
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack Channel</a>
 </p>
 
 <h1 align="center">
@@ -174,25 +174,25 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
-| Data Types |     | Labels          |     | Project sizes |                |
-| ---------- | --- | --------------- | --- | ------------- | -------------- |
-| `jpg`      | ✅  | Bounding Boxes  | ✅  | Images        | 100.000        |
-| `png`      | ✅  | Polygons        | ✅  | Videos        | 100.000 frames |
-| `tiff`     | ✅  | Segmentation    | ✅  |               |                |
-| `mp4`      | ✅  | Classifications | ✅  |               |                |
-|            |     | Polylines       | 🟡  |               |                |
+| Data   |     | Labels          |     | Project sizes |               |
+| ------ | --- | --------------- | --- | ------------- | ------------- |
+| `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 50.000        |
+| `png`  | ✅  | Polygons        | ✅  | Videos        | 50.000 frames |
+| `tiff` | ✅  | Segmentation    | ✅  |               |               |
+| `mp4`  | ✅  | Classifications | 🟡  |               |               |
+|        |     | Polylines       | 🟡  |               |               |
 
 ## 🧑🏽‍💻Development
 
 ### 🛠 Build your own quality metrics
 
-Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[slack community](https://encordactive.slack.com)**!
+Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[Slack channel](https://encordactive.slack.com)**!
 
 ## 👪 Community and support
 
-Join our community on [Slack][join-slack] to connect with the team behind Encord Active.
+Join our channel on [Slack][join-slack] to connect with the team behind Encord Active.
 
-Also, feel free to [suggest improvements or report problems][report-issue] via github issues.
+Also, feel free to [suggest improvements or report problems][report-issue] via GitHub issues.
 
 ## 🎇 Contributions
 
