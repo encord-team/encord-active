@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
 import pandas as pd
-import yaml
 from encord import Dataset, EncordUserClient, Project
 from encord.constants.enums import DataType
 from encord.exceptions import AuthorisationError
