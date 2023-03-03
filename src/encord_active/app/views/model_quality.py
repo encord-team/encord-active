@@ -207,4 +207,7 @@ def model_quality(page: Page):
             classification_model_predictions_matched=classification_model_predictions_matched,
         )
 
+                pr_graph = get_precision_recall_graph(precision, recall, class_names)
+                st.plotly_chart(pr_graph)
+
     return render
