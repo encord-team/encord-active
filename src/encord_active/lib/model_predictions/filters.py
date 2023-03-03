@@ -57,7 +57,7 @@ def prediction_and_label_filtering_classification(
     _labels[~_labels[ClassificationLabelSchema.class_id].isin(set(map(int, class_idx.keys())))] = "temp_others"
 
     name_map = {int(k): v["name"] for k, v in class_idx.items()}
-    name_map["temp_others"] = "Others"
+    name_map["temp_others"] = "others"
     _predictions[ClassificationPredictionSchema.class_id] = _predictions[ClassificationPredictionSchema.class_id].map(
         name_map
     )

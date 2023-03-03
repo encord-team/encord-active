@@ -15,6 +15,7 @@ from encord_active.lib.charts.classification_metrics import (
     get_accuracy,
     get_confusion_matrix,
     get_precision_recall_f1,
+    get_precision_recall_graph,
 )
 from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.filters import (
@@ -141,15 +142,13 @@ def model_quality(page: Page):
 
                 # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
 
-                # y_true, y_pred = list(predictions[reader.ClassificationLabelSchema.class_id]), list(
-                #     labels[reader.ClassificationPredictionSchema.class_id]
-                # )
-
                 y_true, y_pred = list(matched_predictions[reader.ClassificationLabelSchema.class_id]), list(
                     matched_labels[reader.ClassificationPredictionSchema.class_id]
                 )
 
-                precision, recall, f1, _ = get_precision_recall_f1(y_true, y_pred)
+                class_names = sorted(list(set(y_true).union(y_pred)))
+
+                precision, recall, f1, support = get_precision_recall_f1(y_true, y_pred)
                 accuracy = get_accuracy(y_true, y_pred)
 
                 col_acc, col_prec, col_rec, col_f1 = st.columns(4)
@@ -158,13 +157,10 @@ def model_quality(page: Page):
                 col_rec.metric("Mean Recall", f"{float(recall.mean()):.2f}")
                 col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}")
 
-                sorted_class_ids = sorted([k for k in get_state().predictions.all_classes_classifications])
-                class_names = [
-                    get_state().predictions.all_classes_classifications[class_id]["name"]
-                    for class_id in sorted_class_ids
-                ]
-
                 confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
                 st.plotly_chart(confusion_matrix)
+
+                pr_graph = get_precision_recall_graph(precision, recall, class_names)
+                st.plotly_chart(pr_graph)
 
     return render
