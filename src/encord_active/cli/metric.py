@@ -27,7 +27,7 @@ def add_metrics(
     Add metrics to the project.
 
     Add metrics from:
-    - local source python modules
+    - local python modules
 
     If no metric title is provided then all metrics found in the python module will be added to the project.
     """
