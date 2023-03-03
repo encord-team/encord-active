@@ -62,6 +62,19 @@ def common_settings_classifications():
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
         )
 
+    all_classes = get_state().predictions.all_classes_classifications
+    selected_classes = st.multiselect(
+        "Filter by class",
+        list(all_classes.items()),
+        format_func=lambda x: x[1]["name"],
+        help="""
+        With this selection, you can choose which classes to include in the main page.\n
+        This acts as a filter, i.e. when nothing is selected all classes are included.
+        """,
+    )
+
+    get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
+
     # all_classes = get_state().predictions.all_classes_classifications
     # col1, col2, col3 = st.columns([4, 4, 3])
     #

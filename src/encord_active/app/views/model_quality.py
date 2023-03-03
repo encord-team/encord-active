@@ -20,6 +20,7 @@ from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
+    prediction_and_label_filtering_classification,
 )
 from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
 from encord_active.lib.model_predictions.writer import MainPredictionType
@@ -122,41 +123,48 @@ def model_quality(page: Page):
                     f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
                     "section of the documentation to learn how to import your predictions."
                 )
-                return
+            else:
 
-            predictions = reader.get_classification_predictions(
-                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-            )
-            labels = reader.get_classification_labels(
-                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-            )
+                predictions = reader.get_classification_predictions(
+                    get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+                )
+                labels = reader.get_classification_labels(
+                    get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+                )
 
-            with sticky_header():
-                common_settings_classifications()
+                with sticky_header():
+                    common_settings_classifications()
 
-            # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
-            sorted_class_ids = sorted([k for k, v in get_state().predictions.all_classes_classifications.items()])
-            class_names = [
-                get_state().predictions.all_classes_classifications[class_id]["name"] for class_id in sorted_class_ids
-            ]
+                matched_predictions, matched_labels = prediction_and_label_filtering_classification(
+                    get_state().predictions.selected_classes_classifications, labels, predictions
+                )
 
-            y_true, y_pred = list(predictions[reader.ClassificationLabelSchema.class_id]), list(
-                labels[reader.ClassificationPredictionSchema.class_id]
-            )
-            precision, recall, f1, _ = get_precision_recall_f1(y_true, y_pred)
-            accuracy = get_accuracy(y_true, y_pred)
+                # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
 
-            col_acc, col_prec, col_rec, col_f1 = st.columns(4)
-            col_acc.metric("Accuracy", f"{accuracy:.2f}")
-            col_prec.metric("Mean Precision", f"{precision.mean():.2f}")
-            col_rec.metric("Mean Recall", f"{recall.mean():.2f}")
-            col_f1.metric("Mean F1", f"{f1.mean():.2f}")
+                # y_true, y_pred = list(predictions[reader.ClassificationLabelSchema.class_id]), list(
+                #     labels[reader.ClassificationPredictionSchema.class_id]
+                # )
 
-            confusion_matrix = get_confusion_matrix(
-                y_true,
-                y_pred,
-                class_names,
-            )
-            st.plotly_chart(confusion_matrix)
+                y_true, y_pred = list(matched_predictions[reader.ClassificationLabelSchema.class_id]), list(
+                    matched_labels[reader.ClassificationPredictionSchema.class_id]
+                )
+
+                precision, recall, f1, _ = get_precision_recall_f1(y_true, y_pred)
+                accuracy = get_accuracy(y_true, y_pred)
+
+                col_acc, col_prec, col_rec, col_f1 = st.columns(4)
+                col_acc.metric("Accuracy", f"{float(accuracy):.2f}")
+                col_prec.metric("Mean Precision", f"{float(precision.mean()):.2f}")
+                col_rec.metric("Mean Recall", f"{float(recall.mean()):.2f}")
+                col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}")
+
+                sorted_class_ids = sorted([k for k in get_state().predictions.all_classes_classifications])
+                class_names = [
+                    get_state().predictions.all_classes_classifications[class_id]["name"]
+                    for class_id in sorted_class_ids
+                ]
+
+                confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
+                st.plotly_chart(confusion_matrix)
 
     return render

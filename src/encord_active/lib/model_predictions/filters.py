@@ -1,7 +1,11 @@
 import pandas as pd
 from pandera.typing import DataFrame
 
-from encord_active.lib.model_predictions.reader import PredictionMatchSchema
+from encord_active.lib.model_predictions.reader import (
+    ClassificationLabelSchema,
+    ClassificationPredictionSchema,
+    PredictionMatchSchema,
+)
 
 
 def filter_labels_for_frames_wo_predictions(
@@ -34,3 +38,29 @@ def prediction_and_label_filtering(
     _model_pred["class_name"] = _model_pred["class_id"].map(name_map)
     _labels["class_name"] = _labels["class_id"].map(name_map)
     return _labels, _metrics, _model_pred, _precisions
+
+
+def prediction_and_label_filtering_classification(
+    selected_class_idx: dict,
+    labels: pd.DataFrame,
+    predictions: pd.DataFrame,
+):
+    # Predictions
+    class_idx = selected_class_idx
+    _predictions = predictions.copy()
+    _predictions[
+        ~_predictions[ClassificationPredictionSchema.class_id].isin(set(map(int, class_idx.keys())))
+    ] = "temp_others"
+
+    # Labels
+    _labels = labels.copy()
+    _labels[~_labels[ClassificationLabelSchema.class_id].isin(set(map(int, class_idx.keys())))] = "temp_others"
+
+    name_map = {int(k): v["name"] for k, v in class_idx.items()}
+    name_map["temp_others"] = "Others"
+    _predictions[ClassificationPredictionSchema.class_id] = _predictions[ClassificationPredictionSchema.class_id].map(
+        name_map
+    )
+    _labels[ClassificationLabelSchema.class_id] = _labels[ClassificationLabelSchema.class_id].map(name_map)
+
+    return _labels, _predictions

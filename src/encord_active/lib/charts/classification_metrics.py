@@ -9,11 +9,12 @@ from sklearn import metrics
 from encord_active.lib.model_predictions.reader import OntologyClassificationJSON
 
 
-def get_confusion_matrix(labels: list, predictions: list, class_names: List[str]) -> go.Figure:
-    cm = metrics.confusion_matrix(labels, predictions)
+def get_confusion_matrix(labels: list, predictions: list, class_names: list[str]) -> go.Figure:
 
+    cm = metrics.confusion_matrix(labels, predictions)
+    class_names = sorted(list(set(labels).union(predictions)))
     fig = px.imshow(
-        cm, text_auto=True, labels=dict(x="Predicted", y="Real", color="Bluered"), x=class_names, y=class_names
+        cm, text_auto=True, labels=dict(x="Predicted", y="Real", color="RdBu"), x=class_names, y=class_names
     )
 
     return fig
