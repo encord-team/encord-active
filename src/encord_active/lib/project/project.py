@@ -130,16 +130,19 @@ class Project:
 
     def __save_label_row_meta(self, encord_project: EncordProject):
         label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta["number_of_frames"] = 1  # TODO Remove when we have this in all our label rows
         label_row_meta_file_path = self.file_structure.label_row_meta
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
+        def add_number_of_frames(lr_meta):
+            lr_meta["number_of_frames"] = 1
+            return LabelRowMetadata.from_dict(lr_meta)
+
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_metas = {
-            lr_hash: lr_meta[lr_hash]
+            lr_hash: add_number_of_frames(lr_meta)
             for lr_hash, lr_meta in itertools.islice(
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
