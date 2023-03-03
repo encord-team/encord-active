@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "encord-active"
-version = "v0.1.36"
+version = "v0.1.37"
 description = "Enable users to improve machine learning models in an active learning fashion via data, label, and model quality."
 authors = ["Cord Technologies Limited <hello@encord.com>"]
 classifiers=[
@@ -36,7 +36,7 @@ encord-active = "encord_active.cli.main:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-encord = "^0.1.43"
+encord = "0.1.63"
 numpy = "^1.23.5"
 opencv-python = "4.5.5.64"
 streamlit = "1.13.0"
@@ -73,6 +73,7 @@ statsmodels = "^0.13.5"
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
 encord-active-components = "^0.0.5"
+llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
