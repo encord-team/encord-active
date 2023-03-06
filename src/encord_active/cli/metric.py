@@ -15,7 +15,7 @@ SIMPLE_HEAD_BOX = box.Box("    \n    \n -  \n    \n    \n    \n    \n    \n")
 
 
 @metric_cli.command(name="add", short_help="Add metrics.")
-@ensure_project
+@ensure_project()
 def add_metrics(
     module_path: Path = typer.Argument(
         ..., help="Path to the python module where the metric resides.", exists=True, dir_okay=False
@@ -88,7 +88,7 @@ def add_metrics(
 
 
 @metric_cli.command(name="list", short_help="List metrics.")
-@ensure_project
+@ensure_project()
 def list_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
@@ -109,7 +109,7 @@ def list_metrics(
 
 
 @metric_cli.command(name="remove", short_help="Remove metrics.")
-@ensure_project
+@ensure_project()
 def remove_metrics(
     metric_title: list[str] = typer.Argument(..., help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
@@ -135,7 +135,7 @@ def remove_metrics(
 
 
 @metric_cli.command(name="run", short_help="Run metrics.")
-@ensure_project
+@ensure_project()
 def run_metrics(
     metric_title: Optional[list[str]] = typer.Argument(None, help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
@@ -199,7 +199,7 @@ def run_metrics(
 
 
 @metric_cli.command(name="show", short_help="Show information about available metrics.")
-@ensure_project
+@ensure_project()
 def show_metrics(
     metric_title: list[str] = typer.Argument(..., help="Title of the metric. Can be used multiple times."),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
@@ -220,7 +220,7 @@ def show_metrics(
                 print("---")
             print(
                 *(
-                    f"{_property}: {value}"
+                    f"{_property.replace('_', ' ').capitalize()}: {value}"
                     for _property, value in metrics_meta[title].items()
                     if _property not in hidden_properties
                 ),
