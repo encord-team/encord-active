@@ -13,7 +13,6 @@ class ProjectMeta(TypedDict):
     project_title: str
     ssh_key_path: str
     has_remote: bool
-    metrics: dict[str, str]
 
 
 class ProjectNotFound(Exception):
