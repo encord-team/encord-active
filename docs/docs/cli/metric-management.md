@@ -11,9 +11,10 @@ This section documents all the available commands on how to manage and run metri
 Make sure your shell's current working directory is that of an Encord Active project, or your command points to one with the `--target` global option.
 :::
 
+
 ## metric add
 
-The `metric add` command adds required metrics to your project and attaches them.
+The `metric add` command adds required metrics to the project and attaches them.
 
 You can add metrics from local python modules (`.py`).  
 If you don't specify a metric, Encord Active will add all the metrics in the python module to the project.
@@ -21,7 +22,7 @@ If you don't specify a metric, Encord Active will add all the metrics in the pyt
 encord-active metric add /path/to/module.py
 ```
 
-You can also add specific metrics by their title: 
+You can also add specific metrics by using their title:
 ```shell
 encord-active metric add /path/to/module.py "Metric Title" "Another Metric Title"
 ```
@@ -41,6 +42,22 @@ The `metric remove` command removes metrics from the list of attached metrics.
 ```shell
 encord-active metric remove "Metric Title"
 ```
+
+
+## metric run
+
+The `metric run` command runs available metrics over the project's data.
+
+If you don't specify a metric, Encord Active will run all the metrics attached to the project.
+```shell
+encord-active metric run 
+```
+
+You can also run specific metrics by using their title:
+```shell
+encord-active metric run "Metric Title" "Another Metric Title"
+```
+
 
 ## metric list
 
