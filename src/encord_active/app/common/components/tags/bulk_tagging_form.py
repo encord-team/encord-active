@@ -37,13 +37,13 @@ def action_bulk_tags(subset: DataFrame, selected_tags: List[Tag], action: TagAct
 
     all_df = get_state().merged_metrics.copy()
 
-    for tag in selected_tags:
-        target_ids = [target_identifier(id, tag.scope) for id in subset.identifier.to_list()]
+    for selected_tag in selected_tags:
+        target_ids = [target_identifier(id, selected_tag.scope) for id in subset.identifier.to_list()]
         for id, tags in all_df.loc[target_ids, "tags"].items():
             if action == TagAction.ADD:
-                next = list(set(tags + [tag]))
+                next = list(set(tags + [selected_tag]))
             elif action == TagAction.REMOVE:
-                next = list(set(tag for tag in tags if tag != tag))
+                next = list(set(tag for tag in tags if tag != selected_tag))
             else:
                 raise Exception(f"Action {action} is not supported")
 
