@@ -51,8 +51,8 @@ def update_embedding_identifiers(
 
 def replace_in_files(project_file_structure: ProjectFileStructure, renaming_map):
     for subs in iterate_in_batches(list(renaming_map.items()), 100):
-        substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
-        cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
+        substitutions = " -e  " + " -e ".join(f"'s/{old}/{new}/g'" for old, new in subs)
+        cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' {substitutions} {{}} +"
         subprocess.run(cmd, shell=True, cwd=project_file_structure.project_dir)
 
 
