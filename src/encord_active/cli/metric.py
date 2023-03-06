@@ -33,7 +33,11 @@ def add_metrics(
     """
     rich.print("Inspecting provided module ...")
 
-    from encord_active.lib.metrics.io import get_metrics, get_module_metrics
+    from encord_active.lib.metrics.io import (
+        get_metric_metadata,
+        get_metrics,
+        get_module_metrics,
+    )
 
     full_module_path = module_path.expanduser().resolve()
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
@@ -51,7 +55,7 @@ def add_metrics(
         rich.print("[red]Error: Provided module path doesn't comply with expected format. Check the logs.[/red]")
         return
 
-    found_metric_titles = {metric.metadata.title: metric.metadata for metric in found_metrics}
+    found_metric_titles = {metric.metadata.title: metric for metric in found_metrics}
     if add_all_metrics:
         metric_titles = dict.fromkeys(found_metric_titles.keys(), full_module_path)
 
@@ -67,15 +71,15 @@ def add_metrics(
                     rich.print(f"[red]ERROR: Conflict found in metric {title}. It points to '{old_module_path}'.[/red]")
                     has_conflicts = True
             else:
-                # attach input metric to the project and recreate its metadata in metrics_meta.yaml
-                metrics_meta[title] = {title: {"remote": module_path.as_posix()} | vars(found_metric_titles[title])}
+                # attach input metric to the project and recreate its metadata in metrics_meta.json
+                metrics_meta[title] = get_metric_metadata(found_metric_titles[title], module_path)
                 rich.print(f"Adding {title}")
         else:
             # input metric title was not found in the python module
             rich.print(f"[red]ERROR: No matching metric found for {title}.[/red]")
             has_conflicts = True
 
-    # update metric dependencies in metrics_meta.yaml
+    # update metric dependencies in metrics_meta.json
     update_metrics_meta(target, metrics_meta)
     if has_conflicts:
         rich.print("[yellow]Errors were found. Not all metrics were successfully added.[/yellow]")
@@ -100,7 +104,7 @@ def list_metrics(
     table.add_column("Metric Title")
     table.add_column("Editable metric location")
     for title in sorted_titles:
-        table.add_row(title, metrics_meta[title])
+        table.add_row(title, metrics_meta[title]["remote"])
     rich.print(table)
 
 
@@ -126,7 +130,7 @@ def remove_metrics(
         else:
             rich.print(f"[yellow]WARNING: Skipping {title} as it is not attached to the project.[/yellow]")
 
-    # update metric dependencies in metrics_meta.yaml
+    # update metric dependencies in metrics_meta.json
     update_metrics_meta(target, metrics_meta)
 
 
@@ -148,8 +152,7 @@ def run_metrics(
     from encord_active.lib.metrics.io import get_metrics
 
     metrics_meta = fetch_metrics_meta(target)
-
-    metrics = get_metrics(list(metrics_meta.items()))
+    metrics = get_metrics([(m_title, m_meta["remote"]) for m_title, m_meta in metrics_meta.items()])
     if run_all:  # User chooses to run all available metrics
         selected_metrics = metrics
 

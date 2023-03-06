@@ -9,10 +9,17 @@ from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 def fill_metrics_meta_with_builtin_metrics(metrics_meta: dict):
     metrics_meta.update(
-        (metric.metadata.title, {"remote": module_path.as_posix()} | vars(metric.metadata))
+        (metric.metadata.title, get_metric_metadata(metric, module_path))
         for metric, module_path in get_builtin_metrics()
     )
     return metrics_meta
+
+
+def get_metric_metadata(metric: Union[Metric, SimpleMetric], module_path: Optional[Path] = None) -> dict:
+    metric_meta = dict() if module_path is None else dict(remote=module_path.as_posix())
+    metric_meta |= metric.metadata.dict()
+    metric_meta.pop("stats", None)
+    return metric_meta
 
 
 def get_builtin_metrics() -> list[tuple[Union[Metric, SimpleMetric], Path]]:
