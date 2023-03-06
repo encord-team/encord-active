@@ -1,21 +1,37 @@
+from pathlib import Path
+
 import streamlit as st
 
 from encord_active.app.common.state import get_state, refresh
-from encord_active.app.common.state_hooks import use_memo, use_state
+from encord_active.app.common.state_hooks import use_state
 from encord_active.lib.versioning.git import GitVersioner
 
 CURRENT_VERSION_KEY = "current_version"
 
 
-def version_selector(versioner: GitVersioner):
-    initial_version_index = use_memo(lambda: versioner.versions.index(versioner.current_version))
-    get_version, set_version = use_state(versioner.versions[0], CURRENT_VERSION_KEY)
+@st.cache_resource
+def cached_versioner(project_path: Path):
+    versioner = GitVersioner(project_path)
+    index = versioner.versions.index(versioner.current_version)
+    return versioner, index
+
+
+def version_selector(project_path: Path):
+    versioner, initial_version_index = cached_versioner(project_path)
+    get_version, set_version = use_state(versioner.versions[initial_version_index], CURRENT_VERSION_KEY)
+
     version = st.selectbox(
-        "Choose version", versioner.versions, format_func=lambda version: version.name, index=initial_version_index
+        "Choose version",
+        versioner.versions,
+        # NOTE: streamlit auto key generation is not smart enough to know the
+        # options have changed. removing the key would lead to state issues.
+        key=f"version-{project_path}",
+        format_func=lambda version: version.name,
+        index=initial_version_index,
     )
 
     if not version or version.id == get_version().id:
-        return version
+        return version, versioner.is_latest()
 
     if versioner.is_latest(get_version()):
         versioner.stash()

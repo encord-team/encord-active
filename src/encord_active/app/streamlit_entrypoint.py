@@ -29,7 +29,6 @@ from encord_active.cli.utils.decorators import (
 )
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
-from encord_active.lib.versioning.git import GitVersioner
 
 pages = {
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
@@ -61,33 +60,33 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
+def project_selector(path: Path):
+    if is_project(path):
+        projects = [path]
+    else:
+        parent_project = try_find_parent_project(path)
+        projects = [parent_project] if parent_project else find_child_projects(path)
+
+    return st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
+
+
 def main(target: str):
     set_page_config()
     render_help()
     target_path = Path(target)
 
-    if is_project(target_path):
-        projects = [target_path]
-    else:
-        parent_project = try_find_parent_project(target_path)
-        if parent_project:
-            projects = [parent_project]
-        else:
-            projects = find_child_projects(target_path)
-
     with st.sidebar:
-        project_path = st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
+        project_path = project_selector(target_path)
         if not project_path:
             st.info("Please choose a project")
             return
 
-        versioner = GitVersioner(project_path)
-        version = version_selector(versioner)
+        version, is_latest = version_selector(project_path)
         if not version:
             st.info("Please choose a version")
             return
 
-        if not versioner.is_latest():
+        if not is_latest:
             st.error("READ ONLY MODE \n\n Changes will not be saved")
 
         get_path, set_path = use_state(DEFAULT_PAGE_PATH)
