@@ -53,7 +53,7 @@ def add_metrics(
 
     found_metric_titles = {metric.metadata.title: metric.metadata for metric in found_metrics}
     if add_all_metrics:
-        metric_titles = found_metric_titles.copy()
+        metric_titles = dict.fromkeys(found_metric_titles.keys(), full_module_path)
 
     has_conflicts = False
     for title in metric_titles:
