@@ -13,7 +13,8 @@ from encord_active.lib.encord.local_sdk import (
     LocalUserClient,
     get_mimetype,
 )
-from encord_active.lib.metrics.io import fill_project_meta_with_builtin_metrics
+from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
+from encord_active.lib.metrics.metadata import update_metrics_meta
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
@@ -112,9 +113,12 @@ def init_local_project(
         "project_hash": project.project_hash,
         "has_remote": False,
     }
-    fill_project_meta_with_builtin_metrics(project_meta)
     meta_file_path = project_dir / "project_meta.yaml"
     meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
+
+    # attach builtin metrics to the project
+    metrics_meta = fill_metrics_meta_with_builtin_metrics(dict())
+    update_metrics_meta(project_path, metrics_meta)
 
     label_row_meta_collection = {lr["label_hash"]: lr for lr in project.label_rows}
     label_row_meta_file_path = project_dir / "label_row_meta.json"

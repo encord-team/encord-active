@@ -30,7 +30,8 @@ from encord_active.lib.encord.local_sdk import (
     LocalProject,
     LocalUserClient,
 )
-from encord_active.lib.metrics.io import fill_project_meta_with_builtin_metrics
+from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
+from encord_active.lib.metrics.metadata import update_metrics_meta
 
 IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
@@ -213,11 +214,14 @@ class CocoImporter:
             "project_hash": project.project_hash,
             "has_remote": False,
         }
-        fill_project_meta_with_builtin_metrics(project_meta)
         if ssh_key_path:
             project_meta["ssh_key_path"] = ssh_key_path.as_posix()
         meta_file_path = self.project_dir / "project_meta.yaml"
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
+
+        # attach builtin metrics to the project
+        metrics_meta = fill_metrics_meta_with_builtin_metrics(dict())
+        update_metrics_meta(self.project_dir, metrics_meta)
 
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
         id_shape_to_obj = {key: id_to_obj[id] for key, id in self.id_mappings.items()}

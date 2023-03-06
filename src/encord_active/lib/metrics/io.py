@@ -7,11 +7,12 @@ from encord_active.lib.metrics.execute import logger
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 
-def fill_project_meta_with_builtin_metrics(project_meta: dict):
-    project_metrics = project_meta.setdefault("metrics", dict())
-    project_metrics.update(
-        (metric.metadata.title, module_path.as_posix()) for metric, module_path in get_builtin_metrics()
+def fill_metrics_meta_with_builtin_metrics(metrics_meta: dict):
+    metrics_meta.update(
+        (metric.metadata.title, {"remote": module_path.as_posix()} | vars(metric.metadata))
+        for metric, module_path in get_builtin_metrics()
     )
+    return metrics_meta
 
 
 def get_builtin_metrics() -> list[tuple[Union[Metric, SimpleMetric], Path]]:
