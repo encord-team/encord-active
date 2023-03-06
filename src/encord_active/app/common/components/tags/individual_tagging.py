@@ -46,9 +46,11 @@ def multiselect_tag(row: Series, key_prefix: str, metric_type: MetricScope):
     metric_scopes = METRIC_SCOPE_TAG_SCOPES[metric_type]
 
     tag_status = []
+    merged_metrics = get_state().merged_metrics
     for scope in metric_scopes:
         id = target_identifier(identifier, scope)
-        tag_status += get_state().merged_metrics.at[id, "tags"]
+        if id in merged_metrics:
+            tag_status += get_state().merged_metrics.at[id, "tags"]
 
     key = f"{key_prefix}_multiselect_{identifier}"
 
