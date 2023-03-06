@@ -205,4 +205,25 @@ def show_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Show information about one or more available metrics in the project."""
-    pass
+
+    metrics_meta = fetch_metrics_meta(target)
+
+    not_found_metrics = [title for title in metric_title if title not in metrics_meta]
+    if len(not_found_metrics) > 0:
+        rich.print(f"[yellow]WARNING: Package(s) not found:", ", ".join(not_found_metrics))
+
+    first = True
+    hidden_properties = {"stats", "long_description"}
+    for title in metric_title:
+        if title in metrics_meta:
+            if not first:
+                print("---")
+            print(
+                *(
+                    f"{_property}: {value}"
+                    for _property, value in metrics_meta[title].items()
+                    if _property not in hidden_properties
+                ),
+                sep="\n",
+            )
+            first = False
