@@ -210,7 +210,7 @@ def show_metrics(
 
     not_found_metrics = [title for title in metric_title if title not in metrics_meta]
     if len(not_found_metrics) > 0:
-        rich.print(f"[yellow]WARNING: Package(s) not found:", ", ".join(not_found_metrics))
+        rich.print("[yellow]WARNING: Package(s) not found:", ", ".join(not_found_metrics))
 
     first = True
     hidden_properties = {"stats", "long_description"}
