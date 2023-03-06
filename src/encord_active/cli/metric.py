@@ -64,7 +64,7 @@ def add_metrics(
         if title in found_metric_titles:
             # input metric title was found in the python module
             if title in metrics_meta:
-                old_module_path = metrics_meta[title]["remote"]
+                old_module_path = metrics_meta[title]["location"]
                 if full_module_path == Path(old_module_path).expanduser().resolve():
                     rich.print(f"Requirement already satisfied: {title} in '{module_path.as_posix()}'.")
                 else:
@@ -104,7 +104,7 @@ def list_metrics(
     table.add_column("Metric Title")
     table.add_column("Editable metric location")
     for title in sorted_titles:
-        table.add_row(title, metrics_meta[title]["remote"])
+        table.add_row(title, metrics_meta[title]["location"])
     rich.print(table)
 
 
@@ -122,7 +122,7 @@ def remove_metrics(
             rich.print(f"Found existing metric: {title}")
             rich.print(f"Removing {title}:")
             rich.print("  Would detach:")
-            rich.print(f"    {metrics_meta[title]['remote']}")
+            rich.print(f"    {metrics_meta[title]['location']}")
             ok_remove = typer.confirm("Proceed?")
             if ok_remove:
                 metrics_meta.pop(title)
@@ -152,7 +152,7 @@ def run_metrics(
     from encord_active.lib.metrics.io import get_metrics
 
     metrics_meta = fetch_metrics_meta(target)
-    metrics = get_metrics([(m_title, m_meta["remote"]) for m_title, m_meta in metrics_meta.items()])
+    metrics = get_metrics([(m_title, m_meta["location"]) for m_title, m_meta in metrics_meta.items()])
     if run_all:  # User chooses to run all available metrics
         selected_metrics = metrics
 

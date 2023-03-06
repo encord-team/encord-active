@@ -16,9 +16,9 @@ def fill_metrics_meta_with_builtin_metrics(metrics_meta: dict):
 
 
 def get_metric_metadata(metric: Union[Metric, SimpleMetric], module_path: Optional[Path] = None) -> dict:
-    metric_meta = dict() if module_path is None else dict(remote=module_path.as_posix())
-    metric_meta |= metric.metadata.dict()
-    metric_meta.pop("stats", None)
+    metric_meta = metric.metadata.dict()
+    if module_path is not None:
+        metric_meta["location"] = module_path.as_posix()
     return metric_meta
 
 
