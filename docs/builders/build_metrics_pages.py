@@ -19,7 +19,7 @@ descriptions = {
 }
 
 metric_path = Path(run_all.__file__).parent
-docs_root = metric_path.parents[1]
+docs_root = Path(__file__).parents[1]
 
 submodules = [p.name for p in metric_path.iterdir() if p.name[0] != "_" and p.is_dir()]
 
@@ -61,7 +61,7 @@ def fix_strings(row: List[Any]) -> List[str]:
             print(row)
             print(val2)
 
-    row[0] = f'[{row[0]}]({row[0].lower().replace(" ", "-")}) - <small>{row[1]}</small>'
+    row[0] = f'[{row[0]}](#{row[0].lower().replace(" ", "-")}) - <small>{row[1]}</small>'
     row.pop(1)
     return row
 
@@ -82,7 +82,7 @@ for submodule, metrics_list in zip(submodules, ms):
 
     md = ""
     for metric in metrics_list:
-        url = f"{GITHUB_URL}/blob/main/{type(metric).__module__.replace('.', '/')}.py"
+        url = f"{GITHUB_URL}/blob/main/src/{type(metric).__module__.replace('.', '/')}.py"
         md += (
             f"\n## {metric.metadata.title}  \n"
             f"{metric.metadata.long_description}  \n\n"

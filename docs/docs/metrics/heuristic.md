@@ -2,46 +2,48 @@
 
 Work on images or individual video frames and are heuristic in the sense that they mostly depend on the image content without labels.
 
-| Title                                                                                                                                                                                        | Metric Type | Data Type                 |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ----------- | ------------------------- |
-| [Area](#area) - <small>Ranks images by their area (width\*height).</small>                                                                                                                   | `image`     | `Any`                     |
-| [Aspect Ratio](#aspect-ratio) - <small>Ranks images by their aspect ratio (width/height).</small>                                                                                            | `image`     | `Any`                     |
-| [Blue Values](#blue-values) - <small>Ranks images by how much blue is present in the image.</small>                                                                                          | `image`     | `Any`                     |
-| [Blur](#blur) - <small>Ranks images by their blurriness.</small>                                                                                                                             | `image`     | `Any`                     |
-| [Brightness](#brightness) - <small>Ranks images by their brightness.</small>                                                                                                                 | `image`     | `Any`                     |
-| [Contrast](#contrast) - <small>Ranks images by their contrast.</small>                                                                                                                       | `image`     | `Any`                     |
-| [Green Values](#green-values) - <small>Ranks images by how much green is present in the image.</small>                                                                                       | `image`     | `Any`                     |
-| [Inconsistent Object Classification and Track IDs](#inconsistent-object-classification-and-track-ids) - <small>Looks for overlapping objects with different classes (across frames).</small> | `sequence`  | `bounding box`, `polygon` |
-| [Missing Objects and Broken Tracks](#missing-objects-and-broken-tracks) - <small>Identifies missing objects and broken tracks based on object overlaps.</small>                              | `sequence`  | `bounding box`, `polygon` |
-| [Object Count](#object-count) - <small>Counts number of objects in the image</small>                                                                                                         | `image`     | `Any`                     |
-| [Red Values](#red-values) - <small>Ranks images by how much red is present in the image.</small>                                                                                             | `image`     | `Any`                     |
-| [Sharpness](#sharpness) - <small>Ranks images by their sharpness.</small>                                                                                                                    | `image`     | `Any`                     |
+| Title                                                                                                                                                                                        | Metric Type   | Data Type                                                                                                          |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|--------------------------------------------------------------------------------------------------------------------|
+| [Area](#area) - <small>Ranks images by their areawidth/height).</small>                                                                                                                      | `image`       |                                                                                                                    |
+| [Aspect Ratio](#aspect-ratio) - <small>Ranks images by their aspect ratio (width/height).</small>                                                                                            | `image`       |                                                                                                                    |
+| [Blue Values](#blue-values) - <small>Ranks images by how blue the average value of the image is.</small>                                                                                     | `image`       |                                                                                                                    |
+| [Blur](#blur) - <small>Ranks images by their blurriness.</small>                                                                                                                             | `image`       |                                                                                                                    |
+| [Brightness](#brightness) - <small>Ranks images by their brightness.</small>                                                                                                                 | `image`       |                                                                                                                    |
+| [Contrast](#contrast) - <small>Ranks images by their contrast.</small>                                                                                                                       | `image`       |                                                                                                                    |
+| [Green Values](#green-values) - <small>Ranks images by how green the average value of the image is.</small>                                                                                  | `image`       |                                                                                                                    |
+| [Inconsistent Object Classification and Track IDs](#inconsistent-object-classification-and-track-ids) - <small>Looks for overlapping objects with different classes (across frames).</small> | `sequence`    | `bounding box`, `polygon`, `rotatable bounding box`                                                                |
+| [Missing Objects and Broken Tracks](#missing-objects-and-broken-tracks) - <small>Identifies missing objects and broken tracks based on object overlaps.</small>                              | `sequence`    | `bounding box`, `polygon`, `rotatable bounding box`                                                                |
+| [Object Count](#object-count) - <small>Counts number of objects in the image</small>                                                                                                         | `image`       | `bounding box`, `checklist`, `point`, `polygon`, `polyline`, `radio`, `rotatable bounding box`, `skeleton`, `text` |
+| [Random Values on Images](#random-values-on-images) - <small>Assigns a random value between 0 and 1 to images</small>                                                                        | `image`       |                                                                                                                    |
+| [Random Values on Objects](#random-values-on-objects) - <small>Assigns a random value between 0 and 1 to objects</small>                                                                     | `image`       | `bounding box`, `polygon`, `rotatable bounding box`                                                                |
+| [Red Values](#red-values) - <small>Ranks images by how red the average value of the image is.</small>                                                                                        | `image`       |                                                                                                                    |
+| [Sharpness](#sharpness) - <small>Ranks images by their sharpness.</small>                                                                                                                    | `image`       |                                                                                                                    |
 
-## Area
 
-This metric ranks images by their area (width\*height).
+## Area  
+Ranks images by their area.
 
-Area is computed as the product of image width and image height.
-
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
-
-## Aspect Ratio
-
-This metric ranks images by their aspect ratio (width/height).
-
-Aspect ratio is computed as the ratio of image width to image height.
+Area is computed as the product of image width and image height ($width \times height$).
+      
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Blue Values
+## Aspect Ratio  
+Ranks images by their aspect ratio.
 
-This metric ranks images by how much blue is present in the image.
+Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Blur
+## Blue Values  
+Ranks images by how blue the average value of the
+                    image is.  
 
-This metric ranks images by their blurriness.
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
+
+## Blur  
+Ranks images by their blurriness.
 
 Blurriness is computed by applying a Laplacian filter to each image and computing the
 variance of the output. In short, the score computes "the amount of edges" in each
@@ -50,39 +52,39 @@ image. Note that this is $1 - \text{sharpness}$.
 ```python
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Brightness
-
-This metric ranks images by their brightness.
+## Brightness  
+Ranks images their brightness.
 
 Brightness is computed as the average (normalized) pixel value across each image.
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Contrast
-
-This metric ranks images by their contrast.
+## Contrast  
+Ranks images by their contrast.
 
 Contrast is computed as the standard deviation of the pixel values.
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Green Values
-
-This metric Ranks images by how much blue is present in the image.
+## Green Values  
+Ranks images by how green the average value of the
+                    image is.  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Inconsistent Object Classification and Track IDs
-
+## Inconsistent Object Classification and Track IDs  
 This algorithm looks for overlapping objects in consecutive
 frames that have different classes. Furthermore, if classes are the same for overlapping objects but have different
 track-ids, they will be flagged as potential inconsistencies in tracks.
 
-**Example 1:**
 
+**Example 1:**
 ```
       Frame 1                       Frame 2
 ┌───────────────────┐        ┌───────────────────┐
@@ -95,11 +97,9 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 │                   │        │                   │
 └───────────────────┘        └───────────────────┘
 ```
-
 `Dog:1` will be flagged as potentially wrong class, because it overlaps with `CAT:1`.
 
 **Example 2:**
-
 ```
       Frame 1                       Frame 2
 ┌───────────────────┐        ┌───────────────────┐
@@ -112,19 +112,19 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 │                   │        │                   │
 └───────────────────┘        └───────────────────┘
 ```
-
 `Cat:2` will be flagged as potentially having a broken track, because track ids `1` and `2` doesn't match.
+
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/high_iou_changing_classes.py)
 
-## Missing Objects and Broken Tracks
-
+## Missing Objects and Broken Tracks  
 Identifies missing objects by comparing object overlaps based
 on a running window.
 
 **Case 1:**
 If an intermediate frame (frame $i$) doesn't include an object in the same
-region as in the two surrounding frames ($i-1$ and $i+1$), it is flagged.
+region, as the two surrounding frames ($i-1$ and $i+1$), it is flagged.
 
 ```
       Frame i-1                     Frame i                      Frame i+1
@@ -139,7 +139,6 @@ region as in the two surrounding frames ($i-1$ and $i+1$), it is flagged.
 │                   │        │                   │        │                   │
 └───────────────────┘        └───────────────────┘        └───────────────────┘
 ```
-
 Frame $i$ will be flagged as potentially missing an object.
 
 **Case 2:**
@@ -159,26 +158,34 @@ hash, they will be flagged as a potentially broken track.
 │                   │        │                   │        │                   │
 └───────────────────┘        └───────────────────┘        └───────────────────┘
 ```
-
 `CAT:2` will be marked as potentially having a wrong track id.
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/missing_objects_and_wrong_tracks.py)
 
-## Object Count
-
-Counts number of objects in the image.
+## Object Count  
+Counts number of objects in the image.  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/object_counting.py)
 
-## Red Values
+## Random Values on Images  
+Uses a uniform distribution to generate a value between 0 and 1 to each image  
 
-This metric ranks images by how much red is present in the image.
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/random.py)
+
+## Random Values on Objects  
+Uses a uniform distribution to generate a value between 0 and 1 to each object  
+
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/random.py)
+
+## Red Values  
+Ranks images by how red the average value of the
+                    image is.  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
 
-## Sharpness
-
-This metric ranks images by their sharpness.
+## Sharpness  
+Ranks images by their sharpness.
 
 Sharpness is computed by applying a Laplacian filter to each image and computing the
 variance of the output. In short, the score computes "the amount of edges" in each
@@ -187,5 +194,8 @@ image.
 ```python
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
+  
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/heuristic/img_features.py)
+
+

@@ -44,7 +44,7 @@ on a running window.
 
 **Case 1:**
 If an intermediate frame (frame $i$) doesn't include an object in the same
-region, as the two surrounding framge ($i-1$ and $i+1$), it is flagged.
+region, as the two surrounding frames ($i-1$ and $i+1$), it is flagged.
 
 ```
       Frame i-1                     Frame i                      Frame i+1
