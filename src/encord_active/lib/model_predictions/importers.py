@@ -3,7 +3,6 @@
 import json
 import logging
 import re
-from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, cast
 
@@ -259,7 +258,7 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
     elif predictions[0].object:
         prediction_type = MainPredictionType.OBJECT
     else:
-        raise EmptyDataError(f"Prediction data does not exist!")
+        raise EmptyDataError("Predictions does not exist!")
 
     run_all_prediction_metrics(
         data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True, prediction_type=prediction_type

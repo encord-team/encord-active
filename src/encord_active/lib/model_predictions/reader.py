@@ -5,6 +5,7 @@ from typing import Any, Callable, Iterable, List, Optional, TypedDict, cast
 import pandas as pd
 import pandera as pa
 import pandera.dtypes as padt
+from loguru import logger
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
@@ -172,6 +173,9 @@ def get_model_predictions(
         return df.pipe(DataFrame[ClassificationPredictionSchema]) if df is not None else None
     elif prediction_type == MainPredictionType.OBJECT:
         return df.pipe(DataFrame[PredictionSchema]) if df is not None else None
+    else:
+        logger.error(f"Undefined prediction type: {prediction_type}")
+        return None
 
 
 def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
@@ -193,6 +197,9 @@ def get_labels(
         return df.pipe(DataFrame[LabelSchema]) if df is not None else None
     elif prediction_type == MainPredictionType.CLASSIFICATION:
         return df.pipe(DataFrame[ClassificationLabelSchema]) if df is not None else None
+    else:
+        logger.error(f"Undefined prediction type: {prediction_type}")
+        return None
 
 
 def get_gt_matched(predictions_dir: Path) -> Optional[dict]:

@@ -3,7 +3,7 @@ import logging
 from base64 import b64encode
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
 from uuid import uuid4
 
 import cv2
@@ -248,7 +248,7 @@ class PredictionWriter:
         self.project = project.load()
         self.storage_dir = project.file_structure.predictions
 
-        self.predictions: List[Optional[PredictionEntry, ClassificationPredictionEntry]] = []
+        self.predictions: List[Union[PredictionEntry, ClassificationPredictionEntry]] = []
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
         self.classification_lookup = {
@@ -513,7 +513,10 @@ class PredictionWriter:
     def __add_classification_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
 
         class_id = self.classification_class_id_lookup.get(prediction.classification)
-        ptype = PredictionType.FRAME
+        if class_id is None:
+            raise AttributeError(
+                f"classification_class_id_lookup does not have the classification key: '{prediction.classification}'"
+            )
 
         _frame = 0
         if not prediction.frame:  # Try to infer frame number from data hash.
@@ -539,7 +542,15 @@ class PredictionWriter:
         width = int(du["width"])
         height = int(du["height"])
 
+        if prediction.object is None:
+            raise ValueError(f"prediction.object property is None for object with data hash '{prediction.data_hash}'")
         class_id = self.object_class_id_lookup.get(prediction.object.feature_hash)
+
+        # if class_id == -1:
+        #     raise AttributeError(
+        #         f"object_class_id_lookup does not have the object feature_hash key: '{prediction.object.feature_hash}'"
+        #     )
+
         if isinstance(prediction.object.data, np.ndarray):
             polygon = prediction.object.data
             ptype = PredictionType.POLYGON

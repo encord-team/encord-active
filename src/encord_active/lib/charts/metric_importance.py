@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Any, List, Union
 
 import altair as alt
 import pandas as pd
@@ -10,8 +10,6 @@ from encord_active.lib.model_predictions.reader import (
     PredictionMatchSchema,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
-
-_P_COLS = PredictionMatchSchema
 
 
 def create_metric_importance_charts(
@@ -25,6 +23,7 @@ def create_metric_importance_charts(
     else:
         _predictions = model_predictions
 
+    _P_COLS: Any
     if prediction_type == MainPredictionType.OBJECT:
         _P_COLS = PredictionMatchSchema
         scores = _predictions[_P_COLS.iou] * _predictions[_P_COLS.is_true_positive]
