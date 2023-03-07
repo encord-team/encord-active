@@ -248,7 +248,7 @@ class PredictionWriter:
         self.project = project.load()
         self.storage_dir = project.file_structure.predictions
 
-        self.predictions: List[Optional[PredictionEntry, ClassificationPredictionEntry]] = []
+        self.predictions: List[Union[PredictionEntry, ClassificationPredictionEntry]] = []
         self.object_lookup = {o.feature_node_hash: o for o in self.project.ontology.objects}
 
         self.classification_lookup = {
