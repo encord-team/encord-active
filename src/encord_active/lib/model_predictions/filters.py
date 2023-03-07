@@ -3,6 +3,7 @@ from pandera.typing import DataFrame
 
 from encord_active.lib.model_predictions.reader import (
     ClassificationLabelSchema,
+    ClassificationPredictionMatchSchema,
     ClassificationPredictionSchema,
     PredictionMatchSchema,
 )
@@ -44,6 +45,7 @@ def prediction_and_label_filtering_classification(
     selected_class_idx: dict,
     labels: pd.DataFrame,
     predictions: pd.DataFrame,
+    matched_model_predictions: DataFrame[ClassificationPredictionMatchSchema],
 ):
     # Predictions
     class_idx = selected_class_idx
@@ -63,4 +65,10 @@ def prediction_and_label_filtering_classification(
     )
     _labels[ClassificationLabelSchema.class_id] = _labels[ClassificationLabelSchema.class_id].map(name_map)
 
-    return _labels, _predictions
+    # matched predictions
+    _matched_model_predictions = matched_model_predictions.copy()
+    _matched_model_predictions = _matched_model_predictions[
+        _matched_model_predictions[ClassificationPredictionMatchSchema.class_id].isin(set(map(int, class_idx.keys())))
+    ]
+
+    return _labels, _predictions, _matched_model_predictions

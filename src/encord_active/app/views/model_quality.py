@@ -89,7 +89,7 @@ def model_quality(page: Page):
                     common_settings_objects()
                     page.sidebar_options()
 
-                (matched_predictions, matched_labels, metrics, precisions,) = compute_mAP_and_mAR(
+                (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
                     model_predictions,
                     labels,
                     matched_gt,
@@ -102,19 +102,19 @@ def model_quality(page: Page):
                 pred_sort_column = (
                     get_state().predictions.metric_datas.selected_prediction or predictions_metric_datas[0].name
                 )
-                sorted_model_predictions = matched_predictions.sort_values([pred_sort_column], axis=0)
+                sorted_model_predictions = predictions_filtered.sort_values([pred_sort_column], axis=0)
 
                 label_sort_column = get_state().predictions.metric_datas.selected_label or label_metric_datas[0].name
-                sorted_labels = matched_labels.sort_values([label_sort_column], axis=0)
+                sorted_labels = labels_filtered.sort_values([label_sort_column], axis=0)
 
                 if get_state().ignore_frames_without_predictions:
-                    matched_labels = filter_labels_for_frames_wo_predictions(matched_predictions, sorted_labels)
+                    labels_filtered = filter_labels_for_frames_wo_predictions(predictions_filtered, sorted_labels)
                 else:
-                    matched_labels = sorted_labels
+                    labels_filtered = sorted_labels
 
                 _labels, _metrics, _model_pred, _precisions = prediction_and_label_filtering(
                     get_state().predictions.selected_classes_objects,
-                    matched_labels,
+                    labels_filtered,
                     metrics,
                     sorted_model_predictions,
                     precisions,
@@ -159,6 +159,10 @@ def model_quality(page: Page):
                     )
                 )
 
+                get_state().predictions.metric_datas_classification = MetricNames(
+                    predictions={m.name: m for m in predictions_metric_datas},
+                )
+
                 if model_predictions is None:
                     st.error("Couldn't load model predictions")
                     return
@@ -171,20 +175,23 @@ def model_quality(page: Page):
                     common_settings_classifications()
 
                 model_predictions_matched = match_predictions_and_labels(model_predictions, labels_all)
-                pred_sort_column = (
-                    get_state().predictions.metric_datas.selected_prediction or predictions_metric_datas[0].name
-                )
-                sorted_model_predictions = model_predictions_matched.sort_values([pred_sort_column], axis=0)
 
-                matched_predictions, matched_labels = prediction_and_label_filtering_classification(
-                    get_state().predictions.selected_classes_classifications, labels, predictions
+                (
+                    predictions_filtered,
+                    labels_filtered,
+                    model_predictions_matched_filtered,
+                ) = prediction_and_label_filtering_classification(
+                    get_state().predictions.selected_classes_classifications,
+                    labels,
+                    predictions,
+                    model_predictions_matched,
                 )
 
                 # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
 
                 y_true, y_pred = (
-                    list(matched_labels[reader.ClassificationLabelSchema.class_id]),
-                    list(matched_predictions[reader.ClassificationPredictionSchema.class_id]),
+                    list(labels_filtered[reader.ClassificationLabelSchema.class_id]),
+                    list(predictions_filtered[reader.ClassificationPredictionSchema.class_id]),
                 )
 
                 class_names = sorted(list(set(y_true).union(y_pred)))
@@ -225,12 +232,9 @@ def model_quality(page: Page):
                 else:
                     num_samples = model_predictions.shape[0]
 
-                get_state().predictions.metric_datas = MetricNames(
-                    predictions={m.name: m for m in predictions_metric_datas},
-                )
-                metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
+                metric_columns = list(get_state().predictions.metric_datas_classification.predictions.keys())
                 metric_importance_chart = create_metric_importance_charts(
-                    model_predictions_matched,
+                    model_predictions_matched_filtered,
                     metric_columns=metric_columns,
                     num_samples=num_samples,
                     prediction_type=MainPredictionType.CLASSIFICATION,
@@ -239,7 +243,7 @@ def model_quality(page: Page):
 
                 col1, col2 = st.columns(2)
 
-                # CONFUSION MATRTIX
+                # CONFUSION MATRIX
                 confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
                 col1.plotly_chart(confusion_matrix, use_container_width=True)
 
