@@ -192,23 +192,15 @@ def model_quality(page: Page):
                 precision, recall, f1, support = get_precision_recall_f1(y_true, y_pred)
                 accuracy = get_accuracy(y_true, y_pred)
 
+                # PERFORMANCE METRICS SUMMARY
+
                 col_acc, col_prec, col_rec, col_f1 = st.columns(4)
                 col_acc.metric("Accuracy", f"{float(accuracy):.2f}")
                 col_prec.metric("Mean Precision", f"{float(precision.mean()):.2f}")
                 col_rec.metric("Mean Recall", f"{float(recall.mean()):.2f}")
                 col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}")
 
-                confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
-                st.plotly_chart(confusion_matrix)
-
-                pr_graph = get_precision_recall_graph(precision, recall, class_names)
-                st.plotly_chart(pr_graph)
-
-                # In order to plot ROC curve, we need confidences for the ground
-                # truth label. Currently, predictions.pkl file only has confidence
-                # value for the predicted class.
-                # roc_graph = get_roc_curve(y_true, y_prob)
-
+                # METRIC IMPORTANCE
                 if model_predictions.shape[0] > 60_000:  # Computation are heavy so allow computing for only a subset.
                     num_samples = st.slider(
                         "Number of samples",
@@ -238,5 +230,20 @@ def model_quality(page: Page):
                     prediction_type=MainPredictionType.CLASSIFICATION,
                 )
                 st.altair_chart(metric_importance_chart, use_container_width=True)
+
+                col1, col2 = st.columns(2)
+
+                # CONFUSION MATRTIX
+                confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
+                col1.plotly_chart(confusion_matrix, use_container_width=True)
+
+                # PRECISION_RECALL BARS
+                pr_graph = get_precision_recall_graph(precision, recall, class_names)
+                col2.plotly_chart(pr_graph, use_container_width=True)
+
+                # In order to plot ROC curve, we need confidences for the ground
+                # truth label. Currently, predictions.pkl file only has confidence
+                # value for the predicted class.
+                # roc_graph = get_roc_curve(y_true, y_prob)
 
     return render
