@@ -30,7 +30,7 @@ def rename_files(project_file_structure: ProjectFileStructure, file_mappings: di
         if old_lr_path.exists() and not new_lr_path.exists():
             old_lr_path.rename(new_lr_path)
         for old_du_f in new_lr_path.glob(f"**/{old_du}.*"):
-            old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
+            old_du_f.rename(new_lr_path / "images" / f"{new_du}{old_du_f.suffix}")
 
 
 def update_embedding_identifiers(

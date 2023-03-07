@@ -260,6 +260,7 @@ class EncordActions:
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
         self.project_meta["has_remote"] = True
+        self.project_meta["project_title"] = project_title
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
 
         replace_uids(
