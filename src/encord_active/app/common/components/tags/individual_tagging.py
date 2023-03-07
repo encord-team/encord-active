@@ -16,7 +16,7 @@ def target_identifier(identifier: str, scope: TagScope) -> Optional[str]:
 
     if scope == TagScope.DATA:
         return "_".join(data)
-    elif scope == TagScope.LABEL and object:
+    elif scope == TagScope.LABEL:
         return identifier
     else:
         return None

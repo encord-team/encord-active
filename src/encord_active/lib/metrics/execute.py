@@ -66,9 +66,9 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
 
 def is_metric_matching_embedding(embedding_type: EmbeddingType, metric: Metric):
     if metric.metadata.annotation_type is None or isinstance(metric.metadata.annotation_type, list):
-        return embedding_type == get_embedding_type(metric.metadata.title, metric.metadata.annotation_type)
+        return embedding_type == get_embedding_type(metric.metadata.annotation_type)
     else:
-        return embedding_type == get_embedding_type(metric.metadata.title, [metric.metadata.annotation_type])
+        return embedding_type == get_embedding_type([metric.metadata.annotation_type])
 
 
 def get_metrics_by_embedding_type(embedding_type: EmbeddingType):

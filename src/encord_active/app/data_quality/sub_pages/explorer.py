@@ -174,7 +174,7 @@ def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
     meta = selected_metric.meta
-    embedding_type = get_embedding_type(meta.title, meta.annotation_type)
+    embedding_type = get_embedding_type(meta.annotation_type)
     embeddings_dir = get_state().project_paths.embeddings
     embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
 
