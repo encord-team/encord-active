@@ -64,7 +64,7 @@ def create_metric_importance_charts(
                 alt.Tooltip("importance", title="Importance", format=",.3f"),
             ],
         )
-        .properties(width=300)
+        # .properties(height=400)
     )
 
     correlation_bars = (
@@ -79,7 +79,7 @@ def create_metric_importance_charts(
                 alt.Tooltip("correlation", title="Correlation", format=",.3f"),
             ],
         )
-        .properties(width=300)
+        # .properties(height=400)
     )
 
     return alt.hconcat(mutual_info_bars, correlation_bars).resolve_scale(color="independent")

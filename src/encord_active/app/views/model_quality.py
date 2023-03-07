@@ -196,9 +196,15 @@ def model_quality(page: Page):
 
                 col_acc, col_prec, col_rec, col_f1 = st.columns(4)
                 col_acc.metric("Accuracy", f"{float(accuracy):.2f}")
-                col_prec.metric("Mean Precision", f"{float(precision.mean()):.2f}")
-                col_rec.metric("Mean Recall", f"{float(recall.mean()):.2f}")
-                col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}")
+                col_prec.metric(
+                    "Mean Precision",
+                    f"{float(precision.mean()):.2f}",
+                    help="Average of precision scores of all classes",
+                )
+                col_rec.metric(
+                    "Mean Recall", f"{float(recall.mean()):.2f}", help="Average of recall scores of all classes"
+                )
+                col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}", help="Average of F1 scores of all classes")
 
                 # METRIC IMPORTANCE
                 if model_predictions.shape[0] > 60_000:  # Computation are heavy so allow computing for only a subset.

@@ -19,13 +19,15 @@ def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> 
     fig = px.imshow(
         cm,
         text_auto=True,
-        labels=dict(x="Predicted", y="Real", color="RdBu"),
+        labels=dict(x="Predicted", y="Real"),
+        color_continuous_scale=px.colors.sequential.Blues,
         title="Confusion Matrix",
         x=class_names,
         y=class_names,
         aspect="auto",
     )
-
+    fig.update_traces(hovertemplate="<b>Real:</b> %{y}<br><b>Predicted:</b> %{x} <br>" "<b>Count:</b> %{z}")
+    fig.update_coloraxes(showscale=False)
     return fig
 
 
@@ -51,6 +53,17 @@ def get_precision_recall_graph(precision: np.ndarray, recall: np.ndarray, class_
             "metric": ["Precision"] * len(class_names) + ["Recall"] * len(class_names),
         }
     )
-    fig = px.histogram(pr_df, x="class", y="score", color="metric", barmode="group")
 
+    pr_df.sort_values(by=["metric", "score"], ascending=[True, False], inplace=True)
+
+    fig = px.histogram(
+        pr_df,
+        x="class",
+        y="score",
+        color="metric",
+        title="Precision-Recall",
+        barmode="group",
+    )
+    fig.update_traces(hovertemplate="<b>Score:</b> %{y}<br><b>Class:</b> %{x} <br>")
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     return fig
