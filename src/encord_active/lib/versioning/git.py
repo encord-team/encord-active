@@ -44,6 +44,8 @@ class GitVersioner:
         return self.repo.is_dirty() or bool(self.repo.untracked_files)
 
     def create_version(self, name: str):
+        if not self.is_latest():
+            raise Exception("Creating versions is only allowed fron the latest version.")
         self.repo.git.add("-A")
         new_version = _commit_to_version(self.repo.index.commit(name))
         self.jump_to(new_version)
