@@ -1,17 +1,18 @@
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from pandera.typing import DataFrame
 from sklearn import metrics
+from sklearn.preprocessing import label_binarize
 
 
 def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> go.Figure:
     cm = metrics.confusion_matrix(labels, predictions)
-
     cm = metrics.confusion_matrix(labels, predictions)
-    # class_names = sorted(list(set(labels).union(predictions)))
+
     fig = px.imshow(
         cm,
         text_auto=True,
