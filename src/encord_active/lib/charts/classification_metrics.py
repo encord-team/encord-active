@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from pandera.typing import DataFrame
 from sklearn import metrics
 from sklearn.preprocessing import label_binarize
 
