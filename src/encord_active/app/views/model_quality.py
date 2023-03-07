@@ -245,4 +245,19 @@ def model_quality(page: Page):
                 )
                 st.altair_chart(metric_importance_chart, use_container_width=True)
 
+                col1, col2 = st.columns(2)
+
+                # CONFUSION MATRTIX
+                confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
+                col1.plotly_chart(confusion_matrix, use_container_width=True)
+
+                # PRECISION_RECALL BARS
+                pr_graph = get_precision_recall_graph(precision, recall, class_names)
+                col2.plotly_chart(pr_graph, use_container_width=True)
+
+                # In order to plot ROC curve, we need confidences for the ground
+                # truth label. Currently, predictions.pkl file only has confidence
+                # value for the predicted class.
+                # roc_graph = get_roc_curve(y_true, y_prob)
+
     return render
