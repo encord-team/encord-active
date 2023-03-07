@@ -37,6 +37,7 @@ class MetricNames:
 class PredictionsState:
     decompose_classes = False
     metric_datas = MetricNames()
+    metric_datas_classification = MetricNames()
     all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     all_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
     selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
