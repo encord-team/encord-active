@@ -27,6 +27,7 @@ from encord_active.cli.utils.decorators import (
     is_project,
     try_find_parent_project,
 )
+from encord_active.lib.common.utils import fetch_project_meta
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 
@@ -60,6 +61,14 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
+def get_project_name(path: Path):
+    try:
+        project_meta = fetch_project_meta(path)
+        return project_meta["project_title"]
+    except:
+        return path.name
+
+
 def project_selector(path: Path):
     if is_project(path):
         projects = [path]
@@ -67,7 +76,7 @@ def project_selector(path: Path):
         parent_project = try_find_parent_project(path)
         projects = [parent_project] if parent_project else find_child_projects(path)
 
-    return st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
+    return st.selectbox("Choose Project", projects, format_func=get_project_name)
 
 
 def main(target: str):
