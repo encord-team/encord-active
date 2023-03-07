@@ -39,7 +39,7 @@ python = ">=3.9,<3.9.7 || >3.9.7,<3.11"
 encord = "0.1.63"
 numpy = "^1.23.5"
 opencv-python = "4.5.5.64"
-streamlit = "1.13.0"
+streamlit = "^1.19.0"
 natsort = "^8.1.0"
 pandas = "^1.4.3"
 shapely = "^1.7.0"
@@ -74,6 +74,7 @@ umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
 encord-active-components = "^0.0.5"
 llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
+gitpython = "^3.1.31"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

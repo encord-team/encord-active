@@ -1,15 +1,17 @@
 import argparse
 from functools import reduce
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
+from typing import Optional
 
 import streamlit as st
 from encord_active_components import MenuItem, pages_menu
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
+from encord_active.app.actions_page.versioning import version_form, version_selector
 from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State
+from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
 from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
@@ -28,9 +30,7 @@ from encord_active.cli.utils.decorators import (
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 
-Pages = Dict[str, Union[Callable, "Pages"]]  # type: ignore
-
-pages: Pages = {
+pages = {
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
     "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
     "Model Quality": {
@@ -40,9 +40,10 @@ pages: Pages = {
         "False Positives": model_quality(FalsePositivesPage()),
         "False Negatives": model_quality(FalseNegativesPage()),
     },
-    "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance},
+    "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance, "Versioning": version_form},
 }
 
+DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
 SEPARATOR = "#"
 
 
@@ -59,30 +60,44 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
+def project_selector(path: Path):
+    if is_project(path):
+        projects = [path]
+    else:
+        parent_project = try_find_parent_project(path)
+        projects = [parent_project] if parent_project else find_child_projects(path)
+
+    return st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
+
+
 def main(target: str):
     set_page_config()
     render_help()
     target_path = Path(target)
 
-    if is_project(target_path):
-        projects = [target_path]
-    else:
-        parent_project = try_find_parent_project(target_path)
-        if parent_project:
-            projects = [parent_project]
-        else:
-            projects = find_child_projects(target_path)
-
     with st.sidebar:
-        project_path = st.selectbox("Choose Project", projects, format_func=lambda path: path.name)
-        if project_path:
-            items = to_items(pages)
-            key = pages_menu(items)
-            path = key.split(SEPARATOR) if key else []
+        project_path = project_selector(target_path)
+        if not project_path:
+            st.info("Please choose a project")
+            return
 
-    if not project_path:
-        st.info("Please choose a project")
-        return
+        version, is_latest = version_selector(project_path)
+        if not version:
+            st.info("Please choose a version")
+            return
+
+        if not is_latest:
+            st.error("READ ONLY MODE \n\n Changes will not be saved")
+
+        get_path, set_path = use_state(DEFAULT_PAGE_PATH)
+
+        items = to_items(pages)
+        key = pages_menu(items)
+        if key:
+            path = key.split(SEPARATOR)
+            set_path(path)
+        else:
+            path = get_path()
 
     project_dir = Path(project_path).expanduser().absolute()
     st.session_state.project_dir = project_dir
@@ -94,7 +109,7 @@ def main(target: str):
     DBConnection.set_project_path(project_dir)
     State.init(project_dir)
 
-    render = reduce(dict.__getitem__, path, pages) if path else pages["Data Quality"]["Summary"]  # type: ignore
+    render = reduce(dict.__getitem__, path, pages)
     if callable(render):
         render()
 
