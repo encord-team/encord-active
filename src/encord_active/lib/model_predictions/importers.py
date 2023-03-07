@@ -258,7 +258,7 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
     elif predictions[0].object:
         prediction_type = MainPredictionType.OBJECT
     else:
-        raise EmptyDataError("Predictions does not exist!")
+        raise EmptyDataError("Predictions do not exist!")
 
     run_all_prediction_metrics(
         data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True, prediction_type=prediction_type
