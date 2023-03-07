@@ -38,7 +38,12 @@ def build_card_for_labels(
         int(index): object.get("color", Color.RED) for index, object in get_state().predictions.all_classes.items()
     }
     image = show_image_with_predictions_and_label(
-        label, predictions, data_dir, label_color=label_color, class_colors=class_colors
+        label,
+        predictions,
+        data_dir,
+        label_color=label_color,
+        class_colors=class_colors,
+        draw_configurations=get_state().object_drawing_configurations,
     )
     st.image(image)
     multiselect_tag(label, "false_negatives", MetricScope.MODEL_QUALITY)
@@ -51,8 +56,9 @@ def build_card_for_labels(
 
 
 def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.GREEN):
-    image = show_image_and_draw_polygons(row, data_dir, draw_polygons=True, skip_object_hash=True)
-    image = draw_object(image, row, color=box_color, with_box=True)
+    conf = get_state().object_drawing_configurations
+    image = show_image_and_draw_polygons(row, data_dir, draw_configurations=conf, skip_object_hash=True)
+    image = draw_object(image, row, draw_configuration=conf, color=box_color, with_box=True)
     st.image(image)
     multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
 

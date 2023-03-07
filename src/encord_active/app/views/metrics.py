@@ -12,7 +12,7 @@ def summary(metric_type: MetricScope):
         page = SummaryPage()
 
         with sticky_header():
-            page.sidebar_options()
+            page.sidebar_options(metric_type)
 
         page.build(metric_type)
 
@@ -26,7 +26,7 @@ def explorer(metric_type: MetricScope):
         available_metrics = load_available_metrics(get_state().project_paths.metrics, metric_type)
 
         with sticky_header():
-            selected_df = page.sidebar_options(available_metrics)
+            selected_df = page.sidebar_options(available_metrics, metric_type)
 
         if selected_df is None:
             return
