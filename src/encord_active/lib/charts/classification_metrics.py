@@ -63,6 +63,7 @@ def get_precision_recall_graph(precision: np.ndarray, recall: np.ndarray, class_
         color="metric",
         title="Precision-Recall",
         barmode="group",
+        color_discrete_sequence=["#5658dd", "#89e7b6"],
     )
     fig.update_traces(hovertemplate="<b>Score:</b> %{y}<br><b>Class:</b> %{x} <br>")
     fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
