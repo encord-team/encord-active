@@ -17,7 +17,11 @@ from encord_active.lib.charts.classification_metrics import (
     get_precision_recall_f1,
     get_precision_recall_graph,
 )
+from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.constants import DOCS_URL
+from encord_active.lib.model_predictions.classification_metrics import (
+    match_predictions_and_labels,
+)
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
@@ -33,6 +37,7 @@ def model_quality(page: Page):
         tag_creator()
 
         object_tab, classification_tab = st.tabs(["Objects", "Classifications"])
+        metrics_dir = get_state().project_paths.metrics
 
         with object_tab:
             if not reader.check_model_prediction_availability(
@@ -48,16 +53,19 @@ def model_quality(page: Page):
             else:
 
                 predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
-                metrics_dir = get_state().project_paths.metrics
 
                 predictions_metric_datas = use_memo(
                     lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir)
                 )
                 label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
                 model_predictions = use_memo(
-                    lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas)
+                    lambda: reader.get_model_predictions(
+                        predictions_dir, predictions_metric_datas, MainPredictionType.OBJECT
+                    )
                 )
-                labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas))
+                labels = use_memo(
+                    lambda: reader.get_labels(predictions_dir, label_metric_datas, MainPredictionType.OBJECT)
+                )
 
                 if model_predictions is None:
                     st.error("Couldn't load model predictions")
@@ -125,6 +133,9 @@ def model_quality(page: Page):
                     "section of the documentation to learn how to import your predictions."
                 )
             else:
+                predictions_dir_classification = (
+                    get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+                )
 
                 predictions = reader.get_classification_predictions(
                     get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
@@ -133,8 +144,37 @@ def model_quality(page: Page):
                     get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
                 )
 
+                predictions_metric_datas = use_memo(
+                    lambda: reader.get_prediction_metric_data(predictions_dir_classification, metrics_dir)
+                )
+                label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
+                model_predictions = use_memo(
+                    lambda: reader.get_model_predictions(
+                        predictions_dir_classification, predictions_metric_datas, MainPredictionType.CLASSIFICATION
+                    )
+                )
+                labels_all = use_memo(
+                    lambda: reader.get_labels(
+                        predictions_dir_classification, label_metric_datas, MainPredictionType.CLASSIFICATION
+                    )
+                )
+
+                if model_predictions is None:
+                    st.error("Couldn't load model predictions")
+                    return
+
+                if labels_all is None:
+                    st.error("Couldn't load labels properly")
+                    return
+
                 with sticky_header():
                     common_settings_classifications()
+
+                model_predictions_matched = match_predictions_and_labels(model_predictions, labels_all)
+                pred_sort_column = (
+                    get_state().predictions.metric_datas.selected_prediction or predictions_metric_datas[0].name
+                )
+                sorted_model_predictions = model_predictions_matched.sort_values([pred_sort_column], axis=0)
 
                 matched_predictions, matched_labels = prediction_and_label_filtering_classification(
                     get_state().predictions.selected_classes_classifications, labels, predictions
@@ -142,8 +182,9 @@ def model_quality(page: Page):
 
                 # --- THE FOLLOWINGS WILL BE MOVED INTO page.build() METHOD LATER ---
 
-                y_true, y_pred = list(matched_predictions[reader.ClassificationLabelSchema.class_id]), list(
-                    matched_labels[reader.ClassificationPredictionSchema.class_id]
+                y_true, y_pred = (
+                    list(matched_labels[reader.ClassificationLabelSchema.class_id]),
+                    list(matched_predictions[reader.ClassificationPredictionSchema.class_id]),
                 )
 
                 class_names = sorted(list(set(y_true).union(y_pred)))
@@ -162,5 +203,40 @@ def model_quality(page: Page):
 
                 pr_graph = get_precision_recall_graph(precision, recall, class_names)
                 st.plotly_chart(pr_graph)
+
+                # In order to plot ROC curve, we need confidences for the ground
+                # truth label. Currently, predictions.pkl file only has confidence
+                # value for the predicted class.
+                # roc_graph = get_roc_curve(y_true, y_prob)
+
+                if model_predictions.shape[0] > 60_000:  # Computation are heavy so allow computing for only a subset.
+                    num_samples = st.slider(
+                        "Number of samples",
+                        min_value=1,
+                        max_value=len(model_predictions),
+                        step=max(1, (len(model_predictions) - 1) // 100),
+                        value=max((len(model_predictions) - 1) // 2, 1),
+                        help="To avoid too heavy computations, we subsample the data at random to the selected size, "
+                        "computing importance values.",
+                    )
+                    if num_samples < 100:
+                        st.warning(
+                            "Number of samples is too low to compute reliable index importances. "
+                            "We recommend using at least 100 samples.",
+                        )
+                else:
+                    num_samples = model_predictions.shape[0]
+
+                get_state().predictions.metric_datas = MetricNames(
+                    predictions={m.name: m for m in predictions_metric_datas},
+                )
+                metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
+                metric_importance_chart = create_metric_importance_charts(
+                    model_predictions_matched,
+                    metric_columns=metric_columns,
+                    num_samples=num_samples,
+                    prediction_type=MainPredictionType.CLASSIFICATION,
+                )
+                st.altair_chart(metric_importance_chart, use_container_width=True)
 
     return render

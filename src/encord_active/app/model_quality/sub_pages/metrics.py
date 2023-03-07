@@ -14,6 +14,7 @@ from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 from . import ModelQualityPage
 
@@ -95,6 +96,7 @@ class MetricsPage(ModelQualityPage):
                         model_predictions,
                         metric_columns=metric_columns,
                         num_samples=num_samples,
+                        prediction_type=MainPredictionType.OBJECT,
                     )
                     st.altair_chart(chart, use_container_width=True)
                 except ValueError as e:

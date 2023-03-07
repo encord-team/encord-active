@@ -15,6 +15,7 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 class OntologyObjectJSON(TypedDict):
@@ -45,6 +46,14 @@ class ClassificationLabelSchema(IdentifierSchema):
 
 class ClassificationPredictionSchema(ClassificationLabelSchema):
     confidence: Series[padt.Float64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionMatchSchema(ClassificationPredictionSchema):
+    is_true_positive: Series[float] = pa.Field()
+
+
+class ClassificationLabelMatchSchema(ClassificationLabelSchema):
+    is_false_negative: Series[bool] = pa.Field()
 
 
 class LabelSchema(IdentifierSchema):
@@ -155,10 +164,14 @@ def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List
 
 
 def get_model_predictions(
-    predictions_dir: Path, metric_data: List[MetricData]
+    predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
 ) -> Optional[DataFrame[PredictionSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "predictions.csv", metric_data)
-    return df.pipe(DataFrame[PredictionSchema]) if df is not None else None
+
+    if prediction_type == MainPredictionType.CLASSIFICATION:
+        return df.pipe(DataFrame[ClassificationPredictionSchema]) if df is not None else None
+    elif prediction_type == MainPredictionType.OBJECT:
+        return df.pipe(DataFrame[PredictionSchema]) if df is not None else None
 
 
 def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
@@ -171,9 +184,15 @@ def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
     return get_metric_data(entry_points)
 
 
-def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[DataFrame[LabelSchema]]:
+def get_labels(
+    predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
+) -> Optional[DataFrame[LabelSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
-    return df.pipe(DataFrame[LabelSchema]) if df is not None else None
+
+    if prediction_type == MainPredictionType.OBJECT:
+        return df.pipe(DataFrame[LabelSchema]) if df is not None else None
+    elif prediction_type == MainPredictionType.CLASSIFICATION:
+        return df.pipe(DataFrame[ClassificationLabelSchema]) if df is not None else None
 
 
 def get_gt_matched(predictions_dir: Path) -> Optional[dict]:

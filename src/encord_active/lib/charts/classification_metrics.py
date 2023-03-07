@@ -1,19 +1,21 @@
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.figure_factory as ff
 import plotly.graph_objects as go
+from pandera.typing import DataFrame
 from sklearn import metrics
+from sklearn.preprocessing import label_binarize
 
-from encord_active.lib.model_predictions.reader import OntologyClassificationJSON
+from encord_active.lib.model_predictions.reader import (
+    ClassificationPredictionMatchSchema,
+)
 
 
 def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> go.Figure:
-
     cm = metrics.confusion_matrix(labels, predictions)
-    # class_names = sorted(list(set(labels).union(predictions)))
+
     fig = px.imshow(
         cm,
         text_auto=True,
@@ -36,7 +38,8 @@ def get_accuracy(labels: list, predictions: list) -> float:
     return metrics.accuracy_score(labels, predictions)
 
 
-def get_roc_curve(labels: list, predictions: list, probs: list) -> go.Figure:
+# TODO implement this function after writing all class confidences of a prediction into pickle file (currently, only confidence of the predicted class is written)
+def get_roc_curve(labels: list, prediction_probs: list) -> go.Figure:
     pass
 
 

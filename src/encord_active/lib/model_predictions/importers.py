@@ -255,9 +255,9 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
             writer.add_prediction(pred)
 
     if predictions[0].classification:
-        prediction_type = MainPredictionType.CLASSIFICATION.value
+        prediction_type = MainPredictionType.CLASSIFICATION
     elif predictions[0].object:
-        prediction_type = MainPredictionType.OBJECT.value
+        prediction_type = MainPredictionType.OBJECT
     else:
         raise EmptyDataError(f"Prediction data does not exist!")
 

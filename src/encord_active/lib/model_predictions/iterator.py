@@ -49,7 +49,7 @@ class PredictionIterator(Iterator):
         label_hashes = set(self.label_rows.keys())
 
         # Predictions
-        predictions_file = cache_dir / "predictions" / kwargs["prediction_type"] / "predictions.csv"
+        predictions_file = cache_dir / "predictions" / kwargs["prediction_type"].value / "predictions.csv"
         predictions = pd.read_csv(predictions_file, index_col=0)
         self.length = predictions["img_id"].nunique()
 
@@ -63,7 +63,7 @@ class PredictionIterator(Iterator):
         self.predictions = predictions[predictions["label_hash"].isin(label_hashes)]
 
         # Class index
-        class_idx_file = cache_dir / "predictions" / kwargs["prediction_type"] / "class_idx.json"
+        class_idx_file = cache_dir / "predictions" / kwargs["prediction_type"].value / "class_idx.json"
         with class_idx_file.open("r", encoding="utf-8") as f:
             class_idx: Dict[ClassID, dict] = {ClassID(k): v for k, v in json.load(f).items()}
 

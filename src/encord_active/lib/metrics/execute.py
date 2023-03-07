@@ -14,6 +14,7 @@ from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import (
     AnnotationType,
@@ -26,6 +27,7 @@ from encord_active.lib.metrics.metric import (
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.metadata import fetch_project_info
 
 logger = logger.opt(colors=True)
@@ -94,10 +96,11 @@ def run_all_polygon_metrics():
 
 
 def run_all_prediction_metrics(**kwargs):
-    # Return all metrics that apply to objects.
-    def filter(m: Type[Metric]):
+    # Return all metrics that apply according to the prediction type.
+    def filter_objects(m: Type[Metric]):
         # TODO: find a better way to resolve this, only leaf children of `Metric` don't expect arguments
         at = m().metadata.annotation_type  # type: ignore
+
         if isinstance(at, list):
             for t in at:
                 if isinstance(t, ObjectShape):
@@ -106,7 +109,23 @@ def run_all_prediction_metrics(**kwargs):
         else:
             return isinstance(at, ObjectShape)
 
-    run_metrics(filter_func=filter, **kwargs)
+    def filter_classifications(m: Type[Metric]):
+        at = m().metadata.annotation_type  # type: ignore
+
+        if isinstance(at, list):
+            for t in at:
+                if isinstance(t, ClassificationType):
+                    return True
+            return False
+        else:
+            return isinstance(at, ClassificationType)
+
+    if kwargs["prediction_type"] == MainPredictionType.OBJECT:
+        run_metrics(filter_func=filter_objects, **kwargs)
+    elif kwargs["prediction_type"] == MainPredictionType.CLASSIFICATION:
+        run_metrics(filter_func=filter_classifications, **kwargs)
+    else:
+        raise ValueError(f"Undefined prediction type {kwargs['prediction_type']}")
 
 
 def run_metrics(filter_func: Callable[[Metric], bool] = lambda x: True, **kwargs):
@@ -177,7 +196,7 @@ def execute_metrics(
     iterator = iterator_cls(data_dir, project=project, **kwargs)
 
     if "prediction_type" in kwargs:
-        cache_dir = data_dir / "predictions" / kwargs["prediction_type"]
+        cache_dir = data_dir / "predictions" / kwargs["prediction_type"].value
     else:
         cache_dir = data_dir
 
