@@ -28,16 +28,22 @@ class GitVersioner:
             self.repo.index.add(self.repo.untracked_files)
             self.repo.index.commit("init")
 
+        self._default_branch = _get_default_branch(self.repo)
+
+    @property
+    def _default_head(self):
+        return self.repo.heads.__getattr__(self._default_branch)
+
     @property
     def current_version(self):
         return _commit_to_version(self.repo.head.commit)
 
     def is_latest(self, version: Optional[Version] = None) -> bool:
-        return (version or self.current_version).id == self.repo.heads.main.commit.hexsha
+        return (version or self.current_version).id == self._default_head.commit.hexsha
 
     @property
     def versions(self):
-        return [_commit_to_version(commit) for commit in self.repo.iter_commits(self.repo.heads.main)]
+        return [_commit_to_version(commit) for commit in self.repo.iter_commits(self._default_head)]
 
     @property
     def has_changes(self):
@@ -52,8 +58,8 @@ class GitVersioner:
         return new_version
 
     def jump_to(self, version: Union[Version, Literal["latest"]]):
-        if version == "latest" or version.id == self.repo.heads.main.commit.hexsha and not self.is_latest():
-            self.repo.head.reference = self.repo.heads.main  # type: ignore
+        if version == "latest" or version.id == self._default_head.commit.hexsha and not self.is_latest():
+            self.repo.head.reference = self._default_head  # type: ignore
             self.discard_changes()
         elif self.repo.head.commit.hexsha != version.id:
             self.repo.head.reference = self.repo.rev_parse(version.id)  # type: ignore
@@ -73,3 +79,11 @@ class GitVersioner:
 
 def _commit_to_version(commit: Commit) -> Version:
     return Version(name=str(commit.message), id=commit.hexsha)
+
+
+def _get_default_branch(repo: Repo):
+    with repo.config_reader() as reader:
+        possible_heads = [head.name for head in repo.heads]
+        global_default = str(reader.get_value("init", "defaultBranch")).strip('"')
+
+        return global_default if global_default in possible_heads else possible_heads.pop()
