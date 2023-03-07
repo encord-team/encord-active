@@ -1,7 +1,4 @@
----
-sidebar_position: 2
----
-
+import DocCardList from "@theme/DocCardList";
 import TOCInline from "@theme/TOCInline";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -12,47 +9,22 @@ This page shows you how to import model predictions **with code**.
 
 :::caution
 
-Everytime you run any of these importers, previously imported predictions will be overwritten!
-We're working on fixing this.
+Every time you run any of these importers, previously imported predictions will be overwritten!
+Make sure to [version your projects][project-versioning] if you want to be able to go back to previous model iterations.
 
 :::
 
-:::tip
+If you aren't familiar with how to build lists of `Prediction` objects, please have a look at [this](../../import/import-predictions) workflow tutorial first.
+It will show you how to construct predictions for bounding boxes, polygons, masks, and classifications.
 
-There is also a workflow description on importing model predictions [here](../import/import-predictions).
+This page will show you how to
 
-:::
+1. Run your model over your dataset to get predictions
+2. Importing the predictions into Encord Active
 
-### Prerequisites
+## Iterating Over Project Data
 
-Before you can import your predictions you need to have a couple of prerequisites in place:
-
-1. You should have [imported a project](../cli/import-encord-project) - and taken note of the `/path/to/the/data`
-2. In your code, you need to have an `encord.Project` initialised.
-
-You can do this with the following code - only the highlighted line should need to change:
-
-```python
-from pathlib import Path
-import yaml
-
-from encord import EncordUserClient
-
-# highlight-next-line
-data_dir = Path("/path/to/the/data")
-
-meta = yaml.safe_load((data_dir / "project_meta.yaml").read_text())
-private_key = Path(meta["ssh_key_path"]).read_text()
-
-client = EncordUserClient.create_with_ssh_private_key(private_key)
-project = client.get_project(project_hash=meta["project_hash"])
-```
-
-:::note
-
-The code examples from this point on assume that you have the `data_dir` and the `project` variables available.
-
-:::
+There is also a workflow description on importing model predictions [here]
 
 When you have these things in place, there are a couple of options for importing your predictions into Encord Active:
 
@@ -312,213 +284,15 @@ Only one bounding box or polygon can be specified in any given call to this func
 
 :::
 
-## Predictions from KITTI Files
+## Automatic Importers for Predictions stored on disk
 
-:::caution
+When you already have your predictions stored in common file formats, you have a couple of options to import them quickly.
 
-This works for bounding boxes only.
+Below, you can find the available options.
+If you feel that common prediction importers are missing, please reach out to us on [slack][slack-invite] or by [email][ea-email].
 
-:::
+<DocCardList />
 
-If you have KITTI labels stored in CSV files, there is a utility function to import the predictions from those files.
-For this, the files must be associated with one image each and their file names must contain the `data_hash` of the associated image.
-
-The file structure needs to be as follows:
-
-```
-labels_root
-├── labels
-│   ├── aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee__whatever_you_may_need.txt
-│   ├── ...
-│   └── aaaaaaaa-bbbb-cccc-dddd-ffffffffffff__whatever_you_may_need.csv
-└── ontology_label_map.json
-```
-
-That is, a root directory with two components:
-
-1. A subdirectory named "labels" that contains text files with names that start with the `data_hash` followed by two underscores
-2. A json file which maps class names to Encord ontology classes
-
-We cover the two components below.
-
-### Text File Format
-
-The KITTI importer supports the format described [here](https://docs.nvidia.com/tao/archive/tlt-20/tlt-user-guide/text/preparing_data_input.html#label-files) with the addition of an additional column corresponding to the model confidence.
-
-An example:
-
-```
-car 0.00 0 0.00 587.01 173.33 614.12 200.12 0.00 0.00 0.00 0.00 0.00 0.00 0.00 97.85
-cyclist 0.00 0 0.00 665.45 160.00 717.93 217.99 0.00 0.00 0.00 0.00 0.00 0.00 0.00 32.65
-pedestrian 0.00 0 0.00 423.17 173.67 433.17 224.03 0.00 0.00 0.00 0.00 0.00 0.00 0.00 3.183
-```
-
-Columns are:
-
-- `class_name`: str
-- ~~`truncation`: float~~ ignored
-- ~~`occlusion`: int~~ ignored
-- ~~`alpha`: float~~ ignored
-- `xmin`: float
-- `ymin`: float
-- `xmax`: float
-- `ymax`: float
-- ~~`height`: float~~ ignored
-- ~~`width`: float~~ ignored
-- ~~`length`: float~~ ignored
-- ~~`location_x`: float~~ ignored
-- ~~`location_y`: float~~ ignored
-- ~~`location_z`: float~~ ignored
-- ~~`rotation_y`: float~~ ignored
-- `confidence`: float
-
-Note, the ignored items need to be there but will be ignored.
-
-### The JSON Class Map
-
-The JSON class map needs to follow the following structure:
-
-```json
-{
-  "OTk2MzM3": "pedestrian",
-  "NzYyMjcx": "cyclist",
-  "Nzg2ODEx": "car"
-}
-```
-
-The keys should correspond to the `featureNodeHash` of a bounding box object in the project ontology.
-To list the available hashes from your project, you can do this in your script:
-
-```python
-# NB: Remember to include the first code snippet on this page.
-print({o["featureNodeHash"]: o["name"] for o in project.ontology["objects"]})
-# Outputs somtihing similar to
-# {'OTk2MzM3': 'Pedestrian', 'NzYyMjcx': 'Cyclist', 'Nzg2ODEx': 'Car'}
-```
-
-The values of the JSON file should be the values that can appear in the first column of text files described above.
-
-### Importing the Predictions
-
-To import the predictions, you do the following
-
-```python
-import json
-
-from encord_active.lib.model_predictions.importers import import_KITTI_labels
-from encord_active.lib.model_predictions.writer import PredictionWriter
-
-# highlight-next-line
-predictions_root = Path("/path/to/your/predictions")
-object_map = json.loads((predictions_root / "ontology_label_map.json").read_text())
-
-with PredictionWriter(cache_dir=data_dir, project=project, custom_object_map=object_map) as writer:
-    import_KITTI_labels(project, data_root=predictions_root, prediction_writer=writer)
-```
-
-## Predictions from Masks
-
-:::caution
-
-This works for segmentation/polygons only.
-
-:::
-
-If you have your predictions stored as png masks of shape `[height, width]`, where each pixel value correspond to a class,
-then you can use the `import_mask_predictions` function from `encord_active.model_predictions.importers`.
-It requires that you can provide a mapping between file name and data hashes.
-
-Assuming you have predictions stored in a directory like this:
-
-```
-predictions
-├── aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png
-├── ...
-└── aaaaaaaa-bbbb-cccc-dddd-ffffffffffff.png
-```
-
-or in a nested structure like
-
-```
-predictions
-├── dir1
-│   ├── aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png
-│   ├── ...
-│   └── aaaaaaaa-bbbb-cccc-dddd-ffffffffffff.png
-└── dir2
-    ├── bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee.png
-    ├── ...
-    └── bbbbbbbb-bbbb-cccc-dddd-ffffffffffff.png
-```
-
-You can use this template where the highlighted lined are what you need to change:
-
-```python
-from encord_active.lib.model_predictions.importers import import_mask_predictions
-from encord_active.lib.model_predictions.writer import PredictionWriter
-
-# highlight-start
-class_map = {
-    # featureNodeHash: pixel_value
-    "OTk2MzM3": 1,  # "pedestrian"
-    "NzYyMjcx": 2,  # "cyclist",
-    "Nzg2ODEx": 3,  # "car"
-    # Note: value: 0 is reserved for "background"
-}
-predictions_root = Path("/path/to/predictions")
-# highlight-end
-with PredictionWriter(cache_dir=data_dir, project=project) as writer:
-    import_mask_predictions(
-        project,
-        data_root=predictions_root,
-        cache_dir=data_dir,
-        prediction_writer=writer,
-        # this is what provides the mapping between file names and data hashes:
-        du_hash_name_lookup=lambda file_pth: (file_pth.stem, 0),
-    )
-```
-
-:::caution
-
-1. The script will look recursively for files with a `.png` extension and import them.
-2. For each file, every "self-contained" contour will be interpreted as an individual prediction.
-   For example, This mask will be treated as three objects. Two from class 1 and one from class 2.
-
-```
-┌───────────────────┐
-│0000000000000000000│
-│0011100000000000000│
-│0011100000002222000│
-│0000000000002222000│
-│0000111000002200000│
-│0000111000002200000│
-│0000111000000000000│
-│0000000000000000000│
-└───────────────────┘
-```
-
-3. **NB**: model confidence scores will be set to 1... we're working on fixing this!
-
-:::
-
-## Running Metrics on Your Predictions
-
-When you have imported your predictions, it is time to run all the metrics on them.
-
-For this, you can use these lines of code:
-
-```python
-from encord_active.lib.model_predictions.iterator import PredictionIterator
-from encord_active.lib.metrics.execute import run_metrics
-
-run_metrics(data_dir=data_dir, iterator_cls=PredictionIterator)
-```
-
-This will compute all the metrics for your predictions.
-Next time you run
-
-```shell
-encord-active visualise
-```
-
-You should be able to see the performance of your model based on the metrics.
+[ea-email]: mailto:active@encord.com
+[slack-invite]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[project-versioning]: ../../user-guide/versioning

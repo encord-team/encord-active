@@ -1,0 +1,158 @@
+---
+sidebar_position: 1
+title: Initialize a Project
+---
+
+This document takes you through how to initialize a project **with code**.
+
+:::info
+
+This is equivalent to running the [`init` command][init-docs] from the CLI.
+
+:::
+
+## Initialize Project Without Labels
+
+The following code snippet will:
+
+1. **Find the files** that are named "\*.jpg" within your current working directory. Here, you can use any logic to find exactly the files you wish to include.
+2. Specify **where to store the Encord Active project**. It is a good Idea to keep multiple projects within the same directory. That way, you can easily jump between them within the UI.
+3. **Create the project**. Note that the `symlinks` option determines whether to copy all the files (`symlinks=False`) or use symlinks to reference the files where they are stored already to save disk space (`symlinks=True`).
+4. Run essential metrics for the UI to work.
+
+```python title="Initialize project without labels"
+from pathlib import Path
+from typing import List
+
+from encord_active.lib.metrics.execute import run_metrics
+from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.project.local import ProjectExistsError, init_local_project
+
+# 1. Choose images to import
+image_files: List[Path] = list(Path.cwd().glob("**/*.jpg"))  # Find your image files
+
+# 2. Choose where to place the project
+projects_dir = Path("path/to/where/you/store/projects")
+
+# 3. Create the project
+try:
+    project_path: Path = init_local_project(
+        files = image_files,
+        target = projects_dir,
+        project_name = "<your project title>",
+        symlinks = True,
+    )
+except ProjectExistsError as e:
+    print(e)  # A project already exist with that name at the given path.
+    exit()
+
+
+# 4. Run an essential metric
+# This is necessary for the UI to function properly
+run_metrics(
+    filter_func=lambda x: isinstance(x, AreaMetric),
+    data_dir=project_path,
+    use_cache_only=True,
+)
+```
+
+You can also choose to run all the metrics that do not depend on any labels.
+That is done in the following code snippet:
+
+```python
+from encord_active.lib.metrics.execute import run_metrics_by_embedding_type
+run_metrics_by_embedding_type(
+    EmbeddingType.IMAGE,
+    data_dir=project_path,
+    use_cache_only=True
+)
+```
+
+At this stage, you will have a project that you can open with the CLI command:
+
+```
+encord-active visualize
+```
+
+:::tip
+
+For the `visualize` command to work, you need to have your terminals working directory be `path/to/where/you/store/projects`.
+
+:::
+
+## Initialize a Project with Labels
+
+To import your custom labels as well, you will have to implement a `LabelTransformer` that transforms your custom labels to Encord Active labels.
+The interface for label transforms look as follows:
+
+```python
+from pathlib import Path
+from typing import List
+
+from encord_active.lib.labels.label_transformer import (
+    BoundingBoxLabel,
+    ClassificationLabel,
+    DataLabel,
+    LabelTransformer,
+    PolygonLabel
+)
+
+
+class MyTransformer(LabelTransformer):
+    def from_custom_labels(self, label_files: List[Path], data_files: List[Path]) -> List[DataLabel]:
+        # your implementation goes here
+        ...
+```
+
+A label transformer will take as input a list of label files and a list of data files (the files we provide to the `init_local_project` below) and need to return a list of `DataLabel`s.
+A `DataLabel` is a pair of a data file and one of `ClassificationLabel`, `BoundingBoxLabel`, and `PolygonLabel`.
+There are multiple examples of how to define such transformers in our [examples directory][gh-transformer-examples].
+
+Provide the transformer and potentially label files to the `init_local_project` in order to also include labels:
+
+```python title="Initialize project with labels"
+from pathlib import Path
+from typing import List
+
+from encord_active.lib.metrics.execute import run_metrics
+from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.project.local import ProjectExistsError, init_local_project
+
+# 1. Choose images and label files to import
+image_files: List[Path] = list(Path.cwd().glob("**/*.jpg"))  # Find your image files
+# highlight-next-line
+label_files: List[Path] = list(Path.cwd().glob("**/*.json"))  # Find your label files
+
+# 2. Choose where to place the project
+projects_dir = Path("path/to/where/you/store/projects")
+
+# 3. Create the project
+try:
+    project_path: Path = init_local_project(
+        files = image_files,
+        target = projects_dir,
+        project_name = "<your project title>",
+        symlinks = True,
+        # highlight-start
+        label_transformer=MyTransformer(),
+        label_paths=label_files,
+        # highlight-end
+    )
+except ProjectExistsError as e:
+    print(e)  # A project already exist with that name at the given path.
+    exit()
+
+
+# 4. Run an essential metric
+# This is necessary for the UI to function properly
+run_metrics(
+    filter_func=lambda x: isinstance(x, AreaMetric),
+    data_dir=project_path,
+    use_cache_only=True,
+)
+```
+
+Once the project is initialized, consider executing some metrics on your project.
+
+[init-docs]: ../cli/initialising-project-from-image-directories
+[gh-transformer-examples]: https://github.com/encord-team/encord-active/blob/main/examples/label-transformers
