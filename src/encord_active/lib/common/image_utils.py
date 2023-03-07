@@ -21,7 +21,7 @@ from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 @dataclass
 class ObjectDrawingConfigurations:
     draw_objects: bool = True
-    outline_width: int = 3
+    contour_width: int = 3
     opacity: float = 0.3
 
 
@@ -45,19 +45,22 @@ def draw_object_with_background_color(
     color: Union[Color, str],
     draw_configurations: ObjectDrawingConfigurations,
 ):
-    if len(geometry) != 1:
+    # if len(geometry) != 1:
+    if isinstance(geometry, np.ndarray):
+        if geometry.ndim == 2:
+            geometry = geometry.reshape(-1, 1, 2)
         geometry = [geometry]
 
     """
         img_w_poly = cv2.fillPoly(image.copy(), [geometry], hex_to_rgb(color, lighten=0.5))
         image = cv2.addWeighted(image, 1 - draw_configurations.opacity, img_w_poly, draw_configurations.opacity, 1.0)
-        image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), draw_configurations.outline_width)
+        image = cv2.polylines(image, [geometry], is_closed, hex_to_rgb(color), draw_configurations.contour_width)
     """
 
     hex_color = color.value if isinstance(color, Color) else color
     img_w_poly = cv2.fillPoly(image.copy(), geometry, hex_to_rgb(hex_color, lighten=0.5))
     image = cv2.addWeighted(image, 1 - draw_configurations.opacity, img_w_poly, draw_configurations.opacity, 1.0)
-    return cv2.polylines(image, geometry, True, hex_to_rgb(hex_color), draw_configurations.outline_width)
+    return cv2.polylines(image, geometry, True, hex_to_rgb(hex_color), draw_configurations.contour_width)
 
 
 def draw_object(
@@ -81,10 +84,8 @@ def draw_object(
     if box_only:
         return draw_object_with_background_color(image, box, color, draw_configuration)
 
-    import streamlit as st
-
     if with_box:
-        image = cv2.polylines(image, [box], isClosed, _color, draw_configuration.outline_width, lineType=cv2.LINE_8)
+        image = cv2.polylines(image, [box], isClosed, _color, draw_configuration.contour_width, lineType=cv2.LINE_8)
 
     mask = rle_to_binary_mask(eval(row["rle"]))
     contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]

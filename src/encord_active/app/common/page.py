@@ -69,13 +69,12 @@ class Page(ABC):
                         help="Number of rows to show images in the main view",
                     )
                 )
-                global_state.object_drawing_configurations.outline_width = int(
+                global_state.object_drawing_configurations.contour_width = int(
                     st.slider(
-                        "Object outline widhth",
+                        "Object contour width",
                         min_value=1,
                         max_value=25,
-                        value=ObjectDrawingConfigurations.outline_width,
-                        # value=State.object_drawing_configurations.outline_width,
+                        value=ObjectDrawingConfigurations.contour_width,
                         help="Width of the objects outlines",
                         disabled=not global_state.object_drawing_configurations.draw_objects,
                     )
@@ -97,7 +96,6 @@ class Page(ABC):
                         "Object opacity",
                         min_value=0.0,
                         max_value=1.0,
-                        # value=State.object_drawing_configurations.opacity,
                         value=ObjectDrawingConfigurations.opacity,
                         help="Object opacities.",
                         disabled=not global_state.object_drawing_configurations.draw_objects,

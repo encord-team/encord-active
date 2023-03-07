@@ -261,7 +261,6 @@ def build_card(
 
     if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
         button_name = "show similar images"
-        # image = load_or_fill_image(row, data_dir)
     elif embedding_information.type == EmbeddingType.OBJECT:
         button_name = "show similar objects"
     else:

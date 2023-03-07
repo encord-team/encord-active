@@ -38,7 +38,12 @@ def build_card_for_labels(
         int(index): object.get("color", Color.RED) for index, object in get_state().predictions.all_classes.items()
     }
     image = show_image_with_predictions_and_label(
-        label, predictions, data_dir, label_color=label_color, class_colors=class_colors
+        label,
+        predictions,
+        data_dir,
+        label_color=label_color,
+        class_colors=class_colors,
+        draw_configurations=get_state().object_drawing_configurations,
     )
     st.image(image)
     multiselect_tag(label, "false_negatives", MetricScope.MODEL_QUALITY)
