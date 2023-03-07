@@ -287,7 +287,7 @@ def model_quality(page: Page):
                 )
                 metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
                 metric_importance_chart = create_metric_importance_charts(
-                    model_predictions_matched,
+                    model_predictions_matched_filtered,
                     metric_columns=metric_columns,
                     num_samples=num_samples,
                     prediction_type=MainPredictionType.CLASSIFICATION,
@@ -296,7 +296,7 @@ def model_quality(page: Page):
 
                 col1, col2 = st.columns(2)
 
-                # CONFUSION MATRTIX
+                # CONFUSION MATRIX
                 confusion_matrix = get_confusion_matrix(y_true, y_pred, class_names)
                 col1.plotly_chart(confusion_matrix, use_container_width=True)
 
