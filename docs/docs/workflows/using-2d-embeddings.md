@@ -1,13 +1,13 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Using 2D Embeddings
 
 **Use 2D embeddings to improve your active learning cycle**
 
-Encord Active presents you with a 2D embedding plot for all the images in your project. You can use it to find interesting 
-clusters, understand your data better, weakly label your images, remove detrimental images, etc. The 2D 
+Encord Active presents you with a 2D embedding plot for all the images in your project. You can use it to find interesting
+clusters, understand your data better, weakly label your images, remove detrimental images, etc. The 2D
 embedding plot can be found in the **Explorer** pages of the **Data Quality** and **Label Quality** sections. Here is an example
 embedding plot for the COCO 2017 validation set.
 
@@ -25,13 +25,13 @@ snowy images.
 ![img.png](../images/workflows/using-2d-embeddings/using-2d-embeddings-3.png)
 
 Now you can perform several actions with the selected group:
-- You can tag and export them in the **Actions** => **Filter & Export** page so that you can label these images 
+- You can tag and export them in the **Actions** => **Filter & Export** page so that you can label these images
 automatically via a script.
 - You can explore the performance of the selected samples in the model performance page.
 - You can create different subsets like these and compare them.
 
 Samples in the 2D embedding plot in the **Data Quality => Summary** page have no label information; therefore, they all share
-the same color. On the other hand, points colored according to labels on the **Label Quality => Summary** page. 
+the same color. On the other hand, points colored according to labels on the **Label Quality => Summary** page.
 
 ![using-2d-embeddings-4](../images/workflows/using-2d-embeddings/using-2d-embeddings-4.png)
 
