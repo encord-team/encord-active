@@ -1,2 +1,3 @@
 # example workflow related
 config.yaml
+logreg_model.pkl

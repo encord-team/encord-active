@@ -1,10 +1,10 @@
+import pickle
 from pathlib import Path
 
 import numpy as np
 import yaml
 from PIL import Image
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
 from encord_active.lib.common.iterator import DatasetIterator
@@ -29,23 +29,12 @@ for data_unit, img_pth in iterator.iterate():
     X.append(image_array.flatten())
     y.append(class_label)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # train phase
 logreg = LogisticRegression()
 logreg.fit(X_train, y_train)
 
-# get predictions
-y_pred = logreg.predict(X_test)
-
-# show scores
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred, average=None)
-recall = recall_score(y_test, y_pred, average=None)
-f1 = f1_score(y_test, y_pred, average=None)
-
-print("Classes:", logreg.classes_)
-print("Accuracy:", accuracy)
-print("precision", list(precision))
-print("recall", list(recall))
-print("f1", list(f1))
+# save model to disk
+logreg_model_path = Path(config["logreg_model_path"])
+logreg_model_path.write_bytes(pickle.dumps(logreg))

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
+from PIL import Image
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import (
@@ -32,9 +33,8 @@ class AcquisitionFunction(Metric):
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         pass
 
-    @abstractmethod
     def read_image(self, image_path: Path) -> Optional[Any]:
-        pass
+        return Image.open(image_path)
 
     @abstractmethod
     def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:

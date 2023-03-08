@@ -1,1 +1,2 @@
 project_dir: /path/to/project/directory
+logreg_model_path: /path/to/trained/logreg_model.pkl
