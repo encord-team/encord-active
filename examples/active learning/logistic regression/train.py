@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from encord_active.lib.common.iterator import DatasetIterator
 
-config = yaml.safe_load(Path("./config.yaml").read_text())
+config = yaml.safe_load(Path("./../config.yaml").read_text())
 project_dir = Path(config["project_dir"])
 
 iterator = DatasetIterator(project_dir)

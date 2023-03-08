@@ -12,7 +12,7 @@ from encord_active.lib.metrics.acquisition_functions import (
     Variance,
 )
 
-config = yaml.safe_load(Path("./config.yaml").read_text())
+config = yaml.safe_load(Path("./../config.yaml").read_text())
 logreg_model = pickle.loads(Path(config["logreg_model_path"]).read_bytes())
 
 
