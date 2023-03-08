@@ -13,6 +13,7 @@ import encord_active.cli.utils.typer  # pylint: disable=unused-import
 from encord_active.app.app_config import APP_NAME
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
+from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
 from encord_active.cli.utils.prints import success_with_visualise_command
@@ -26,6 +27,7 @@ class OrderedPanelGroup(TyperGroup):
         "init",
         "import",
         "visualize",
+        "metric",
         "metricize",
         "print",
         "config",
@@ -61,6 +63,7 @@ Made by Encord. [bold]Get in touch[/bold]:
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
 cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
+cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project's metrics.")
 
 
 @cli.command()

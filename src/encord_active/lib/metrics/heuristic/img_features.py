@@ -226,7 +226,7 @@ class AreaMetric(Metric):
     def __init__(self):
         super().__init__(
             title="Area",
-            short_description="Ranks images by their areawidth/height).",
+            short_description="Ranks images by their area (width/height).",
             long_description=r"""Ranks images by their area.
 
 Area is computed as the product of image width and image height ($width \times height$).

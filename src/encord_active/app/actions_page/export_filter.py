@@ -15,12 +15,12 @@ from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
-from encord_active.lib.common.utils import ProjectNotFound
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
 from encord_active.lib.db.tags import Tags
 from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
     EncordActions,
 )
+from encord_active.lib.project.metadata import ProjectNotFound
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:

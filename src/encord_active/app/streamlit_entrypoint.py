@@ -27,9 +27,9 @@ from encord_active.cli.utils.decorators import (
     is_project,
     try_find_parent_project,
 )
-from encord_active.lib.common.utils import fetch_project_meta
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
+from encord_active.lib.project.metadata import fetch_project_meta
 
 pages = {
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
