@@ -41,6 +41,7 @@ from encord_active.lib.embeddings.utils import (
 )
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
+    IdentifierSchema,
     MetricData,
     MetricSchema,
     MetricScope,
@@ -222,7 +223,7 @@ def fill_data_quality_window(
 
     paginated_subset = render_pagination(subset, n_cols, n_rows, "score")
 
-    form = bulk_tagging_form(metric_scope)
+    form = bulk_tagging_form(subset.pipe(DataFrame[IdentifierSchema]))
 
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
@@ -285,7 +286,7 @@ def build_card(
         description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
         st.write(f"Description: {description}")
 
-    multiselect_tag(row, "explorer", metric_scope)
+    multiselect_tag(row, "explorer")
 
     target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
 
