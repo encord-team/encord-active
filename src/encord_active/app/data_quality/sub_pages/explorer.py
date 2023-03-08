@@ -153,6 +153,7 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         y=Embedding2DSchema.y,
         color=Embedding2DSchema.label,
         title="2D embedding plot",
+        template="plotly",
     )
 
     new_selection = plotly_events(fig, click_event=False, select_event=True)
