@@ -31,10 +31,7 @@ from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import use_state
 from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.common.image_utils import (
-    load_or_fill_image,
-    show_image_and_draw_polygons,
-)
+from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import (
     Embedding2DSchema,
@@ -56,7 +53,7 @@ from encord_active.lib.metrics.utils import (
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(self, available_metrics: List[MetricData]):
+    def sidebar_options(self, available_metrics: List[MetricData], metric_scope: MetricScope):
         tag_creator()
 
         if not available_metrics:
@@ -111,7 +108,7 @@ class ExplorerPage(Page):
             else df_class_selected[MetricSchema.annotator].isin(selected_annotators)
         )
 
-        self.row_col_settings_in_sidebar()
+        self.display_settings(metric_scope)
         # For now go the easy route and just filter the dataframe here
         return df_class_selected[annotator_selected]
 
@@ -156,6 +153,7 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         y=Embedding2DSchema.y,
         color=Embedding2DSchema.label,
         title="2D embedding plot",
+        template="plotly",
     )
 
     new_selection = plotly_events(fig, click_event=False, select_event=True)
@@ -177,7 +175,7 @@ def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
     meta = selected_metric.meta
-    embedding_type = get_embedding_type(meta.title, meta.annotation_type)
+    embedding_type = get_embedding_type(meta.annotation_type)
     embeddings_dir = get_state().project_paths.embeddings
     embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
 
@@ -264,14 +262,13 @@ def build_card(
 
     if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
         button_name = "show similar images"
-        image = load_or_fill_image(row, data_dir)
     elif embedding_information.type == EmbeddingType.OBJECT:
         button_name = "show similar objects"
-        image = show_image_and_draw_polygons(row, data_dir)
     else:
         st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return
 
+    image = show_image_and_draw_polygons(row, data_dir, draw_configurations=get_state().object_drawing_configurations)
     st.image(image)
 
     # === Write scores and link to editor === #

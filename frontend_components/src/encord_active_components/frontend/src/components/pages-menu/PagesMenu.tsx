@@ -10,8 +10,8 @@ import classes from "./PagesMenu.module.css";
 
 export const PagesMenu = () => {
   const {
-    args: { items },
-  } = useRenderData<{ items: SubMenuType[] }>();
+    args: { items, selected },
+  } = useRenderData<{ items: SubMenuType[]; selected?: string }>();
 
   if (!items) throw new Error("`items` prop must be provided");
 
@@ -27,7 +27,7 @@ export const PagesMenu = () => {
     <div ref={ref}>
       <Menu
         defaultSelectedKeys={[
-          (first.children?.[0]?.key || first.key).toString(),
+          selected || (first.children?.[0]?.key || first.key).toString(),
         ]}
         defaultOpenKeys={[first.key]}
         subMenuOpenDelay={1}

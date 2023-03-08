@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -93,6 +94,12 @@ def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> Annotatio
 
                     for classification in data_unit["labels"].get("classifications", []):
                         classificationHash = classification["classificationHash"]
+                        if classificationHash not in label_row_meta["classification_answers"]:
+                            logging.warning(
+                                "Couldn't find the classification answer. Something is probably wrong with the label row"
+                            )
+                            continue
+
                         classification_answer_item = label_row_meta["classification_answers"][classificationHash][
                             "classifications"
                         ][0]

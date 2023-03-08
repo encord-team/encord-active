@@ -13,7 +13,6 @@ import faiss  # pylint: disable=unused-import
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
-from encord_active.lib.common.utils import fetch_project_info
 from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import (
@@ -27,6 +26,7 @@ from encord_active.lib.metrics.metric import (
 )
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.project.metadata import fetch_project_info
 
 logger = logger.opt(colors=True)
 
@@ -66,9 +66,9 @@ def get_module_metrics(module_name: str, filter_func: Callable) -> List:
 
 def is_metric_matching_embedding(embedding_type: EmbeddingType, metric: Metric):
     if metric.metadata.annotation_type is None or isinstance(metric.metadata.annotation_type, list):
-        return embedding_type == get_embedding_type(metric.metadata.title, metric.metadata.annotation_type)
+        return embedding_type == get_embedding_type(metric.metadata.annotation_type)
     else:
-        return embedding_type == get_embedding_type(metric.metadata.title, [metric.metadata.annotation_type])
+        return embedding_type == get_embedding_type([metric.metadata.annotation_type])
 
 
 def get_metrics_by_embedding_type(embedding_type: EmbeddingType):

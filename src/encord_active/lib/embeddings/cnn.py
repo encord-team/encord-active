@@ -243,7 +243,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
                             )
                         )
             # NOTE: since we only support one one classification for now
-            classification_answers = answers[0] if len(answers) else None
+            identified_answers = answers[0] if len(answers) else None
 
             entry = LabelEmbedding(
                 url=data_unit["data_link"],
@@ -256,7 +256,7 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
                 name=classification["name"],
                 dataset_title=iterator.dataset_title,
                 embedding=embedding,
-                classification_answers=classification_answers,
+                classification_answers=identified_answers,
             )
             collections.append(entry)
 

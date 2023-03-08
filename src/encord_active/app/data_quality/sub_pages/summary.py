@@ -21,8 +21,8 @@ class SummaryPage(Page):
     _moderate_outlier_color = "orange"
     _summary_item_background_color = "#fbfbfb"
 
-    def sidebar_options(self):
-        self.row_col_settings_in_sidebar()
+    def sidebar_options(self, metric_scope: MetricScope):
+        self.display_settings(metric_scope)
         tag_creator()
 
     def build(self, metric_scope: MetricScope):

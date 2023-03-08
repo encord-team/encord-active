@@ -41,6 +41,6 @@ The command will ask you:
 1. `Where is your private ssh key stored?`: type the path to your private ssh key
 2. `What project would you like to import?`: here, you can (fuzzy) search for the project title that you would like to import. Hit <kbd>enter</kbd> when your desired project is highlighted.
 
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](category/metrics) available in `encord-active`.
+Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/metrics) available in `encord-active`.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./open-encord-active) page.

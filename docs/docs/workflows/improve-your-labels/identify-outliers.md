@@ -17,7 +17,7 @@ If you haven't installed Encord Active, visit [installation](../../installation)
 
 ### Steps
 
-Navigate to the _Label Quality_ > _Summary_ tab. Here each [metric](category/metrics) will be presented as an expandable panes.
+Navigate to the _Label Quality_ > _Summary_ tab. Here each [metric](/category/metrics) will be presented as an expandable panes.
 
 ![label-quality-outliers.png](../../images/label-quality-outliers.png)
 

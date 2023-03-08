@@ -6,7 +6,7 @@ sidebar_position: 2
 
 **Visualise the relationship between your model performance and metrics**
 
-With this workflow, you will be able to identify the most important [metrics](category/metrics) for your model performance and prioritise further data exploration and actions.
+With this workflow, you will be able to identify the most important [metrics](/category/metrics) for your model performance and prioritise further data exploration and actions.
 
 `Prerequisites:` Dataset, Labels, Predictions
 

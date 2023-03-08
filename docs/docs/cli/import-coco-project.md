@@ -36,7 +36,7 @@ You can provide any path to each of the arguments as long as the first one is a 
 Running the importer will do the following things.
 
 1. Create a local Encord Active project.
-2. Compute all the [metrics](category/metrics).
+2. Compute all the [metrics](/category/metrics).
 
 :::info
 

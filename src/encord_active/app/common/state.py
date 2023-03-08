@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.merged_metrics import MergedMetrics
@@ -31,11 +32,11 @@ class MetricNames:
 @dataclass
 class PredictionsState:
     decompose_classes = False
-    metric_datas = MetricNames()
+    metric_datas: MetricNames = field(default_factory=lambda: MetricNames())
     all_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     selected_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None
-    nbins = 50
+    nbins: int = 50
 
 
 @dataclass
@@ -55,29 +56,40 @@ class State:
     project_paths: ProjectFileStructure
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
-    ignore_frames_without_predictions = False
-    iou_threshold = 0.5
-    selected_metric: Optional[MetricData] = None
-    page_grid_settings = PageGridSettings()
-    predictions = PredictionsState()
-    similarities_count = 8
-    image_sizes: Optional[np.ndarray] = None
     annotation_sizes: Optional[AnnotationStatistics] = None
+    ignore_frames_without_predictions = False
+    image_sizes: Optional[np.ndarray] = None
+    iou_threshold = 0.5
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
+    object_drawing_configurations: ObjectDrawingConfigurations = field(
+        default_factory=lambda: ObjectDrawingConfigurations()
+    )
+    page_grid_settings = PageGridSettings()
+    predictions: PredictionsState = field(default_factory=lambda: PredictionsState())
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
+    selected_metric: Optional[MetricData] = None
+    similarities_count = 8
 
     @classmethod
     def init(cls, project_dir: Path):
-        if GLOBAL_STATE in st.session_state:
-            return
+        if GLOBAL_STATE not in st.session_state or project_dir != get_state().project_paths.project_dir:
+            st.session_state[GLOBAL_STATE] = State(
+                project_paths=ProjectFileStructure(project_dir),
+                merged_metrics=MergedMetrics().all(),
+                all_tags=Tags().all(),
+            )
 
-        st.session_state[GLOBAL_STATE] = State(
-            project_paths=ProjectFileStructure(project_dir),
-            merged_metrics=MergedMetrics().all(),
-            all_tags=Tags().all(),
-        )
+    @classmethod
+    def clear(cls) -> None:
+        del st.session_state[GLOBAL_STATE]
 
 
 def get_state() -> State:
     return st.session_state.get(GLOBAL_STATE)  # type: ignore
+
+
+def refresh(clear_state=False):
+    if clear_state:
+        State.clear()
+    st.experimental_rerun()

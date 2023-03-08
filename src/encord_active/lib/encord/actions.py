@@ -13,11 +13,7 @@ from encord.orm.label_row import LabelRow
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.common.utils import (
-    fetch_project_meta,
-    iterate_in_batches,
-    update_project_meta,
-)
+from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
     LabelEmbedding,
@@ -27,6 +23,7 @@ from encord_active.lib.embeddings.utils import (
 from encord_active.lib.encord.utils import get_client
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
 
 class LabelRowDataUnit(NamedTuple):

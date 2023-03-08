@@ -18,9 +18,9 @@ from loguru import logger
 from encord_active.lib.common.utils import (
     collect_async,
     download_file,
-    fetch_project_meta,
     slice_video_into_frames,
 )
+from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
@@ -133,11 +133,15 @@ class Project:
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
+        def add_number_of_frames(lr_meta):
+            lr_meta["number_of_frames"] = 1
+            return LabelRowMetadata.from_dict(lr_meta)
+
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
         self.label_row_metas = {
-            lr_hash: LabelRowMetadata.from_dict(lr_meta)
+            lr_hash: add_number_of_frames(lr_meta)
             for lr_hash, lr_meta in itertools.islice(
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
