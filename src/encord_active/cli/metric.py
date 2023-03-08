@@ -68,7 +68,11 @@ def add_metrics(
                 if full_module_path == Path(old_module_path).expanduser().resolve():
                     rich.print(f"Requirement already satisfied: {title} in '{module_path.as_posix()}'.")
                 else:
-                    rich.print(f"[red]ERROR: Conflict found in metric {title}. It points to '{old_module_path}'.[/red]")
+                    rich.print(
+                        f"[red]ERROR: Conflict found in metric {title}. "
+                        f"The same metric title already points to '{old_module_path}'. "
+                        "Please change the metric title if you intend to have both metrics included.[/red]"
+                    )
                     has_conflicts = True
             else:
                 # attach input metric to the project and recreate its metadata in metrics_meta.json

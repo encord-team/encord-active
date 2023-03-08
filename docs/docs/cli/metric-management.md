@@ -14,7 +14,8 @@ Make sure your shell's current working directory is that of an Encord Active pro
 
 ## metric add
 
-The `metric add` command adds required metrics to the project and attaches them.
+The `metric add` command adds metrics to the project.  
+These metrics can be listed, removed and run on the project data via other CLI commands. 
 
 You can add metrics from local python modules (`.py`).  
 If you don't specify a metric, Encord Active will add all the metrics in the python module to the project.
@@ -37,7 +38,8 @@ Some shells may treat square braces (`[` and `]`) as special characters. It is s
 
 ## metric remove
 
-The `metric remove` command removes metrics from the list of attached metrics.
+The `metric remove` command removes metrics from the project.  
+Deleted metrics will not be available to run on the project data, but their results will still appear in the UI.
 
 ```shell
 encord-active metric remove "Metric Title"
@@ -46,9 +48,9 @@ encord-active metric remove "Metric Title"
 
 ## metric run
 
-The `metric run` command runs available metrics over the project's data.
+The `metric run` command runs metrics on the project data.
 
-If you don't specify a metric, Encord Active will run all the metrics attached to the project.
+If you don't specify a metric, Encord Active will run all metrics available in the project.
 ```shell
 encord-active metric run 
 ```
@@ -61,7 +63,7 @@ encord-active metric run "Metric Title" "Another Metric Title"
 
 ## metric list
 
-The `metric list` command lists all the metrics attached to the project.
+The `metric list` command lists all metrics available in the project.
 
 Metrics are listed in a case-insensitive sorted order.
 ```shell
@@ -70,7 +72,7 @@ encord-active metric list
 
 ## metric show
 
-The `metric show` command shows information about one or more available metrics in the project.
+The `metric show` command shows detailed information about one or more metrics available in the project.
 
 ```shell
 encord-active metric show "Metric Title"
