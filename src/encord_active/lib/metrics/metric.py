@@ -61,6 +61,7 @@ class MetricMetadata(BaseModel):
     title: str
     short_description: str
     long_description: str
+    doc_url: str
     metric_type: MetricType
     data_type: DataType
     annotation_type: List[AnnotationTypeUnion]
@@ -82,6 +83,7 @@ class SimpleMetric(ABC):
         data_type: DataType,
         annotation_type: List[Union[ObjectShape, ClassificationType]],
         embedding_type: Optional[EmbeddingType] = None,
+        doc_url: str = "",
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -91,6 +93,7 @@ class SimpleMetric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            doc_url=doc_url,
             stats=StatsMetadata(),
         )
 
@@ -109,6 +112,7 @@ class Metric(ABC):
         data_type: DataType,
         annotation_type: List[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
+        doc_url: str = "",
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -118,6 +122,7 @@ class Metric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            doc_url=doc_url,
             stats=StatsMetadata(),
         )
 

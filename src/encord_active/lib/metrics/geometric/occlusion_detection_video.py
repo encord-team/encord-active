@@ -28,6 +28,7 @@ class OcclusionDetectionOnVideo(Metric):
             short_description="Tracks objects and detect outliers",
             long_description=r"""This metric collects information related to object size and aspect ratio for each track
  and find outliers among them.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#detect-occlusion-in-video",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.SEQUENCE,
             annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX],

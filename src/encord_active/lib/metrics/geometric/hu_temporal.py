@@ -53,6 +53,7 @@ class HuMomentsTemporalMetric(Metric):
             long_description=r"""Ranks objects by how similar they are to their instances in previous frames
 based on [Hu moments](https://en.wikipedia.org/wiki/Image_moment). The more an object's shape changes,
 the lower its score will be.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#polygon-shape-similarity",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.SEQUENCE,
             annotation_type=[AnnotationType.OBJECT.POLYGON],
