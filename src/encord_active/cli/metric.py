@@ -53,7 +53,7 @@ def add_metrics(
         found_metrics = get_metrics(list(metric_titles.items()))
     if found_metrics is None:
         rich.print("[red]Error: Provided module path doesn't comply with expected format. Check the logs.[/red]")
-        return
+        raise typer.Abort()
 
     found_metric_titles = {metric.metadata.title: metric for metric in found_metrics}
     if add_all_metrics:
