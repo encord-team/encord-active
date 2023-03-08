@@ -84,6 +84,6 @@ def _commit_to_version(commit: Commit) -> Version:
 def _get_default_branch(repo: Repo):
     with repo.config_reader() as reader:
         possible_heads = [head.name for head in repo.heads]
-        global_default = str(reader.get_value("init", "defaultBranch")).strip('"')
+        global_default = str(reader.get_value("init", "defaultBranch", "main")).strip('"')
 
         return global_default if global_default in possible_heads else possible_heads.pop()
