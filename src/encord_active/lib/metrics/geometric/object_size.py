@@ -35,6 +35,7 @@ class RelativeObjectAreaMetric(Metric):
             title="Object Area - Relative",
             short_description="Computes object area as a percentage of total image area.",
             long_description=r"""Computes object area as a percentage of total image area.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#polygon-shape-similarity",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[
@@ -68,6 +69,7 @@ class OccupiedTotalAreaMetric(Metric):
             title="Frame object density",
             short_description="Computes the percentage of image area that's occupied by objects.",
             long_description=r"""Computes the percentage of image area that's occupied by objects.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#polygon-shape-similarity",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[
@@ -111,6 +113,7 @@ class AbsoluteObjectAreaMetric(Metric):
             title="Object Area - Absolute",
             short_description="Computes object area in amount of pixels",
             long_description=r"""Computes object area in amount of pixels.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#object-area---absolute",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[
@@ -151,6 +154,7 @@ class ObjectAspectRatioMetric(Metric):
             title="Object Aspect Ratio",
             short_description="Computes aspect ratios of objects",
             long_description=r"""Computes aspect ratios ($width/height$) of objects.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#object-aspect-ratio",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[

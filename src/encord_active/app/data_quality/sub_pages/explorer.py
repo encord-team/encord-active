@@ -117,9 +117,10 @@ class ExplorerPage(Page):
         if not selected_metric:
             return
 
-        st.markdown(f"# {self.title}")
-        st.markdown(f"## {selected_metric.meta.title}")
-        st.markdown(selected_metric.meta.long_description)
+        if selected_metric.meta.doc_url is None:
+            st.markdown(f"### {selected_metric.meta.title}")
+        else:
+            st.markdown(f"### [{selected_metric.meta.title}]({selected_metric.meta.doc_url})")
 
         if selected_df.empty:
             return

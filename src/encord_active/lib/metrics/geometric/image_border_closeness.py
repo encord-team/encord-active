@@ -19,6 +19,7 @@ class ImageBorderCloseness(Metric):
             title="Annotation closeness to image borders",
             short_description="Ranks annotations by how close they are to image borders.",
             long_description=r"""This metric ranks annotations by how close they are to image borders.""",
+            doc_url="https://encord-active-docs.web.app/metrics/geometric#polygon-shape-similarity",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[

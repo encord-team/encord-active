@@ -57,6 +57,7 @@ class ImageLevelQualityTest(Metric):
             long_description=r"""This metric creates embeddings from images. Then, these embeddings are used to build
     nearest neighbor graph. Similar embeddings' classifications are compared against each other.
         """,
+            doc_url="https://encord-active-docs.web.app/metrics/semantic#image-level-annotation-quality",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             annotation_type=[AnnotationType.CLASSIFICATION.RADIO],

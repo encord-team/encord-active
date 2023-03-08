@@ -47,6 +47,7 @@ to the awesome paper that proposed the method.
 Or use math to better explain such method:
 $$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
 """,
+            doc_url='link/to/documentation', # This is optional, if a link is given, it can be accessed from the app
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=[AnnotationType.OBJECT.BOUNDING_BOX, AnnotationType.OBJECT.ROTATABLE_BOUNDING_BOX, AnnotationType.OBJECT.POLYGON],

@@ -130,6 +130,7 @@ def load_metric_metadata(meta_pth) -> MetricMetadata:
             metric_type=old_meta.get("metric_type", old_meta.get("index_type")),
             embedding_type=old_meta.get("embedding_type", None),
             annotation_type=annotation_type,
+            doc_url=old_meta.get("doc_url", None),
             stats=stats,
         )
         with meta_pth.open("w") as f:
