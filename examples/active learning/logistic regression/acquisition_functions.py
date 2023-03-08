@@ -22,21 +22,37 @@ def get_predicted_class_probabilities(image) -> Optional[np.ndarray]:
 
 
 class LogRegEntropy(Entropy):
+    def __init__(self):
+        super().__init__()
+        self.metadata.title += " (Logistic Regression)"
+
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         return get_predicted_class_probabilities(image)
 
 
 class LogRegLeastConfidence(LeastConfidence):
+    def __init__(self):
+        super().__init__()
+        self.metadata.title += " (Logistic Regression)"
+
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         return get_predicted_class_probabilities(image)
 
 
 class LogRegMargin(Margin):
+    def __init__(self):
+        super().__init__()
+        self.metadata.title += " (Logistic Regression)"
+
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         return get_predicted_class_probabilities(image)
 
 
 class LogRegVariance(Variance):
+    def __init__(self):
+        super().__init__()
+        self.metadata.title += " (Logistic Regression)"
+
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
         return get_predicted_class_probabilities(image)
 
