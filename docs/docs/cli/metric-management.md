@@ -19,6 +19,7 @@ These metrics can be listed, removed and run on the project data via other CLI c
 
 You can add metrics from local python modules (`.py`).  
 If you don't specify a metric, Encord Active will add all the metrics in the python module to the project.
+
 ```shell
 encord-active metric add /path/to/module.py
 ```
@@ -51,6 +52,7 @@ encord-active metric remove "Metric Title"
 The `metric run` command runs metrics on the project data.
 
 If you don't specify a metric, Encord Active will run all metrics available in the project.
+
 ```shell
 encord-active metric run 
 ```
@@ -66,9 +68,11 @@ encord-active metric run "Metric Title" "Another Metric Title"
 The `metric list` command lists all metrics available in the project.
 
 Metrics are listed in a case-insensitive sorted order.
+
 ```shell
 encord-active metric list
 ```
+
 
 ## metric show
 
