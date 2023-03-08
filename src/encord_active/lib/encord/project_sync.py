@@ -1,4 +1,5 @@
 import json
+import pickle
 import subprocess
 from pathlib import Path
 from typing import NamedTuple
@@ -10,6 +11,7 @@ from encord_active.lib.common.utils import fetch_project_meta, iterate_in_batche
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
+    EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
     load_collections,
     save_collections,
@@ -49,6 +51,25 @@ def update_embedding_identifiers(
     save_collections(embedding_type, project_file_structure.embeddings, updated_collection)
 
 
+def update_2d_embedding_identifiers(
+    project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, renaming_map: dict[str, str]
+):
+    print("Updating 2D embeddings")
+
+    def _update_identifiers(identifier: str):
+        old_lr, old_du, *_ = identifier.split("_", 3)
+        new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
+        return identifier.replace(old_du, new_du).replace(old_lr, new_lr)
+
+    embedding_file = project_file_structure.embeddings / EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
+    if not embedding_file.is_file():
+        return
+
+    embeddings = pickle.loads(embedding_file.read_bytes())
+    embeddings["identifier"] = list(map(_update_identifiers, embeddings["identifier"]))
+    embedding_file.write_bytes(pickle.dumps(embeddings))
+
+
 def replace_in_files(project_file_structure: ProjectFileStructure, renaming_map):
     for subs in iterate_in_batches(list(renaming_map.items()), 100):
         substitutions = " -e  " + " -e ".join(f"'s/{old}/{new}/g'" for old, new in subs)
@@ -82,6 +103,7 @@ def replace_uids(
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
             update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
+            update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
     except Exception as e:
         rev_renaming_map = {v: k for k, v in renaming_map.items()}
         rename_files(project_file_structure, {v: k for k, v in file_mappings.items()})
@@ -93,6 +115,7 @@ def replace_uids(
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
             update_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
+            update_2d_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
         raise Exception("UID replacement failed")
 
 
