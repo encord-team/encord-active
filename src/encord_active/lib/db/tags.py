@@ -3,7 +3,6 @@ from sqlite3 import OperationalError
 from typing import Callable, List, NamedTuple
 
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.metrics.utils import MetricScope
 
 TABLE_NAME = "tags"
 
@@ -21,12 +20,6 @@ class Tag(NamedTuple):
 SCOPE_EMOJI = {
     TagScope.DATA.value: "🖼️",
     TagScope.LABEL.value: "✏️",
-}
-
-METRIC_SCOPE_TAG_SCOPES = {
-    MetricScope.DATA_QUALITY: {TagScope.DATA},
-    MetricScope.LABEL_QUALITY: {TagScope.DATA, TagScope.LABEL},
-    MetricScope.MODEL_QUALITY: {TagScope.DATA},
 }
 
 
