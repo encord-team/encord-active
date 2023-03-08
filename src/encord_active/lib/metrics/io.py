@@ -7,7 +7,9 @@ from encord_active.lib.metrics.execute import logger
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 
-def fill_metrics_meta_with_builtin_metrics(metrics_meta: dict):
+def fill_metrics_meta_with_builtin_metrics(metrics_meta: Optional[dict] = None):
+    if metrics_meta is None:
+        metrics_meta = dict()
     metrics_meta.update(
         (metric.metadata.title, get_metric_metadata(metric, module_path))
         for metric, module_path in get_builtin_metrics()

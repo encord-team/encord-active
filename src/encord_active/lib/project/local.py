@@ -117,7 +117,7 @@ def init_local_project(
     meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 
     # attach builtin metrics to the project
-    metrics_meta = fill_metrics_meta_with_builtin_metrics(dict())
+    metrics_meta = fill_metrics_meta_with_builtin_metrics()
     update_metrics_meta(project_path, metrics_meta)
 
     label_row_meta_collection = {lr["label_hash"]: lr for lr in project.label_rows}

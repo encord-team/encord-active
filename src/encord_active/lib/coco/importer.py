@@ -220,7 +220,7 @@ class CocoImporter:
         meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
 
         # attach builtin metrics to the project
-        metrics_meta = fill_metrics_meta_with_builtin_metrics(dict())
+        metrics_meta = fill_metrics_meta_with_builtin_metrics()
         update_metrics_meta(self.project_dir, metrics_meta)
 
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
