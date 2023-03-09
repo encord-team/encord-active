@@ -233,13 +233,19 @@ def model_quality(page: Page):
                     num_samples = model_predictions.shape[0]
 
                 metric_columns = list(get_state().predictions.metric_datas_classification.predictions.keys())
-                metric_importance_chart = create_metric_importance_charts(
-                    model_predictions_matched_filtered,
-                    metric_columns=metric_columns,
-                    num_samples=num_samples,
-                    prediction_type=MainPredictionType.CLASSIFICATION,
-                )
-                st.altair_chart(metric_importance_chart, use_container_width=True)
+                try:
+                    metric_importance_chart = create_metric_importance_charts(
+                        model_predictions_matched_filtered,
+                        metric_columns=metric_columns,
+                        num_samples=num_samples,
+                        prediction_type=MainPredictionType.CLASSIFICATION,
+                    )
+                    st.altair_chart(metric_importance_chart, use_container_width=True)
+                except ValueError as e:
+                    if e.args:
+                        st.info(e.args[0])
+                    else:
+                        st.info("Failed to compute metric importance")
 
                 col1, col2 = st.columns(2)
 

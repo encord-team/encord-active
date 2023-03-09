@@ -65,26 +65,18 @@ class State:
     merged_metrics: pd.DataFrame
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
-    binary_confidence_threshold = 0.5
     selected_metric: Optional[MetricData] = None
     page_grid_settings = PageGridSettings()
     predictions = PredictionsState()
     similarities_count = 8
     image_sizes: Optional[np.ndarray] = None
     annotation_sizes: Optional[AnnotationStatistics] = None
-    ignore_frames_without_predictions = False
-    image_sizes: Optional[np.ndarray] = None
-    iou_threshold = 0.5
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
     object_drawing_configurations: ObjectDrawingConfigurations = field(
         default_factory=lambda: ObjectDrawingConfigurations()
     )
-    page_grid_settings = PageGridSettings()
-    predictions: PredictionsState = field(default_factory=lambda: PredictionsState())
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
-    selected_metric: Optional[MetricData] = None
-    similarities_count = 8
 
     @classmethod
     def init(cls, project_dir: Path):

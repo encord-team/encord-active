@@ -26,6 +26,7 @@ from encord_active.lib.labels.classification import (
     LabelClassification,
 )
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
+from encord_active.lib.model_predictions.reader import OntologyClassificationJSON
 from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
@@ -427,18 +428,18 @@ class PredictionWriter:
             df.to_csv(storage_folder / LABELS_FILE)
 
             # 3. The class idx map
-            class_index = {}
+            class_index: Dict[str, OntologyClassificationJSON] = {}
             for frame_classification, class_id in self.classification_class_id_lookup.items():
                 if class_id in class_index or frame_classification not in self.classification_lookup:
                     continue
 
                 selected_option = self.classification_lookup[frame_classification]
-                class_index[class_id] = {
-                    "featureHash": frame_classification.feature_hash,
-                    "attributeHash": frame_classification.attribute_hash,
-                    "optionHash": selected_option.feature_node_hash,
-                    "name": selected_option.label,
-                }
+                class_index[class_id] = OntologyClassificationJSON(
+                    featureHash=frame_classification.feature_hash,
+                    attributeHash=frame_classification.attribute_hash,
+                    optionHash=selected_option.feature_node_hash,
+                    name=selected_option.label,
+                )
 
             with (storage_folder / CLASS_INDEX_FILE).open("w") as f:
                 json.dump(class_index, f)
