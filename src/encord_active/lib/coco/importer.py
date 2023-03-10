@@ -142,6 +142,7 @@ class CocoImporter:
         self.images_dir = images_dir_path
         self.annotations_file_path = annotations_file_path
         self.use_symlinks: bool = use_symlinks
+        self.data_hash_to_image_id: dict[str, int] = {}
 
         if not self.images_dir.is_dir():
             raise NotADirectoryError(f"Images directory '{self.images_dir}' doesn't exist")
@@ -169,9 +170,10 @@ class CocoImporter:
         print(f"Creating a new dataset: {self.title}")
         dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
-        for _, coco_image in tqdm(self.images.items(), desc="Uploading images"):
-            upload_img(dataset, coco_image, self.images_dir, temp_folder)
-
+        for image_id, coco_image in tqdm(self.images.items(), desc="Uploading images"):
+            encord_image = upload_img(dataset, coco_image, self.images_dir, temp_folder)
+            if encord_image:
+                self.data_hash_to_image_id[encord_image.DB_FIELDS["data_hash"]] = image_id
         return dataset
 
     def create_ontology(self) -> LocalOntology:
@@ -234,7 +236,7 @@ class CocoImporter:
 
         for data_unit in tqdm(dataset.data_rows, desc="Uploading annotations"):
             data_hash, lr = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj)
-            image_id = lr["data_title"]
+            image_id = self.data_hash_to_image_id[data_hash]
             image = self.images[image_id]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
 
