@@ -155,7 +155,6 @@ class CocoImporter:
         self.images = parse_images(annotations_file["images"])
         self.annotations = parse_annotations(annotations_file["annotations"])
 
-        # TODO: infer shape
         self.category_shapes = _infer_category_shapes(self.annotations)
         self.id_mappings: Dict[Tuple[int, Shape], int] = {}
 
@@ -180,7 +179,8 @@ class CocoImporter:
         print(f"Creating a new ontology: {self.title}")
         ontology_structure = OntologyStructure()
         for cat in self.categories:
-            shapes = self.category_shapes.get(cat.id_, [])
+            # NOTE: default to polygon when there is no way to infer the shape
+            shapes = self.category_shapes.get(cat.id_) or [Shape.POLYGON]
             for i, shape in enumerate(shapes):
                 new_id = cat.id_ * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
