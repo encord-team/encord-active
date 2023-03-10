@@ -40,7 +40,7 @@ def import_coco_predictions(
 
         if res.segmentation is not None:
             format, shape = Format.POLYGON, Shape.POLYGON
-            data = res.segmentation / np.array([[img_h, img_w]])
+            data = res.segmentation / np.array([[img_w, img_h]])
         elif res.bbox:
             format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
             x, y, w, h = res.bbox
@@ -53,7 +53,7 @@ def import_coco_predictions(
                 data_hash=image["data_hash"],
                 confidence=res.score,
                 object=ObjectDetection(
-                    feature_hash=category_to_hash[(str(res.category_id), shape)],
+                    feature_hash=category_to_hash[(str(res.category_id), shape.value)],
                     format=format,
                     data=data,
                 ),
