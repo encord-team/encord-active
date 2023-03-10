@@ -26,12 +26,18 @@ from encord_active.lib.labels.classification import (
     LabelClassification,
 )
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
-from encord_active.lib.model_predictions.reader import OntologyClassificationJSON
 from encord_active.lib.project import Project
 
 logger = logging.getLogger(__name__)
 BBOX_KEYS = {"x", "y", "w", "h"}
 BASE_URL = "https://app.encord.com/label_editor/"
+
+
+class OntologyClassificationJSON(TypedDict):
+    featureHash: str
+    attributeHash: str
+    optionHash: str
+    name: str
 
 
 class PredictionType(str, Enum):

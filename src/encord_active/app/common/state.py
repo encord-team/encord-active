@@ -15,11 +15,8 @@ from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.reader import (
-    LabelSchema,
-    OntologyClassificationJSON,
-    OntologyObjectJSON,
-)
+from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
+from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
 from encord_active.lib.project import ProjectFileStructure
 
 GLOBAL_STATE = "global_state"
