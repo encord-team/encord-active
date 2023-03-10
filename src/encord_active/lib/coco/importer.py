@@ -38,7 +38,7 @@ IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
 def upload_img(
     dataset_tmp: LocalDataset, coco_image: CocoImage, image_path: Path, temp_folder: Path
-) -> Optional[Image]:
+) -> Optional[LocalDataRow]:
     file_path = image_path / coco_image.file_name
 
     if not file_path.is_file():
@@ -171,9 +171,9 @@ class CocoImporter:
         dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
         for image_id, coco_image in tqdm(self.images.items(), desc="Uploading images"):
-            encord_image = upload_img(dataset, coco_image, self.images_dir, temp_folder)
-            if encord_image:
-                self.data_hash_to_image_id[encord_image.DB_FIELDS["data_hash"]] = image_id
+            data_row = upload_img(dataset, coco_image, self.images_dir, temp_folder)
+            if data_row:
+                self.data_hash_to_image_id[data_row["data_hash"]] = image_id
         return dataset
 
     def create_ontology(self) -> LocalOntology:
