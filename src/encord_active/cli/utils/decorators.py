@@ -29,7 +29,7 @@ def try_find_parent_project(target: Path) -> Optional[Path]:
 
 def find_child_projects(target: Path) -> List[Path]:
     child_meta_files = target.glob("*/project_meta.yaml")
-    return [cmf.parent.relative_to(target) for cmf in child_meta_files]
+    return [cmf.parent.expanduser().resolve() for cmf in child_meta_files]
 
 
 def is_project(target: Path):
