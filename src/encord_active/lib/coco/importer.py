@@ -173,7 +173,7 @@ class CocoImporter:
         for image_id, coco_image in tqdm(self.images.items(), desc="Uploading images"):
             data_row = upload_img(dataset, coco_image, self.images_dir, temp_folder)
             if data_row:
-                self.data_hash_to_image_id[data_row["data_hash"]] = image_id
+                self.data_hash_to_image_id[data_row.uid] = image_id
         return dataset
 
     def create_ontology(self) -> LocalOntology:
