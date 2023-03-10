@@ -239,7 +239,7 @@ class LocalDataset:
         )
         self._data_rows[data_hash] = data_row
 
-    def upload_image(self, file_path: Union[Path, str], title: str = ""):
+    def upload_image(self, file_path: Union[Path, str], title: str = "") -> LocalDataRow:
         """
         Copies image to `self.data_path/label_hash/images/datahash.ext`.
 
@@ -278,6 +278,7 @@ class LocalDataset:
             uid=data_hash, label_hash=label_hash, title=title, data_type=DataType.IMAGE, media=[dr_media]
         )
         self._data_rows[data_hash] = data_row
+        return data_row
 
 
 @dataclass
