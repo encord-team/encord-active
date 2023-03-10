@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "encord-active"
-version = "v0.1.42"
+version = "v0.1.43"
 description = "Enable users to improve machine learning models in an active learning fashion via data, label, and model quality."
 authors = ["Cord Technologies Limited <hello@encord.com>"]
 classifiers=[
