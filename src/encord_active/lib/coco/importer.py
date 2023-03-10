@@ -7,7 +7,6 @@ import yaml
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
-from encord.orm.dataset import Image
 from encord.utilities import label_utilities
 from PIL import Image as pil_image
 from PIL import ImageOps
@@ -237,7 +236,7 @@ class CocoImporter:
         for data_unit in tqdm(dataset.data_rows, desc="Uploading annotations"):
             data_hash, lr = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj)
             image_id = self.data_hash_to_image_id[data_hash]
-            image = self.images[image_id]
+            image = self.images[str(image_id)]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
 
         (Path(self.project_dir) / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
