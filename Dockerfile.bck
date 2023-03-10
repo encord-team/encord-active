@@ -14,8 +14,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     software-properties-common \
     git \
-    ffmpeg \
-    sqlite3
+    ffmpeg
 
 RUN apt-get -y clean  \
     && rm -rf /var/lib/apt/lists/*
@@ -40,9 +39,9 @@ COPY ./src/ /home/appuser/src
 
 RUN poetry install --only-root
 
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 EXPOSE 8501
 
 COPY run.sh /home/appuser
-RUN git config --global --add safe.directory '*'
-
 ENTRYPOINT ["./run.sh"]
+
