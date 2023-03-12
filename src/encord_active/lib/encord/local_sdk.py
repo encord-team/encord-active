@@ -319,8 +319,12 @@ class LocalProject:
         return self._ontology.structure.to_dict()
 
     @property
-    def label_rows(self) -> List[LabelRowMetadata]:
+    def label_row_meta(self) -> List[LabelRowMetadata]:
         return list(self._label_row_meta.values())
+
+    @property
+    def label_rows(self) -> List[LabelRow]:
+        return list(self._label_rows.values())
 
     def _populate_label_row_meta(self):
         for dataset in self._datasets.values():

@@ -16,8 +16,10 @@ from pandas import Series
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.common.time import get_timestamp
 from encord_active.lib.common.utils import rle_to_binary_mask
 from encord_active.lib.db.predictions import FrameClassification
+from encord_active.lib.encord.utils import lower_snake_case
 from encord_active.lib.labels.classification import LabelClassification
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.writer import (
@@ -33,16 +35,6 @@ BBOX_KEYS = {"x", "y", "h", "w"}
 
 
 # === UTILITIES === #
-def get_timestamp():
-    now = datetime.now()
-    new_timezone_timestamp = now.astimezone(GMT_TIMEZONE)
-    return new_timezone_timestamp.strftime(DATETIME_STRING_FORMAT)
-
-
-def lower_snake_case(s: str):
-    return "_".join(s.lower().split())
-
-
 class PredictionIterator(Iterator):
     def __init__(self, cache_dir: Path, subset_size: Optional[int] = None, **kwargs):
         super().__init__(cache_dir, subset_size, **kwargs)
