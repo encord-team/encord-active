@@ -42,10 +42,8 @@ class FalseNegativesPage(ModelQualityPage):
 
     def _build_objects(
         self,
-        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]],
-        object_labels: Optional[DataFrame[LabelMatchSchema]],
-        object_metrics: Optional[DataFrame[PerformanceMetricSchema]],
-        object_precisions: Optional[DataFrame[PrecisionRecallSchema]],
+        object_model_predictions: DataFrame[PredictionMatchSchema],
+        object_labels: DataFrame[LabelMatchSchema],
     ):
         metric_name = get_state().predictions.metric_datas.selected_label
         if not metric_name:
@@ -66,7 +64,7 @@ class FalseNegativesPage(ModelQualityPage):
         """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description()
+            self.metric_details_description(get_state().predictions.metric_datas)
         fns_df = object_labels[object_labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
         if fns_df.shape[0] == 0:
             st.write("No false negatives")
@@ -122,7 +120,7 @@ class FalseNegativesPage(ModelQualityPage):
         object_labels, object_metrics, object_precisions"
                 )
             else:
-                self._build_objects(object_model_predictions, object_labels, object_metrics, object_precisions)
+                self._build_objects(object_model_predictions, object_labels)
 
         with classification_tab:
             st.markdown(

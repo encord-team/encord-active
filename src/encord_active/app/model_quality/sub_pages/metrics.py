@@ -1,6 +1,7 @@
 import json
 from typing import Optional
 
+import numpy as np
 import streamlit as st
 from loguru import logger
 from pandera.typing import DataFrame
@@ -43,10 +44,9 @@ class MetricsPage(ModelQualityPage):
 
     def _build_objects(
         self,
-        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]],
-        object_labels: Optional[DataFrame[LabelMatchSchema]],
-        object_metrics: Optional[DataFrame[PerformanceMetricSchema]],
-        object_precisions: Optional[DataFrame[PrecisionRecallSchema]],
+        object_model_predictions: DataFrame[PredictionMatchSchema],
+        object_metrics: DataFrame[PerformanceMetricSchema],
+        object_precisions: DataFrame[PrecisionRecallSchema],
     ):
 
         _map = object_metrics[object_metrics[_M_COLS.metric] == "mAP"]["value"].item()
@@ -128,9 +128,9 @@ class MetricsPage(ModelQualityPage):
 
     def _build_classifications(
         self,
-        classification_labels: Optional[list],
-        classification_pred: Optional[list],
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]],
+        classification_labels: list,
+        classification_pred: list,
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
         class_names = sorted(list(set(classification_labels).union(classification_pred)))
 
@@ -241,7 +241,7 @@ class MetricsPage(ModelQualityPage):
         object_labels, object_metrics, object_precisions"
                 )
             else:
-                self._build_objects(object_model_predictions, object_labels, object_metrics, object_precisions)
+                self._build_objects(object_model_predictions, object_metrics, object_precisions)
 
         with classification_tab:
             if not classification_predictions_exist:

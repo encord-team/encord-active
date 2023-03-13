@@ -27,7 +27,7 @@ def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> 
     return fig
 
 
-def get_precision_recall_f1(labels: list, predictions: list) -> List[float]:
+def get_precision_recall_f1(labels: list, predictions: list) -> List[np.ndarray]:
 
     return metrics.precision_recall_fscore_support(labels, predictions, zero_division=0)
 

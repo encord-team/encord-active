@@ -8,7 +8,7 @@ from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
-from encord_active.app.common.state import PredictionsState, get_state
+from encord_active.app.common.state import MetricNames, PredictionsState, get_state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.constants import DOCS_URL
@@ -39,7 +39,7 @@ CHART_TITLES = {
 class PerformanceMetric(ModelQualityPage):
     title = "⚡️ Performance by Metric"
 
-    def description_expander(self):
+    def description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):
             st.markdown(
                 """### The View
@@ -58,7 +58,7 @@ on your labels are used for the "False Negative Rate" plot.
 """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description()
+            self.metric_details_description(metric_datas)
 
     def sidebar_options(self):
         c1, c2, c3 = st.columns([4, 4, 3])
@@ -89,10 +89,8 @@ on your labels are used for the "False Negative Rate" plot.
 
     def _build_objects(
         self,
-        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]],
-        object_labels: Optional[DataFrame[LabelMatchSchema]],
-        object_metrics: Optional[DataFrame[PerformanceMetricSchema]],
-        object_precisions: Optional[DataFrame[PrecisionRecallSchema]],
+        object_model_predictions: DataFrame[PredictionMatchSchema],
+        object_labels: DataFrame[LabelMatchSchema],
     ):
 
         if object_model_predictions.shape[0] == 0:
@@ -111,7 +109,7 @@ on your labels are used for the "False Negative Rate" plot.
             )
             return
 
-        self.description_expander()
+        self.description_expander(get_state().predictions.metric_datas)
 
         label_metric_name = metric_name
         if metric_name[-3:] == "(P)":  # Replace the P with O:  "Metric (P)" -> "Metric (O)"
@@ -157,9 +155,7 @@ on your labels are used for the "False Negative Rate" plot.
 
     def _build_classifications(
         self,
-        classification_labels: Optional[list],
-        classification_pred: Optional[list],
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
         if classification_model_predictions_matched.shape[0] == 0:
             st.write("No predictions of the given class(es).")
@@ -177,7 +173,7 @@ on your labels are used for the "False Negative Rate" plot.
             )
             return
 
-        self.description_expander()
+        self.description_expander(get_state().predictions.metric_datas_classification)
 
         classes_for_coloring = ["Average"]
         decompose_classes = get_state().predictions.decompose_classes
@@ -245,7 +241,7 @@ on your labels are used for the "False Negative Rate" plot.
         object_labels, object_metrics, object_precisions"
                 )
             else:
-                self._build_objects(object_model_predictions, object_labels, object_metrics, object_precisions)
+                self._build_objects(object_model_predictions, object_labels)
 
         with classification_tab:
             if not classification_predictions_exist:
@@ -266,6 +262,4 @@ on your labels are used for the "False Negative Rate" plot.
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(
-                    classification_labels, classification_pred, classification_model_predictions_matched
-                )
+                self._build_classifications(classification_model_predictions_matched)

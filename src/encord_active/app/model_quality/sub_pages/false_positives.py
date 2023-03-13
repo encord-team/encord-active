@@ -36,10 +36,7 @@ class FalsePositivesPage(ModelQualityPage):
 
     def _build_objects(
         self,
-        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]],
-        object_labels: Optional[DataFrame[LabelMatchSchema]],
-        object_metrics: Optional[DataFrame[PerformanceMetricSchema]],
-        object_precisions: Optional[DataFrame[PrecisionRecallSchema]],
+        object_model_predictions: DataFrame[PredictionMatchSchema],
     ):
         metric_name = get_state().predictions.metric_datas.selected_prediction
         if not metric_name:
@@ -64,7 +61,7 @@ class FalsePositivesPage(ModelQualityPage):
         """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description()
+            self.metric_details_description(get_state().predictions.metric_datas)
 
         fp_df = object_model_predictions[
             object_model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
@@ -78,11 +75,9 @@ class FalsePositivesPage(ModelQualityPage):
 
     def _build_classifications(
         self,
-        classification_labels: Optional[list],
-        classification_pred: Optional[list],
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
-        pass
+        st.markdown(f"### This page is under construction...")
 
     def build(
         self,
@@ -100,11 +95,11 @@ class FalsePositivesPage(ModelQualityPage):
     ):
 
         """
-                If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
-                object_labels, object_metrics, object_precisions
-                If classification_predictions_exist is True, the followings should be provided: classification_labels, \
-                classification_pred, classification_model_predictions_matched_filtered
-                """
+        If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
+        object_labels, object_metrics, object_precisions
+        If classification_predictions_exist is True, the followings should be provided: classification_labels, \
+        classification_pred, classification_model_predictions_matched_filtered
+        """
 
         with object_tab:
             if not object_predictions_exist:
@@ -126,7 +121,7 @@ class FalsePositivesPage(ModelQualityPage):
         object_labels, object_metrics, object_precisions"
                 )
             else:
-                self._build_objects(object_model_predictions, object_labels, object_metrics, object_precisions)
+                self._build_objects(object_model_predictions)
 
         with classification_tab:
             if not classification_predictions_exist:
@@ -147,6 +142,4 @@ class FalsePositivesPage(ModelQualityPage):
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(
-                    classification_labels, classification_pred, classification_model_predictions_matched
-                )
+                self._build_classifications(classification_model_predictions_matched)

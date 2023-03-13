@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Optional
+from typing import Optional
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -7,7 +7,7 @@ from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
-from encord_active.lib.metrics.utils import MetricData
+from encord_active.app.common.state import MetricNames
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
@@ -97,15 +97,15 @@ class ModelQualityPage(Page):
         )
 
     @staticmethod
-    def metric_details_description():
-        metric_name = state.get_state().predictions.metric_datas.selected_prediction
+    def metric_details_description(metric_datas: MetricNames):
+        metric_name = metric_datas.selected_prediction
         if not metric_name:
             return
 
-        metric_data = state.get_state().predictions.metric_datas.predictions.get(metric_name)
+        metric_data = metric_datas.predictions.get(metric_name)
 
         if not metric_data:
-            metric_data = state.get_state().predictions.metric_datas.labels.get(metric_name)
+            metric_data = metric_datas.labels.get(metric_name)
 
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")

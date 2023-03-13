@@ -36,10 +36,7 @@ class TruePositivesPage(ModelQualityPage):
 
     def _build_objects(
         self,
-        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]],
-        object_labels: Optional[DataFrame[LabelMatchSchema]],
-        object_metrics: Optional[DataFrame[PerformanceMetricSchema]],
-        object_precisions: Optional[DataFrame[PrecisionRecallSchema]],
+        object_model_predictions: DataFrame[PredictionMatchSchema],
     ):
         with st.expander("Details"):
             color = Color.PURPLE
@@ -56,7 +53,7 @@ class TruePositivesPage(ModelQualityPage):
                     """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description()
+            self.metric_details_description(get_state().predictions.metric_datas)
 
         metric_name = get_state().predictions.metric_datas.selected_prediction
         if not metric_name:
@@ -75,11 +72,9 @@ class TruePositivesPage(ModelQualityPage):
 
     def _build_classifications(
         self,
-        classification_labels: Optional[list],
-        classification_pred: Optional[list],
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
-        pass
+        st.markdown(f"### This page is under construction...")
 
     def build(
         self,
@@ -122,7 +117,7 @@ class TruePositivesPage(ModelQualityPage):
         object_labels, object_metrics, object_precisions"
                 )
             else:
-                self._build_objects(object_model_predictions, object_labels, object_metrics, object_precisions)
+                self._build_objects(object_model_predictions)
 
         with classification_tab:
             if not classification_predictions_exist:
@@ -143,6 +138,4 @@ class TruePositivesPage(ModelQualityPage):
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(
-                    classification_labels, classification_pred, classification_model_predictions_matched
-                )
+                self._build_classifications(classification_model_predictions_matched)
