@@ -2,12 +2,14 @@ from abc import abstractmethod
 from typing import Optional
 
 import streamlit as st
+from loguru import logger
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import MetricNames
+from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,
@@ -35,6 +37,66 @@ class ModelQualityPage(Page):
     def sidebar_options_classifications(self):
         pass
 
+    def check_building_object_quality(
+        self,
+        object_predictions_exist: bool,
+        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None,
+        object_labels: Optional[DataFrame[LabelMatchSchema]] = None,
+        object_metrics: Optional[DataFrame[PerformanceMetricSchema]] = None,
+        object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
+    ) -> bool:
+        if not object_predictions_exist:
+            st.markdown(
+                "## Missing model predictions for the objects\n"
+                "This project does not have any imported predictions for the objects. "
+                "Please refer to the "
+                f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
+                "section of the documentation to learn how to import your predictions."
+            )
+            return False
+        elif not (
+            (object_model_predictions is not None)
+            and (object_labels is not None)
+            and (object_metrics is not None)
+            and (object_precisions is not None)
+        ):
+            logger.error(
+                "If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
+        object_labels, object_metrics, object_precisions"
+            )
+            return False
+
+        return True
+
+    def check_building_classification_quality(
+        self,
+        classification_predictions_exist: bool,
+        classification_labels: Optional[list] = None,
+        classification_pred: Optional[list] = None,
+        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+    ) -> bool:
+        if not classification_predictions_exist:
+            st.markdown(
+                "## Missing model predictions for the classifications\n"
+                "This project does not have any imported predictions for the classifications. "
+                "Please refer to the "
+                f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
+                "section of the documentation to learn how to import your predictions."
+            )
+            return False
+        elif not (
+            (classification_labels is not None)
+            and (classification_pred is not None)
+            and (classification_model_predictions_matched is not None),
+        ):
+            logger.error(
+                "If classification_predictions_exist is True, the followings should be provided: classification_labels, \
+    classification_pred, classification_model_predictions_matched_filtered"
+            )
+            return False
+
+        return True
+
     @abstractmethod
     def build(
         self,
@@ -52,6 +114,13 @@ class ModelQualityPage(Page):
             DataFrame[ClassificationPredictionMatchSchema]
         ] = None,
     ):
+        """
+        If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
+        object_labels, object_metrics, object_precisions
+        If classification_predictions_exist is True, the followings should be provided: classification_labels, \
+        classification_pred, classification_model_predictions_matched_filtered
+        """
+
         pass
 
     def __call__(

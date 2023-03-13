@@ -214,54 +214,20 @@ on your labels are used for the "False Negative Rate" plot.
         classification_pred: Optional[list] = None,
         classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
     ):
-        """
-        If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
-        object_labels, object_metrics, object_precisions
-        If classification_predictions_exist is True, the followings should be provided: classification_labels, \
-        classification_pred, classification_model_predictions_matched_filtered
-        """
 
         with object_tab:
-            if not object_predictions_exist:
-                st.markdown(
-                    "## Missing model predictions for the classifications\n"
-                    "This project does not have any imported predictions for the classifications. "
-                    "Please refer to the "
-                    f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
-                    "section of the documentation to learn how to import your predictions."
-                )
-            elif not (
-                (object_model_predictions is not None)
-                and (object_labels is not None)
-                and (object_metrics is not None)
-                and (object_precisions is not None)
+            if self.check_building_object_quality(
+                object_predictions_exist, object_model_predictions, object_labels, object_metrics, object_precisions
             ):
-                logger.error(
-                    "If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
-        object_labels, object_metrics, object_precisions"
-                )
-            else:
                 self._build_objects(object_model_predictions, object_labels)
 
         with classification_tab:
-            if not classification_predictions_exist:
-                st.markdown(
-                    "## Missing model predictions for the classifications\n"
-                    "This project does not have any imported predictions for the classifications. "
-                    "Please refer to the "
-                    f"[Importing Model Predictions]({DOCS_URL}/sdk/importing-model-predictions) "
-                    "section of the documentation to learn how to import your predictions."
-                )
-            elif not (
-                (classification_labels is not None)
-                and (classification_pred is not None)
-                and (classification_model_predictions_matched is not None),
+            if self.check_building_classification_quality(
+                classification_predictions_exist,
+                classification_labels,
+                classification_pred,
+                classification_model_predictions_matched,
             ):
-                logger.error(
-                    "If classification_predictions_exist is True, the followings should be provided: classification_labels, \
-        classification_pred, classification_model_predictions_matched_filtered"
-                )
-            else:
                 self._build_classifications(
                     DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched)
                 )
