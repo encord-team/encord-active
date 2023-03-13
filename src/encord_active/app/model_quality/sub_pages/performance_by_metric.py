@@ -3,7 +3,6 @@ from typing import Optional
 
 import altair as alt
 import streamlit as st
-from loguru import logger
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
@@ -11,7 +10,6 @@ import encord_active.app.common.state as state
 from encord_active.app.common.state import MetricNames, PredictionsState, get_state
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
-from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,

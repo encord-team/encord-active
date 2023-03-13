@@ -2,7 +2,6 @@ import json
 from typing import Optional, cast
 
 import streamlit as st
-from loguru import logger
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
@@ -15,7 +14,6 @@ from encord_active.lib.charts.classification_metrics import (
 )
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
-from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
     PrecisionRecallSchema,

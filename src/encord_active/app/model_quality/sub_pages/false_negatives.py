@@ -1,7 +1,6 @@
 from typing import Optional
 
 import streamlit as st
-from loguru import logger
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
@@ -9,7 +8,6 @@ from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
-from encord_active.lib.constants import DOCS_URL
 from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
