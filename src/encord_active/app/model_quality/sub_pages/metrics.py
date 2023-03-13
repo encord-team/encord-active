@@ -1,7 +1,6 @@
 import json
-from typing import Optional
+from typing import Optional, cast
 
-import numpy as np
 import streamlit as st
 from loguru import logger
 from pandera.typing import DataFrame
@@ -263,5 +262,7 @@ class MetricsPage(ModelQualityPage):
                 )
             else:
                 self._build_classifications(
-                    classification_labels, classification_pred, classification_model_predictions_matched
+                    cast(list, classification_labels),
+                    cast(list, classification_pred),
+                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched),
                 )

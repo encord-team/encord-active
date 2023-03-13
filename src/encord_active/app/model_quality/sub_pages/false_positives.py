@@ -77,7 +77,7 @@ class FalsePositivesPage(ModelQualityPage):
         self,
         classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
-        st.markdown(f"### This page is under construction...")
+        st.markdown("### This page is under construction...")
 
     def build(
         self,
@@ -142,4 +142,6 @@ class FalsePositivesPage(ModelQualityPage):
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(classification_model_predictions_matched)
+                self._build_classifications(
+                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched)
+                )

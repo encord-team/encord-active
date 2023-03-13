@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn import metrics
-from sklearn.preprocessing import label_binarize
 
 
 def get_confusion_matrix(labels: list, predictions: list, class_names: list) -> go.Figure:

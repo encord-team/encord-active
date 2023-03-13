@@ -31,7 +31,7 @@ class TruePositivesPage(ModelQualityPage):
         self.prediction_metric_in_sidebar_objects()
         self.display_settings(MetricScope.MODEL_QUALITY)
 
-    def sidebar_options_classifications(slef):
+    def sidebar_options_classifications(self):
         pass
 
     def _build_objects(
@@ -74,7 +74,7 @@ class TruePositivesPage(ModelQualityPage):
         self,
         classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
     ):
-        st.markdown(f"### This page is under construction...")
+        st.markdown("### This page is under construction...")
 
     def build(
         self,
@@ -138,4 +138,6 @@ class TruePositivesPage(ModelQualityPage):
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(classification_model_predictions_matched)
+                self._build_classifications(
+                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched)
+                )

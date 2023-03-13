@@ -262,4 +262,6 @@ on your labels are used for the "False Negative Rate" plot.
         classification_pred, classification_model_predictions_matched_filtered"
                 )
             else:
-                self._build_classifications(classification_model_predictions_matched)
+                self._build_classifications(
+                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched)
+                )
