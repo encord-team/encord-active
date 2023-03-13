@@ -16,7 +16,13 @@ class Page(ABC):
     @abstractmethod
     def sidebar_options(self, *args, **kwargs):
         """
-        Used to append options to the sidebar.
+        Used to append object-level options to the sidebar.
+        """
+        pass
+
+    def sidebar_options_classifications(self, *args, **kwargs):
+        """
+        Used to append classification-label options to the sidebar.
         """
         pass
 

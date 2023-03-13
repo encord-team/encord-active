@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import streamlit as st
 from pandera.typing import DataFrame
+from streamlit.delta_generator import DeltaGenerator
 
 import encord_active.app.common.state as state
 from encord_active.app.common.page import Page
@@ -12,6 +13,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
+    ClassificationPredictionMatchSchema,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -30,13 +32,25 @@ class ModelQualityPage(Page):
         """
         pass
 
+    def sidebar_options_classifications(self):
+        pass
+
     @abstractmethod
     def build(
         self,
-        model_predictions: DataFrame[PredictionMatchSchema],
-        labels: DataFrame[LabelMatchSchema],
-        metrics: DataFrame[PerformanceMetricSchema],
-        precisions: DataFrame[PrecisionRecallSchema],
+        object_predictions_exist: bool,
+        classification_predictions_exist: bool,
+        object_tab: DeltaGenerator,
+        classification_tab: DeltaGenerator,
+        object_model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None,
+        object_labels: Optional[DataFrame[LabelMatchSchema]] = None,
+        object_metrics: Optional[DataFrame[PerformanceMetricSchema]] = None,
+        object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
+        classification_labels: Optional[list] = None,
+        classification_pred: Optional[list] = None,
+        classification_model_predictions_matched_filtered: Optional[
+            DataFrame[ClassificationPredictionMatchSchema]
+        ] = None,
     ):
         pass
 
@@ -53,7 +67,7 @@ class ModelQualityPage(Page):
         return f"{type(self).__name__}()"
 
     @staticmethod
-    def prediction_metric_in_sidebar():
+    def prediction_metric_in_sidebar_objects():
         """
         Note: Adding the fixed options "confidence" and "iou" works here because
         confidence is required on import and IOU is computed during prediction
@@ -63,6 +77,18 @@ class ModelQualityPage(Page):
         fixed_options = {"confidence": "Model Confidence", "iou": "IOU"}
         column_names = list(state.get_state().predictions.metric_datas.predictions.keys())
         state.get_state().predictions.metric_datas.selected_prediction = st.selectbox(
+            "Select metric for your predictions",
+            column_names + list(fixed_options.keys()),
+            format_func=lambda s: fixed_options.get(s, s),
+            help="The data in the main view will be sorted by the selected metric. "
+            "(F) := frame scores, (P) := prediction scores.",
+        )
+
+    @staticmethod
+    def prediction_metric_in_sidebar_classifications():
+        fixed_options = {"confidence": "Model Confidence"}
+        column_names = list(state.get_state().predictions.metric_datas_classification.predictions.keys())
+        state.get_state().predictions.metric_datas_classification.selected_prediction = st.selectbox(
             "Select metric for your predictions",
             column_names + list(fixed_options.keys()),
             format_func=lambda s: fixed_options.get(s, s),

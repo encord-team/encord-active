@@ -49,6 +49,7 @@ def prediction_and_label_filtering_classification(
 ):
     class_idx = selected_class_idx
     new_index = max(list(map(int, class_idx.keys()))) + 1
+
     # Predictions
     _predictions = predictions.copy()
     _predictions[
@@ -71,5 +72,6 @@ def prediction_and_label_filtering_classification(
     _matched_model_predictions = _matched_model_predictions[
         _matched_model_predictions[ClassificationPredictionMatchSchema.class_id].isin(set(map(int, class_idx.keys())))
     ]
+    _matched_model_predictions["class_name"] = _matched_model_predictions["class_id"].map(name_map)
 
     return _labels, _predictions, _matched_model_predictions
