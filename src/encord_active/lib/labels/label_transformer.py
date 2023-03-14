@@ -9,11 +9,12 @@ from encord.objects.common import NestableOption, RadioAttribute, Shape
 from encord.objects.ontology_structure import Classification, Object
 from encord.ontology import OntologyStructure
 from encord.project import LabelRow
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 from encord_active.lib.common.module_loading import load_module
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.encord.utils import (
+    Point,
     make_classification_dict_and_answer_dict,
     make_object_dict,
 )
@@ -193,7 +194,7 @@ This will make a (potentially new) classification question `{LabelTransformerWra
 
     def _add_polygon_label(self, label: PolygonLabel, data_unit: dict):
         ont_obj = self._get_object_by_name(label.class_, shape=Shape.POLYGON, create_when_missing=True)
-        points = list(map(lambda r: tuple(r), label.polygon))
+        points = [Point(*r) for r in label.polygon]
         poly_obj = make_object_dict(ont_obj, points)
         data_unit.setdefault("labels", {}).setdefault("objects", []).append(poly_obj)
 

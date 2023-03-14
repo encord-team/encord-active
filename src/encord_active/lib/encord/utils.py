@@ -1,19 +1,19 @@
 import uuid
 from json import dumps as json_dumps
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
-from encord.objects.common import NestableOption, OptionAttribute, RadioAttribute
+from encord.objects.common import NestableOption, RadioAttribute
 from encord.objects.ontology_structure import Classification, Object
 from encord.orm.project import Project
 from encord.project import ObjectShape
 
 from encord_active.lib.common.time import get_timestamp
+from encord_active.lib.db.predictions import Point
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
 
-Point = Tuple[float, float]
 BBOX_KEYS = {"x", "y", "h", "w"}
 
 
