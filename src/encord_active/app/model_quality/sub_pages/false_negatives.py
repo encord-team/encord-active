@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -95,7 +95,10 @@ class FalseNegativesPage(ModelQualityPage):
             if self.check_building_object_quality(
                 object_predictions_exist, object_model_predictions, object_labels, object_metrics, object_precisions
             ):
-                self._build_objects(object_model_predictions, object_labels)
+                self._build_objects(
+                    cast(DataFrame[PredictionMatchSchema], object_model_predictions),
+                    cast(DataFrame[LabelMatchSchema], object_labels),
+                )
 
         with classification_tab:
             st.markdown(

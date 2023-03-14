@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, cast
 
 import altair as alt
 import streamlit as st
@@ -217,7 +217,10 @@ on your labels are used for the "False Negative Rate" plot.
             if self.check_building_object_quality(
                 object_predictions_exist, object_model_predictions, object_labels, object_metrics, object_precisions
             ):
-                self._build_objects(object_model_predictions, object_labels)
+                self._build_objects(
+                    cast(DataFrame[PredictionMatchSchema], object_model_predictions),
+                    cast(DataFrame[LabelMatchSchema], object_labels),
+                )
 
         with classification_tab:
             if self.check_building_classification_quality(
@@ -227,5 +230,5 @@ on your labels are used for the "False Negative Rate" plot.
                 classification_model_predictions_matched,
             ):
                 self._build_classifications(
-                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched)
+                    cast(DataFrame[ClassificationPredictionMatchSchema], classification_model_predictions_matched)
                 )

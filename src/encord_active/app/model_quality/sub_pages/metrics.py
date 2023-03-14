@@ -215,7 +215,11 @@ class MetricsPage(ModelQualityPage):
             if self.check_building_object_quality(
                 object_predictions_exist, object_model_predictions, object_labels, object_metrics, object_precisions
             ):
-                self._build_objects(object_model_predictions, object_metrics, object_precisions)
+                self._build_objects(
+                    cast(DataFrame[PredictionMatchSchema], object_model_predictions),
+                    cast(DataFrame[PerformanceMetricSchema], object_metrics),
+                    cast(DataFrame[PrecisionRecallSchema], object_precisions),
+                )
 
         with classification_tab:
             if self.check_building_classification_quality(
@@ -227,5 +231,5 @@ class MetricsPage(ModelQualityPage):
                 self._build_classifications(
                     cast(list, classification_labels),
                     cast(list, classification_pred),
-                    DataFrame[ClassificationPredictionMatchSchema](classification_model_predictions_matched),
+                    cast(DataFrame[ClassificationPredictionMatchSchema], classification_model_predictions_matched),
                 )
