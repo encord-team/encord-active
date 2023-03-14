@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://encord-active-docs.web.app" target="_blank">Documentation</a> |
+<a href="https://docs.encord.com/active/docs" target="_blank">Documentation</a> |
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
@@ -21,7 +21,7 @@
 
 In this directory, you find examples of how to use Encord Active.
 
-Generally, you need to have installed [`encord-active`](https://encord-active-docs.web.app) and [`jupyter-lab`](#jupyter-lab).
+Generally, you need to have installed [`encord-active`](https://docs.encord.com/active/docs) and [`jupyter-lab`](#jupyter-lab).
 
 ## Table of Contensts
 
