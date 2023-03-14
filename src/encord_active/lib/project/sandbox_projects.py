@@ -1,7 +1,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Optional, TypedDict
+from typing import Callable, Optional, TypedDict
 
 import requests
 import rich
@@ -91,7 +91,9 @@ def fetch_response_content_length(r: requests.Response) -> Optional[int]:
     return int(r.headers["content-length"]) if "content-length" in r.headers.keys() else None
 
 
-def fetch_prebuilt_project(project_name: str, out_dir: Path):
+def fetch_prebuilt_project(
+    project_name: str, out_dir: Path, *, unpack=True, progress_callback: Optional[Callable] = None
+):
     url = PREBUILT_PROJECTS[project_name]["url"]
     output_file_name = "prebuilt_project.zip"
     output_file_path = out_dir / output_file_name
@@ -104,14 +106,29 @@ def fetch_prebuilt_project(project_name: str, out_dir: Path):
             return out_dir
 
     r = requests.get(url, stream=True)
-    total_length = fetch_response_content_length(r)
+    total_length = fetch_response_content_length(r) or 100
+    chunk_size = 1024 * 1024
+
     with open(output_file_path.as_posix(), "wb") as f:
         with tqdm(total=total_length, unit="B", unit_scale=True, desc="Downloading sandbox project", ascii=True) as bar:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
+            for index, chunk in enumerate(r.iter_content(chunk_size=chunk_size)):
                 f.write(chunk)
                 bar.update(len(chunk))
+                if progress_callback:
+                    progress_callback(chunk_size * index / total_length)
+            else:
+                if progress_callback:
+                    progress_callback(1.0)
 
+    if not unpack:
+        return output_file_path
+
+    return unpack_archive(output_file_path, out_dir)
+
+
+def unpack_archive(archive_path: Path, target_path: Path, delete=True):
     rich.print("Unpacking zip file. May take a bit.")
-    shutil.unpack_archive(output_file_path, out_dir)
-    os.remove(output_file_path)
-    return out_dir
+    shutil.unpack_archive(archive_path, target_path)
+    if delete:
+        os.remove(archive_path)
+    return target_path

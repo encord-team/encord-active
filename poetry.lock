@@ -409,14 +409,19 @@ tqdm = ">=4.32.1,<5.0.0"
 
 [[package]]
 name = "encord-active-components"
-version = "0.0.5"
+version = "0.0.6"
 description = "Frontend components used by Encord Active"
 category = "main"
 optional = false
-python-versions = ">=3.9, !=2.7.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*, !=3.8.*"
+python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+develop = true
 
 [package.dependencies]
-streamlit = ">=1.13.0,<2.0.0"
+streamlit = "^1.19.0"
+
+[package.source]
+type = "directory"
+url = "frontend_components"
 
 [[package]]
 name = "entrypoints"
@@ -2651,7 +2656,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "61c571dca6eb8e8a9bf1aeaf11e3af6f65bf819d04d9b1d01d7c5101cd7a5d95"
+content-hash = "8dc414f85d1b18f33ea8a07d5a94b0f760accf4a006659a8fedee6d0b6c53030"
 
 [metadata.files]
 altair = [
@@ -3005,10 +3010,7 @@ encord = [
     {file = "encord-0.1.67-py3-none-any.whl", hash = "sha256:03e7f86ed4685fda4ab88f74f0baeb92eb7cefafa28a808be246f28b7013d8bd"},
     {file = "encord-0.1.67.tar.gz", hash = "sha256:4d8c040e6dc8a39d7cfa206ec2cdc52f875e5bbea7ec407c617b18e383e660c6"},
 ]
-encord-active-components = [
-    {file = "encord_active_components-0.0.5-py3-none-any.whl", hash = "sha256:a4581dece67252a5de19c26927670bfb2f364c5310a778b39b7974a72125dc09"},
-    {file = "encord_active_components-0.0.5.tar.gz", hash = "sha256:fce0a5730c3a08eeae8c0717687b5c22771ac119566da86d5eb438c34a177660"},
-]
+encord-active-components = []
 entrypoints = [
     {file = "entrypoints-0.4-py3-none-any.whl", hash = "sha256:f174b5ff827504fd3cd97cc3f8649f3693f51538c7e4bdf3ef002c8429d42f9f"},
     {file = "entrypoints-0.4.tar.gz", hash = "sha256:b706eddaa9218a19ebcd67b56818f05bb27589b1ca9e8d797b74affad4ccacd4"},

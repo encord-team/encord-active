@@ -16,6 +16,11 @@ def cached_versioner(project_path: Path):
     return versioner, index
 
 
+def is_latest(project_path: Path):
+    versioner, _ = cached_versioner(project_path)
+    return versioner.is_latest()
+
+
 def version_selector(project_path: Path):
     versioner, initial_version_index = cached_versioner(project_path)
     version_state = UseState[Version](versioner.versions[initial_version_index], CURRENT_VERSION_KEY)
@@ -34,7 +39,7 @@ def version_selector(project_path: Path):
         version_state.set(versioner.current_version)
 
     if not version or version.id == version_state.value.id:
-        return version, versioner.is_latest()
+        return version
 
     if versioner.is_latest(version_state.value):
         versioner.stash()
@@ -46,7 +51,7 @@ def version_selector(project_path: Path):
     if versioner.is_latest(version):
         versioner.unstash()
 
-    refresh(True)
+    refresh(clear_global=True)
 
 
 def version_form():
@@ -58,6 +63,9 @@ def version_form():
     if show_success_message.value:
         container.success(f'Successfully created version with name "{versioner.versions[0].name}"')
         show_success_message.set(False)
+
+    with container:
+        version_selector(get_state().project_paths.project_dir)
 
     opts = {}
     if not versioner.is_latest():
@@ -75,7 +83,7 @@ def version_form():
 
         if discard.form_submit_button("Discard", use_container_width=True, **opts):
             versioner.discard_changes()
-            refresh(True)
+            refresh(clear_global=True)
         if create.form_submit_button("Create", use_container_width=True, type="primary", **opts):
             if not version_name:
                 st.error("Version name is required.")

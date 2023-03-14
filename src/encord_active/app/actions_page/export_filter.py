@@ -439,7 +439,7 @@ def render_export_button(
                 UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new dataset]({new_dataset_link})"),
             ]
             set_updates(update_items)
-            refresh(True)
+            refresh(clear_global=True)
 
 
 def render_unimplemented_buttons(

@@ -1,5 +1,7 @@
-from typing import List, Optional, TypedDict
+from enum import Enum
+from typing import List, Optional, Tuple, TypedDict, Union
 
+from encord_active_components.components.projects_page import Project, ProjectStats
 from encord_active_components.renderer import Components, render
 
 
@@ -9,8 +11,19 @@ class MenuItem(TypedDict):
     children: Optional[List["MenuItem"]]
 
 
-def pages_menu(items: List[MenuItem], selected: Optional[str] = None) -> str:
-    return render(component=Components.PAGES_MENU, props={"items": items, "selected": selected})
+class OutputAction(str, Enum):
+    VIEW_ALL_PROJECTS = "VIEW_ALL_PROJECTS"
+    SELECT_PROJECT = "SELECT_PROJECT"
+    SELECT_PAGE = "SELECT_PAGE"
+
+
+def pages_menu(
+    items: List[MenuItem], projects: List[Project] = [], selected_project_hash: Optional[str] = None
+) -> Tuple[OutputAction, Union[str, None]]:
+    return render(
+        component=Components.PAGES_MENU,
+        props={"items": items, "projects": projects, "selectedProjectHash": selected_project_hash},
+    )
 
 
 if __name__ == "__main__":
@@ -32,4 +45,18 @@ if __name__ == "__main__":
             ],
         },
     ]
-    key = pages_menu(ITEMS)
+    PROJECTS = [
+        Project(
+            name="Foo",
+            hash="d3d81fb8-634c-4909-be57-49f94adc93dd",
+            downloaded=True,
+            stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
+        ),
+        Project(
+            name="Bar",
+            hash="603336c6-c5c4-4ae9-87a7-216e5201ede5",
+            downloaded=True,
+            stats=ProjectStats(dataUnits=100, labels=166, classes=2),
+        ),
+    ]
+    key, action = pages_menu(ITEMS, PROJECTS)

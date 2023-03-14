@@ -39,12 +39,12 @@ def model_quality(page: Page):
 
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
 
-        predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
-        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        model_predictions = use_memo(
+        predictions_metric_datas, _ = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
+        label_metric_datas, _ = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
+        model_predictions, _ = use_memo(
             lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas, MainPredictionType.OBJECT)
         )
-        labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas, MainPredictionType.OBJECT))
+        labels, _ = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas, MainPredictionType.OBJECT))
 
         if model_predictions is None:
             st.error("Couldn't load model predictions")
@@ -54,7 +54,7 @@ def model_quality(page: Page):
             st.error("Couldn't load labels properly")
             return
 
-        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+        matched_gt, _ = use_memo(lambda: reader.get_gt_matched(predictions_dir))
         get_state().predictions.metric_datas = MetricNames(
             predictions={m.name: m for m in predictions_metric_datas},
             labels={m.name: m for m in label_metric_datas},
@@ -114,16 +114,16 @@ def model_quality(page: Page):
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
         )
 
-        predictions_metric_datas = use_memo(
+        predictions_metric_datas, _ = use_memo(
             lambda: reader.get_prediction_metric_data(predictions_dir_classification, metrics_dir)
         )
-        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        model_predictions = use_memo(
+        label_metric_datas, _ = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
+        model_predictions, _ = use_memo(
             lambda: reader.get_model_predictions(
                 predictions_dir_classification, predictions_metric_datas, MainPredictionType.CLASSIFICATION
             )
         )
-        labels_all = use_memo(
+        labels_all, _ = use_memo(
             lambda: reader.get_labels(
                 predictions_dir_classification, label_metric_datas, MainPredictionType.CLASSIFICATION
             )

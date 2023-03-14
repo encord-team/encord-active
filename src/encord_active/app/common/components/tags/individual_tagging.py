@@ -23,6 +23,8 @@ def target_identifier(identifier: str, scope: TagScope) -> Optional[str]:
 
 
 def update_tags(identifier: str, key: str, scopes: Set[TagScope]):
+    if key not in st.session_state:
+        return
     tags_for_update: List[Tag] = st.session_state[key]
 
     targeted_tags: Dict[str, List[Tag]] = {}
