@@ -37,7 +37,7 @@ def rename_files(project_file_structure: ProjectFileStructure, file_mappings: di
 
     for _, new_lr in folder_maps.items():
         new_lr_path = project_file_structure.data / new_lr
-        for old_du_f in new_lr_path.glob(f"images/*.*"):
+        for old_du_f in new_lr_path.glob("images/*.*"):
             old_du_name_parts = old_du_f.stem.split("_")
             old_du_name_parts[0] = file_maps.get(old_du_name_parts[0], old_du_name_parts[0])
             new_f_name = "_".join(old_du_name_parts) + old_du_f.suffix
@@ -171,7 +171,7 @@ def copy_filtered_data(
         if not (curr_project_structure.data / label_row_hash).is_dir():
             continue
         (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
-        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"*.*"):
+        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob("*.*"):
             curr_data_unit = curr_file.stem.split("_")[0]
             if (
                 curr_data_unit in filtered_data_hashes
