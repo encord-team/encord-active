@@ -239,7 +239,9 @@ def download_label_rows(
     )
 
 
-def download_images_from_data_unit(lr: LabelRow, encord_project: EncordProject, project_file_structure: ProjectFileStructure) -> Optional[bool]:
+def download_images_from_data_unit(
+        lr: LabelRow, encord_project: EncordProject, project_file_structure: ProjectFileStructure
+) -> Optional[bool]:
     label_hash = lr.label_hash
 
     if label_hash is None:
@@ -278,7 +280,9 @@ def download_images_from_data_unit(lr: LabelRow, encord_project: EncordProject, 
     return True
 
 
-def download_all_images(encord_project: EncordProject, label_rows, project_file_structure: ProjectFileStructure) -> Dict[str, Optional[bool]]:
+def download_all_images(
+        encord_project: EncordProject, label_rows, project_file_structure: ProjectFileStructure
+) -> Dict[str, Optional[bool]]:
     return collect_async(
         partial(download_images_from_data_unit, encord_project=encord_project, project_file_structure=project_file_structure),
         label_rows.values(),
