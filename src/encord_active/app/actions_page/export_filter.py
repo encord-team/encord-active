@@ -298,7 +298,6 @@ def render_subset_button(
         if not cols or not cols.project:
             return
 
-        st.error().empty()
         with st.spinner("Creating Project Subset..."):
             try:
                 created_dir = action_utils.create_subset(
@@ -337,7 +336,6 @@ def render_export_button(
         )
         if not cols:
             return
-        st.error().empty()
         success = create_and_sync_remote_project(action_utils, cols, df)
 
 
