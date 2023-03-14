@@ -118,10 +118,10 @@ If you want to share your notebooks, custom metrics, or improve the tool, please
 [colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
-[contribute-url]: https://encord-active-docs.web.app/contributing
+[contribute-url]: https://docs.encord.com/active/docs/contributing
 [docs-image]: https://img.shields.io/badge/docs-online-blue
 [encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
-[encord-active-docs]: https://encord-active-docs.web.app/
+[encord-active-docs]: https://docs.encord.com/active/docs
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [pypi-package-image]: https://img.shields.io/pypi/v/encord-active

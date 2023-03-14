@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://encord-active-docs.web.app" target="_blank">Documentation</a> |
+<a href="https://docs.encord.com/active/docs" target="_blank">Documentation</a> |
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
@@ -39,12 +39,12 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ## 🔖 Documentation
 
-Our full documentation is available [here](https://encord-active-docs.web.app). In particular we recommend checking out:
+Our full documentation is available [here](https://docs.encord.com/active/docs). In particular we recommend checking out:
 
-- [Getting Started](https://encord-active-docs.web.app/)
+- [Getting Started](https://docs.encord.com/active/docs/getting-started)
 - [Workflows][encord-active-docs-workflow]
-- [Tutorials](https://encord-active-docs.web.app/category/tutorials)
-- [CLI Documentation](https://encord-active-docs.web.app/category/command-line-interface)
+- [Tutorials](https://docs.encord.com/active/docs/category/tutorials)
+- [CLI Documentation](https://docs.encord.com/active/docs/category/command-line-interface)
 
 ## Installation
 
@@ -158,16 +158,16 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 ### Core features:
 
-- [Data Exploration](https://encord-active-docs.web.app/pages/data-quality/summary)
-- [Data Outlier detection](https://encord-active-docs.web.app/workflows/Improve-your-data/identify-outliers-edge-cases)
-- [Label Outlier detection](https://encord-active-docs.web.app/workflows/improve-your-labels/identify-outliers)
-- [Model Decomposition](https://encord-active-docs.web.app/pages/model-quality/metrics)
-- [Similarity Search](https://encord-active-docs.web.app/workflows/Improve-your-data/similar-images)
-- [Annotator Benchmarks](https://encord-active-docs.web.app/pages/label-quality/explorer/)
-- [Data Tagging](https://encord-active-docs.web.app/workflows/tags/#steps)
-- [Visualise TP/FP/FN](https://encord-active-docs.web.app/category/model-quality)
-- [Dataset Balancing](https://encord-active-docs.web.app/pages/export/balance_export)
-- [COCO Exports](https://encord-active-docs.web.app/pages/export/filter_export)
+- [Data Exploration](https://docs.encord.com/active/docs/pages/data-quality/summary)
+- [Data Outlier detection](https://docs.encord.com/active/docs/workflows/improve-your-data/identify-outliers-edge-cases)
+- [Label Outlier detection](https://docs.encord.com/active/docs/workflows/improve-your-labels/identify-outliers)
+- [Model Decomposition](https://docs.encord.com/active/docs/pages/model-quality/metrics)
+- [Similarity Search](https://docs.encord.com/active/docs/workflows/improve-your-data/similar-images)
+- [Annotator Benchmarks](https://docs.encord.com/active/docs/pages/label-quality/explorer/)
+- [Data Tagging](https://docs.encord.com/active/docs/workflows/tags/#steps)
+- [Visualise TP/FP/FN](https://docs.encord.com/active/docs/category/model-quality)
+- [Dataset Balancing](https://docs.encord.com/active/docs/pages/export/balance_export)
+- [COCO Exports](https://docs.encord.com/active/docs/pages/export/filter_export)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.
@@ -214,12 +214,12 @@ This repository is published under the Apache 2.0 licence.
 
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
-[contribute-url]: https://encord-active-docs.web.app/contributing
-[encord-active-docs-init]: https://encord-active-docs.web.app/cli/initialising-project-from-image-directories
-[encord-active-docs-workflow-import-data]: https://encord-active-docs.web.app/workflows/import-data
-[encord-active-docs-workflow]: https://encord-active-docs.web.app/category/workflows
+[contribute-url]: https://docs.encord.com/active/docs/contributing
+[encord-active-docs-init]: https://docs.encord.com/active/docs/cli/initialising-project-from-image-directories
+[encord-active-docs-workflow-import-data]: https://docs.encord.com/active/docs/workflows/import-data
+[encord-active-docs-workflow]: https://docs.encord.com/active/docs/category/workflows
 [encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
-[encord-active-docs]: https://encord-active-docs.web.app/
+[encord-active-docs]: https://docs.encord.com/active/docs
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
