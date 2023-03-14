@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
@@ -289,53 +290,57 @@ class EncordActions:
             raise Exception("Subset with the same title already exists")
         target_project_dir.mkdir()
 
-        ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
-        filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
-        filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
-        filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
-        filtered_labels = {(ids[1][0], ids[1][1], ids[1][3]) for ids in ids_df.iterrows()}
+        try:
+            ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
+            filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
+            filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
+            filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
+            filtered_labels = {(ids[1][0], ids[1][1], ids[1][3]) for ids in ids_df.iterrows()}
 
-        create_filtered_db(target_project_dir, filtered_df)
+            create_filtered_db(target_project_dir, filtered_df)
 
-        if curr_project_structure.image_data_unit.exists():
-            copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
+            if curr_project_structure.image_data_unit.exists():
+                copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
 
-        filtered_label_row_meta = copy_label_row_meta_json(
-            curr_project_structure, target_project_structure, filtered_label_rows
-        )
-
-        label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
-
-        shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
-
-        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
-
-        create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
-
-        copy_filtered_data(
-            curr_project_structure,
-            target_project_structure,
-            filtered_label_rows,
-            filtered_data_hashes,
-            filtered_labels,
-        )
-
-        create_filtered_embeddings(
-            curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
-        )
-
-        if remote_copy:
-            cloned_project_hash = self._create_and_sync_subset_clone(
-                target_project_structure,
-                project_title,
-                project_description,
-                dataset_title,
-                dataset_description,
-                label_rows,
-                filtered_lr_du,
-                filtered_label_row_meta,
+            filtered_label_row_meta = copy_label_row_meta_json(
+                curr_project_structure, target_project_structure, filtered_label_rows
             )
 
+            label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
+
+            shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
+
+            copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
+
+            create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
+
+            copy_filtered_data(
+                curr_project_structure,
+                target_project_structure,
+                filtered_label_rows,
+                filtered_data_hashes,
+                filtered_labels,
+            )
+
+            create_filtered_embeddings(
+                curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
+            )
+
+            if remote_copy:
+                cloned_project_hash = self._create_and_sync_subset_clone(
+                    target_project_structure,
+                    project_title,
+                    project_description,
+                    dataset_title,
+                    dataset_description,
+                    label_rows,
+                    filtered_lr_du,
+                    filtered_label_row_meta,
+                )
+
+        except Exception as e:
+            os.removedirs(target_project_dir.as_posix())
+            raise e
         return target_project_structure.project_dir
 
     def _create_and_sync_subset_clone(
