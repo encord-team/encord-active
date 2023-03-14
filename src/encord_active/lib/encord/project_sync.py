@@ -1,4 +1,5 @@
 import json
+import pickle
 import subprocess
 from pathlib import Path
 from typing import NamedTuple
@@ -10,6 +11,7 @@ from encord_active.lib.common.utils import fetch_project_meta, iterate_in_batche
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
+    EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
     load_collections,
     save_collections,
@@ -24,13 +26,21 @@ class LabelRowDataUnit(NamedTuple):
 
 
 def rename_files(project_file_structure: ProjectFileStructure, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit]):
-    for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
+    folder_maps = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
+    file_maps = {old_du: new_du for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
+
+    for old_lr, new_lr in folder_maps.items():
         old_lr_path = project_file_structure.data / old_lr
         new_lr_path = project_file_structure.data / new_lr
-        if old_lr_path.exists() and not new_lr_path.exists():
-            old_lr_path.rename(new_lr_path)
-        for old_du_f in new_lr_path.glob(f"**/{old_du}.*"):
-            old_du_f.rename(new_lr_path / "images" / f"{new_du}{old_du_f.suffix}")
+        old_lr_path.rename(new_lr_path)
+
+    for _, new_lr in folder_maps.items():
+        new_lr_path = project_file_structure.data / new_lr
+        for old_du_f in new_lr_path.glob(f"images/*.*"):
+            old_du_name_parts = old_du_f.stem.split('_')
+            old_du_name_parts[0] = file_maps.get(old_du_name_parts[0], old_du_name_parts[0])
+            new_f_name = '_'.join(old_du_name_parts) + old_du_f.suffix
+            old_du_f.rename(new_lr_path / "images" / new_f_name)
 
 
 def update_embedding_identifiers(
@@ -47,6 +57,23 @@ def update_embedding_identifiers(
     collection = load_collections(embedding_type, project_file_structure.embeddings)
     updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
     save_collections(embedding_type, project_file_structure.embeddings, updated_collection)
+
+
+def update_2d_embedding_identifiers(
+    project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, renaming_map: dict[str, str]
+):
+    def _update_identifiers(identifier: str):
+        old_lr, old_du, *_ = identifier.split("_", 3)
+        new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
+        return identifier.replace(old_du, new_du).replace(old_lr, new_lr)
+
+    embedding_file = project_file_structure.embeddings / EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
+    if not embedding_file.is_file():
+        return
+
+    embeddings = pickle.loads(embedding_file.read_bytes())
+    embeddings["identifier"] = [_update_identifiers(id) for id in embeddings["identifier"]]
+    embedding_file.write_bytes(pickle.dumps(embeddings))
 
 
 def replace_in_files(project_file_structure: ProjectFileStructure, renaming_map):
@@ -82,6 +109,7 @@ def replace_uids(
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
             update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
+            update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
     except Exception as e:
         rev_renaming_map = {v: k for k, v in renaming_map.items()}
         rename_files(project_file_structure, {v: k for k, v in file_mappings.items()})
@@ -93,6 +121,7 @@ def replace_uids(
 
         for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
             update_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
+            update_2d_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
         raise Exception("UID replacement failed")
 
 
@@ -116,6 +145,24 @@ def create_filtered_embeddings(
         ]
         save_collections(embedding_type, target_project_structure.embeddings, collection)
 
+    for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
+        embedding_file_name = EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
+        if not Path(curr_project_structure.embeddings / embedding_file_name).exists():
+            continue
+        embeddings = pickle.loads(Path(curr_project_structure.embeddings / embedding_file_name).read_bytes())
+        embeddings_df = pd.DataFrame.from_dict(embeddings)
+        embeddings_df = embeddings_df[embeddings_df["identifier"].isin(filtered_df.identifier)]
+        filtered_embeddings = embeddings_df.to_dict(orient="list")
+        (target_project_structure.embeddings / embedding_file_name).write_bytes(pickle.dumps(filtered_embeddings))
+
+
+def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, objects):
+    return [obj for obj in objects if (label_row_hash, data_unit_hash, obj["objectHash"]) in filtered_labels]
+
+
+def get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, classifications):
+    return [obj for obj in classifications if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels]
+
 
 def copy_filtered_data(
     curr_project_structure: ProjectFileStructure,
@@ -125,28 +172,26 @@ def copy_filtered_data(
     filtered_labels: set[tuple[str, str, str]],
 ):
     target_project_structure.data.mkdir(parents=True, exist_ok=True)
-    for label_row_hash, data_unit in zip(filtered_label_rows, filtered_data_hashes):
+    for label_row_hash in filtered_label_rows:
         if not (curr_project_structure.data / label_row_hash).is_dir():
             continue
         (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
-        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"{data_unit}.*"):
-            if not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists():
+        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"*.*"):
+            curr_data_unit = curr_file.stem.split('_')[0]
+            if curr_data_unit in filtered_data_hashes and not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists():
                 (target_project_structure.data / label_row_hash / "images" / curr_file.name).symlink_to(curr_file)
 
         label_row = json.loads((curr_project_structure.data / label_row_hash / "label_row.json").read_text())
         label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
-        for data_unit_hash, v in label_row["data_units"].items():
-            label_row["data_units"][data_unit_hash]["labels"]["objects"] = [
-                obj
-                for obj in v["labels"]["objects"]
-                if (label_row_hash, data_unit_hash, obj["objectHash"]) in filtered_labels
-            ]
 
-            label_row["data_units"][data_unit_hash]["labels"]["classifications"] = [
-                obj
-                for obj in v["labels"]["classifications"]
-                if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels
-            ]
+        for data_unit_hash, v in label_row["data_units"].items():
+            if "objects" in label_row["data_units"][data_unit_hash]["labels"]:
+                label_row["data_units"][data_unit_hash]["labels"]["objects"] = get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, v["labels"]["objects"])
+                label_row["data_units"][data_unit_hash]["labels"]["classifications"] = get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, v["labels"]["classifications"])
+                continue
+            for label_no, label_item in label_row["data_units"][data_unit_hash]["labels"].items():
+                label_row["data_units"][data_unit_hash]["labels"][label_no]["objects"] = get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["objects"])
+                label_row["data_units"][data_unit_hash]["labels"][label_no]["classifications"] = get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["classifications"])
 
         filtered_label_hashes = {f[2] for f in filtered_labels}
         label_row["object_answers"] = {

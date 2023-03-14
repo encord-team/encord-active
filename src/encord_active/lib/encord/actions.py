@@ -296,7 +296,7 @@ class EncordActions:
         filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
         filtered_labels = {(ids[1][0], ids[1][1], ids[1][3]) for ids in ids_df.iterrows()}
 
-        curr_project_dir = create_filtered_db(target_project_dir, filtered_df)
+        create_filtered_db(target_project_dir, filtered_df)
 
         if curr_project_structure.image_data_unit.exists():
             copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
@@ -326,7 +326,7 @@ class EncordActions:
         )
 
         if remote_copy:
-            self._create_and_sync_subset_clone(
+            cloned_project_hash = self._create_and_sync_subset_clone(
                 target_project_structure,
                 project_title,
                 project_description,
@@ -375,6 +375,7 @@ class EncordActions:
         lr_du_mapping = {
             LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
             for cdu, clr in du_lr_mapping.items()
+            if clr
         }
         replace_uids(
             target_project_structure,
@@ -383,6 +384,12 @@ class EncordActions:
             cloned_project_hash,
             cloned_project.datasets[0]["dataset_hash"],
         )
+        project_meta = fetch_project_meta(target_project_structure.project_dir)
+        project_meta["has_remote"] = True
+        project_meta["project_hash"] = cloned_project_hash
+        update_project_meta(target_project_structure.project_dir, project_meta)
+
+        return cloned_project_hash
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:

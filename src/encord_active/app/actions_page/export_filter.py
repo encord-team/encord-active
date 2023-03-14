@@ -125,11 +125,11 @@ class RenderItems(NamedTuple):
     ontology: Optional[InputItem] = None
 
 
-def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool) -> InputItem:
+def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool, project_name: str) -> InputItem:
     return InputItem(
         col.text_input(
             f"{item} title",
-            value=f"{'Subset: ' if subset else ''}{get_state().project_paths.project_dir.name} ({num_rows})",
+            value=f"{'Subset: ' if subset else ''}{project_name} ({num_rows})",
         ),
         col.text_area(f"{item} description"),
     )
@@ -200,6 +200,7 @@ def export_filter():
     st.header("Filter & Export")
     action_utils = _get_action_utils()
     project_has_remote = bool(action_utils.project_meta.get("has_remote", False)) if action_utils else False
+    project_name = action_utils.project_meta.get("project_title", get_state().project_paths.project_dir.name) if action_utils else get_state().project_paths.project_dir.name
     filtered_df = filter_dataframe(get_state().merged_metrics.copy())
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
@@ -229,16 +230,16 @@ def export_filter():
         set_current_form(CurrentForm.NONE)
 
     if not project_has_remote:
-        render_export_button(export_button_col, action_utils, get_current_form, set_current_form)
+        render_export_button(export_button_col, action_utils, get_current_form, set_current_form, project_name)
 
     if row_count != original_row_count:
         render_subset_button(
-            subset_button_col, action_utils, filtered_df, project_has_remote, get_current_form, set_current_form
+            subset_button_col, action_utils, filtered_df, project_has_remote, get_current_form, set_current_form, project_name
         )
 
 
 def generate_create_project_form(
-    header: str, num_rows: int, dataset: bool, ontology: bool, subset: bool
+    header: str, num_rows: int, dataset: bool, ontology: bool, subset: bool, project_name: str
 ) -> Optional[RenderItems]:
     with st.form("new_project_form"):
         st.subheader(header)
@@ -250,7 +251,7 @@ def generate_create_project_form(
 
         form_columns = st.columns(len(items_to_render))
         cols = RenderItems(
-            *[_get_column(col, item, num_rows, subset) for item, col in zip(items_to_render, form_columns)]
+            *[_get_column(col, item, num_rows, subset, project_name=project_name) for item, col in zip(items_to_render, form_columns)]
         )
 
         if not st.form_submit_button("➕ Create"):
@@ -269,6 +270,7 @@ def render_subset_button(
     project_has_remote: bool,
     get_current_form: Callable,
     set_current_form: Callable,
+    project_name: str
 ):
     render_col.button(
         "🏗 Create Subset",
@@ -284,6 +286,7 @@ def render_subset_button(
             dataset=project_has_remote,
             ontology=False,
             subset=True,
+            project_name=project_name
         )
         if not cols or not cols.project:
             return
@@ -310,6 +313,7 @@ def render_export_button(
     action_utils: EncordActions,
     get_current_form: Callable,
     set_current_form: Callable,
+    project_name: str
 ):
     export_button = render_col.button(
         "🏗 Export to Encord",
@@ -321,7 +325,7 @@ def render_export_button(
 
     if get_current_form() == CurrentForm.EXPORT:
         cols = generate_create_project_form(
-            "Create a new project with the current dataset", df.shape[0], dataset=True, ontology=True, subset=False
+            "Create a new project with the current dataset", df.shape[0], dataset=True, ontology=True, subset=False, project_name=project_name
         )
         if not cols:
             return
