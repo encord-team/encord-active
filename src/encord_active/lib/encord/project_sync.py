@@ -7,7 +7,7 @@ from typing import NamedTuple
 import pandas as pd
 import yaml
 
-from encord_active.lib.common.utils import fetch_project_meta, iterate_in_batches
+from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
@@ -18,6 +18,7 @@ from encord_active.lib.embeddings.utils import (
 )
 from encord_active.lib.metrics.metric import EmbeddingType, MetricMetadata
 from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.project.metadata import fetch_project_meta
 
 
 class LabelRowDataUnit(NamedTuple):
@@ -37,9 +38,9 @@ def rename_files(project_file_structure: ProjectFileStructure, file_mappings: di
     for _, new_lr in folder_maps.items():
         new_lr_path = project_file_structure.data / new_lr
         for old_du_f in new_lr_path.glob(f"images/*.*"):
-            old_du_name_parts = old_du_f.stem.split('_')
+            old_du_name_parts = old_du_f.stem.split("_")
             old_du_name_parts[0] = file_maps.get(old_du_name_parts[0], old_du_name_parts[0])
-            new_f_name = '_'.join(old_du_name_parts) + old_du_f.suffix
+            new_f_name = "_".join(old_du_name_parts) + old_du_f.suffix
             old_du_f.rename(new_lr_path / "images" / new_f_name)
 
 
@@ -161,7 +162,9 @@ def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, object
 
 
 def get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, classifications):
-    return [obj for obj in classifications if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels]
+    return [
+        obj for obj in classifications if (label_row_hash, data_unit_hash, obj["classificationHash"]) in filtered_labels
+    ]
 
 
 def copy_filtered_data(
@@ -177,8 +180,11 @@ def copy_filtered_data(
             continue
         (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
         for curr_file in (curr_project_structure.data / label_row_hash / "images").glob(f"*.*"):
-            curr_data_unit = curr_file.stem.split('_')[0]
-            if curr_data_unit in filtered_data_hashes and not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists():
+            curr_data_unit = curr_file.stem.split("_")[0]
+            if (
+                curr_data_unit in filtered_data_hashes
+                and not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists()
+            ):
                 (target_project_structure.data / label_row_hash / "images" / curr_file.name).symlink_to(curr_file)
 
         label_row = json.loads((curr_project_structure.data / label_row_hash / "label_row.json").read_text())
@@ -186,12 +192,22 @@ def copy_filtered_data(
 
         for data_unit_hash, v in label_row["data_units"].items():
             if "objects" in label_row["data_units"][data_unit_hash]["labels"]:
-                label_row["data_units"][data_unit_hash]["labels"]["objects"] = get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, v["labels"]["objects"])
-                label_row["data_units"][data_unit_hash]["labels"]["classifications"] = get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, v["labels"]["classifications"])
+                label_row["data_units"][data_unit_hash]["labels"]["objects"] = get_filtered_objects(
+                    filtered_labels, label_row_hash, data_unit_hash, v["labels"]["objects"]
+                )
+                label_row["data_units"][data_unit_hash]["labels"]["classifications"] = get_filtered_classifications(
+                    filtered_labels, label_row_hash, data_unit_hash, v["labels"]["classifications"]
+                )
                 continue
             for label_no, label_item in label_row["data_units"][data_unit_hash]["labels"].items():
-                label_row["data_units"][data_unit_hash]["labels"][label_no]["objects"] = get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["objects"])
-                label_row["data_units"][data_unit_hash]["labels"][label_no]["classifications"] = get_filtered_classifications(filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["classifications"])
+                label_row["data_units"][data_unit_hash]["labels"][label_no]["objects"] = get_filtered_objects(
+                    filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["objects"]
+                )
+                label_row["data_units"][data_unit_hash]["labels"][label_no][
+                    "classifications"
+                ] = get_filtered_classifications(
+                    filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["classifications"]
+                )
 
         filtered_label_hashes = {f[2] for f in filtered_labels}
         label_row["object_answers"] = {

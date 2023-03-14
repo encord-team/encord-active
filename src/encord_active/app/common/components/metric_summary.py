@@ -111,7 +111,10 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             merged_metrics.pop("identifier_rest")
         if not merged_metrics.empty:
             fig = create_2d_metric_chart(
-                merged_metrics.pipe(DataFrame[CrossMetricSchema]), str(x_metric_name), str(y_metric_name), trend_selected
+                merged_metrics.pipe(DataFrame[CrossMetricSchema]),
+                str(x_metric_name),
+                str(y_metric_name),
+                trend_selected,
             )
             scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
