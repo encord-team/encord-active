@@ -218,7 +218,7 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-docs-init]: https://encord-active-docs.web.app/cli/initialising-project-from-image-directories
 [encord-active-docs-workflow-import-data]: https://encord-active-docs.web.app/workflows/import-data
 [encord-active-docs-workflow]: https://encord-active-docs.web.app/category/workflows
-[encord-active-docs-write-metric]: https://encord-active-docs.web.app/metrics/write-your-own
+[encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
 [encord-active-docs]: https://encord-active-docs.web.app/
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
