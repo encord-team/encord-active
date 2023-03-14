@@ -101,29 +101,22 @@ def replace_uids(
         renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
     try:
-        rename_files(project_file_structure, file_mappings)
-        replace_in_files(project_file_structure, renaming_map)
-
-        DBConnection.set_project_path(project_file_structure.project_dir)
-        MergedMetrics().replace_identifiers(renaming_map)
-        DBConnection.set_project_path(project_file_structure.project_dir)
-
-        for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-            update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
-            update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
+        _replace_uids(project_file_structure, file_mappings, renaming_map)
     except Exception as e:
         rev_renaming_map = {v: k for k, v in renaming_map.items()}
-        rename_files(project_file_structure, {v: k for k, v in file_mappings.items()})
-        replace_in_files(project_file_structure, rev_renaming_map)
-
-        DBConnection.set_project_path(project_file_structure.project_dir)
-        MergedMetrics().replace_identifiers(rev_renaming_map)
-        DBConnection.set_project_path(project_file_structure.project_dir)
-
-        for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-            update_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
-            update_2d_embedding_identifiers(project_file_structure, embedding_type, rev_renaming_map)
+        _replace_uids(project_file_structure, {v: k for k, v in file_mappings.items()}, rev_renaming_map)
         raise Exception("UID replacement failed")
+
+
+def _replace_uids(project_file_structure: ProjectFileStructure, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], renaming_map: dict[str, str]):
+    rename_files(project_file_structure, file_mappings)
+    replace_in_files(project_file_structure, renaming_map)
+    original_project_dir = DBConnection.set_project_path(project_file_structure.project_dir)
+    MergedMetrics().replace_identifiers(renaming_map)
+    DBConnection.set_project_path(original_project_dir)
+    for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
+        update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
+        update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
 
 
 def create_filtered_embeddings(
@@ -133,7 +126,6 @@ def create_filtered_embeddings(
     filtered_data_hashes: set[str],
     filtered_df: pd.DataFrame,
 ):
-    target_project_structure.embeddings.mkdir()
     target_project_structure.embeddings.mkdir(parents=True, exist_ok=True)
     for csv_embedding_file in curr_project_structure.embeddings.glob("*.csv"):
         csv_df = pd.read_csv(csv_embedding_file, index_col=0)
