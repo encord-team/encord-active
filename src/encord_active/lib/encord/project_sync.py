@@ -209,7 +209,6 @@ def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     DBConnection.set_project_path(target_project_dir)
     MergedMetrics().replace_all(to_save_df)
     DBConnection.set_project_path(curr_project_dir)
-    return curr_project_dir
 
 
 def create_filtered_metrics(

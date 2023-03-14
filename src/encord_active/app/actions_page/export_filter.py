@@ -20,6 +20,7 @@ from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
 from encord_active.lib.db.tags import Tags
 from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
+    DatasetUniquenessError,
     EncordActions,
 )
 from encord_active.lib.project.metadata import ProjectNotFound
@@ -156,11 +157,17 @@ def _get_action_utils():
 
 def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItems, df: pd.DataFrame):
     if not cols.dataset or not cols.project:
-        return
+        return False
     label = st.empty()
     progress, clear = render_progress_bar()
     label.text("Step 1/2: Uploading data...")
-    dataset_creation_result = action_utils.create_dataset(cols.dataset.title, cols.dataset.description, df, progress)
+    try:
+        dataset_creation_result = action_utils.create_dataset(cols.dataset.title, cols.dataset.description, df, progress)
+    except DatasetUniquenessError as e:
+        clear()
+        label.empty()
+        st.error(str(e))
+        return False
     clear()
     label.text("Step 2/2: Uploading labels...")
     ontology_hash = (
@@ -291,6 +298,7 @@ def render_subset_button(
         if not cols or not cols.project:
             return
 
+        st.error().empty()
         with st.spinner("Creating Project Subset..."):
             try:
                 created_dir = action_utils.create_subset(
@@ -329,7 +337,7 @@ def render_export_button(
         )
         if not cols:
             return
-
+        st.error().empty()
         success = create_and_sync_remote_project(action_utils, cols, df)
 
 
