@@ -1,3 +1,4 @@
+import mimetypes
 from pathlib import Path
 
 import streamlit as st
@@ -5,7 +6,14 @@ import streamlit as st
 from encord_active.app.common.css import write_page_css
 
 
+# NOTE: this ensures mimetypes for custom components are always loaded
+def add_mimetypes():
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("text/css", ".css")
+
+
 def set_page_config():
+    add_mimetypes()
     favicon_pth = Path(__file__).parents[1] / "assets" / "favicon-32x32.png"
     st.set_page_config(
         page_title="Encord Active",
