@@ -60,6 +60,8 @@ def provide_backcompatibility_for_old_predictions():
     prediction_items = []
     object_folder_not_exist = True
     prediction_file_exist = False
+    if not get_state().project_paths.predictions.is_dir():
+        return
     for item in get_state().project_paths.predictions.iterdir():
         if item.name == MainPredictionType.OBJECT.value:
             object_folder_not_exist = False
