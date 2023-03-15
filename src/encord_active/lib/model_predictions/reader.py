@@ -125,6 +125,11 @@ def append_metric_columns(df: pd.DataFrame, metric_entries: List[MetricData]) ->
         has_object_level_keys = len(cast(str, metric_scores.index[0]).split("_")) > 3
         metric_column = "identifier" if has_object_level_keys else "identifier_no_oh"
 
+        # TODO: When EA supports different classification questions, the following must be fixed
+        if (len(df[IdentifierSchema.identifier][0].split("_")) == 3) and (has_object_level_keys):
+            metric_scores = metric_scores.copy()
+            metric_scores.index = metric_scores.index.str.replace(r"^(\S{73}_\d+)(.*)", r"\1", regex=True)
+
         # Join data and rename column to metric name.
         df = df.join(metric_scores["score"], on=[metric_column])
         df[metric.name] = df["score"]
