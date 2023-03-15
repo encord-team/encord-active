@@ -247,8 +247,8 @@ def export_filter():
     ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
-    render_generate_csv(generate_csv_col, file_prefix, filtered_df)
-    render_generate_coco(generate_coco_col, file_prefix, filtered_df)
+    render_generate_csv(generate_csv_col, file_prefix, filtered_df, set_updates)
+    render_generate_coco(generate_coco_col, file_prefix, filtered_df, set_updates)
     render_unimplemented_buttons(
         delete_button_col, edit_button_col, augment_button_col, message_placeholder, set_current_form, set_updates
     )
@@ -259,7 +259,7 @@ def export_filter():
 
     if not project_has_remote:
         render_export_button(
-            export_button_col, action_utils, get_current_form, set_current_form, project_name, set_updates
+            export_button_col, action_utils, get_current_form, set_current_form, project_name, set_updates, is_filtered=(row_count != original_row_count)
         )
 
     if row_count != original_row_count:
@@ -371,12 +371,13 @@ def render_export_button(
     set_current_form: Callable,
     project_name: str,
     set_updates: Callable,
+    is_filtered: bool,
 ):
     export_button = render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
-        disabled=not action_utils,
-        help="Export to an Encord dataset and project",
+        disabled=not action_utils and not is_filtered,
+        help="Export to an Encord dataset and project" if not is_filtered else "Export is allowed only for entire datasets, create a subset first or remove all filters",
     )
     df = get_state().merged_metrics
     if get_current_form() == CurrentForm.EXPORT:
@@ -436,13 +437,14 @@ community</a>
         )
 
 
-def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
+def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable):
     coco_placeholder = render_column.empty()
     generate_coco = coco_placeholder.button(
         "🌀 Generate COCO",
         help="Generate COCO file with filtered data to enable COCO download.",
     )
     if generate_coco:
+        set_updates([])
         with st.spinner(text="Generating COCO file"):
             coco_json = (
                 generate_coco_file(
@@ -461,13 +463,14 @@ def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filter
         )
 
 
-def render_generate_csv(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame):
+def render_generate_csv(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable):
     csv_placeholder = render_column.empty()
     generate_csv = csv_placeholder.button(
         "🌀 Generate CSV",
         help="Generate CSV file with filtered data to enable CSV download.",
     )
     if generate_csv:
+        set_updates([])
         with st.spinner(text="Generating CSV file"):
             csv_content = filtered_df.to_csv().encode("utf-8") if generate_csv else ""
             csv_placeholder.empty()
