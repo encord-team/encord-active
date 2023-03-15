@@ -22,6 +22,10 @@ from encord_active.lib.model_predictions.filters import (
     prediction_and_label_filtering_classification,
 )
 from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
+from encord_active.lib.model_predictions.reader import (
+    ClassificationLabelSchema,
+    ClassificationPredictionSchema,
+)
 from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
@@ -143,8 +147,8 @@ def model_quality(page: Page):
         model_predictions_matched = match_predictions_and_labels(model_predictions, labels_all)
 
         (
-            predictions_filtered,
             labels_filtered,
+            predictions_filtered,
             model_predictions_matched_filtered,
         ) = prediction_and_label_filtering_classification(
             get_state().predictions.selected_classes_classifications,
@@ -153,12 +157,31 @@ def model_quality(page: Page):
             model_predictions_matched,
         )
 
+        img_id_intersection = list(
+            set(labels_filtered[ClassificationLabelSchema.img_id]).intersection(
+                set(predictions_filtered[ClassificationPredictionSchema.img_id])
+            )
+        )
+        labels_filtered_intersection = labels_filtered[
+            labels_filtered[ClassificationLabelSchema.img_id].isin(img_id_intersection)
+        ]
+        predictions_filtered_intersection = predictions_filtered[
+            predictions_filtered[ClassificationPredictionSchema.img_id].isin(img_id_intersection)
+        ]
+
         y_true, y_pred = (
-            list(labels_filtered[reader.ClassificationLabelSchema.class_id]),
-            list(predictions_filtered[reader.ClassificationPredictionSchema.class_id]),
+            list(labels_filtered_intersection[ClassificationLabelSchema.class_id]),
+            list(predictions_filtered_intersection[ClassificationPredictionSchema.class_id]),
         )
 
-        return True, y_true, y_pred, model_predictions_matched_filtered
+        return (
+            True,
+            y_true,
+            y_pred,
+            model_predictions_matched_filtered.copy()[
+                model_predictions_matched_filtered[ClassificationPredictionSchema.img_id].isin(img_id_intersection)
+            ],
+        )
 
     def render():
         setup_page()
