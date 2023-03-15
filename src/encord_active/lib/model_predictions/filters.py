@@ -52,13 +52,17 @@ def prediction_and_label_filtering_classification(
 
     # Predictions
     _predictions = predictions.copy()
-    _predictions[
-        ~_predictions[ClassificationPredictionSchema.class_id].isin(set(map(int, class_idx.keys())))
+    _predictions.loc[
+        ~_predictions[ClassificationPredictionSchema.class_id].isin(set(map(int, class_idx.keys()))),
+        ClassificationPredictionSchema.class_id,
     ] = new_index
 
     # Labels
     _labels = labels.copy()
-    _labels[~_labels[ClassificationLabelSchema.class_id].isin(set(map(int, class_idx.keys())))] = new_index
+    _labels.loc[
+        ~_labels[ClassificationLabelSchema.class_id].isin(set(map(int, class_idx.keys()))),
+        ClassificationLabelSchema.class_id,
+    ] = new_index
 
     name_map = {int(k): v["name"] for k, v in class_idx.items()}
     name_map[new_index] = "others"
