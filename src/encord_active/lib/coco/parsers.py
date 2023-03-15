@@ -27,9 +27,9 @@ def parse_info(info: Dict) -> CocoInfo:
 def parse_categories(categories: Dict) -> List[CocoCategory]:
     return [
         CocoCategory(
-            supercategory=category["supercategory"] if "supercategory" in category.keys() else "",
-            id_=category["id"],
-            name=category["name"],
+            supercategory=category.get("supercategory", ""),
+            id_=category.get("id", -1),
+            name=category.get("name", "unknown"),
         )
         for category in tqdm(categories, desc="Parsing categories")
     ]
@@ -55,7 +55,7 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
         if annotation["iscrowd"] == 1:
             continue
 
-        segmentations = annotation["segmentation"]
+        segmentations = annotation.get("segmentation", {})
 
         if not segmentations:
             segmentations = [[]]
@@ -70,10 +70,25 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
                 continue
             segmentations = [poly]
 
-        annot_dict.setdefault(annotation["image_id"], [])
+        img_id = annotation["image_id"]
+        annot_dict.setdefault(img_id, [])
 
-        for segment in segmentations:
-            annot_dict[annotation["image_id"]].append(
+        if segmentations:
+            for segment in segmentations:
+                annot_dict[img_id].append(
+                    CocoAnnotation(
+                        area=annotation["area"],
+                        bbox=annotation["bbox"],
+                        category_id=annotation["category_id"],
+                        id_=annotation["id"],
+                        image_id=annotation["image_id"],
+                        iscrowd=annotation["iscrowd"],
+                        segmentation=segment,
+                        rotation=annotation.get("attributes", {}).get("rotation"),
+                    )
+                )
+        else:
+            annot_dict[img_id].append(
                 CocoAnnotation(
                     area=annotation["area"],
                     bbox=annotation["bbox"],
@@ -81,7 +96,7 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
                     id_=annotation["id"],
                     image_id=annotation["image_id"],
                     iscrowd=annotation["iscrowd"],
-                    segmentation=segment,
+                    segmentation=[],
                     rotation=annotation.get("attributes", {}).get("rotation"),
                 )
             )
@@ -106,6 +121,18 @@ def parse_results(results: List[Dict]):
                 continue
             bbox = inferred_bbox
             segmentations = [poly]
+        else:
+            # No segmentation
+            coco_results.append(
+                CocoResult(
+                    bbox=bbox,
+                    category_id=result["category_id"],
+                    image_id=result["image_id"],
+                    segmentation=None,
+                    score=result["score"],
+                )
+            )
+            continue
 
         for segment in segmentations:
             coco_results.append(
