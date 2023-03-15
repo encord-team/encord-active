@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import Enum, auto
 from typing import Callable, NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
@@ -31,6 +31,17 @@ from encord_active.lib.project.metadata import ProjectNotFound
 class ProjectCreationResult:
     project_hash: str
     dataset_hash: str
+
+
+class UpdateItemType(Enum):
+    LABEL = auto()
+    MARKDOWN = auto()
+
+
+@dataclass
+class UpdateItem:
+    type: UpdateItemType
+    text: str
 
 
 class CurrentForm(str, Enum):
@@ -205,6 +216,8 @@ def export_filter():
 
     get_current_form, set_current_form = use_state(CurrentForm.NONE)
 
+    get_updates, set_updates = use_state([])
+
     setup_page()
     message_placeholder = st.empty()
 
@@ -237,7 +250,7 @@ def export_filter():
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
     render_generate_coco(generate_coco_col, file_prefix, filtered_df)
     render_unimplemented_buttons(
-        delete_button_col, edit_button_col, augment_button_col, message_placeholder, set_current_form
+        delete_button_col, edit_button_col, augment_button_col, message_placeholder, set_current_form, set_updates
     )
 
     if get_filtered_row_count() != row_count:
@@ -245,7 +258,9 @@ def export_filter():
         set_current_form(CurrentForm.NONE)
 
     if not project_has_remote:
-        render_export_button(export_button_col, action_utils, get_current_form, set_current_form, project_name)
+        render_export_button(
+            export_button_col, action_utils, get_current_form, set_current_form, project_name, set_updates
+        )
 
     if row_count != original_row_count:
         render_subset_button(
@@ -256,7 +271,16 @@ def export_filter():
             get_current_form,
             set_current_form,
             project_name,
+            set_updates,
         )
+
+    updates = get_updates()
+    for update in get_updates():
+        if update.type == UpdateItemType.LABEL:
+            label = st.empty()
+            label.info(update.text)
+        elif update.type == UpdateItemType.MARKDOWN:
+            st.markdown(update.text)
 
 
 def generate_create_project_form(
@@ -295,10 +319,11 @@ def render_subset_button(
     get_current_form: Callable,
     set_current_form: Callable,
     project_name: str,
+    set_updates: Callable,
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: set_current_form(CurrentForm.CLONE),  # type: ignore
+        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
@@ -328,8 +353,15 @@ def render_subset_button(
             except Exception as e:
                 st.error(str(e))
                 return
-        label = st.empty()
-        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()}")
+
+        set_updates(
+            [
+                UpdateItem(
+                    type=UpdateItemType.LABEL,
+                    text=f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()}",
+                )
+            ]
+        )
 
 
 def render_export_button(
@@ -338,16 +370,15 @@ def render_export_button(
     get_current_form: Callable,
     set_current_form: Callable,
     project_name: str,
+    set_updates: Callable,
 ):
-    get_successful_export_data, set_successful_export_data = use_state(None)
     export_button = render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_successful_export_data(None)),  # type: ignore
+        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
         disabled=not action_utils,
         help="Export to an Encord dataset and project",
     )
     df = get_state().merged_metrics
-
     if get_current_form() == CurrentForm.EXPORT:
         cols = generate_create_project_form(
             "Create a new project with the current dataset",
@@ -357,24 +388,19 @@ def render_export_button(
             subset=False,
             project_name=project_name,
         )
-        previous_successful_export_data = get_successful_export_data()
-        if previous_successful_export_data:
-            label = st.empty()
-            label.info("🎉 New project is created!")
-
-            new_project_link = (
-                f"https://app.encord.com/projects/view/{previous_successful_export_data.project_hash}/summary"
-            )
-            new_dataset_link = f"https://app.encord.com/datasets/view/{previous_successful_export_data.dataset_hash}"
-            st.markdown(f"[Go to new project]({new_project_link})")
-            st.markdown(f"[Go to new dataset]({new_dataset_link})")
 
         if not cols:
             return
-        set_successful_export_data(None)
         project_creation_result = create_and_sync_remote_project(action_utils, cols, df)
         if project_creation_result:
-            set_successful_export_data(project_creation_result)
+            new_project_link = f"https://app.encord.com/projects/view/{project_creation_result.project_hash}/summary"
+            new_dataset_link = f"https://app.encord.com/datasets/view/{project_creation_result.dataset_hash}"
+            update_items = [
+                UpdateItem(type=UpdateItemType.LABEL, text="🎉 New project is created!"),
+                UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new project]({new_project_link})"),
+                UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new dataset]({new_dataset_link})"),
+            ]
+            set_updates(update_items)
             refresh(True)
 
 
@@ -384,6 +410,7 @@ def render_unimplemented_buttons(
     augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
     set_current_form: Callable,
+    set_updates: Callable,
 ):
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
@@ -394,6 +421,7 @@ def render_unimplemented_buttons(
     augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
     if any([delete_btn, edit_btn, augment_btn]):
         set_current_form(CurrentForm.NONE)
+        set_updates([])
         message_placeholder.markdown(
             f"""
 <div class="encord-active-info-box">
