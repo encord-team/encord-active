@@ -115,7 +115,7 @@ class ModelQualityPage(Page):
         ] = None,
     ):
         """
-        If object_prediction_exist is True, the followings should be provided: object_model_predictions, \
+        If object_predictions_exist is True, the followings should be provided: object_model_predictions, \
         object_labels, object_metrics, object_precisions
         If classification_predictions_exist is True, the followings should be provided: classification_labels, \
         classification_pred, classification_model_predictions_matched_filtered

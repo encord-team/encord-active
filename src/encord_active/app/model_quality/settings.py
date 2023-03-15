@@ -25,7 +25,7 @@ def common_settings_objects():
             list(all_classes.items()),
             format_func=lambda x: x[1]["name"],
             help="""
-            With this selection, you can choose which classes to include in the main page.\n
+            With this selection, you can choose which classes to include in the performance metrics calculations.\n
             This acts as a filter, i.e. when nothing is selected all classes are included.
             """,
         )
@@ -68,7 +68,7 @@ def common_settings_classifications():
         list(all_classes.items()),
         format_func=lambda x: x[1]["name"],
         help="""
-        With this selection, you can choose which classes to include in the main page.
+        With this selection, you can choose which classes to include in the performance metrics calculations.
         This acts as a filter, i.e. when nothing is selected all classes are included.
         Performance metrics will be automatically updated according to the chosen classes.
         """,
