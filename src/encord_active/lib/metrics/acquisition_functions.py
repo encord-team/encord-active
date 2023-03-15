@@ -1,14 +1,17 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 from PIL import Image
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.labels.classification import ClassificationType
+from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
+    EmbeddingType,
     Metric,
     MetricType,
 )
@@ -16,6 +19,22 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
 class AcquisitionFunction(Metric):
+    def __init__(
+        self,
+        title: str,
+        short_description: str,
+        long_description: str,
+        metric_type: MetricType,
+        data_type: DataType,
+        annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
+        embedding_type: Optional[EmbeddingType] = None,
+        model=None,
+    ):
+        self._model = model
+        super().__init__(
+            title, short_description, long_description, metric_type, data_type, annotation_type, embedding_type
+        )
+
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         for _, img_pth in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             if img_pth is None:
@@ -29,9 +48,9 @@ class AcquisitionFunction(Metric):
             score = self.score_predicted_class_probabilities(pred_probs)
             writer.write(score)
 
-    @abstractmethod
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
-        pass
+        image_array = np.asarray(image).flatten()
+        return self._model.predict_proba([image_array])
 
     def read_image(self, image_path: Path) -> Optional[Any]:
         return Image.open(image_path)
@@ -42,7 +61,7 @@ class AcquisitionFunction(Metric):
 
 
 class Entropy(AcquisitionFunction):
-    def __init__(self):
+    def __init__(self, model):
         super().__init__(
             title="Entropy",
             short_description="Ranks images by their entropy.",
@@ -60,6 +79,7 @@ class Entropy(AcquisitionFunction):
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
+            model=model,
         )
 
     def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
@@ -70,7 +90,7 @@ class Entropy(AcquisitionFunction):
 
 
 class LeastConfidence(AcquisitionFunction):
-    def __init__(self):
+    def __init__(self, model):
         super().__init__(
             title="Least Confidence",
             short_description="Ranks images by their least confidence score.",
@@ -89,6 +109,7 @@ class LeastConfidence(AcquisitionFunction):
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
+            model=model,
         )
 
     def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
@@ -96,7 +117,7 @@ class LeastConfidence(AcquisitionFunction):
 
 
 class Margin(AcquisitionFunction):
-    def __init__(self):
+    def __init__(self, model):
         super().__init__(
             title="Margin",
             short_description="Ranks images by their margin score.",
@@ -112,6 +133,7 @@ class Margin(AcquisitionFunction):
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
+            model=model,
         )
 
     def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
@@ -121,7 +143,7 @@ class Margin(AcquisitionFunction):
 
 
 class Variance(AcquisitionFunction):
-    def __init__(self):
+    def __init__(self, model):
         super().__init__(
             title="Variance",
             short_description="Ranks images by their variance.",
@@ -140,6 +162,7 @@ class Variance(AcquisitionFunction):
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
+            model=model,
         )
 
     def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
