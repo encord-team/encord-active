@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Callable, NamedTuple, Optional, Tuple, cast
@@ -13,7 +14,7 @@ from pandas.api.types import (
 from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
-from encord_active.app.common.state import get_state
+from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import use_state
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
@@ -24,6 +25,12 @@ from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_
     EncordActions,
 )
 from encord_active.lib.project.metadata import ProjectNotFound
+
+
+@dataclass
+class ProjectCreationResult:
+    project_hash: str
+    dataset_hash: str
 
 
 class CurrentForm(str, Enum):
@@ -155,9 +162,11 @@ def _get_action_utils():
         st.error(str(e))
 
 
-def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItems, df: pd.DataFrame):
+def create_and_sync_remote_project(
+    action_utils: EncordActions, cols: RenderItems, df: pd.DataFrame
+) -> Optional[ProjectCreationResult]:
     if not cols.dataset or not cols.project:
-        return False
+        return None
     label = st.empty()
     progress, clear = render_progress_bar()
     label.text("Step 1/2: Uploading data...")
@@ -169,7 +178,7 @@ def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItem
         clear()
         label.empty()
         st.error(str(e))
-        return False
+        return None
     clear()
     label.text("Step 2/2: Uploading labels...")
     ontology_hash = (
@@ -184,17 +193,10 @@ def create_and_sync_remote_project(action_utils: EncordActions, cols: RenderItem
         )
     except Exception as e:
         st.error(str(e))
-        return False
+        return None
     clear()
     label.empty()
-    label = st.empty()
-    label.info("🎉 New project is created!")
-
-    new_project_link = f"https://app.encord.com/projects/view/{new_project.project_hash}/summary"
-    new_dataset_link = f"https://app.encord.com/datasets/view/{dataset_creation_result.hash}"
-    st.markdown(f"[Go to new project]({new_project_link})")
-    st.markdown(f"[Go to new dataset]({new_dataset_link})")
-    return True
+    return ProjectCreationResult(project_hash=new_project.project_hash, dataset_hash=dataset_creation_result.hash)
 
 
 def export_filter():
@@ -327,7 +329,7 @@ def render_subset_button(
                 st.error(str(e))
                 return
         label = st.empty()
-        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()} ")
+        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()}")
 
 
 def render_export_button(
@@ -337,9 +339,10 @@ def render_export_button(
     set_current_form: Callable,
     project_name: str,
 ):
+    get_successful_export_data, set_successful_export_data = use_state(None)
     export_button = render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: set_current_form(CurrentForm.EXPORT),  # type: ignore
+        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_successful_export_data(None)),  # type: ignore
         disabled=not action_utils,
         help="Export to an Encord dataset and project",
     )
@@ -354,9 +357,25 @@ def render_export_button(
             subset=False,
             project_name=project_name,
         )
+        previous_successful_export_data = get_successful_export_data()
+        if previous_successful_export_data:
+            label = st.empty()
+            label.info("🎉 New project is created!")
+
+            new_project_link = (
+                f"https://app.encord.com/projects/view/{previous_successful_export_data.project_hash}/summary"
+            )
+            new_dataset_link = f"https://app.encord.com/datasets/view/{previous_successful_export_data.dataset_hash}"
+            st.markdown(f"[Go to new project]({new_project_link})")
+            st.markdown(f"[Go to new dataset]({new_dataset_link})")
+
         if not cols:
             return
-        success = create_and_sync_remote_project(action_utils, cols, df)
+        set_successful_export_data(None)
+        project_creation_result = create_and_sync_remote_project(action_utils, cols, df)
+        if project_creation_result:
+            set_successful_export_data(project_creation_result)
+            refresh(True)
 
 
 def render_unimplemented_buttons(

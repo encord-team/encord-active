@@ -2,7 +2,7 @@ import json
 import pickle
 import subprocess
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 import pandas as pd
 import yaml
@@ -115,9 +115,9 @@ def _replace_uids(
 ):
     rename_files(project_file_structure, file_mappings)
     replace_in_files(project_file_structure, renaming_map)
-    original_project_dir = DBConnection.set_project_path(project_file_structure.project_dir)
-    MergedMetrics().replace_identifiers(renaming_map)
-    DBConnection.set_project_path(original_project_dir)
+    perform_db_fn_with_switched_paths(
+        project_file_structure.project_dir, lambda: MergedMetrics().replace_identifiers(renaming_map)
+    )
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
         update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
@@ -217,9 +217,13 @@ def copy_filtered_data(
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     to_save_df = filtered_df.set_index("identifier")
+    perform_db_fn_with_switched_paths(target_project_dir, lambda: MergedMetrics().replace_all(to_save_df))
+
+
+def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):
     curr_project_dir = DBConnection.project_file_structure().project_dir
     DBConnection.set_project_path(target_project_dir)
-    MergedMetrics().replace_all(to_save_df)
+    f()
     DBConnection.set_project_path(curr_project_dir)
 
 
