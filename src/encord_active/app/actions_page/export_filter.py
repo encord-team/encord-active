@@ -259,7 +259,13 @@ def export_filter():
 
     if not project_has_remote:
         render_export_button(
-            export_button_col, action_utils, get_current_form, set_current_form, project_name, set_updates, is_filtered=(row_count != original_row_count)
+            export_button_col,
+            action_utils,
+            get_current_form,
+            set_current_form,
+            project_name,
+            set_updates,
+            is_filtered=(row_count != original_row_count),
         )
 
     if row_count != original_row_count:
@@ -377,7 +383,9 @@ def render_export_button(
         "🏗 Export to Encord",
         on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
         disabled=not action_utils and not is_filtered,
-        help="Export to an Encord dataset and project" if not is_filtered else "Export is allowed only for entire datasets, create a subset first or remove all filters",
+        help="Export to an Encord dataset and project"
+        if not is_filtered
+        else "Export is allowed only for entire datasets, create a subset first or remove all filters",
     )
     df = get_state().merged_metrics
     if get_current_form() == CurrentForm.EXPORT:
@@ -437,7 +445,9 @@ community</a>
         )
 
 
-def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable):
+def render_generate_coco(
+    render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable
+):
     coco_placeholder = render_column.empty()
     generate_coco = coco_placeholder.button(
         "🌀 Generate COCO",
@@ -463,7 +473,9 @@ def render_generate_coco(render_column: DeltaGenerator, file_prefix: str, filter
         )
 
 
-def render_generate_csv(render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable):
+def render_generate_csv(
+    render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable
+):
     csv_placeholder = render_column.empty()
     generate_csv = csv_placeholder.button(
         "🌀 Generate CSV",
