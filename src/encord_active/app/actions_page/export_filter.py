@@ -323,7 +323,7 @@ def render_subset_button(
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
+        on_click=lambda: (set_current_form(CurrentForm.CLONE), set_updates([])),  # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
