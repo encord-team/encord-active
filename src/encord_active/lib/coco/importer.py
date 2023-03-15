@@ -168,7 +168,7 @@ class CocoImporter:
         print(f"Creating a new dataset: {self.title}")
         dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
-        for image_id, coco_image in tqdm(self.images.items(), desc="Uploading images"):
+        for image_id, coco_image in tqdm(self.images.items(), desc="Storing images"):
             data_row = upload_img(dataset, coco_image, self.images_dir, temp_folder)
             if data_row:
                 self.data_hash_to_image_id[data_row.uid] = image_id

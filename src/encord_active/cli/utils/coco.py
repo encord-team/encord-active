@@ -38,7 +38,7 @@ def import_coco_predictions(
         image = image_data_unit[str(res.image_id)]
         img_h, img_w = image["height"], image["width"]
 
-        if res.segmentation is not None:
+        if res.segmentation is not None and res.segmentation:
             format, shape = Format.POLYGON, Shape.POLYGON
             data = res.segmentation / np.array([[img_w, img_h]])
         elif res.bbox:
