@@ -108,7 +108,11 @@ def replace_uids(
         raise Exception("UID replacement failed")
 
 
-def _replace_uids(project_file_structure: ProjectFileStructure, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], renaming_map: dict[str, str]):
+def _replace_uids(
+    project_file_structure: ProjectFileStructure,
+    file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit],
+    renaming_map: dict[str, str],
+):
     rename_files(project_file_structure, file_mappings)
     replace_in_files(project_file_structure, renaming_map)
     original_project_dir = DBConnection.set_project_path(project_file_structure.project_dir)

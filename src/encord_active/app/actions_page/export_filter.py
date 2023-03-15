@@ -327,7 +327,7 @@ def render_subset_button(
                 st.error(str(e))
                 return
         label = st.empty()
-        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()}")
+        label.info(f"🎉 Project subset has been created! You can view it at {created_dir.as_posix()} ")
 
 
 def render_export_button(

@@ -292,7 +292,9 @@ class EncordActions:
 
         try:
             ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
-            filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
+            filtered_lr_du = {
+                LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])
+            }
             filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
             filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
             filtered_labels = {(ids[1][0], ids[1][1], ids[1][3]) for ids in ids_df.iterrows()}
