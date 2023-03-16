@@ -179,7 +179,9 @@ def fill_data_quality_window(
     meta = selected_metric.meta
     embedding_type = get_embedding_type(meta.annotation_type)
     embeddings_dir = get_state().project_paths.embeddings
-    embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
+    embedding_information = SimilaritiesFinder(
+        embedding_type, embeddings_dir, num_of_neighbors=get_state().similarities_count
+    )
 
     if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
         st.write("Image-level embedding file is not available for this project.")
@@ -263,9 +265,9 @@ def build_card(
     identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
 
     if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
-        button_name = "show similar images"
+        button_name = "Show similar images"
     elif embedding_information.type == EmbeddingType.OBJECT:
-        button_name = "show similar objects"
+        button_name = "Show similar objects"
     else:
         st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return
