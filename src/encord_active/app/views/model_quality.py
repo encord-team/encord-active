@@ -153,6 +153,7 @@ def model_quality(page: Page):
             model_predictions_matched_filtered,
         ) = prediction_and_label_filtering_classification(
             get_state().predictions.selected_classes_classifications,
+            get_state().predictions.all_classes_classifications,
             labels,
             predictions,
             model_predictions_matched,

@@ -137,7 +137,9 @@ def prediction_grid(
                 build_card(row, frame_additionals, data_dir, box_color=box_color)
 
 
-def prediction_grid_classifications(data_dir: Path, model_predictions: DataFrame[ClassificationPredictionMatchSchema]):
+def prediction_grid_classifications(
+    data_dir: Path, model_predictions: DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+):
     df = model_predictions
     selected_metric = get_state().predictions.metric_datas_classification.selected_prediction or ""
 

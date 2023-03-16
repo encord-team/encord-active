@@ -44,12 +44,13 @@ def prediction_and_label_filtering(
 
 def prediction_and_label_filtering_classification(
     selected_class_idx: dict,
+    all_class_idx: dict,
     labels: pd.DataFrame,
     predictions: pd.DataFrame,
     matched_model_predictions: DataFrame[ClassificationPredictionMatchSchema],
 ):
     class_idx = selected_class_idx
-    new_index = max(list(map(int, class_idx.keys()))) + 1
+    new_index = max(list(map(int, all_class_idx.keys()))) + 1
 
     # Predictions
     _predictions = predictions.copy()
@@ -65,7 +66,7 @@ def prediction_and_label_filtering_classification(
         ClassificationLabelSchema.class_id,
     ] = new_index
 
-    name_map = {int(k): v["name"] for k, v in class_idx.items()}
+    name_map = {int(k): v["name"] for k, v in all_class_idx.items()}
     name_map[new_index] = "others"
     _predictions[ClassificationPredictionSchema.class_id] = _predictions[ClassificationPredictionSchema.class_id].map(
         name_map
