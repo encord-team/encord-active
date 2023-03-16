@@ -15,7 +15,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
-    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -153,7 +153,7 @@ on your labels are used for the "False Negative Rate" plot.
 
     def _build_classifications(
         self,
-        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
     ):
         if classification_model_predictions_matched.shape[0] == 0:
             st.write("No predictions of the given class(es).")
@@ -210,7 +210,9 @@ on your labels are used for the "False Negative Rate" plot.
         object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
         classification_labels: Optional[list] = None,
         classification_pred: Optional[list] = None,
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+        classification_model_predictions_matched: Optional[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+        ] = None,
     ):
 
         with object_tab:
@@ -230,5 +232,8 @@ on your labels are used for the "False Negative Rate" plot.
                 classification_model_predictions_matched,
             ):
                 self._build_classifications(
-                    cast(DataFrame[ClassificationPredictionMatchSchema], classification_model_predictions_matched)
+                    cast(
+                        DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
+                        classification_model_predictions_matched,
+                    )
                 )

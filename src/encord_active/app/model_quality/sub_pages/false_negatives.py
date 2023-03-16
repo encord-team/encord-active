@@ -14,7 +14,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
-    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -88,7 +88,9 @@ class FalseNegativesPage(ModelQualityPage):
         object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
         classification_labels: Optional[list] = None,
         classification_pred: Optional[list] = None,
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+        classification_model_predictions_matched: Optional[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+        ] = None,
     ):
 
         with object_tab:

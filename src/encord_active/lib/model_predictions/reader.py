@@ -44,6 +44,12 @@ class ClassificationPredictionSchema(ClassificationLabelSchema):
 
 class ClassificationPredictionMatchSchema(ClassificationPredictionSchema):
     is_true_positive: Series[float] = pa.Field()
+    gt_class_id: Series[padt.Int64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionMatchSchemaWithClassNames(ClassificationPredictionMatchSchema):
+    class_name: Series[str] = pa.Field()
+    gt_class_name: Series[str] = pa.Field()
 
 
 class ClassificationLabelMatchSchema(ClassificationLabelSchema):

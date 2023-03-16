@@ -24,6 +24,7 @@ from encord_active.lib.model_predictions.filters import (
 from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
 from encord_active.lib.model_predictions.reader import (
     ClassificationLabelSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
@@ -179,7 +180,9 @@ def model_quality(page: Page):
             y_true,
             y_pred,
             model_predictions_matched_filtered.copy()[
-                model_predictions_matched_filtered[ClassificationPredictionSchema.img_id].isin(img_id_intersection)
+                model_predictions_matched_filtered[ClassificationPredictionMatchSchemaWithClassNames.img_id].isin(
+                    img_id_intersection
+                )
             ],
         )
 
