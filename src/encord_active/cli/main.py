@@ -205,7 +205,7 @@ def import_local_project(
         rich.print(
             Panel(
                 str(e),
-                title=":fire: No Files Found From Data Glob :fire:",
+                title=":fire: No files found from data glob :fire:",
                 expand=False,
                 style="yellow",
             )
@@ -226,72 +226,72 @@ def import_local_project(
             rich.print(
                 Panel(
                     str(e),
-                    title=":fire: No Files Found From Label Glob :fire:",
+                    title=":fire: No files found from label glob :fire:",
                     expand=False,
                     style="yellow",
                 )
             )
             raise typer.Abort()
 
-    transformer_results: List[TransformerResult] = []
+    selected_transformer: Optional[TransformerResult] = None
     if transformer is not None:
         transformers_found = load_transformers_from_module(transformer)
         if not transformers_found:
+            rich.print(f"[yellow]Couldn't find any transformers in `[blue]{transformer}[/blue]`")
             pass
         elif len(transformers_found) == 1:
-            transformer_results = transformers_found
+            selected_transformer = transformers_found[0]
         else:
             choices = list(map(lambda m: Choice(m, name=m.name), transformers_found))
-            transformer_results = i.checkbox(
-                message="Please choose which label adapters to use? Use [TAB] to select from the list.", choices=choices
+            selected_transformer = i.select(
+                message="Please choose which label transformer to use? Use [TAB] to select from the list.",
+                choices=choices,
             ).execute()
 
     if dryrun:
         directories: Set[Path] = set()
-        rich.print("[blue]Matches:[/blue]")
+        rich.print("[blue]Included files:[/blue]")
         for file in data_result.matched:
             directories.add(file.parent)
             rich.print(f"[blue]{escape(file.as_posix())}[/blue]")
 
         print()
-        rich.print("[yellow]Excluded:[/yellow]")
-        for file in data_result.excluded:
-            directories.add(file.parent)
-            rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
-
-        found_labels: Dict[str, Dict[str, int]] = {}  # <type, <class, label>>
-        for transformer_result in transformer_results:
-            labels = transformer_result.transformer.from_custom_labels(label_result, data_files=data_result.matched)
-            for label in labels:
-                label_type = type(label.label).__name__
-                label_name = label.label.class_
-                counter = found_labels.setdefault(label_type, {})
-                counter[label_name] = counter.get(label_name, 0) + 1
-
-            if not labels:
-                rich.print(f"[yellow]The transformer [blue]{transformer_result.name}[/blue] didn't return any labels")
-                continue
-
-            labels = sorted(labels, key=lambda l: l.abs_data_path)
-            rich.print(f"Labels identified by [blue]{transformer_result.name}[/blue]:")
-            current_file_name = None
-            for label in labels:
-                if label.abs_data_path != current_file_name:
-                    current_file_name = label.abs_data_path
-                    rich.print(f"[green]{current_file_name}[/green]")
-                rich.print(f"\t{label.label}")
-
-            print()
-
-        total_labels = sum([sum(v.values()) for v in found_labels.values()])
+        if data_result.excluded:
+            rich.print("[yellow]Excluded files:[/yellow]")
+            for file in data_result.excluded:
+                rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
 
         label_stats = ""
-        for label_type, counts in found_labels.items():
-            label_stats += f"\t{label_type}\n"
-            label_stats += "\n".join([f"\t\t{k}: {v}" for k, v in counts.items()])
-            label_stats += "\n"
+        total_labels = 0
+        if selected_transformer is not None:
+            labels = selected_transformer.transformer.from_custom_labels(label_result, data_files=data_result.matched)
+            labels = sorted(labels, key=lambda l: l.abs_data_path)
 
-        exclusion = "\n"
+            if not labels:
+                rich.print(f"[yellow]The transformer [blue]{selected_transformer.name}[/blue] didn't return any labels")
+            else:
+                rich.print(f"Labels identified by [blue]{selected_transformer.name}[/blue]:")
+
+                found_labels: Dict[str, Dict[str, int]] = {}  # <type, <class, label>>
+                current_file_name = None
+                for label in labels:
+                    label_type = type(label.label).__name__
+                    label_name = label.label.class_
+                    counter = found_labels.setdefault(label_type, {})
+                    counter[label_name] = counter.get(label_name, 0) + 1
+
+                    if label.abs_data_path != current_file_name:
+                        current_file_name = label.abs_data_path
+                        rich.print(f"[green]{current_file_name}[/green]")
+                    rich.print(f"\t{label.label}")
+
+                total_labels = sum([sum(v.values()) for v in found_labels.values()])
+                for label_type, counts in found_labels.items():
+                    label_stats += f"\t{label_type}\n"
+                    label_stats += "\n".join([f"\t\t{k}: {v}" for k, v in counts.items()])
+                    label_stats += "\n"
+
+        exclusion = ""
         if len(data_result.excluded):
             exclusion = f"[yellow]Excluded[/yellow] {len(data_result.excluded)} file(s) because they do not seem to be images.\n"
 
@@ -311,7 +311,7 @@ def import_local_project(
 
         raise typer.Exit()
 
-    transformers = list(map(lambda t: t.transformer, transformer_results))
+    transformer_instance = selected_transformer.transformer if selected_transformer else None
 
     if not project_name:
         project_name = f"[EA] {root.name}"
@@ -322,7 +322,7 @@ def import_local_project(
             target=target,
             project_name=project_name,
             symlinks=symlinks,
-            label_transformers=transformers,
+            label_transformer=transformer_instance,
             label_paths=label_result,
         )
 

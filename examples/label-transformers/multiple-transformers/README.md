@@ -18,7 +18,7 @@ encord-active init \
     data
 ```
 
-you will be prompted with a choice of which transformers you want to use.
-Use `[TAB]` or `[SPACE]` to select/deselect metrics before hitting `[ENTER]` to execute the initialization.
+you will be prompted with a choice of which transformer you want to use.
+Use the arrows to choose the one you would like to use and hit `[ENTER]`.
 
 This is useful if you want to keep your label transformers in a common place and reuse them across projects.

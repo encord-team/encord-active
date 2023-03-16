@@ -68,7 +68,7 @@ def init_local_project(
     target: Path,
     project_name: str = "",
     symlinks: bool = False,
-    label_transformers: Optional[List[LabelTransformer]] = None,
+    label_transformer: Optional[LabelTransformer] = None,
     label_paths: Optional[List[Path]] = None,
 ) -> Path:
     """
@@ -142,7 +142,7 @@ def init_local_project(
                 "width": width,
             }
 
-    transformer = LabelTransformerWrapper(ontology.structure, project.label_rows, label_transformers or [])
+    transformer = LabelTransformerWrapper(ontology.structure, project.label_rows, label_transformer)
     transformer.add_labels(label_paths or [], data_paths=files)
 
     for label_row in project.label_rows:

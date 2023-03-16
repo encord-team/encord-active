@@ -31,7 +31,8 @@ You have some additional options to tailor the initialisation of the project for
 
 ## Including Labels
 
-If you want to include labels as well, this is also an option. To do so, you will have to define how to parse your labels.
+If you want to include labels as well, this is also an option.
+To do so, you will have to define how to parse your labels.
 You do this by implementing the [`LabelTransformer`][gh-label-transformer] interface.
 
 ```python
@@ -198,7 +199,7 @@ If you later move the data that the symlinks are pointing to, the Encord Active 
 > **Default:** `None`
 
 A file path to a python implementation of the [`LabelTransformer`][gh-label-transformer] interface.
-This file can contain one or more implementations and you will be able to choose interactively from the UI which ones you would like to apply during your project initialization.
+This file can contain one or more implementations and you will be able to choose interactively from the UI which one you would like to apply during your project initialization.
 
 :::tip
 

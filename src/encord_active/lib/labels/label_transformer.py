@@ -1,6 +1,5 @@
 import inspect
 from dataclasses import dataclass
-from itertools import chain
 from pathlib import Path
 from typing import List, NamedTuple, Optional, Tuple, Union
 
@@ -20,7 +19,6 @@ from encord_active.lib.encord.utils import (
 )
 
 
-# TODO the dataclasses should be replaced with objects from the later version of `encord`
 class Label(BaseModel):
     class_: str
 
@@ -87,10 +85,10 @@ class LabelTransformerWrapper:
         self,
         ontology_structure: OntologyStructure,
         label_rows: List[LabelRow],
-        label_transformers: List[LabelTransformer],
+        label_transformer: Optional[LabelTransformer],
     ):
         self.ontology_structure = ontology_structure
-        self.label_transformers = label_transformers
+        self.label_transformer = label_transformer
 
         self.file_to_data_unit_map = {
             Path(du["data_link"]).expanduser().absolute(): du
@@ -207,7 +205,10 @@ This will make a (potentially new) classification question `{LabelTransformerWra
             self._add_polygon_label(label, data_unit)
 
     def add_labels(self, label_paths: List[Path], data_paths: List[Path]):
-        for data_label in chain(*map(lambda t: t.from_custom_labels(label_paths, data_paths), self.label_transformers)):
+        if not self.label_transformer:
+            return
+
+        for data_label in self.label_transformer.from_custom_labels(label_paths, data_paths):
             du = self.file_to_data_unit_map.get(data_label.abs_data_path.expanduser().absolute(), None)
             if du is None:
                 continue
