@@ -30,6 +30,9 @@ def version_selector(project_path: Path):
         index=initial_version_index,
     )
 
+    if get_state() and get_state().project_paths.project_dir != project_path:
+        set_version(versioner.current_version)
+
     if not version or version.id == get_version().id:
         return version, versioner.is_latest()
 
