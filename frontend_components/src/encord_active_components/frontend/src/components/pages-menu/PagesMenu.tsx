@@ -4,15 +4,11 @@ import useResizeObserver from "use-resize-observer";
 
 import { useEffect } from "react";
 import { Streamlit } from "streamlit-component-lib";
-import { useRenderData } from "../../streamlit/StreamlitProvider";
 
 import classes from "./PagesMenu.module.css";
 
-export const PagesMenu = () => {
-  const {
-    args: { items, selected },
-  } = useRenderData<{ items: SubMenuType[]; selected?: string }>();
-
+export type Props = { items: SubMenuType[] };
+export const PagesMenu = ({ items }: Props) => {
   if (!items) throw new Error("`items` prop must be provided");
 
   const first = items.filter(Boolean)[0];
@@ -27,7 +23,7 @@ export const PagesMenu = () => {
     <div ref={ref}>
       <Menu
         defaultSelectedKeys={[
-          selected || (first.children?.[0]?.key || first.key).toString(),
+          (first.children?.[0]?.key || first.key).toString(),
         ]}
         defaultOpenKeys={[first.key]}
         subMenuOpenDelay={1}

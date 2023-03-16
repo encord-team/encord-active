@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 import json
 import logging
+import re
 from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -153,7 +154,7 @@ class Project:
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
         label_rows = download_label_rows(encord_project, self.file_structure)
-        results = download_all_images(label_rows, self.file_structure)
+        results = download_all_images(encord_project, label_rows, self.file_structure)
 
         lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
 
@@ -171,7 +172,7 @@ class Project:
             filter_fn=lambda lr: lr["label_hash"] in lr_with_failed_images,
             refresh=True,
         )
-        results = download_all_images(label_rows, self.file_structure)
+        results = download_all_images(encord_project, label_rows, self.file_structure)
         lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
 
         if not lr_with_failed_images:
@@ -238,7 +239,9 @@ def download_label_rows(
     )
 
 
-def download_images_from_data_unit(lr: LabelRow, project_file_structure: ProjectFileStructure) -> Optional[bool]:
+def download_images_from_data_unit(
+    lr: LabelRow, encord_project: EncordProject, project_file_structure: ProjectFileStructure
+) -> Optional[bool]:
     label_hash = lr.label_hash
 
     if label_hash is None:
@@ -253,13 +256,19 @@ def download_images_from_data_unit(lr: LabelRow, project_file_structure: Project
     lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     frame_pths: List[Path] = []
     data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
+    # If customer uses private cloud integration with signed URLs, refresh data links for label row
+    pat = re.compile(r"^(?!https://storage.googleapis.com/cord-ai-platform.appspot.com/.*)")
+    if any([re.match(pat, du["data_link"]) for du in data_units]):
+        lr = encord_project.get_label_row(label_hash)
+        data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
         out_pth = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try:
             out_pth = download_file(du["data_link"], out_pth)
             frame_pths.append(out_pth)
-        except:
+        except Exception as e:
+            logger.warning(e)
             return False
 
     if lr.data_type == "video":
@@ -271,9 +280,13 @@ def download_images_from_data_unit(lr: LabelRow, project_file_structure: Project
     return True
 
 
-def download_all_images(label_rows, project_file_structure: ProjectFileStructure) -> Dict[str, Optional[bool]]:
+def download_all_images(
+    encord_project: EncordProject, label_rows, project_file_structure: ProjectFileStructure
+) -> Dict[str, Optional[bool]]:
     return collect_async(
-        partial(download_images_from_data_unit, project_file_structure=project_file_structure),
+        partial(
+            download_images_from_data_unit, encord_project=encord_project, project_file_structure=project_file_structure
+        ),
         label_rows.values(),
         lambda lr: lr.label_hash,
         desc="Collecting frames from label rows",

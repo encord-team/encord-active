@@ -65,6 +65,7 @@ class MetricMetadata(BaseModel):
     data_type: DataType
     annotation_type: List[AnnotationTypeUnion]
     embedding_type: Optional[EmbeddingType] = None
+    doc_url: Optional[str] = None
     stats: StatsMetadata
 
     def get_unique_name(self):
@@ -82,6 +83,7 @@ class SimpleMetric(ABC):
         data_type: DataType,
         annotation_type: List[Union[ObjectShape, ClassificationType]],
         embedding_type: Optional[EmbeddingType] = None,
+        doc_url: Optional[str] = None,
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -91,6 +93,7 @@ class SimpleMetric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            doc_url=doc_url,
             stats=StatsMetadata(),
         )
 
@@ -109,6 +112,7 @@ class Metric(ABC):
         data_type: DataType,
         annotation_type: List[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
+        doc_url: Optional[str] = None,
     ):
         self.metadata = MetricMetadata(
             title=title,
@@ -118,6 +122,7 @@ class Metric(ABC):
             data_type=data_type,
             annotation_type=annotation_type,
             embedding_type=embedding_type,
+            doc_url=doc_url,
             stats=StatsMetadata(),
         )
 

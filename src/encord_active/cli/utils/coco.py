@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
+from encord.objects.common import Shape
 
 from encord_active.cli.config import app_config
 from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME, CocoImporter
@@ -22,7 +23,13 @@ def import_coco_predictions(
 ):
     image_data_unit = json.loads((target / IMAGE_DATA_UNIT_FILENAME).read_text(encoding="utf-8"))
     ontology = json.loads((target / "ontology.json").read_text(encoding="utf-8"))
-    category_to_hash = {obj["id"]: obj["featureNodeHash"] for obj in ontology["objects"]}
+    # NOTE: when we import a coco project, we change the category id to support
+    # categories with multiple shapes. Here we iterate the ontology objects
+    # and the ids are in the following format:
+    # obj["id"] == `10` ->
+    #   1 - original category_id
+    #   0 - index of the shape -- we can discard and use the actual shape
+    category_to_hash = {(obj["id"][:-1], obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]}
     predictions = []
     results = json.loads(predictions_path.read_text(encoding="utf-8"))
 
@@ -31,11 +38,11 @@ def import_coco_predictions(
         image = image_data_unit[str(res.image_id)]
         img_h, img_w = image["height"], image["width"]
 
-        if res.segmentation is not None:
-            format = Format.POLYGON
-            data = res.segmentation / np.array([[img_h, img_w]])
+        if res.segmentation is not None and res.segmentation:
+            format, shape = Format.POLYGON, Shape.POLYGON
+            data = res.segmentation / np.array([[img_w, img_h]])
         elif res.bbox:
-            format = Format.BOUNDING_BOX
+            format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
             x, y, w, h = res.bbox
             data = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
         else:
@@ -46,7 +53,7 @@ def import_coco_predictions(
                 data_hash=image["data_hash"],
                 confidence=res.score,
                 object=ObjectDetection(
-                    feature_hash=category_to_hash[str(res.category_id)],
+                    feature_hash=category_to_hash[(str(res.category_id), shape.value)],
                     format=format,
                     data=data,
                 ),

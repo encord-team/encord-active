@@ -7,7 +7,6 @@ import yaml
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
-from encord.orm.dataset import Image
 from encord.utilities import label_utilities
 from PIL import Image as pil_image
 from PIL import ImageOps
@@ -38,7 +37,7 @@ IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
 
 def upload_img(
     dataset_tmp: LocalDataset, coco_image: CocoImage, image_path: Path, temp_folder: Path
-) -> Optional[Image]:
+) -> Optional[LocalDataRow]:
     file_path = image_path / coco_image.file_name
 
     if not file_path.is_file():
@@ -142,6 +141,7 @@ class CocoImporter:
         self.images_dir = images_dir_path
         self.annotations_file_path = annotations_file_path
         self.use_symlinks: bool = use_symlinks
+        self.data_hash_to_image_id: dict[str, int] = {}
 
         if not self.images_dir.is_dir():
             raise NotADirectoryError(f"Images directory '{self.images_dir}' doesn't exist")
@@ -154,7 +154,6 @@ class CocoImporter:
         self.images = parse_images(annotations_file["images"])
         self.annotations = parse_annotations(annotations_file["annotations"])
 
-        # TODO: infer shape
         self.category_shapes = _infer_category_shapes(self.annotations)
         self.id_mappings: Dict[Tuple[int, Shape], int] = {}
 
@@ -169,16 +168,18 @@ class CocoImporter:
         print(f"Creating a new dataset: {self.title}")
         dataset: LocalDataset = self.user_client.create_dataset(self.title, use_symlinks=self.use_symlinks)
 
-        for _, coco_image in tqdm(self.images.items(), desc="Uploading images"):
-            upload_img(dataset, coco_image, self.images_dir, temp_folder)
-
+        for image_id, coco_image in tqdm(self.images.items(), desc="Storing images"):
+            data_row = upload_img(dataset, coco_image, self.images_dir, temp_folder)
+            if data_row:
+                self.data_hash_to_image_id[data_row.uid] = image_id
         return dataset
 
     def create_ontology(self) -> LocalOntology:
         print(f"Creating a new ontology: {self.title}")
         ontology_structure = OntologyStructure()
         for cat in self.categories:
-            shapes = self.category_shapes.get(cat.id_, [])
+            # NOTE: default to polygon when there is no way to infer the shape
+            shapes = self.category_shapes.get(cat.id_) or [Shape.POLYGON]
             for i, shape in enumerate(shapes):
                 new_id = cat.id_ * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
@@ -234,8 +235,8 @@ class CocoImporter:
 
         for data_unit in tqdm(dataset.data_rows, desc="Uploading annotations"):
             data_hash, lr = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj)
-            image_id = lr["data_title"]
-            image = self.images[image_id]
+            image_id = self.data_hash_to_image_id[data_hash]
+            image = self.images[str(image_id)]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
 
         (Path(self.project_dir) / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))

@@ -21,7 +21,6 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
     show_image_with_predictions_and_label,
 )
-from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
@@ -46,7 +45,7 @@ def build_card_for_labels(
         draw_configurations=get_state().object_drawing_configurations,
     )
     st.image(image)
-    multiselect_tag(label, "false_negatives", MetricScope.MODEL_QUALITY)
+    multiselect_tag(label, "false_negatives")
 
     cls = get_state().predictions.all_classes[str(label["class_id"])]["name"]
     label = label.copy()
@@ -60,7 +59,7 @@ def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.G
     image = show_image_and_draw_polygons(row, data_dir, draw_configurations=conf, skip_object_hash=True)
     image = draw_object(image, row, draw_configuration=conf, color=box_color, with_box=True)
     st.image(image)
-    multiselect_tag(row, "metric_view", MetricScope.MODEL_QUALITY)
+    multiselect_tag(row, "metric_view", is_predictions=True)
 
     # === Write scores and link to editor === #
     build_data_tags(row, get_state().predictions.metric_datas.selected_predicion)
@@ -101,7 +100,7 @@ def prediction_grid(
     subset = render_df_slicer(df, selected_metric)
     paginated_subset = render_pagination(subset, n_cols, n_rows, selected_metric)
 
-    form = bulk_tagging_form(MetricScope.MODEL_QUALITY)
+    form = bulk_tagging_form(subset, is_predictions=True)
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
         action_bulk_tags(df, form.tags, form.action)

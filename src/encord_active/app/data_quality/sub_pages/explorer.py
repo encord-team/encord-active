@@ -41,6 +41,7 @@ from encord_active.lib.embeddings.utils import (
 )
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
+    IdentifierSchema,
     MetricData,
     MetricSchema,
     MetricScope,
@@ -117,9 +118,10 @@ class ExplorerPage(Page):
         if not selected_metric:
             return
 
-        st.markdown(f"# {self.title}")
-        st.markdown(f"## {selected_metric.meta.title}")
-        st.markdown(selected_metric.meta.long_description)
+        if selected_metric.meta.doc_url is None:
+            st.markdown(f"### {selected_metric.meta.title}")
+        else:
+            st.markdown(f"### [{selected_metric.meta.title}]({selected_metric.meta.doc_url})")
 
         if selected_df.empty:
             return
@@ -222,7 +224,7 @@ def fill_data_quality_window(
 
     paginated_subset = render_pagination(subset, n_cols, n_rows, "score")
 
-    form = bulk_tagging_form(metric_scope)
+    form = bulk_tagging_form(subset.pipe(DataFrame[IdentifierSchema]))
 
     if form and form.submitted:
         df = paginated_subset if form.level == BulkLevel.PAGE else subset
@@ -285,7 +287,7 @@ def build_card(
         description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
         st.write(f"Description: {description}")
 
-    multiselect_tag(row, "explorer", metric_scope)
+    multiselect_tag(row, "explorer")
 
     target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
 
