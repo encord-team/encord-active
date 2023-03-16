@@ -49,16 +49,16 @@ class FalsePositivesPage(ModelQualityPage):
         with st.expander("Details"):
             st.markdown(
                 f"""### The view
-        These are the predictions for which either of the following is true
-        1. The IOU between the prediction and the best matching label was too low
-        2. There was another prediction with higher model confidence which matched the label already
-        3. The predicted class didn't match
+These are the predictions for which either of the following is true
+1. The IOU between the prediction and the best matching label was too low
+2. There was another prediction with higher model confidence which matched the label already
+3. The predicted class didn't match
 
-        ---
+---
 
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
-        The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
         """,
                 unsafe_allow_html=True,
             )
@@ -81,7 +81,7 @@ class FalsePositivesPage(ModelQualityPage):
         with st.expander("Details"):
             st.markdown(
                 """### The view
-        These are the predictions where the model incorrectly predicts the positive class.
+These are the predictions where the model incorrectly predicts the positive class.
                     """,
                 unsafe_allow_html=True,
             )

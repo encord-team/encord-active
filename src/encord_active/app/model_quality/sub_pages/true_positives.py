@@ -43,14 +43,14 @@ class TruePositivesPage(ModelQualityPage):
             color = Color.PURPLE
             st.markdown(
                 f"""### The view
-        These are the predictions for which the IOU was sufficiently high and the confidence score was
-        the highest amongst predictions that overlap with the label.
+These are the predictions for which the IOU was sufficiently high and the confidence score was
+the highest amongst predictions that overlap with the label.
 
-        ---
+---
 
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
-        The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
                     """,
                 unsafe_allow_html=True,
             )
@@ -78,7 +78,7 @@ class TruePositivesPage(ModelQualityPage):
         with st.expander("Details"):
             st.markdown(
                 """### The view
-        These are the predictions where the model correctly predicts the true class.
+These are the predictions where the model correctly predicts the true class.
                     """,
                 unsafe_allow_html=True,
             )
