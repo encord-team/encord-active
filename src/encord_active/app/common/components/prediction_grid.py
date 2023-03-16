@@ -34,7 +34,8 @@ def build_card_for_labels(
     label_color: Color = Color.RED,
 ):
     class_colors = {
-        int(index): object.get("color", Color.RED) for index, object in get_state().predictions.all_classes.items()
+        int(index): object.get("color", Color.RED)
+        for index, object in get_state().predictions.all_classes_objects.items()
     }
     image = show_image_with_predictions_and_label(
         label,
@@ -47,7 +48,7 @@ def build_card_for_labels(
     st.image(image)
     multiselect_tag(label, "false_negatives")
 
-    cls = get_state().predictions.all_classes[str(label["class_id"])]["name"]
+    cls = get_state().predictions.all_classes_objects[str(label["class_id"])]["name"]
     label = label.copy()
     label["label_class_name"] = cls
     # === Write scores and link to editor === #
@@ -62,7 +63,7 @@ def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.G
     multiselect_tag(row, "metric_view", is_predictions=True)
 
     # === Write scores and link to editor === #
-    build_data_tags(row, get_state().predictions.metric_datas.selected_predicion)
+    build_data_tags(row, get_state().predictions.metric_datas.selected_prediction)
 
     if row[PredictionMatchSchema.false_positive_reason] and not row[PredictionMatchSchema.is_true_positive]:
         st.write(f"Reason: {row[PredictionMatchSchema.false_positive_reason]}")
@@ -94,7 +95,7 @@ def prediction_grid(
     else:
         df = model_predictions
         additionals = None
-        selected_metric = get_state().predictions.metric_datas.selected_predicion or ""
+        selected_metric = get_state().predictions.metric_datas.selected_prediction or ""
 
     n_cols, n_rows = get_state().page_grid_settings.columns, get_state().page_grid_settings.rows
     subset = render_df_slicer(df, selected_metric)

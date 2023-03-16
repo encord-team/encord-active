@@ -16,6 +16,7 @@ from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
+from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
 from encord_active.lib.project import ProjectFileStructure
 
 GLOBAL_STATE = "global_state"
@@ -24,7 +25,7 @@ GLOBAL_STATE = "global_state"
 @dataclass
 class MetricNames:
     predictions: Dict[str, MetricData] = field(default_factory=dict)
-    selected_predicion: Optional[str] = None
+    selected_prediction: Optional[str] = None
     labels: Dict[str, MetricData] = field(default_factory=dict)
     selected_label: Optional[str] = None
 
@@ -32,9 +33,12 @@ class MetricNames:
 @dataclass
 class PredictionsState:
     decompose_classes = False
-    metric_datas: MetricNames = field(default_factory=lambda: MetricNames())
-    all_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
-    selected_classes: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    metric_datas = MetricNames()
+    metric_datas_classification = MetricNames()
+    all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    all_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
+    selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    selected_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None
     nbins: int = 50
 
@@ -56,20 +60,20 @@ class State:
     project_paths: ProjectFileStructure
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
-    annotation_sizes: Optional[AnnotationStatistics] = None
     ignore_frames_without_predictions = False
-    image_sizes: Optional[np.ndarray] = None
     iou_threshold = 0.5
+    selected_metric: Optional[MetricData] = None
+    page_grid_settings = PageGridSettings()
+    predictions = PredictionsState()
+    similarities_count = 8
+    image_sizes: Optional[np.ndarray] = None
+    annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
     object_drawing_configurations: ObjectDrawingConfigurations = field(
         default_factory=lambda: ObjectDrawingConfigurations()
     )
-    page_grid_settings = PageGridSettings()
-    predictions: PredictionsState = field(default_factory=lambda: PredictionsState())
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
-    selected_metric: Optional[MetricData] = None
-    similarities_count = 8
 
     @classmethod
     def init(cls, project_dir: Path):
