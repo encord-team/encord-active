@@ -15,7 +15,7 @@ from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state, refresh
-from encord_active.app.common.state_hooks import use_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
@@ -212,11 +212,11 @@ def create_and_sync_remote_project(
 
 def export_filter():
     original_row_count = get_state().merged_metrics.shape[0]
-    get_filtered_row_count, set_filtered_row_count = use_state(0)
+    filtered_row_count = UseState(0)
 
-    get_current_form, set_current_form = use_state(CurrentForm.NONE)
+    current_form = UseState(CurrentForm.NONE)
 
-    get_updates, set_updates = use_state([])
+    updates = UseState([])
 
     setup_page()
     message_placeholder = st.empty()
@@ -247,24 +247,23 @@ def export_filter():
     ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
-    render_generate_csv(generate_csv_col, file_prefix, filtered_df, set_updates)
-    render_generate_coco(generate_coco_col, file_prefix, filtered_df, set_updates)
+    render_generate_csv(generate_csv_col, file_prefix, filtered_df, updates.set)
+    render_generate_coco(generate_coco_col, file_prefix, filtered_df, updates.set)
     render_unimplemented_buttons(
-        delete_button_col, edit_button_col, augment_button_col, message_placeholder, set_current_form, set_updates
+        delete_button_col, edit_button_col, augment_button_col, message_placeholder, current_form.set, updates.set
     )
 
-    if get_filtered_row_count() != row_count:
-        set_filtered_row_count(row_count)
-        set_current_form(CurrentForm.NONE)
+    if filtered_row_count.value != row_count:
+        filtered_row_count.set(row_count)
+        current_form.set(CurrentForm.NONE)
 
     if not project_has_remote:
         render_export_button(
             export_button_col,
             action_utils,
-            get_current_form,
-            set_current_form,
+            current_form,
             project_name,
-            set_updates,
+            updates.set,
             is_filtered=(row_count != original_row_count),
         )
 
@@ -274,14 +273,12 @@ def export_filter():
             action_utils,
             filtered_df,
             project_has_remote,
-            get_current_form,
-            set_current_form,
+            current_form,
             project_name,
-            set_updates,
+            updates.set,
         )
 
-    updates = get_updates()
-    for update in get_updates():
+    for update in updates.value:
         if update.type == UpdateItemType.LABEL:
             label = st.empty()
             label.info(update.text)
@@ -322,19 +319,18 @@ def render_subset_button(
     action_utils: EncordActions,
     subset_df: pd.DataFrame,
     project_has_remote: bool,
-    get_current_form: Callable,
-    set_current_form: Callable,
+    current_form: UseState[CurrentForm],
     project_name: str,
     set_updates: Callable,
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: (set_current_form(CurrentForm.CLONE), set_updates([])),  # type: ignore
+        on_click=lambda: (current_form.set(CurrentForm.CLONE), set_updates([])),  # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
 
-    if get_current_form() == CurrentForm.CLONE:
+    if current_form.value == CurrentForm.CLONE:
         cols = generate_create_project_form(
             "Create a subset with the selected items",
             subset_df.shape[0],
@@ -373,22 +369,21 @@ def render_subset_button(
 def render_export_button(
     render_col: DeltaGenerator,
     action_utils: EncordActions,
-    get_current_form: Callable,
-    set_current_form: Callable,
+    current_form: UseState[CurrentForm],
     project_name: str,
     set_updates: Callable,
     is_filtered: bool,
 ):
     export_button = render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: (set_current_form(CurrentForm.EXPORT), set_updates([])),  # type: ignore
+        on_click=lambda: (current_form.set(CurrentForm.EXPORT), set_updates([])),  # type: ignore
         disabled=not action_utils and not is_filtered,
         help="Export to an Encord dataset and project"
         if not is_filtered
         else "Export is allowed only for entire datasets, create a subset first or remove all filters",
     )
     df = get_state().merged_metrics
-    if get_current_form() == CurrentForm.EXPORT:
+    if current_form.value == CurrentForm.EXPORT:
         cols = generate_create_project_form(
             "Create a new project with the current dataset",
             df.shape[0],

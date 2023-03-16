@@ -28,7 +28,7 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import use_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
@@ -147,8 +147,9 @@ def get_selected_rows(
 
 
 def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
-    get_should_select, set_should_select = use_state(True)
-    get_selection, set_selection = use_state(None)
+    should_select = UseState(True)
+    selection = UseState[Optional[List[dict]]](None)
+
     fig = px.scatter(
         embedding_2d,
         x=Embedding2DSchema.x,
@@ -160,14 +161,14 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
 
     new_selection = plotly_events(fig, click_event=False, select_event=True)
 
-    if new_selection != get_selection():
-        set_should_select(True)
-        set_selection(new_selection)
+    if new_selection != selection.value:
+        should_select.set(True)
+        selection.set(new_selection)
 
     if st.button("Reset selection"):
-        set_should_select(False)
+        should_select.set(False)
 
-    if get_should_select() and len(new_selection) > 0:
+    if should_select.value and len(new_selection) > 0:
         return get_selected_rows(embedding_2d, new_selection)
     else:
         return None
