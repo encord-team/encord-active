@@ -10,7 +10,7 @@ from encord_active.lib.metrics.metric import (
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-class RandomeImageMetric(Metric):
+class RandomImageMetric(Metric):
     def __init__(self):
         super().__init__(
             title="Random Values on Images",
