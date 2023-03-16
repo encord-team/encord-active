@@ -43,7 +43,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
     and an embedding for each bounding box is extracted. Then, these embeddings are compared
     with their neighbors. If the neighbors are annotated differently, a low score is given to it.
     """,
-            doc_url="https://encord-active-docs.web.app/metrics/semantic#object-annotation-quality",
+            doc_url="https://docs.encord.com/active/docs/metrics/semantic#object-annotation-quality",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[
