@@ -36,6 +36,7 @@ def get_all_image_sizes(project_folder: Path) -> np.ndarray:
     for label_row in (project_folder / "data").iterdir():
         if (label_row / "label_row.json").exists():
             label_row_meta = json.loads((label_row / "label_row.json").read_text(encoding="utf-8"))
+            # TODO Handle videos as well, breaks on datasets containing only videos
             if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
                 for data_unit in label_row_meta["data_units"].values():
                     image_sizes.append([data_unit["width"], data_unit["height"]])

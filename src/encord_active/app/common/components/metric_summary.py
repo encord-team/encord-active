@@ -109,11 +109,14 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
             )
 
             merged_metrics.pop("identifier_rest")
-
-        fig = create_2d_metric_chart(
-            merged_metrics.pipe(DataFrame[CrossMetricSchema]), str(x_metric_name), str(y_metric_name), trend_selected
-        )
-        scatter_plot_col.plotly_chart(fig, use_container_width=True)
+        if not merged_metrics.empty:
+            fig = create_2d_metric_chart(
+                merged_metrics.pipe(DataFrame[CrossMetricSchema]),
+                str(x_metric_name),
+                str(y_metric_name),
+                trend_selected,
+            )
+            scatter_plot_col.plotly_chart(fig, use_container_width=True)
 
 
 def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator, metric_scope: MetricScope):
@@ -273,10 +276,11 @@ def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_c
             classification_question_name,
             classification_question_answers,
         ) in get_state().annotation_sizes.classifications.items():
-            fig = create_labels_distribution_chart(
-                classification_question_answers, classification_question_name, "Class"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            if classification_question_answers:
+                fig = create_labels_distribution_chart(
+                    classification_question_answers, classification_question_name, "Class"
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
