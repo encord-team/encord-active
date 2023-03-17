@@ -153,7 +153,7 @@ def prediction_grid_classifications(
         action_bulk_tags(df, form.tags, form.action)
 
     if len(paginated_subset) == 0:
-        st.error("No data in selected quality interval")
+        st.error("No data in the selected quality interval")
     else:
         cols: List = []
         for i, (_, row) in enumerate(paginated_subset.iterrows()):
