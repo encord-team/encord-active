@@ -1,2 +1,11 @@
 project_dir: /path/to/project/directory
 logreg_model_path: /path/to/trained/logreg_model.pkl
+
+active-learning-in-mnist:
+  initial_data_amount: 500
+  n_iterations: 15
+  batch_size_to_label: 300
+  train:
+    project_dir: /path/to/train/mnist/project/dir
+  test:
+    project_dir: /path/to/test/mnist/project/dir
