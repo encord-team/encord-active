@@ -86,7 +86,7 @@ class State:
 
     @classmethod
     def clear(cls) -> None:
-        del st.session_state[GLOBAL_STATE]
+        st.session_state.pop(GLOBAL_STATE, None)
 
 
 def get_state() -> State:

@@ -3,8 +3,8 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.app.common.state import get_state, refresh
-from encord_active.app.common.state_hooks import use_state
-from encord_active.lib.versioning.git import GitVersioner
+from encord_active.app.common.state_hooks import UseState
+from encord_active.lib.versioning.git import GitVersioner, Version
 
 CURRENT_VERSION_KEY = "current_version"
 
@@ -18,7 +18,7 @@ def cached_versioner(project_path: Path):
 
 def version_selector(project_path: Path):
     versioner, initial_version_index = cached_versioner(project_path)
-    get_version, set_version = use_state(versioner.versions[initial_version_index], CURRENT_VERSION_KEY)
+    version_state = UseState[Version](versioner.versions[initial_version_index], CURRENT_VERSION_KEY)
 
     version = st.selectbox(
         "Choose version",
@@ -31,15 +31,15 @@ def version_selector(project_path: Path):
     )
 
     if get_state() and get_state().project_paths.project_dir != project_path:
-        set_version(versioner.current_version)
+        version_state.set(versioner.current_version)
 
-    if not version or version.id == get_version().id:
+    if not version or version.id == version_state.value.id:
         return version, versioner.is_latest()
 
-    if versioner.is_latest(get_version()):
+    if versioner.is_latest(version_state.value):
         versioner.stash()
 
-    set_version(version)
+    version_state.set(version)
     versioner.jump_to(version)
     versioner.discard_changes()
 
@@ -52,7 +52,7 @@ def version_selector(project_path: Path):
 def version_form():
     _, container, _ = st.columns(3)
     versioner = GitVersioner(get_state().project_paths.project_dir)
-    _, set_version = use_state(versioner.versions[0], CURRENT_VERSION_KEY)
+    version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
 
     opts = {}
     if not versioner.is_latest():
@@ -76,5 +76,5 @@ def version_form():
                 st.error("Version name is required.")
             else:
                 version = versioner.create_version(version_name)
-                set_version(version)
+                version_state.set(version)
                 refresh()
