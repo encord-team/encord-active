@@ -49,8 +49,19 @@ class AcquisitionFunction(Metric):
             writer.write(score)
 
     def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
+        """
+        Calculate the model-predicted class probabilities of the examples found by the model in the image.
+
+        :param image: Input image.
+            *Requirement*: It must allow conversion to numpy ndarray via ``np.asarray(image)``.
+        :return: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
+            Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
+            `x` belongs to each possible class, for each of the K classes.
+            In the case the model can't extract any example `x` from the image, the method will return ``None``.
+        """
         image_array = np.asarray(image).flatten()
-        return self._model.predict_proba([image_array])
+        pred_proba = self._model.predict_proba([image_array])
+        return None if len(pred_proba) == 0 else pred_proba
 
     def read_image(self, image_path: Path) -> Optional[Any]:
         return Image.open(image_path)
