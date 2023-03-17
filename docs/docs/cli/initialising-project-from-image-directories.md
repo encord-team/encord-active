@@ -37,6 +37,7 @@ You do this by implementing the [`LabelTransformer`][gh-label-transformer] inter
 
 ```python
 from pathlib import Path
+from typing import List
 
 from encord_active.lib.labels.label_transformer import (
     BoundingBoxLabel,
@@ -70,24 +71,29 @@ Let's say you have your images stored in the following structure:
 
 ```
 
-Your implementation would look similar to this:
+Your implementation would look similar to:
 
 ```python
+# classification_transformer.py
 from pathlib import Path
+from typing import List
 
 from encord_active.lib.labels.label_transformer import (
     ClassificationLabel,
     DataLabel,
-    LabelTransformer
+    LabelTransformer,
 )
 
 
-class MyTransformer(LabelTransformer):
-    def from_custom_labels(self, label_files: List[Path], data_files: List[Path]) -> List[DataLabel]:
-        out: List[DataLabel] = []
-        for data_file in data_files:
-            out.append(DataLabel(data_file, ClassificationLabel(class_=data_file.parent.name))
-        return out
+class ClassificationTransformer(LabelTransformer):
+    def from_custom_labels(self, _, data_files: List[Path]) -> List[DataLabel]:
+        return [DataLabel(f, ClassificationLabel(class_=f.parent.name)) for f in data_files]
+```
+
+And the CLI command:
+
+```shell
+encord-active init --transformer classification_transformer.py /path/to/data_root
 ```
 
 :::tip
@@ -199,7 +205,7 @@ If you later move the data that the symlinks are pointing to, the Encord Active 
 > **Default:** `None`
 
 A file path to a python implementation of the [`LabelTransformer`][gh-label-transformer] interface.
-This file can contain one or more implementations and you will be able to choose interactively from the UI which one you would like to apply during your project initialization.
+This file can contain one or more implementations, and you will be able to choose interactively from the UI which one you would like to apply during your project initialization.
 
 :::tip
 
