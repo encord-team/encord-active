@@ -377,7 +377,7 @@ def render_export_button(
     export_button = render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: (current_form.set(CurrentForm.EXPORT), set_updates([])),  # type: ignore
-        disabled=not action_utils and not is_filtered,
+        disabled=not action_utils or not is_filtered,
         help="Export to an Encord dataset and project"
         if not is_filtered
         else "Export is allowed only for entire datasets, create a subset first or remove all filters",
