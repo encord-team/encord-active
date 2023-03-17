@@ -297,7 +297,9 @@ class EncordActions:
             }
             filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
             filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
-            filtered_labels = {(ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()}
+            filtered_labels = {
+                (ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()
+            }
 
             create_filtered_db(target_project_dir, filtered_df)
 
