@@ -14,7 +14,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
-    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -52,13 +52,13 @@ class FalseNegativesPage(ModelQualityPage):
             color = Color.PURPLE
             st.markdown(
                 f"""### The view
-        These are the labels that were not matched with any predictions.
+These are the labels that were not matched with any predictions.
 
-        ---
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives.
-        That is, the labels that were not matched to any predictions.
-        The remaining objects are predictions, where colors correspond to their predicted class (identical colors to labels objects in the editor).
+---
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives.
+That is, the labels that were not matched to any predictions.
+The remaining objects are predictions, where colors correspond to their predicted class (identical colors to labels objects in the editor).
         """,
                 unsafe_allow_html=True,
             )
@@ -88,7 +88,9 @@ class FalseNegativesPage(ModelQualityPage):
         object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
         classification_labels: Optional[list] = None,
         classification_pred: Optional[list] = None,
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+        classification_model_predictions_matched: Optional[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+        ] = None,
     ):
 
         with object_tab:

@@ -18,5 +18,6 @@ def match_predictions_and_labels(
         .eq(_labels[ClassificationLabelSchema.class_id])
         .astype(float)
     )
+    _model_predictions[ClassificationPredictionMatchSchema.gt_class_id] = _labels[ClassificationLabelSchema.class_id]
 
     return _model_predictions.pipe(ClassificationPredictionMatchSchema)

@@ -4,6 +4,7 @@ from pandera.typing import DataFrame
 from encord_active.lib.model_predictions.reader import (
     ClassificationLabelSchema,
     ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
     PredictionMatchSchema,
 )
@@ -43,12 +44,13 @@ def prediction_and_label_filtering(
 
 def prediction_and_label_filtering_classification(
     selected_class_idx: dict,
+    all_class_idx: dict,
     labels: pd.DataFrame,
     predictions: pd.DataFrame,
     matched_model_predictions: DataFrame[ClassificationPredictionMatchSchema],
 ):
     class_idx = selected_class_idx
-    new_index = max(list(map(int, class_idx.keys()))) + 1
+    new_index = max(list(map(int, all_class_idx.keys()))) + 1
 
     # Predictions
     _predictions = predictions.copy()
@@ -64,7 +66,7 @@ def prediction_and_label_filtering_classification(
         ClassificationLabelSchema.class_id,
     ] = new_index
 
-    name_map = {int(k): v["name"] for k, v in class_idx.items()}
+    name_map = {int(k): v["name"] for k, v in all_class_idx.items()}
     name_map[new_index] = "others"
     _predictions[ClassificationPredictionSchema.class_id] = _predictions[ClassificationPredictionSchema.class_id].map(
         name_map
@@ -76,6 +78,12 @@ def prediction_and_label_filtering_classification(
     _matched_model_predictions = _matched_model_predictions[
         _matched_model_predictions[ClassificationPredictionMatchSchema.class_id].isin(set(map(int, class_idx.keys())))
     ]
-    _matched_model_predictions["class_name"] = _matched_model_predictions["class_id"].map(name_map)
+    _matched_model_predictions[
+        ClassificationPredictionMatchSchemaWithClassNames.class_name
+    ] = _matched_model_predictions[ClassificationPredictionMatchSchema.class_id].map(name_map)
 
-    return _labels, _predictions, _matched_model_predictions
+    _matched_model_predictions[
+        ClassificationPredictionMatchSchemaWithClassNames.gt_class_name
+    ] = _matched_model_predictions[ClassificationPredictionMatchSchema.gt_class_id].map(name_map)
+
+    return _labels, _predictions, _matched_model_predictions.pipe(ClassificationPredictionMatchSchemaWithClassNames)

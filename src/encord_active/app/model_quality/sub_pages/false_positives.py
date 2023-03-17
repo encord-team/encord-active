@@ -4,7 +4,10 @@ import streamlit as st
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
-from encord_active.app.common.components.prediction_grid import prediction_grid
+from encord_active.app.common.components.prediction_grid import (
+    prediction_grid,
+    prediction_grid_classifications,
+)
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.colors import Color
@@ -14,7 +17,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
-    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -30,7 +33,7 @@ class FalsePositivesPage(ModelQualityPage):
         self.display_settings(MetricScope.MODEL_QUALITY)
 
     def sidebar_options_classifications(self):
-        pass
+        self.prediction_metric_in_sidebar_classifications()
 
     def _build_objects(
         self,
@@ -46,16 +49,16 @@ class FalsePositivesPage(ModelQualityPage):
         with st.expander("Details"):
             st.markdown(
                 f"""### The view
-        These are the predictions for which either of the following is true
-        1. The IOU between the prediction and the best matching label was too low
-        2. There was another prediction with higher model confidence which matched the label already
-        3. The predicted class didn't match
+These are the predictions for which either of the following is true
+1. The IOU between the prediction and the best matching label was too low
+2. There was another prediction with higher model confidence which matched the label already
+3. The predicted class didn't match
 
-        ---
+---
 
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
-        The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
         """,
                 unsafe_allow_html=True,
             )
@@ -73,9 +76,33 @@ class FalsePositivesPage(ModelQualityPage):
 
     def _build_classifications(
         self,
-        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
     ):
-        st.markdown("### This page is under construction...")
+        with st.expander("Details"):
+            st.markdown(
+                """### The view
+These are the predictions where the model incorrectly predicts the positive class.
+                    """,
+                unsafe_allow_html=True,
+            )
+            self.metric_details_description(get_state().predictions.metric_datas_classification)
+
+        metric_name = get_state().predictions.metric_datas_classification.selected_prediction
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
+        fp_df = classification_model_predictions_matched[
+            classification_model_predictions_matched[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive]
+            == 0.0
+        ].dropna(subset=[metric_name])
+
+        if fp_df.shape[0] == 0:
+            st.write("No false positives")
+        else:
+            histogram = get_histogram(fp_df, metric_name)
+            st.altair_chart(histogram, use_container_width=True)
+            prediction_grid_classifications(get_state().project_paths.data, model_predictions=fp_df)
 
     def build(
         self,
@@ -89,7 +116,9 @@ class FalsePositivesPage(ModelQualityPage):
         object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
         classification_labels: Optional[list] = None,
         classification_pred: Optional[list] = None,
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+        classification_model_predictions_matched: Optional[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+        ] = None,
     ):
 
         with object_tab:
@@ -106,5 +135,8 @@ class FalsePositivesPage(ModelQualityPage):
                 classification_model_predictions_matched,
             ):
                 self._build_classifications(
-                    cast(DataFrame[ClassificationPredictionMatchSchema], classification_model_predictions_matched)
+                    cast(
+                        DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
+                        classification_model_predictions_matched,
+                    )
                 )

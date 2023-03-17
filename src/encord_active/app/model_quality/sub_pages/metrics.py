@@ -19,7 +19,7 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 from encord_active.lib.model_predictions.reader import (
-    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,
     PredictionMatchSchema,
 )
@@ -127,7 +127,7 @@ class MetricsPage(ModelQualityPage):
         self,
         classification_labels: list,
         classification_pred: list,
-        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchema],
+        classification_model_predictions_matched: DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
     ):
         class_names = sorted(list(set(classification_labels).union(classification_pred)))
 
@@ -209,7 +209,9 @@ class MetricsPage(ModelQualityPage):
         object_precisions: Optional[DataFrame[PrecisionRecallSchema]] = None,
         classification_labels: Optional[list] = None,
         classification_pred: Optional[list] = None,
-        classification_model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchema]] = None,
+        classification_model_predictions_matched: Optional[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+        ] = None,
     ):
         with object_tab:
             if self.check_building_object_quality(
@@ -231,5 +233,8 @@ class MetricsPage(ModelQualityPage):
                 self._build_classifications(
                     cast(list, classification_labels),
                     cast(list, classification_pred),
-                    cast(DataFrame[ClassificationPredictionMatchSchema], classification_model_predictions_matched),
+                    cast(
+                        DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
+                        classification_model_predictions_matched,
+                    ),
                 )
