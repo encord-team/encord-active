@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import List, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
+from encord.objects.classification import Classification
 from encord.objects.common import NestableOption, RadioAttribute, Shape
-from encord.objects.ontology_structure import Classification, Object
+from encord.objects.ontology_object import Object
 from encord.ontology import OntologyStructure
 from encord.project import LabelRow
 from pydantic import BaseModel
@@ -40,7 +41,7 @@ class BoundingBoxLabel(BaseModel):
 class PolygonLabel:
     class_: str
     polygon: np.ndarray
-    """numpy arrays need to be an numpy array of relative (x, y) coordinates with shape [N, 2]. 
+    """numpy arrays need to be an numpy array of relative (x, y) coordinates with shape [N, 2].
     For example: np.array([[0.1, 0.1], [0.1, 0.2], [0.2, 0.2], [0.2, 0.1]])
     """
 
@@ -141,7 +142,7 @@ class LabelTransformerWrapper:
 
         if not create_when_missing:
             raise ValueError(
-                f"""Couldn't find radio classification with option `{label.class_}`. 
+                f"""Couldn't find radio classification with option `{label.class_}`.
 Consider setting the `create_when_missing` flag to True.
 This will make a (potentially new) classification question `{LabelTransformerWrapper.ATTRIBUTE_NAME} and add the option `{label.class_}`."""
             )

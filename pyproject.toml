@@ -36,7 +36,7 @@ encord-active = "encord_active.cli.main:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-encord = "0.1.63"
+encord = "^0.1.67"
 numpy = "^1.23.5"
 opencv-python = "4.5.5.64"
 streamlit = "^1.19.0"

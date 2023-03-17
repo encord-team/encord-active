@@ -5,8 +5,9 @@ from typing import Dict, List, Optional, Union
 
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
+from encord.objects.classification import Classification
 from encord.objects.common import NestableOption, RadioAttribute
-from encord.objects.ontology_structure import Classification, Object
+from encord.objects.ontology_object import Object
 from encord.orm.project import Project
 from encord.project import ObjectShape
 
@@ -19,7 +20,9 @@ BBOX_KEYS = {"x", "y", "h", "w"}
 
 def get_client(ssh_key_path: Path):
     return EncordUserClient.create_with_ssh_private_key(
-        ssh_key_path.read_text(encoding="utf-8"), requests_settings=RequestsSettings(max_retries=5)
+        ssh_key_path.read_text(encoding="utf-8"),
+        requests_settings=RequestsSettings(max_retries=5),
+        domain="http://localhost:8000",
     )
 
 
