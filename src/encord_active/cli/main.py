@@ -16,9 +16,14 @@ from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.cli.utils.decorators import (
+    bypass_streamlit_question,
+    ensure_project,
+    find_child_projects,
+)
 from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib import constants as ea_constants
+from encord_active.lib.project.metadata import fetch_project_meta
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -94,10 +99,17 @@ def download(
     if not project_name:
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
-        for project_name in PREBUILT_PROJECTS.keys():
+        downloaded = {fetch_project_meta(project_path)["project_hash"] for project_path in find_child_projects(target)}
+        for project_name, data in PREBUILT_PROJECTS.items():
+            if data["hash"] in downloaded:
+                continue
             project_size = fetch_prebuilt_project_size(project_name)
             modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
+
+        if not project_names_with_storage:
+            rich.print("[green]Nothing to download, current working directory contains all sandbox projects.")
+            raise typer.Exit()
 
         answer = i.select(message="Choose a project", choices=project_names_with_storage, vi_mode=True).execute()
         if not answer:
