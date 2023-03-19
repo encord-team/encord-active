@@ -8,8 +8,8 @@ import Link from '@docusaurus/Link';
 
 # Getting Started
 
-**Encord Active** is an open-source Python library that enables you to improve computer vision models in an active learning fashion by improving your
-[data quality](/category/data-quality), [label quality](/category/label-quality), and [model quality](/category/model-quality).
+**Encord Active** is an open-source active learning tookit that helps you visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
+**Encord Active** is open-source and accesible as Python library on GitHub. 
 
 ## Install Encord Active
 
@@ -129,7 +129,7 @@ The command will ask you:
 1. `Where is your private ssh key stored?`: type the path to your private ssh key
 2. `What project would you like to import?`: here, you can (fuzzy) search for the project title that you would like to import. Hit <kbd>enter</kbd> when your desired project is highlighted.
 
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/metrics) available in `encord-active`.
+Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/quality-metrics) available in `encord-active`.
 
 Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.
@@ -156,14 +156,14 @@ If the script just seems to hang and nothing happens in your browser, try visiti
 
 ## What's Up Next?
 
-We recommend to take a look at one of the [tutorials](/category/tutorials) that demonstrate Encord Active's capabilities and the [workflows](/category/workflows) section to learn about importing your model predictions and improving your model performance.
+We recommend to take a look at one of the [tutorials](/category/end-to-end-tutorials) that demonstrate Encord Active's capabilities and the [workflows](/category/workflows) section to learn about importing your model predictions and improving your model performance.
 A couple of example references are:
 
-1. [Import your model predictions](./workflows/import-predictions)
-2. Find outliers in your [data](./workflows/improve-your-data/identify-outliers-edge-cases) or your [labels](./workflows/improve-your-labels/identify-outliers)
-3. [Identify metrics](./workflows/improve-your-models/metric-importance) that are important for your model performance
+1. [Import your model predictions](./import/import-predictions)
+2. Find outliers in your [data](./workflows/identify-outliers-edge-cases) or your [labels](./workflows/identify-outliers-edge-cases)
+3. [Identify metrics](./workflows/evaluate-detection-model) that are important for your model performance
 
-You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](/category/command-line-interface).
+You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](/cli).
 
 ### Need Support?
 
