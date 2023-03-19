@@ -1,9 +1,0 @@
-{
-  "label": "Improve Your Data",
-  "position": 6,
-  "collapsible": true,
-  "link": {
-    "type": "generated-index",
-    "description": "Workflows for improving your data."
-  }
-}

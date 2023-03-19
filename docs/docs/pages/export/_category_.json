@@ -1,9 +1,0 @@
-{
-  "label": "Export",
-  "position": 5,
-  "collapsible": true,
-  "link": {
-    "type": "generated-index",
-    "description": "Export data from Encord Active."
-  }
-}

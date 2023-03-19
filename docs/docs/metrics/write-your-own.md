@@ -2,8 +2,9 @@
 sidebar_position: 5
 ---
 
-# Write Your Own Metric
+# Writing Custom Quality Metric
 
+**Guide on how to write your own Custom Quality Metrics**
 :::tip
 If you are more comfortable with using notebooks, we have a
 [Google Colab notebook](https://colab.research.google.com/drive/1tAqGGSY0sZfwec2Vp4ThvgLKIefy3-4b?usp=sharing)

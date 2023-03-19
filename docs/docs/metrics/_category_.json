@@ -1,9 +1,9 @@
 {
-  "label": "Metrics",
-  "position": 6,
+  "label": "Quality Metrics",
+  "position": 8,
   "collapsed": true,
   "link": {
     "type": "generated-index",
-    "description": "Detailed descriptions of the pre-existing metrics."
+    "description": "Detailed descriptions of the pre-existing Quality Metrics."
   }
 }
