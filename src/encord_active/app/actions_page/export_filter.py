@@ -16,7 +16,7 @@ from streamlit.delta_generator import DeltaGenerator
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
-from encord_active.app.common.utils import set_page_config, setup_page
+from encord_active.app.common.utils import human_format, set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
 from encord_active.lib.db.tags import Tags
@@ -210,6 +210,35 @@ def create_and_sync_remote_project(
     return ProjectCreationResult(project_hash=new_project.project_hash, dataset_hash=dataset_creation_result.hash)
 
 
+def show_update_stats(filtered_df: pd.DataFrame):
+    project_path = get_state().project_paths.project_dir
+
+    def get_key(counter_name: str):
+        return f"{counter_name}_{project_path}"
+
+    state_frame_count = UseState(-1, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
+    frame_count: int = len(filtered_df["identifier"].map(lambda x: tuple(x.split("_")[1:3])).unique())
+    st.metric(
+        "Selected Frames",
+        value=human_format(frame_count),
+        delta=f"{human_format(frame_count - state_frame_count.value)} frames"
+        if state_frame_count.value != -1
+        else None,
+    )
+    state_frame_count.set(frame_count)
+
+    state_label_count = UseState(-1, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
+    label_count: int = filtered_df[filtered_df["identifier"].map(lambda x: len(x.split("_")) > 3)].shape[0]
+    st.metric(
+        "Selected Labels",
+        value=human_format(label_count),
+        delta=f"{human_format(label_count - state_label_count.value)} labels"
+        if state_label_count.value != -1
+        else None,
+    )
+    state_label_count.set(label_count)
+
+
 def export_filter():
     original_row_count = get_state().merged_metrics.shape[0]
     filtered_row_count = UseState(0)
@@ -229,10 +258,17 @@ def export_filter():
         if action_utils
         else get_state().project_paths.project_dir.name
     )
-    filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+
+    filter_col, _, stats_col = st.columns([8, 1, 2])
+    with filter_col:
+        filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
-    st.markdown(f"**Total row:** {row_count}")
+
+    with stats_col:
+        show_update_stats(filtered_df)
+
     st.dataframe(filtered_df, use_container_width=True)
 
     (
