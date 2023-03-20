@@ -22,7 +22,6 @@ def get_client(ssh_key_path: Path):
     return EncordUserClient.create_with_ssh_private_key(
         ssh_key_path.read_text(encoding="utf-8"),
         requests_settings=RequestsSettings(max_retries=5),
-        domain="http://localhost:8000",
     )
 
 
