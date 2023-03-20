@@ -18,6 +18,55 @@ from encord_active.lib.metrics.metric import (
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
+class Model:
+    def __init__(self, model):
+        self._model = model
+
+    def prepare_data(self, data_path: Path) -> Optional[Any]:
+        """
+        Reads and prepares a data sample from local storage to feed the model with it.
+
+        Supported data files:
+            * image
+
+        :param data_path: Path to the data sample.
+
+        :return: Data sample prepared to be used as the input of `self.predict_probabilities()` method.
+        :rtype: Changeable to numpy ndarray via ``np.asarray(data)``.
+        """
+        return [np.asarray(Image.open(data_path)).flatten()]
+
+    def predict_probabilities(self, data) -> Optional[np.ndarray]:
+        """
+        Calculate the model-predicted class probabilities of the examples found in the data sample by the model.
+
+        :param data: Input data sample.
+        :type data: Changeable to numpy ndarray via ``np.asarray(data)``.
+
+        :return: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
+            Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
+            `x` belongs to each possible class, for each of the K classes.
+            In the case the model can't extract any example `x` from the data sample, the method will return ``None``.
+        """
+        pred_proba = self._predict_proba(data)
+        return None if len(pred_proba) == 0 else pred_proba
+
+    def _predict_proba(self, X) -> np.ndarray:
+        """
+        Probability estimates.
+
+        Note that in the multilabel case, each sample can have any number of labels.
+        This returns the marginal probability that the given sample has the label in question.
+
+        :param X: Input data.
+        :type X: {array-like} of shape (n_samples, n_features)
+
+        :return: Returns the probability of the sample for each class in the model.
+        :rtype: array-like of shape (n_samples, n_classes)
+        """
+        return self._model.predict_proba(X)
+
+
 class AcquisitionFunction(Metric):
     def __init__(
         self,
@@ -26,10 +75,15 @@ class AcquisitionFunction(Metric):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
+        model: Model,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
-        model=None,
     ):
+        """
+        Creates an instance of the acquisition function with a custom model to score data samples.
+
+        :param model: Machine learning model used to score data samples.
+        """
         self._model = model
         super().__init__(
             title, short_description, long_description, metric_type, data_type, annotation_type, embedding_type
@@ -39,35 +93,17 @@ class AcquisitionFunction(Metric):
         for _, img_pth in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             if img_pth is None:
                 continue
-            img = self.read_image(img_pth)
-            if img is None:
+            prepared_data = self._model.prepare_data(img_pth)
+            if prepared_data is None:
                 continue
-            pred_probs = self.get_predicted_class_probabilities(img)
-            if pred_probs is None:
+            pred_proba = self._model.predict_probabilities(prepared_data)
+            if pred_proba is None:
                 continue
-            score = self.score_predicted_class_probabilities(pred_probs)
+            score = self.score_predicted_class_probabilities(pred_proba)
             writer.write(score)
 
-    def get_predicted_class_probabilities(self, image) -> Optional[np.ndarray]:
-        """
-        Calculate the model-predicted class probabilities of the examples found by the model in the image.
-
-        :param image: Input image.
-            *Requirement*: It must allow conversion to numpy ndarray via ``np.asarray(image)``.
-        :return: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
-            Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
-            `x` belongs to each possible class, for each of the K classes.
-            In the case the model can't extract any example `x` from the image, the method will return ``None``.
-        """
-        image_array = np.asarray(image).flatten()
-        pred_proba = self._model.predict_proba([image_array])
-        return None if len(pred_proba) == 0 else pred_proba
-
-    def read_image(self, image_path: Path) -> Optional[Any]:
-        return Image.open(image_path)
-
     @abstractmethod
-    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
         pass
 
 
@@ -93,11 +129,11 @@ class Entropy(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
         # silence divide by zero warning as the result will be correct (log2(0) is -inf, when multiplied by 0 gives 0)
-        # raise exception if invalid (negative) values are found in the predictions
+        # raise exception if invalid (negative) values are found in the pred_proba array
         with np.errstate(divide="ignore", invalid="raise"):
-            return -np.multiply(predictions, np.nan_to_num(np.log2(predictions))).sum(axis=1).mean()
+            return -np.multiply(pred_proba, np.nan_to_num(np.log2(pred_proba))).sum(axis=1).mean()
 
 
 class LeastConfidence(AcquisitionFunction):
@@ -123,8 +159,8 @@ class LeastConfidence(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
-        return (1 - predictions.max(axis=1)).mean()
+    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+        return (1 - pred_proba.max(axis=1)).mean()
 
 
 class Margin(AcquisitionFunction):
@@ -147,9 +183,9 @@ class Margin(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
+    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
         # move the second highest and highest class prediction values to the last two columns respectively
-        preds = np.partition(predictions, -2)
+        preds = np.partition(pred_proba, -2)
         return (preds[:, -1] - preds[:, -2]).mean()
 
 
@@ -176,5 +212,5 @@ class Variance(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, predictions: np.ndarray) -> float:
-        return predictions.var(axis=1).mean()
+    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+        return pred_proba.var(axis=1).mean()
