@@ -27,6 +27,7 @@ from encord_active.lib.charts.performance_by_metric import performance_rate_by_m
 from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.common.colors import Color
+from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
@@ -46,6 +47,7 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 
 class ObjectTypeBuilder(PredictionTypeBuilder):
     name = "Object"
+    title = "Object-level model performance"
 
     def __init__(self):
         self._model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None
@@ -53,22 +55,26 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         self._metrics: Optional[DataFrame[PerformanceMetricSchema]] = None
         self._precisions: Optional[DataFrame[PrecisionRecallSchema]] = None
 
+    def sidebar_options(self, *args, **kwargs):
+        pass
+
     def description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):
             st.markdown(
                 """### The View
 
 On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
-Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value in the plots.
-Bars indicate the number of samples in each bucket, while lines indicate the true positive and false negative rates of each bucket.
+Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the 
+x-value in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive 
+and false negative rates of each bucket.
 
 
 Metrics marked with (P) are metrics computed on your predictions.
 Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
 with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
 
-For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" (O/F) computed
-on your labels are used for the "False Negative Rate" plot.
+For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
+(O/F) computed on your labels are used for the "False Negative Rate" plot.
 """,
                 unsafe_allow_html=True,
             )
@@ -172,7 +178,7 @@ on your labels are used for the "False Negative Rate" plot.
     def _topbar_additional_settings(self, page_mode: ModelQualityPage):
         if page_mode == ModelQualityPage.METRICS:
             return
-        else:
+        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
                 self._prediction_metric_in_sidebar_objects(page_mode)
@@ -195,6 +201,19 @@ on your labels are used for the "False Negative Rate" plot.
                     value=PredictionsState.decompose_classes,
                     help="When checked, every plot will have a separate component for each class.",
                 )
+        elif page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+            ModelQualityPage.FALSE_NEGATIVES,
+        ]:
+            self._prediction_metric_in_sidebar_objects(page_mode)
+
+        if page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+            ModelQualityPage.FALSE_NEGATIVES,
+        ]:
+            self.display_settings(MetricScope.MODEL_QUALITY)
 
     def _common_settings(self):
         if not get_state().predictions.all_classes_objects:
@@ -237,8 +256,8 @@ on your labels are used for the "False Negative Rate" plot.
             get_state().ignore_frames_without_predictions = st.checkbox(
                 "Ignore frames without predictions",
                 value=State.ignore_frames_without_predictions,
-                help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for which there "
-                "exist no predictions. With this flag, you can ignore those.",
+                help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
+                "which there exist no predictions. With this flag, you can ignore those.",
             )
 
     def _render_metrics(self):
@@ -388,14 +407,15 @@ on your labels are used for the "False Negative Rate" plot.
             color = Color.PURPLE
             st.markdown(
                 f"""### The view
-        These are the predictions for which the IOU was sufficiently high and the confidence score was
-        the highest amongst predictions that overlap with the label.
+These are the predictions for which the IOU was sufficiently high and the confidence score was
+the highest amongst predictions that overlap with the label.
 
-        ---
+---
 
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
-        The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
                             """,
                 unsafe_allow_html=True,
             )
@@ -456,13 +476,14 @@ on your labels are used for the "False Negative Rate" plot.
             color = Color.PURPLE
             st.markdown(
                 f"""### The view
-        These are the labels that were not matched with any predictions.
+These are the labels that were not matched with any predictions.
 
-        ---
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives.
-        That is, the labels that were not matched to any predictions.
-        The remaining objects are predictions, where colors correspond to their predicted class (identical colors to labels objects in the editor).
+---
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives. That is, the labels that were not 
+matched to any predictions. The remaining objects are predictions, where colors correspond to their predicted class 
+(identical colors to labels objects in the editor).
                 """,
                 unsafe_allow_html=True,
             )
@@ -479,17 +500,3 @@ on your labels are used for the "False Negative Rate" plot.
                 model_predictions=self._model_predictions,
                 box_color=color,
             )
-
-    def render(self, page_mode: ModelQualityPage):
-        self._load_data(page_mode)
-
-        if page_mode == ModelQualityPage.METRICS:
-            self._render_metrics()
-        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
-            self._render_performance_by_metric()
-        elif page_mode == ModelQualityPage.TRUE_POSITIVES:
-            self._render_true_positives()
-        elif page_mode == ModelQualityPage.FALSE_POSITIVES:
-            self._render_false_positives()
-        elif page_mode == ModelQualityPage.FALSE_NEGATIVES:
-            self._render_false_negatives()
