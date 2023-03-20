@@ -230,8 +230,6 @@ def load_transformers_from_module(
     module_path: Union[str, Path],
 ) -> Optional[List[TransformerResult]]:
     mod = load_module(module_path)
-    if mod is None:
-        return None
 
     cls_members = inspect.getmembers(mod, inspect.isclass)
     label_transformers = []

@@ -23,6 +23,7 @@ from encord_active.cli.utils.decorators import (
 )
 from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib import constants as ea_constants
+from encord_active.lib.common.module_loading import ModuleLoadError
 from encord_active.lib.project.metadata import fetch_project_meta
 
 
@@ -176,6 +177,7 @@ def import_local_project(
     transformer: Path = typer.Option(
         None,
         help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface",
+        exists=True,
     ),
 ):
     """
@@ -247,16 +249,21 @@ def import_local_project(
 
     selected_transformer: Optional[TransformerResult] = None
     if transformer is not None:
-        transformers_found = load_transformers_from_module(transformer)
+        try:
+            transformers_found = load_transformers_from_module(transformer)
+        except (ModuleLoadError, ValueError) as e:
+            rich.print(e)
+            raise typer.Abort()
+
         if not transformers_found:
-            rich.print(f"[yellow]Couldn't find any transformers in `[blue]{transformer}[/blue]`")
-            pass
+            rich.print(f"[yellow]Didn't find any transformers in `[blue]{transformer}[/blue]`")
+            raise typer.Abort()
         elif len(transformers_found) == 1:
             selected_transformer = transformers_found[0]
         else:
             choices = list(map(lambda m: Choice(m, name=m.name), transformers_found))
             selected_transformer = i.select(
-                message="Please choose which label transformer to use? Use [TAB] to select from the list.",
+                message="Please choose which label transformer to use? Use [ENTER] to select from the list.",
                 choices=choices,
             ).execute()
 

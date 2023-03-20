@@ -2,7 +2,9 @@ import inspect
 from pathlib import Path
 from typing import Callable, Optional, Union
 
-from encord_active.lib.common.module_loading import load_module
+from loguru import logger
+
+from encord_active.lib.common.module_loading import ModuleLoadError, load_module
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 
@@ -53,9 +55,12 @@ def get_module_metrics(
     module_path: Union[str, Path],
     filter_func: Callable[[Union[Metric, SimpleMetric]], bool],
 ) -> Optional[list[Union[Metric, SimpleMetric]]]:
-    mod = load_module(module_path)
-    if mod is None:
+    try:
+        mod = load_module(module_path)
+    except (ModuleLoadError, ValueError) as e:
+        logger.warning(e)
         return None
+
     cls_members = inspect.getmembers(mod, inspect.isclass)
     metrics = []
     for cls_name, cls_obj in cls_members:
