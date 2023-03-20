@@ -12,6 +12,7 @@ from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalUserClient,
     get_mimetype,
+    handle_enum_and_datetime,
 )
 from encord_active.lib.labels.label_transformer import (
     LabelTransformer,
@@ -124,7 +125,7 @@ def init_local_project(
     metrics_meta = fill_metrics_meta_with_builtin_metrics()
     update_metrics_meta(project_path, metrics_meta)
 
-    label_row_meta_collection = {lr.label_hash: lr for lr in project.label_row_meta}
+    label_row_meta_collection = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
     label_row_meta_file_path = project_dir / "label_row_meta.json"
     label_row_meta_file_path.write_text(json.dumps(label_row_meta_collection, indent=2), encoding="utf-8")
 
