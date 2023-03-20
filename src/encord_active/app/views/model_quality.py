@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import streamlit as st
 
@@ -8,6 +9,14 @@ from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.state import MetricNames, get_state
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.app.common.utils import setup_page
+from encord_active.app.model_quality.classification_type_builder import (
+    ClassificationTypeBuilder,
+)
+from encord_active.app.model_quality.object_type_builder import ObjectTypeBuilder
+from encord_active.app.model_quality.prediction_type_builder import (
+    ModelQualityPage,
+    PredictionTypeBuilder,
+)
 from encord_active.app.model_quality.settings import (
     common_settings_classifications,
     common_settings_objects,
@@ -30,7 +39,7 @@ from encord_active.lib.model_predictions.reader import (
 from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
-def model_quality(page: Page):
+def model_quality(page_mode: ModelQualityPage):
     def _get_object_model_quality_data(metrics_dir: Path):
         if not reader.check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.OBJECT.value
@@ -66,7 +75,7 @@ def model_quality(page: Page):
 
         with sticky_header():
             common_settings_objects()
-            page.sidebar_options()
+            # page.sidebar_options()
 
         (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
             model_predictions,
@@ -143,7 +152,7 @@ def model_quality(page: Page):
 
         with sticky_header():
             common_settings_classifications()
-            page.sidebar_options_classifications()
+            # page.sidebar_options_classifications()
 
         model_predictions_matched = match_predictions_and_labels(model_predictions, labels_all)
 
@@ -187,7 +196,26 @@ def model_quality(page: Page):
             ],
         )
 
+    def get_available_predictions() -> List[PredictionTypeBuilder]:
+        builders = [ClassificationTypeBuilder(), ObjectTypeBuilder()]
+        return [b for b in builders if b.is_available()]
+
     def render():
+        available_predictions: List[PredictionTypeBuilder] = get_available_predictions()
+
+        if not available_predictions:
+            st.markdown("## No predictions imported into this project.")
+            pass
+        st.write("2222")  # TODO delete
+
+        tab_names = [m.name for m in available_predictions]
+        tabs = st.tabs(tab_names)
+
+        for tab, builder in zip(tabs, available_predictions):
+            with tab:
+                builder.render(page_mode)
+
+    def render_2():
         setup_page()
         tag_creator()
 
@@ -220,18 +248,18 @@ def model_quality(page: Page):
                 classification_model_predictions_matched,
             ) = _get_classification_model_quality_data(metrics_dir)
 
-        page.build(
-            object_predictions_exist,
-            classification_predictions_exist,
-            object_tab,
-            classification_tab,
-            object_model_predictions=object_model_pred,
-            object_labels=object_labels,
-            object_metrics=object_metrics,
-            object_precisions=object_precisions,
-            classification_labels=classification_labels,
-            classification_pred=classification_pred,
-            classification_model_predictions_matched=classification_model_predictions_matched,
-        )
+        # page.build(
+        #     object_predictions_exist,
+        #     classification_predictions_exist,
+        #     object_tab,
+        #     classification_tab,
+        #     object_model_predictions=object_model_pred,
+        #     object_labels=object_labels,
+        #     object_metrics=object_metrics,
+        #     object_precisions=object_precisions,
+        #     classification_labels=classification_labels,
+        #     classification_pred=classification_pred,
+        #     classification_model_predictions_matched=classification_model_predictions_matched,
+        # )
 
     return render
