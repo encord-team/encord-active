@@ -1,3 +1,5 @@
+from typing import List
+
 import streamlit as st
 
 from encord_active.app.common.components.metric_summary import (
@@ -8,9 +10,8 @@ from encord_active.app.common.components.metric_summary import (
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.dataset.outliers import MetricWithDistanceSchema
-from encord_active.lib.metrics.utils import MetricScope, load_available_metrics
+from encord_active.lib.metrics.utils import MetricData, MetricScope
 
 _COLUMNS = MetricWithDistanceSchema
 
@@ -25,18 +26,14 @@ class SummaryPage(Page):
         self.display_settings(metric_scope)
         tag_creator()
 
-    def build(self, metric_scope: MetricScope):
-
+    def build(self, metrics: List[MetricData], metric_scope: MetricScope):
         if metric_scope == MetricScope.DATA_QUALITY:
             render_data_quality_dashboard(
-                self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
+                metrics, self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
             )
         elif metric_scope == MetricScope.LABEL_QUALITY:
-            metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.LABEL_QUALITY)
-            if not metrics:
-                return label_onboarding_page()
             render_label_quality_dashboard(
-                self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
+                metrics, self._severe_outlier_color, self._moderate_outlier_color, self._summary_item_background_color
             )
 
         with st.expander("Outlier description", expanded=False):
