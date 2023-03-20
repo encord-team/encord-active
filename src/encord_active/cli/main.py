@@ -177,6 +177,7 @@ def import_local_project(
     transformer: Path = typer.Option(
         None,
         help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface",
+        exists=True,
     ),
 ):
     """
@@ -250,7 +251,7 @@ def import_local_project(
     if transformer is not None:
         try:
             transformers_found = load_transformers_from_module(transformer)
-        except ModuleLoadError as e:
+        except (ModuleLoadError, ValueError) as e:
             rich.print(e)
             raise typer.Abort()
 

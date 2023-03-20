@@ -57,7 +57,7 @@ def get_module_metrics(
 ) -> Optional[list[Union[Metric, SimpleMetric]]]:
     try:
         mod = load_module(module_path)
-    except ModuleLoadError as e:
+    except (ModuleLoadError, ValueError) as e:
         logger.warning(e)
         return None
 
