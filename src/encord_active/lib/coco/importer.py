@@ -27,6 +27,7 @@ from encord_active.lib.encord.local_sdk import (
     LocalOntology,
     LocalProject,
     LocalUserClient,
+    handle_enum_and_datetime,
 )
 from encord_active.lib.encord.utils import make_object_dict
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
@@ -227,7 +228,7 @@ class CocoImporter:
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
         id_shape_to_obj = {key: id_to_obj[id] for key, id in self.id_mappings.items()}
 
-        label_row_meta = {lr["label_hash"]: lr for lr in project.label_row_meta}
+        label_row_meta = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
         label_row_meta_file_path = self.project_dir / "label_row_meta.json"
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 

@@ -124,13 +124,13 @@ def init_local_project(
     metrics_meta = fill_metrics_meta_with_builtin_metrics()
     update_metrics_meta(project_path, metrics_meta)
 
-    label_row_meta_collection = {lr["label_hash"]: lr for lr in project.label_row_meta}
+    label_row_meta_collection = {lr.label_hash: lr for lr in project.label_row_meta}
     label_row_meta_file_path = project_dir / "label_row_meta.json"
     label_row_meta_file_path.write_text(json.dumps(label_row_meta_collection, indent=2), encoding="utf-8")
 
     image_to_du = {}
     for label_row_meta in tqdm(project.label_row_meta, desc="Constructing project"):
-        label_row = project.create_label_row(label_row_meta["data_hash"])
+        label_row = project.create_label_row(label_row_meta.data_hash)
         image_id = label_row["data_title"]  # This is specific to one image label rows
         for du in label_row["data_units"].values():
             data_hash = du["data_hash"]

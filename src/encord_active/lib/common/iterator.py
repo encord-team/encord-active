@@ -166,7 +166,7 @@ class DatasetIterator(Iterator):
             return []
 
         # Load label logs and store them according to frames.
-        data_hash = self.project.label_row_metas[self.label_hash]["data_hash"]
+        data_hash = self.project.label_row_metas[self.label_hash].data_hash
         try:
             # logs = self.project.get_label_logs(data_hash=data_hash)
             # TODO commented while we figure out how to address this from cache only
