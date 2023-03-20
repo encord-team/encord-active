@@ -30,11 +30,7 @@ from encord_active.lib.dataset.summary_utils import (
     get_median_value_of_2d_array,
     get_metric_summary,
 )
-from encord_active.lib.metrics.utils import (
-    MetricData,
-    MetricScope,
-    load_available_metrics,
-)
+from encord_active.lib.metrics.utils import MetricData, MetricScope
 
 _COLUMNS = MetricWithDistanceSchema
 
@@ -137,12 +133,13 @@ def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: Delt
         )
 
 
-def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+def render_data_quality_dashboard(
+    metrics: List[MetricData], severe_outlier_color: str, moderate_outlier_color: str, background_color: str
+):
     if get_state().image_sizes is None:
         get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
     median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
 
-    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
     if get_state().metrics_data_summary is None:
         get_state().metrics_data_summary = get_metric_summary(metrics)
 
@@ -200,11 +197,12 @@ def render_data_quality_dashboard(severe_outlier_color: str, moderate_outlier_co
     render_2d_metric_plots(get_state().metrics_data_summary)
 
 
-def render_label_quality_dashboard(severe_outlier_color: str, moderate_outlier_color: str, background_color: str):
+def render_label_quality_dashboard(
+    metrics: List[MetricData], severe_outlier_color: str, moderate_outlier_color: str, background_color: str
+):
     if get_state().annotation_sizes is None:
         get_state().annotation_sizes = get_all_annotation_numbers(get_state().project_paths)
 
-    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.LABEL_QUALITY)
     if get_state().metrics_label_summary is None:
         get_state().metrics_label_summary = get_metric_summary(metrics)
 

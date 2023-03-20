@@ -29,7 +29,6 @@ from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
-from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
@@ -54,11 +53,10 @@ from encord_active.lib.metrics.utils import (
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(self, available_metrics: List[MetricData], metric_scope: MetricScope):
+    def sidebar_options(
+        self, available_metrics: List[MetricData], metric_scope: MetricScope
+    ) -> Optional[DataFrame[MetricSchema]]:
         tag_creator()
-
-        if not available_metrics:
-            return label_onboarding_page()
 
         non_empty_metrics = [
             metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
@@ -75,7 +73,7 @@ class ExplorerPage(Page):
         )
 
         if not selected_metric_name:
-            return
+            return None
 
         metric_idx = metric_names.index(selected_metric_name)
         selected_metric = sorted_metrics[metric_idx]
@@ -83,7 +81,7 @@ class ExplorerPage(Page):
 
         df = load_metric_dataframe(selected_metric)
         if df.shape[0] <= 0:
-            return
+            return None
 
         class_set = natsorted(df[MetricSchema.object_class].dropna().unique().tolist())
         with col2:
@@ -111,7 +109,7 @@ class ExplorerPage(Page):
 
         self.display_settings(metric_scope)
         # For now go the easy route and just filter the dataframe here
-        return df_class_selected[annotator_selected]
+        return df_class_selected[annotator_selected].pipe(DataFrame[MetricSchema])
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
         selected_metric = get_state().selected_metric
