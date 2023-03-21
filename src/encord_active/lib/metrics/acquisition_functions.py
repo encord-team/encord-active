@@ -18,16 +18,15 @@ from encord_active.lib.metrics.metric import (
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-class ModelWrapper:
+class BaseModelWrapper:
     def __init__(self, model):
         self._model = model
 
-    def prepare_data(self, data_path: Path) -> Optional[Any]:
+    @classmethod
+    @abstractmethod
+    def prepare_data(cls, data_path: Path) -> Optional[Any]:
         """
         Reads and prepares a data sample from local storage to feed the model with it.
-
-        Supported data types:
-            * image
 
         Args:
             data_path (Path): Path to the data sample.
@@ -35,7 +34,7 @@ class ModelWrapper:
         Returns:
             Data sample prepared to be used as input of `self.predict_probabilities()` method.
         """
-        return [np.asarray(Image.open(data_path)).flatten()]
+        pass
 
     def predict_probabilities(self, data) -> Optional[np.ndarray]:
         """
@@ -55,6 +54,7 @@ class ModelWrapper:
             raise ValueError("Model-predicted class probabilities cannot be less than zero.")
         return pred_proba
 
+    @abstractmethod
     def _predict_proba(self, X) -> Optional[np.ndarray]:
         """
         Probability estimates.
@@ -69,6 +69,15 @@ class ModelWrapper:
             An array of shape (n_samples, n_classes). Probability of the sample for each class in the model.
             In the case the model fails, the method returns ``None``.
         """
+        pass
+
+
+class SKLearnModelWrapper(BaseModelWrapper):
+    @classmethod
+    def prepare_data(cls, data_path: Path) -> Optional[Any]:
+        return [np.asarray(Image.open(data_path)).flatten() / 255]
+
+    def _predict_proba(self, X) -> Optional[np.ndarray]:
         return self._model.predict_proba(X)
 
 
@@ -80,7 +89,7 @@ class AcquisitionFunction(Metric):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        model: ModelWrapper,
+        model: BaseModelWrapper,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
     ):
@@ -88,7 +97,7 @@ class AcquisitionFunction(Metric):
         Creates an instance of the acquisition function with a custom model to score data samples.
 
         Args:
-            model (ModelWrapper): Machine learning model used to score data samples.
+            model (BaseModelWrapper): Machine learning model used to score data samples.
         """
         self._model = model
         super().__init__(
