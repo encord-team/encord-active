@@ -53,6 +53,11 @@ def version_form():
     _, container, _ = st.columns(3)
     versioner = GitVersioner(get_state().project_paths.project_dir)
     version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
+    show_success_message = UseState(False)
+
+    if show_success_message.value:
+        container.success(f'Successfully created version with name "{versioner.versions[0].name}"')
+        show_success_message.set(False)
 
     opts = {}
     if not versioner.is_latest():
@@ -77,4 +82,5 @@ def version_form():
             else:
                 version = versioner.create_version(version_name)
                 version_state.set(version)
+                show_success_message.set(True)
                 refresh()
