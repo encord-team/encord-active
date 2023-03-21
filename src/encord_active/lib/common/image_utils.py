@@ -17,6 +17,7 @@ from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
 from encord_active.lib.project import LabelRowStructure, ProjectFileStructure
+from encord_active.lib.project.project_file_structure import DataUnitStructure
 
 
 @dataclass
@@ -153,17 +154,17 @@ def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: Proje
     """
     key = __get_key(row)
 
-    img_pth: Optional[Path] = key_to_image_path(key, project_file_structure)
+    img_du: Optional[DataUnitStructure] = key_to_data_unit(key, project_file_structure)
 
-    if img_pth and img_pth.is_file():
+    if img_du and img_du.path.is_file():
         try:
-            image = cv2.imread(img_pth.as_posix())
+            image = cv2.imread(img_du.path.as_posix())
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception:
             pass
 
     # Read not successful, so tell the user why
-    error_text = "Image not found" if not img_pth else "File seems broken"
+    error_text = "Image not found" if not img_du else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
     # lr = json.loads(key_to_lr_path(key, project_file_structure).read_text(encoding="utf-8"))
@@ -289,7 +290,7 @@ def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStru
     return project_file_structure.label_row_structure(label_hash)
 
 
-def key_to_image_path(key: str, project_file_structure: ProjectFileStructure) -> Optional[Path]:
+def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure) -> Optional[DataUnitStructure]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
@@ -299,7 +300,7 @@ def key_to_image_path(key: str, project_file_structure: ProjectFileStructure) ->
     label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_path = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
-    if frame_path is not None:
-        return frame_path
+    frame_du: DataUnitStructure = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    if frame_du is not None:
+        return frame_du
     return next(label_row_structure.iter_data_unit(du_hash), None)  # So this is an img_group image

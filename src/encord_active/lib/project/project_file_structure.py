@@ -1,12 +1,17 @@
 import json
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator, NamedTuple, Optional
 
+
+class DataUnitStructure(NamedTuple):
+    hash: str
+    path: Path
 
 class LabelRowStructure:
     def __init__(self, path: Path, mappings: dict[str, str]):
         self.path: Path = path
         self._mappings: dict[str, str] = mappings
+        self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
 
     @property
     def label_row_file(self) -> Path:
@@ -16,15 +21,17 @@ class LabelRowStructure:
     def images_dir(self) -> Path:
         return self.path / "images"
 
-    def iter_data_unit(self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None) -> Iterator[Path]:
-        glob_string = ""
+    def iter_data_unit(self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None) -> Iterator[DataUnitStructure]:
         if data_unit_hash:
-            glob_string += self._mappings.get(data_unit_hash, data_unit_hash)
+            glob_string = self._mappings.get(data_unit_hash, data_unit_hash)
+        else:
+            glob_string = "*"
         if frame:
             glob_string += f"_{frame}"
         glob_string += ".*"
         for du_path in self.images_dir.glob(glob_string):
-            yield du_path
+            du_hash = du_path.name.split('.')[0].split('_')[0]
+            yield DataUnitStructure(self._rev_mappings.get(du_hash, du_hash), du_path)
 
     def is_present(self):
         return self.path.is_dir()

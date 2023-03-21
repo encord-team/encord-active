@@ -125,7 +125,7 @@ def create_filtered_embeddings(
 
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         embedding_file_name = EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
-        if not Path(curr_project_structure.embeddings / embedding_file_name).exists():
+        if not (curr_project_structure.embeddings / embedding_file_name).exists():
             continue
         embeddings = pickle.loads(Path(curr_project_structure.embeddings / embedding_file_name).read_bytes())
         embeddings_df = pd.DataFrame.from_dict(embeddings)
@@ -158,15 +158,14 @@ def copy_filtered_data(
             continue
         target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
         target_label_row_structure.images_dir.mkdir(parents=True, exist_ok=True)
-        for curr_file in current_label_row_structure.images_dir.glob("*.*"):
-            curr_data_unit = curr_file.stem.split("_")[0]
+        for data_unit in current_label_row_structure.iter_data_unit():
             if (
-                curr_data_unit in filtered_data_hashes
-                and not (target_label_row_structure.images_dir / curr_file.name).exists()
+                data_unit.hash in filtered_data_hashes
+                and not (target_label_row_structure.images_dir / data_unit.path.name).exists()
             ):
-                (target_label_row_structure.images_dir / curr_file.name).symlink_to(curr_file)
+                (target_label_row_structure.images_dir / data_unit.path.name).symlink_to(data_unit.path)
 
-        label_row = json.loads(target_label_row_structure.label_row_file.read_text())
+        label_row = json.loads(current_label_row_structure.label_row_file.read_text())
         label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
 
         for data_unit_hash, v in label_row["data_units"].items():
@@ -196,6 +195,11 @@ def copy_filtered_data(
             k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
         }
         target_label_row_structure.label_row_file.write_text(json.dumps(label_row))
+
+        hash_mappings = json.loads(curr_project_structure.mappings.read_text())
+        filtered_hash_mappings = {k: v for k, v in hash_mappings.items() if k in filtered_label_hashes or k in filtered_data_hashes}
+        target_project_structure.mappings.write_text(json.dumps(filtered_hash_mappings))
+
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
