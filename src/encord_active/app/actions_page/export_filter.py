@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
-from typing import Callable, NamedTuple, Optional, Tuple, cast
+from typing import Callable, List, NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
 import streamlit as st
@@ -16,7 +16,7 @@ from streamlit.delta_generator import DeltaGenerator
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
-from encord_active.app.common.utils import set_page_config, setup_page
+from encord_active.app.common.utils import human_format, set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
 from encord_active.lib.db.tags import Tags
@@ -210,13 +210,38 @@ def create_and_sync_remote_project(
     return ProjectCreationResult(project_hash=new_project.project_hash, dataset_hash=dataset_creation_result.hash)
 
 
+def show_update_stats(filtered_df: pd.DataFrame):
+    project_path = get_state().project_paths.project_dir
+
+    def get_key(counter_name: str):
+        return f"{counter_name}_{project_path}"
+
+    state_frame_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
+    frame_count: int = len(filtered_df["identifier"].map(lambda x: tuple(x.split("_")[1:3])).unique())
+    st.metric(
+        "Selected Frames",
+        value=human_format(frame_count),
+        delta=state_frame_count.value and f"{human_format(frame_count - state_frame_count.value)} frames",
+    )
+    state_frame_count.set(frame_count)
+
+    state_label_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
+    label_count: int = filtered_df[filtered_df["identifier"].map(lambda x: len(x.split("_")) > 3)].shape[0]
+    st.metric(
+        "Selected Labels",
+        value=human_format(label_count),
+        delta=state_label_count.value and f"{human_format(label_count - state_label_count.value)} labels",
+    )
+    state_label_count.set(label_count)
+
+
 def export_filter():
     original_row_count = get_state().merged_metrics.shape[0]
     filtered_row_count = UseState(0)
 
     current_form = UseState(CurrentForm.NONE)
 
-    updates = UseState([])
+    updates = UseState[List[UpdateItem]]([])
 
     setup_page()
     message_placeholder = st.empty()
@@ -229,10 +254,17 @@ def export_filter():
         if action_utils
         else get_state().project_paths.project_dir.name
     )
-    filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+
+    filter_col, _, stats_col = st.columns([8, 1, 2])
+    with filter_col:
+        filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+
     filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
-    st.markdown(f"**Total row:** {row_count}")
+
+    with stats_col:
+        show_update_stats(filtered_df)
+
     st.dataframe(filtered_df, use_container_width=True)
 
     (
@@ -247,10 +279,10 @@ def export_filter():
     ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
-    render_generate_csv(generate_csv_col, file_prefix, filtered_df, updates.set)
-    render_generate_coco(generate_coco_col, file_prefix, filtered_df, updates.set)
+    render_generate_csv(generate_csv_col, file_prefix, filtered_df)
+    render_generate_coco(generate_coco_col, file_prefix, filtered_df)
     render_unimplemented_buttons(
-        delete_button_col, edit_button_col, augment_button_col, message_placeholder, current_form.set, updates.set
+        delete_button_col, edit_button_col, augment_button_col, message_placeholder, current_form.set
     )
 
     if filtered_row_count.value != row_count:
@@ -284,6 +316,7 @@ def export_filter():
             label.info(update.text)
         elif update.type == UpdateItemType.MARKDOWN:
             st.markdown(update.text)
+    updates.set([])
 
 
 def generate_create_project_form(
@@ -321,11 +354,11 @@ def render_subset_button(
     project_has_remote: bool,
     current_form: UseState[CurrentForm],
     project_name: str,
-    set_updates: Callable,
+    set_updates: Callable[[List[UpdateItem]], None],
 ):
     render_col.button(
         "🏗 Create Subset",
-        on_click=lambda: (current_form.set(CurrentForm.CLONE), set_updates([])),  # type: ignore
+        on_click=lambda: current_form.set(CurrentForm.CLONE),  # type: ignore
         disabled=not action_utils,
         help="Subset the filtered data into a new Encord dataset and project",
     )
@@ -371,19 +404,19 @@ def render_export_button(
     action_utils: EncordActions,
     current_form: UseState[CurrentForm],
     project_name: str,
-    set_updates: Callable,
+    set_updates: Callable[[List[UpdateItem]], None],
     is_filtered: bool,
 ):
-    export_button = render_col.button(
+    render_col.button(
         "🏗 Export to Encord",
-        on_click=lambda: (current_form.set(CurrentForm.EXPORT), set_updates([])),  # type: ignore
+        on_click=lambda: current_form.set(CurrentForm.EXPORT),  # type: ignore
         disabled=not action_utils or is_filtered,
         help="Export to an Encord dataset and project"
         if not is_filtered
         else "Export is allowed only for entire datasets, create a subset first or remove all filters",
     )
-    df = get_state().merged_metrics
     if current_form.value == CurrentForm.EXPORT:
+        df = get_state().merged_metrics
         cols = generate_create_project_form(
             "Create a new project with the current dataset",
             df.shape[0],
@@ -414,7 +447,6 @@ def render_unimplemented_buttons(
     augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
     set_current_form: Callable,
-    set_updates: Callable,
 ):
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
@@ -425,7 +457,6 @@ def render_unimplemented_buttons(
     augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
     if any([delete_btn, edit_btn, augment_btn]):
         set_current_form(CurrentForm.NONE)
-        set_updates([])
         message_placeholder.markdown(
             f"""
 <div class="encord-active-info-box">
@@ -441,7 +472,9 @@ community</a>
 
 
 def render_generate_coco(
-    render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable
+    render_column: DeltaGenerator,
+    file_prefix: str,
+    filtered_df: pd.DataFrame,
 ):
     coco_placeholder = render_column.empty()
     generate_coco = coco_placeholder.button(
@@ -449,7 +482,6 @@ def render_generate_coco(
         help="Generate COCO file with filtered data to enable COCO download.",
     )
     if generate_coco:
-        set_updates([])
         with st.spinner(text="Generating COCO file"):
             coco_json = (
                 generate_coco_file(
@@ -469,7 +501,9 @@ def render_generate_coco(
 
 
 def render_generate_csv(
-    render_column: DeltaGenerator, file_prefix: str, filtered_df: pd.DataFrame, set_updates: Callable
+    render_column: DeltaGenerator,
+    file_prefix: str,
+    filtered_df: pd.DataFrame,
 ):
     csv_placeholder = render_column.empty()
     generate_csv = csv_placeholder.button(
@@ -477,7 +511,6 @@ def render_generate_csv(
         help="Generate CSV file with filtered data to enable CSV download.",
     )
     if generate_csv:
-        set_updates([])
         with st.spinner(text="Generating CSV file"):
             csv_content = filtered_df.to_csv().encode("utf-8") if generate_csv else ""
             csv_placeholder.empty()

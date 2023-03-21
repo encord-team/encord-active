@@ -8,7 +8,7 @@
 
 <h1 align="center">
   <p align="center">Encord Active</p>
-  <a href="https://encord.com"><img src="docs/static/img/icons/encord_logo.png" width="150" alt="Encord logo"/></a>
+  <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_logo.png" width="150" alt="Encord logo"/></a>
 </h1>
 
 [![PRs-Welcome][contribute-image]][contribute-url]
@@ -35,7 +35,7 @@ Encord Active helps you understand and improve your data, labels, and models at 
 
 Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
 
-![encord active diagram](docs/static/img/process-chart-ea.webp)
+![encord active diagram](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/process-chart-ea.webp)
 
 ## 🔖 Documentation
 
@@ -92,7 +92,7 @@ The app should then open in the browser.
 If not, navigate to [`localhost:8501`](http://localhost:8501).
 Our [docs][encord-active-docs] contains more information about what you can see in the page.
 
-## <img width="24" height="24" src="docs/static/img/icons/encord_icon.png"/> Import your dataset
+## <img width="24" height="24" src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_icon.png"/> Import your dataset
 
 ### Quick import Dataset
 
