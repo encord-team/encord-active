@@ -1,5 +1,6 @@
 import json
-import subprocess
+import os
+import shutil
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -10,25 +11,30 @@ from encord.exceptions import AuthorisationError
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.dataset import StorageLocation
 from encord.orm.label_row import LabelRow
+from encord.orm.project import (
+    CopyDatasetAction,
+    CopyDatasetOptions,
+    CopyLabelsOptions,
+    ReviewApprovalState,
+)
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
-from encord_active.lib.common.utils import iterate_in_batches
-from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.embeddings.utils import (
-    LabelEmbedding,
-    load_collections,
-    save_collections,
+from encord_active.app.common.state import get_state
+from encord_active.lib.encord.project_sync import (
+    LabelRowDataUnit,
+    copy_filtered_data,
+    copy_image_data_unit_json,
+    copy_label_row_meta_json,
+    copy_project_meta,
+    create_filtered_db,
+    create_filtered_embeddings,
+    create_filtered_metrics,
+    replace_uids,
 )
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
-
-
-class LabelRowDataUnit(NamedTuple):
-    label_row: str
-    data_unit: str
 
 
 class DatasetCreationResult(NamedTuple):
@@ -50,13 +56,13 @@ class EncordActions:
         try:
             original_project_hash = self.project_meta["project_hash"]
         except Exception as e:
-            raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
+            raise MissingProjectMetaAttribute(e.args[0], self.project_file_structure.project_meta)
 
         try:
             ssh_key_path = Path(self.project_meta["ssh_key_path"]).resolve()
         except Exception as e:
             if not fallback_ssh_key_path:
-                raise MissingProjectMetaAttribure(e.args[0], self.project_file_structure.project_meta)
+                raise MissingProjectMetaAttribute(e.args[0], self.project_file_structure.project_meta)
             ssh_key_path = fallback_ssh_key_path
 
         if not ssh_key_path.is_file():
@@ -122,7 +128,7 @@ class EncordActions:
         self,
         dataset_title: str,
         dataset_description: str,
-        filtered_dataset: pd.DataFrame,
+        dataset_df: pd.DataFrame,
         progress_callback: Optional[Callable] = None,
     ):
         datasets_with_same_title = self.user_client.get_datasets(title_eq=dataset_title)
@@ -142,8 +148,8 @@ class EncordActions:
 
         # The following operation is for image groups (to upload them efficiently)
         label_hash_to_data_units: dict[str, set] = {}
-        for _, item in tqdm(filtered_dataset.iterrows(), total=filtered_dataset.shape[0]):
-            label_row_hash, data_unit_hash, *_ = str(item["identifier"]).split("_")
+        for identifier, item in tqdm(dataset_df.iterrows(), total=dataset_df.shape[0]):
+            label_row_hash, data_unit_hash, *_ = str(identifier).split("_")
             label_hash_to_data_units.setdefault(label_row_hash, set()).add(data_unit_hash)
 
         uploaded_data_units: set[str] = set()
@@ -166,7 +172,7 @@ class EncordActions:
                     uploaded_data_units.add(data_unit_hash)
 
                 if progress_callback:
-                    progress_callback(len(uploaded_data_units) / filtered_dataset.shape[0])
+                    progress_callback(len(uploaded_data_units) / dataset_df.shape[0])
         return DatasetCreationResult(dataset_hash, new_du_to_original, lrdu_mapping)
 
     def create_ontology(self, title: str, description: str):
@@ -254,60 +260,144 @@ class EncordActions:
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
         self.project_meta["has_remote"] = True
+        self.project_meta["project_title"] = project_title
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
+
+        replace_uids(
+            self.project_file_structure,
+            dataset_creation_result.lr_du_mapping,
+            self.project_meta["project_hash"],
+            new_project.project_hash,
+            dataset_creation_result.hash,
+        )
+
         return new_project
 
-    def update_embedding_identifiers(self, embedding_type: EmbeddingType, renaming_map: dict[str, str]):
-        def _update_identifiers(embedding: LabelEmbedding, renaming_map: dict[str, str]):
-            old_lr, old_du = embedding["label_row"], embedding["data_unit"]
-            new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
-            embedding["label_row"] = new_lr
-            embedding["data_unit"] = new_du
-            embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
-            return embedding
+    def create_subset(
+        self,
+        filtered_df: pd.DataFrame,
+        project_title: str,
+        project_description: str,
+        dataset_title: Optional[str] = None,
+        dataset_description: Optional[str] = None,
+        remote_copy: bool = False,
+    ) -> Path:
+        curr_project_structure = get_state().project_paths
+        target_project_dir = curr_project_structure.project_dir.parent / project_title
+        target_project_structure = ProjectFileStructure(target_project_dir)
 
-        collection = load_collections(embedding_type, self.project_file_structure.embeddings)
-        updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
-        save_collections(embedding_type, self.project_file_structure.embeddings, updated_collection)
-
-    def _rename_files(self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit]):
-        for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            old_lr_path = self.project_file_structure.data / old_lr
-            new_lr_path = self.project_file_structure.data / new_lr
-            if old_lr_path.exists() and not new_lr_path.exists():
-                old_lr_path.rename(new_lr_path)
-            for old_du_f in new_lr_path.glob(f"**/{old_du}.*"):
-                old_du_f.rename(new_lr_path / "images" / f"{new_du}.{old_du_f.suffix}")
-
-    def _replace_in_files(self, renaming_map):
-        for subs in iterate_in_batches(list(renaming_map.items()), 100):
-            substitutions = ";".join(f"s/{old}/{new}/g" for old, new in subs)
-            cmd = f" find . -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.csv \) -exec sed -i '' '{substitutions}' {{}} +"
-            subprocess.run(cmd, shell=True, cwd=self.project_file_structure.project_dir)
-
-    def replace_uids(
-        self, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit], project_hash: str, dataset_hash: str
-    ):
-        label_row_meta = json.loads(self.project_file_structure.label_row_meta.read_text(encoding="utf-8"))
-        original_dataset_hash = next(iter(label_row_meta.values()))["dataset_hash"]
-        renaming_map = {self.project_meta["project_hash"]: project_hash, original_dataset_hash: dataset_hash}
-        for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
-            renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
+        if target_project_dir.exists():
+            raise Exception("Subset with the same title already exists")
+        target_project_dir.mkdir()
 
         try:
-            self._rename_files(file_mappings)
-            self._replace_in_files(renaming_map)
-            MergedMetrics().replace_identifiers(renaming_map)
-            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-                self.update_embedding_identifiers(embedding_type, renaming_map)
+            ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
+            filtered_lr_du = {
+                LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])
+            }
+            filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
+            filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
+            filtered_labels = {
+                (ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()
+            }
+
+            create_filtered_db(target_project_dir, filtered_df)
+
+            if curr_project_structure.image_data_unit.exists():
+                copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
+
+            filtered_label_row_meta = copy_label_row_meta_json(
+                curr_project_structure, target_project_structure, filtered_label_rows
+            )
+
+            label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
+
+            shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
+
+            copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
+
+            create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
+
+            copy_filtered_data(
+                curr_project_structure,
+                target_project_structure,
+                filtered_label_rows,
+                filtered_data_hashes,
+                filtered_labels,
+            )
+
+            create_filtered_embeddings(
+                curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
+            )
+
+            if remote_copy:
+                cloned_project_hash = self._create_and_sync_subset_clone(
+                    target_project_structure,
+                    project_title,
+                    project_description,
+                    dataset_title,
+                    dataset_description,
+                    label_rows,
+                    filtered_lr_du,
+                    filtered_label_row_meta,
+                )
+
         except Exception as e:
-            rev_renaming_map = {v: k for k, v in renaming_map.items()}
-            self._rename_files({v: k for k, v in file_mappings.items()})
-            self._replace_in_files(rev_renaming_map)
-            MergedMetrics().replace_identifiers(rev_renaming_map)
-            for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-                self.update_embedding_identifiers(embedding_type, rev_renaming_map)
-            raise Exception("UID replacement failed")
+            os.removedirs(target_project_dir.as_posix())
+            raise e
+        return target_project_structure.project_dir
+
+    def _create_and_sync_subset_clone(
+        self,
+        target_project_structure: ProjectFileStructure,
+        project_title: str,
+        project_description: str,
+        dataset_title: Optional[str],
+        dataset_description: Optional[str],
+        label_rows: set[str],
+        filtered_lr_du: set[LabelRowDataUnit],
+        filtered_label_row_meta: dict,
+    ):
+        dataset_hash_map: dict[str, set[str]] = {}
+        for k, v in filtered_label_row_meta.items():
+            dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
+
+        cloned_project_hash = self.original_project.copy_project(
+            new_title=project_title,
+            new_description=project_description,
+            copy_collaborators=True,
+            copy_datasets=CopyDatasetOptions(
+                action=CopyDatasetAction.CLONE,
+                dataset_title=dataset_title,
+                dataset_description=dataset_description,
+                datasets_to_data_hashes_map={k: list(v) for k, v in dataset_hash_map.items()},
+            ),
+            copy_labels=CopyLabelsOptions(
+                accepted_label_statuses=[state for state in ReviewApprovalState],
+                accepted_label_hashes=list(label_rows),
+            ),
+        )
+        cloned_project = self.user_client.get_project(cloned_project_hash)
+        du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project.label_rows}
+        filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
+        lr_du_mapping = {
+            LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
+            for cdu, clr in du_lr_mapping.items()
+            if clr
+        }
+        replace_uids(
+            target_project_structure,
+            lr_du_mapping,
+            self.original_project.project_hash,
+            cloned_project_hash,
+            cloned_project.datasets[0]["dataset_hash"],
+        )
+        project_meta = fetch_project_meta(target_project_structure.project_dir)
+        project_meta["has_remote"] = True
+        project_meta["project_hash"] = cloned_project_hash
+        update_project_meta(target_project_structure.project_dir, project_meta)
+
+        return cloned_project_hash
 
 
 def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
@@ -318,7 +408,7 @@ def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out
     return None
 
 
-class MissingProjectMetaAttribure(Exception):
+class MissingProjectMetaAttribute(Exception):
     """Exception raised when project metadata doesn't contain an attribute
 
     Attributes:

@@ -1,6 +1,6 @@
 """
 This file mimics or extends some of the central structures in the encord SDK
-like the:: 
+like the::
 
     encord.Dataset
     encord.EncordUserClient
@@ -19,10 +19,11 @@ import os
 import random
 import shutil
 import string
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, TypedDict, Union
+from typing import Dict, Iterable, List, Optional, Union
 from uuid import uuid4
 
 from encord.exceptions import (
@@ -31,7 +32,7 @@ from encord.exceptions import (
 from encord.http.utils import CloudUploadSettings
 from encord.ontology import OntologyStructure
 from encord.orm.dataset import DataType
-from encord.orm.label_row import LabelRow
+from encord.orm.label_row import LabelRow, LabelRowMetadata
 from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
 
@@ -44,22 +45,6 @@ class FileTypeNotSupportedError(EncordFiletypeNotSupportedError):
 class Dimensions:
     height: int
     width: int
-
-
-class LabelRowMetadata(TypedDict):
-    """
-    This is a class that mimics the encord.orm.label_row.LabelRowMetadata
-    The reason why we don't use the actual class is because we cannot update
-    fields in the original class.
-    """
-
-    label_hash: str
-    data_hash: str
-    dataset_hash: str
-    data_title: str
-    data_type: str
-    label_status: str
-    annotation_task_status: str
 
 
 @dataclass
@@ -147,18 +132,29 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
     data_units = get_data_units(dr)
     return LabelRow(
         {
-            "label_hash": meta["label_hash"],
-            "dataset_hash": meta["dataset_hash"],
+            "label_hash": meta.label_hash,
+            "dataset_hash": meta.dataset_hash,
             "dataset_title": dataset_title,
-            "data_title": meta["data_title"],
+            "data_title": meta.data_title,
             "data_type": "image",
             "data_units": data_units,
             "object_answers": {},
             "classification_answers": {},
             "object_actions": {},
-            "label_status": meta["label_status"],
+            "label_status": meta.label_status,
         }
     )
+
+
+def handle_enum_and_datetime(label_row_meta: LabelRowMetadata):
+    def convert_value(obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        return obj
+
+    return dict((k, convert_value(v)) for k, v in asdict(label_row_meta).items())
 
 
 class LocalDataset:
@@ -319,24 +315,38 @@ class LocalProject:
         return self._ontology.structure.to_dict()
 
     @property
-    def label_rows(self) -> List[LabelRowMetadata]:
+    def label_row_meta(self) -> List[LabelRowMetadata]:
         return list(self._label_row_meta.values())
+
+    @property
+    def label_rows(self) -> List[LabelRow]:
+        return list(self._label_rows.values())
 
     def _populate_label_row_meta(self):
         for dataset in self._datasets.values():
             for dr in dataset.data_rows:
-                meta = LabelRowMetadata(
-                    label_hash=dr.label_hash,
-                    dataset_hash=dataset.dataset_hash,
-                    data_hash=dr.uid,
-                    data_type=dr.data_type.to_upper_case_string(),
-                    data_title=dr.title,
-                    annotation_task_status=AnnotationTaskStatus.QUEUED.value,
-                    label_status=LabelStatus.NOT_LABELLED.value,
-                    # is_shadow_data=False,
-                )
-                self._label_row_meta[dr.label_hash] = meta
-                self._dh_to_lh[dr.uid] = dr.label_hash
+                for du in get_data_units(dr).values():
+                    meta = LabelRowMetadata(
+                        label_hash=dr.label_hash,
+                        dataset_hash=dataset.dataset_hash,
+                        dataset_title=dataset.title,
+                        data_hash=du["data_hash"],
+                        data_type=du["data_type"],
+                        data_title=du["data_title"],
+                        data_link=du["data_link"],
+                        height=du["height"],
+                        width=du["width"],
+                        annotation_task_status=AnnotationTaskStatus.QUEUED,
+                        label_status=LabelStatus.NOT_LABELLED,
+                        created_at=dr.created_at or datetime.now(),
+                        last_edited_at=dr.created_at or datetime.now(),
+                        is_shadow_data=False,
+                        number_of_frames=1,
+                        duration=None,
+                        frames_per_second=None,
+                    )
+                    self._label_row_meta[dr.label_hash] = meta
+                    self._dh_to_lh[dr.uid] = dr.label_hash
 
     def create_label_row(self, data_hash: str):
         label_hash = self._dh_to_lh.get(data_hash)
@@ -344,8 +354,8 @@ class LocalProject:
             raise ValueError("Data hash not associated to project")
 
         meta: LabelRowMetadata = self._label_row_meta[label_hash]
-        dataset = self._datasets[meta["dataset_hash"]]
-        data_row = dataset.get_data_row(meta["data_hash"])
+        dataset = self._datasets[meta.dataset_hash]
+        data_row = dataset.get_data_row(meta.data_hash)
         self._label_rows[label_hash] = get_empty_label_row(meta, data_row, dataset.title)
         return self._label_rows[label_hash]
 
@@ -361,9 +371,6 @@ class LocalProject:
         label_hash: str = uid
         if uid not in self._label_rows:
             raise ValueError("No label row with that uid. Call `LocalProject.create_label_row` first.")
-
-        meta: LabelRowMetadata = self._label_row_meta[label_hash]
-        meta["label_status"] = label["label_status"]
 
         self._label_rows[label_hash] = label
 

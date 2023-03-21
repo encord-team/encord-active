@@ -1,9 +1,10 @@
-import importlib.util
 import inspect
 from pathlib import Path
 from typing import Callable, Optional, Union
 
-from encord_active.lib.metrics.execute import logger
+from loguru import logger
+
+from encord_active.lib.common.module_loading import ModuleLoadError, load_module
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 
 
@@ -54,9 +55,12 @@ def get_module_metrics(
     module_path: Union[str, Path],
     filter_func: Callable[[Union[Metric, SimpleMetric]], bool],
 ) -> Optional[list[Union[Metric, SimpleMetric]]]:
-    mod = load_module(module_path)
-    if mod is None:
+    try:
+        mod = load_module(module_path)
+    except (ModuleLoadError, ValueError) as e:
+        logger.warning(e)
         return None
+
     cls_members = inspect.getmembers(mod, inspect.isclass)
     metrics = []
     for cls_name, cls_obj in cls_members:
@@ -66,21 +70,3 @@ def get_module_metrics(
         ) and filter_func(cls_instance := cls_obj()):
             metrics.append(cls_instance)
     return metrics
-
-
-def load_module(module_path: Union[str, Path]):
-    if isinstance(module_path, str):
-        module_path = Path(module_path)
-
-    # Load the module from its full path
-    if module_path.suffix != ".py":
-        logger.error(f"Module '{module_path.as_posix()}' doesn't have a valid python module extension (py).")
-        return None
-    try:
-        spec = importlib.util.spec_from_file_location(module_path.stem, module_path.as_posix())
-        mod = importlib.util.module_from_spec(spec)  # type: ignore
-        spec.loader.exec_module(mod)  # type: ignore
-    except Exception as e:
-        logger.error(f"Module '{module_path.as_posix()}' is ill-formed. Exception: {e}")
-        return None
-    return mod

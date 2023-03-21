@@ -3,8 +3,9 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, List, Optional, Set, Union
 
+from encord.objects.classification import Classification
 from encord.objects.common import NestableOption, RadioAttribute
-from encord.objects.ontology_structure import Classification, OntologyStructure
+from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.label_row import LabelRow
 from pydantic import BaseModel
 

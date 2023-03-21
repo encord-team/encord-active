@@ -2,7 +2,6 @@ import json
 import logging
 from copy import deepcopy
 from dataclasses import asdict
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
@@ -16,8 +15,10 @@ from pandas import Series
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.common.time import get_timestamp
 from encord_active.lib.common.utils import rle_to_binary_mask
 from encord_active.lib.db.predictions import FrameClassification
+from encord_active.lib.encord.utils import lower_snake_case
 from encord_active.lib.labels.classification import LabelClassification
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.writer import (
@@ -33,23 +34,13 @@ BBOX_KEYS = {"x", "y", "h", "w"}
 
 
 # === UTILITIES === #
-def get_timestamp():
-    now = datetime.now()
-    new_timezone_timestamp = now.astimezone(GMT_TIMEZONE)
-    return new_timezone_timestamp.strftime(DATETIME_STRING_FORMAT)
-
-
-def lower_snake_case(s: str):
-    return "_".join(s.lower().split())
-
-
 class PredictionIterator(Iterator):
     def __init__(self, cache_dir: Path, subset_size: Optional[int] = None, **kwargs):
         super().__init__(cache_dir, subset_size, **kwargs)
         label_hashes = set(self.label_rows.keys())
 
         # Predictions
-        predictions_file = cache_dir / "predictions" / "predictions.csv"
+        predictions_file = cache_dir / "predictions" / kwargs["prediction_type"].value / "predictions.csv"
         predictions = pd.read_csv(predictions_file, index_col=0)
         self.length = predictions["img_id"].nunique()
 
@@ -63,7 +54,7 @@ class PredictionIterator(Iterator):
         self.predictions = predictions[predictions["label_hash"].isin(label_hashes)]
 
         # Class index
-        class_idx_file = cache_dir / "predictions" / "class_idx.json"
+        class_idx_file = cache_dir / "predictions" / kwargs["prediction_type"].value / "class_idx.json"
         with class_idx_file.open("r", encoding="utf-8") as f:
             class_idx: Dict[ClassID, dict] = {ClassID(k): v for k, v in json.load(f).items()}
 

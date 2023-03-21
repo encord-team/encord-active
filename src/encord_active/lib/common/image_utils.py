@@ -148,7 +148,6 @@ def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray
     :param row: A csv row from either a metric, a prediction, or a label csv file.
     :return: Numpy / cv2 image.
     """
-    read_error = False
     key = __get_key(row)
 
     img_pth: Optional[Path] = key_to_image_path(key, data_dir)
@@ -203,9 +202,14 @@ def __get_geometry(obj: dict, img_h: int, img_w: int) -> Optional[Tuple[str, np.
     """
 
     if obj["shape"] == ObjectShape.POLYGON:
-        p = obj["polygon"]
+        p = obj.get("polygon", {})
+        if not p:
+            return None
         polygon = np.array([[p[str(i)]["x"] * img_w, p[str(i)]["y"] * img_h] for i in range(len(p))])
     elif obj["shape"] == ObjectShape.BOUNDING_BOX:
+        bbox_dict = obj.get("boundingBox", {})
+        if not bbox_dict:
+            return None
         b = BoundingBox.parse_obj(obj["boundingBox"])
         polygon = np.array(__to_absolute_points(b, img_h, img_w))
     elif obj["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:

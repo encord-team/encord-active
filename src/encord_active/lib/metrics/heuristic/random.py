@@ -16,7 +16,7 @@ class RandomImageMetric(Metric):
             title="Random Values on Images",
             short_description="Assigns a random value between 0 and 1 to images",
             long_description="Uses a uniform distribution to generate a value between 0 and 1 to each image",
-            doc_url="https://encord-active-docs.web.app/metrics/heuristic#random-values-on-images",
+            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#random-values-on-images",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=[],
@@ -35,7 +35,7 @@ class RandomeObjectMetric(Metric):
             title="Random Values on Objects",
             short_description="Assigns a random value between 0 and 1 to objects",
             long_description="Uses a uniform distribution to generate a value between 0 and 1 to each object",
-            doc_url="https://encord-active-docs.web.app/metrics/heuristic#random-values-on-objects",
+            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#random-values-on-objects",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=[

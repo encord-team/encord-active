@@ -5,6 +5,7 @@ from typing import Any, Callable, Iterable, List, Optional, TypedDict, cast
 import pandas as pd
 import pandera as pa
 import pandera.dtypes as padt
+from loguru import logger
 from natsort import natsorted
 from pandera.typing import DataFrame, Series
 
@@ -15,6 +16,7 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 class OntologyObjectJSON(TypedDict):
@@ -28,6 +30,30 @@ class MetricEntryPoint:
     metric_path: Path
     is_predictions: bool
     filter_fn: Optional[Callable[[MetricData], Any]] = None
+
+
+class ClassificationLabelSchema(IdentifierSchema):
+    url: Series[str] = pa.Field()
+    img_id: Series[padt.Int64] = pa.Field(coerce=True)
+    class_id: Series[padt.Int64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionSchema(ClassificationLabelSchema):
+    confidence: Series[padt.Float64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionMatchSchema(ClassificationPredictionSchema):
+    is_true_positive: Series[float] = pa.Field()
+    gt_class_id: Series[padt.Int64] = pa.Field(coerce=True)
+
+
+class ClassificationPredictionMatchSchemaWithClassNames(ClassificationPredictionMatchSchema):
+    class_name: Series[str] = pa.Field()
+    gt_class_name: Series[str] = pa.Field()
+
+
+class ClassificationLabelMatchSchema(ClassificationLabelSchema):
+    is_false_negative: Series[bool] = pa.Field()
 
 
 class LabelSchema(IdentifierSchema):
@@ -105,6 +131,11 @@ def append_metric_columns(df: pd.DataFrame, metric_entries: List[MetricData]) ->
         has_object_level_keys = len(cast(str, metric_scores.index[0]).split("_")) > 3
         metric_column = "identifier" if has_object_level_keys else "identifier_no_oh"
 
+        # TODO: When EA supports different classification questions, the following must be fixed
+        if (len(df[IdentifierSchema.identifier][0].split("_")) == 3) and (has_object_level_keys):
+            metric_scores = metric_scores.copy()
+            metric_scores.index = metric_scores.index.str.replace(r"^(\S{73}_\d+)(.*)", r"\1", regex=True)
+
         # Join data and rename column to metric name.
         df = df.join(metric_scores["score"], on=[metric_column])
         df[metric.name] = df["score"]
@@ -138,10 +169,17 @@ def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List
 
 
 def get_model_predictions(
-    predictions_dir: Path, metric_data: List[MetricData]
+    predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
 ) -> Optional[DataFrame[PredictionSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "predictions.csv", metric_data)
-    return df.pipe(DataFrame[PredictionSchema]) if df is not None else None
+
+    if prediction_type == MainPredictionType.CLASSIFICATION:
+        return df.pipe(DataFrame[ClassificationPredictionSchema]) if df is not None else None
+    elif prediction_type == MainPredictionType.OBJECT:
+        return df.pipe(DataFrame[PredictionSchema]) if df is not None else None
+    else:
+        logger.error(f"Undefined prediction type: {prediction_type}")
+        return None
 
 
 def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
@@ -154,9 +192,18 @@ def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
     return get_metric_data(entry_points)
 
 
-def get_labels(predictions_dir: Path, metric_data: List[MetricData]) -> Optional[DataFrame[LabelSchema]]:
+def get_labels(
+    predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
+) -> Optional[DataFrame[LabelSchema]]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
-    return df.pipe(DataFrame[LabelSchema]) if df is not None else None
+
+    if prediction_type == MainPredictionType.OBJECT:
+        return df.pipe(DataFrame[LabelSchema]) if df is not None else None
+    elif prediction_type == MainPredictionType.CLASSIFICATION:
+        return df.pipe(DataFrame[ClassificationLabelSchema]) if df is not None else None
+    else:
+        logger.error(f"Undefined prediction type: {prediction_type}")
+        return None
 
 
 def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
@@ -167,3 +214,13 @@ def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
 def get_class_idx(predictions_dir: Path) -> dict[str, OntologyObjectJSON]:
     class_idx_pth = predictions_dir / "class_idx.json"
     return load_json(class_idx_pth) or {}
+
+
+def get_classification_labels(predictions_dir: Path) -> Optional[DataFrame[ClassificationLabelSchema]]:
+    predictions = pd.read_csv(predictions_dir / "labels.csv")
+    return predictions.pipe(DataFrame[ClassificationLabelSchema])
+
+
+def get_classification_predictions(predictions_dir: Path) -> Optional[DataFrame[ClassificationPredictionSchema]]:
+    labels = pd.read_csv(predictions_dir / "predictions.csv")
+    return labels.pipe(DataFrame[ClassificationPredictionSchema])

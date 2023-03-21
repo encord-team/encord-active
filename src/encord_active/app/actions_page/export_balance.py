@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import use_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import set_page_config, setup_page
 from encord_active.lib.charts.partition_histogram import get_partition_histogram
 from encord_active.lib.dataset.balance import balance_dataframe, get_partitions_zip
@@ -50,16 +50,16 @@ def partitions_panel() -> Dict[str, int]:
     Returns:
         A dictionary with the partition names as keys and the partition sizes as values.
     """
-    get_partitions_number, set_partitions_number = use_state(1)
+    partitions_number = UseState(1)
 
     def add_partition():
-        set_partitions_number(lambda prev: prev + 1)
+        partitions_number.set(lambda prev: prev + 1)
 
     def remove_partition():
-        set_partitions_number(lambda prev: prev - 1)
+        partitions_number.set(lambda prev: prev - 1)
 
     partition_sizes = {}
-    for i in range(get_partitions_number()):
+    for i in range(partitions_number.value):
         partition_columns = st.columns((4, 12, 1))
         partition_name = partition_columns[0].text_input(
             f"Name of partition {i + 1}", key=f"name_partition_{i + 1}", value=f"Partition {i + 1}"
@@ -69,7 +69,7 @@ def partitions_panel() -> Dict[str, int]:
             key=f"size_partition_{i + 1}",
             min_value=1,
             max_value=100,
-            value=100 // get_partitions_number(),
+            value=100 // partitions_number.value,
             step=1,
         )
         if i > 0:

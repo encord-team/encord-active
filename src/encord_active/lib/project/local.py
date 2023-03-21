@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import yaml
 from encord.ontology import OntologyStructure
@@ -12,6 +12,11 @@ from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalUserClient,
     get_mimetype,
+    handle_enum_and_datetime,
+)
+from encord_active.lib.labels.label_transformer import (
+    LabelTransformer,
+    LabelTransformerWrapper,
 )
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
@@ -64,6 +69,8 @@ def init_local_project(
     target: Path,
     project_name: str = "",
     symlinks: bool = False,
+    label_transformer: Optional[LabelTransformer] = None,
+    label_paths: Optional[List[Path]] = None,
 ) -> Path:
     """
     Initialising an Encord Active project based on the data found from the `root`
@@ -104,8 +111,6 @@ def init_local_project(
         ontology_hash=ontology.ontology_hash,
     )
     project_dir = client.project_path
-    ontology_file = project_dir / "ontology.json"
-    ontology_file.write_text(json.dumps(project.ontology))
 
     project_meta = {
         "project_title": project.title,
@@ -120,14 +125,13 @@ def init_local_project(
     metrics_meta = fill_metrics_meta_with_builtin_metrics()
     update_metrics_meta(project_path, metrics_meta)
 
-    label_row_meta_collection = {lr["label_hash"]: lr for lr in project.label_rows}
+    label_row_meta_collection = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
     label_row_meta_file_path = project_dir / "label_row_meta.json"
     label_row_meta_file_path.write_text(json.dumps(label_row_meta_collection, indent=2), encoding="utf-8")
 
     image_to_du = {}
-    # Empty label rows for now
-    for label_row_meta in tqdm(project.label_rows, desc="Constructing project"):
-        label_row = project.create_label_row(label_row_meta["data_hash"])
+    for label_row_meta in tqdm(project.label_row_meta, desc="Constructing project"):
+        label_row = project.create_label_row(label_row_meta.data_hash)
         image_id = label_row["data_title"]  # This is specific to one image label rows
         for du in label_row["data_units"].values():
             data_hash = du["data_hash"]
@@ -138,8 +142,15 @@ def init_local_project(
                 "height": height,
                 "width": width,
             }
+
+    transformer = LabelTransformerWrapper(ontology.structure, project.label_rows, label_transformer)
+    transformer.add_labels(label_paths or [], data_paths=files)
+
+    for label_row in project.label_rows:
         project.save_label_row(label_row["label_hash"], label_row)
 
     (project_dir / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
+    ontology_file = project_dir / "ontology.json"
+    ontology_file.write_text(json.dumps(project.ontology))
 
     return project_path

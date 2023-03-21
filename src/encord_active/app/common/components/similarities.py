@@ -11,7 +11,7 @@ from encord_active.lib.embeddings.utils import SimilaritiesFinder
 def show_similarities(identifier: str, expander: DeltaGenerator, embedding_information: SimilaritiesFinder):
     nearest_images = embedding_information.get_similarities(identifier)
 
-    division = 4
+    division = get_state().page_grid_settings.columns
     column_id = 0
     st_columns = []
 

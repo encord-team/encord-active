@@ -28,8 +28,7 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import use_state
-from encord_active.app.label_onboarding.label_onboarding import label_onboarding_page
+from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
@@ -54,11 +53,10 @@ from encord_active.lib.metrics.utils import (
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(self, available_metrics: List[MetricData], metric_scope: MetricScope):
+    def sidebar_options(
+        self, available_metrics: List[MetricData], metric_scope: MetricScope
+    ) -> Optional[DataFrame[MetricSchema]]:
         tag_creator()
-
-        if not available_metrics:
-            return label_onboarding_page()
 
         non_empty_metrics = [
             metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
@@ -75,7 +73,7 @@ class ExplorerPage(Page):
         )
 
         if not selected_metric_name:
-            return
+            return None
 
         metric_idx = metric_names.index(selected_metric_name)
         selected_metric = sorted_metrics[metric_idx]
@@ -83,7 +81,7 @@ class ExplorerPage(Page):
 
         df = load_metric_dataframe(selected_metric)
         if df.shape[0] <= 0:
-            return
+            return None
 
         class_set = natsorted(df[MetricSchema.object_class].dropna().unique().tolist())
         with col2:
@@ -111,7 +109,7 @@ class ExplorerPage(Page):
 
         self.display_settings(metric_scope)
         # For now go the easy route and just filter the dataframe here
-        return df_class_selected[annotator_selected]
+        return df_class_selected[annotator_selected].pipe(DataFrame[MetricSchema])
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
         selected_metric = get_state().selected_metric
@@ -147,8 +145,9 @@ def get_selected_rows(
 
 
 def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
-    get_should_select, set_should_select = use_state(True)
-    get_selection, set_selection = use_state(None)
+    should_select = UseState(True)
+    selection = UseState[Optional[List[dict]]](None)
+
     fig = px.scatter(
         embedding_2d,
         x=Embedding2DSchema.x,
@@ -160,14 +159,14 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
 
     new_selection = plotly_events(fig, click_event=False, select_event=True)
 
-    if new_selection != get_selection():
-        set_should_select(True)
-        set_selection(new_selection)
+    if new_selection != selection.value:
+        should_select.set(True)
+        selection.set(new_selection)
 
     if st.button("Reset selection"):
-        set_should_select(False)
+        should_select.set(False)
 
-    if get_should_select() and len(new_selection) > 0:
+    if should_select.value and len(new_selection) > 0:
         return get_selected_rows(embedding_2d, new_selection)
     else:
         return None
@@ -179,7 +178,9 @@ def fill_data_quality_window(
     meta = selected_metric.meta
     embedding_type = get_embedding_type(meta.annotation_type)
     embeddings_dir = get_state().project_paths.embeddings
-    embedding_information = SimilaritiesFinder(embedding_type, embeddings_dir)
+    embedding_information = SimilaritiesFinder(
+        embedding_type, embeddings_dir, num_of_neighbors=get_state().similarities_count
+    )
 
     if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
         st.write("Image-level embedding file is not available for this project.")
@@ -263,9 +264,9 @@ def build_card(
     identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
 
     if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
-        button_name = "show similar images"
+        button_name = "Show similar images"
     elif embedding_information.type == EmbeddingType.OBJECT:
-        button_name = "show similar objects"
+        button_name = "Show similar objects"
     else:
         st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return

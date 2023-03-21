@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Optional, TypeVar, Union, overload
+from typing import Callable, Generic, Optional, TypeVar, Union, overload
 
 import streamlit as st
 
@@ -34,32 +34,28 @@ def use_lazy_state(initial: Callable[[], T], key: Optional[str] = None):
         st.session_state[SCOPED_STATES][key] = initial()
     value: T = st.session_state[SCOPED_STATES][key]
 
-    return use_state(value, key)
+    return UseState(value, key)
 
 
-# TODO: is there a way to make this work and have proper types?
-# def use_state(initial: Union[T, Callable[[], T]], key: Optional[str] = create_key()):
-#     st.session_state.setdefault(SCOPED_STATES, {})
-#     st.session_state[SCOPED_STATES].setdefault(key, initial() if callable(initial) else initial)
-def use_state(initial: T, key: Optional[str] = None):
-    key = key or create_key()
-    st.session_state.setdefault(SCOPED_STATES, {}).setdefault(key, initial)
+class UseState(Generic[T]):
+    def __init__(self, initial: Optional[T] = None, key: Optional[str] = None) -> None:
+        self.key = key or create_key()
+        st.session_state.setdefault(SCOPED_STATES, {}).setdefault(self.key, initial)
 
     @overload
-    def set_state(arg: T):
+    def set(self, arg: T):
         ...
 
     @overload
-    def set_state(arg: Reducer[T]):
+    def set(self, arg: Reducer[T]):
         ...
 
-    def set_state(arg: Union[T, Reducer[T]]):
+    def set(self, arg: Union[T, Reducer[T]]):
         if callable(arg):
-            st.session_state[SCOPED_STATES][key] = arg(st.session_state[SCOPED_STATES][key])
+            st.session_state[SCOPED_STATES][self.key] = arg(st.session_state[SCOPED_STATES][self.key])
         else:
-            st.session_state[SCOPED_STATES][key] = arg
+            st.session_state[SCOPED_STATES][self.key] = arg
 
-    def get_state() -> T:
-        return st.session_state[SCOPED_STATES][key]
-
-    return get_state, set_state
+    @property
+    def value(self) -> T:
+        return st.session_state[SCOPED_STATES][self.key]

@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import List, Optional, Set, TypedDict
+from typing import Dict, List, Optional, Set, TypedDict
 
 import click
 import rich
@@ -15,9 +16,15 @@ from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import bypass_streamlit_question, ensure_project
+from encord_active.cli.utils.decorators import (
+    bypass_streamlit_question,
+    ensure_project,
+    find_child_projects,
+)
 from encord_active.cli.utils.prints import success_with_visualise_command
 from encord_active.lib import constants as ea_constants
+from encord_active.lib.common.module_loading import ModuleLoadError
+from encord_active.lib.project.metadata import fetch_project_meta
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -93,10 +100,17 @@ def download(
     if not project_name:
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
-        for project_name in PREBUILT_PROJECTS.keys():
+        downloaded = {fetch_project_meta(project_path)["project_hash"] for project_path in find_child_projects(target)}
+        for project_name, data in PREBUILT_PROJECTS.items():
+            if data["hash"] in downloaded:
+                continue
             project_size = fetch_prebuilt_project_size(project_name)
             modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
+
+        if not project_names_with_storage:
+            rich.print("[green]Nothing to download, current working directory contains all sandbox projects.")
+            raise typer.Exit()
 
         answer = i.select(message="Choose a project", choices=project_names_with_storage, vi_mode=True).execute()
         if not answer:
@@ -123,11 +137,17 @@ def import_local_project(
         help="The root directory of the dataset you are trying to import",
         file_okay=False,
     ),
-    glob: List[str] = typer.Option(
+    data_glob: List[str] = typer.Option(
         ["**/*.jpg", "**/*.png", "**/*.jpeg", "**/*.tiff"],
-        "--glob",
-        "-g",
-        help="Glob pattern to choose files. Note that you can repeat the `--glob` argument if you want to match multiple things.",
+        "--data-glob",
+        "-dg",
+        help="Glob pattern to choose files. Repeat the `--data-glob` argument to match multiple globs.",
+    ),
+    label_glob: List[str] = typer.Option(
+        None,
+        "--label-glob",
+        "-lg",
+        help="Glob pattern to choose label files. Repeat the `--label-glob` argument to match multiple globs. This argument is only used if you also provide the `transformer` argument",
     ),
     target: Path = typer.Option(
         Path.cwd(),
@@ -154,14 +174,31 @@ def import_local_project(
         True,
         help="Run the metrics on the initiated project.",
     ),
+    transformer: Path = typer.Option(
+        None,
+        help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface",
+        exists=True,
+    ),
 ):
     """
     [green bold]Initialize[/green bold] a project from your local file system :seedling:
 
-    The command will search for images based on the `glob` arguments.
-
+    The command will search for images based on the [blue]`data-glob`[/blue] arguments.
     By default, all jpeg, jpg, png, and tiff files will be matched.
+
+    It will search for label files with the [blue]`label-glob`[/blue] argument.
+
+    Both glob results will be passed to your implementation of the `LabelTransformer` interface if you provide a `transformer` argument.
+
     """
+    from encord.ontology import OntologyStructure
+    from InquirerPy import inquirer as i
+    from InquirerPy.base.control import Choice
+
+    from encord_active.lib.labels.label_transformer import (
+        TransformerResult,
+        load_transformers_from_module,
+    )
     from encord_active.lib.metrics.execute import (
         run_metrics,
         run_metrics_by_embedding_type,
@@ -174,62 +211,139 @@ def import_local_project(
         file_glob,
         init_local_project,
     )
+    from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     try:
-        glob_result = file_glob(root, glob, images_only=True)
+        data_result = file_glob(root, data_glob, images_only=True)
     except NoFilesFoundError as e:
         rich.print(
             Panel(
                 str(e),
-                title=":fire: No Files Found :fire:",
+                title=":fire: No files found from data glob :fire:",
                 expand=False,
                 style="yellow",
             )
         )
         raise typer.Abort()
 
+    if not label_glob:
+        label_result: List[Path] = []
+    else:
+        if transformer is None:
+            rich.print("Label glob specified without a transformer. Label glob is only allowed with a transformer.")
+            print(label_glob)
+            raise typer.Abort()
+
+        try:
+            label_result = file_glob(root, label_glob, images_only=False).matched
+        except NoFilesFoundError as e:
+            rich.print(
+                Panel(
+                    str(e),
+                    title=":fire: No files found from label glob :fire:",
+                    expand=False,
+                    style="yellow",
+                )
+            )
+            raise typer.Abort()
+
+    selected_transformer: Optional[TransformerResult] = None
+    if transformer is not None:
+        try:
+            transformers_found = load_transformers_from_module(transformer)
+        except (ModuleLoadError, ValueError) as e:
+            rich.print(e)
+            raise typer.Abort()
+
+        if not transformers_found:
+            rich.print(f"[yellow]Didn't find any transformers in `[blue]{transformer}[/blue]`")
+            raise typer.Abort()
+        elif len(transformers_found) == 1:
+            selected_transformer = transformers_found[0]
+        else:
+            choices = list(map(lambda m: Choice(m, name=m.name), transformers_found))
+            selected_transformer = i.select(
+                message="Please choose which label transformer to use? Use [ENTER] to select from the list.",
+                choices=choices,
+            ).execute()
+
     if dryrun:
         directories: Set[Path] = set()
-        rich.print("[blue]Matches:[/blue]")
-        for file in glob_result.matched:
+        rich.print("[blue]Included files:[/blue]")
+        for file in data_result.matched:
             directories.add(file.parent)
             rich.print(f"[blue]{escape(file.as_posix())}[/blue]")
 
         print()
-        rich.print("[yellow]Excluded:[/yellow]")
-        for file in glob_result.excluded:
-            directories.add(file.parent)
-            rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
+        if data_result.excluded:
+            rich.print("[yellow]Excluded files:[/yellow]")
+            for file in data_result.excluded:
+                rich.print(f"[yellow]{escape(file.as_posix())}[/yellow]")
+
+        label_stats = ""
+        total_labels = 0
+        if selected_transformer is not None:
+            labels = selected_transformer.transformer.from_custom_labels(label_result, data_files=data_result.matched)
+            labels = sorted(labels, key=lambda l: l.abs_data_path)
+
+            if not labels:
+                rich.print(f"[yellow]The transformer [blue]{selected_transformer.name}[/blue] didn't return any labels")
+            else:
+                rich.print(f"Labels identified by [blue]{selected_transformer.name}[/blue]:")
+
+                found_labels: Dict[str, Dict[str, int]] = {}  # <type, <class, label>>
+                current_file_name = None
+                for label in labels:
+                    label_type = type(label.label).__name__
+                    label_name = label.label.class_
+                    counter = found_labels.setdefault(label_type, {})
+                    counter[label_name] = counter.get(label_name, 0) + 1
+
+                    if label.abs_data_path != current_file_name:
+                        current_file_name = label.abs_data_path
+                        rich.print(f"[green]{current_file_name}[/green]")
+                    rich.print(f"\t{label.label}")
+
+                total_labels = sum([sum(v.values()) for v in found_labels.values()])
+                for label_type, counts in found_labels.items():
+                    label_stats += f"\t{label_type}\n"
+                    label_stats += "\n".join([f"\t\t{k}: {v}" for k, v in counts.items()])
+                    label_stats += "\n"
+
+        exclusion = ""
+        if len(data_result.excluded):
+            exclusion = f"[yellow]Excluded[/yellow] {len(data_result.excluded)} file(s) because they do not seem to be images.\n"
 
         print()
         rich.print(
             Panel(
                 f"""
-[blue]Found[/blue] {len(glob_result.matched)} file(s) in {len(directories)} directories.
-[yellow]Excluded[/yellow] {len(glob_result.excluded)} file(s) because they do not seem to be images.
+[blue]Found[/blue] {len(data_result.matched)} file(s) in {len(directories)} directories.
+{exclusion}
+[blue]Found[/blue] {total_labels} label(s):
+{label_stats}
 """,
                 title=":bar_chart: Stats :bar_chart:",
                 expand=False,
             )
         )
-        raise typer.Abort()
+
+        raise typer.Exit()
+
+    transformer_instance = selected_transformer.transformer if selected_transformer else None
+
+    if not project_name:
+        project_name = f"[EA] {root.name}"
 
     try:
-        if not project_name:
-            project_name = f"[EA] {root.name}"
-
         project_path = init_local_project(
-            files=glob_result.matched, target=target, project_name=project_name, symlinks=symlinks
+            files=data_result.matched,
+            target=target,
+            project_name=project_name,
+            symlinks=symlinks,
+            label_transformer=transformer_instance,
+            label_paths=label_result,
         )
-
-        metricize_options = {"data_dir": project_path, "use_cache_only": True}
-        if metrics:
-            run_metrics_by_embedding_type(EmbeddingType.IMAGE, **metricize_options)
-        else:
-            # NOTE: we need to compute at  least one metric otherwise everything breaks
-            run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
-
-        success_with_visualise_command(project_path, "Project initialised :+1:")
 
     except ProjectExistsError as e:
         rich.print(
@@ -245,6 +359,22 @@ Consider removing the directory or setting the `--name` option.
             )
         )
         raise typer.Abort()
+
+    metricize_options = {"data_dir": project_path, "use_cache_only": True}
+    if metrics:
+        run_metrics_by_embedding_type(EmbeddingType.IMAGE, **metricize_options)
+
+        ontology = OntologyStructure.from_dict(json.loads(ProjectFileStructure(project_path).ontology.read_text()))
+        if ontology.objects:
+            run_metrics_by_embedding_type(EmbeddingType.OBJECT, **metricize_options)
+        if ontology.classifications:
+            run_metrics_by_embedding_type(EmbeddingType.CLASSIFICATION, **metricize_options)
+
+    else:
+        # NOTE: we need to compute at least one metric otherwise everything breaks
+        run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
+
+    success_with_visualise_command(project_path, "Project initialised :+1:")
 
 
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility

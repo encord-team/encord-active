@@ -97,10 +97,10 @@ def ensure_project(*, allow_multi=False):
                 rich.print(
                     Panel(
                         f"""
-        Couldn't find a project at: [purple]{kwargs['target']}[/purple].
-        Either [blue]`cd`[/blue] into a directory containing a project or specify the path with the `--target` option.
+Couldn't find a project at: [purple]{kwargs['target']}[/purple].
+Either [blue]`cd`[/blue] into a directory containing a project or specify the path with the `--target` option.
 
-        :bulb: hint: By default, projects are stored in the current working directory when you run the [blue]init[/blue], [blue]import[/blue], and [blue]download[/blue] commands.
+:bulb: hint: By default, projects are stored in the current working directory when you run the [blue]init[/blue], [blue]import[/blue], and [blue]download[/blue] commands.
                     """,
                         title=":exclamation: Couldn't find a project :exclamation:",
                         style="yellow",

@@ -19,8 +19,7 @@ from encord_active.lib.coco.parsers import (
     parse_images,
     parse_info,
 )
-from encord_active.lib.coco.utils import make_object_dict
-from encord_active.lib.db.predictions import BoundingBox
+from encord_active.lib.db.predictions import BoundingBox, Point
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalDataRow,
@@ -28,7 +27,9 @@ from encord_active.lib.encord.local_sdk import (
     LocalOntology,
     LocalProject,
     LocalUserClient,
+    handle_enum_and_datetime,
 )
+from encord_active.lib.encord.utils import make_object_dict
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
 
@@ -103,8 +104,8 @@ def upload_annotation(
         if annot.segmentation:
             obj = id_shape_to_obj[(annot.category_id, Shape.POLYGON)]
             polygon = annot.segmentation
-            polygon_points = [(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
-            objects.append(make_object_dict(ontology_object=obj.to_dict(), object_data=polygon_points))
+            polygon_points = [Point(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
+            objects.append(make_object_dict(ontology_object=obj, object_data=polygon_points))
         elif len(annot.bbox or []) == 4:
             x, y, w, h = annot.bbox
             x = max(0.0, x)
@@ -116,7 +117,7 @@ def upload_annotation(
             else:
                 obj = id_shape_to_obj[(annot.category_id, Shape.BOUNDING_BOX)]
 
-            objects.append(make_object_dict(ontology_object=obj.to_dict(), object_data=bounding_box.dict()))
+            objects.append(make_object_dict(ontology_object=obj, object_data=bounding_box.dict()))
 
     lr["data_units"][data_hash]["labels"] = {"objects": objects, "classifications": []}
     updated_lr = label_utilities.construct_answer_dictionaries(lr)
@@ -227,7 +228,7 @@ class CocoImporter:
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
         id_shape_to_obj = {key: id_to_obj[id] for key, id in self.id_mappings.items()}
 
-        label_row_meta = {lr["label_hash"]: lr for lr in project.label_rows}
+        label_row_meta = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
         label_row_meta_file_path = self.project_dir / "label_row_meta.json"
         label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 

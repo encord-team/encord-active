@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from functools import reduce
 from pathlib import Path
 from typing import Optional
@@ -10,8 +11,8 @@ from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import export_filter
 from encord_active.app.actions_page.versioning import version_form, version_selector
 from encord_active.app.common.components.help.help import render_help
-from encord_active.app.common.state import State
-from encord_active.app.common.state_hooks import use_state
+from encord_active.app.common.state import State, get_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import set_page_config
 from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
 from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
@@ -29,6 +30,7 @@ from encord_active.cli.utils.decorators import (
 )
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
+from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.metadata import fetch_project_meta
 
 pages = {
@@ -46,6 +48,36 @@ pages = {
 
 DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
 SEPARATOR = "#"
+
+
+def provide_backcompatibility_for_old_predictions():
+    """
+    TODO: For back compatibility of the predictions/ folder. Can be removed later (3+ months).
+    If there is no object folder, and prediction files/folders are inside predictions/ folder
+    Create a predictions/object folder and move all prediction-related files inside
+    """
+
+    prediction_items = []
+    object_folder_not_exist = True
+    prediction_file_exist = False
+    if not get_state().project_paths.predictions.is_dir():
+        return
+    for item in get_state().project_paths.predictions.iterdir():
+        if item.name == MainPredictionType.OBJECT.value:
+            object_folder_not_exist = False
+            break
+        else:
+            if item.name == "predictions.csv":
+                prediction_file_exist = True
+            if item.name != MainPredictionType.CLASSIFICATION.value:
+                prediction_items.append(item)
+
+    if object_folder_not_exist and prediction_file_exist:
+        object_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
+        object_dir.mkdir()
+        for item in prediction_items:
+            if item.name != ".DS_Store":
+                shutil.move(item.as_posix(), object_dir.as_posix())
 
 
 def to_item(k, v, parent_key: Optional[str] = None):
@@ -98,15 +130,12 @@ def main(target: str):
         if not is_latest:
             st.error("READ ONLY MODE \n\n Changes will not be saved")
 
-        get_path, set_path = use_state(DEFAULT_PAGE_PATH)
+        path_state = UseState(DEFAULT_PAGE_PATH)
 
         items = to_items(pages)
         key = pages_menu(items)
         if key:
-            path = key.split(SEPARATOR)
-            set_path(path)
-        else:
-            path = get_path()
+            path_state.set(key.split(SEPARATOR))
 
     project_dir = Path(project_path).expanduser().absolute()
     st.session_state.project_dir = project_dir
@@ -118,7 +147,9 @@ def main(target: str):
     DBConnection.set_project_path(project_dir)
     State.init(project_dir)
 
-    render = reduce(dict.__getitem__, path, pages)
+    provide_backcompatibility_for_old_predictions()
+
+    render = reduce(dict.__getitem__, path_state.value, pages)
     if callable(render):
         render()
 

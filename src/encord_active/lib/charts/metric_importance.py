@@ -1,22 +1,37 @@
-from typing import List
+from typing import Any, List, Union
 
 import altair as alt
 import pandas as pd
 from pandera.typing import DataFrame
 from sklearn.feature_selection import mutual_info_regression
 
-from encord_active.lib.model_predictions.reader import PredictionMatchSchema
-
-_P_COLS = PredictionMatchSchema
+from encord_active.lib.model_predictions.reader import (
+    ClassificationPredictionMatchSchema,
+    PredictionMatchSchema,
+)
+from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 def create_metric_importance_charts(
-    model_predictions: DataFrame[PredictionMatchSchema], metric_columns: List[str], num_samples: int
+    model_predictions: Union[DataFrame[PredictionMatchSchema], DataFrame[ClassificationPredictionMatchSchema]],
+    metric_columns: List[str],
+    num_samples: int,
+    prediction_type: MainPredictionType,
 ):
     if num_samples < model_predictions.shape[0]:
         _predictions = model_predictions.sample(num_samples, axis=0, random_state=42)
     else:
         _predictions = model_predictions
+
+    _P_COLS: Any
+    if prediction_type == MainPredictionType.OBJECT:
+        _P_COLS = PredictionMatchSchema
+        scores = _predictions[_P_COLS.iou] * _predictions[_P_COLS.is_true_positive]
+    elif prediction_type == MainPredictionType.CLASSIFICATION:
+        _P_COLS = ClassificationPredictionMatchSchema
+        scores = _predictions[_P_COLS.is_true_positive]
+    else:
+        raise ValueError(f"Undefined prediction type {prediction_type}")
 
     num_tps = (_predictions[_P_COLS.is_true_positive].iloc[:num_samples] != 0).sum()
     if num_tps < 50:
@@ -25,7 +40,6 @@ def create_metric_importance_charts(
             "Try increasing the number of samples or lower the IoU threshold in the top bar."
         )
 
-    scores = _predictions[_P_COLS.iou] * _predictions[_P_COLS.is_true_positive]
     metrics = _predictions[metric_columns]
 
     correlations = metrics.fillna(0).corrwith(scores, axis=0).to_frame("correlation")
@@ -49,7 +63,6 @@ def create_metric_importance_charts(
                 alt.Tooltip("importance", title="Importance", format=",.3f"),
             ],
         )
-        .properties(height=400)
     )
 
     correlation_bars = (
@@ -64,7 +77,6 @@ def create_metric_importance_charts(
                 alt.Tooltip("correlation", title="Correlation", format=",.3f"),
             ],
         )
-        .properties(height=400)
     )
 
     return alt.hconcat(mutual_info_bars, correlation_bars).resolve_scale(color="independent")
