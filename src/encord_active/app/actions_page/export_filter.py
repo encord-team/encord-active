@@ -216,25 +216,21 @@ def show_update_stats(filtered_df: pd.DataFrame):
     def get_key(counter_name: str):
         return f"{counter_name}_{project_path}"
 
-    state_frame_count = UseState(-1, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
+    state_frame_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
     frame_count: int = len(filtered_df["identifier"].map(lambda x: tuple(x.split("_")[1:3])).unique())
     st.metric(
         "Selected Frames",
         value=human_format(frame_count),
-        delta=f"{human_format(frame_count - state_frame_count.value)} frames"
-        if state_frame_count.value != -1
-        else None,
+        delta=state_frame_count.value and f"{human_format(frame_count - state_frame_count.value)} frames",
     )
     state_frame_count.set(frame_count)
 
-    state_label_count = UseState(-1, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
+    state_label_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
     label_count: int = filtered_df[filtered_df["identifier"].map(lambda x: len(x.split("_")) > 3)].shape[0]
     st.metric(
         "Selected Labels",
         value=human_format(label_count),
-        delta=f"{human_format(label_count - state_label_count.value)} labels"
-        if state_label_count.value != -1
-        else None,
+        delta=state_label_count.value and f"{human_format(label_count - state_label_count.value)} labels",
     )
     state_label_count.set(label_count)
 
