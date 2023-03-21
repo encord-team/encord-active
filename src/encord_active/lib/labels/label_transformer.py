@@ -210,7 +210,7 @@ This will make a (potentially new) classification question `{LabelTransformerWra
             return
 
         for data_label in self.label_transformer.from_custom_labels(label_paths, data_paths):
-            du = self.file_to_data_unit_map.get(data_label.abs_data_path.expanduser().absolute(), None)
+            du = self.file_to_data_unit_map.get(data_label.abs_data_path.expanduser().resolve(), None)
             if du is None:
                 continue
 
