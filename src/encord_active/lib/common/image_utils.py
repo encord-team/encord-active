@@ -300,7 +300,7 @@ def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure) -> 
     label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_du: DataUnitStructure = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    frame_du: Optional[DataUnitStructure] = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
     if frame_du is not None:
         return frame_du
     return next(label_row_structure.iter_data_unit(du_hash), None)  # So this is an img_group image

@@ -7,6 +7,7 @@ class DataUnitStructure(NamedTuple):
     hash: str
     path: Path
 
+
 class LabelRowStructure:
     def __init__(self, path: Path, mappings: dict[str, str]):
         self.path: Path = path
@@ -21,7 +22,9 @@ class LabelRowStructure:
     def images_dir(self) -> Path:
         return self.path / "images"
 
-    def iter_data_unit(self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None) -> Iterator[DataUnitStructure]:
+    def iter_data_unit(
+        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+    ) -> Iterator[DataUnitStructure]:
         if data_unit_hash:
             glob_string = self._mappings.get(data_unit_hash, data_unit_hash)
         else:
@@ -30,7 +33,7 @@ class LabelRowStructure:
             glob_string += f"_{frame}"
         glob_string += ".*"
         for du_path in self.images_dir.glob(glob_string):
-            du_hash = du_path.name.split('.')[0].split('_')[0]
+            du_hash = du_path.name.split(".")[0].split("_")[0]
             yield DataUnitStructure(self._rev_mappings.get(du_hash, du_hash), du_path)
 
     def is_present(self):

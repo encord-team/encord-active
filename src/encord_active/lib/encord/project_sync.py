@@ -10,6 +10,7 @@ import yaml
 from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tags
 from encord_active.lib.embeddings.utils import (
     EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
@@ -94,6 +95,8 @@ def _replace_uids(
     project_file_structure: ProjectFileStructure,
     renaming_map: dict[str, str],
 ):
+    original_mappings = json.loads(project_file_structure.mappings.read_text())
+
     replace_in_files(project_file_structure, renaming_map)
     perform_db_fn_with_switched_paths(
         project_file_structure.project_dir, lambda: MergedMetrics().replace_identifiers(renaming_map)
@@ -101,7 +104,9 @@ def _replace_uids(
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
         update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
-    project_file_structure.mappings.write_text(json.dumps({v: k for k, v in renaming_map.items()}))
+
+    new_mappings = {renaming_map[k]: v for k, v in original_mappings.items()}
+    project_file_structure.mappings.write_text(json.dumps(new_mappings))
 
 
 def create_filtered_embeddings(
@@ -154,10 +159,13 @@ def copy_filtered_data(
     target_project_structure.data.mkdir(parents=True, exist_ok=True)
 
     hash_mappings = json.loads(curr_project_structure.mappings.read_text())
-    filtered_hash_mappings = {k: v for k, v in hash_mappings.items() if
-                              k in filtered_label_rows or k in filtered_data_hashes}
+    filtered_hash_mappings = {
+        k: v for k, v in hash_mappings.items() if k in filtered_label_rows or k in filtered_data_hashes
+    }
     target_project_structure.mappings.write_text(json.dumps(filtered_hash_mappings))
-    target_project_structure = ProjectFileStructure(target_project_structure.project_dir) # Re create object to reload mappings
+    target_project_structure = ProjectFileStructure(
+        target_project_structure.project_dir
+    )  # Recreate object to reload mappings
 
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
@@ -204,11 +212,10 @@ def copy_filtered_data(
         target_label_row_structure.label_row_file.write_text(json.dumps(label_row))
 
 
-
-
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     to_save_df = filtered_df.set_index("identifier")
     perform_db_fn_with_switched_paths(target_project_dir, lambda: MergedMetrics().replace_all(to_save_df))
+    perform_db_fn_with_switched_paths(target_project_dir, lambda: Tags().create_many(Tags().all()))
 
 
 def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):

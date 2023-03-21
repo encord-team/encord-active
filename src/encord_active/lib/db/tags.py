@@ -59,6 +59,11 @@ class Tags(object):
             ]
 
     @ensure_existence
+    def create_many(self, tags: List[Tag]):
+        with DBConnection() as conn:
+            return conn.executemany(f"INSERT INTO {TABLE_NAME} (name, scope) VALUES(?, ?) ", tags)
+
+    @ensure_existence
     def create_tag(self, tag: Tag):
         stripped = tag.name.strip()
         if not stripped:
