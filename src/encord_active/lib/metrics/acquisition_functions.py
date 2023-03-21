@@ -18,7 +18,7 @@ from encord_active.lib.metrics.metric import (
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
-class Model:
+class ModelWrapper:
     def __init__(self, model):
         self._model = model
 
@@ -26,27 +26,29 @@ class Model:
         """
         Reads and prepares a data sample from local storage to feed the model with it.
 
-        Supported data files:
+        Supported data types:
             * image
 
-        :param data_path: Path to the data sample.
+        Args:
+            data_path (Path): Path to the data sample.
 
-        :return: Data sample prepared to be used as the input of `self.predict_probabilities()` method.
-        :rtype: Changeable to numpy ndarray via ``np.asarray(data)``.
+        Returns:
+            Data sample prepared to be used as input of `self.predict_probabilities()` method.
         """
         return [np.asarray(Image.open(data_path)).flatten()]
 
     def predict_probabilities(self, data) -> Optional[np.ndarray]:
         """
-        Calculate the model-predicted class probabilities of the examples found in the data sample by the model.
+        Calculate the model-predicted class probabilities of the examples in the data sample found by the model.
 
-        :param data: Input data sample.
-        :type data: Changeable to numpy ndarray via ``np.asarray(data)``.
+        Args:
+            data: Input data sample.
 
-        :return: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
+        Returns:
+            An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
             Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
             `x` belongs to each possible class, for each of the K classes.
-            In the case the model can't extract any example `x` from the data sample, the method will return ``None``.
+            In the case the model can't extract any example `x` from the data sample, the method returns ``None``.
         """
         pred_proba = self._predict_proba(data)
         return None if len(pred_proba) == 0 else pred_proba
@@ -58,11 +60,11 @@ class Model:
         Note that in the multilabel case, each sample can have any number of labels.
         This returns the marginal probability that the given sample has the label in question.
 
-        :param X: Input data.
-        :type X: {array-like} of shape (n_samples, n_features)
+        Args:
+            X ({array-like} of shape (n_samples, n_features)): Input data.
 
-        :return: Returns the probability of the sample for each class in the model.
-        :rtype: array-like of shape (n_samples, n_classes)
+        Returns:
+            An array of shape (n_samples, n_classes). Probability of the sample for each class in the model.
         """
         return self._model.predict_proba(X)
 
@@ -75,14 +77,15 @@ class AcquisitionFunction(Metric):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        model: Model,
+        model: ModelWrapper,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
     ):
         """
         Creates an instance of the acquisition function with a custom model to score data samples.
 
-        :param model: Machine learning model used to score data samples.
+        Args:
+            model (ModelWrapper): Machine learning model used to score data samples.
         """
         self._model = model
         super().__init__(
@@ -104,6 +107,17 @@ class AcquisitionFunction(Metric):
 
     @abstractmethod
     def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+        """
+        Scores model-predicted class probabilities according the acquisition function description.
+
+        Args:
+            pred_proba: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
+                Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities
+                that `x` belongs to each possible class, for each of the K classes.
+
+        Returns:
+             score: Score of the model-predicted class probabilities.
+        """
         pass
 
 
