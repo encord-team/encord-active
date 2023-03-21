@@ -21,6 +21,7 @@ from encord_active.lib.common.utils import (
     download_file,
     slice_video_into_frames,
 )
+from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -129,9 +130,12 @@ class Project:
         self.ontology = OntologyStructure.from_dict(json.loads(ontology_file_path.read_text(encoding="utf-8")))
 
     def __save_label_row_meta(self, encord_project: EncordProject):
-        label_row_meta = {lr["label_hash"]: lr for lr in encord_project.label_rows if lr["label_hash"] is not None}
-        label_row_meta_file_path = self.file_structure.label_row_meta
-        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
+        label_row_meta = {
+            lrm.label_hash: handle_enum_and_datetime(lrm)
+            for lrm in encord_project.list_label_rows()
+            if lrm.label_hash is not None
+        }
+        self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int]):
         label_row_meta_file_path = self.file_structure.label_row_meta
