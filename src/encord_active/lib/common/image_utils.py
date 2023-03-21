@@ -258,7 +258,6 @@ def get_geometries(
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
     label_row = json.loads(label_row_structure.label_row_file.read_text())
-    # du = label_row_structure.
     du = label_row["data_units"][du_hash]
 
     geometries = []
