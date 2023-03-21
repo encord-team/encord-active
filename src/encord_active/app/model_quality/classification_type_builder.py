@@ -10,8 +10,7 @@ from encord_active.app.common.components import sticky_header
 from encord_active.app.common.components.prediction_grid import (
     prediction_grid_classifications,
 )
-from encord_active.app.common.state import MetricNames, PredictionsState, get_state
-from encord_active.app.common.state_hooks import use_memo
+from encord_active.app.common.state import MetricNames, get_state
 from encord_active.app.model_quality.prediction_type_builder import (
     ModelQualityPage,
     PredictionTypeBuilder,
@@ -72,32 +71,6 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             )
             self.metric_details_description(metric_datas)
 
-    def _prediction_metric_in_sidebar_objects(self, page_mode: ModelQualityPage):
-        """
-        Note: Adding the fixed options "confidence" and "iou" works here because
-        confidence is required on import and IOU is computed during prediction
-        import. So the two columns are already available in the
-        `st.session_state.model_predictions` data frame.
-        """
-        if page_mode == ModelQualityPage.FALSE_NEGATIVES:
-            column_names = list(get_state().predictions.metric_datas_classification.predictions.keys())
-            get_state().predictions.metric_datas.selected_label = st.selectbox(
-                "Select metric for your labels",
-                column_names,
-                help="The data in the main view will be sorted by the selected metric. "
-                "(F) := frame scores, (O) := object scores.",
-            )
-        else:
-            fixed_options = {"confidence": "Model Confidence"}
-            column_names = list(get_state().predictions.metric_datas_classification.predictions.keys())
-            get_state().predictions.metric_datas_classification.selected_prediction = st.selectbox(
-                "Select metric for your predictions",
-                column_names + list(fixed_options.keys()),
-                format_func=lambda s: fixed_options.get(s, s),
-                help="The data in the main view will be sorted by the selected metric. "
-                "(F) := frame scores, (P) := prediction scores.",
-            )
-
     def _common_settings(self):
         if not get_state().predictions.all_classes_classifications:
             get_state().predictions.all_classes_classifications = get_class_idx(
@@ -124,32 +97,18 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
-                self._prediction_metric_in_sidebar_objects(page_mode)
-
+                self._prediction_metric_in_sidebar_objects(
+                    page_mode, get_state().predictions.metric_datas_classification
+                )
             with c2:
-                get_state().predictions.nbins = int(
-                    st.number_input(
-                        "Number of buckets (n)",
-                        min_value=5,
-                        max_value=200,
-                        value=PredictionsState.nbins,
-                        help="Choose the number of bins to discritize the prediction metric values into.",
-                    )
-                )
+                self._set_binning()
             with c3:
-                st.write("")  # Make some spacing.
-                st.write("")
-                get_state().predictions.decompose_classes = st.checkbox(
-                    "Show class decomposition",
-                    value=PredictionsState.decompose_classes,
-                    help="When checked, every plot will have a separate component for each class.",
-                )
+                self._class_decomposition()
         elif page_mode in [
             ModelQualityPage.TRUE_POSITIVES,
             ModelQualityPage.FALSE_POSITIVES,
-            ModelQualityPage.FALSE_NEGATIVES,
         ]:
-            self._prediction_metric_in_sidebar_objects(page_mode)
+            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas_classification)
 
         if page_mode in [
             ModelQualityPage.TRUE_POSITIVES,
@@ -170,13 +129,13 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             st.error("Couldn't load labels properly")
             return False
 
-        with sticky_header():
-            self._common_settings()
-            self._topbar_additional_settings(page_mode)
-
         get_state().predictions.metric_datas_classification = MetricNames(
             predictions={m.name: m for m in predictions_metric_datas},
         )
+
+        with sticky_header():
+            self._common_settings()
+            self._topbar_additional_settings(page_mode)
 
         model_predictions_matched = match_predictions_and_labels(model_predictions, labels)
 
@@ -247,37 +206,12 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         if (
             self._model_predictions_matched.shape[0] > 60_000
         ):  # Computation are heavy so allow computing for only a subset.
-            num_samples = st.slider(
-                "Number of samples",
-                min_value=1,
-                max_value=len(self._model_predictions_matched),
-                step=max(1, (len(self._model_predictions_matched) - 1) // 100),
-                value=max((len(self._model_predictions_matched) - 1) // 2, 1),
-                help="To avoid too heavy computations, we subsample the data at random to the selected size, "
-                "computing importance values.",
-            )
-            if num_samples < 100:
-                st.warning(
-                    "Number of samples is too low to compute reliable index importances. "
-                    "We recommend using at least 100 samples.",
-                )
+            num_samples = self._set_sampling_for_metric_importance(self._model_predictions_matched)
         else:
             num_samples = self._model_predictions_matched.shape[0]
 
         metric_columns = list(get_state().predictions.metric_datas_classification.predictions.keys())
-        try:
-            metric_importance_chart = create_metric_importance_charts(
-                self._model_predictions_matched,
-                metric_columns=metric_columns,
-                num_samples=num_samples,
-                prediction_type=MainPredictionType.CLASSIFICATION,
-            )
-            st.altair_chart(metric_importance_chart, use_container_width=True)
-        except ValueError as e:
-            if e.args:
-                st.info(e.args[0])
-            else:
-                st.info("Failed to compute metric importance")
+        self._get_metric_importance(self._model_predictions_matched, metric_columns, num_samples)
 
         col1, col2 = st.columns(2)
 
