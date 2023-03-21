@@ -17,10 +17,9 @@ class LabelRowStructure:
         return self.path / "images"
 
     def iter_data_unit(self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None) -> Iterator[Path]:
-        mapped_data_unit_hash = self._mappings.get(data_unit_hash, data_unit_hash)
         glob_string = ""
-        if mapped_data_unit_hash:
-            glob_string += mapped_data_unit_hash
+        if data_unit_hash:
+            glob_string += self._mappings.get(data_unit_hash, data_unit_hash)
         if frame:
             glob_string += f"_{frame}"
         glob_string += ".*"
