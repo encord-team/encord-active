@@ -46,8 +46,7 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 class ObjectTypeBuilder(PredictionTypeBuilder):
-    name = "Object"
-    title = "Object-level model performance"
+    title = "Object"
 
     def __init__(self):
         self._model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None
@@ -107,39 +106,33 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 "(F) := frame scores, (P) := prediction scores.",
             )
 
-    def _load_data(self, page_mode: ModelQualityPage):
-        metrics_dir = get_state().project_paths.metrics
-
+    def _load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
-
-        predictions_metric_datas = use_memo(lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir))
-        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        model_predictions = use_memo(
-            lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas, MainPredictionType.OBJECT)
+        predictions_metric_datas, label_metric_datas, model_predictions, labels = self.read_prediction_files(
+            MainPredictionType.OBJECT
         )
-        labels = use_memo(lambda: reader.get_labels(predictions_dir, label_metric_datas, MainPredictionType.OBJECT))
 
         if model_predictions is None:
             st.error("Couldn't load model predictions")
-            return
+            return False
 
         if labels is None:
             st.error("Couldn't load labels properly")
-            return
+            return False
 
-        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+        with sticky_header():
+            self._common_settings()
+            self._topbar_additional_settings(page_mode)
+
         get_state().predictions.metric_datas = MetricNames(
             predictions={m.name: m for m in predictions_metric_datas},
             labels={m.name: m for m in label_metric_datas},
         )
 
+        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
         if not matched_gt:
             st.error("Couldn't match ground truths")
-            return
-
-        with sticky_header():
-            self._common_settings()
-            self._topbar_additional_settings(page_mode)
+            return False
 
         (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
             model_predictions,
@@ -169,6 +162,8 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             sorted_model_predictions,
             precisions,
         )
+
+        return True
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(

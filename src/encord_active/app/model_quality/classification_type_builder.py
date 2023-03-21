@@ -8,7 +8,6 @@ from pandera.typing import DataFrame
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.components.prediction_grid import (
-    prediction_grid,
     prediction_grid_classifications,
 )
 from encord_active.app.common.state import MetricNames, PredictionsState, get_state
@@ -44,8 +43,7 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
 class ClassificationTypeBuilder(PredictionTypeBuilder):
-    name = "Classification"
-    title = "Frame-level model performance"
+    title = "Classification"
 
     def __init__(self):
 
@@ -59,16 +57,16 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                 """### The View
 
 On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
-Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value in the plots.
-Bars indicate the number of samples in each bucket, while lines indicate the true positive and false negative rates of each bucket.
-
+Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value 
+in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive and false 
+negative rates of each bucket.
 
 Metrics marked with (P) are metrics computed on your predictions.
 Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
 with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
 
-For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" (O/F) computed
-on your labels are used for the "False Negative Rate" plot.
+For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
+(O/F) computed on your labels are used for the "False Negative Rate" plot.
 """,
                 unsafe_allow_html=True,
             )
@@ -159,50 +157,28 @@ on your labels are used for the "False Negative Rate" plot.
         ]:
             self.display_settings(MetricScope.MODEL_QUALITY)
 
-    def _load_data(self, page_mode: ModelQualityPage):
-        metrics_dir = get_state().project_paths.metrics
-
-        predictions_dir_classification = get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-
-        predictions = reader.get_classification_predictions(
-            get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-        )
-        labels = reader.get_classification_labels(
-            get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-        )
-
-        predictions_metric_datas = use_memo(
-            lambda: reader.get_prediction_metric_data(predictions_dir_classification, metrics_dir)
-        )
-        label_metric_datas = use_memo(lambda: reader.get_label_metric_data(metrics_dir))
-        model_predictions = use_memo(
-            lambda: reader.get_model_predictions(
-                predictions_dir_classification, predictions_metric_datas, MainPredictionType.CLASSIFICATION
-            )
-        )
-        labels_all = use_memo(
-            lambda: reader.get_labels(
-                predictions_dir_classification, label_metric_datas, MainPredictionType.CLASSIFICATION
-            )
-        )
-
-        get_state().predictions.metric_datas_classification = MetricNames(
-            predictions={m.name: m for m in predictions_metric_datas},
+    def _load_data(self, page_mode: ModelQualityPage) -> bool:
+        predictions_metric_datas, label_metric_datas, model_predictions, labels = self.read_prediction_files(
+            MainPredictionType.CLASSIFICATION
         )
 
         if model_predictions is None:
             st.error("Couldn't load model predictions")
-            return
+            return False
 
-        if labels_all is None:
+        if labels is None:
             st.error("Couldn't load labels properly")
-            return
+            return False
 
         with sticky_header():
             self._common_settings()
             self._topbar_additional_settings(page_mode)
 
-        model_predictions_matched = match_predictions_and_labels(model_predictions, labels_all)
+        get_state().predictions.metric_datas_classification = MetricNames(
+            predictions={m.name: m for m in predictions_metric_datas},
+        )
+
+        model_predictions_matched = match_predictions_and_labels(model_predictions, labels)
 
         (
             labels_filtered,
@@ -212,7 +188,7 @@ on your labels are used for the "False Negative Rate" plot.
             get_state().predictions.selected_classes_classifications,
             get_state().predictions.all_classes_classifications,
             labels,
-            predictions,
+            model_predictions,
             model_predictions_matched,
         )
 
@@ -238,6 +214,8 @@ on your labels are used for the "False Negative Rate" plot.
                 img_id_intersection
             )
         ]
+
+        return True
 
     def sidebar_options(self, *args, **kwargs):
         pass

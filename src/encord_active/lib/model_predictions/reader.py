@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, TypedDict, cast
+from typing import Any, Callable, Iterable, List, Optional, TypedDict, Union, cast
 
 import pandas as pd
 import pandera as pa
@@ -170,7 +170,7 @@ def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List
 
 def get_model_predictions(
     predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
-) -> Optional[DataFrame[PredictionSchema]]:
+) -> Union[DataFrame[PredictionSchema], DataFrame[ClassificationPredictionSchema], None]:
     df = _load_csv_and_merge_metrics(predictions_dir / "predictions.csv", metric_data)
 
     if prediction_type == MainPredictionType.CLASSIFICATION:
@@ -194,7 +194,7 @@ def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
 
 def get_labels(
     predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
-) -> Optional[DataFrame[LabelSchema]]:
+) -> Union[DataFrame[LabelSchema], DataFrame[ClassificationLabelSchema], None]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
 
     if prediction_type == MainPredictionType.OBJECT:

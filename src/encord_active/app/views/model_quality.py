@@ -30,7 +30,7 @@ def model_quality(page_mode: ModelQualityPage):
             pass
         st.write("2222")  # TODO delete
 
-        tab_names = [m.name for m in available_predictions]
+        tab_names = [m.title for m in available_predictions]
         tabs = st.tabs(tab_names)
 
         for tab, builder in zip(tabs, available_predictions):
