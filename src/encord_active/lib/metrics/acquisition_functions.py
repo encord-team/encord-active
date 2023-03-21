@@ -51,9 +51,11 @@ class ModelWrapper:
             In the case the model can't extract any example `x` from the data sample, the method returns ``None``.
         """
         pred_proba = self._predict_proba(data)
-        return None if len(pred_proba) == 0 else pred_proba
+        if pred_proba is not None and pred_proba.min() < 0:
+            raise ValueError("Model-predicted class probabilities cannot be less than zero.")
+        return pred_proba
 
-    def _predict_proba(self, X) -> np.ndarray:
+    def _predict_proba(self, X) -> Optional[np.ndarray]:
         """
         Probability estimates.
 
@@ -65,6 +67,7 @@ class ModelWrapper:
 
         Returns:
             An array of shape (n_samples, n_classes). Probability of the sample for each class in the model.
+            In the case the model fails, the method returns ``None``.
         """
         return self._model.predict_proba(X)
 
