@@ -152,6 +152,13 @@ def copy_filtered_data(
     filtered_labels: set[tuple[str, str, str]],
 ):
     target_project_structure.data.mkdir(parents=True, exist_ok=True)
+
+    hash_mappings = json.loads(curr_project_structure.mappings.read_text())
+    filtered_hash_mappings = {k: v for k, v in hash_mappings.items() if
+                              k in filtered_label_rows or k in filtered_data_hashes}
+    target_project_structure.mappings.write_text(json.dumps(filtered_hash_mappings))
+    target_project_structure = ProjectFileStructure(target_project_structure.project_dir) # Re create object to reload mappings
+
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
         if not current_label_row_structure.is_present():
@@ -196,9 +203,6 @@ def copy_filtered_data(
         }
         target_label_row_structure.label_row_file.write_text(json.dumps(label_row))
 
-        hash_mappings = json.loads(curr_project_structure.mappings.read_text())
-        filtered_hash_mappings = {k: v for k, v in hash_mappings.items() if k in filtered_label_hashes or k in filtered_data_hashes}
-        target_project_structure.mappings.write_text(json.dumps(filtered_hash_mappings))
 
 
 
