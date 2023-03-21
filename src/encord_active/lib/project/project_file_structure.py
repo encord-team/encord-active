@@ -1,16 +1,42 @@
+import json
 from pathlib import Path
-from typing import NamedTuple
+from typing import Iterator, Optional
 
 
-class LabelRowStructure(NamedTuple):
-    path: Path
-    images_dir: Path
-    label_row_file: Path
+class LabelRowStructure:
+    def __init__(self, path: Path, mappings: dict[str, str]):
+        self.path: Path = path
+        self._mappings: dict[str, str] = mappings
+
+    @property
+    def label_row_file(self) -> Path:
+        return self.path / "label_row.json"
+
+    @property
+    def images_dir(self) -> Path:
+        return self.path / "images"
+
+    def iter_data_unit(self, data_unit_hash: str, frame: Optional[int] = None) -> Iterator[Path]:
+        glob_string = (
+            f"{self._mappings.get(data_unit_hash, data_unit_hash)}.*"
+            if not frame
+            else f"{self._mappings.get(data_unit_hash, data_unit_hash)}_{frame}.*"
+        )
+        for du_path in self.images_dir.glob(glob_string):
+            yield du_path
+
+    def is_present(self):
+        return self.path.is_dir()
 
 
 class ProjectFileStructure:
     def __init__(self, project_dir: Path):
         self.project_dir: Path = project_dir.expanduser().resolve()
+        self._mappings = (
+            json.loads((project_dir / "hash_mappings.json").read_text())
+            if (project_dir / "hash_mappings.json").exists()
+            else {}
+        )
 
     @property
     def data(self) -> Path:
@@ -49,5 +75,16 @@ class ProjectFileStructure:
         return self.project_dir / "project_meta.yaml"
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
-        path = self.data / label_hash
-        return LabelRowStructure(path=path, images_dir=path / "images", label_row_file=path / "label_row.json")
+        path = self.data / self._mappings.get(label_hash, label_hash)
+        return LabelRowStructure(path=path, mappings=self._mappings)
+
+    def iter_labels(self) -> Iterator[LabelRowStructure]:
+        for label_hash in self.data.iterdir():
+            path = self.data / label_hash
+            yield LabelRowStructure(path=path, mappings=self._mappings)
+
+    @property
+    def mappings(self) -> Path:
+        return self.project_dir / "hash_mappings.json"
+
+    # def data_unit(self, label_hash: str, data_unit_hash: str):

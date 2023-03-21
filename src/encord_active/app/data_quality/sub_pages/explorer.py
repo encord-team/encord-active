@@ -258,8 +258,6 @@ def build_card(
     """
     Builds each sub card (the content displayed for each row in a csv file).
     """
-    data_dir = get_state().project_paths.data
-
     identifier_parts = 4 if embedding_information.has_annotations else 3
     identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
 
@@ -271,7 +269,9 @@ def build_card(
         st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
         return
 
-    image = show_image_and_draw_polygons(row, data_dir, draw_configurations=get_state().object_drawing_configurations)
+    image = show_image_and_draw_polygons(
+        row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
+    )
     st.image(image)
 
     # === Write scores and link to editor === #
