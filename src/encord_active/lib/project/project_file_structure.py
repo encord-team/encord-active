@@ -86,5 +86,3 @@ class ProjectFileStructure:
     @property
     def mappings(self) -> Path:
         return self.project_dir / "hash_mappings.json"
-
-    # def data_unit(self, label_hash: str, data_unit_hash: str):
