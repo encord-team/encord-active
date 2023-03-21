@@ -141,8 +141,21 @@ class Project:
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
+
+        def populate_defaults(lr_dict: dict):
+            img_dir = self.file_structure.label_row_structure(lr_dict["label_hash"]).images_dir
+            image_pth = next((i.as_posix() for i in img_dir.iterdir() if i.is_file()), None) or ""
+
+            return {
+                "data_link": image_pth,
+                "dataset_title": "",
+                "is_shadow_data": False,
+                "number_of_frames": 1,
+                **lr_dict,
+            }
+
         self.label_row_metas = {
-            lr_hash: LabelRowMetadata.from_dict(lr_meta)
+            lr_hash: LabelRowMetadata.from_dict(populate_defaults(lr_meta))
             for lr_hash, lr_meta in itertools.islice(
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
