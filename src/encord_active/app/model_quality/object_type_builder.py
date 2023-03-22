@@ -5,24 +5,19 @@ from typing import Optional
 
 import altair as alt
 import streamlit as st
+from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.common.components import sticky_header
 from encord_active.app.common.components.prediction_grid import prediction_grid
-from encord_active.app.common.state import (
-    MetricNames,
-    PredictionsState,
-    State,
-    get_state,
-)
+from encord_active.app.common.state import MetricNames, State, get_state
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.app.model_quality.prediction_type_builder import (
     ModelQualityPage,
     PredictionTypeBuilder,
 )
 from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
@@ -56,28 +51,6 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
     def sidebar_options(self, *args, **kwargs):
         pass
-
-    def description_expander(self, metric_datas: MetricNames):
-        with st.expander("Details", expanded=False):
-            st.markdown(
-                """### The View
-
-On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
-Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the 
-x-value in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive 
-and false negative rates of each bucket.
-
-
-Metrics marked with (P) are metrics computed on your predictions.
-Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
-with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
-
-For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
-(O/F) computed on your labels are used for the "False Negative Rate" plot.
-""",
-                unsafe_allow_html=True,
-            )
-            self.metric_details_description(metric_datas)
 
     def _load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
@@ -219,43 +192,11 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         col1, col2 = st.columns(2)
         col1.metric("mAP", f"{_map:.3f}")
         col2.metric("mAR", f"{_mar:.3f}")
-        st.markdown("""---""")
 
-        st.subheader("Metric Importance")
-        with st.container():
-            with st.expander("Description"):
-                st.write(
-                    "The following charts show the dependency between model performance and each index. "
-                    "In other words, these charts answer the question of how much is model "
-                    "performance affected by each index. This relationship can be decomposed into two metrics:"
-                )
-                st.markdown(
-                    "- **Metric importance**: measures the *strength* of the dependency between and metric and model "
-                    "performance. A high value means that the model performance would be strongly affected by "
-                    "a change in the index. For example, a high importance in 'Brightness' implies that a change "
-                    "in that quantity would strongly affect model performance. Values range from 0 (no dependency) "
-                    "to 1 (perfect dependency, one can completely predict model performance simply by looking "
-                    "at this index)."
-                )
-                st.markdown(
-                    "- **Metric [correlation](https://en.wikipedia.org/wiki/Correlation)**: measures the *linearity "
-                    "and direction* of the dependency between an index and model performance. "
-                    "Crucially, this metric tells us whether a positive change in an index "
-                    "will lead to a positive change (positive correlation) or a negative change (negative correlation) "
-                    "in model performance . Values range from -1 to 1."
-                )
-                st.write(
-                    "Finally, you can also select how many samples are included in the computation "
-                    "with the slider, as well as filter by class with the dropdown in the side bar."
-                )
-
-            if self._model_predictions.shape[0] > 60_000:  # Computation are heavy so allow computing for only a subset.
-                num_samples = self._set_sampling_for_metric_importance(self._model_predictions)
-            else:
-                num_samples = self._model_predictions.shape[0]
-
-            metric_columns = list(get_state().predictions.metric_datas.predictions.keys())
-            self._get_metric_importance(self._model_predictions, metric_columns, num_samples)
+        # METRIC IMPORTANCE
+        self._get_metric_importance(
+            self._model_predictions, list(get_state().predictions.metric_datas.predictions.keys())
+        )
 
         st.subheader("Subset selection scores")
         with st.container():
@@ -264,29 +205,14 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             st.plotly_chart(chart, use_container_width=True)
 
     def _render_performance_by_metric(self):
-        if self._model_predictions.shape[0] == 0:
-            st.write("No predictions of the given class(es).")
-            return
-
+        self._render_performance_by_metric_description(self._model_predictions, get_state().predictions.metric_datas)
         metric_name = get_state().predictions.metric_datas.selected_prediction
-        if not metric_name:
-            # This shouldn't happen with the current flow. The only way a user can do this
-            # is if he/she write custom code to bypass running the metrics. In this case,
-            # I think that it is fair to not give more information than this.
-            st.write(
-                "No metrics computed for the your model predictions. "
-                "With `encord-active import predictions /path/to/predictions.pkl`, "
-                "Encord Active will automatically run compute the metrics."
-            )
-            return
-
-        self.description_expander(get_state().predictions.metric_datas)
 
         label_metric_name = metric_name
         if metric_name[-3:] == "(P)":  # Replace the P with O:  "Metric (P)" -> "Metric (O)"
             label_metric_name = re.sub(r"(.*?\()P(\))", r"\1O\2", metric_name)
 
-        if not label_metric_name in self._labels.columns:
+        if label_metric_name not in self._labels.columns:
             label_metric_name = re.sub(
                 r"(.*?\()O(\))", r"\1F\2", label_metric_name
             )  # Look for it in frame label metrics.
@@ -307,21 +233,29 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         )
 
         try:
-            tpr = performance_rate_by_metric(
-                self._model_predictions, metric_name, scope=PredictionMatchScope.TRUE_POSITIVES, **chart_args
-            )
-            if tpr is not None:
-                st.altair_chart(tpr.interactive(), use_container_width=True)
-        except:
+            if metric_name in self._model_predictions.columns:
+                tpr = performance_rate_by_metric(
+                    self._model_predictions, metric_name, scope=PredictionMatchScope.TRUE_POSITIVES, **chart_args
+                )
+                if tpr is not None:
+                    st.altair_chart(tpr.interactive(), use_container_width=True)
+            else:
+                st.info(f"True Positive Rate is not available for `{metric_name}` metric")
+        except Exception as e:
+            logger.warning(e)
             pass
 
         try:
-            fnr = performance_rate_by_metric(
-                self._labels, label_metric_name, scope=PredictionMatchScope.FALSE_NEGATIVES, **chart_args
-            )
-            if fnr is not None:
-                st.altair_chart(fnr.interactive(), use_container_width=True)
-        except:
+            if label_metric_name in self._labels.columns:
+                fnr = performance_rate_by_metric(
+                    self._labels, label_metric_name, scope=PredictionMatchScope.FALSE_NEGATIVES, **chart_args
+                )
+                if fnr is not None:
+                    st.altair_chart(fnr.interactive(), use_container_width=True)
+            else:
+                st.info(f"False Negative Rate is not available for `{label_metric_name}` metric")
+        except Exception as e:
+            logger.warning(e)
             pass
 
     def _render_true_positives(self):
@@ -368,16 +302,17 @@ The remaining colors correspond to the dataset labels with the colors you are us
         with st.expander("Details"):
             st.markdown(
                 f"""### The view
-        These are the predictions for which either of the following is true
-        1. The IOU between the prediction and the best matching label was too low
-        2. There was another prediction with higher model confidence which matched the label already
-        3. The predicted class didn't match
+These are the predictions for which either of the following is true
+1. The IOU between the prediction and the best matching label was too low
+2. There was another prediction with higher model confidence which matched the label already
+3. The predicted class didn't match
 
-        ---
+---
 
-        **Color**:
-        The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
-        The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
                 """,
                 unsafe_allow_html=True,
             )

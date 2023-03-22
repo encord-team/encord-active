@@ -33,6 +33,27 @@ class ModelQualityPage(str, Enum):
 class PredictionTypeBuilder(Page):
     name: str
 
+    def description_expander(self, metric_datas: MetricNames):
+        with st.expander("Details", expanded=False):
+            st.markdown(
+                """### The View
+
+On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
+Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value 
+in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive and false 
+negative rates of each bucket.
+
+Metrics marked with (P) are metrics computed on your predictions.
+Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
+with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
+
+For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
+(O/F) computed on your labels are used for the "False Negative Rate" plot.
+""",
+                unsafe_allow_html=True,
+            )
+            self.metric_details_description(metric_datas)
+
     @staticmethod
     def metric_details_description(metric_datas: MetricNames):
         metric_name = metric_datas.selected_prediction
@@ -166,28 +187,84 @@ class PredictionTypeBuilder(Page):
 
         return predictions_metric_datas, label_metric_datas, model_predictions, labels
 
+    def _render_performance_by_metric_description(
+        self,
+        model_predictions: Union[
+            DataFrame[ClassificationPredictionMatchSchemaWithClassNames], DataFrame[PredictionMatchSchema]
+        ],
+        metric_datas: MetricNames,
+    ):
+        if model_predictions.shape[0] == 0:
+            st.write("No predictions of the given class(es).")
+            return
+
+        metric_name = metric_datas.selected_prediction
+        if not metric_name:
+            # This shouldn't happen with the current flow. The only way a user can do this
+            # is if he/she write custom code to bypass running the metrics. In this case,
+            # I think that it is fair to not give more information than this.
+            st.write(
+                "No metrics computed for the your model predictions. "
+                "With `encord-active import predictions /path/to/predictions.pkl`, "
+                "Encord Active will automatically run compute the metrics."
+            )
+            return
+
+        self.description_expander(metric_datas)
+
     def _get_metric_importance(
         self,
         model_predictions: Union[
             DataFrame[ClassificationPredictionMatchSchemaWithClassNames], DataFrame[PredictionMatchSchema]
         ],
         metric_columns: List[str],
-        num_samples: int,
     ):
-        with st.spinner("Computing index importance..."):
-            try:
-                metric_importance_chart = create_metric_importance_charts(
-                    model_predictions,
-                    metric_columns=metric_columns,
-                    num_samples=num_samples,
-                    prediction_type=MainPredictionType.CLASSIFICATION,
+        with st.container():
+            with st.expander("Description"):
+                st.write(
+                    "The following charts show the dependency between model performance and each index. "
+                    "In other words, these charts answer the question of how much is model "
+                    "performance affected by each index. This relationship can be decomposed into two metrics:"
                 )
-                st.altair_chart(metric_importance_chart, use_container_width=True)
-            except ValueError as e:
-                if e.args:
-                    st.info(e.args[0])
-                else:
-                    st.info("Failed to compute metric importance")
+                st.markdown(
+                    "- **Metric importance**: measures the *strength* of the dependency between and metric and model "
+                    "performance. A high value means that the model performance would be strongly affected by "
+                    "a change in the index. For example, a high importance in 'Brightness' implies that a change "
+                    "in that quantity would strongly affect model performance. Values range from 0 (no dependency) "
+                    "to 1 (perfect dependency, one can completely predict model performance simply by looking "
+                    "at this index)."
+                )
+                st.markdown(
+                    "- **Metric [correlation](https://en.wikipedia.org/wiki/Correlation)**: measures the *linearity "
+                    "and direction* of the dependency between an index and model performance. "
+                    "Crucially, this metric tells us whether a positive change in an index "
+                    "will lead to a positive change (positive correlation) or a negative change (negative correlation) "
+                    "in model performance . Values range from -1 to 1."
+                )
+                st.write(
+                    "Finally, you can also select how many samples are included in the computation "
+                    "with the slider, as well as filter by class with the dropdown in the side bar."
+                )
+
+            if model_predictions.shape[0] > 60_000:  # Computation are heavy so allow computing for only a subset.
+                num_samples = self._set_sampling_for_metric_importance(model_predictions)
+            else:
+                num_samples = model_predictions.shape[0]
+
+            with st.spinner("Computing index importance..."):
+                try:
+                    metric_importance_chart = create_metric_importance_charts(
+                        model_predictions,
+                        metric_columns=metric_columns,
+                        num_samples=num_samples,
+                        prediction_type=MainPredictionType.CLASSIFICATION,
+                    )
+                    st.altair_chart(metric_importance_chart, use_container_width=True)
+                except ValueError as e:
+                    if e.args:
+                        st.info(e.args[0])
+                    else:
+                        st.info("Failed to compute metric importance")
 
     def build(self, page_mode: ModelQualityPage):
         if self._load_data(page_mode):

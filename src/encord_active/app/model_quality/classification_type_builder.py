@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import altair as alt
 import streamlit as st
+from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
@@ -22,7 +23,6 @@ from encord_active.lib.charts.classification_metrics import (
     get_precision_recall_graph,
 )
 from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.metrics.utils import MetricScope
@@ -48,28 +48,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         self._labels: Optional[List] = None
         self._predictions: Optional[List] = None
-        self._model_predictions_matched: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
-
-    def description_expander(self, metric_datas: MetricNames):
-        with st.expander("Details", expanded=False):
-            st.markdown(
-                """### The View
-
-On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
-Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value 
-in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive and false 
-negative rates of each bucket.
-
-Metrics marked with (P) are metrics computed on your predictions.
-Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
-with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
-
-For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
-(O/F) computed on your labels are used for the "False Negative Rate" plot.
-""",
-                unsafe_allow_html=True,
-            )
-            self.metric_details_description(metric_datas)
+        self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
 
     def _common_settings(self):
         if not get_state().predictions.all_classes_classifications:
@@ -168,7 +147,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             list(predictions_filtered_intersection[ClassificationPredictionSchema.class_id]),
         )
 
-        self._model_predictions_matched = model_predictions_matched_filtered.copy()[
+        self._model_predictions = model_predictions_matched_filtered.copy()[
             model_predictions_matched_filtered[ClassificationPredictionMatchSchemaWithClassNames.img_id].isin(
                 img_id_intersection
             )
@@ -203,15 +182,9 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         col_f1.metric("Mean F1", f"{float(f1.mean()):.2f}", help="Average of F1 scores of all classes")
 
         # METRIC IMPORTANCE
-        if (
-            self._model_predictions_matched.shape[0] > 60_000
-        ):  # Computation are heavy so allow computing for only a subset.
-            num_samples = self._set_sampling_for_metric_importance(self._model_predictions_matched)
-        else:
-            num_samples = self._model_predictions_matched.shape[0]
-
-        metric_columns = list(get_state().predictions.metric_datas_classification.predictions.keys())
-        self._get_metric_importance(self._model_predictions_matched, metric_columns, num_samples)
+        self._get_metric_importance(
+            self._model_predictions, list(get_state().predictions.metric_datas_classification.predictions.keys())
+        )
 
         col1, col2 = st.columns(2)
 
@@ -224,7 +197,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         col2.plotly_chart(pr_graph, use_container_width=True)
 
     def _render_performance_by_metric(self):
-        if self._model_predictions_matched.shape[0] == 0:
+        if self._model_predictions.shape[0] == 0:
             st.write("No predictions of the given class(es).")
             return
 
@@ -245,7 +218,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         classes_for_coloring = ["Average"]
         decompose_classes = get_state().predictions.decompose_classes
         if decompose_classes:
-            unique_classes = set(self._model_predictions_matched["class_name"].unique())
+            unique_classes = set(self._model_predictions["class_name"].unique())
             classes_for_coloring += sorted(list(unique_classes))
 
         # Ensure same colors between plots
@@ -257,14 +230,15 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
 
         try:
             tpr = performance_rate_by_metric(
-                self._model_predictions_matched,
+                self._model_predictions,
                 metric_name,
                 scope=PredictionMatchScope.TRUE_POSITIVES,
                 **chart_args,
             )
             if tpr is not None:
                 st.altair_chart(tpr.interactive(), use_container_width=True)
-        except:
+        except Exception as e:
+            logger.warning(e)
             pass
 
     def _render_true_positives(self):
@@ -282,8 +256,8 @@ These are the predictions where the model correctly predicts the true class.
             st.error("No prediction metric selected")
             return
 
-        tp_df = self._model_predictions_matched[
-            self._model_predictions_matched[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 1.0
+        tp_df = self._model_predictions[
+            self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 1.0
         ].dropna(subset=[metric_name])
 
         if tp_df.shape[0] == 0:
@@ -308,8 +282,8 @@ These are the predictions where the model incorrectly predicts the positive clas
             st.error("No prediction metric selected")
             return
 
-        fp_df = self._model_predictions_matched[
-            self._model_predictions_matched[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 0.0
+        fp_df = self._model_predictions[
+            self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 0.0
         ].dropna(subset=[metric_name])
 
         if fp_df.shape[0] == 0:
