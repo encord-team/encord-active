@@ -4,6 +4,7 @@ import encordImportUrl from "../../../assets/encord-import.svg";
 import fileImageUrl from "../../../assets/file-image.svg";
 import annotationsUrl from "../../../assets/annotations.svg";
 import classesUrl from "../../../assets/classes.svg";
+import DEFAUL_PROJECT_IMAGE from "../../../assets/default_project_image.webp";
 
 import { Streamlit } from "streamlit-component-lib";
 
@@ -18,9 +19,6 @@ export type Project = {
     classes: number;
   };
 };
-
-const DEFAUL_PROJECT_IMAGE =
-  "https://encord.com/static/78adcea1165af168531fd9a16ddd27f0/9db6b/d419cc3a-8859-4c28-bf35-745609d9c1d9_5.webp";
 
 type Output = [
   (
@@ -148,11 +146,14 @@ const ProjectCard = ({
   onClick: ButtonCardProps["onClick"];
 }) => (
   <ButtonCard onClick={onClick}>
-    <figure className="overflow-visible">
+    <figure className="max-h-36 rounded">
       <img
-        src={project.imageUrl || DEFAUL_PROJECT_IMAGE}
+        src={
+          project.imageUrl
+            ? window.location.ancestorOrigins[0] + project.imageUrl
+            : DEFAUL_PROJECT_IMAGE
+        }
         alt={project.name}
-        className="rounded"
       />
     </figure>
     <div className="card-body w-full p-0 justify-between gap-1">
@@ -180,7 +181,6 @@ const ProjectCard = ({
     ) : null}
   </ButtonCard>
 );
-
 const ProjectStat = ({
   title,
   value,

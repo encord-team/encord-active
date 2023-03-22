@@ -14,7 +14,10 @@ class PrebuiltProject(TypedDict):
     url: str
     hash: str
     name: str
+    image_path: Path
 
+
+IMAGES_PATH = (Path(__file__).parent).resolve() / "images"
 
 # GCP bucket links will be added here
 PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
@@ -22,31 +25,37 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-coco-2017-dataset.zip",
         hash="f2140a72-c644-4c31-be66-3ef80b3718e5",
         name="[open-source][validation]-coco-2017-dataset",
+        image_path=(IMAGES_PATH / "coco.jpeg"),
     ),
     "[open-source][test]-limuc-ulcerative-colitis-classification": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
         hash="aa2b21bd-6f2e-48fc-8f4f-4ba4d9b7bd67",
         name="[open-source][test]-limuc-ulcerative-colitis-classification",
+        image_path=(IMAGES_PATH / "limuc.jpeg"),
     ),
     "[open-source]-covid-19-segmentations": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
         hash="d18819cb-2b75-4040-beb6-c63a901e6c84",
         name="[open-source]-covid-19-segmentations",
+        image_path=(IMAGES_PATH / "covid_segmentations.jpeg"),
     ),
     "[open-source][validation]-bdd-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
         hash="b37a48e0-6462-472d-baaa-2fcaf5ab9521",
         name="[open-source][validation]-bdd-dataset",
+        image_path=(IMAGES_PATH / "bdd.jpeg"),
     ),
     "[open-source]-TACO-Official": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
         hash="dc1cf137-f1b9-4c2f-973d-32512c971955",
         name="[open-source]-TACO-Official",
+        image_path=(IMAGES_PATH / "taco.jpeg"),
     ),
     "[open-source]-TACO-Unofficial": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
         hash="14a52852-55f6-46c9-850a-40e11540605f",
         name="[open-source]-TACO-Unofficial",
+        image_path=(IMAGES_PATH / "taco_unofficial.jpeg"),
     ),
     "[open-source][train]-mnist-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btrain%5D-mnist-dataset.zip",
@@ -62,11 +71,13 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         url="https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
         hash="1f4752d7-4a7a-4c0e-8b08-dd4b1c5a8bc6",
         name="rareplanes",
+        image_path=(IMAGES_PATH / "rareplanes.jpeg"),
     ),
     "quickstart": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
         hash="d6423838-f60e-41d9-b2ca-715aa2edef9c",
         name="quickstart",
+        image_path=(IMAGES_PATH / "quickstart.jpeg"),
     ),
 }
 

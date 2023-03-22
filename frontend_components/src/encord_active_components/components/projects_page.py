@@ -13,6 +13,7 @@ class ProjectStats(TypedDict):
 class Project(TypedDict):
     name: str
     hash: str
+    imageUrl: str
     downloaded: bool
     stats: Optional[ProjectStats]
 

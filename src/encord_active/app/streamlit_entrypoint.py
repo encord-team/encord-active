@@ -17,6 +17,8 @@ from encord_active_components.components.projects_page import (
     ProjectStats,
     projects_page,
 )
+from PIL import Image
+from streamlit.elements.image import image_to_url
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import (
@@ -133,6 +135,11 @@ class GetProjectsResult(NamedTuple):
     local_paths: dict[str, Path]
 
 
+def image_url(path: Path, id: str):
+    image = Image.open(path.resolve().as_posix())
+    return image_to_url(image, -1, False, "RGB", "JPEG", id)
+
+
 def get_projects(path: Path):
     prevent_detached_versions(path)
     project_metas = {project: fetch_project_meta(project) for project in project_list(path)}
@@ -142,6 +149,7 @@ def get_projects(path: Path):
             name=project.get("project_title") or path.name,
             hash=project["project_hash"],
             downloaded=True,
+            imageUrl="",
             stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
         )
         for path, project in project_metas.items()
@@ -153,6 +161,7 @@ def get_projects(path: Path):
             hash=data["hash"],
             downloaded=data["hash"] in local_projects,
             stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
+            imageUrl=image_url(data["image_path"], f"project-{data['hash']}-image"),
         )
         for name, data in PREBUILT_PROJECTS.items()
     }
