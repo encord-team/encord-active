@@ -1,7 +1,6 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 from encord.constants.enums import DataType

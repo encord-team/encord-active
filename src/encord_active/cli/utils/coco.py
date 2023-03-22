@@ -6,7 +6,7 @@ import numpy as np
 from encord.objects.common import Shape
 
 from encord_active.cli.config import app_config
-from encord_active.lib.coco.importer import IMAGE_DATA_UNIT_FILENAME, CocoImporter
+from encord_active.lib.coco.importer import CocoImporter
 from encord_active.lib.coco.parsers import parse_results
 from encord_active.lib.db.predictions import (
     BoundingBox,
