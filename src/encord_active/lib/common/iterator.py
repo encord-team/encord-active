@@ -79,7 +79,9 @@ class DatasetIterator(Iterator):
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
                     try:
-                        yield data_unit, next(self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash)).path
+                        yield data_unit, next(
+                            self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash)
+                        ).path
                     except KeyError:
                         logger.error(
                             f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
