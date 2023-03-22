@@ -50,50 +50,8 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         self._predictions: Optional[List] = None
         self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
 
-    def _common_settings(self):
-        if not get_state().predictions.all_classes_classifications:
-            get_state().predictions.all_classes_classifications = get_class_idx(
-                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-            )
-
-        all_classes = get_state().predictions.all_classes_classifications
-        selected_classes = st.multiselect(
-            "Filter by class",
-            list(all_classes.items()),
-            format_func=lambda x: x[1]["name"],
-            help="""
-            With this selection, you can choose which classes to include in the performance metrics calculations.
-            This acts as a filter, i.e. when nothing is selected all classes are included.
-            Performance metrics will be automatically updated according to the chosen classes.
-            """,
-        )
-
-        get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
-
-    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
-        if page_mode == ModelQualityPage.METRICS:
-            return
-        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
-            c1, c2, c3 = st.columns([4, 4, 3])
-            with c1:
-                self._prediction_metric_in_sidebar_objects(
-                    page_mode, get_state().predictions.metric_datas_classification
-                )
-            with c2:
-                self._set_binning()
-            with c3:
-                self._class_decomposition()
-        elif page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-        ]:
-            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas_classification)
-
-        if page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-        ]:
-            self.display_settings(MetricScope.MODEL_QUALITY)
+    def sidebar_options(self, *args, **kwargs):
+        pass
 
     def _load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
@@ -155,8 +113,50 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         return True
 
-    def sidebar_options(self, *args, **kwargs):
-        pass
+    def _common_settings(self):
+        if not get_state().predictions.all_classes_classifications:
+            get_state().predictions.all_classes_classifications = get_class_idx(
+                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+            )
+
+        all_classes = get_state().predictions.all_classes_classifications
+        selected_classes = st.multiselect(
+            "Filter by class",
+            list(all_classes.items()),
+            format_func=lambda x: x[1]["name"],
+            help="""
+            With this selection, you can choose which classes to include in the performance metrics calculations.
+            This acts as a filter, i.e. when nothing is selected all classes are included.
+            Performance metrics will be automatically updated according to the chosen classes.
+            """,
+        )
+
+        get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
+
+    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
+        if page_mode == ModelQualityPage.METRICS:
+            return
+        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+            c1, c2, c3 = st.columns([4, 4, 3])
+            with c1:
+                self._prediction_metric_in_sidebar_objects(
+                    page_mode, get_state().predictions.metric_datas_classification
+                )
+            with c2:
+                self._set_binning()
+            with c3:
+                self._class_decomposition()
+        elif page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+        ]:
+            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas_classification)
+
+        if page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+        ]:
+            self.display_settings(MetricScope.MODEL_QUALITY)
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(

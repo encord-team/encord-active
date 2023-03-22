@@ -30,7 +30,6 @@ def model_quality(page_mode: ModelQualityPage):
         if not available_predictions:
             st.markdown("## No predictions imported into this project.")
             pass
-        st.write("2222")  # TODO delete
 
         tab_names = [m.title for m in available_predictions]
         tabs = st.tabs(tab_names)

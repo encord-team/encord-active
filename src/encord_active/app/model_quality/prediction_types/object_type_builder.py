@@ -111,36 +111,6 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
         return True
 
-    def is_available(self) -> bool:
-        return reader.check_model_prediction_availability(
-            get_state().project_paths.predictions / MainPredictionType.OBJECT.value
-        )
-
-    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
-        if page_mode == ModelQualityPage.METRICS:
-            return
-        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
-            c1, c2, c3 = st.columns([4, 4, 3])
-            with c1:
-                self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
-            with c2:
-                self._set_binning()
-            with c3:
-                self._class_decomposition()
-        elif page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-            ModelQualityPage.FALSE_NEGATIVES,
-        ]:
-            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
-
-        if page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-            ModelQualityPage.FALSE_NEGATIVES,
-        ]:
-            self.display_settings(MetricScope.MODEL_QUALITY)
-
     def _common_settings(self):
         if not get_state().predictions.all_classes_objects:
             get_state().predictions.all_classes_objects = get_class_idx(
@@ -185,6 +155,36 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                 help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
                 "which there exist no predictions. With this flag, you can ignore those.",
             )
+
+    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
+        if page_mode == ModelQualityPage.METRICS:
+            return
+        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+            c1, c2, c3 = st.columns([4, 4, 3])
+            with c1:
+                self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
+            with c2:
+                self._set_binning()
+            with c3:
+                self._class_decomposition()
+        elif page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+            ModelQualityPage.FALSE_NEGATIVES,
+        ]:
+            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
+
+        if page_mode in [
+            ModelQualityPage.TRUE_POSITIVES,
+            ModelQualityPage.FALSE_POSITIVES,
+            ModelQualityPage.FALSE_NEGATIVES,
+        ]:
+            self.display_settings(MetricScope.MODEL_QUALITY)
+
+    def is_available(self) -> bool:
+        return reader.check_model_prediction_availability(
+            get_state().project_paths.predictions / MainPredictionType.OBJECT.value
+        )
 
     def _render_metrics(self):
         _map = self._metrics[self._metrics[PerformanceMetricSchema.metric] == "mAP"]["value"].item()
