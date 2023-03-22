@@ -14,7 +14,7 @@ from encord.orm.label_log import LabelLog
 from loguru import logger
 from tqdm.auto import tqdm
 
-from encord_active.lib.project import Project
+from encord_active.lib.project import Project, ProjectFileStructure
 
 
 class Iterator(Sized):
@@ -27,6 +27,7 @@ class Iterator(Sized):
         self.frame = -1
         self.num_frames = -1
         self.project: Project
+        self.project_file_structure = ProjectFileStructure(cache_dir)
         if "project" in kwargs and kwargs["project"]:
             self.project = Project(cache_dir).from_encord_project(kwargs["project"])
         else:
@@ -78,7 +79,7 @@ class DatasetIterator(Iterator):
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
                     try:
-                        yield data_unit, self.project.image_paths[label_hash][self.du_hash]
+                        yield data_unit, next(self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash)).path
                     except KeyError:
                         logger.error(
                             f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
