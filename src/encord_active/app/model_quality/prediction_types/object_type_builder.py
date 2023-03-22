@@ -254,16 +254,20 @@ matched to any predictions. The remaining objects are predictions, where colors 
     def _get_target_df(
         self, metric_name: str
     ) -> Union[DataFrame[PredictionMatchSchema], DataFrame[LabelMatchSchema], None]:
-        if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
-            return self._model_predictions[
-                self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0
-            ].dropna(subset=[metric_name])
-        elif self._explorer_outcome_type == self.OutcomeType.FALSE_POSITIVES:
-            return self._model_predictions[
-                self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
-            ].dropna(subset=[metric_name])
-        elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
-            return self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
+
+        if self._model_predictions is not None and self._labels is not None:
+            if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
+                return self._model_predictions[
+                    self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0
+                ].dropna(subset=[metric_name])
+            elif self._explorer_outcome_type == self.OutcomeType.FALSE_POSITIVES:
+                return self._model_predictions[
+                    self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
+                ].dropna(subset=[metric_name])
+            elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
+                return self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
+            else:
+                return None
         else:
             return None
 
