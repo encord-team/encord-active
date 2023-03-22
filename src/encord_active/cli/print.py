@@ -51,7 +51,6 @@ def print_ontology(
     from encord_active.lib.model_predictions.writer import (
         iterate_classification_attribute_options,
     )
-    from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     fs = ProjectFileStructure(target)
     if not fs.ontology.is_file():
