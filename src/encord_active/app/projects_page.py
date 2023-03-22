@@ -1,12 +1,11 @@
+import json
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional, Tuple
 
 import streamlit as st
-from encord_active_components.components.pages_menu import OutputAction as OutputAction
+from encord.ontology import OntologyStructure
 from encord_active_components.components.projects_page import (
-    OutputAction as ProjectsPageOutputAction,
-)
-from encord_active_components.components.projects_page import (
+    OutputAction,
     Project,
     ProjectStats,
     projects_page,
@@ -22,6 +21,11 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
+from encord_active.lib.metrics.metric import AnnotationType
+from encord_active.lib.metrics.utils import load_metric_metadata
+from encord_active.lib.model_predictions.writer import (
+    iterate_classification_attribute_options,
+)
 from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.project.sandbox_projects import (
@@ -52,6 +56,7 @@ def image_url(image: AtomicImage, project_hash: str):
 
 
 # TODO: repalce me with something smarter than just the first image
+@st.cache_data(show_spinner=False)
 def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
     label_structure = next(project_structure.iter_labels())
@@ -61,6 +66,28 @@ def get_first_image_with_polygons(project_path: Path):
     id = f"{label_hash}_{data_hash}_00000"
 
     return show_image_and_draw_polygons(id, project_structure)
+
+
+# TODO: there must be a better way to get these numbers. would be much easier
+# if we store everything in the DB.
+@st.cache_data(show_spinner=False)
+def get_project_stats(project_path: Path):
+    project_structure = ProjectFileStructure(project_path)
+    label_count = 0
+    data_count = 0
+
+    for meta_path in project_structure.metrics.glob("*.meta.json"):
+        meta = load_metric_metadata(meta_path)
+        if meta.annotation_type == AnnotationType.NONE:
+            data_count = max(data_count, meta.stats.num_rows)
+        else:
+            label_count = max(label_count, meta.stats.num_rows)
+
+    ontology_structure = OntologyStructure.from_dict(json.loads(project_structure.ontology.read_text()))
+    objects_count = len(ontology_structure.objects)
+    classifications_count = len(list(iterate_classification_attribute_options(ontology_structure)))
+
+    return ProjectStats(dataUnits=data_count, labels=label_count, classes=(objects_count + classifications_count))
 
 
 class GetProjectsResult(NamedTuple):
@@ -79,7 +106,7 @@ def get_projects(path: Path):
             hash=project["project_hash"],
             downloaded=True,
             imageUrl=image_url(get_first_image_with_polygons(project_path), project["project_hash"]),
-            stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
+            stats=get_project_stats(project_path),
         )
         for project_path, project in project_metas.items()
     }
@@ -124,7 +151,7 @@ def render_projects_page(
     download_path: Path,
 ):
     user_projects = [project for hash, project in projects.local.items() if hash not in projects.sandbox]
-    output_state = UseState[Optional[Tuple[ProjectsPageOutputAction, str]]](None, "PROJECTS_PAGE_OUTPUT")
+    output_state = UseState[Optional[Tuple[OutputAction, str]]](None, "PROJECTS_PAGE_OUTPUT")
     output = projects_page(user_projects=user_projects, sandbox_projects=list(projects.sandbox.values()))
 
     if output and output != output_state.value:
@@ -132,8 +159,8 @@ def render_projects_page(
         action, payload = output
 
         if payload and action in [
-            ProjectsPageOutputAction.SELECT_USER_PROJECT,
-            ProjectsPageOutputAction.SELECT_SANDBOX_PROJECT,
+            OutputAction.SELECT_USER_PROJECT,
+            OutputAction.SELECT_SANDBOX_PROJECT,
         ]:
             refetch_projects = False
             if payload not in projects.local:
