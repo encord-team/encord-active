@@ -42,26 +42,22 @@ from encord_active.lib.model_predictions.reader import (
 from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
-class OutcomeType(str, Enum):
-    TRUE_POSITIVES = "True Positive"
-    FALSE_POSITIVES = "False Positive"
-    FALSE_NEGATIVES = "False Negative"
-
-
 class ObjectTypeBuilder(PredictionTypeBuilder):
     title = "Object"
 
+    class OutcomeType(str, Enum):
+        TRUE_POSITIVES = "True Positive"
+        FALSE_POSITIVES = "False Positive"
+        FALSE_NEGATIVES = "False Negative"
+
     def __init__(self):
-        self._explorer_outcome_type: OutcomeType = OutcomeType.TRUE_POSITIVES
+        self._explorer_outcome_type = self.OutcomeType.TRUE_POSITIVES
         self._model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None
         self._labels: Optional[DataFrame[LabelMatchSchema]] = None
         self._metrics: Optional[DataFrame[PerformanceMetricSchema]] = None
         self._precisions: Optional[DataFrame[PrecisionRecallSchema]] = None
 
-    def sidebar_options(self, *args, **kwargs):
-        pass
-
-    def _load_data(self, page_mode: ModelQualityPage) -> bool:
+    def load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.OBJECT
@@ -130,15 +126,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         col1, col2, col3 = st.columns([4, 4, 3])
 
         with col1:
-            selected_classes = st.multiselect(
-                "Filter by class",
-                list(all_classes.items()),
-                format_func=lambda x: x[1]["name"],
-                help="""
-                With this selection, you can choose which classes to include in the performance metrics calculations.\n
-                This acts as a filter, i.e. when nothing is selected all classes are included.
-                """,
-            )
+            selected_classes = self._render_class_filtering_component(all_classes)
 
         get_state().predictions.selected_classes_objects = dict(selected_classes) or deepcopy(all_classes)
 
@@ -181,14 +169,15 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             with c1:
                 self._explorer_outcome_type = st.selectbox(
                     "Outcome",
-                    [x for x in OutcomeType],
+                    [x for x in self.OutcomeType],
                     format_func=lambda x: x.value,
                     help="Only the samples with this outcome will be shown",
                 )
             with c2:
                 explorer_metric_type = (
                     MetricType.PREDICTION
-                    if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]
+                    if self._explorer_outcome_type
+                    in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]
                     else MetricType.LABEL
                 )
 
@@ -197,7 +186,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             self.display_settings(MetricScope.MODEL_QUALITY)
 
     def _get_metric_name(self) -> Optional[str]:
-        if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]:
+        if self._explorer_outcome_type in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]:
             return get_state().predictions.metric_datas.selected_prediction
         else:
             return get_state().predictions.metric_datas.selected_label
@@ -205,7 +194,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
     def _render_explorer_details(self) -> Optional[Color]:
         color: Optional[Color] = None
         with st.expander("Details"):
-            if self._explorer_outcome_type == OutcomeType.TRUE_POSITIVES:
+            if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
                 color = Color.PURPLE
 
                 st.markdown(
@@ -223,7 +212,7 @@ The remaining colors correspond to the dataset labels with the colors you are us
                     unsafe_allow_html=True,
                 )
 
-            elif self._explorer_outcome_type == OutcomeType.FALSE_POSITIVES:
+            elif self._explorer_outcome_type == self.OutcomeType.FALSE_POSITIVES:
                 color = Color.RED
 
                 st.markdown(
@@ -243,7 +232,7 @@ The remaining colors correspond to the dataset labels with the colors you are us
                     unsafe_allow_html=True,
                 )
 
-            elif self._explorer_outcome_type == OutcomeType.FALSE_NEGATIVES:
+            elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
                 color = Color.PURPLE
 
                 st.markdown(
@@ -265,15 +254,15 @@ matched to any predictions. The remaining objects are predictions, where colors 
     def _get_target_df(
         self, metric_name: str
     ) -> Union[DataFrame[PredictionMatchSchema], DataFrame[LabelMatchSchema], None]:
-        if self._explorer_outcome_type == OutcomeType.TRUE_POSITIVES:
+        if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
             return self._model_predictions[
                 self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0
             ].dropna(subset=[metric_name])
-        elif self._explorer_outcome_type == OutcomeType.FALSE_POSITIVES:
+        elif self._explorer_outcome_type == self.OutcomeType.FALSE_POSITIVES:
             return self._model_predictions[
                 self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
             ].dropna(subset=[metric_name])
-        elif self._explorer_outcome_type == OutcomeType.FALSE_NEGATIVES:
+        elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
             return self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
         else:
             return None
@@ -283,7 +272,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
             get_state().project_paths.predictions / MainPredictionType.OBJECT.value
         )
 
-    def _render_metrics(self):
+    def render_metrics(self):
         _map = self._metrics[self._metrics[PerformanceMetricSchema.metric] == "mAP"]["value"].item()
         _mar = self._metrics[self._metrics[PerformanceMetricSchema.metric] == "mAR"]["value"].item()
         col1, col2 = st.columns(2)
@@ -301,7 +290,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
             chart = create_pr_chart_plotly(self._metrics, self._precisions, project_ontology["objects"])
             st.plotly_chart(chart, use_container_width=True)
 
-    def _render_performance_by_metric(self):
+    def render_performance_by_metric(self):
         self._render_performance_by_metric_description(self._model_predictions, get_state().predictions.metric_datas)
         metric_name = get_state().predictions.metric_datas.selected_prediction
 
@@ -355,7 +344,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
             logger.warning(e)
             pass
 
-    def _render_explorer(self):
+    def render_explorer(self):
         metric_name = self._get_metric_name()
         if not metric_name:
             st.error("No metric selected")
@@ -375,7 +364,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
         else:
             histogram = get_histogram(view_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]:
+            if self._explorer_outcome_type in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]:
                 prediction_grid(get_state().project_paths.data, model_predictions=view_df, box_color=color)
             else:
                 prediction_grid(

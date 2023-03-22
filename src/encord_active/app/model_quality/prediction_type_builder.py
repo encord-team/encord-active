@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -16,10 +16,14 @@ from encord_active.lib.model_predictions.reader import (
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
     LabelSchema,
+    OntologyObjectJSON,
     PredictionMatchSchema,
     PredictionSchema,
 )
-from encord_active.lib.model_predictions.writer import MainPredictionType
+from encord_active.lib.model_predictions.writer import (
+    MainPredictionType,
+    OntologyClassificationJSON,
+)
 
 
 class ModelQualityPage(str, Enum):
@@ -35,6 +39,23 @@ class MetricType(str, Enum):
 
 class PredictionTypeBuilder(Page):
     name: str
+
+    def sidebar_options(self, *args, **kwargs):
+        pass
+
+    def _render_class_filtering_component(
+        self, all_classes: Union[Dict[str, OntologyObjectJSON], Dict[str, OntologyClassificationJSON]]
+    ):
+        return st.multiselect(
+            "Filter by class",
+            list(all_classes.items()),
+            format_func=lambda x: x[1]["name"],
+            help="""
+With this selection, you can choose which classes to include in the performance metrics calculations.
+This acts as a filter, i.e. when nothing is selected all classes are included.
+Performance metrics will be automatically updated according to the chosen classes.
+                """,
+        )
 
     def _description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):
@@ -242,28 +263,25 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                         st.info("Failed to compute metric importance")
 
     def build(self, page_mode: ModelQualityPage):
-        if self._load_data(page_mode):
+        if self.load_data(page_mode):
             if page_mode == ModelQualityPage.METRICS:
-                self._render_metrics()
+                self.render_metrics()
             elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
-                self._render_performance_by_metric()
+                self.render_performance_by_metric()
             elif page_mode == ModelQualityPage.EXPLORER:
-                self._render_explorer()
+                self.render_explorer()
+
+    def render_metrics(self):
+        st.markdown("### This page is not supported")
+
+    def render_performance_by_metric(self):
+        st.markdown("### This page is not supported")
+
+    def render_explorer(self):
+        st.markdown("### This page is not supported")
 
     @abstractmethod
-    def _load_data(self, page_mode: ModelQualityPage) -> bool:
-        pass
-
-    @abstractmethod
-    def _render_metrics(self):
-        pass
-
-    @abstractmethod
-    def _render_performance_by_metric(self):
-        pass
-
-    @abstractmethod
-    def _render_explorer(self):
+    def load_data(self, page_mode: ModelQualityPage) -> bool:
         pass
 
     @abstractmethod

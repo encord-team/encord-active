@@ -51,15 +51,12 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         FALSE_POSITIVES = "False Positive"
 
     def __init__(self):
-
+        self._explorer_outcome_type = self.OutcomeType.TRUE_POSITIVES
         self._labels: Optional[List] = None
         self._predictions: Optional[List] = None
         self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
 
-    def sidebar_options(self, *args, **kwargs):
-        pass
-
-    def _load_data(self, page_mode: ModelQualityPage) -> bool:
+    def load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.CLASSIFICATION
         )
@@ -126,16 +123,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             )
 
         all_classes = get_state().predictions.all_classes_classifications
-        selected_classes = st.multiselect(
-            "Filter by class",
-            list(all_classes.items()),
-            format_func=lambda x: x[1]["name"],
-            help="""
-            With this selection, you can choose which classes to include in the performance metrics calculations.
-            This acts as a filter, i.e. when nothing is selected all classes are included.
-            Performance metrics will be automatically updated according to the chosen classes.
-            """,
-        )
+        selected_classes = self._render_class_filtering_component(all_classes)
 
         get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
 
@@ -174,7 +162,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
         )
 
-    def _render_metrics(self):
+    def render_metrics(self):
         class_names = sorted(list(set(self._labels).union(self._predictions)))
 
         precision, recall, f1, support = get_precision_recall_f1(self._labels, self._predictions)
@@ -207,7 +195,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         pr_graph = get_precision_recall_graph(precision, recall, class_names)
         col2.plotly_chart(pr_graph, use_container_width=True)
 
-    def _render_performance_by_metric(self):
+    def render_performance_by_metric(self):
         if self._model_predictions.shape[0] == 0:
             st.write("No predictions of the given class(es).")
             return
@@ -252,7 +240,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             logger.warning(e)
             pass
 
-    def _render_explorer(self):
+    def render_explorer(self):
         with st.expander("Details"):
             if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
                 view_text = "These are the predictions where the model correctly predicts the true class."
