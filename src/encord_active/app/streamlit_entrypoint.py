@@ -18,7 +18,7 @@ from encord_active_components.components.projects_page import (
     projects_page,
 )
 from PIL import Image
-from streamlit.elements.image import image_to_url
+from streamlit.elements.image import AtomicImage, image_to_url
 
 from encord_active.app.actions_page.export_balance import export_balance
 from encord_active.app.actions_page.export_filter import (
@@ -44,10 +44,12 @@ from encord_active.cli.utils.decorators import (
     is_project,
     try_find_parent_project,
 )
+from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.metadata import fetch_project_meta
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.project.sandbox_projects import (
     PREBUILT_PROJECTS,
     fetch_prebuilt_project,
@@ -135,9 +137,21 @@ class GetProjectsResult(NamedTuple):
     local_paths: dict[str, Path]
 
 
-def image_url(path: Path, id: str):
-    image = Image.open(path.resolve().as_posix())
+def image_url(image: AtomicImage, project_hash: str):
+    id = f"project-{project_hash}-image"
     return image_to_url(image, -1, False, "RGB", "JPEG", id)
+
+
+# TODO: repalce me with something smarter than just the first image
+def get_first_image_with_polygons(project_path: Path):
+    project_structure = ProjectFileStructure(project_path)
+    label_structure = next(project_structure.iter_labels())
+    label_hash = label_structure.path.stem
+    image_path = next(label_structure.iter_data_unit()).path
+    data_hash = image_path.stem
+    id = f"{label_hash}_{data_hash}_00000"
+
+    return show_image_and_draw_polygons(id, project_structure)
 
 
 def get_projects(path: Path):
@@ -146,13 +160,13 @@ def get_projects(path: Path):
 
     local_projects = {
         project["project_hash"]: Project(
-            name=project.get("project_title") or path.name,
+            name=project.get("project_title") or project_path.name,
             hash=project["project_hash"],
             downloaded=True,
-            imageUrl="",
+            imageUrl=image_url(get_first_image_with_polygons(project_path), project["project_hash"]),
             stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
         )
-        for path, project in project_metas.items()
+        for project_path, project in project_metas.items()
     }
 
     sandbox_projects = {
@@ -161,7 +175,7 @@ def get_projects(path: Path):
             hash=data["hash"],
             downloaded=data["hash"] in local_projects,
             stats=data["stats"],
-            imageUrl=image_url(data["image_path"], f"project-{data['hash']}-image"),
+            imageUrl=image_url(Image.open(data["image_path"].resolve().as_posix()), data["hash"]),
         )
         for name, data in PREBUILT_PROJECTS.items()
     }
