@@ -31,11 +31,11 @@ from encord_active.lib.metrics.utils import MetricData, load_metric_dataframe
 _COLUMNS = MetricWithDistanceSchema
 
 
-def get_all_image_sizes(project_folder: Path) -> np.ndarray:
+def get_all_image_sizes(project_file_structure: ProjectFileStructure) -> np.ndarray:
     image_sizes = []
-    for label_row in (project_folder / "data").iterdir():
-        if (label_row / "label_row.json").exists():
-            label_row_meta = json.loads((label_row / "label_row.json").read_text(encoding="utf-8"))
+    for label_row_structure in project_file_structure.iter_labels():
+        if label_row_structure.is_present():
+            label_row_meta = json.loads(label_row_structure.label_row_file.read_text(encoding="utf-8"))
             # TODO Handle videos as well, breaks on datasets containing only videos
             if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
                 for data_unit in label_row_meta["data_units"].values():
@@ -66,7 +66,7 @@ def get_all_annotation_numbers(project_file_structure: ProjectFileStructure) -> 
     classification_label_counter = 0
     object_label_counter = 0
 
-    project_ontology = json.loads((project_file_structure.ontology).read_text(encoding="utf-8"))
+    project_ontology = json.loads(project_file_structure.ontology.read_text(encoding="utf-8"))
     ontology = OntologyStructure.from_dict(project_ontology)
 
     for object_item in ontology.objects:

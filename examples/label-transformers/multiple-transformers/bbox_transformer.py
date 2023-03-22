@@ -2,14 +2,13 @@ import json
 from pathlib import Path
 from typing import List
 
-from utils import get_meta_and_labels, label_file_to_image
-
 from encord_active.lib.labels.label_transformer import (
     BoundingBox,
     BoundingBoxLabel,
     DataLabel,
     LabelTransformer,
 )
+from examples.utils import get_meta_and_labels, label_file_to_image
 
 
 class BBoxTransformer(LabelTransformer):

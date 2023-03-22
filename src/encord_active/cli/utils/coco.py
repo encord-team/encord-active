@@ -15,14 +15,16 @@ from encord_active.lib.db.predictions import (
     Prediction,
 )
 from encord_active.lib.metrics.execute import run_metrics
+from encord_active.lib.project import ProjectFileStructure
 
 
 def import_coco_predictions(
     target: Path,
     predictions_path: Path,
 ):
-    image_data_unit = json.loads((target / IMAGE_DATA_UNIT_FILENAME).read_text(encoding="utf-8"))
-    ontology = json.loads((target / "ontology.json").read_text(encoding="utf-8"))
+    project_file_structure = ProjectFileStructure(target)
+    image_data_unit = json.loads(project_file_structure.image_data_unit.read_text(encoding="utf-8"))
+    ontology = json.loads(project_file_structure.ontology.read_text(encoding="utf-8"))
     # NOTE: when we import a coco project, we change the category id to support
     # categories with multiple shapes. Here we iterate the ontology objects
     # and the ids are in the following format:
