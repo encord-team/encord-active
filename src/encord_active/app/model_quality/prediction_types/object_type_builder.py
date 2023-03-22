@@ -159,7 +159,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
-                self._prediction_metric_in_sidebar_objects(MetricType.PREDICTION, get_state().predictions.metric_datas)
+                self._topbar_metric_selection_component(MetricType.PREDICTION, get_state().predictions.metric_datas)
             with c2:
                 self._set_binning()
             with c3:
@@ -181,7 +181,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                     else MetricType.LABEL
                 )
 
-                self._prediction_metric_in_sidebar_objects(explorer_metric_type, get_state().predictions.metric_datas)
+                self._topbar_metric_selection_component(explorer_metric_type, get_state().predictions.metric_datas)
 
             self.display_settings(MetricScope.MODEL_QUALITY)
 

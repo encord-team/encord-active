@@ -38,8 +38,6 @@ class MetricType(str, Enum):
 
 
 class PredictionTypeBuilder(Page):
-    name: str
-
     def sidebar_options(self, *args, **kwargs):
         pass
 
@@ -136,7 +134,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             help="When checked, every plot will have a separate component for each class.",
         )
 
-    def _prediction_metric_in_sidebar_objects(self, metric_type: MetricType, metric_datas: MetricNames):
+    def _topbar_metric_selection_component(self, metric_type: MetricType, metric_datas: MetricNames):
         """
         Note: Adding the fixed options "confidence" and "iou" works here because
         confidence is required on import and IOU is computed during prediction
@@ -272,13 +270,13 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 self.render_explorer()
 
     def render_metrics(self):
-        st.markdown("### This page is not supported")
+        st.markdown("### This page is not implemented")
 
     def render_performance_by_metric(self):
-        st.markdown("### This page is not supported")
+        st.markdown("### This page is not implemented")
 
     def render_explorer(self):
-        st.markdown("### This page is not supported")
+        st.markdown("### This page is not implemented")
 
     @abstractmethod
     def load_data(self, page_mode: ModelQualityPage) -> bool:

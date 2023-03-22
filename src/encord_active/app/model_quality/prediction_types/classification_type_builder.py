@@ -133,7 +133,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
-                self._prediction_metric_in_sidebar_objects(
+                self._topbar_metric_selection_component(
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
             with c2:
@@ -151,7 +151,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                     help="Only the samples with this outcome will be shown",
                 )
             with c2:
-                self._prediction_metric_in_sidebar_objects(
+                self._topbar_metric_selection_component(
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
 
@@ -196,23 +196,10 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         col2.plotly_chart(pr_graph, use_container_width=True)
 
     def render_performance_by_metric(self):
-        if self._model_predictions.shape[0] == 0:
-            st.write("No predictions of the given class(es).")
-            return
-
+        self._render_performance_by_metric_description(
+            self._model_predictions, get_state().predictions.metric_datas_classification
+        )
         metric_name = get_state().predictions.metric_datas_classification.selected_prediction
-        if not metric_name:
-            # This shouldn't happen with the current flow. The only way a user can do this
-            # is if he/she write custom code to bypass running the metrics. In this case,
-            # I think that it is fair to not give more information than this.
-            st.write(
-                "No metrics computed for the your model predictions. "
-                "With `encord-active import predictions /path/to/predictions.pkl`, "
-                "Encord Active will automatically run compute the metrics."
-            )
-            return
-
-        self._description_expander(get_state().predictions.metric_datas_classification)
 
         classes_for_coloring = ["Average"]
         decompose_classes = get_state().predictions.decompose_classes
