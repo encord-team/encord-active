@@ -99,7 +99,7 @@ These are the predictions where the model correctly predicts the true class.
         else:
             histogram = get_histogram(tp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid_classifications(get_state().project_paths.data, model_predictions=tp_df)
+            prediction_grid_classifications(get_state().project_paths, model_predictions=tp_df)
 
     def build(
         self,

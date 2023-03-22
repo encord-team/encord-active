@@ -23,7 +23,7 @@ def show_similarities(identifier: str, expander: DeltaGenerator, embedding_infor
         if embedding_information.has_annotations:
             load_image = show_image_and_draw_polygons
 
-        image = load_image(nearest_image["key"], get_state().project_paths.data)
+        image = load_image(nearest_image["key"], get_state().project_paths)
 
         st_columns[column_id].image(image)
         st_columns[column_id].write(f"Annotated as `{nearest_image['name']}`")

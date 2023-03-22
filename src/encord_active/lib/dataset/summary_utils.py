@@ -56,7 +56,7 @@ def get_median_value_of_2d_array(array: np.ndarray) -> np.ndarray:
     return array[item_index[0][0], :]
 
 
-def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> AnnotationStatistics:
+def get_all_annotation_numbers(project_file_structure: ProjectFileStructure) -> AnnotationStatistics:
     """
     Returns label statistics for both objects and classifications. Does not count nested
     labels, only counts the immediate labels.
@@ -66,7 +66,7 @@ def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> Annotatio
     classification_label_counter = 0
     object_label_counter = 0
 
-    project_ontology = json.loads((project_paths.ontology).read_text(encoding="utf-8"))
+    project_ontology = json.loads((project_file_structure.ontology).read_text(encoding="utf-8"))
     ontology = OntologyStructure.from_dict(project_ontology)
 
     for object_item in ontology.objects:
@@ -79,9 +79,9 @@ def get_all_annotation_numbers(project_paths: ProjectFileStructure) -> Annotatio
             for option in classification_item.attributes[0].options:
                 labels.classifications[classification_item.attributes[0].name][option.label] = 0
 
-    for label_row in (project_paths.data).iterdir():
-        if (label_row / "label_row.json").exists():
-            label_row_meta = json.loads((label_row / "label_row.json").read_text(encoding="utf-8"))
+    for label_row_structure in project_file_structure.iter_labels():
+        if label_row_structure.label_row_file.exists():
+            label_row_meta = json.loads(label_row_structure.label_row_file.read_text(encoding="utf-8"))
             if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
                 for data_unit in label_row_meta["data_units"].values():
 
