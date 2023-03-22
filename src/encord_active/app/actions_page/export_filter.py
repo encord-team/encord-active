@@ -83,7 +83,9 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
                 )
                 filtered_rows = [True if set(tag_filters) <= set(x) else False for x in filtered["tags"]]
-                filtered = filtered.loc[filtered_rows]
+                filtered_items = filtered.loc[filtered_rows]
+                filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
+
 
             # Treat columns with < 10 unique values as categorical
             elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
