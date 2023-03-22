@@ -51,12 +51,14 @@ if __name__ == "__main__":
             hash="d3d81fb8-634c-4909-be57-49f94adc93dd",
             downloaded=True,
             stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
+            imageUrl="",
         ),
         Project(
             name="Bar",
             hash="603336c6-c5c4-4ae9-87a7-216e5201ede5",
             downloaded=True,
             stats=ProjectStats(dataUnits=100, labels=166, classes=2),
+            imageUrl="",
         ),
     ]
     key, action = pages_menu(ITEMS, PROJECTS)
