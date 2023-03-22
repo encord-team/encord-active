@@ -25,9 +25,12 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 class ModelQualityPage(str, Enum):
     METRICS = "metrics"
     PERFORMANCE_BY_METRIC = "performance by metric"
-    TRUE_POSITIVES = "true positives"
-    FALSE_POSITIVES = "false positives"
-    FALSE_NEGATIVES = "false negatives"
+    EXPLORER = "explorer"
+
+
+class MetricType(str, Enum):
+    PREDICTION = "prediction"
+    LABEL = "label"
 
 
 class PredictionTypeBuilder(Page):
@@ -112,14 +115,14 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             help="When checked, every plot will have a separate component for each class.",
         )
 
-    def _prediction_metric_in_sidebar_objects(self, page_mode: ModelQualityPage, metric_datas: MetricNames):
+    def _prediction_metric_in_sidebar_objects(self, metric_type: MetricType, metric_datas: MetricNames):
         """
         Note: Adding the fixed options "confidence" and "iou" works here because
         confidence is required on import and IOU is computed during prediction
         import. So the two columns are already available in the
         `st.session_state.model_predictions` data frame.
         """
-        if page_mode == ModelQualityPage.FALSE_NEGATIVES:
+        if metric_type == MetricType.LABEL:
             column_names = list(metric_datas.predictions.keys())
             metric_datas.selected_label = st.selectbox(
                 "Select metric for your labels",
@@ -127,7 +130,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 help="The data in the main view will be sorted by the selected metric. "
                 "(F) := frame scores, (O) := object scores.",
             )
-        else:
+        elif metric_type == MetricType.PREDICTION:
             fixed_options = {"confidence": "Model Confidence"}
             column_names = list(metric_datas.predictions.keys())
             metric_datas.selected_prediction = st.selectbox(
@@ -244,12 +247,8 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 self._render_metrics()
             elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
                 self._render_performance_by_metric()
-            elif page_mode == ModelQualityPage.TRUE_POSITIVES:
-                self._render_true_positives()
-            elif page_mode == ModelQualityPage.FALSE_POSITIVES:
-                self._render_false_positives()
-            elif page_mode == ModelQualityPage.FALSE_NEGATIVES:
-                self._render_false_negatives()
+            elif page_mode == ModelQualityPage.EXPLORER:
+                self._render_explorer()
 
     @abstractmethod
     def _load_data(self, page_mode: ModelQualityPage) -> bool:
@@ -264,15 +263,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         pass
 
     @abstractmethod
-    def _render_true_positives(self):
-        pass
-
-    @abstractmethod
-    def _render_false_positives(self):
-        pass
-
-    @abstractmethod
-    def _render_false_negatives(self):
+    def _render_explorer(self):
         pass
 
     @abstractmethod

@@ -1,4 +1,5 @@
 from copy import deepcopy
+from enum import Enum
 from typing import List, Optional
 
 import altair as alt
@@ -13,6 +14,7 @@ from encord_active.app.common.components.prediction_grid import (
 )
 from encord_active.app.common.state import MetricNames, get_state
 from encord_active.app.model_quality.prediction_type_builder import (
+    MetricType,
     ModelQualityPage,
     PredictionTypeBuilder,
 )
@@ -43,6 +45,10 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 
 class ClassificationTypeBuilder(PredictionTypeBuilder):
     title = "Classification"
+
+    class OutcomeType(str, Enum):
+        TRUE_POSITIVES = "True Positive"
+        FALSE_POSITIVES = "False Positive"
 
     def __init__(self):
 
@@ -140,22 +146,27 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
                 self._prediction_metric_in_sidebar_objects(
-                    page_mode, get_state().predictions.metric_datas_classification
+                    MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
             with c2:
                 self._set_binning()
             with c3:
                 self._class_decomposition()
-        elif page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-        ]:
-            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas_classification)
+        elif page_mode == ModelQualityPage.EXPLORER:
+            c1, c2 = st.columns([4, 4])
 
-        if page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-        ]:
+            with c1:
+                self._explorer_outcome_type = st.selectbox(
+                    "Outcome",
+                    [x for x in self.OutcomeType],
+                    format_func=lambda x: x.value,
+                    help="Only the samples with this outcome will be shown",
+                )
+            with c2:
+                self._prediction_metric_in_sidebar_objects(
+                    MetricType.PREDICTION, get_state().predictions.metric_datas_classification
+                )
+
             self.display_settings(MetricScope.MODEL_QUALITY)
 
     def is_available(self) -> bool:
@@ -241,6 +252,42 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             logger.warning(e)
             pass
 
+    def _render_explorer(self):
+        with st.expander("Details"):
+            if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
+                view_text = "These are the predictions where the model correctly predicts the true class."
+            else:
+                view_text = "These are the predictions where the model incorrectly predicts the positive class."
+            st.markdown(
+                f"""### The view
+{view_text}
+                    """,
+                unsafe_allow_html=True,
+            )
+
+            self._metric_details_description(get_state().predictions.metric_datas_classification)
+
+        metric_name = get_state().predictions.metric_datas_classification.selected_prediction
+        if not metric_name:
+            st.error("No prediction metric selected")
+            return
+
+        if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
+            view_df = self._model_predictions[
+                self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 1.0
+            ].dropna(subset=[metric_name])
+        else:
+            view_df = self._model_predictions[
+                self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 0.0
+            ].dropna(subset=[metric_name])
+
+        if view_df.shape[0] == 0:
+            st.write(f"No {self._explorer_outcome_type}")
+        else:
+            histogram = get_histogram(view_df, metric_name)
+            st.altair_chart(histogram, use_container_width=True)
+            prediction_grid_classifications(get_state().project_paths.data, model_predictions=view_df)
+
     def _render_true_positives(self):
         with st.expander("Details"):
             st.markdown(
@@ -292,9 +339,3 @@ These are the predictions where the model incorrectly predicts the positive clas
             histogram = get_histogram(fp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             prediction_grid_classifications(get_state().project_paths.data, model_predictions=fp_df)
-
-    def _render_false_negatives(self):
-        st.markdown(
-            "## False Negatives view for the classification predictions is not available\n"
-            "Please use **Filter by class** field in True Positives page to inspect different classes."
-        )

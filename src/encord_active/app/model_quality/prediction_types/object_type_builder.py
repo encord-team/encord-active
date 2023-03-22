@@ -1,7 +1,8 @@
 import json
 import re
 from copy import deepcopy
-from typing import Optional
+from enum import Enum
+from typing import Optional, Union
 
 import altair as alt
 import streamlit as st
@@ -14,6 +15,7 @@ from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import MetricNames, State, get_state
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.app.model_quality.prediction_type_builder import (
+    MetricType,
     ModelQualityPage,
     PredictionTypeBuilder,
 )
@@ -40,10 +42,17 @@ from encord_active.lib.model_predictions.reader import (
 from encord_active.lib.model_predictions.writer import MainPredictionType
 
 
+class OutcomeType(str, Enum):
+    TRUE_POSITIVES = "True Positive"
+    FALSE_POSITIVES = "False Positive"
+    FALSE_NEGATIVES = "False Negative"
+
+
 class ObjectTypeBuilder(PredictionTypeBuilder):
     title = "Object"
 
     def __init__(self):
+        self._explorer_outcome_type: OutcomeType = OutcomeType.TRUE_POSITIVES
         self._model_predictions: Optional[DataFrame[PredictionMatchSchema]] = None
         self._labels: Optional[DataFrame[LabelMatchSchema]] = None
         self._metrics: Optional[DataFrame[PerformanceMetricSchema]] = None
@@ -162,24 +171,112 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
-                self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
+                self._prediction_metric_in_sidebar_objects(MetricType.PREDICTION, get_state().predictions.metric_datas)
             with c2:
                 self._set_binning()
             with c3:
                 self._class_decomposition()
-        elif page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-            ModelQualityPage.FALSE_NEGATIVES,
-        ]:
-            self._prediction_metric_in_sidebar_objects(page_mode, get_state().predictions.metric_datas)
+        elif page_mode == ModelQualityPage.EXPLORER:
+            c1, c2 = st.columns([4, 4])
+            with c1:
+                self._explorer_outcome_type = st.selectbox(
+                    "Outcome",
+                    [x for x in OutcomeType],
+                    format_func=lambda x: x.value,
+                    help="Only the samples with this outcome will be shown",
+                )
+            with c2:
+                explorer_metric_type = (
+                    MetricType.PREDICTION
+                    if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]
+                    else MetricType.LABEL
+                )
 
-        if page_mode in [
-            ModelQualityPage.TRUE_POSITIVES,
-            ModelQualityPage.FALSE_POSITIVES,
-            ModelQualityPage.FALSE_NEGATIVES,
-        ]:
+                self._prediction_metric_in_sidebar_objects(explorer_metric_type, get_state().predictions.metric_datas)
+
             self.display_settings(MetricScope.MODEL_QUALITY)
+
+    def _get_metric_name(self) -> Optional[str]:
+        if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]:
+            return get_state().predictions.metric_datas.selected_prediction
+        else:
+            return get_state().predictions.metric_datas.selected_label
+
+    def _render_explorer_details(self) -> Optional[Color]:
+        color: Optional[Color] = None
+        with st.expander("Details"):
+            if self._explorer_outcome_type == OutcomeType.TRUE_POSITIVES:
+                color = Color.PURPLE
+
+                st.markdown(
+                    f"""### The view
+These are the predictions for which the IOU was sufficiently high and the confidence score was
+the highest amongst predictions that overlap with the label.
+
+---
+
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+                                        """,
+                    unsafe_allow_html=True,
+                )
+
+            elif self._explorer_outcome_type == OutcomeType.FALSE_POSITIVES:
+                color = Color.RED
+
+                st.markdown(
+                    f"""### The view
+These are the predictions for which either of the following is true
+1. The IOU between the prediction and the best matching label was too low
+2. There was another prediction with higher model confidence which matched the label already
+3. The predicted class didn't match
+
+---
+
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
+The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
+                            """,
+                    unsafe_allow_html=True,
+                )
+
+            elif self._explorer_outcome_type == OutcomeType.FALSE_NEGATIVES:
+                color = Color.PURPLE
+
+                st.markdown(
+                    f"""### The view
+These are the labels that were not matched with any predictions.
+
+---
+**Color**:
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives. That is, the labels that were not 
+matched to any predictions. The remaining objects are predictions, where colors correspond to their predicted class 
+(identical colors to labels objects in the editor).
+                """,
+                    unsafe_allow_html=True,
+                )
+            self._metric_details_description(get_state().predictions.metric_datas)
+            return color
+
+    def _get_target_df(
+        self, metric_name: str
+    ) -> Union[DataFrame[PredictionMatchSchema], DataFrame[LabelMatchSchema], None]:
+        if self._explorer_outcome_type == OutcomeType.TRUE_POSITIVES:
+            return self._model_predictions[
+                self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0
+            ].dropna(subset=[metric_name])
+        elif self._explorer_outcome_type == OutcomeType.FALSE_POSITIVES:
+            return self._model_predictions[
+                self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
+            ].dropna(subset=[metric_name])
+        elif self._explorer_outcome_type == OutcomeType.FALSE_NEGATIVES:
+            return self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
+        else:
+            return None
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
@@ -258,107 +355,32 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             logger.warning(e)
             pass
 
-    def _render_true_positives(self):
-        metric_name = get_state().predictions.metric_datas.selected_prediction
+    def _render_explorer(self):
+        metric_name = self._get_metric_name()
         if not metric_name:
-            st.error("No prediction metric selected")
+            st.error("No metric selected")
             return
 
-        with st.expander("Details"):
-            color = Color.PURPLE
-            st.markdown(
-                f"""### The view
-These are the predictions for which the IOU was sufficiently high and the confidence score was
-the highest amongst predictions that overlap with the label.
+        color = self._render_explorer_details()
+        if color is None:
+            st.warning("An error occurred while rendering the explorer page")
 
----
-
-**Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
-font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
-The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
-                            """,
-                unsafe_allow_html=True,
-            )
-            self._metric_details_description(get_state().predictions.metric_datas)
-
-        tp_df = self._model_predictions[self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0].dropna(
-            subset=[metric_name]
-        )
-        if tp_df.shape[0] == 0:
-            st.write("No true positives")
-        else:
-            histogram = get_histogram(tp_df, metric_name)
-            st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(get_state().project_paths.data, model_predictions=tp_df, box_color=color)
-
-    def _render_false_positives(self):
-        metric_name = get_state().predictions.metric_datas.selected_prediction
-        if not metric_name:
-            st.error("No prediction metric selected")
+        view_df = self._get_target_df(metric_name)
+        if view_df is None:
+            st.error(f"An error occurred during getting data according to the {metric_name} metric")
             return
 
-        color = Color.RED
-        with st.expander("Details"):
-            st.markdown(
-                f"""### The view
-These are the predictions for which either of the following is true
-1. The IOU between the prediction and the best matching label was too low
-2. There was another prediction with higher model confidence which matched the label already
-3. The predicted class didn't match
-
----
-
-**Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
-font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
-The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
-                """,
-                unsafe_allow_html=True,
-            )
-            self._metric_details_description(get_state().predictions.metric_datas)
-
-        fp_df = self._model_predictions[self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0].dropna(
-            subset=[metric_name]
-        )
-        if fp_df.shape[0] == 0:
-            st.write("No false positives")
+        if view_df.shape[0] == 0:
+            st.write(f"No {self._explorer_outcome_type}")
         else:
-            histogram = get_histogram(fp_df, metric_name)
+            histogram = get_histogram(view_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(get_state().project_paths.data, model_predictions=fp_df, box_color=color)
-
-    def _render_false_negatives(self):
-        metric_name = get_state().predictions.metric_datas.selected_label
-        if not metric_name:
-            st.error("Prediction label not selected")
-            return
-
-        with st.expander("Details"):
-            color = Color.PURPLE
-            st.markdown(
-                f"""### The view
-These are the labels that were not matched with any predictions.
-
----
-**Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
-font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives. That is, the labels that were not 
-matched to any predictions. The remaining objects are predictions, where colors correspond to their predicted class 
-(identical colors to labels objects in the editor).
-                """,
-                unsafe_allow_html=True,
-            )
-            self._metric_details_description(get_state().predictions.metric_datas)
-        fns_df = self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
-        if fns_df.shape[0] == 0:
-            st.write("No false negatives")
-        else:
-            histogram = get_histogram(fns_df, metric_name)
-            st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(
-                get_state().project_paths.data,
-                labels=fns_df,
-                model_predictions=self._model_predictions,
-                box_color=color,
-            )
+            if self._explorer_outcome_type in [OutcomeType.TRUE_POSITIVES, OutcomeType.FALSE_POSITIVES]:
+                prediction_grid(get_state().project_paths.data, model_predictions=view_df, box_color=color)
+            else:
+                prediction_grid(
+                    get_state().project_paths.data,
+                    model_predictions=self._model_predictions,
+                    labels=view_df,
+                    box_color=color,
+                )
