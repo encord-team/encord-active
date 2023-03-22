@@ -86,7 +86,6 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 filtered_items = filtered.loc[filtered_rows]
                 filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
-
             # Treat columns with < 10 unique values as categorical
             elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
                 if filtered[column].isnull().sum() != filtered.shape[0]:
