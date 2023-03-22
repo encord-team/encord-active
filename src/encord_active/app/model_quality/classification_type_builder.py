@@ -96,7 +96,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             self.display_settings(MetricScope.MODEL_QUALITY)
 
     def _load_data(self, page_mode: ModelQualityPage) -> bool:
-        predictions_metric_datas, label_metric_datas, model_predictions, labels = self.read_prediction_files(
+        predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.CLASSIFICATION
         )
 
@@ -213,7 +213,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             )
             return
 
-        self.description_expander(get_state().predictions.metric_datas_classification)
+        self._description_expander(get_state().predictions.metric_datas_classification)
 
         classes_for_coloring = ["Average"]
         decompose_classes = get_state().predictions.decompose_classes
@@ -249,7 +249,7 @@ These are the predictions where the model correctly predicts the true class.
                     """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(get_state().predictions.metric_datas_classification)
+            self._metric_details_description(get_state().predictions.metric_datas_classification)
 
         metric_name = get_state().predictions.metric_datas_classification.selected_prediction
         if not metric_name:
@@ -275,7 +275,7 @@ These are the predictions where the model incorrectly predicts the positive clas
                     """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(get_state().predictions.metric_datas_classification)
+            self._metric_details_description(get_state().predictions.metric_datas_classification)
 
         metric_name = get_state().predictions.metric_datas_classification.selected_prediction
         if not metric_name:

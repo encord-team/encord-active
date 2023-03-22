@@ -16,7 +16,7 @@ from encord_active.app.model_quality.prediction_type_builder import (
 
 def model_quality(page_mode: ModelQualityPage):
     def get_available_predictions() -> List[PredictionTypeBuilder]:
-        builders = [ClassificationTypeBuilder(), ObjectTypeBuilder()]
+        builders: List[PredictionTypeBuilder] = [ClassificationTypeBuilder(), ObjectTypeBuilder()]
         return [b for b in builders if b.is_available()]
 
     def render():

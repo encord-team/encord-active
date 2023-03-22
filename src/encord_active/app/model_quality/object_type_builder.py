@@ -54,7 +54,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
     def _load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
-        predictions_metric_datas, label_metric_datas, model_predictions, labels = self.read_prediction_files(
+        predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.OBJECT
         )
 
@@ -280,7 +280,7 @@ The remaining colors correspond to the dataset labels with the colors you are us
                             """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(get_state().predictions.metric_datas)
+            self._metric_details_description(get_state().predictions.metric_datas)
 
         tp_df = self._model_predictions[self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0].dropna(
             subset=[metric_name]
@@ -316,7 +316,7 @@ The remaining colors correspond to the dataset labels with the colors you are us
                 """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(get_state().predictions.metric_datas)
+            self._metric_details_description(get_state().predictions.metric_datas)
 
         fp_df = self._model_predictions[self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0].dropna(
             subset=[metric_name]
@@ -349,7 +349,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
                 """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(get_state().predictions.metric_datas)
+            self._metric_details_description(get_state().predictions.metric_datas)
         fns_df = self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
         if fns_df.shape[0] == 0:
             st.write("No false negatives")

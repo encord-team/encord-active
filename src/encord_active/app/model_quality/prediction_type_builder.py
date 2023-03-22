@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -33,7 +33,7 @@ class ModelQualityPage(str, Enum):
 class PredictionTypeBuilder(Page):
     name: str
 
-    def description_expander(self, metric_datas: MetricNames):
+    def _description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):
             st.markdown(
                 """### The View
@@ -52,10 +52,10 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
 """,
                 unsafe_allow_html=True,
             )
-            self.metric_details_description(metric_datas)
+            self._metric_details_description(metric_datas)
 
     @staticmethod
-    def metric_details_description(metric_datas: MetricNames):
+    def _metric_details_description(metric_datas: MetricNames):
         metric_name = metric_datas.selected_prediction
         if not metric_name:
             return
@@ -68,34 +68,6 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         if metric_data:
             st.markdown(f"### The {metric_data.name[:-4]} metric")
             st.markdown(metric_data.meta.long_description)
-
-    @abstractmethod
-    def _load_data(self, page_mode: ModelQualityPage) -> bool:
-        pass
-
-    @abstractmethod
-    def _render_metrics(self):
-        pass
-
-    @abstractmethod
-    def _render_performance_by_metric(self):
-        pass
-
-    @abstractmethod
-    def _render_true_positives(self):
-        pass
-
-    @abstractmethod
-    def _render_false_positives(self):
-        pass
-
-    @abstractmethod
-    def _render_false_negatives(self):
-        pass
-
-    @abstractmethod
-    def is_available(self) -> bool:
-        pass
 
     def _set_binning(self):
         get_state().predictions.nbins = int(
@@ -166,14 +138,14 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 "(F) := frame scores, (P) := prediction scores.",
             )
 
-    def read_prediction_files(
+    def _read_prediction_files(
         self, prediction_type: MainPredictionType
-    ) -> (
+    ) -> Tuple[
         List[MetricData],
         List[MetricData],
         Union[DataFrame[PredictionSchema], DataFrame[ClassificationPredictionSchema], None],
         Union[DataFrame[LabelSchema], DataFrame[ClassificationLabelSchema], None],
-    ):
+    ]:
         metrics_dir = get_state().project_paths.metrics
         predictions_dir = get_state().project_paths.predictions / prediction_type.value
 
@@ -210,7 +182,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             )
             return
 
-        self.description_expander(metric_datas)
+        self._description_expander(metric_datas)
 
     def _get_metric_importance(
         self,
@@ -278,3 +250,31 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
                 self._render_false_positives()
             elif page_mode == ModelQualityPage.FALSE_NEGATIVES:
                 self._render_false_negatives()
+
+    @abstractmethod
+    def _load_data(self, page_mode: ModelQualityPage) -> bool:
+        pass
+
+    @abstractmethod
+    def _render_metrics(self):
+        pass
+
+    @abstractmethod
+    def _render_performance_by_metric(self):
+        pass
+
+    @abstractmethod
+    def _render_true_positives(self):
+        pass
+
+    @abstractmethod
+    def _render_false_positives(self):
+        pass
+
+    @abstractmethod
+    def _render_false_negatives(self):
+        pass
+
+    @abstractmethod
+    def is_available(self) -> bool:
+        pass
