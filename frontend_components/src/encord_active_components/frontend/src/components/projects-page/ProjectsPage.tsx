@@ -7,6 +7,7 @@ import classesUrl from "../../../assets/classes.svg";
 import DEFAUL_PROJECT_IMAGE from "../../../assets/default_project_image.webp";
 
 import { Streamlit } from "streamlit-component-lib";
+import { classy } from "../../helpers/classy";
 
 export type Project = {
   name: string;
@@ -47,6 +48,7 @@ export const ProjectsPage = ({
           title="Import from Encord Annotate"
           description="Bring in existing Encord project"
           iconUrl={encordImportUrl}
+          onClick={() => 0}
         />
         <NewProjectButton
           title="Import a COCO project"
@@ -116,7 +118,10 @@ const NewProjectButton = ({
   return (
     <div {...containerProps}>
       <button
-        className="btn btn-ghost normal-case flex felx-row gap-3 justify-start shadow-lg w-80 h-28 border-1 border-zinc-50 p-3.5"
+        className={classy(
+          "btn btn-ghost normal-case flex felx-row gap-3 justify-start w-96 h-28 border-1 border-zinc-50 p-3.5",
+          { "shadow-lg": !disabled }
+        )}
         onClick={onClick}
         disabled={disabled}
       >
@@ -124,7 +129,13 @@ const NewProjectButton = ({
           <img src={iconUrl} alt="import-project" className="rounded" />
         </div>
         <div className="flex flex-col items-start gap-1">
-          <span className="font-semibol text-sm">{title}</span>
+          <span
+            className={classy("font-semibol text-sm", {
+              "text-gray-500": disabled,
+            })}
+          >
+            {title}
+          </span>
           {description && (
             <span className="font-normal text-xs text-gray-400">
               {description}
