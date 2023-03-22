@@ -369,10 +369,10 @@ matched to any predictions. The remaining objects are predictions, where colors 
             histogram = get_histogram(view_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             if self._explorer_outcome_type in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]:
-                prediction_grid(get_state().project_paths.data, model_predictions=view_df, box_color=color)
+                prediction_grid(get_state().project_paths, model_predictions=view_df, box_color=color)
             else:
                 prediction_grid(
-                    get_state().project_paths.data,
+                    get_state().project_paths,
                     model_predictions=self._model_predictions,
                     labels=view_df,
                     box_color=color,
