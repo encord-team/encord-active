@@ -160,7 +160,7 @@ def get_projects(path: Path):
             name=name,
             hash=data["hash"],
             downloaded=data["hash"] in local_projects,
-            stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
+            stats=data["stats"],
             imageUrl=image_url(data["image_path"], f"project-{data['hash']}-image"),
         )
         for name, data in PREBUILT_PROJECTS.items()

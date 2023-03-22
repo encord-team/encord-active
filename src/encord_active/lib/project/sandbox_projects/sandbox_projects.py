@@ -6,6 +6,7 @@ from typing import Callable, Optional, TypedDict
 import requests
 import rich
 import typer
+from encord_active_components.components.projects_page import ProjectStats
 from rich.markup import escape
 from tqdm.auto import tqdm
 
@@ -15,6 +16,7 @@ class PrebuiltProject(TypedDict):
     hash: str
     name: str
     image_path: Path
+    stats: ProjectStats
 
 
 IMAGES_PATH = (Path(__file__).parent).resolve() / "images"
@@ -26,36 +28,42 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         hash="f2140a72-c644-4c31-be66-3ef80b3718e5",
         name="[open-source][validation]-coco-2017-dataset",
         image_path=(IMAGES_PATH / "coco.jpeg"),
+        stats=ProjectStats(dataUnits=4952, labels=41420, classes=80),
     ),
     "[open-source][test]-limuc-ulcerative-colitis-classification": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
         hash="aa2b21bd-6f2e-48fc-8f4f-4ba4d9b7bd67",
         name="[open-source][test]-limuc-ulcerative-colitis-classification",
         image_path=(IMAGES_PATH / "limuc.jpeg"),
+        stats=ProjectStats(dataUnits=1686, labels=1686, classes=4),
     ),
     "[open-source]-covid-19-segmentations": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
         hash="d18819cb-2b75-4040-beb6-c63a901e6c84",
         name="[open-source]-covid-19-segmentations",
         image_path=(IMAGES_PATH / "covid_segmentations.jpeg"),
+        stats=ProjectStats(dataUnits=100, labels=588, classes=13),
     ),
     "[open-source][validation]-bdd-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
         hash="b37a48e0-6462-472d-baaa-2fcaf5ab9521",
         name="[open-source][validation]-bdd-dataset",
         image_path=(IMAGES_PATH / "bdd.jpeg"),
+        stats=ProjectStats(dataUnits=981, labels=12983, classes=8),
     ),
     "[open-source]-TACO-Official": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
         hash="dc1cf137-f1b9-4c2f-973d-32512c971955",
         name="[open-source]-TACO-Official",
         image_path=(IMAGES_PATH / "taco.jpeg"),
+        stats=ProjectStats(dataUnits=1500, labels=5038, classes=59),
     ),
     "[open-source]-TACO-Unofficial": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
         hash="14a52852-55f6-46c9-850a-40e11540605f",
         name="[open-source]-TACO-Unofficial",
         image_path=(IMAGES_PATH / "taco_unofficial.jpeg"),
+        stats=ProjectStats(dataUnits=3731, labels=8419, classes=60),
     ),
     "[open-source][train]-mnist-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btrain%5D-mnist-dataset.zip",
@@ -72,12 +80,14 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         hash="1f4752d7-4a7a-4c0e-8b08-dd4b1c5a8bc6",
         name="rareplanes",
         image_path=(IMAGES_PATH / "rareplanes.jpeg"),
+        stats=ProjectStats(dataUnits=2710, labels=6812, classes=7),
     ),
     "quickstart": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
         hash="d6423838-f60e-41d9-b2ca-715aa2edef9c",
         name="quickstart",
         image_path=(IMAGES_PATH / "quickstart.jpeg"),
+        stats=ProjectStats(dataUnits=199, labels=1617, classes=71),
     ),
 }
 

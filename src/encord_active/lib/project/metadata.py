@@ -3,6 +3,7 @@ from typing import TypedDict
 
 import yaml
 from encord import Project
+from encord_active_components.components.projects_page import ProjectStats
 
 from encord_active.lib.encord.utils import get_client
 
@@ -13,6 +14,7 @@ class ProjectMeta(TypedDict):
     project_title: str
     ssh_key_path: str
     has_remote: bool
+    stats: ProjectStats
 
 
 class ProjectNotFound(Exception):
