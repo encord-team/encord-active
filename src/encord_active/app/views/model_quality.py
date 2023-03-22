@@ -4,13 +4,15 @@ import streamlit as st
 
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.utils import setup_page
-from encord_active.app.model_quality.classification_type_builder import (
-    ClassificationTypeBuilder,
-)
-from encord_active.app.model_quality.object_type_builder import ObjectTypeBuilder
 from encord_active.app.model_quality.prediction_type_builder import (
     ModelQualityPage,
     PredictionTypeBuilder,
+)
+from encord_active.app.model_quality.prediction_types.classification_type_builder import (
+    ClassificationTypeBuilder,
+)
+from encord_active.app.model_quality.prediction_types.object_type_builder import (
+    ObjectTypeBuilder,
 )
 
 
