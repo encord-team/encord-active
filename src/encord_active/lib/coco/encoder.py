@@ -432,10 +432,13 @@ class CocoEncoder:
             else:
                 raise ValueError(f"Unsupported shape: {shape}")
 
-            res_dict = asdict(res)
-            res_dict["frame_metrics"] = frame_level
-            res_dict["object_metrics"] = metrics.get(object_["objectHash"], {})
-            annotations.append(to_attributes_field(res_dict, include_null_annotations=self._include_null_annotations))
+            if res:
+                res_dict = asdict(res)
+                res_dict["frame_metrics"] = frame_level
+                res_dict["object_metrics"] = metrics.get(object_["objectHash"], {})
+                annotations.append(
+                    to_attributes_field(res_dict, include_null_annotations=self._include_null_annotations)
+                )
         return annotations
 
     def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
@@ -494,7 +497,10 @@ class CocoEncoder:
             rotation=rotation,
         )
 
-    def get_polygon(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_polygon(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if not len(object_["polygon"]) >= 3:
+            return None
+
         polygon = get_polygon_from_dict(object_["polygon"], size.width, size.height)
         segmentation = [list(chain(*polygon))]
         polygon = Polygon(polygon)
