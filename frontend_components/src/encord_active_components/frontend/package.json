@@ -13,6 +13,7 @@
     "@tailwindcss/line-clamp": "^0.4.2",
     "antd": "^4.23.5",
     "daisyui": "^2.51.3",
+    "radash": "^10.7.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.4.2",

@@ -18,11 +18,19 @@ class OutputAction(str, Enum):
 
 
 def pages_menu(
-    items: List[MenuItem], projects: List[Project] = [], selected_project_hash: Optional[str] = None
+    items: List[MenuItem],
+    projects: List[Project] = [],
+    selected_project_hash: Optional[str] = None,
+    initial_key=Optional[str],
 ) -> Tuple[OutputAction, Union[str, None]]:
     return render(
         component=Components.PAGES_MENU,
-        props={"items": items, "projects": projects, "selectedProjectHash": selected_project_hash},
+        props={
+            "items": items,
+            "projects": projects,
+            "selectedProjectHash": selected_project_hash,
+            "initialKey": initial_key,
+        },
     )
 
 
@@ -49,14 +57,16 @@ if __name__ == "__main__":
         Project(
             name="Foo",
             hash="d3d81fb8-634c-4909-be57-49f94adc93dd",
-            downloaded=True,
+            path=None,
+            sandbox=True,
             stats=ProjectStats(dataUnits=1000, labels=14566, classes=8),
             imageUrl="",
         ),
         Project(
             name="Bar",
             hash="603336c6-c5c4-4ae9-87a7-216e5201ede5",
-            downloaded=True,
+            path=None,
+            sandbox=True,
             stats=ProjectStats(dataUnits=100, labels=166, classes=2),
             imageUrl="",
         ),

@@ -8,12 +8,14 @@ import DEFAUL_PROJECT_IMAGE from "../../../assets/default_project_image.webp";
 
 import { Streamlit } from "streamlit-component-lib";
 import { classy } from "../../helpers/classy";
+import { fork } from "radash";
 
 export type Project = {
   name: string;
   hash: string;
-  imageUrl: string;
-  downloaded: boolean;
+  imageUrl?: string;
+  path?: string;
+  sandbox?: boolean;
   stats: {
     dataUnits: number;
     labels: number;
@@ -34,11 +36,13 @@ type Output = [
 
 const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
 
-export type Props = { userProjects: Project[]; sandboxProjects: Project[] };
-export const ProjectsPage = ({
-  userProjects = [],
-  sandboxProjects = [],
-}: Props) => {
+export type Props = { projects: Project[] };
+export const ProjectsPage = ({ projects = [] }: Props) => {
+  const [sandboxProjects, userProjects] = fork(
+    projects,
+    ({ sandbox }) => !!sandbox
+  );
+
   return (
     <div className="h-max p-5 flex flex-col gap-5">
       <h1 className="font-medium text-3xl">Let’s get started!</h1>
@@ -80,7 +84,7 @@ export const ProjectsPage = ({
       <div className="flex flex-wrap gap-5">
         {sandboxProjects.length ? (
           sandboxProjects
-            .sort((a, b) => -a.downloaded - -b.downloaded)
+            .sort((a, b) => -!!a.path - -!!b.path)
             .map((project) => (
               <ProjectCard
                 key={project.hash}
@@ -187,7 +191,7 @@ const ProjectCard = ({
         />
       </div>
     </div>
-    {showDownloadedBadge && project.downloaded ? (
+    {showDownloadedBadge && project.path ? (
       <div className="badge absolute top-1">Downloaded</div>
     ) : null}
   </ButtonCard>

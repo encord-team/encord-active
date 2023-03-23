@@ -7,6 +7,7 @@ import { Streamlit } from "streamlit-component-lib";
 
 import classes from "./PagesMenu.module.css";
 import { Project } from "../projects-page";
+import { fork } from "radash";
 
 type ViewAll = ["VIEW_ALL_PROJECTS", null];
 type SelectProject = ["SELECT_PROJECT", string];
@@ -42,6 +43,11 @@ export const PagesMenu = ({
     Streamlit.setFrameHeight(height);
   }, [height]);
 
+  const [sandboxProjects, userProjects] = fork(
+    projects.filter(({ path }) => !!path),
+    ({ sandbox }) => !!sandbox
+  );
+
   return (
     <div ref={ref} className="flex flex-col gap-5">
       <div className="form-control">
@@ -64,11 +70,24 @@ export const PagesMenu = ({
                 Select a project
               </option>
             )}
-            {projects.map(({ hash, name }) => (
-              <option onSelect={console.log} value={hash} key={hash}>
-                {name}
-              </option>
-            ))}
+            {userProjects.length ? (
+              <optgroup label="User projects">
+                {userProjects.map(({ hash, name }) => (
+                  <option value={hash} key={hash}>
+                    {name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {sandboxProjects.length ? (
+              <optgroup label="Sandbox projects">
+                {sandboxProjects.map(({ hash, name }) => (
+                  <option value={hash} key={hash}>
+                    {name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
         </div>
       </div>

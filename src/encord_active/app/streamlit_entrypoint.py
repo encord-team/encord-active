@@ -53,11 +53,11 @@ def main(target: str):
     memoized_projects, refresh_projects = use_memo(lambda: get_projects(target_path))
 
     def select_project(project_hash: str, refetch=False):
-        projects = refresh_projects() if refetch else memoized_projects
-        project = {**projects.local, **projects.sandbox}.get(project_hash)
+        projects, local_paths = refresh_projects() if refetch else memoized_projects
+        project = projects.get(project_hash)
         if not project:
             return
-        project_path = projects.local_paths.get(project["hash"])
+        project_path = local_paths.get(project["hash"])
         if not project_path:
             return
 
@@ -71,7 +71,7 @@ def main(target: str):
     if not has_state() or not initial_project.value:
         render_projects_page(
             select_project=select_project,
-            projects=memoized_projects,
+            projects=memoized_projects.projects,
             download_path=target_path,
         )
         return
@@ -80,7 +80,7 @@ def main(target: str):
 
     with st.sidebar:
         render_help()
-        render = render_pages_menu(select_project, memoized_projects.local, initial_project.value["hash"])
+        render = render_pages_menu(select_project, memoized_projects.projects, initial_project.value["hash"])
 
     provide_backcompatibility_for_old_predictions()
 

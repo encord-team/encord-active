@@ -14,7 +14,8 @@ class Project(TypedDict):
     name: str
     hash: str
     imageUrl: str
-    downloaded: bool
+    sandbox: bool
+    path: Optional[str]
     stats: Optional[ProjectStats]
 
 
@@ -26,13 +27,8 @@ class OutputAction(str, Enum):
     INIT = "INIT"
 
 
-def projects_page(
-    user_projects: List[Project] = [], sandbox_projects: List[Project] = []
-) -> Optional[Tuple[OutputAction, str]]:
-    return render(
-        component=Components.PROJECT_SELECTION,
-        props={"userProjects": user_projects, "sandboxProjects": sandbox_projects},
-    )
+def projects_page(projects: List[Project] = []) -> Optional[Tuple[OutputAction, str]]:
+    return render(component=Components.PROJECT_SELECTION, props={"projects": projects})
 
 
 if __name__ == "__main__":
