@@ -10,9 +10,9 @@ from encord_active.lib.metrics.execute import execute_metrics
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
-def get_data(project_fs: ProjectFileStructure, model: BaseModelWrapper, subset_size=None):
+def get_data(project_fs: ProjectFileStructure, model: BaseModelWrapper, class_name: str, subset_size=None):
     data_hashes = get_data_hashes_from_project(project_fs, subset_size)
-    image_paths, y = get_data_from_data_hashes(project_fs, data_hashes)
+    image_paths, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
     X = model.prepare_data(image_paths)
     return X, y
 
@@ -23,8 +23,8 @@ def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: 
     return data_hashes
 
 
-def get_data_from_data_hashes(project_fs: ProjectFileStructure, data_hashes: list[tuple[str, str]]):
-    image_paths, class_labels = zip(*(get_data_sample(project_fs, data_hash) for data_hash in data_hashes))
+def get_data_from_data_hashes(project_fs: ProjectFileStructure, data_hashes: list[tuple[str, str]], class_name: str):
+    image_paths, class_labels = zip(*(get_data_sample(project_fs, data_hash, class_name) for data_hash in data_hashes))
     return list(image_paths), list(class_labels)
 
 
