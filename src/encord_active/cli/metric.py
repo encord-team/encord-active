@@ -8,6 +8,7 @@ from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
 from encord_active.lib.metrics.metadata import fetch_metrics_meta, update_metrics_meta
+from encord_active.lib.project import ProjectFileStructure
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
 logger = logger.opt(colors=True)
@@ -42,7 +43,7 @@ def add_metrics(
     full_module_path = module_path.expanduser().resolve()
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
-    metrics_meta = fetch_metrics_meta(target)
+    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
 
     add_all_metrics = len(metric_titles) == 0
     if add_all_metrics:
@@ -101,7 +102,7 @@ def list_metrics(
 
     Metrics are listed in a case-insensitive sorted order.
     """
-    metrics_meta = fetch_metrics_meta(target)
+    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
     sorted_titles = sorted(metrics_meta.keys(), key=lambda x: x.lower())
 
     table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0)
@@ -119,7 +120,7 @@ def remove_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Remove metrics from the project."""
-    metrics_meta = fetch_metrics_meta(target)
+    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
 
     for title in metric_title:
         if title in metrics_meta:
@@ -155,7 +156,7 @@ def run_metrics(
     from encord_active.lib.metrics.execute import execute_metrics
     from encord_active.lib.metrics.io import get_metrics
 
-    metrics_meta = fetch_metrics_meta(target)
+    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
     metrics = get_metrics([(m_title, m_meta["location"]) for m_title, m_meta in metrics_meta.items()])
     if run_all:  # User chooses to run all available metrics
         selected_metrics = metrics
@@ -210,7 +211,7 @@ def show_metrics(
 ):
     """Show information about one or more available metrics in the project."""
 
-    metrics_meta = fetch_metrics_meta(target)
+    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
 
     not_found_metrics = [title for title in metric_title if title not in metrics_meta]
     if len(not_found_metrics) > 0:

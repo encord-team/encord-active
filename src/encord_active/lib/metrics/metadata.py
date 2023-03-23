@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
 
+from encord_active.lib.project import ProjectFileStructure
 
-def fetch_metrics_meta(project_dir: Path):
-    meta_file = project_dir / "metrics" / "metrics_meta.json"
+
+def fetch_metrics_meta(project_file_structure: ProjectFileStructure):
+    meta_file = project_file_structure.metrics_meta
     if not meta_file.is_file():
         # todo raise an exception after a few releases when it's a rule to have such file
         return dict()

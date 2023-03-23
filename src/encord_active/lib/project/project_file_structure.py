@@ -43,11 +43,7 @@ class LabelRowStructure:
 class ProjectFileStructure:
     def __init__(self, project_dir: Path):
         self.project_dir: Path = project_dir.expanduser().resolve()
-        self._mappings = (
-            json.loads((project_dir / "hash_mappings.json").read_text())
-            if (project_dir / "hash_mappings.json").exists()
-            else {}
-        )
+        self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
     @property
     def data(self) -> Path:
@@ -56,6 +52,10 @@ class ProjectFileStructure:
     @property
     def metrics(self) -> Path:
         return self.project_dir / "metrics"
+
+    @property
+    def metrics_meta(self) -> Path:
+        return self.metrics / "metrics_meta.json"
 
     @property
     def embeddings(self) -> Path:

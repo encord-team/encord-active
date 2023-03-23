@@ -137,7 +137,7 @@ def render_data_quality_dashboard(
     metrics: List[MetricData], severe_outlier_color: str, moderate_outlier_color: str, background_color: str
 ):
     if get_state().image_sizes is None:
-        get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
+        get_state().image_sizes = get_all_image_sizes(get_state().project_paths)
     median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
 
     if get_state().metrics_data_summary is None:
