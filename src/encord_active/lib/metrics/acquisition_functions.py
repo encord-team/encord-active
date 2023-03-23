@@ -74,8 +74,8 @@ class BaseModelWrapper:
 
 class SKLearnModelWrapper(BaseModelWrapper):
     @classmethod
-    def prepare_data(cls, data_path: Path) -> Optional[Any]:
-        return [np.asarray(Image.open(data_path)).flatten() / 255]
+    def prepare_data(cls, data_paths: list[Path]) -> Optional[Any]:
+        return [np.asarray(Image.open(data_path)).flatten() / 255 for data_path in data_paths]
 
     def _predict_proba(self, X) -> Optional[np.ndarray]:
         return self._model.predict_proba(X)
