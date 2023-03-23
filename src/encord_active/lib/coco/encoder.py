@@ -442,6 +442,9 @@ class CocoEncoder:
         return annotations
 
     def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if not all(k in object_["boundingBox"] for k in ["x", "y", "w", "h"]):
+            return None
+
         x, y = (
             object_["boundingBox"]["x"] * size.width,
             object_["boundingBox"]["y"] * size.height,
@@ -471,6 +474,9 @@ class CocoEncoder:
     def get_rotatable_bounding_box(
         self, object_: dict, image_id: int, size: Size
     ) -> Union[CocoAnnotation, SuperClass, None]:
+        if not all(k in object_["rotatableBoundingBox"] for k in ["x", "y", "w", "h", "theta"]):
+            return None
+
         x, y = (
             object_["rotatableBoundingBox"]["x"] * size.width,
             object_["rotatableBoundingBox"]["y"] * size.height,
@@ -528,6 +534,9 @@ class CocoEncoder:
 
     def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         """Polylines are technically not supported in COCO, but here we use a trick to allow a representation."""
+        if not len(object_["polyline"]) >= 2:
+            return None
+
         polygon = get_polygon_from_dict(object_["polyline"], size.width, size.height)
         polyline_coordinate = self.join_polyline_from_polygon(list(chain(*polygon)))
         segmentation = [polyline_coordinate]
@@ -584,6 +593,9 @@ class CocoEncoder:
         return polygon
 
     def get_point(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if "0" not in object_["point"]:
+            return None
+
         x, y = (
             object_["point"]["0"]["x"] * size.width,
             object_["point"]["0"]["y"] * size.height,
@@ -614,6 +626,9 @@ class CocoEncoder:
 
     def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         # DENIS: next up: check how this is visualised.
+        if not len(object_["skeleton"]) >= 1:
+            return None
+
         area = 0
         segmentation: List = []
         keypoints: List = []
