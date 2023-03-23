@@ -10,9 +10,9 @@ SCOPED_STATES = "scoped_states"
 
 
 def create_key():
-    stk = inspect.stack()
-    frame = stk[2]
-    return f"{frame.filename}:{frame.function}:{frame.lineno}"
+    frames = inspect.stack()
+    frame_keys = [f"{frame.filename}:{frame.function}:{frame.lineno}" for frame in frames]
+    return str(hash("&".join(frame_keys)))
 
 
 def use_memo(initial: Callable[[], T], key: Optional[str] = None):
