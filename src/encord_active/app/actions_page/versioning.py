@@ -9,7 +9,7 @@ from encord_active.lib.versioning.git import GitVersioner, Version
 CURRENT_VERSION_KEY = "current_version"
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def cached_versioner(project_path: Path):
     versioner = GitVersioner(project_path)
     index = versioner.versions.index(versioner.current_version)

@@ -37,11 +37,12 @@ from encord_active.lib.versioning.git import GitVersioner
 
 
 def project_list(path: Path):
+    child_projects = find_child_projects(path)
     if is_project(path):
-        return [path]
+        return [path, *child_projects]
     else:
         parent_project = try_find_parent_project(path)
-        return [parent_project] if parent_project else find_child_projects(path)
+        return [parent_project] if parent_project else child_projects
 
 
 def prevent_detached_versions(path: Path):
