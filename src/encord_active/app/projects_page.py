@@ -60,13 +60,15 @@ def image_url(image: AtomicImage, project_hash: str):
 @st.cache_data(show_spinner=False)
 def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
-    label_structure = next(project_structure.iter_labels())
-    label_hash = label_structure.path.stem
-    image_path = next(label_structure.iter_data_unit()).path
-    data_hash = image_path.stem
-    id = f"{label_hash}_{data_hash}_00000"
-
-    return show_image_and_draw_polygons(id, project_structure)
+    for label_structure in project_structure.iter_labels():
+        if not (label_structure.label_row_file.is_file() and label_structure.images_dir.is_dir()):
+            continue
+        label_hash = label_structure.path.stem
+        image_path = next(label_structure.iter_data_unit(), None)
+        if not image_path:
+            continue
+        id = f"{label_hash}_{image_path.hash}_00000"
+        return show_image_and_draw_polygons(id, project_structure)
 
 
 # TODO: there must be a better way to get these numbers. would be much easier
@@ -77,8 +79,7 @@ def get_project_stats(project_path: Path):
     label_count = 0
     data_count = 0
 
-    for meta_path in project_structure.metrics.glob("*.meta.json"):
-        meta = load_metric_metadata(meta_path)
+    for meta in map(load_metric_metadata, project_structure.metrics.glob("*.meta.json")):
         if meta.annotation_type == AnnotationType.NONE:
             data_count = max(data_count, meta.stats.num_rows)
         else:
@@ -119,11 +120,13 @@ def get_projects(path: Path) -> GetProjectsResult:
             projects[project["project_hash"]]["path"] = posix_path
             continue
 
+        image = get_first_image_with_polygons(project_path)
+        url = "" if image is None else image_url(image, project["project_hash"])
         projects[project["project_hash"]] = Project(
             name=project.get("project_title") or project_path.name,
             hash=project["project_hash"],
             path=posix_path,
-            imageUrl=image_url(get_first_image_with_polygons(project_path), project["project_hash"]),
+            imageUrl=url,
             sandbox=False,
             stats=get_project_stats(project_path),
         )

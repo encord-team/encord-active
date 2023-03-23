@@ -52,7 +52,6 @@ export const ProjectsPage = ({ projects = [] }: Props) => {
           title="Import from Encord Annotate"
           description="Bring in existing Encord project"
           iconUrl={encordImportUrl}
-          onClick={() => 0}
         />
         <NewProjectButton
           title="Import a COCO project"
