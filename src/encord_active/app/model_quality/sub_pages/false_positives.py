@@ -72,7 +72,7 @@ The remaining colors correspond to the dataset labels with the colors you are us
         else:
             histogram = get_histogram(fp_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid(get_state().project_paths.data, model_predictions=fp_df, box_color=color)
+            prediction_grid(get_state().project_paths, model_predictions=fp_df, box_color=color)
 
     def _build_classifications(
         self,

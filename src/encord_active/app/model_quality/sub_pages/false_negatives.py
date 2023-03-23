@@ -70,7 +70,7 @@ The remaining objects are predictions, where colors correspond to their predicte
             histogram = get_histogram(fns_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
             prediction_grid(
-                get_state().project_paths.data,
+                get_state().project_paths,
                 labels=fns_df,
                 model_predictions=object_model_predictions,
                 box_color=color,
