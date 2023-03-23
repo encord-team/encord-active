@@ -6,18 +6,18 @@ import pandas as pd
 
 from encord_active.lib.common.iterator import DatasetIterator
 from encord_active.lib.metrics.acquisition_functions import BaseModelWrapper
-from encord_active.lib.metrics.execute import execute_metrics
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
-def get_data(project_fs: ProjectFileStructure, model: BaseModelWrapper, class_name: str, subset_size=None):
-    data_hashes = get_data_hashes_from_project(project_fs, subset_size)
+def get_data(
+    project_fs: ProjectFileStructure, model: BaseModelWrapper, data_hashes: list[tuple[str, str]], class_name: str
+):
     image_paths, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
     X = model.prepare_data(image_paths)
     return X, y
 
 
-def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: int = None):
+def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: int = None) -> list[tuple[str, str]]:
     iterator = DatasetIterator(project_fs.project_dir, subset_size)
     data_hashes = [(iterator.label_hash, iterator.du_hash) for _ in iterator.iterate()]
     return data_hashes
@@ -53,19 +53,32 @@ def get_classification_label(label_row, du_hash: str, class_name: str):
     return class_label
 
 
-def get_n_best_ranked_data_samples(project_fs: ProjectFileStructure, acq_func_instance, n, data_hashes, rank_by: str):
-    execute_metrics([acq_func_instance], data_dir=project_fs.project_dir)
-    unique_acq_func_name = acq_func_instance.metadata.get_unique_name()
+def get_metric_results(project_fs: ProjectFileStructure, acq_func):
+    unique_acq_func_name = acq_func.metadata.get_unique_name()
     acq_func_results = pd.read_csv(project_fs.metrics / f"{unique_acq_func_name}.csv")
+    return acq_func_results
 
-    # filter acquisition function results to only contain data samples specified in data_hashes
-    str_data_hashes = tuple(f"{label_hash}_{du_hash}" for label_hash, du_hash in data_hashes)
-    filtered_results = acq_func_results[acq_func_results["identifier"].str.startswith(str_data_hashes, na=False)]
+
+def get_n_best_ranked_data_samples(
+    acq_func_results,
+    n,
+    rank_by: str,
+    filter_by_data_hashes: list[tuple[str, str]] = None,
+    exclude_data_hashes: list[tuple[str, str]] = None,
+):
+    # filter acquisition function results to include/exclude data hashes stated by the user
+    if filter_by_data_hashes is not None:
+        str_data_hashes = tuple(f"{label_hash}_{du_hash}" for label_hash, du_hash in filter_by_data_hashes)
+        acq_func_results = acq_func_results[acq_func_results["identifier"].str.startswith(str_data_hashes, na=False)]
+
+    if exclude_data_hashes is not None:
+        str_data_hashes = tuple(f"{label_hash}_{du_hash}" for label_hash, du_hash in exclude_data_hashes)
+        acq_func_results = acq_func_results[~acq_func_results["identifier"].str.startswith(str_data_hashes, na=False)]
 
     if rank_by == "asc":  # get the first n data samples if they were sorted by ascending score order
-        best_n = filtered_results[["identifier", "score"]].nsmallest(n, "score", keep="first")["identifier"]
+        best_n = acq_func_results[["identifier", "score"]].nsmallest(n, "score", keep="first")["identifier"]
     elif rank_by == "desc":  # get the first n data samples if they were sorted by descending score order
-        best_n = filtered_results[["identifier", "score"]].nlargest(n, "score", keep="first")["identifier"]
+        best_n = acq_func_results[["identifier", "score"]].nlargest(n, "score", keep="first")["identifier"]
     else:
         raise ValueError
     return [get_data_hash_from_identifier(identifier) for identifier in best_n]
