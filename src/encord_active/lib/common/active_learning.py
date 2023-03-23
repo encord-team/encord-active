@@ -76,12 +76,15 @@ def get_n_best_ranked_data_samples(
         acq_func_results = acq_func_results[~acq_func_results["identifier"].str.startswith(str_data_hashes, na=False)]
 
     if rank_by == "asc":  # get the first n data samples if they were sorted by ascending score order
-        best_n = acq_func_results[["identifier", "score"]].nsmallest(n, "score", keep="first")["identifier"]
+        best_n = acq_func_results[["identifier", "score"]].nsmallest(n, "score", keep="first")
     elif rank_by == "desc":  # get the first n data samples if they were sorted by descending score order
-        best_n = acq_func_results[["identifier", "score"]].nlargest(n, "score", keep="first")["identifier"]
+        best_n = acq_func_results[["identifier", "score"]].nlargest(n, "score", keep="first")
     else:
         raise ValueError
-    return [get_data_hash_from_identifier(identifier) for identifier in best_n]
+
+    identifiers, scores = zip(*best_n.itertuples(index=False))
+    data_hashes = tuple(get_data_hash_from_identifier(identifier) for identifier in identifiers)
+    return data_hashes, scores
 
 
 def get_data_hash_from_identifier(identifier: str):
