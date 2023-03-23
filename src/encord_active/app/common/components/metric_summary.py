@@ -127,8 +127,8 @@ def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: Delt
 
     for counter, (_, row) in enumerate(metrics.iterrows()):
         st_col.metric(
-            f"{counter + 1}. {row[AllMetricsOutlierSchema.metric_name]} outliers",
-            row[AllMetricsOutlierSchema.total_severe_outliers],
+            label=f"**{counter + 1}**\. {row[AllMetricsOutlierSchema.metric_name]} outliers",
+            value=row[AllMetricsOutlierSchema.total_severe_outliers],
             help=f"Go to Explorer page and chose {row[AllMetricsOutlierSchema.metric_name]} metric to spot these outliers.",
         )
 
