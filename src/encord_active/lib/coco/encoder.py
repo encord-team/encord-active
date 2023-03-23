@@ -441,7 +441,7 @@ class CocoEncoder:
                 )
         return annotations
 
-    def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         x, y = (
             object_["boundingBox"]["x"] * size.width,
             object_["boundingBox"]["y"] * size.height,
@@ -468,7 +468,9 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_rotatable_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_rotatable_bounding_box(
+        self, object_: dict, image_id: int, size: Size
+    ) -> Union[CocoAnnotation, SuperClass, None]:
         x, y = (
             object_["rotatableBoundingBox"]["x"] * size.width,
             object_["rotatableBoundingBox"]["y"] * size.height,
@@ -524,7 +526,7 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         """Polylines are technically not supported in COCO, but here we use a trick to allow a representation."""
         polygon = get_polygon_from_dict(object_["polyline"], size.width, size.height)
         polyline_coordinate = self.join_polyline_from_polygon(list(chain(*polygon)))
@@ -581,7 +583,7 @@ class CocoEncoder:
 
         return polygon
 
-    def get_point(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_point(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         x, y = (
             object_["point"]["0"]["x"] * size.width,
             object_["point"]["0"]["y"] * size.height,
@@ -610,7 +612,7 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         # DENIS: next up: check how this is visualised.
         area = 0
         segmentation: List = []
