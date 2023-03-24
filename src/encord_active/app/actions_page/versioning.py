@@ -32,7 +32,7 @@ def version_selector(project_path: Path):
         # options have changed. removing the key would lead to state issues.
         key=f"version-{project_path}",
         format_func=lambda version: version.name,
-        index=initial_version_index,
+        index=versioner.versions.index(versioner.current_version),
     )
 
     if get_state() and get_state().project_paths.project_dir != project_path:
@@ -51,12 +51,12 @@ def version_selector(project_path: Path):
     if versioner.is_latest(version):
         versioner.unstash()
 
-    refresh(clear_global=True)
+    refresh()
 
 
 def version_form():
     _, container, _ = st.columns(3)
-    versioner = GitVersioner(get_state().project_paths.project_dir)
+    versioner, _ = cached_versioner(get_state().project_paths.project_dir)
     version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
     show_success_message = UseState(False)
 
