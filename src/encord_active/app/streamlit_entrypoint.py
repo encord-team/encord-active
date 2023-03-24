@@ -65,7 +65,7 @@ def main(target: str):
             initial_project.set(project)
 
         project_dir = project_path.expanduser().absolute()
-        State.init(project_dir)
+        State.init(project_dir, refresh_projects)
         refresh(clear_memo=True)
 
     if not has_state() or not initial_project.value:
@@ -80,7 +80,11 @@ def main(target: str):
 
     with st.sidebar:
         render_help()
-        render = render_pages_menu(select_project, memoized_projects.projects, initial_project.value["hash"])
+        try:
+            render = render_pages_menu(select_project, memoized_projects.projects, initial_project.value["hash"])
+        except Exception as e:
+            __import__("ipdb").set_trace()
+            pass
 
     provide_backcompatibility_for_old_predictions()
 

@@ -11,7 +11,9 @@ Reducer = Callable[[T], T]
 
 def create_key():
     frames = inspect.stack()
-    frame_keys = [f"{frame.filename}:{frame.function}:{frame.lineno}" for frame in frames]
+    frame_keys = [
+        f"{frame.filename}:{frame.function}:{frame.lineno}" for frame in frames if "encord_active" in frame.filename
+    ]
     return str(hash("&".join(frame_keys)))
 
 
@@ -56,9 +58,11 @@ class UseState(Generic[T]):
 
     def set(self, arg: Union[T, Reducer[T]]):
         if callable(arg):
-            st.session_state[StateKey.SCOPED][self._key] = arg(st.session_state[StateKey.SCOPED][self._key])
+            st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = arg(
+                st.session_state[StateKey.SCOPED][self._key]
+            )
         else:
-            st.session_state[StateKey.SCOPED][self._key] = arg
+            st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = arg
 
     @property
     def value(self) -> T:

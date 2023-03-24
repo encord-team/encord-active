@@ -55,16 +55,14 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
-def render_pages_menu(
-    select_project: Callable[[str], None], local_projects: dict[str, Project], initial_project_hash: str
-):
+def render_pages_menu(select_project: Callable[[str], None], projects: dict[str, Project], initial_project_hash: str):
     if not is_latest(get_state().project_paths.project_dir):
         st.error("READ ONLY MODE \n\n Changes will not be saved")
 
     key_path = UseState(DEFAULT_PAGE_PATH)
     items = to_items(PAGES)
-    output_state = UseState[Optional[Tuple[OutputAction, Optional[str]]]](None)
-    output = pages_menu(items, list(local_projects.values()), initial_project_hash)
+    output_state = UseState[Optional[Tuple[OutputAction, Optional[str]]]](None, "FOO")
+    output = pages_menu(items, list(projects.values()), initial_project_hash)
     if output and output != output_state.value:
         output_state.set(output)
         action, payload = output

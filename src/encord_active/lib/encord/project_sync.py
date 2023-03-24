@@ -1,6 +1,7 @@
 import json
 import pickle
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Callable, NamedTuple
 
@@ -263,7 +264,7 @@ def copy_project_meta(
     project_meta["project_title"] = project_title
     project_meta["project_description"] = project_description
     project_meta["has_remote"] = False
-    project_meta["project_hash"] = ""
+    project_meta["project_hash"] = str(uuid.uuid4())
     target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta), encoding="utf-8")
 
 

@@ -104,7 +104,6 @@ def get_projects(path: Path) -> GetProjectsResult:
     projects = {}
 
     for name, data in PREBUILT_PROJECTS.items():
-
         projects[data["hash"]] = Project(
             name=name,
             hash=data["hash"],
@@ -157,7 +156,7 @@ def render_projects_page(
     projects: Dict[str, Project],
     download_path: Path,
 ):
-    output_state = UseState[Optional[Tuple[OutputAction, str]]](None, "PROJECTS_PAGE_OUTPUT")
+    output_state = UseState[Optional[Tuple[OutputAction, str]]](None)
     output = projects_page(projects=list(projects.values()))
 
     if output and output != output_state.value:

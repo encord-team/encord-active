@@ -33,11 +33,6 @@ export const PagesMenu = ({
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
 
   const defaultSelectedKey = (first.children?.[0]?.key || first.key).toString();
-  const [selectedKey, setSelectedKeys] = useState(defaultSelectedKey);
-
-  useEffect(() => {
-    pushOutput(["SELECT_PAGE", selectedKey]);
-  }, [selectedKey]);
 
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -98,7 +93,7 @@ export const PagesMenu = ({
         items={items}
         mode="inline"
         className={`bg-transparent text-xl select-none ${classes["transparent-submenu"]}`}
-        onSelect={({ key }) => setSelectedKeys(key)}
+        onSelect={({ key }) => pushOutput(["SELECT_PAGE", key])}
         forceSubMenuRender={true}
       />
     </div>

@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+from encord_active_components.components.projects_page import Project
 from pandera.typing import DataFrame
 
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
@@ -63,6 +64,7 @@ class State:
     """
 
     project_paths: ProjectFileStructure
+    refresh_projects: Callable[[], Any]
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
     ignore_frames_without_predictions = False
@@ -80,7 +82,7 @@ class State:
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
-    def init(cls, project_dir: Path):
+    def init(cls, project_dir: Path, refresh_projects: Callable[[], Any]):
         if (
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
@@ -88,6 +90,7 @@ class State:
             DBConnection.set_project_path(project_dir)
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=ProjectFileStructure(project_dir),
+                refresh_projects=refresh_projects,
                 merged_metrics=MergedMetrics().all(),
                 all_tags=Tags().all(),
             )

@@ -398,6 +398,7 @@ def render_subset_button(
                 )
             ]
         )
+        refresh(clear_memo=True)
 
 
 def render_export_button(
