@@ -58,11 +58,14 @@ class UseState(Generic[T]):
 
     def set(self, arg: Union[T, Reducer[T]]):
         if callable(arg):
-            st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = arg(
-                st.session_state[StateKey.SCOPED][self._key]
-            )
+            new_value = arg(st.session_state[StateKey.SCOPED][self._key])
         else:
-            st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = arg
+            new_value = arg
+
+        if new_value == self.value:
+            return
+
+        st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = new_value
 
     @property
     def value(self) -> T:

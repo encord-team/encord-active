@@ -2,7 +2,7 @@ import { Menu } from "antd";
 import { SubMenuType } from "antd/lib/menu/hooks/useItems";
 import useResizeObserver from "use-resize-observer";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Streamlit } from "streamlit-component-lib";
 
 import classes from "./PagesMenu.module.css";
@@ -18,6 +18,7 @@ const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
 
 export type Props = {
   items: SubMenuType[];
+  initialKey: string;
   projects?: Project[];
   selectedProjectHash?: string;
 };
@@ -25,14 +26,11 @@ export const PagesMenu = ({
   items,
   projects = [],
   selectedProjectHash,
+  initialKey,
 }: Props) => {
   if (!items) throw new Error("`items` prop must be provided");
 
-  const first = items.filter(Boolean)[0];
-
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
-
-  const defaultSelectedKey = (first.children?.[0]?.key || first.key).toString();
 
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -87,8 +85,8 @@ export const PagesMenu = ({
         </div>
       </div>
       <Menu
-        defaultSelectedKeys={[defaultSelectedKey]}
-        defaultOpenKeys={[first.key]}
+        defaultSelectedKeys={[initialKey]}
+        defaultOpenKeys={[initialKey.split("#")[0]]}
         subMenuOpenDelay={1}
         items={items}
         mode="inline"

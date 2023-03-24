@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
+from typing import Callable, Dict, NamedTuple, Optional, Tuple
 
 import streamlit as st
 from encord.ontology import OntologyStructure

@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
-from encord_active_components.components.projects_page import Project
 from pandera.typing import DataFrame
 
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations

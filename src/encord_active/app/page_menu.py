@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import streamlit as st
 from encord_active_components.components.pages_menu import (
@@ -55,14 +55,23 @@ def to_items(d: dict, parent_key: Optional[str] = None):
     return [to_item(k, v, parent_key) for k, v in d.items()]
 
 
-def render_pages_menu(select_project: Callable[[str], None], projects: dict[str, Project], initial_project_hash: str):
+def get_renderer(key_path: List[str]):
+    return reduce(dict.__getitem__, key_path, PAGES)
+
+
+def render_pages_menu(
+    select_project: Callable[[str], None],
+    select_page: Callable[[Any], Any],
+    projects: dict[str, Project],
+    initial_project_hash: str,
+    initial_key_path: List[str],
+):
     if not is_latest(get_state().project_paths.project_dir):
         st.error("READ ONLY MODE \n\n Changes will not be saved")
 
-    key_path = UseState(DEFAULT_PAGE_PATH)
     items = to_items(PAGES)
-    output_state = UseState[Optional[Tuple[OutputAction, Optional[str]]]](None, "FOO")
-    output = pages_menu(items, list(projects.values()), initial_project_hash)
+    output_state = UseState[Optional[Tuple[OutputAction, Optional[str]]]](None)
+    output = pages_menu(items, list(projects.values()), initial_project_hash, SEPARATOR.join(initial_key_path))
     if output and output != output_state.value:
         output_state.set(output)
         action, payload = output
@@ -70,7 +79,5 @@ def render_pages_menu(select_project: Callable[[str], None], projects: dict[str,
             refresh(nuke=True)
         elif action == OutputAction.SELECT_PROJECT and payload:
             select_project(payload)
-        elif action == OutputAction.SELECT_PAGE and payload and payload != key_path.value:
-            key_path.set(payload.split(SEPARATOR))
-
-    return reduce(dict.__getitem__, key_path.value, PAGES)
+        elif action == OutputAction.SELECT_PAGE and payload:
+            select_page(payload.split(SEPARATOR))

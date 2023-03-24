@@ -398,7 +398,7 @@ def render_subset_button(
                 )
             ]
         )
-        refresh(clear_memo=True)
+        get_state().refresh_projects()
 
 
 def render_export_button(

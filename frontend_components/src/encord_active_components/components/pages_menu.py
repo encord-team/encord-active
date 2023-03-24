@@ -19,9 +19,9 @@ class OutputAction(str, Enum):
 
 def pages_menu(
     items: List[MenuItem],
-    projects: List[Project] = [],
-    selected_project_hash: Optional[str] = None,
-    initial_key=Optional[str],
+    projects: List[Project],
+    initial_key: str,
+    selected_project_hash: str,
 ) -> Tuple[OutputAction, Union[str, None]]:
     return render(
         component=Components.PAGES_MENU,
@@ -71,4 +71,4 @@ if __name__ == "__main__":
             imageUrl="",
         ),
     ]
-    key, action = pages_menu(ITEMS, PROJECTS)
+    key, action = pages_menu(ITEMS, PROJECTS, PROJECTS[0]["hash"], ITEMS[0]["key"])

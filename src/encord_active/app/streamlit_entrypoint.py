@@ -1,7 +1,8 @@
 import argparse
 import shutil
+from copy import deepcopy
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import streamlit as st
 from encord_active_components.components.projects_page import Project
@@ -10,7 +11,11 @@ from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State, get_state, has_state, refresh
 from encord_active.app.common.state_hooks import UseState, use_memo
 from encord_active.app.common.utils import set_page_config
-from encord_active.app.page_menu import render_pages_menu
+from encord_active.app.page_menu import (
+    DEFAULT_PAGE_PATH,
+    get_renderer,
+    render_pages_menu,
+)
 from encord_active.app.projects_page import get_projects, render_projects_page
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.model_predictions.writer import MainPredictionType
@@ -49,8 +54,16 @@ def provide_backcompatibility_for_old_predictions():
 def main(target: str):
     set_page_config()
     target_path = Path(target)
-    initial_project = UseState[Optional[Project]](None, "INITIAL_PROJECT")
+    initial_project = UseState[Optional[Project]](None)
+    initial_key_path = UseState[List[str]](DEFAULT_PAGE_PATH)
+    selected_key_path = UseState(deepcopy(initial_key_path.value))
+
     memoized_projects, refresh_projects = use_memo(lambda: get_projects(target_path))
+
+    def refresh_pages_menu():
+        refresh_projects()
+        initial_key_path.set(deepcopy(selected_key_path.value))
+        refresh(clear_memo=True)
 
     def select_project(project_hash: str, refetch=False):
         projects, local_paths = refresh_projects() if refetch else memoized_projects
@@ -65,7 +78,7 @@ def main(target: str):
             initial_project.set(project)
 
         project_dir = project_path.expanduser().absolute()
-        State.init(project_dir, refresh_projects)
+        State.init(project_dir, refresh_pages_menu)
         refresh(clear_memo=True)
 
     if not has_state() or not initial_project.value:
@@ -80,14 +93,17 @@ def main(target: str):
 
     with st.sidebar:
         render_help()
-        try:
-            render = render_pages_menu(select_project, memoized_projects.projects, initial_project.value["hash"])
-        except Exception as e:
-            __import__("ipdb").set_trace()
-            pass
+        render_pages_menu(
+            select_project,
+            selected_key_path.set,
+            memoized_projects.projects,
+            initial_project.value["hash"],
+            initial_key_path.value,
+        )
 
     provide_backcompatibility_for_old_predictions()
 
+    render = get_renderer(selected_key_path.value)
     if callable(render):
         render()
 
