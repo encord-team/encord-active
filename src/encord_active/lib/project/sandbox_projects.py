@@ -48,6 +48,11 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         hash="14a52852-55f6-46c9-850a-40e11540605f",
         name="[open-source]-TACO-Unofficial",
     ),
+    "[open-source][test]-mnist-dataset": PrebuiltProject(
+        url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-mnist-dataset.zip",
+        hash="5c96df58-beac-4e42-a74d-fce16622c5af",
+        name="[open-source][test]-mnist-dataset",
+    ),
     "rareplanes": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
         hash="1f4752d7-4a7a-4c0e-8b08-dd4b1c5a8bc6",
