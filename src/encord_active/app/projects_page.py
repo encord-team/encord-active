@@ -168,7 +168,8 @@ def render_projects_page(
             OutputAction.SELECT_SANDBOX_PROJECT,
         ]:
             refetch_projects = False
-            if payload not in projects:
+            selected_project = projects[payload]
+            if not selected_project["path"]:
                 handle_download_sandbox_project(projects[payload]["name"], download_path)
                 refetch_projects = True
 
