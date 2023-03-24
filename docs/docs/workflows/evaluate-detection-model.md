@@ -10,9 +10,9 @@ Encord Active enables you to visualize the important performance metrics, such a
 Performance metrics can be visualized based on different classes and intersection-over-Union (IoU) thresholds.
 Performance metrics are supported for bounding-boxes (object detection) and polygons (segmentation).
 
-`Prerequisites:` Dataset, Labels, Predictions
+`Prerequisites:` Dataset, Labels, Object (bounding-box or polygon) Predictions
 
-### Steps
+#### Steps
 
 1. Navigate to the _Model Quality_ > _Metrics_ tab on the left sidebar.
 2. Under the **Subset selection scores**, you will see the average precision (AP) and average recall (AR) for each class in the graph to the left
@@ -21,16 +21,17 @@ Performance metrics are supported for bounding-boxes (object detection) and poly
 4. On the **Mean scores** plot, you can observe in which classes the model has difficulty and in which classes it does well.
 5. According to insights you get here, you can, e.g., prioritize from which classes you need to collect more data.
 
-### Example
+#### Example
 
 Comparing **person** and **clock** objects.
 
 ![clock_vs_person_performance](../images/clock_vs_person_performance.png)
 
-From the above figure, it is apparent that clock class degrades overall performance considerably. So, when collecting and labelling more data, prioritizing it
-over person class will make more sense for overall performance.
+From the above figure, it is apparent that __clock__ class degrades overall performance considerably. So, when 
+collecting and labelling more data, prioritizing it
+over __person__ class will make more sense for overall performance.
 
-# Finding Important Metrics
+## Finding Important Metrics
 
 **Visualise the relationship between your model performance and metrics**
 
@@ -38,7 +39,7 @@ With this workflow, you will be able to identify the most important [Quality Met
 
 `Prerequisites:` Dataset, Labels, Predictions
 
-### Steps:
+#### Steps:
 
 1. Navigate to the _Model Quality_ > _Metrics_ tab.
 2. Select label classes to include in the top left drop down menu.
@@ -64,7 +65,7 @@ With this workflow, you will be able to identify the most important [Quality Met
 8. By default, the performance chart is shown in aggregate for all classes, optionally you can choose to decompose performance by class or select individual classes to be shown in the top left drop down menu.
 9. The plot shows the _True Positive Rate_ (TPR) and the _False Negative Rate_ (FNR) by metric to help you identify which metric characteristics you model have a hard time predicting.
 
-### Example
+## Performance by Metric
 
 ![metric_importance](../images/index_importance.png)
 Metric importance plots indicate that _Object Area - Relative (P)_ is an important metric that has an important relationship
@@ -89,9 +90,16 @@ Based on this insight, you may improve your model with several actions, such as:
 - Increasing the confidence threshold for small objects
 
 
-# Identifying False Positives
+## Exploring the Individual Samples
 
-Using the false positive tab in Encord you can quickly identify in which areas your model fails. With this
+Using the explorer page you can visualize the ranked images for specific outcomes (True 
+Positives, False Positives, False-Negatives).
+
+![metric_importance](../images/workflows/evaluate-detection-model/img_1.png)
+
+#### Identifying False Positives 
+
+By selecting the false positive outcome in Encord you can quickly identify in which areas your model fails. With this
 functionality you can, for example:
 
 - Detect missing ground-truth labels
@@ -100,11 +108,8 @@ functionality you can, for example:
 
 and more, depending on your use cases.
 
-`Prerequisites:` Dataset, Labels, Predictions
-
-### Steps:
-
-1. Navigate to the _Model Quality_ > _False Positives_ tab on the left sidebar.
+1. Navigate to the _Model Quality_ > _Explorer_ tab on the left sidebar and choose __False Positive__ as the Outcome in 
+the top bar.
 2. Visualise predictions and try to get insights on where model fails.
 3. Under each image, an explanation is given for why the prediction is false positive. The three reasons are:
    - No overlapping with the ground-truth object. This means that there is no label with the same class as the predicted
@@ -112,18 +117,16 @@ and more, depending on your use cases.
    - IoU is too low. This means that the prediction does overlap with a label of the same class. However, the IoU
      between the prediction and the label is lower than the IoU threshold which is selected in the top bar.
    - Prediction with higher confidence is already matched with the ground-truth object.
-     Since the mAP score chooses the prediction with the highest model confidence that has an IOU larger than the set threshold, other predictions that matched the label with a sufficiently high IOU will be considered false positives.
+     Since the mAP score chooses the prediction with the highest model confidence that has an IOU larger than the set 
+   threshold, other predictions that matched the label with a sufficiently high IOU will be considered false positives.
 4. Note, that the boxed magenta object is the prediction, while the remaining objects are labels for the same
    image/frame.
 
 
-# Identifying False Negatives
+#### Identifying False Negatives
 
 Using the false negatives tab in Encord Active, you can quickly find out which objects the model misses.
 
-`Prerequisites:` Dataset, Labels, Predictions
-
-### Steps:
-
-1. Navigate to the _Model Quality_ > _False Negatives_ tab on the left sidebar.
-2. Observe the ground-truth objects (purple boxed objects) that are missed by the model and get insights on where the model fails. The remaining objects in the image are the model predictions for that image.
+1. Choose __False Positive__ as the Outcome in the top bar.
+2. Observe the ground-truth objects (purple boxed objects) that are missed by the model and get insights on where the 
+model fails. The remaining objects in the image are the model predictions for that image.

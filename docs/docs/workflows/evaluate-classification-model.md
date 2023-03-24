@@ -11,7 +11,7 @@ scores as well as confusion matrix. Performance metrics can also be reported acc
 
 `Prerequisites:` Dataset, Labels, Classification Predictions
 
-### Steps
+#### Steps
 
 1. Navigate to the _Model Quality_ > _Metrics_ tab on the left sidebar.
 2. Under the **Classifications** tab, you will see the main performance metrics (accuracy, mean precision, mean recall, 
@@ -22,7 +22,7 @@ and mean F1 scores), metric importance graphs, confusion matrix, and class-based
 does well.
 5. According to insights you get here, you can, e.g., prioritize from which classes you need to collect more data.
 
-### Example
+#### Example
 
 The following is the model performance result for a Pokemon dataset (classes: *charmander, mewtwo, pikachu, 
 squirtle*)
@@ -31,34 +31,38 @@ squirtle*)
 
 
 
-#### Metrics 
+## Finding Important Metrics 
 
 The three important metrics for this dataset are *Image-level Annotation Quality, Red Values*, and *Image Singularity*. When 
-we look at their correlation. we see that as the Image-Level Annotation Quality increases model performances increases, 
+we look at their correlation, we see that as the Image-Level Annotation Quality increases, model performances increases, 
 too. On the other hand, Red Values and Image Singularity have negative correlation with the model performance.
 
 When we look at the confusion matrix, you can see that most of the predictions are correct; Meanwhile, we can easily 
-observe that a significant part of the *charmader* was predicted as *pikachu*, resulting in low recall for the 
+observe that a significant part of the *charmader* images was predicted as *pikachu*, resulting in low recall for the 
 *charmander* and low precision for the *pikachu*. So there might be a value in investigating these wrongly labeled 
 charmander samples.
 
-#### Performance by Metric
+## Performance by Metric
 
-In this page, you can observe the **True-Positive Rate** as a function of a metric. You can 
+Now, choose _Performance By Metric_ on the left side bar. In this page, you can observe the **True-Positive Rate** as a 
+function of the chosen metric. You can 
 detect in which regions model performs poorly or good, so that you can prioritize you next data collection and 
-labelling work accordingly. Classes can be filtered via global top bar for class-specific visualization.
+labelling work accordingly. Classes can be filtered via global top bar for class-specific visualization. From the below
+ image, it can be seen that when the redness property of the image increases, performance decreases. So, we can find 
+similar images like the ones where the model is failing and annotate more of them to boost the performance in this 
+region.
 
 ![performance_by_metric](../images/workflows/evaluate-classification-model/img_2.png)
 
 
-#### Explorer
+## Exploring the Individual Samples
 
 Using the explorer page you can visualize the ranked images for specific outcomes (True 
 Positives, False Positives).
 
 ![explorer](../images/workflows/evaluate-classification-model/img_3.png)
 
-This page is very similar to the other explorer pages under Data Quality and Label Quality tabs; however, since you 
+This page is very similar to the other explorer pages under _Data Quality_ and _Label Quality_ tabs; however, since you 
 have the prediction results now, the images can be filtered according to their outcome type. When the **True Positive** 
 outcome is selected only the images that are predicted correctly will be shown, likewise, when the **False Positive** 
 outcome is selected, only the images that are wrongly predicted will be shown.
