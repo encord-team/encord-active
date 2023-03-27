@@ -21,7 +21,7 @@ from encord_active.cli.utils.decorators import (
     ensure_project,
     find_child_projects,
 )
-from encord_active.cli.utils.prints import success_with_visualise_command
+from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
 from encord_active.lib.project.metadata import fetch_project_meta
@@ -124,7 +124,7 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
-    success_with_visualise_command(project_path, "Successfully downloaded sandbox dataset. ")
+    success_with_vizualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
 
 @cli.command(
@@ -373,7 +373,7 @@ Consider removing the directory or setting the `--name` option.
         # NOTE: we need to compute at least one metric otherwise everything breaks
         run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
 
-    success_with_visualise_command(project_path, "Project initialised :+1:")
+    success_with_vizualise_command(project_path, "Project initialised :+1:")
 
 
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
@@ -381,7 +381,7 @@ Consider removing the directory or setting the `--name` option.
 @bypass_streamlit_question
 def visualize(
     target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
+        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualize", file_okay=False
     ),
 ):
     """

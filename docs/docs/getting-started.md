@@ -9,7 +9,6 @@ import Link from '@docusaurus/Link';
 # Getting Started
 
 **Encord Active** is an open-source active learning tookit that helps you visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
-**Encord Active** is open-source and accesible as Python library on GitHub.
 
 ## Install Encord Active
 
@@ -91,11 +90,11 @@ encord-active init /path/to/data/directory
 
 A project will be created using the data (without labels) in the current working directory (unless used with `--target`).
 
-To visualise the project run:
+To visualize the project run:
 
 ```shell
 cd /path/to/project
-encord-active visualise
+encord-active visualize
 ```
 
 You can find more details on the `init` command in the [CLI section](./cli#init).
@@ -143,7 +142,7 @@ To run the Encord Active app, run the following command:
 ```shell
 # within venv
 cd /path/to/project
-encord-active visualise
+encord-active visualize
 ```
 
 Now, your browser should open a new window with Encord Active.

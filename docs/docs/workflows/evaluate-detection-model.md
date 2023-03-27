@@ -34,7 +34,7 @@ over **person** class will make more sense for overall performance.
 
 ## Finding Important Metrics
 
-**Visualise the relationship between your model performance and metrics**
+**Visualize the relationship between your model performance and metrics**
 
 With this workflow, you will be able to identify the most important [Quality Metrics](/category/quality-metrics) for
 your model performance and prioritize further data exploration and actions.
@@ -116,7 +116,7 @@ and more, depending on your use cases.
 
 1. Navigate to the _Model Quality_ > _Explorer_ tab on the left sidebar and choose **False Positive** as the Outcome in
    the top bar.
-2. Visualise predictions and try to get insights on where model fails.
+2. Visualize predictions and try to get insights on where model fails.
 3. Under each image, an explanation is given for why the prediction is false positive. The three reasons are:
    - No overlapping with the ground-truth object. This means that there is no label with the same class as the predicted
      class which overlaps with the prediction.

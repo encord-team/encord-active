@@ -139,7 +139,7 @@ Launch the application with the provided project ✨
 Usage: encord-active quickstart [OPTIONS]
 
 Options:
- --target   -t  DIRECTORY  Path of the projects you would like to visualise
+ --target   -t  DIRECTORY  Path of the projects you would like to visualize
 ```
 
 ## `init`
