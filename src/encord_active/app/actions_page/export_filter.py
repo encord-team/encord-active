@@ -64,9 +64,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         # Move some columns to the begining
         columns_to_filter.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
 
-        to_filter_columns = st.multiselect(
-            "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
-        )
+        to_filter_columns = st.multiselect("Filter by", columns_to_filter)
         filtered = df.copy()
         filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:

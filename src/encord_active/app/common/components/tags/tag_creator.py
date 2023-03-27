@@ -31,7 +31,7 @@ def tag_creator():
 
     form_col, tags_count_col = st.columns(2)
 
-    with form_col.form("tag_creation_form", clear_on_submit=True):
+    with form_col.form("tag_creation_form", clear_on_submit=False):
         left, right = st.columns(2)
         name = st.text_input(
             "Tag name",
