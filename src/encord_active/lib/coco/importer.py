@@ -32,8 +32,7 @@ from encord_active.lib.encord.local_sdk import (
 from encord_active.lib.encord.utils import make_object_dict
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
-
-IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def upload_img(
@@ -65,7 +64,7 @@ def upload_img(
                 title=str(coco_image.id_),
                 file_path=temp_folder / temp_file_name,
             )
-        except FileTypeNotSupportedError as e:
+        except FileTypeNotSupportedError:
             print(f"{file_path} will be skipped as it doesn't seem to be an image.")
             encord_image = None
 
@@ -76,7 +75,7 @@ def upload_img(
                 title=str(coco_image.id_),
                 file_path=file_path,
             )
-        except FileTypeNotSupportedError as e:
+        except FileTypeNotSupportedError:
             print(f"{file_path} will be skipped as it doesn't seem to be an image.")
             return None
 
@@ -207,8 +206,8 @@ class CocoImporter:
 
         self.project_dir.mkdir(exist_ok=True)
 
-        ontology_file = self.project_dir / "ontology.json"
-        ontology_file.write_text(json.dumps(project.ontology))
+        project_file_structure = ProjectFileStructure(self.project_dir)
+        project_file_structure.ontology.write_text(json.dumps(project.ontology))
 
         project_meta = {
             "project_title": project.title,
@@ -218,19 +217,17 @@ class CocoImporter:
         }
         if ssh_key_path:
             project_meta["ssh_key_path"] = ssh_key_path.as_posix()
-        meta_file_path = self.project_dir / "project_meta.yaml"
-        meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
+        project_file_structure.project_meta.write_text(yaml.dump(project_meta), encoding="utf-8")
 
         # attach builtin metrics to the project
         metrics_meta = fill_metrics_meta_with_builtin_metrics()
-        update_metrics_meta(self.project_dir, metrics_meta)
+        update_metrics_meta(project_file_structure, metrics_meta)
 
         id_to_obj = {obj.uid: obj for obj in ontology.structure.objects}
         id_shape_to_obj = {key: id_to_obj[id] for key, id in self.id_mappings.items()}
 
         label_row_meta = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
-        label_row_meta_file_path = self.project_dir / "label_row_meta.json"
-        label_row_meta_file_path.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
+        project_file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
         image_to_du = {}
 
@@ -240,7 +237,7 @@ class CocoImporter:
             image = self.images[str(image_id)]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
 
-        (Path(self.project_dir) / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
+        project_file_structure.image_data_unit.write_text(json.dumps(image_to_du))
 
         return project
 

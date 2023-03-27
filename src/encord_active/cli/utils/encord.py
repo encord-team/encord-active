@@ -11,6 +11,7 @@ from encord_active.lib.encord.utils import get_client, get_encord_projects
 from encord_active.lib.metrics.execute import run_metrics
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
@@ -57,6 +58,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
 
     project_path = target / project.title.replace(" ", "-")
     project_path.mkdir(exist_ok=True, parents=True)
+    project_file_structure = ProjectFileStructure(project_path)
 
     meta_data = {
         "project_title": project.title,
@@ -65,18 +67,16 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "ssh_key_path": ssh_key_path.as_posix(),
         "has_remote": True,
     }
-    meta_file_path = project_path / "project_meta.yaml"
     yaml_str = yaml.dump(meta_data)
-    with meta_file_path.open("w", encoding="utf-8") as f:
-        f.write(yaml_str)
+    project_file_structure.project_meta.write_text(yaml_str, encoding="utf-8")
 
     # attach builtin metrics to the project
     metrics_meta = fill_metrics_meta_with_builtin_metrics()
-    update_metrics_meta(project_path, metrics_meta)
+    update_metrics_meta(project_file_structure, metrics_meta)
 
     rich.print("Stored the following data:")
     rich.print(f"[magenta]{escape(yaml_str)}")
-    rich.print(f'In file: [blue]"{escape(meta_file_path.as_posix())}"')
+    rich.print(f'In file: [blue]"{escape(project_file_structure.project_meta.as_posix())}"')
     rich.print()
     rich.print("Now downloading data and running metrics")
 

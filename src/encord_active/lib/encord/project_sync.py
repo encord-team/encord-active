@@ -264,7 +264,7 @@ def copy_project_meta(
     project_meta["project_description"] = project_description
     project_meta["has_remote"] = False
     project_meta["project_hash"] = ""
-    target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta))
+    target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta), encoding="utf-8")
 
 
 def copy_image_data_unit_json(
