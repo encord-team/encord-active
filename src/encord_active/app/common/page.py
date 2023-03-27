@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import streamlit as st
 
-from encord_active.app.common.state import State, get_state
+from encord_active.app.common.state import PageGridSettings, State, get_state
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.metrics.utils import MetricScope
 
@@ -50,7 +50,7 @@ class Page(ABC):
                         "Columns",
                         min_value=2,
                         max_value=col_default_max,
-                        value=State.page_grid_settings.columns,
+                        value=PageGridSettings.columns,
                         help="Number of columns to show images in the main view",
                     )
                 )
@@ -71,7 +71,7 @@ class Page(ABC):
                         "Rows",
                         min_value=1,
                         max_value=row_default_max,
-                        value=State.page_grid_settings.rows,
+                        value=PageGridSettings.rows,
                         help="Number of rows to show images in the main view",
                     )
                 )
