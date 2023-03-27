@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 import shutil
+import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
@@ -22,6 +24,7 @@ import av
 import cv2
 import numpy as np
 import requests
+from encord.exceptions import EncordException, UnknownException
 from loguru import logger
 from shapely.errors import ShapelyDeprecationWarning
 from shapely.geometry import Polygon
@@ -420,3 +423,18 @@ def patch_sklearn_linalg(func):
         module_to_patch1.linalg, module_to_patch2.linalg = original_lin_alg1, original_lin_alg2
 
     return wrap
+
+
+def try_execute(func, num_tries, kwargs=None):
+    for n in range(num_tries):
+        try:
+            if kwargs:
+                return func(**kwargs)
+            else:
+                return func()
+        except (ConnectionError, ConnectionResetError, OSError, UnknownException, EncordException) as e:
+            logging.warning(
+                f"Handling {e} when executing {func} with args {kwargs}.\n" f" Trying again, attempt number {n + 1}."
+            )
+            time.sleep(0.5 * num_tries)  # linear backoff
+    raise Exception("Reached maximum number of execution attempts.")

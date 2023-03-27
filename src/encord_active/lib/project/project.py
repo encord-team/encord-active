@@ -20,6 +20,7 @@ from encord_active.lib.common.utils import (
     collect_async,
     download_file,
     slice_video_into_frames,
+    try_execute,
 )
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.project.metadata import fetch_project_meta
@@ -166,33 +167,10 @@ class Project:
         lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        label_rows = download_label_rows(encord_project, self.file_structure)
-        results = download_all_images(encord_project, label_rows, self.file_structure)
-
-        lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
-
-        if not lr_with_failed_images:
-            logger.info("Successfully downloaded all label row datas")
-            return
-
-        # NOTE: most likely the singed url have expired, we should refresh the label row and try again.
-        logger.warning(
-            f"Failed downloading datas for some the following label rows: {lr_with_failed_images}. \nRetrying..."
-        )
-        label_rows = download_label_rows(
-            self.encord_project,
-            self.file_structure,
-            filter_fn=lambda lr: lr["label_hash"] in lr_with_failed_images,
-            refresh=True,
-        )
-        results = download_all_images(encord_project, label_rows, self.file_structure)
-        lr_with_failed_images = {lr_hash for lr_hash, success in results.items() if success is False}
-
-        if not lr_with_failed_images:
-            logger.info("Successfully downloaded all label row datas")
-            return
-
-        logger.error("Retry didn't help. Skipping...")
+        keyed_label_rows = download_label_rows_and_data(encord_project, self.file_structure)
+        split_videos(keyed_label_rows, self.file_structure)
+        logger.info("Successfully downloaded all label row datas")
+        return
 
     def __load_label_rows(self):
         self.label_rows = {}
@@ -304,3 +282,78 @@ def download_all_images(
         lambda lr: lr.label_hash,
         desc="Collecting frames from label rows",
     )
+
+
+def download_label_rows_and_data(
+    project: EncordProject,
+    project_file_structure: ProjectFileStructure,
+    filter_fn: Optional[Callable[..., bool]] = lambda x: x["label_hash"] is not None,
+    subset_size: Optional[int] = None,
+    **kwargs,
+) -> Dict[str, LabelRow]:
+    label_rows = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
+
+    return collect_async(
+        partial(download_label_row_and_data, project=project, project_file_structure=project_file_structure, **kwargs),
+        label_rows,
+        lambda lr: lr["label_hash"],
+        desc="Collecting label rows and data from Encord SDK",
+    )
+
+
+def download_label_row_and_data(
+    lr, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
+) -> Optional[LabelRow]:
+    # TODO: Split this out into methods
+    label_hash = lr.get("label_hash")
+    if not label_hash:
+        return None
+
+    lr_structure = project_file_structure.label_row_structure(label_hash)
+    lr_structure.path.mkdir(parents=True, exist_ok=True)
+    if not refresh and lr_structure.label_row_file.is_file():
+        try:
+            return LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
+        except json.decoder.JSONDecodeError:
+            logging.warning(f"Could not decode row {label_hash} stored here {lr_structure.label_row_file}.")
+            # TODO: Filter this out when passing it to split videos
+            return None
+
+    lr = try_execute(project.get_label_row, 5, {"uid": label_hash})
+    lr_structure.label_row_file.write_text(json.dumps(lr, indent=2), encoding="utf-8")
+    # Data download
+    lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
+    data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
+
+    for du in data_units:
+        suffix = f".{du['data_type'].split('/')[1]}"
+        out_pth = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
+        try:
+            download_file(du["data_link"], out_pth)
+        except Exception as e:
+            logger.warning(e)
+            return lr
+    return lr
+
+
+def split_videos(
+    keyed_label_rows: Dict[str, LabelRow], project_file_structure: ProjectFileStructure
+) -> Dict[str, Optional[bool]]:
+    return collect_async(
+        partial(split_video, project_file_structure=project_file_structure),
+        keyed_label_rows.values(),
+        lambda lr: lr.label_hash,
+        desc="Splitting videos into frames.",
+    )
+
+
+def split_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
+    if label_row.data_type == "video":
+        lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
+        data_hash = list(label_row.data_units.keys())[0]
+        du = label_row.data_units[data_hash]
+        suffix = f".{du['data_type'].split('/')[1]}"
+        video_path = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
+        slice_video_into_frames(video_path)
+        return True
+    return False
