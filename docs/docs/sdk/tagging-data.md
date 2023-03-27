@@ -8,8 +8,6 @@ Tagging is done in two steps.
 1. Creating the tag.
 2. Tagging the data or labels.
 
-Below we describe how to do this with code.
-
 ## Creating Tags
 
 To create new tags, you follow this template:
@@ -38,9 +36,9 @@ tags.create_multiple([data_tag, label_tag])
 ```
 
 Note that there are two different scopes to which you can tag your data.
-One it the `TagScope.DATA` score which applies tags to the images them self.
-The second one it the `TagScope.LABEL`, which applies to individual labels.
-As such the `TagScope.LABEL` can be present multiple times in the same image if there are multiple labels with that tag.
+One is the `TagScope.DATA` scope which applies tags to the images.
+The second one is the `TagScope.LABEL`, which applies to individual labels.
+As such, the `TagScope.LABEL` can be present multiple times in the same image if there are multiple labels with that tag.
 
 ## Tagging Data
 
