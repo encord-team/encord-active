@@ -213,7 +213,7 @@ def download_label_row_and_data(
 
     lr_structure = project_file_structure.label_row_structure(label_hash)
     lr_structure.path.mkdir(parents=True, exist_ok=True)
-    if not refresh and lr_structure.label_row_file.is_file():
+    if not refresh and lr_structure.label_row_file.is_file() and lr_structure.images_dir.is_dir():
         try:
             return LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
         except json.decoder.JSONDecodeError:
