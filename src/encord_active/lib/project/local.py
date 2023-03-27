@@ -20,8 +20,7 @@ from encord_active.lib.labels.label_transformer import (
 )
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
-
-IMAGE_DATA_UNIT_FILENAME = "image_data_unit.json"
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 class NoFilesFoundError(Exception):
@@ -110,7 +109,7 @@ def init_local_project(
         dataset_hashes=[dataset.dataset_hash],
         ontology_hash=ontology.ontology_hash,
     )
-    project_dir = client.project_path
+    project_file_structure = ProjectFileStructure(project_path)
 
     project_meta = {
         "project_title": project.title,
@@ -118,16 +117,14 @@ def init_local_project(
         "project_hash": project.project_hash,
         "has_remote": False,
     }
-    meta_file_path = project_dir / "project_meta.yaml"
-    meta_file_path.write_text(yaml.dump(project_meta), encoding="utf-8")
+    project_file_structure.project_meta.write_text(yaml.dump(project_meta), encoding="utf-8")
 
     # attach builtin metrics to the project
     metrics_meta = fill_metrics_meta_with_builtin_metrics()
-    update_metrics_meta(project_path, metrics_meta)
+    update_metrics_meta(project_file_structure, metrics_meta)
 
     label_row_meta_collection = {lr.label_hash: handle_enum_and_datetime(lr) for lr in project.label_row_meta}
-    label_row_meta_file_path = project_dir / "label_row_meta.json"
-    label_row_meta_file_path.write_text(json.dumps(label_row_meta_collection, indent=2), encoding="utf-8")
+    project_file_structure.label_row_meta.write_text(json.dumps(label_row_meta_collection, indent=2), encoding="utf-8")
 
     image_to_du = {}
     for label_row_meta in tqdm(project.label_row_meta, desc="Constructing project"):
@@ -149,8 +146,7 @@ def init_local_project(
     for label_row in project.label_rows:
         project.save_label_row(label_row["label_hash"], label_row)
 
-    (project_dir / IMAGE_DATA_UNIT_FILENAME).write_text(json.dumps(image_to_du))
-    ontology_file = project_dir / "ontology.json"
-    ontology_file.write_text(json.dumps(project.ontology))
+    project_file_structure.image_data_unit.write_text(json.dumps(image_to_du))
+    project_file_structure.ontology.write_text(json.dumps(project.ontology))
 
     return project_path

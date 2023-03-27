@@ -43,7 +43,8 @@ def add_metrics(
     full_module_path = module_path.expanduser().resolve()
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
-    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
+    project_file_structure = ProjectFileStructure(target)
+    metrics_meta = fetch_metrics_meta(project_file_structure)
 
     add_all_metrics = len(metric_titles) == 0
     if add_all_metrics:
@@ -85,7 +86,7 @@ def add_metrics(
             has_conflicts = True
 
     # update metric dependencies in metrics_meta.json
-    update_metrics_meta(target, metrics_meta)
+    update_metrics_meta(project_file_structure, metrics_meta)
     if has_conflicts:
         rich.print("[yellow]Errors were found. Not all metrics were successfully added.[/yellow]")
     else:
@@ -120,7 +121,8 @@ def remove_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Remove metrics from the project."""
-    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
+    project_file_structure = ProjectFileStructure(target)
+    metrics_meta = fetch_metrics_meta(project_file_structure)
 
     for title in metric_title:
         if title in metrics_meta:
@@ -136,7 +138,7 @@ def remove_metrics(
             rich.print(f"[yellow]WARNING: Skipping {title} as it is not attached to the project.[/yellow]")
 
     # update metric dependencies in metrics_meta.json
-    update_metrics_meta(target, metrics_meta)
+    update_metrics_meta(project_file_structure, metrics_meta)
 
 
 @metric_cli.command(name="run", short_help="Run metrics.")
@@ -156,7 +158,8 @@ def run_metrics(
     from encord_active.lib.metrics.execute import execute_metrics
     from encord_active.lib.metrics.io import get_metrics
 
-    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
+    project_file_structure = ProjectFileStructure(target)
+    metrics_meta = fetch_metrics_meta(project_file_structure)
     metrics = get_metrics([(m_title, m_meta["location"]) for m_title, m_meta in metrics_meta.items()])
     if run_all:  # User chooses to run all available metrics
         selected_metrics = metrics
