@@ -353,32 +353,28 @@ def mask_to_polygon(mask: np.ndarray) -> Tuple[Optional[List[Any]], CocoBbox]:
     return None, (x, y, w, h)
 
 
-def collect_async(fn, job_args, key_fn, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
+def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
     """
     Distribute work across multiple workers. Good for, e.g., downloading data.
     Will return results in dictionary.
     :param fn: The function to be applied
     :param job_args: Arguments to `fn`.
-    :param key_fn: Function to determine dictionary key for the result (given the same input as `fn`).
     :param max_workers: Number of workers to distribute work over.
     :param kwargs: Arguments passed on to tqdm.
-    :return: Dictionary {key_fn(*job_args): fn(*job_args)}
+    :return: List [fn(*job_args)]
     """
     job_args = list(job_args)
     if not isinstance(job_args[0], tuple):
         job_args = [(j,) for j in job_args]
 
-    results = {}
+    results = []
     with tqdm(total=len(job_args), **kwargs) as pbar:
         with Executor(max_workers=max_workers) as exe:
-            jobs = {exe.submit(fn, *args): key_fn(*args) for args in job_args}
+            jobs = [exe.submit(fn, *args) for args in job_args]
             for job in as_completed(jobs):
-                key = jobs[job]
-
                 result = job.result()
                 if result is not None:
-                    results[key] = result
-
+                    results.append(result)
                 pbar.update(1)
     return results
 

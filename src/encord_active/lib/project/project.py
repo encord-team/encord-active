@@ -3,12 +3,10 @@ from __future__ import annotations
 import itertools
 import json
 import logging
-import re
 from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-import encord.exceptions
 import yaml
 from encord import Project as EncordProject
 from encord.objects.ontology_structure import OntologyStructure
@@ -167,8 +165,8 @@ class Project:
         lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        keyed_label_rows = download_label_rows_and_data(encord_project, self.file_structure)
-        split_videos(keyed_label_rows, self.file_structure)
+        label_rows = download_label_rows_and_data(encord_project, self.file_structure)
+        split_videos(label_rows, self.file_structure)
         logger.info("Successfully downloaded all label row datas")
         return
 
@@ -192,13 +190,12 @@ def download_label_rows_and_data(
     filter_fn: Optional[Callable[..., bool]] = lambda x: x["label_hash"] is not None,
     subset_size: Optional[int] = None,
     **kwargs,
-) -> Dict[str, LabelRow]:
+) -> List[LabelRow]:
     label_rows = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
 
     return collect_async(
         partial(download_label_row_and_data, project=project, project_file_structure=project_file_structure, **kwargs),
         label_rows,
-        lambda lr: lr["label_hash"],
         desc="Collecting label rows and data from Encord SDK",
     )
 
@@ -238,13 +235,10 @@ def download_label_row_and_data(
     return lr
 
 
-def split_videos(
-    keyed_label_rows: Dict[str, LabelRow], project_file_structure: ProjectFileStructure
-) -> Dict[str, Optional[bool]]:
+def split_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
     return collect_async(
         partial(split_video, project_file_structure=project_file_structure),
-        keyed_label_rows.values(),
-        lambda lr: lr.label_hash,
+        label_rows,
         desc="Splitting videos into frames.",
     )
 
