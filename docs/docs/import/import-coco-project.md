@@ -1,8 +1,8 @@
 ---
-sidebar_position: 5
+sidebar_position: 4
 ---
 
-# Importing COCO Project
+# Importing COCO project
 
 **Import a dataset and annotations which are stored in COCO format on your local file system.**
 

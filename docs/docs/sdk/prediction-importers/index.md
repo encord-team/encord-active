@@ -1,6 +1,6 @@
 import DocCardList from "@theme/DocCardList";
 
-# Importing Model Predictions
+# Model Predictions
 
 :::caution
 
