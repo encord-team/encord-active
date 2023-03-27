@@ -29,7 +29,7 @@ This will import the project into a subdirectory of `/path/to/store/project`.
 
 :::tip
 
-If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](../importing-data-and-labels).
+If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](./quick-import-data).
 
 :::
 
@@ -49,7 +49,7 @@ Next, the CLI will ask you what project to import based on all the projects you 
 You can type in a search word to find the project you want to import.
 Use the keyboard arrows to select your project and hit <kbd>enter</kbd>.
 
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/metrics) available in `encord-active`.
+Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/quality-metrics) available in `encord-active`.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [visualize](../../cli#visualize) CLI command.
 

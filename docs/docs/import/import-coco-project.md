@@ -38,7 +38,7 @@ You can provide any path to each of the arguments as long as the first one is a 
 Running the importer will do the following things.
 
 1. Create a local Encord Active project.
-2. Compute all the [metrics](/category/metrics).
+2. Compute all the [metrics](/category/quality-metrics).
 
 :::info
 
@@ -56,10 +56,10 @@ to tell Encord Active to use symlinks instead of copying files. But be aware tha
 The whole flow might take a while depending on the size of your dataset.
 Bare with us, it is worth the wait.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./open-encord-active) page.
+When the process is done, follow the printed instructions to open the app or see more details [here](../cli#visualize).
 
 :::info
 
-If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](../../pages/export/filter_export#export-to-encord).
+If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](../user-guide/filter_export#export-to-encord).
 
 :::

@@ -52,8 +52,6 @@ run_metrics_by_embedding_type(EmbeddingType.OBJECT, **options)
 run_metrics_by_embedding_type(EmbeddingType.CLASSIFICATION, **options)
 ```
 
-[metrics-run-cli-docs]: ../cli/metric-management#metric-run
-
 ## Running Custom Metrics
 
 If you have already [written a custom metric][write-custom-metric] - let's call it `SuperMetric`, then you can execute it on a projects with the following code:
@@ -76,4 +74,5 @@ The CLI also has a way to [registering metrics][cli-metric-add] to the project t
 :::
 
 [write-custom-metric]: ../metrics/write-your-own
-[cli-metric-add]: ../cli/metric-management#metric-add
+[cli-metric-add]: ../cli#add
+[metrics-run-cli-docs]: ../cli#run

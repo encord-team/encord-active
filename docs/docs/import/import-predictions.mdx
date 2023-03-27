@@ -25,7 +25,7 @@ Just note that when specifying the `class_id` for a prediction, Encord Active ex
 
 :::tip
 
-In the [SDK section](../sdk/importing-model-predictions), you will also find ways to import predictions directly from your [prediction loop](../sdk/importing-model-predictions#predictions-from-your-prediction-loop), [KITTI files](../sdk/importing-model-predictions#predictions-from-kitti-files), and [directories containing mask files](../sdk/importing-model-predictions#predictions-from-masks).
+In the [SDK section](../sdk/prediction-import), you will also find ways to import predictions [KITTI files](../sdk/prediction-import/kitti) and [directories containing mask files](../sdk/prediction-import/masks).
 
 :::
 
@@ -332,7 +332,7 @@ Make sure you have installed Encord Active with the `coco` [extras](../installat
 :::
 
 :::note
-This command assume that you have imported you project using the [COCO importer](../cli/import-coco-project) and you are inside the projects directory.
+This command assume that you have imported you project using the [COCO importer](../cli#project) and you are inside the projects directory.
 :::
 
 Importing COCO predictions is currently the easiest way to import predictions to Encord Active.
@@ -343,4 +343,4 @@ You need to have a results JSON file following the [COCO results format](https:/
 encord-active import predictions --coco results.json
 ```
 
-After the execution is done you should be ready to view your [model quality metrics](/category/model-quality).
+After the execution is done, you should be ready to [evaluate your model performance](../workflows/evaluate-detection-model).

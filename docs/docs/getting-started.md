@@ -9,7 +9,7 @@ import Link from '@docusaurus/Link';
 # Getting Started
 
 **Encord Active** is an open-source active learning tookit that helps you visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
-**Encord Active** is open-source and accesible as Python library on GitHub. 
+**Encord Active** is open-source and accesible as Python library on GitHub.
 
 ## Install Encord Active
 
@@ -98,11 +98,11 @@ cd /path/to/project
 encord-active visualise
 ```
 
-You can find more details on the `init` command in the [CLI section](./cli/initialising-project-from-image-directories).
+You can find more details on the `init` command in the [CLI section](./cli#init).
 
 ## Import an Encord Project
 
-If you are an Encord user, you can directly [import](./cli/import-encord-project) your own projects into Encord Active easily.
+If you are an Encord user, you can directly [import](./cli#project) your own projects into Encord Active easily.
 
 ```shell
 # within venv
@@ -112,9 +112,9 @@ encord-active import project
 This will import your encord project to a new directory in your current working directory.
 If you don't have an Encord project ready, you can either
 
-1. [Initialise a project from a local data directory](./cli/initialising-project-from-image-directories)
-2. [Migrating data and labels to Encord](./sdk/migrating-data) before calling this command
-3. [Download one of our sandbox datasets](./cli/download-sandbox-data)
+1. [Initialise a project from a local data directory](./cli#init)
+2. [Import a project from COCO](./import/import-coco-project)
+3. [Download one of our sandbox datasets](./cli#download)
 
 :::info
 
@@ -134,11 +134,11 @@ Next, `encord-active` will fetch your data and labels before computing all the [
 Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./cli/open-encord-active) page.
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./cli#visualize) page.
 
 ## Running the App
 
-To run the Encord Active app, you need to `cd` into the directory that was created by one of the previous commands and run the following command:
+To run the Encord Active app, run the following command:
 
 ```shell
 # within venv
@@ -163,7 +163,7 @@ A couple of example references are:
 2. Find outliers in your [data](./workflows/identify-outliers-edge-cases) or your [labels](./workflows/identify-outliers-edge-cases)
 3. [Identify metrics](./workflows/evaluate-detection-model) that are important for your model performance
 
-You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](/cli).
+You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](./cli).
 
 ### Need Support?
 
