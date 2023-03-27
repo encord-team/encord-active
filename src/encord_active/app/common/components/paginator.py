@@ -19,3 +19,9 @@ def render_pagination(df: pd.DataFrame, n_cols: int, n_rows: int, sort_key: str)
     sorted_subset = df.sort_values(by=sort_key, ascending=sorting_order == "Ascending")
     paginated_subset = sorted_subset[low_lim:high_lim]
     return paginated_subset
+
+
+def paginate_df(df: pd.DataFrame, page_number: int, n_items: int):
+    low_lim = (page_number - 1) * n_items
+    high_lim = page_number * n_items
+    return df[low_lim:high_lim]

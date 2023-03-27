@@ -26,36 +26,30 @@ def on_tag_entered(all_tags: List[Tag], name: str, scope: TagScope):
 
 
 def tag_creator():
-    with st.sidebar:
-        st.markdown("<hr/>", unsafe_allow_html=True)
-        st.markdown("### Tags", unsafe_allow_html=True)
+    all_tags = Tags().all()
+    get_state().all_tags = all_tags
 
-        # Show message after on change.
-        if "new_tag_message" in st.session_state:
-            st.info(st.session_state.new_tag_message)
-            del st.session_state.new_tag_message
+    form_col, tags_count_col = st.columns(2)
 
-        all_tags = Tags().all()
-        get_state().all_tags = all_tags
+    with form_col.form("tag_creation_form", clear_on_submit=False):
+        left, right = st.columns(2)
+        name = st.text_input(
+            "Tag name",
+            label_visibility="collapsed",
+            placeholder="Enter new tag",
+        ).strip()
+        scope = left.radio(
+            "Scope",
+            [a.value for a in TagScope],
+            label_visibility="collapsed",
+            format_func=lambda x: f"{SCOPE_EMOJI[x]} {x}",
+        )
+        submitted = right.form_submit_button("Submit")
 
-        with st.form("tag_creation_form", clear_on_submit=False):
-            left, right = st.columns([2, 1])
-            name = st.text_input(
-                "Tag name",
-                label_visibility="collapsed",
-                placeholder="Enter new tag",
-            ).strip()
-            scope = left.radio(
-                "Scope",
-                [a.value for a in TagScope],
-                label_visibility="collapsed",
-                format_func=lambda x: f"{SCOPE_EMOJI[x]} {x}",
-            )
-            submitted = right.form_submit_button("Submit")
+        if submitted and scope and name:
+            on_tag_entered(all_tags, name, scope)
 
-            if submitted and scope and name:
-                on_tag_entered(all_tags, name, scope)
-
+    with tags_count_col:
         tag_display_with_counts()
 
 

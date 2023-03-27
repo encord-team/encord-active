@@ -7,7 +7,6 @@ from encord_active.app.common.components.metric_summary import (
     render_label_quality_dashboard,
     render_metric_summary,
 )
-from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
 from encord_active.lib.dataset.outliers import MetricWithDistanceSchema
@@ -24,7 +23,6 @@ class SummaryPage(Page):
 
     def sidebar_options(self, metric_scope: MetricScope):
         self.display_settings(metric_scope)
-        tag_creator()
 
     def build(self, metrics: List[MetricData], metric_scope: MetricScope):
         if metric_scope == MetricScope.DATA_QUALITY:
