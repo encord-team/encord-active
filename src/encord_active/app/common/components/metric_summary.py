@@ -137,7 +137,7 @@ def render_data_quality_dashboard(
     metrics: List[MetricData], severe_outlier_color: str, moderate_outlier_color: str, background_color: str
 ):
     if get_state().image_sizes is None:
-        get_state().image_sizes = get_all_image_sizes(get_state().project_paths.project_dir)
+        get_state().image_sizes = get_all_image_sizes(get_state().project_paths)
     median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
 
     if get_state().metrics_data_summary is None:
@@ -328,7 +328,7 @@ def render_metric_summary(
 
 
 def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers, metric_scope: MetricScope):
-    image = show_image_and_draw_polygons(row, get_state().project_paths.data, get_state().object_drawing_configurations)
+    image = show_image_and_draw_polygons(row, get_state().project_paths, get_state().object_drawing_configurations)
     st.image(image)
 
     multiselect_tag(row, f"{metric_name}_summary")

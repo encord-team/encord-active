@@ -1,6 +1,5 @@
 import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
@@ -16,6 +15,11 @@ from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
+from encord_active.lib.project import (
+    DataUnitStructure,
+    LabelRowStructure,
+    ProjectFileStructure,
+)
 
 
 @dataclass
@@ -96,7 +100,7 @@ def draw_object(
 def show_image_with_predictions_and_label(
     label: pd.Series,
     predictions: DataFrame[PredictionMatchSchema],
-    data_dir: Path,
+    project_file_structure: ProjectFileStructure,
     draw_configurations: Optional[ObjectDrawingConfigurations] = None,
     label_color: Color = Color.RED,
     class_colors: Optional[Dict[int, str]] = None,
@@ -109,12 +113,12 @@ def show_image_with_predictions_and_label(
 
     :param label: The csv row of the false-negative label to display (from a LabelSchema).
     :param predictions: All the predictions on the same image with the samme predicted class (from a PredictionSchema).
-    :param data_dir: The data directory of the project
+    :param project_file_structure: The directory of the project
     :param label_color: The hex color to use when drawing the prediction.
     :param class_colors: Dict of [class_id, hex_color] pairs.
     """
     class_colors = class_colors or {}
-    image = load_or_fill_image(label, data_dir)
+    image = load_or_fill_image(label, project_file_structure)
 
     for _, pred in predictions.iterrows():
         color = class_colors.get(pred["class_id"], Color.PURPLE)
@@ -125,45 +129,48 @@ def show_image_with_predictions_and_label(
 
 def show_image_and_draw_polygons(
     row: Union[Series, str],
-    data_dir: Path,
+    project_file_structure: ProjectFileStructure,
     draw_configurations: Optional[ObjectDrawingConfigurations] = None,
     skip_object_hash: bool = False,
 ) -> np.ndarray:
-    image = load_or_fill_image(row, data_dir)
+    image = load_or_fill_image(row, project_file_structure)
 
     if draw_configurations is None:
         draw_configurations = ObjectDrawingConfigurations()
 
     if draw_configurations.draw_objects:
         img_h, img_w = image.shape[:2]
-        for color, geometry in get_geometries(row, img_h, img_w, data_dir, skip_object_hash=skip_object_hash):
+        for color, geometry in get_geometries(
+            row, img_h, img_w, project_file_structure, skip_object_hash=skip_object_hash
+        ):
             image = draw_object_with_background_color(image, geometry, color, draw_configurations)
     return image
 
 
-def load_or_fill_image(row: Union[pd.Series, str], data_dir: Path) -> np.ndarray:
+def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: ProjectFileStructure) -> np.ndarray:
     """
-    Tries to read the infered image path. If not possible, generates a white image
-    and indicates what the error seemd to be embedded in the image.
+    Tries to read the inferred image path. If not possible, generates a white image
+    and indicates what the error seemed to be embedded in the image.
     :param row: A csv row from either a metric, a prediction, or a label csv file.
     :return: Numpy / cv2 image.
     """
     key = __get_key(row)
 
-    img_pth: Optional[Path] = key_to_image_path(key, data_dir)
+    img_du: Optional[DataUnitStructure] = key_to_data_unit(key, project_file_structure)
 
-    if img_pth and img_pth.is_file():
+    if img_du and img_du.path.is_file():
         try:
-            image = cv2.imread(img_pth.as_posix())
+            image = cv2.imread(img_du.path.as_posix())
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception:
             pass
 
     # Read not successful, so tell the user why
-    error_text = "Image not found" if not img_pth else "File seems broken"
+    error_text = "Image not found" if not img_du else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
-    lr = json.loads(key_to_lr_path(key, data_dir).read_text(encoding="utf-8"))
+    label_row_structure = key_to_label_row_structure(key, project_file_structure)
+    lr = json.loads(label_row_structure.label_row_file.read_text())
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 
@@ -235,7 +242,11 @@ def __to_absolute_points(bounding_box: BoundingBox, height: int, width: int):
 
 
 def get_geometries(
-    row: Union[pd.Series, str], img_h: int, img_w: int, data_dir: Path, skip_object_hash: bool = False
+    row: Union[pd.Series, str],
+    img_h: int,
+    img_w: int,
+    project_file_structure: ProjectFileStructure,
+    skip_object_hash: bool = False,
 ) -> List[Tuple[str, np.ndarray]]:
     """
     Loads cached label row and computes geometries from the label row.
@@ -247,10 +258,8 @@ def get_geometries(
     key = __get_key(row)
     _, du_hash, frame, *remainder = key.split("_")
 
-    lr_pth = key_to_lr_path(key, data_dir)
-    with lr_pth.open("r") as f:
-        label_row = json.load(f)
-
+    label_row_structure = key_to_label_row_structure(key, project_file_structure)
+    label_row = json.loads(label_row_structure.label_row_file.read_text())
     du = label_row["data_units"][du_hash]
 
     geometries = []
@@ -277,22 +286,22 @@ def get_geometries(
     return valid_geometries
 
 
-def key_to_lr_path(key: str, data_dir: Path) -> Path:
+def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStructure) -> LabelRowStructure:
     label_hash, *_ = key.split("_")
-    return data_dir / label_hash / "label_row.json"
+    return project_file_structure.label_row_structure(label_hash)
 
 
-def key_to_image_path(key: str, data_dir: Path) -> Optional[Path]:
+def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure) -> Optional[DataUnitStructure]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
     :return: The associated image path if it exists or a path to a placeholder otherwise
     """
     label_hash, du_hash, frame, *_ = key.split("_")
-    img_folder = data_dir / label_hash / "images"
+    label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_pth = next(img_folder.glob(f"{du_hash}_{int(frame)}.*"), None)
-    if frame_pth is not None:
-        return frame_pth
-    return next(img_folder.glob(f"{du_hash}.*"), None)  # So this is an img_group image
+    frame_du: Optional[DataUnitStructure] = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    if frame_du is not None:
+        return frame_du
+    return next(label_row_structure.iter_data_unit(du_hash), None)  # So this is an img_group image

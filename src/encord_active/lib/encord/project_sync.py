@@ -10,6 +10,7 @@ import yaml
 from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tags
 from encord_active.lib.embeddings.utils import (
     EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
@@ -24,24 +25,6 @@ from encord_active.lib.project.metadata import fetch_project_meta
 class LabelRowDataUnit(NamedTuple):
     label_row: str
     data_unit: str
-
-
-def rename_files(project_file_structure: ProjectFileStructure, file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit]):
-    folder_maps = {old_lr: new_lr for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
-    file_maps = {old_du: new_du for (old_lr, old_du), (new_lr, new_du) in file_mappings.items()}
-
-    for old_lr, new_lr in folder_maps.items():
-        old_lr_path = project_file_structure.data / old_lr
-        new_lr_path = project_file_structure.data / new_lr
-        old_lr_path.rename(new_lr_path)
-
-    for _, new_lr in folder_maps.items():
-        new_lr_path = project_file_structure.data / new_lr
-        for old_du_f in new_lr_path.glob("images/*.*"):
-            old_du_name_parts = old_du_f.stem.split("_")
-            old_du_name_parts[0] = file_maps.get(old_du_name_parts[0], old_du_name_parts[0])
-            new_f_name = "_".join(old_du_name_parts) + old_du_f.suffix
-            old_du_f.rename(new_lr_path / "images" / new_f_name)
 
 
 def update_embedding_identifiers(
@@ -101,19 +84,21 @@ def replace_uids(
         renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
 
     try:
-        _replace_uids(project_file_structure, file_mappings, renaming_map)
+        _replace_uids(project_file_structure, renaming_map)
     except Exception as e:
         rev_renaming_map = {v: k for k, v in renaming_map.items()}
-        _replace_uids(project_file_structure, {v: k for k, v in file_mappings.items()}, rev_renaming_map)
+        _replace_uids(project_file_structure, rev_renaming_map)
         raise Exception("UID replacement failed")
 
 
 def _replace_uids(
     project_file_structure: ProjectFileStructure,
-    file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit],
     renaming_map: dict[str, str],
 ):
-    rename_files(project_file_structure, file_mappings)
+    original_mappings = {}
+    if project_file_structure.mappings.is_file():
+        original_mappings = json.loads(project_file_structure.mappings.read_text())
+
     replace_in_files(project_file_structure, renaming_map)
     perform_db_fn_with_switched_paths(
         project_file_structure.project_dir, lambda: MergedMetrics().replace_identifiers(renaming_map)
@@ -121,6 +106,12 @@ def _replace_uids(
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
         update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
+
+    if original_mappings:
+        new_mappings = {renaming_map[k]: v for k, v in original_mappings.items()}
+    else:
+        new_mappings = {v: k for k, v in renaming_map.items()}
+    project_file_structure.mappings.write_text(json.dumps(new_mappings))
 
 
 def create_filtered_embeddings(
@@ -144,7 +135,7 @@ def create_filtered_embeddings(
 
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         embedding_file_name = EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
-        if not Path(curr_project_structure.embeddings / embedding_file_name).exists():
+        if not (curr_project_structure.embeddings / embedding_file_name).exists():
             continue
         embeddings = pickle.loads(Path(curr_project_structure.embeddings / embedding_file_name).read_bytes())
         embeddings_df = pd.DataFrame.from_dict(embeddings)
@@ -171,19 +162,32 @@ def copy_filtered_data(
     filtered_labels: set[tuple[str, str, str]],
 ):
     target_project_structure.data.mkdir(parents=True, exist_ok=True)
-    for label_row_hash in filtered_label_rows:
-        if not (curr_project_structure.data / label_row_hash).is_dir():
-            continue
-        (target_project_structure.data / label_row_hash / "images").mkdir(parents=True, exist_ok=True)
-        for curr_file in (curr_project_structure.data / label_row_hash / "images").glob("*.*"):
-            curr_data_unit = curr_file.stem.split("_")[0]
-            if (
-                curr_data_unit in filtered_data_hashes
-                and not (target_project_structure.data / label_row_hash / "images" / curr_file.name).exists()
-            ):
-                (target_project_structure.data / label_row_hash / "images" / curr_file.name).symlink_to(curr_file)
 
-        label_row = json.loads((curr_project_structure.data / label_row_hash / "label_row.json").read_text())
+    filtered_hash_mappings = {}
+    if curr_project_structure.mappings.is_file():
+        hash_mappings = json.loads(curr_project_structure.mappings.read_text())
+        filtered_hash_mappings = {
+            k: v for k, v in hash_mappings.items() if k in filtered_label_rows or k in filtered_data_hashes
+        }
+        target_project_structure.mappings.write_text(json.dumps(filtered_hash_mappings))
+        target_project_structure = ProjectFileStructure(
+            target_project_structure.project_dir
+        )  # Recreate object to reload mappings
+
+    for label_row_hash in filtered_label_rows:
+        current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
+        if not current_label_row_structure.is_present():
+            continue
+        target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
+        target_label_row_structure.images_dir.mkdir(parents=True, exist_ok=True)
+        for data_unit in current_label_row_structure.iter_data_unit():
+            if (
+                data_unit.hash in filtered_data_hashes
+                and not (target_label_row_structure.images_dir / data_unit.path.name).exists()
+            ):
+                (target_label_row_structure.images_dir / data_unit.path.name).symlink_to(data_unit.path)
+
+        label_row = json.loads(current_label_row_structure.label_row_file.read_text())
         label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
 
         for data_unit_hash, v in label_row["data_units"].items():
@@ -212,12 +216,14 @@ def copy_filtered_data(
         label_row["classification_answers"] = {
             k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
         }
-        (target_project_structure.data / label_row_hash / "label_row.json").write_text(json.dumps(label_row))
+        target_label_row_structure.label_row_file.write_text(json.dumps(label_row))
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     to_save_df = filtered_df.set_index("identifier")
     perform_db_fn_with_switched_paths(target_project_dir, lambda: MergedMetrics().replace_all(to_save_df))
+    all_tags = Tags().all()
+    perform_db_fn_with_switched_paths(target_project_dir, lambda: Tags().create_many(all_tags))
 
 
 def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):

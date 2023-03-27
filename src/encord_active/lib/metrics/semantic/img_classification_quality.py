@@ -287,20 +287,21 @@ class ImageLevelQualityTest(Metric):
                         if question_featureHash not in self.featureNodeHash_to_question_name:
                             continue
 
-                        classification_hash = classification["classificationHash"]
-                        classification_info = key_score_pairs[key][question_featureHash]
-
-                        label_class = f"{classification_info['answer']}"
-                        if is_multiclass:
-                            label_class = f"{classification_info['question']}:{label_class}"
-
                         if question_featureHash in key_score_pairs[key]:
-                            writer.write(
-                                key_score_pairs[key][question_featureHash]["score"],
-                                key=f"{key}_{classification_hash}",
-                                description=classification_info["description"],
-                                label_class=label_class,
-                                labels=classification,
-                            )
+                            classification_hash = classification["classificationHash"]
+                            classification_info = key_score_pairs[key][question_featureHash]
+
+                            label_class = f"{classification_info['answer']}"
+                            if is_multiclass:
+                                label_class = f"{classification_info['question']}:{label_class}"
+
+                            if question_featureHash in key_score_pairs[key]:
+                                writer.write(
+                                    key_score_pairs[key][question_featureHash]["score"],
+                                    key=f"{key}_{classification_hash}",
+                                    description=classification_info["description"],
+                                    label_class=label_class,
+                                    labels=classification,
+                                )
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")

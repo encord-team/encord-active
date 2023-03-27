@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
@@ -27,12 +26,13 @@ from encord_active.lib.model_predictions.reader import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )
+from encord_active.lib.project import ProjectFileStructure
 
 
 def build_card_for_labels(
     label: pd.Series,
     predictions: DataFrame[PredictionMatchSchema],
-    data_dir: Path,
+    project_file_structure: ProjectFileStructure,
     label_color: Color = Color.RED,
 ):
     class_colors = {
@@ -42,7 +42,7 @@ def build_card_for_labels(
     image = show_image_with_predictions_and_label(
         label,
         predictions,
-        data_dir,
+        project_file_structure,
         label_color=label_color,
         class_colors=class_colors,
         draw_configurations=get_state().object_drawing_configurations,
@@ -57,9 +57,9 @@ def build_card_for_labels(
     build_data_tags(label, get_state().predictions.metric_datas.selected_label)
 
 
-def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.GREEN):
+def build_card_for_predictions(row: pd.Series, project_file_structure: ProjectFileStructure, box_color=Color.GREEN):
     conf = get_state().object_drawing_configurations
-    image = show_image_and_draw_polygons(row, data_dir, draw_configurations=conf, skip_object_hash=True)
+    image = show_image_and_draw_polygons(row, project_file_structure, draw_configurations=conf, skip_object_hash=True)
     image = draw_object(image, row, draw_configuration=conf, color=box_color, with_box=True)
     st.image(image)
     multiselect_tag(row, "metric_view", is_predictions=True)
@@ -74,17 +74,17 @@ def build_card_for_predictions(row: pd.Series, data_dir: Path, box_color=Color.G
 def build_card(
     row: pd.Series,
     predictions: Optional[DataFrame[PredictionMatchSchema]],
-    data_dir: Path,
+    project_file_structure: ProjectFileStructure,
     box_color: Color = Color.GREEN,
 ):
     if predictions is not None:
-        build_card_for_labels(row, predictions, data_dir, box_color)
+        build_card_for_labels(row, predictions, project_file_structure, box_color)
     else:
-        build_card_for_predictions(row, data_dir, box_color)
+        build_card_for_predictions(row, project_file_structure, box_color)
 
 
-def build_card_classifications(row: pd.Series, data_dir: Path):
-    image = show_image_and_draw_polygons(row, data_dir)
+def build_card_classifications(row: pd.Series, project_file_structure: ProjectFileStructure):
+    image = show_image_and_draw_polygons(row, project_file_structure)
     st.image(image)
     multiselect_tag(row, "metric_view_classification", is_predictions=True)
     build_data_tags(row, get_state().predictions.metric_datas_classification.selected_prediction)
@@ -94,7 +94,7 @@ def build_card_classifications(row: pd.Series, data_dir: Path):
 
 
 def prediction_grid(
-    data_dir: Path,
+    project_file_structure: ProjectFileStructure,
     model_predictions: DataFrame[PredictionMatchSchema],
     labels: Optional[DataFrame[LabelMatchSchema]] = None,
     box_color: Color = Color.GREEN,
@@ -134,11 +134,12 @@ def prediction_grid(
                     divider()
                 cols = list(st.columns(n_cols))
             with cols.pop(0):
-                build_card(row, frame_additionals, data_dir, box_color=box_color)
+                build_card(row, frame_additionals, project_file_structure, box_color=box_color)
 
 
 def prediction_grid_classifications(
-    data_dir: Path, model_predictions: DataFrame[ClassificationPredictionMatchSchemaWithClassNames]
+    project_file_structure: ProjectFileStructure,
+    model_predictions: DataFrame[ClassificationPredictionMatchSchemaWithClassNames],
 ):
     df = model_predictions
     selected_metric = get_state().predictions.metric_datas_classification.selected_prediction or ""
@@ -162,4 +163,4 @@ def prediction_grid_classifications(
                     divider()
                 cols = list(st.columns(n_cols))
             with cols.pop(0):
-                build_card_classifications(row, data_dir)
+                build_card_classifications(row, project_file_structure)
