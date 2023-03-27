@@ -91,7 +91,9 @@ class MergedMetrics(object):
     @ensure_initialised
     def get_row(self, id: str):
         with DBConnection() as conn:
-            return pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", conn)
+            r = pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", conn)
+            r.tags = r.tags.apply(unmarshall_tags)
+            return r
 
     @ensure_initialised
     def update_tags(self, id: str, tags: List[Tag]):

@@ -1,8 +1,8 @@
 ---
-sidebar_position: 4
+sidebar_position: 3
 ---
 
-# Importing Encord Project
+# Importing Encord project
 
 **For projects already in the Encord Annotate platform.**
 
