@@ -37,7 +37,7 @@ def get_data_sample(project_fs: ProjectFileStructure, data_hash: tuple[str, str]
     class_label = get_classification_label(label_row, du_hash, class_name=class_name)
 
     # get image path
-    image_path = lr_struct.images_dir / f"{du_hash}.{label_row['data_units'][du_hash]['data_type'].split('/')[-1]}"
+    image_path = next(du_struct.path for du_struct in lr_struct.iter_data_unit(du_hash))
 
     return image_path, class_label
 
