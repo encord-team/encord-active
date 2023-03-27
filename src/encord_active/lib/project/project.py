@@ -201,9 +201,9 @@ def download_label_rows_and_data(
 
 
 def download_label_row_and_data(
-    lr, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
+    label_row: LabelRow, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
 ) -> Optional[LabelRow]:
-    label_hash = lr.get("label_hash")
+    label_hash = label_row.get("label_hash")
     if not label_hash:
         return None
 
@@ -215,17 +215,17 @@ def download_label_row_and_data(
         except json.decoder.JSONDecodeError:
             logging.warning(f"Could not decode row {label_hash} stored here {lr_structure.label_row_file}.")
             return None
+    label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
+    lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
 
-    lr = try_execute(project.get_label_row, 5, {"uid": label_hash})
-    lr_structure.label_row_file.write_text(json.dumps(lr, indent=2), encoding="utf-8")
     # Download the data units
     lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
-    data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
+    data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
-    return lr
+    return label_row
 
 
 def split_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
