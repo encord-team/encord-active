@@ -47,11 +47,11 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
     title = "Classification"
 
     class OutcomeType(str, Enum):
-        TRUE_POSITIVES = "True Positive"
-        FALSE_POSITIVES = "False Positive"
+        CORRECT_CLASSIFICATIONS = "Correct Classifications"
+        MISCLASSIFICATIONS = "Misclassifications"
 
     def __init__(self):
-        self._explorer_outcome_type = self.OutcomeType.TRUE_POSITIVES
+        self._explorer_outcome_type = self.OutcomeType.CORRECT_CLASSIFICATIONS
         self._labels: Optional[List] = None
         self._predictions: Optional[List] = None
         self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
@@ -229,7 +229,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
     def render_explorer(self):
         with st.expander("Details"):
-            if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
+            if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS:
                 view_text = "These are the predictions where the model correctly predicts the true class."
             else:
                 view_text = "These are the predictions where the model incorrectly predicts the positive class."
@@ -247,7 +247,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             st.error("No prediction metric selected")
             return
 
-        if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
+        if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS:
             view_df = self._model_predictions[
                 self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 1.0
             ].dropna(subset=[metric_name])

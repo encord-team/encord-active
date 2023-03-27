@@ -32,7 +32,7 @@ def model_quality(page_mode: ModelQualityPage):
             return
 
         tab_names = [m.title for m in available_predictions]
-        tabs = st.tabs(tab_names)
+        tabs = st.tabs(tab_names) if len(available_predictions) > 1 else [st.container()]
 
         for tab, builder in zip(tabs, available_predictions):
             with tab:
