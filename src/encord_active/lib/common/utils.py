@@ -390,7 +390,7 @@ def download_file(
     r = requests.get(url, stream=True)
 
     if r.status_code != 200:
-        raise Exception(f"Something happened, couldn't download file from: {url}")
+        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
     with destination.open("wb") as f:
         for chunk in r.iter_content(chunk_size=byte_size):

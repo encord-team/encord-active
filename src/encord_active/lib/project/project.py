@@ -203,7 +203,6 @@ def download_label_rows_and_data(
 def download_label_row_and_data(
     lr, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
 ) -> Optional[LabelRow]:
-    # TODO: Split this out into methods
     label_hash = lr.get("label_hash")
     if not label_hash:
         return None
@@ -219,18 +218,13 @@ def download_label_row_and_data(
 
     lr = try_execute(project.get_label_row, 5, {"uid": label_hash})
     lr_structure.label_row_file.write_text(json.dumps(lr, indent=2), encoding="utf-8")
-    # Data download
+    # Download the data units
     lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     data_units = sorted(lr.data_units.values(), key=lambda du: int(du["data_sequence"]))
-
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
-        out_pth = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        try:
-            download_file(du["data_link"], out_pth)
-        except Exception as e:
-            logger.warning(e)
-            return lr
+        destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
+        try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
     return lr
 
 
