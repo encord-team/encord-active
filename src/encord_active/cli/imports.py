@@ -10,7 +10,7 @@ from rich.panel import Panel
 
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
-from encord_active.cli.utils.prints import success_with_visualise_command
+from encord_active.cli.utils.prints import success_with_vizualise_command
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -141,4 +141,4 @@ def import_project(
 
         project_path = import_encord_project(ssh_key_path, target, encord_project_hash)
 
-    success_with_visualise_command(project_path, "The data is downloaded and the metrics are complete.")
+    success_with_vizualise_command(project_path, "The data is downloaded and the metrics are complete.")

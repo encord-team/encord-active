@@ -5,13 +5,13 @@ from rich.markup import escape
 from rich.panel import Panel
 
 
-def success_with_visualise_command(
+def success_with_vizualise_command(
     project_path: Path, success_text: str = "The data is downloaded and the metrics are complete."
 ):
     cwd = Path.cwd()
     cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
-    commands = "[cyan]encord-active visualise[/cyan]"
+    commands = "[cyan]encord-active visualize[/cyan]"
     if cd_dir.resolve() != cwd.resolve():
         commands = f"[cyan]cd {escape(cd_dir.as_posix())}[/cyan]\n{commands}"
 

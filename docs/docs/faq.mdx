@@ -7,8 +7,8 @@ title: FAQ
 
 You can.
 Encord Active is an open source project aimed to support all computer vision based active learning projects.
-You can, for example, use the [`init`](./cli/initialising-project-from-image-directories) command to initialize a project from an image directory.
-You can also [import a COCO project](./cli/import-coco-project).
+You can, for example, use the [`init`](./cli#init) command to initialize a project from an image directory.
+You can also [import a COCO project](./import/import-coco-project).
 
 The [Importing Data and Labels][importing-data] is a great resource for more information on your possibilities.
 
@@ -46,7 +46,7 @@ In fact, the power lies in defining your own quality metrics for indexing your d
 ## How do I import my model predictions?
 
 You build a list of `encord_active.lib.db.Prediction` objects, store them in a pickle file and run `encord-active import predictions /path/to/your/file.pkl`.
-Here is the [workflow description](./workflows/import-predictions) for importing model predictions.
+Here is the [workflow description](/import/import-predictions) for importing model predictions.
 
 ---
 
@@ -135,7 +135,7 @@ Next, run `git add .; git commit -am "Initial commit"`.
 
 ## What is the tagging feature?
 
-Throughout the [Data Quality][data-quality-page], [Label Quality][label-quality-page], and [Model Quality][model-quality-page] pages, you can tag your data.
+Throughout the Data Quality, Label Quality, and Model Quality pages, you can tag your data.
 There are two different levels at which you can tag data; the data level which applies to the raw images/video frames and the label level which applies to the classifications and objects associated to each image.
 
 You can use the tags to, e.g., [filter and export][filter-and-export] your data for further processing like re-labeling, training models, or inspecting model performance based on a specific subset of your data.
@@ -188,19 +188,16 @@ Get in touch with us on [slack][join-slack] or shoot us an [email][ea-email] and
 
 We would also love if you wouldn't mind [reporting an issue][report-issue] on GitHub.
 
-[data-quality-page]: category/data-quality
-[label-quality-page]: category/label-quality
-[model-quality-page]: category/model-quality
 [ea-app]: https://github.com/encord-team/encord-active/tree/main/src/encord_active/app
 [ea-examples]: https://github.com/encord-team/encord-active/tree/main/examples
 [ea-intro-blogpost]: https://encord.com/blog/closing-the-ai-production-gap-encord-active-a-new/
 [ea-lib]: https://github.com/encord-team/encord-active/tree/main/src/encord_active/lib
-[export-data]: category/export
-[filter-and-export]: ./pages/export/filter_export
-[importing-data]: ./workflows/importing-data-and-labels
-[importing-predictions]: ./workflows/import-predictions
+[export-data]: ./user-guide/filter_export
+[filter-and-export]: ./user-guide/filter_export
+[importing-data]: /import
+[importing-predictions]: ./import/import-predictions
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-fzj1eeahoqu91sz0cx0a7q
-[tagging]: ./workflows/tags
+[tagging]: ./user-guide/tags
 [write-metric]: ./metrics/write-your-own
 [finding-label-errors]: https://encord.com/blog/how-to-find-and-fix-label-errors-with-encord-active/
 [ssh-key-association]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication

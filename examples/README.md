@@ -92,6 +92,12 @@ Here, you will learn more about how to write your own custom metric functions to
 
 For more information, please refer to our [documentation]([encord-active-docs-write-metric]) on the topic.
 
+### Custom Embeddings
+
+Here, you will learn more about how to add your own custom embeddings to improve your similarity search within Encord Active.
+
+- [Adding Your Own Custom Embeddings](adding-own-custom-embeddings.ipynb)
+
 ## Google Colab
 
 We also provide a couple of notebooks, which can be run on the internet without having to install anything on your own system.
