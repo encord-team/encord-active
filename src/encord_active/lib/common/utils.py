@@ -10,6 +10,7 @@ from itertools import product
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Collection,
     Dict,
     List,
@@ -421,7 +422,14 @@ def patch_sklearn_linalg(func):
     return wrap
 
 
-def try_execute(func, num_tries, kwargs=None):
+def try_execute(func: Callable, num_tries: int, kwargs=None):
+    """
+    Try to execute func num_tries, catching connection related exceptions.
+    :param func: The function to execute.
+    :param num_tries: The number of times to try and execute the connection.
+    :param kwargs: A kwargs dict to pass as function arguments.
+    :return: The result of func, so func(kwargs).
+    """
     for n in range(num_tries):
         try:
             if kwargs:

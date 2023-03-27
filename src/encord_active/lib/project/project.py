@@ -166,7 +166,7 @@ class Project:
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
         label_rows = download_label_rows_and_data(encord_project, self.file_structure)
-        split_videos(label_rows, self.file_structure)
+        split_lr_videos(label_rows, self.file_structure)
         logger.info("Successfully downloaded all label row datas")
         return
 
@@ -228,15 +228,21 @@ def download_label_row_and_data(
     return label_row
 
 
-def split_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
+def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
     return collect_async(
-        partial(split_video, project_file_structure=project_file_structure),
+        partial(split_lr_video, project_file_structure=project_file_structure),
         label_rows,
-        desc="Splitting videos into frames.",
+        desc="Splitting videos into frames",
     )
 
 
-def split_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
+def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
+    """
+    Take a label row, if it is a video, split the underlying video file into frames.
+    :param label_row: The label row to consider splitting.
+    :param project_file_structure: The directory of the project.
+    :return: Whether the label row had a video to split.
+    """
     if label_row.data_type == "video":
         lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
         data_hash = list(label_row.data_units.keys())[0]
