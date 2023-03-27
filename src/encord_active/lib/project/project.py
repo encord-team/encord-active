@@ -215,7 +215,6 @@ def download_label_row_and_data(
             return LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
         except json.decoder.JSONDecodeError:
             logging.warning(f"Could not decode row {label_hash} stored here {lr_structure.label_row_file}.")
-            # TODO: Filter this out when passing it to split videos
             return None
 
     lr = try_execute(project.get_label_row, 5, {"uid": label_hash})
