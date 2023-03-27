@@ -7,7 +7,7 @@ sidebar_position: 4
 Model quality metrics help you evaluate your data and labels based on a trained model and imported model predictions.
 
 
-# Acquisition functions
+## Acquisition functions
 
 Acquisition functions are a special type of model quality metric, primarily used in active learning to score data samples according to how informative they are for the model and enable smart labeling of unannotated data.
 
@@ -19,7 +19,7 @@ Acquisition functions are a special type of model quality metric, primarily used
 | [Variance](#variance) - <small>Rank images by their variance</small>                              | `image`     |           |
 
 
-## Entropy
+### Entropy
 
 Rank images by their entropy.
 
@@ -37,7 +37,7 @@ As a result, data samples with higher entropy score should be offered for annota
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/acquisition_functions.py)
 
 
-## Least Confidence
+### Least Confidence
 
 Rank images by their least confidence score.
 
@@ -55,7 +55,7 @@ As a result, data samples with higher LC score should be offered for annotation.
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/acquisition_functions.py)
 
 
-## Margin
+### Margin
 
 Rank images by their margin score.
 
@@ -69,7 +69,7 @@ As a result, data samples with lower margin score should be offered for annotati
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/acquisition_functions.py)
 
 
-## Variance
+### Variance
 
 Rank images by their variance.
 
