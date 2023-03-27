@@ -60,7 +60,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
     def load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
-            MainPredictionType.OBJECT
+            MainPredictionType.OBJECT, project_path=get_state().project_paths.project_dir.as_posix()
         )
 
         if model_predictions is None:
@@ -80,7 +80,10 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             self._common_settings()
             self._topbar_additional_settings(page_mode)
 
-        matched_gt = use_memo(lambda: reader.get_gt_matched(predictions_dir))
+        matched_gt = use_memo(
+            lambda: reader.get_gt_matched(predictions_dir),
+            key=f"matched_gt_{get_state().project_paths.project_dir.as_posix()}",
+        )
         if not matched_gt:
             st.error("Couldn't match ground truths")
             return False

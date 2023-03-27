@@ -58,7 +58,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
     def load_data(self, page_mode: ModelQualityPage) -> bool:
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
-            MainPredictionType.CLASSIFICATION
+            MainPredictionType.CLASSIFICATION, project_path=get_state().project_paths.project_dir.as_posix()
         )
 
         if model_predictions is None:
