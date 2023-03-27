@@ -8,7 +8,8 @@ sidebar_position: 5
 
 Encord Active enables you to visualize the important performance metrics, such as mean Average-Precision (mAP), for your model.
 Performance metrics can be visualized based on different classes and intersection-over-Union (IoU) thresholds.
-Performance metrics are supported for bounding-boxes (object detection) and polygons (segmentation).
+Performance metrics are supported for bounding-boxes (object detection) and polygons (segmentation). For this workflow, 
+you need to [import your model predictions](../sdk/importing-model-predictions.mdx) into Encord Active.
 
 `Prerequisites:` Dataset, Labels, Object (bounding-box or polygon) Predictions
 

@@ -7,7 +7,9 @@ sidebar_position: 5
 **Visualize the performance of your model**
 
 Encord Active enables you to inspect classification performance metrics such as Accuracy, Precision, Recall, and F1 
-scores as well as confusion matrix. Performance metrics can also be reported according to different class combinations.
+scores as well as a confusion matrix. Performance metrics can also be inspected according to different class 
+combinations. For this workflow, you need to [import your model predictions](../sdk/importing-model-predictions.mdx) 
+into Encord Active.
 
 `Prerequisites:` Dataset, Labels, Classification Predictions
 
@@ -16,8 +18,8 @@ scores as well as confusion matrix. Performance metrics can also be reported acc
 1. Navigate to the _Model Quality_ > _Metrics_ tab on the left sidebar.
 2. Under the **Classifications** tab, you will see the main performance metrics (accuracy, mean precision, mean recall, 
 and mean F1 scores), metric importance graphs, confusion matrix, and class-based precision and recall plot.
-3. You can select classes of interest on the upper bar to customize plots.
-4. Via Confusion Matrix, you can detect which classes are confused with each other (uni-directional or bi-directional).
+3. You can filter by classes in the upper bar to see plots for your classes of interest.
+4. Via the confusion matrix, you can detect which classes are confused with each other (uni-directional or bi-directional).
 5. On the **Precision-Recall** plot, you can observe which classes the model has difficulty in and which classes it 
 does well.
 6. According to insights you get here, you can, e.g., prioritize from which classes you need to collect more data.
@@ -38,9 +40,9 @@ When
 we look at their correlation, we see that as the Image-Level Annotation Quality increases, model performance increases, 
 too. On the other hand, Red Values and Image Singularity have a negative correlation with the model performance.
 
-When we look at the confusion matrix, you can see that most of the predictions are correct; Meanwhile, we can easily 
+When we look at the confusion matrix, we find that most of the predictions are correct; Meanwhile, we can easily 
 observe that a significant part of the *charmader* images was predicted as *pikachu*, resulting in low recall for the 
-*charmander* and low precision for the *pikachu*. So there might be value in investigating these wrongly labeled 
+*charmander* and low precision for the *pikachu* classes. So there might be value in investigating these wrongly labeled 
 charmander samples.
 
 ## Performance by Metric
