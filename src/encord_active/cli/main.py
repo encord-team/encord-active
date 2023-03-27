@@ -18,7 +18,6 @@ from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import (
     bypass_streamlit_question,
-    ensure_project,
     find_child_projects,
 )
 from encord_active.cli.utils.prints import success_with_vizualise_command
