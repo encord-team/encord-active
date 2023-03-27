@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Quick import data
+# Quick importing data & labels
 
 **Grep arbitrary images from within a dataset directory.**
 
@@ -103,3 +103,5 @@ encord-active init --transformer classification_transformer.py /path/to/data_roo
 More concrete examples for, e.g., bounding boxes and polygons, are included in our [example directory][gh-transformer-examples] on GitHub.
 
 :::
+
+[gh-transformer-examples]: https://github.com/encord-team/encord-active/blob/main/examples/label-transformers
