@@ -14,13 +14,7 @@ from encord_active.app.actions_page.export_filter import export_filter
 from encord_active.app.actions_page.versioning import is_latest, version_form
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
-from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
-from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
-from encord_active.app.model_quality.sub_pages.metrics import MetricsPage
-from encord_active.app.model_quality.sub_pages.performance_by_metric import (
-    PerformanceMetric,
-)
-from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
+from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.metrics.utils import MetricScope
@@ -29,11 +23,9 @@ PAGES = {
     "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
     "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
     "Model Quality": {
-        "Metrics": model_quality(MetricsPage()),
-        "Performance By Metric": model_quality(PerformanceMetric()),
-        "True Positives": model_quality(TruePositivesPage()),
-        "False Positives": model_quality(FalsePositivesPage()),
-        "False Negatives": model_quality(FalseNegativesPage()),
+        "Metrics": model_quality(ModelQualityPage.METRICS),
+        "Performance By Metric": model_quality(ModelQualityPage.PERFORMANCE_BY_METRIC),
+        "Explorer": model_quality(ModelQualityPage.EXPLORER),
     },
     "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance, "Versioning": version_form},
 }

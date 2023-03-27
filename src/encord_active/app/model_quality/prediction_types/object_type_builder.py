@@ -80,7 +80,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             self._common_settings()
             self._topbar_additional_settings(page_mode)
 
-        matched_gt = use_memo(
+        matched_gt, _ = use_memo(
             lambda: reader.get_gt_matched(predictions_dir),
             key=f"matched_gt_{get_state().project_paths.project_dir.as_posix()}",
         )

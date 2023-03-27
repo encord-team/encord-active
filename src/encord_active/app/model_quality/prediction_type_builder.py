@@ -171,20 +171,20 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         metrics_dir = get_state().project_paths.metrics
         predictions_dir = get_state().project_paths.predictions / prediction_type.value
 
-        predictions_metric_datas = use_memo(
+        predictions_metric_datas, _ = use_memo(
             lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir),
             key=f"predictions_metrics_data_{project_path}_{prediction_type.value}",
         )
 
-        label_metric_datas = use_memo(
+        label_metric_datas, _ = use_memo(
             lambda: reader.get_label_metric_data(metrics_dir),
             key=f"label_metric_datas_{project_path}_{prediction_type.value}",
         )
-        model_predictions = use_memo(
+        model_predictions, _ = use_memo(
             lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
             key=f"model_predictions_{project_path}_{prediction_type.value}",
         )
-        labels = use_memo(
+        labels, _ = use_memo(
             lambda: reader.get_labels(predictions_dir, label_metric_datas, prediction_type),
             key=f"labels_{project_path}_{prediction_type.value}",
         )
