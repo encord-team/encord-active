@@ -9,6 +9,7 @@ from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.data_quality_summary import summary_item
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import use_memo
 from encord_active.lib.charts.data_quality_summary import (
     CrossMetricSchema,
     create_2d_metric_chart,
@@ -136,9 +137,8 @@ def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: Delt
 def render_data_quality_dashboard(
     metrics: List[MetricData], severe_outlier_color: str, moderate_outlier_color: str, background_color: str
 ):
-    if get_state().image_sizes is None:
-        get_state().image_sizes = get_all_image_sizes(get_state().project_paths)
-    median_image_dimension = get_median_value_of_2d_array(get_state().image_sizes)
+    image_sizes, _ = use_memo(lambda: get_all_image_sizes(get_state().project_paths))
+    median_image_dimension = get_median_value_of_2d_array(image_sizes)
 
     if get_state().metrics_data_summary is None:
         get_state().metrics_data_summary = get_metric_summary(metrics)
@@ -148,7 +148,7 @@ def render_data_quality_dashboard(
     total_images_col, total_severe_outliers_col, total_moderate_outliers_col, average_image_size = st.columns(4)
 
     total_images_col.markdown(
-        summary_item("Number of images", len(get_state().image_sizes), background_color=background_color),
+        summary_item("Number of images", len(image_sizes), background_color=background_color),
         unsafe_allow_html=True,
     )
 
@@ -186,7 +186,7 @@ def render_data_quality_dashboard(
         fig = create_outlier_distribution_chart(all_metrics_outliers, severe_outlier_color, moderate_outlier_color)
         plots_col.plotly_chart(fig, use_container_width=True)
 
-    fig = create_image_size_distribution_chart(get_state().image_sizes)
+    fig = create_image_size_distribution_chart(image_sizes)
     plots_col.plotly_chart(fig, use_container_width=True)
 
     metrics_with_severe_outliers = all_metrics_outliers[

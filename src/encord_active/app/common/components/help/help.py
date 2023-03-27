@@ -19,14 +19,13 @@ def link(text: str, href: str, icon: Optional[str] = None):
 
 
 def render_help():
-    with st.sidebar:
-        html((Path(__file__).parent / "help.html").read_text(encoding="utf-8"), height=0, width=0)
-        st.markdown(
-            f"""
-            <div style="display: flex; flex-direction: column; padding: 1rem">
-                <span style="font-size: 1.2rem">Need help?</span>
-                {link("Join our Slack community", SLACK_INVITE_URL, SLACK_ICON)}
-                {link("Documentation", DOCS_URL, DOCS_ICON)}
-            </div>""",
-            unsafe_allow_html=True,
-        )
+    html((Path(__file__).parent / "help.html").read_text(encoding="utf-8"), height=0, width=0)
+    st.markdown(
+        f"""
+        <div style="display: flex; flex-direction: column; padding: 1rem">
+            <span style="font-size: 1.2rem">Need help?</span>
+            {link("Join our Slack community", SLACK_INVITE_URL, SLACK_ICON)}
+            {link("Documentation", DOCS_URL, DOCS_ICON)}
+        </div>""",
+        unsafe_allow_html=True,
+    )

@@ -380,7 +380,6 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
 @cli.command(name="visualize")
 @bypass_streamlit_question
-@ensure_project(allow_multi=True)
 def visualize(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Path of the project you would like to visualise", file_okay=False
