@@ -3,11 +3,6 @@ sidebar_position: 3
 title: Tagging
 ---
 
-Tagging is done in two steps.
-
-1. Creating the tag.
-2. Tagging the data or labels.
-
 ## Creating Tags
 
 To create new tags, you follow this template:
@@ -35,15 +30,15 @@ tags.create_tag(label_tag)
 tags.create_multiple([data_tag, label_tag])
 ```
 
-Note that there are two different scopes to which you can tag your data.
+Note that there are two different scopes to which you can apply tags.
 One is the `TagScope.DATA` scope which applies tags to the images.
 The second one is the `TagScope.LABEL`, which applies to individual labels.
-As such, the `TagScope.LABEL` can be present multiple times in the same image if there are multiple labels with that tag.
+The `TagScope.LABEL` can be present multiple times in the same image if there are multiple labels with that tag.
 
 ## Tagging Data
 
 Tagging data is based on unique identifiers of the data you are tagging.
-For data tagging, identifier is a composition of `label_hash`, `data_hash`, and `frame`.
+For data tagging, the identifier is a composition of `label_hash`, `data_hash`, and `frame`.
 
 To iterate over the data in a project and add tags is to follow this structure.
 
@@ -69,9 +64,7 @@ for data_unit, image_path in DatasetIterator(project_path).iterate():
 ## Tagging Labels
 
 Tagging labels is very similar to tagging data.
-You will need to append the `classificationHash` or the `objectHash` for the label you are tagging.
-
-To iterate over the labels in a project and add tags follow this structure.
+You will need to append the `classificationHash` or the `objectHash` for the label you are tagging to the identifier - as done below.
 
 ```python
 from pathlib import Path

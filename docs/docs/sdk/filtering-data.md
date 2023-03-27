@@ -33,7 +33,7 @@ Index(['identifier', 'url', 'Green Values', 'Sharpness', 'Image Singularity',
 
 Based on this data frame, you can do any filter you might like using pandas.
 
-To get the path to the data item that a specific row corresponds to, you can use this utility function:
+To get the path to the data item (image) that a specific row corresponds to, you can use this utility function:
 
 ```python
 from encord_active.lib.project import ProjectFileStructure
