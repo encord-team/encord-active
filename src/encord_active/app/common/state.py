@@ -38,8 +38,8 @@ class MetricNames:
 @dataclass
 class PredictionsState:
     decompose_classes = False
-    metric_datas = MetricNames()
-    metric_datas_classification = MetricNames()
+    metric_datas: MetricNames = field(default_factory=MetricNames)
+    metric_datas_classification: MetricNames = field(default_factory=MetricNames)
     all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     all_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
     selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
@@ -69,15 +69,13 @@ class State:
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
     selected_metric: Optional[MetricData] = None
-    page_grid_settings = PageGridSettings()
-    predictions = PredictionsState()
+    page_grid_settings: PageGridSettings = field(default_factory=PageGridSettings)
+    predictions: PredictionsState = field(default_factory=PredictionsState)
     similarities_count = 8
     annotation_sizes: Optional[AnnotationStatistics] = None
     metrics_data_summary: Optional[MetricsSeverity] = None
     metrics_label_summary: Optional[MetricsSeverity] = None
-    object_drawing_configurations: ObjectDrawingConfigurations = field(
-        default_factory=lambda: ObjectDrawingConfigurations()
-    )
+    object_drawing_configurations: ObjectDrawingConfigurations = field(default_factory=ObjectDrawingConfigurations)
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
