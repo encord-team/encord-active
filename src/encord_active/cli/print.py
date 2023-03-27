@@ -9,6 +9,7 @@ from rich.markup import escape
 
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
+from encord_active.lib.project import ProjectFileStructure
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -50,7 +51,6 @@ def print_ontology(
     from encord_active.lib.model_predictions.writer import (
         iterate_classification_attribute_options,
     )
-    from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     fs = ProjectFileStructure(target)
     if not fs.ontology.is_file():
@@ -95,12 +95,13 @@ def print_data_mapping(
     [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`
     """
     mapping: Dict[str, str] = {}
+    project_file_structure = ProjectFileStructure(target)
 
-    for label in (target / "data").iterdir():
-        if not label.is_dir() and not (label / "label_row.json").is_file():
+    for label_row_structure in project_file_structure.iter_labels():
+        if not label_row_structure.is_present() and not label_row_structure.label_row_file.is_file():
             continue
 
-        label_row = json.loads((label / "label_row.json").read_text())
+        label_row = json.loads(label_row_structure.label_row_file.read_text())
         mapping = {
             **mapping,
             **{data_hash: value["data_title"] for data_hash, value in label_row["data_units"].items()},

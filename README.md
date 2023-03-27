@@ -75,6 +75,12 @@ This downloads a small dataset and launches the Encord Active App for you to exp
 encord-active quickstart
 ```
 
+or you can use <a href="https://hub.docker.com/r/encord/encord-active"><img src="https://www.docker.com/wp-content/uploads/2022/03/horizontal-logo-monochromatic-white.png" height="20"/></a>:
+
+```shell
+docker run -it --rm -p 8501:8501 -v ${PWD}:/data encord/encord-active quickstart
+```
+
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
 ## ⬇️  Download a sandbox dataset

@@ -169,7 +169,6 @@ def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: Proje
     error_text = "Image not found" if not img_du else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
-    # lr = json.loads(key_to_lr_path(key, project_file_structure).read_text(encoding="utf-8"))
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
     lr = json.loads(label_row_structure.label_row_file.read_text())
 

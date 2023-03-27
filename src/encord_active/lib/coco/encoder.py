@@ -432,13 +432,19 @@ class CocoEncoder:
             else:
                 raise ValueError(f"Unsupported shape: {shape}")
 
-            res_dict = asdict(res)
-            res_dict["frame_metrics"] = frame_level
-            res_dict["object_metrics"] = metrics.get(object_["objectHash"], {})
-            annotations.append(to_attributes_field(res_dict, include_null_annotations=self._include_null_annotations))
+            if res:
+                res_dict = asdict(res)
+                res_dict["frame_metrics"] = frame_level
+                res_dict["object_metrics"] = metrics.get(object_["objectHash"], {})
+                annotations.append(
+                    to_attributes_field(res_dict, include_null_annotations=self._include_null_annotations)
+                )
         return annotations
 
-    def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if not all(k in object_["boundingBox"] for k in ["x", "y", "w", "h"]):
+            return None
+
         x, y = (
             object_["boundingBox"]["x"] * size.width,
             object_["boundingBox"]["y"] * size.height,
@@ -465,7 +471,12 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_rotatable_bounding_box(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_rotatable_bounding_box(
+        self, object_: dict, image_id: int, size: Size
+    ) -> Union[CocoAnnotation, SuperClass, None]:
+        if not all(k in object_["rotatableBoundingBox"] for k in ["x", "y", "w", "h", "theta"]):
+            return None
+
         x, y = (
             object_["rotatableBoundingBox"]["x"] * size.width,
             object_["rotatableBoundingBox"]["y"] * size.height,
@@ -494,7 +505,10 @@ class CocoEncoder:
             rotation=rotation,
         )
 
-    def get_polygon(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_polygon(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if not len(object_["polygon"]) >= 3:
+            return None
+
         polygon = get_polygon_from_dict(object_["polygon"], size.width, size.height)
         segmentation = [list(chain(*polygon))]
         polygon = Polygon(polygon)
@@ -518,8 +532,11 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         """Polylines are technically not supported in COCO, but here we use a trick to allow a representation."""
+        if not len(object_["polyline"]) >= 2:
+            return None
+
         polygon = get_polygon_from_dict(object_["polyline"], size.width, size.height)
         polyline_coordinate = self.join_polyline_from_polygon(list(chain(*polygon)))
         segmentation = [polyline_coordinate]
@@ -575,7 +592,10 @@ class CocoEncoder:
 
         return polygon
 
-    def get_point(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_point(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
+        if "0" not in object_["point"]:
+            return None
+
         x, y = (
             object_["point"]["0"]["x"] * size.width,
             object_["point"]["0"]["y"] * size.height,
@@ -604,8 +624,11 @@ class CocoEncoder:
             encord_track_uuid=encord_track_uuid,
         )
 
-    def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass]:
+    def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         # DENIS: next up: check how this is visualised.
+        if not len(object_["skeleton"]) >= 1:
+            return None
+
         area = 0
         segmentation: List = []
         keypoints: List = []
