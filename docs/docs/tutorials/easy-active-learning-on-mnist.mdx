@@ -1,0 +1,118 @@
+---
+sidebar_position: 1
+---
+
+import TOCInline from "@theme/TOCInline";
+
+# Easy Active Learning on MNIST using Random Forest
+
+In this tutorial, you will see how to plug a Random Forest model in to Encord Active and use it to select the best data to label next on the MNIST dataset.
+You will go through the following steps:
+
+<TOCInline toc={toc.filter((node) => node.level === 2)} />
+
+:::note
+
+This tutorial assumes that you have [installed](../installation) `encord-active`.
+
+:::
+
+## 1. Download the MNIST sandbox project
+
+Download the data by running the following CLI command:
+
+```shell
+encord-active download --project-name "[open-source][test]-mnist-dataset"
+```
+
+When the process is done, the MNIST test dataset is ready to be used.
+
+From now on, the tutorial is hands-on with python code, so we need a reference to the folder where the project was downloaded.
+
+```python
+from pathlib import Path
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
+
+project_path = Path("/path/to/project/directory")
+project_fs = ProjectFileStructure(project_path)
+```
+
+## 2. Train the model with labeled data from the project
+
+It's a common scenario to start spinning the active learning cycle using a model trained with some initial data.
+Let's select [sklearn.ensemble.RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) as the base model.
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+
+forest = RandomForestClassifier(n_estimators = 500)
+```
+
+We need to wrap the model with a `BaseModelWrapper` in order to interface the model's behaviour with the one expected by the acquisition functions.
+The two main functionalities wrapped around the model are:
+
+1. Prepare the input data to be ingested by the model (`prepare_data(..)`), and
+2. Be able to obtain predicted probabilities of data samples (`_predict_proba(..)`).
+
+Encord Active has a built-in wrapper for _scikit-learn_ classifiers (`SKLearnModelWrapper`), so let's use it.
+
+```python
+from encord_active.lib.common.active_learning import get_data, get_data_hashes_from_project
+from encord_active.lib.metrics.acquisition_functions import SKLearnModelWrapper
+
+w_model = SKLearnModelWrapper(forest)
+
+data_hashes = get_data_hashes_from_project(project_fs, subset_size=5000)
+X, y = get_data(project_fs, w_model, data_hashes, class_name="digit")
+
+w_model._model.fit(X, y)
+```
+
+## 3. Run the acquisition function powered by the model to rank the project data
+
+Encord Active provides multiple acquisition functions ready to be used with the wrapped model.
+
+We use an acquisition function called `Entropy` that measures the average level of “uncertainty” in the model's predicted probabilities.
+The higher the entropy, the more “uncertain” the model.
+
+```python
+from encord_active.lib.common.active_learning import get_metric_results
+from encord_active.lib.metrics.acquisition_functions import Entropy
+from encord_active.lib.metrics.execute import execute_metrics
+
+acq_func = Entropy(w_model)
+
+execute_metrics([acq_func], data_dir=project_fs.project_dir, use_cache_only=True)
+
+acq_func_results = get_metric_results(project_fs, acq_func)
+```
+
+:::info
+
+We use `Entropy` in this tutorial but Encord Active has multiple acquisition functions that can be inspected [here](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/acquisition_functions.py).
+
+:::
+
+## 4. Rank and sample the data to label next
+
+As soon as the acquisition function finishes its execution through all the data samples, we proceed to rank them.
+
+```python
+from encord_active.lib.common.active_learning import get_n_best_ranked_data_samples
+
+batch_size_to_label = 100 # amount of data samples selected to label next
+data_to_label_next, scores = get_n_best_ranked_data_samples(
+    acq_func_results,
+    batch_size_to_label,
+    rank_by="desc",
+    exclude_data_hashes=data_hashes)
+```
+
+The output variable `data_to_label_next` contains the hashes of the best ranked data samples.
+Now you can proceed to label these samples and enable your own active learning pipeline.
+
+## 5. Summary
+
+This section concludes the end-to-end example on easy active learning on the MNIST dataset using Random Forest.
+We covered training a Random Forest model, wrapping the model to match Encord Active requirements on models, selecting and running acquisition functions over the data, and choosing the best data to label next.
+By now, you should have a good idea about how Encord Active can be used to run your active learning pipeline while enabling smart selection of the data for labeling.
