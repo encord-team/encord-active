@@ -2,6 +2,7 @@ from typing import List
 
 import streamlit as st
 
+from encord_active.app.common.components import sticky_header
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.prediction_type_builder import (
@@ -23,7 +24,8 @@ def model_quality(page_mode: ModelQualityPage):
 
     def render():
         setup_page()
-        tag_creator()
+        with sticky_header():
+            tag_creator()
 
         available_predictions: List[PredictionTypeBuilder] = get_available_predictions()
 
