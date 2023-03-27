@@ -11,7 +11,8 @@ Encord Active finds outliers using precomputed Interquartile ranges.
 
 ### Setup
 
-If you haven't installed Encord Active, visit [installation](/installation). In this workflow we will be using the BDD validation dataset.
+If you haven't installed Encord Active, visit [installation](/installation).
+In this workflow we will be using the BDD validation dataset.
 
 ## Data outliers
 
@@ -41,7 +42,6 @@ Within the _Actions_ tab, click _Filter dataframe on_ and select _tags_. Next, c
 
 ![data-quality-outliers-action.png](../images/data-quality-outliers-action.png)
 
-
 ## Label outliers
 
 ### Steps
@@ -68,4 +68,3 @@ After creating a tagged image group, you can access it at the bottom of the left
 Within the _Actions_ tab, click _Filter data frame on_ and select _tags_. Next, choose the tags you would like to export, relabel, augment, review, or delete from your dataset.
 
 ![label-quality-outliers-action.png](../images/label-quality-outliers-action.png)
-

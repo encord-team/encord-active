@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Quick importing data & labels
+# Quick import data & labels
 
 **Grep arbitrary images from within a dataset directory.**
 
