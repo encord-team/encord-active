@@ -162,7 +162,7 @@ def print_system_info():
 
 
 @print_cli.callback()
-def main(json: bool = False):  # pylint: disable=redefined-outer-name
+def main(json: bool = typer.Option(False, help="Save output to a json file.")):  # pylint: disable=redefined-outer-name
     """
     [green bold]Print[/green bold] useful information 🖨️
     """
