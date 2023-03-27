@@ -71,7 +71,7 @@ def render_pages_menu(
 
     items = to_items(PAGES)
     output_state = UseState[Optional[Tuple[OutputAction, Optional[str]]]](None)
-    output = pages_menu(items, list(projects.values()), initial_project_hash, SEPARATOR.join(initial_key_path))
+    output = pages_menu(items, list(projects.values()), SEPARATOR.join(initial_key_path), initial_project_hash)
     if output and output != output_state.value:
         output_state.set(output)
         action, payload = output
