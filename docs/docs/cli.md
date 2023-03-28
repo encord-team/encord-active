@@ -1,7 +1,5 @@
 ---
 sidebar_position: 8
-slug: /cli
-title: Command Line Interface
 ---
 
 # Command Line Interface
@@ -176,7 +174,7 @@ Options:
                                    [default: None]
 ```
 
-The [Initialising from local data](./import/quick-import-data.md) workflow is a great starting point to using this command.
+The [Initialising from local data](./import/quick-import-data) workflow is a great starting point to using this command.
 
 ## `import`
 
