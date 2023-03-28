@@ -270,7 +270,7 @@ class ImageLevelQualityTest(Metric):
         get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
         generate_2d_embedding_data(EmbeddingType.IMAGE, iterator.cache_dir)
 
-        self.collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.CLASSIFICATION)
+        self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
 
         if len(self.collections) > 0:
             generate_2d_embedding_data(EmbeddingType.CLASSIFICATION, iterator.cache_dir)
