@@ -191,19 +191,19 @@ def download_label_rows_and_data(
     subset_size: Optional[int] = None,
     **kwargs,
 ) -> List[LabelRow]:
-    label_rows = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
+    label_row_metas = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
 
     return collect_async(
         partial(download_label_row_and_data, project=project, project_file_structure=project_file_structure, **kwargs),
-        label_rows,
+        label_row_metas,
         desc="Collecting label rows and data from Encord SDK",
     )
 
 
 def download_label_row_and_data(
-    label_row: LabelRow, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
+    label_row_meta, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
 ) -> Optional[LabelRow]:
-    label_hash = label_row.get("label_hash")
+    label_hash = label_row_meta.get("label_hash")
     if not label_hash:
         return None
 
