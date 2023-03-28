@@ -116,7 +116,13 @@ class ObjectEmbeddingSimilarityTest(Metric):
             logger.info("<yellow>[Skipping]</yellow> No objects in the project ontology.")
             return
 
-        collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+        if self.metadata.embedding_type:
+            collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+        else:
+            logger.error(
+                f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
+            )
+            return
 
         if len(collections) > 0:
             generate_2d_embedding_data(EmbeddingType.OBJECT, iterator.cache_dir)

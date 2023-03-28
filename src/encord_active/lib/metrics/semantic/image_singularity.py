@@ -86,7 +86,13 @@ This metric gives each image a score that shows each image's uniqueness.
                     break
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+        if self.metadata.embedding_type:
+            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+        else:
+            logger.error(
+                f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
+            )
+            return
 
         if len(self.collections) > 0:
 
