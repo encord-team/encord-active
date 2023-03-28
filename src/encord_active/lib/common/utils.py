@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 import shutil
+import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
@@ -8,6 +10,7 @@ from itertools import product
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Collection,
     Dict,
     List,
@@ -22,6 +25,7 @@ import av
 import cv2
 import numpy as np
 import requests
+from encord.exceptions import EncordException, UnknownException
 from loguru import logger
 from shapely.errors import ShapelyDeprecationWarning
 from shapely.geometry import Polygon
@@ -350,32 +354,28 @@ def mask_to_polygon(mask: np.ndarray) -> Tuple[Optional[List[Any]], CocoBbox]:
     return None, (x, y, w, h)
 
 
-def collect_async(fn, job_args, key_fn, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
+def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
     """
     Distribute work across multiple workers. Good for, e.g., downloading data.
     Will return results in dictionary.
     :param fn: The function to be applied
     :param job_args: Arguments to `fn`.
-    :param key_fn: Function to determine dictionary key for the result (given the same input as `fn`).
     :param max_workers: Number of workers to distribute work over.
     :param kwargs: Arguments passed on to tqdm.
-    :return: Dictionary {key_fn(*job_args): fn(*job_args)}
+    :return: List [fn(*job_args)]
     """
     job_args = list(job_args)
     if not isinstance(job_args[0], tuple):
         job_args = [(j,) for j in job_args]
 
-    results = {}
+    results = []
     with tqdm(total=len(job_args), **kwargs) as pbar:
         with Executor(max_workers=max_workers) as exe:
-            jobs = {exe.submit(fn, *args): key_fn(*args) for args in job_args}
+            jobs = [exe.submit(fn, *args) for args in job_args]
             for job in as_completed(jobs):
-                key = jobs[job]
-
                 result = job.result()
                 if result is not None:
-                    results[key] = result
-
+                    results.append(result)
                 pbar.update(1)
     return results
 
@@ -391,7 +391,7 @@ def download_file(
     r = requests.get(url, stream=True)
 
     if r.status_code != 200:
-        raise Exception(f"Something happened, couldn't download file from: {url}")
+        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
     with destination.open("wb") as f:
         for chunk in r.iter_content(chunk_size=byte_size):
@@ -420,3 +420,25 @@ def patch_sklearn_linalg(func):
         module_to_patch1.linalg, module_to_patch2.linalg = original_lin_alg1, original_lin_alg2
 
     return wrap
+
+
+def try_execute(func: Callable, num_tries: int, kwargs=None):
+    """
+    Try to execute func num_tries, catching connection related exceptions.
+    :param func: The function to execute.
+    :param num_tries: The number of times to try and execute the connection.
+    :param kwargs: A kwargs dict to pass as function arguments.
+    :return: The result of func, so func(kwargs).
+    """
+    for n in range(num_tries):
+        try:
+            if kwargs:
+                return func(**kwargs)
+            else:
+                return func()
+        except (ConnectionError, ConnectionResetError, OSError, UnknownException, EncordException) as e:
+            logging.warning(
+                f"Handling {e} when executing {func} with args {kwargs}.\n" f" Trying again, attempt number {n + 1}."
+            )
+            time.sleep(0.5 * num_tries)  # linear backoff
+    raise Exception("Reached maximum number of execution attempts.")
