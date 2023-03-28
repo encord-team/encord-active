@@ -182,7 +182,7 @@ The [Initialising from local data](./import/quick-import-data.md) workflow is a 
 
 The command is used to import projects and predictions from various sources.
 
-Concrete usage example can be found [here](./import).
+Concrete usage example can be found [here](/import).
 
 ```
 Usage: encord-active import [OPTIONS] COMMAND [ARGS]...
@@ -220,7 +220,7 @@ Options:
 Imports a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
 If `--coco` option is specified the file should be a json following the coco results format.
 
-Concrete usage example can be found [here](./import/import-predictions).
+Concrete usage example can be found [here](/import/import-predictions).
 
 ```
 Usage: encord-active import predictions [OPTIONS] PREDICTIONS_PATH
