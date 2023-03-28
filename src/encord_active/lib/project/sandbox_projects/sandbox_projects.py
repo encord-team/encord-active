@@ -34,7 +34,7 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
         hash="aa2b21bd-6f2e-48fc-8f4f-4ba4d9b7bd67",
         name="[open-source][test]-limuc-ulcerative-colitis-classification",
-        image_path=(IMAGES_PATH / "limuc.jpeg"),
+        image_path=(IMAGES_PATH / "limuc.png"),
         stats=ProjectStats(dataUnits=1686, labels=1686, classes=4),
     ),
     "[open-source]-covid-19-segmentations": PrebuiltProject(
