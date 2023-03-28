@@ -43,7 +43,7 @@ class PredictionsState:
     all_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
     all_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
     selected_classes_objects: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
-    selected_classes_classifications: Dict[str, OntologyObjectJSON] = field(default_factory=dict)
+    selected_classes_classifications: Dict[str, OntologyClassificationJSON] = field(default_factory=dict)
     labels: Optional[DataFrame[LabelSchema]] = None
     nbins: int = 50
 
