@@ -91,7 +91,7 @@ The download command will ask which pre-built dataset to use and will download i
 ```shell
 encord-active download
 cd /path/of/downloaded/project
-encord-active visualise
+encord-active visualize
 ```
 
 The app should then open in the browser.
@@ -111,11 +111,11 @@ encord-active init /path/to/data/directory
 
 A project will be created using the data in the directory.
 
-To visualise the project run:
+To visualize the project run:
 
 ```shell
 cd /path/to/project
-encord-active visualise
+encord-active visualize
 ```
 
 You can find more details on the `init` command in the [CLI documentation][encord-active-docs-init].
@@ -171,7 +171,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Similarity Search](https://docs.encord.com/active/docs/workflows/improve-your-data/similar-images)
 - [Annotator Benchmarks](https://docs.encord.com/active/docs/pages/label-quality/explorer/)
 - [Data Tagging](https://docs.encord.com/active/docs/workflows/tags/#steps)
-- [Visualise TP/FP/FN](https://docs.encord.com/active/docs/category/model-quality)
+- [Visualize TP/FP/FN](https://docs.encord.com/active/docs/category/model-quality)
 - [Dataset Balancing](https://docs.encord.com/active/docs/pages/export/balance_export)
 - [COCO Exports](https://docs.encord.com/active/docs/pages/export/filter_export)
 - And much more!

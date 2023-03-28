@@ -1,53 +1,24 @@
 import argparse
 import shutil
-from functools import reduce
+from copy import deepcopy
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import streamlit as st
-from encord_active_components import MenuItem, pages_menu
+from encord_active_components.components.projects_page import Project
 
-from encord_active.app.actions_page.export_balance import export_balance
-from encord_active.app.actions_page.export_filter import export_filter
-from encord_active.app.actions_page.versioning import version_form, version_selector
 from encord_active.app.common.components.help.help import render_help
-from encord_active.app.common.state import State, get_state
-from encord_active.app.common.state_hooks import UseState
+from encord_active.app.common.state import State, get_state, has_state, refresh
+from encord_active.app.common.state_hooks import UseState, use_memo
 from encord_active.app.common.utils import set_page_config
-from encord_active.app.model_quality.sub_pages.false_negatives import FalseNegativesPage
-from encord_active.app.model_quality.sub_pages.false_positives import FalsePositivesPage
-from encord_active.app.model_quality.sub_pages.metrics import MetricsPage
-from encord_active.app.model_quality.sub_pages.performance_by_metric import (
-    PerformanceMetric,
+from encord_active.app.page_menu import (
+    DEFAULT_PAGE_PATH,
+    get_renderer,
+    render_pages_menu,
 )
-from encord_active.app.model_quality.sub_pages.true_positives import TruePositivesPage
-from encord_active.app.views.metrics import explorer, summary
-from encord_active.app.views.model_quality import model_quality
-from encord_active.cli.utils.decorators import (
-    find_child_projects,
-    is_project,
-    try_find_parent_project,
-)
+from encord_active.app.projects_page import get_projects, render_projects_page
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.writer import MainPredictionType
-from encord_active.lib.project.metadata import fetch_project_meta
-
-pages = {
-    "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
-    "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
-    "Model Quality": {
-        "Metrics": model_quality(MetricsPage()),
-        "Performance By Metric": model_quality(PerformanceMetric()),
-        "True Positives": model_quality(TruePositivesPage()),
-        "False Positives": model_quality(FalsePositivesPage()),
-        "False Negatives": model_quality(FalseNegativesPage()),
-    },
-    "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance, "Versioning": version_form},
-}
-
-DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
-SEPARATOR = "#"
 
 
 def provide_backcompatibility_for_old_predictions():
@@ -80,76 +51,59 @@ def provide_backcompatibility_for_old_predictions():
                 shutil.move(item.as_posix(), object_dir.as_posix())
 
 
-def to_item(k, v, parent_key: Optional[str] = None):
-    # NOTE: keys must be unique for the menu to render properly
-    composite_key = SEPARATOR.join(filter(None, [parent_key, k]))
-    item = MenuItem(key=composite_key, label=k, children=None)
-    if isinstance(v, dict):
-        item["children"] = to_items(v, parent_key=composite_key)
-    return item
-
-
-def to_items(d: dict, parent_key: Optional[str] = None):
-    return [to_item(k, v, parent_key) for k, v in d.items()]
-
-
-def get_project_name(path: Path):
-    try:
-        project_meta = fetch_project_meta(path)
-        return project_meta["project_title"]
-    except:
-        return path.name
-
-
-def project_selector(path: Path):
-    if is_project(path):
-        projects = [path]
-    else:
-        parent_project = try_find_parent_project(path)
-        projects = [parent_project] if parent_project else find_child_projects(path)
-
-    return st.selectbox("Choose Project", projects, format_func=get_project_name)
-
-
 def main(target: str):
     set_page_config()
-    render_help()
     target_path = Path(target)
+    initial_project = UseState[Optional[Project]](None)
+    initial_key_path = UseState[List[str]](DEFAULT_PAGE_PATH)
+    selected_key_path = UseState(deepcopy(initial_key_path.value))
+
+    memoized_projects, refresh_projects = use_memo(lambda: get_projects(target_path))
+
+    def refresh_pages_menu():
+        refresh_projects()
+        initial_key_path.set(deepcopy(selected_key_path.value))
+        refresh(clear_memo=True)
+
+    def select_project(project_hash: str, refetch=False):
+        projects, local_paths = refresh_projects() if refetch else memoized_projects
+        project = projects.get(project_hash)
+        if not project:
+            return
+        project_path = local_paths.get(project["hash"])
+        if not project_path:
+            return
+
+        if not initial_project.value:
+            initial_project.set(project)
+
+        project_dir = project_path.expanduser().absolute()
+        State.init(project_dir, refresh_pages_menu)
+        refresh(clear_memo=True)
+
+    if not has_state() or not initial_project.value:
+        render_projects_page(
+            select_project=select_project,
+            projects=memoized_projects.projects,
+            download_path=target_path,
+        )
+        return
+    else:
+        DBConnection.set_project_path(get_state().project_paths.project_dir)
 
     with st.sidebar:
-        project_path = project_selector(target_path)
-        if not project_path:
-            st.info("Please choose a project")
-            return
-
-        version, is_latest = version_selector(project_path)
-        if not version:
-            st.info("Please choose a version")
-            return
-
-        if not is_latest:
-            st.error("READ ONLY MODE \n\n Changes will not be saved")
-
-        path_state = UseState(DEFAULT_PAGE_PATH)
-
-        items = to_items(pages)
-        key = pages_menu(items)
-        if key:
-            path_state.set(key.split(SEPARATOR))
-
-    project_dir = Path(project_path).expanduser().absolute()
-    st.session_state.project_dir = project_dir
-
-    if not st.session_state.project_dir.is_dir():
-        st.error(f"Project not found for directory `{project_path}`.")
-        st.stop()
-
-    DBConnection.set_project_path(project_dir)
-    State.init(project_dir)
+        render_help()
+        render_pages_menu(
+            select_project,
+            selected_key_path.set,
+            memoized_projects.projects,
+            initial_project.value["hash"],
+            initial_key_path.value,
+        )
 
     provide_backcompatibility_for_old_predictions()
 
-    render = reduce(dict.__getitem__, path_state.value, pages)
+    render = get_renderer(selected_key_path.value)
     if callable(render):
         render()
 

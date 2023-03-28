@@ -1,0 +1,12 @@
+{
+  "label": "User Guide",
+  "position": 5,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Detailed descriptions of the key building blocks of Encord Active."
+  }
+}
+
+
+

@@ -1,9 +1,5 @@
 {
   "label": "Python SDK",
-  "position": 9,
-  "collapsed": true,
-  "link": {
-    "type": "generated-index",
-    "description": "How to use the `encord_active` python SDK."
-  }
+  "position": 10,
+  "collapsed": true
 }

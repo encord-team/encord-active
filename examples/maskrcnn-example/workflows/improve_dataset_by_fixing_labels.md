@@ -11,18 +11,18 @@ See documentation: https://docs.encord.com/active/docs/cli/import-encord-project
 3. Open the Encord-Active app.
 
 ```shell
-(encord-active-environment) > encord-active visualise
+(encord-active-environment) > encord-active visualize
 ```
 
 4. Go to **Label Quality => Explore**, and choose **Object annotation quality** metric.
 
 5. Fix labels via Encord Annotate by clicking the editor button.
 
-6. Once the fixing operation is finished, the local project should be updated again because labels have changed 
-on the Encord Annotate side. So delete the local project and import it again.
+6. Once the fixing operation is finished, the local project should be updated again because labels have changed
+   on the Encord Annotate side. So delete the local project and import it again.
 
-7. Open the App. Go to **Actions => Filter & Export**, click **Generate COCO file** and when activated 
-click **Download filtered data** to download COCO file.
+7. Open the App. Go to **Actions => Filter & Export**, click **Generate COCO file** and when activated
+   click **Download filtered data** to download COCO file.
 
 8. Fill in **config.ini** file.
 
@@ -44,8 +44,3 @@ click **Download filtered data** to download COCO file.
 ```
 
 11. Open the app and check the **Model quality** tab for the details.
-
-
-
-
-

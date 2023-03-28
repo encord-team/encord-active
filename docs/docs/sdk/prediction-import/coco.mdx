@@ -1,0 +1,30 @@
+---
+title: COCO
+sidebar_position: 1
+---
+
+:::caution
+
+Every time you run any of these importers, previously imported predictions will be overwritten!
+Make sure to [version your projects][project-versioning] if you want to be able to go back to previous model iterations.
+
+:::
+
+If you have your model predictions stored in the [COCO results format](https://cocodataset.org/#format-results), then you can import them as follows:
+
+```python
+from pathlib import Path
+
+from encord_active.cli.utils.coco import import_coco_predictions
+from encord_active.lib.model_predictions.importers import import_predictions
+from encord_active.lib.project import Project
+
+project_path = Path("/path/to/your/project/root")
+predictions_path = Path("/path/to/your/predictions.json")
+
+predictions = import_coco_predictions(project_path, predictions_path)
+
+import_predictions(Project(target), project_path, predictions)
+```
+
+[project-versioning]: ../../user-guide/versioning
