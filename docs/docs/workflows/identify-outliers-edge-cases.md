@@ -30,7 +30,7 @@ Use the slider to navigate your data from most severe outlier to least severe.
 
 ### 2. Tag outliers
 
-When you have identified outliers of interest, use the [tagging](/user-guide/tags) or [bulk tagging](user-guide/tags) feature to save a group of images.
+When you have identified outliers of interest, use the [tagging](../user-guide/tags) or [bulk tagging](../user-guide/tags) feature to save a group of images.
 
 ![data-quality-outliers-tagging.png](../images/data-quality-outliers-tagging.png)
 
