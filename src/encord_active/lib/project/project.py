@@ -196,7 +196,7 @@ class Project:
         self,
         project: EncordProject,
         project_file_structure: ProjectFileStructure,
-        filter_fn: Optional[Callable[..., bool]] = lambda x: x.label_hash is not None,
+        filter_fn: Optional[Callable[..., bool]] = lambda x: x["label_hash"] is not None,
         subset_size: Optional[int] = None,
     ) -> List[LabelRow]:
         try:
