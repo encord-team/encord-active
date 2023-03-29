@@ -75,9 +75,9 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
             counter += 1
 
-        data_hash_to_score: Dict[str, int] = {}
-        for counter, item in enumerate(common_array_indices):
-            data_hash_to_score[id_to_data_hash[item]] = counter + 1
+        data_hash_to_score: Dict[str, int] = {
+            id_to_data_hash[item]: counter + 1 for counter, item in enumerate(common_array_indices)
+        }
 
         return data_hash_to_score
 
