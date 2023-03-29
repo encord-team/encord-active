@@ -365,6 +365,8 @@ def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), 
     :return: List [fn(*job_args)]
     """
     job_args = list(job_args)
+    if len(job_args) == 0:
+        return []
     if not isinstance(job_args[0], tuple):
         job_args = [(j,) for j in job_args]
 
