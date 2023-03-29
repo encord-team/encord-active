@@ -173,25 +173,13 @@ class Project:
         }
         self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
-    def __load_label_row_meta(self, subset_size: Optional[int] = None):
+    def __load_label_row_meta(self, subset_size: Optional[int] = None) -> dict[str, LabelRowMetadata]:
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
 
-        def populate_defaults(lr_dict: dict):
-            img_dir = self.file_structure.label_row_structure(lr_dict["label_hash"]).images_dir
-            image_pth = next((i.as_posix() for i in img_dir.iterdir() if i.is_file()), None) or ""
-
-            return {
-                "data_link": image_pth,
-                "dataset_title": "",
-                "is_shadow_data": False,
-                "number_of_frames": 1,
-                **lr_dict,
-            }
-
         self.label_row_metas = {
-            lr_hash: LabelRowMetadata.from_dict(populate_defaults(lr_meta))
+            lr_hash: LabelRowMetadata.from_dict(self.__populate_label_row_metadata_defaults(lr_meta))
             for lr_hash, lr_meta in itertools.islice(
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
@@ -220,15 +208,21 @@ class Project:
         except FileNotFoundError:
             current_label_row_metas = dict()
 
-        latest_label_row_metas = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
+        latest_label_row_metas = [
+            LabelRowMetadata.from_dict(self.__populate_label_row_metadata_defaults(lr_meta))
+            for lr_meta in itertools.islice(filter(filter_fn, project.label_rows), subset_size)
+        ]
 
         label_rows_to_download: list[str] = []
         label_rows_to_update: list[str] = []
         for label_row_meta in latest_label_row_metas:
-            if label_row_meta["label_hash"] not in current_label_row_metas:
-                label_rows_to_download.append(label_row_meta["label_hash"])
+            if label_row_meta.label_hash not in current_label_row_metas:
+                label_rows_to_download.append(label_row_meta.label_hash)
             else:
-                label_rows_to_update.append(label_row_meta["label_hash"])
+                current_label_row_version_hash = current_label_row_metas[label_row_meta.label_hash].last_edited_at
+                latest_label_row_version_hash = label_row_meta.last_edited_at
+                if current_label_row_version_hash != latest_label_row_version_hash:
+                    label_rows_to_update.append(label_row_meta.label_hash)
 
         # Update label row content
         if len(label_rows_to_update) > 0:
@@ -266,6 +260,18 @@ class Project:
                 continue
             self.label_rows[lr_hash] = LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
             self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
+
+    def __populate_label_row_metadata_defaults(self, lr_dict: dict):
+        img_dir = self.file_structure.label_row_structure(lr_dict["label_hash"]).images_dir
+        image_pth = next((i.as_posix() for i in img_dir.iterdir() if i.is_file()), None) or ""
+
+        return {
+            "data_link": image_pth,
+            "dataset_title": "",
+            "is_shadow_data": False,
+            "number_of_frames": 1,
+            **lr_dict,
+        }
 
 
 def download_label_row(
