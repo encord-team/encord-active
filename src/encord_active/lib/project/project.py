@@ -21,6 +21,7 @@ from encord_active.lib.common.utils import (
     try_execute,
 )
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
+from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -92,6 +93,42 @@ class Project:
 
         return self.load()
 
+    def refresh(self):
+        """
+        Refresh project data using its remote project in Encord Annotate.
+
+        :return: The updated project instance.
+        """
+        if not self.is_loaded:
+            raise AttributeError(
+                "The project has not been loaded. You need to load the project before refreshing its data."
+            )
+
+        if not self.project_meta.get("has_remote", False):
+            raise AttributeError("The project does not have a remote project associated to it.")
+
+        project_hash = self.project_meta.get("project_hash")
+        if project_hash is None:
+            raise AttributeError(
+                "The project metadata is missing the reference to the remote project in Encord Annotate. "
+                "Add the project hash of the remote project to the property `project_hash` in the file "
+                f"{self.file_structure.project_meta}."
+            )
+
+        ssh_key_path = self.project_meta.get("ssh_key_path")
+        if ssh_key_path is None:
+            raise AttributeError(
+                "The project metadata is missing the path to the private SSH key needed to log into Encord Annotate. "
+                f"Add such path to the property `ssh_key_path` in the file {self.file_structure.project_meta}."
+            )
+
+        encord_client = get_client(Path(ssh_key_path))
+        encord_project = encord_client.get_project(project_hash)
+        self.__download_and_save_label_rows(encord_project)
+        self.__save_label_row_meta(encord_project)  # Update cached metadata of the label rows (after new data sync)
+
+        return self.load()
+
     @property
     def is_loaded(self) -> bool:
         return all(
@@ -136,7 +173,7 @@ class Project:
         }
         self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
-    def __load_label_row_meta(self, subset_size: Optional[int]):
+    def __load_label_row_meta(self, subset_size: Optional[int] = None):
         label_row_meta_file_path = self.file_structure.label_row_meta
         if not label_row_meta_file_path.exists():
             raise FileNotFoundError(f"Expected file `label_row_meta.json` at {label_row_meta_file_path.parent}")
@@ -159,16 +196,63 @@ class Project:
                 json.loads(label_row_meta_file_path.read_text(encoding="utf-8")).items(), subset_size
             )
         }
+        return self.label_row_metas
 
     def save_label_row(self, label_row: LabelRow):
         lr_structure = self.file_structure.label_row_structure(label_row["label_hash"])
         lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
-        label_rows = download_label_rows_and_data(encord_project, self.file_structure)
+        label_rows = self.__download_label_rows_and_data(encord_project, self.file_structure)
         split_lr_videos(label_rows, self.file_structure)
-        logger.info("Successfully downloaded all label row datas")
+        logger.info("Data successfully synced from the remote project")
         return
+
+    def __download_label_rows_and_data(
+        self,
+        project: EncordProject,
+        project_file_structure: ProjectFileStructure,
+        filter_fn: Optional[Callable[..., bool]] = lambda x: x.label_hash is not None,
+        subset_size: Optional[int] = None,
+    ) -> List[LabelRow]:
+        try:
+            current_label_row_metas = self.__load_label_row_meta()
+        except FileNotFoundError:
+            current_label_row_metas = dict()
+
+        latest_label_row_metas = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
+
+        label_rows_to_download: list[str] = []
+        label_rows_to_update: list[str] = []
+        for label_row_meta in latest_label_row_metas:
+            if label_row_meta["label_hash"] not in current_label_row_metas:
+                label_rows_to_download.append(label_row_meta["label_hash"])
+            else:
+                label_rows_to_update.append(label_row_meta["label_hash"])
+
+        # Update label row content
+        if len(label_rows_to_update) > 0:
+            collect_async(
+                partial(
+                    download_label_row,
+                    project=project,
+                    project_file_structure=project_file_structure,
+                ),
+                label_rows_to_update,
+                desc="Updating label rows",
+            )
+
+        # Download new project data
+        downloaded_label_rows = collect_async(
+            partial(
+                download_label_row_and_data,
+                project=project,
+                project_file_structure=project_file_structure,
+            ),
+            label_rows_to_download,
+            desc="Collecting new data",
+        )
+        return downloaded_label_rows
 
     def __load_label_rows(self):
         self.label_rows = {}
@@ -184,47 +268,32 @@ class Project:
             self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
 
 
-def download_label_rows_and_data(
-    project: EncordProject,
-    project_file_structure: ProjectFileStructure,
-    filter_fn: Optional[Callable[..., bool]] = lambda x: x["label_hash"] is not None,
-    subset_size: Optional[int] = None,
-    **kwargs,
-) -> List[LabelRow]:
-    label_row_metas = list(itertools.islice(filter(filter_fn, project.label_rows), subset_size))
-
-    return collect_async(
-        partial(download_label_row_and_data, project=project, project_file_structure=project_file_structure, **kwargs),
-        label_row_metas,
-        desc="Collecting label rows and data from Encord SDK",
-    )
-
-
-def download_label_row_and_data(
-    label_row_meta, project: EncordProject, project_file_structure: ProjectFileStructure, refresh=False
-) -> Optional[LabelRow]:
-    label_hash = label_row_meta.get("label_hash")
-    if not label_hash:
-        return None
-
+def download_label_row(
+    label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
+) -> LabelRow:
     lr_structure = project_file_structure.label_row_structure(label_hash)
     lr_structure.path.mkdir(parents=True, exist_ok=True)
-    if not refresh and lr_structure.label_row_file.is_file() and lr_structure.images_dir.is_dir():
-        try:
-            return LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
-        except json.decoder.JSONDecodeError:
-            logging.warning(f"Could not decode row {label_hash} stored here {lr_structure.label_row_file}.")
-            return None
     label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
     lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
+    return label_row
 
-    # Download the data units
+
+def download_data(label_row: LabelRow, project_file_structure: ProjectFileStructure):
+    lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
     lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
+
+
+def download_label_row_and_data(
+    label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
+) -> Optional[LabelRow]:
+
+    label_row = download_label_row(label_hash, project, project_file_structure)
+    download_data(label_row, project_file_structure)
     return label_row
 
 
