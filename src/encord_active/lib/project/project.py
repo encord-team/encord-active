@@ -302,7 +302,7 @@ def download_label_row_and_data(
 def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
     return collect_async(
         partial(split_lr_video, project_file_structure=project_file_structure),
-        label_rows,
+        filter(lambda lr: lr.data_type == "video", label_rows),
         desc="Splitting videos into frames",
     )
 
