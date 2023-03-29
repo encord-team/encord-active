@@ -95,14 +95,10 @@ class Project:
 
     def refresh(self):
         """
-        Refresh project data using its remote project in Encord Annotate.
+        Refresh project data and labels using its remote project in Encord Annotate.
 
         :return: The updated project instance.
         """
-        if not self.is_loaded:
-            raise AttributeError(
-                "The project has not been loaded. You need to load the project before refreshing its data."
-            )
 
         if not self.project_meta.get("has_remote", False):
             raise AttributeError("The project does not have a remote project associated to it.")
@@ -193,7 +189,7 @@ class Project:
     def __download_and_save_label_rows(self, encord_project: EncordProject):
         label_rows = self.__download_label_rows_and_data(encord_project, self.file_structure)
         split_lr_videos(label_rows, self.file_structure)
-        logger.info("Data successfully synced from the remote project")
+        logger.info("Data and labels successfully synced from the remote project")
         return
 
     def __download_label_rows_and_data(
