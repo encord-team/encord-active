@@ -259,7 +259,7 @@ class Project:
 
     def __populate_label_row_metadata_defaults(self, lr_dict: dict):
         img_dir = self.file_structure.label_row_structure(lr_dict["label_hash"]).images_dir
-        image_pth = next((i.as_posix() for i in img_dir.iterdir() if i.is_file()), None) or ""
+        image_pth = img_dir.as_posix() if img_dir.is_dir() else ""
 
         return {
             "data_link": image_pth,
