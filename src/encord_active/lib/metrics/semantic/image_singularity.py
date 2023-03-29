@@ -40,7 +40,7 @@ This metric gives each image a score that shows each image's uniqueness.
             doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-singularity",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
-            embedding_type=EmbeddingType.CLASSIFICATION,
+            embedding_type=EmbeddingType.IMAGE,
         )
         self.collections: List[LabelEmbedding] = []
         self.scores: dict[str, DataUnitInfo] = {}
@@ -86,7 +86,13 @@ This metric gives each image a score that shows each image's uniqueness.
                     break
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        self.collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+        if self.metadata.embedding_type:
+            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+        else:
+            logger.error(
+                f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
+            )
+            return
 
         if len(self.collections) > 0:
 
