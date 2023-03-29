@@ -14,21 +14,21 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 logger = logger.opt(colors=True)
 
 
-class ImageEasiness(Metric):
+class ImageDifficulty(Metric):
     def __init__(self):
-        super(ImageEasiness, self).__init__(
-            title="Image Easiness",
+        super(ImageDifficulty, self).__init__(
+            title="Image Difficulty",
             short_description="Ranks images according to their proximity to class prototypes (lower values = closer to "
             "class prototypes = easy samples)",
             long_description=r"""
-This metric gives each image a ranking value that shows the image's easiness.  
+This metric gives each image a ranking value that shows the image's difficulty (higher values = more difficult).  
 It clusters images according to the number of classes in the ontology (if there are both object and frame level 
 classifications in the ontology, the number of object classes is taken into account) 
 and rank images inside each cluster by assigning lower 
 score to the ones which are closer to the cluster center. Finally, ranked images in different clusters are 
 merged by keeping the samples of classes the same for the first _N_ samples.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-easiness",
+            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-difficulty",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.IMAGE,
@@ -49,7 +49,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
         else:
             return default_k_size
 
-    def _get_easiness_ranking(self, cluster_size: int) -> Dict[str, int]:
+    def _get_difficulty_ranking(self, cluster_size: int) -> Dict[str, int]:
         id_to_data_hash: Dict[int, str] = {i: item["data_unit"] for i, item in enumerate(self.collections)}
         embeddings = np.array([item["embedding"] for item in self.collections]).astype(np.float32)
         kmeans: KMeans = KMeans(n_clusters=cluster_size).fit(embeddings)  # type: ignore
@@ -92,7 +92,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
         if len(self.collections) > 0:
             cluster_size = self._get_cluster_size(iterator)
-            data_hash_to_score = self._get_easiness_ranking(cluster_size)
+            data_hash_to_score = self._get_difficulty_ranking(cluster_size)
 
             for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
                 writer.write(score=data_hash_to_score[data_unit["data_hash"]])
