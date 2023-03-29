@@ -11,7 +11,7 @@ Encord Active finds outliers using precomputed Interquartile ranges.
 
 ### Setup
 
-If you haven't installed Encord Active, visit [installation](/installation).
+If you haven't installed Encord Active, visit [installation](../installation).
 In this workflow we will be using the BDD validation dataset.
 
 ## Data outliers
