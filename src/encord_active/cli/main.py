@@ -33,6 +33,7 @@ class OrderedPanelGroup(TyperGroup):
         "download",
         "init",
         "import",
+        "refresh",
         "visualize",
         "metric",
         "print",
