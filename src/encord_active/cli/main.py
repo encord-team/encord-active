@@ -18,6 +18,7 @@ from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import (
     bypass_streamlit_question,
+    ensure_project,
     find_child_projects,
 )
 from encord_active.cli.utils.prints import success_with_vizualise_command
@@ -373,6 +374,24 @@ Consider removing the directory or setting the `--name` option.
         run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
 
     success_with_vizualise_command(project_path, "Project initialised :+1:")
+
+
+@cli.command(name="refresh")
+@ensure_project()
+def refresh(
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
+):
+    """
+    [green bold]Sync[/green bold] your data and labels from the remote project
+    """
+    from encord_active.lib.project import Project
+
+    try:
+        Project(target).refresh()
+    except Exception as e:
+        rich.print(f"[red] ERROR: The data sync failed. Logs: {e}.")
+    else:
+        rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
