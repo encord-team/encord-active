@@ -52,7 +52,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
     def _get_difficulty_ranking(self, cluster_size: int) -> Dict[str, int]:
         id_to_data_hash: Dict[int, str] = {i: item["data_unit"] for i, item in enumerate(self.collections)}
         embeddings = np.array([item["embedding"] for item in self.collections]).astype(np.float32)
-        kmeans: KMeans = KMeans(n_clusters=cluster_size).fit(embeddings)  # type: ignore
+        kmeans: KMeans = KMeans(n_clusters=cluster_size, n_init="auto").fit(embeddings)  # type: ignore
 
         cluster_ids_all = []
 
