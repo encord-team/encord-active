@@ -21,8 +21,8 @@ Once the COCO file is generated, the **Download filtered data** button will unlo
 
 Additionally, you can also clone the data and labels directly to the Encord labelling platform.
 
-1. Click the _🏗 Clone_ button
-2. Choose a dataset and project title
+1. Click the _🏗 Export to Encord_ button
+2. Choose an ontology, dataset and project title
 3. Pres the _➕ Create_ button
 
 The data will be exported to Encord. You can follow the progress in the buttom of the page.
