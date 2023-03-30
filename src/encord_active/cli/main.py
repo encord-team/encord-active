@@ -384,6 +384,12 @@ def refresh(
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
+
+    The local project should have a reference to the remote Encord project in its config file (`project_meta.yaml`).
+    The required attributes are:
+    1. The remote flag set to `true` (has_remote: true).
+    2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
+    3. The path to the private Encord user SSH key (ssh_key_path: private-encord-user-ssh-key-path).
     """
     from encord_active.lib.project import Project
 
