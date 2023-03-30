@@ -51,6 +51,6 @@ Use the keyboard arrows to select your project and hit <kbd>enter</kbd>.
 
 Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/quality-metrics) available in `encord-active`.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [visualize](../../cli#visualize) CLI command.
+When the process is done, follow the printed instructions to open the app or see more details in the [visualize](../cli#visualize) CLI command.
 
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication

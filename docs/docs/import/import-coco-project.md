@@ -7,7 +7,7 @@ sidebar_position: 4
 **Import a dataset and annotations which are stored in COCO format on your local file system.**
 
 :::info
-Make sure you have installed Encord Active with the `coco` [extras](../../installation#coco-extras).
+Make sure you have installed Encord Active with the `coco` [extras](../installation#coco-extras).
 :::
 
 If you already have a project on your local machine using the COCO data format, you can import that project with the following command:

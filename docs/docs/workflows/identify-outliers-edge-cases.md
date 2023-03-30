@@ -11,7 +11,7 @@ Encord Active finds outliers using precomputed Interquartile ranges.
 
 ### Setup
 
-If you haven't installed Encord Active, visit [installation](/installation).
+If you haven't installed Encord Active, visit [installation](../installation).
 In this workflow we will be using the BDD validation dataset.
 
 ## Data outliers
@@ -30,7 +30,7 @@ Use the slider to navigate your data from most severe outlier to least severe.
 
 ### 2. Tag outliers
 
-When you have identified outliers of interest, use the [tagging](/user-guide/tags) or [bulk tagging](user-guide/tags) feature to save a group of images.
+When you have identified outliers of interest, use the [tagging](../user-guide/tags) or [bulk tagging](../user-guide/tags) feature to save a group of images.
 
 ![data-quality-outliers-tagging.png](../images/data-quality-outliers-tagging.png)
 
