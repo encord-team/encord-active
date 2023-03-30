@@ -19,11 +19,8 @@ from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
-from encord_active.lib.db.tags import Tags
-from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
-    DatasetUniquenessError,
-    EncordActions,
-)
+from encord_active.lib.db.tags import Tags, TagScope
+from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
 from encord_active.lib.project.metadata import ProjectNotFound
 
 
@@ -70,7 +67,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
         to_filter_columns = st.multiselect("Filter by", columns_to_filter)
         filtered = df.copy()
-        filtered["data_row_id"] = filtered.index.str.split("_", n=2).str[0:2].str.join("_")
+        filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
@@ -82,9 +79,14 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 tag_filters = right.multiselect(
                     "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
                 )
-                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in filtered["tags"]]
-                filtered_items = filtered.loc[filtered_rows]
-                filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
+                for tag in tag_filters:
+                    filtered_rows = [tag in x for x in filtered["tags"]]
+                    filtered_items = filtered.loc[filtered_rows]
+                    if tag.scope == TagScope.LABEL:
+                        non_applicable = filtered[filtered.index.isin(filtered_items["data_row_id"])]
+                        filtered = filtered[filtered.index.isin(filtered_items.index)]
+                    else:
+                        filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
             # Treat columns with < 10 unique values as categorical
             elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
