@@ -15,12 +15,12 @@ Here is a list of all the top-level commands:
 
 ```
 quickstart         Start Encord Active straight away 🏃💨
-download           Download a sandbox dataset to get started. 📁
+download           Download a sandbox dataset to get started 📁
 init               Initialize a project from your local file system 🌱
 import             Import Projects or Predictions ⬇️
+refresh            Sync data and labels from a remote Encord project 🔄
 visualize          Launch the application with the provided project ✨
-metric             Manage project's metrics.
-metricize          Execute metrics on your data and predictions 🧠
+metric             Manage project metrics 📋
 print              Print useful information 🖨️
 config             Configure global settings 🔧
 ```
@@ -231,9 +231,33 @@ Options:
  --coco                          Import a coco result format file
 ```
 
+## `refresh`
+
+Sync data and labels from a remote Encord project.
+
+```
+Usage: encord-active refresh [OPTIONS]
+
+Options:
+ --target  -t         DIRECTORY  Path to the target project. [default: CWD]
+```
+
+The local project should have a reference to the remote Encord project in its config file (`project_meta.yaml`).
+The required attributes are:
+1. The remote flag set to `true`.
+2. The hash of the remote Encord project.
+3. The path to the private Encord user SSH key.
+
+Use this snippet to fill the required fields and remember to substitute `project_hash` and `ssh_key_path` attributes with yours.
+```yaml
+has_remote: true
+project_hash: remote-encord-project-hash
+ssh_key_path: private-encord-user-ssh-key-path
+```
+
 ## `metric`
 
-Manage project's metrics.
+Manage project metrics.
 
 ```
 Usage: encord-active metric [OPTIONS] COMMAND [ARGS]...
@@ -246,17 +270,16 @@ Commands:
  show                 Show information about available metrics.
 ```
 
-### `add`
-
-Add metrics to the project by specifying a path to a metrics module and titles of metrics within the module. If no metric titles are provided then all metrics found in the python module will be added to the project.
-
 :::info
 Make sure your shell's current working directory is that of an Encord Active project, or your command points to one with the `--target` global option.
 :::
 
+### `add`
+
+Add metrics to the project by specifying a path to a metrics module and titles of metrics within the module. If no metric titles are provided then all metrics found in the python module will be added to the project.
+
 ```
 Usage: encord-active metric add [OPTIONS] MODULE_PATH [METRIC_TITLE]...
-
 
 Arguments:
  *  module_path       FILE               Path to the python module where the metric resides. [required]
@@ -312,7 +335,6 @@ Options:
  --target  -t      DIRECTORY  Path to the target project. [default: CWD]
  --all                        Run all metrics.
  --fuzzy                      Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄
-
 ```
 
 ### `show`
@@ -327,7 +349,6 @@ Arguments:
 
 Options:
  --target  -t        DIRECTORY  Path to the target project. [default: CWD]
-
 ```
 
 ## `config`

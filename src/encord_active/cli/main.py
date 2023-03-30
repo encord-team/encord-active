@@ -70,7 +70,7 @@ Made by Encord. [bold]Get in touch[/bold]:
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
 cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
-cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project's metrics.")
+cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project metrics :clipboard:")
 
 
 @cli.command()
@@ -81,7 +81,7 @@ def download(
     ),
 ):
     """
-    [green bold]Download[/green bold] a sandbox dataset to get started. 📁
+    [green bold]Download[/green bold] a sandbox dataset to get started 📁
 
     * If --project_name is not given as an argument, available sandbox projects will be listed
      and you can select one from the menu.
@@ -383,14 +383,14 @@ def refresh(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
 ):
     """
-    [green bold]Sync[/green bold] your data and labels from the remote project
+    [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
     """
     from encord_active.lib.project import Project
 
     try:
         Project(target).refresh()
     except Exception as e:
-        rich.print(f"[red] ERROR: The data sync failed. Logs: {e}.")
+        rich.print(f"[red] ERROR: The data sync failed. Log: {e}.")
     else:
         rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
