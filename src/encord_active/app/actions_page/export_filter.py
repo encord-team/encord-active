@@ -14,7 +14,7 @@ from pandas.api.types import (
 from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
-from encord_active.app.common.state import get_state, refresh
+from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config, setup_page
 from encord_active.lib.coco.encoder import generate_coco_file
@@ -435,12 +435,11 @@ def render_export_button(
             new_project_link = f"https://app.encord.com/projects/view/{project_creation_result.project_hash}/summary"
             new_dataset_link = f"https://app.encord.com/datasets/view/{project_creation_result.dataset_hash}"
             update_items = [
-                UpdateItem(type=UpdateItemType.LABEL, text="🎉 New project is created!"),
+                UpdateItem(type=UpdateItemType.LABEL, text="🎉 Project exported to Encord Annotate!"),
                 UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new project]({new_project_link})"),
                 UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new dataset]({new_dataset_link})"),
             ]
             set_updates(update_items)
-            refresh(clear_global=True)
 
 
 def render_unimplemented_buttons(
