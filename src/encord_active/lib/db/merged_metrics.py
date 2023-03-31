@@ -98,7 +98,7 @@ class MergedMetrics(object):
     @ensure_initialised
     def update_tags(self, id: str, tags: List[Tag]):
         with DBConnection() as conn:
-            conn.execute(f"UPDATE {TABLE_NAME} SET tags = '{marshall_tags(tags)}' WHERE IDENTIFIER = '{id}'")
+            conn.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
     @ensure_initialised
     def all(self):
