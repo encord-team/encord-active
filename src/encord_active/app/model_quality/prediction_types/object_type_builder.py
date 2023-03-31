@@ -1,6 +1,5 @@
 import json
 import re
-from copy import deepcopy
 from enum import Enum
 from typing import Optional, Union
 
@@ -118,43 +117,79 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
         return True
 
+    def _render_iou_slider(self):
+        get_state().iou_threshold = st.slider(
+            "Select an IOU threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=State.iou_threshold,
+            help="The mean average precision (mAP) score is based on true positives and false positives. "
+            "The IOU threshold determines how closely predictions need to match labels to be considered "
+            "as true positives.",
+        )
+
+    def _render_ignore_empty_frames_checkbox(self):
+        st.write("")
+        st.write("")
+        # Ignore unmatched frames
+        get_state().ignore_frames_without_predictions = st.checkbox(
+            "Ignore frames without predictions",
+            value=State.ignore_frames_without_predictions,
+            help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
+            "which there exist no predictions. With this flag, you can ignore those.",
+        )
+
     def render_view_options(self, *args):
         if not get_state().predictions.all_classes_objects:
             get_state().predictions.all_classes_objects = get_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.OBJECT.value
             )
 
-        all_classes = get_state().predictions.all_classes_objects
-        col1, col2, col3 = st.columns([4, 4, 3])
+        def render_metrics_settings():
+            col1, col2, col3 = st.columns([4, 4, 3])
+            with col1:
+                get_state().predictions.selected_classes_objects = self._render_class_filtering_component(
+                    get_state().predictions.all_classes_objects
+                )
+            with col2:
+                self._render_iou_slider()
+            with col3:
+                self._render_ignore_empty_frames_checkbox()
 
-        with col1:
-            selected_classes = self._render_class_filtering_component(all_classes)
+        if self.page_mode == ModelQualityPage.METRICS:
+            render_metrics_settings()
+        elif self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+            render_metrics_settings()
+            c1, c2, c3 = st.columns([4, 4, 3])
+            with c1:
+                self._topbar_metric_selection_component(MetricType.PREDICTION, get_state().predictions.metric_datas)
+            with c2:
+                self._set_binning()
+            with c3:
+                self._class_decomposition()
+        elif self.page_mode == ModelQualityPage.EXPLORER:
+            c1, c2, c3, c4 = st.columns([2, 4, 5, 4])
+            with c1:
+                self._explorer_outcome_type = st.selectbox(
+                    "Outcome",
+                    [x for x in self.OutcomeType],
+                    format_func=lambda x: x.value,
+                    help="Only the samples with this outcome will be shown",
+                )
+            with c2:
+                explorer_metric_type = (
+                    MetricType.PREDICTION
+                    if self._explorer_outcome_type
+                    in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]
+                    else MetricType.LABEL
+                )
 
-        get_state().predictions.selected_classes_objects = dict(selected_classes) or deepcopy(all_classes)
+                self._topbar_metric_selection_component(explorer_metric_type, get_state().predictions.metric_datas)
+            with c3:
+                self._render_iou_slider()
+            with c4:
+                self._render_ignore_empty_frames_checkbox()
 
-        with col2:
-            # IOU
-            get_state().iou_threshold = st.slider(
-                "Select an IOU threshold",
-                min_value=0.0,
-                max_value=1.0,
-                value=State.iou_threshold,
-                help="The mean average precision (mAP) score is based on true positives and false positives. "
-                "The IOU threshold determines how closely predictions need to match labels to be considered "
-                "as true positives.",
-            )
-
-        with col3:
-            st.write("")
-            st.write("")
-            # Ignore unmatched frames
-            get_state().ignore_frames_without_predictions = st.checkbox(
-                "Ignore frames without predictions",
-                value=State.ignore_frames_without_predictions,
-                help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
-                "which there exist no predictions. With this flag, you can ignore those.",
-            )
-        self._topbar_additional_settings()
         divider()
         render_filter()
         divider()

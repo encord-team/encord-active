@@ -1,4 +1,3 @@
-from copy import deepcopy
 from enum import Enum
 from typing import List, Optional
 
@@ -120,10 +119,9 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                 get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
             )
 
-        all_classes = get_state().predictions.all_classes_classifications
-        selected_classes = self._render_class_filtering_component(all_classes)
-
-        get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
+        get_state().predictions.selected_classes_classifications = self._render_class_filtering_component(
+            get_state().predictions.all_classes_classifications
+        )
         self._topbar_additional_settings()
         divider()
         super().render_view_options(*args)

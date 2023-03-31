@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Tuple, Union
 
@@ -44,7 +45,7 @@ class PredictionTypeBuilder(Page):
     def _render_class_filtering_component(
         self, all_classes: Union[Dict[str, OntologyObjectJSON], Dict[str, OntologyClassificationJSON]]
     ):
-        return st.multiselect(
+        selected_classes = st.multiselect(
             "Filter by class",
             list(all_classes.items()),
             format_func=lambda x: x[1]["name"],
@@ -54,6 +55,7 @@ This acts as a filter, i.e. when nothing is selected all classes are included.
 Performance metrics will be automatically updated according to the chosen classes.
                 """,
         )
+        return dict(selected_classes) or deepcopy(all_classes)
 
     def _description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):

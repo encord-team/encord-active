@@ -61,11 +61,12 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         columns_to_filter = df.columns.to_list()
         if "url" in columns_to_filter:
             columns_to_filter.remove("url")
-        # Move tags to first option.
-        tags_column = columns_to_filter.pop(columns_to_filter.index("tags"))
-        columns_to_filter = [tags_column] + columns_to_filter
+        # Move some columns to the begining
+        columns_to_filter.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
 
-        to_filter_columns = st.multiselect("Filter by", columns_to_filter)
+        to_filter_columns = st.multiselect(
+            "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
+        )
         filtered = df.copy()
         filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:
@@ -89,7 +90,11 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
             # Treat columns with < 10 unique values as categorical
-            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
+            elif (
+                is_categorical_dtype(filtered[column])
+                or filtered[column].nunique()
+                or column in ["object_class", "annotator"]
+            ):
                 if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
