@@ -154,8 +154,6 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
 
-            self.display_settings()
-
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
