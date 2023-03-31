@@ -89,7 +89,9 @@ def main(target: str):
         )
         return
     else:
-        DBConnection.set_project_path(get_state().project_paths.project_dir)
+        project_dir = get_state().project_paths.project_dir
+        DBConnection.set_project_path(project_dir)
+        get_state().querier.set_project_path(project_dir)
 
     with st.sidebar:
         render_help()

@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, Path("~/Projects/natural-language-querying/").expanduser().absolute().as_posix())
+
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -5,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+from ea_query import Querier
 from pandera.typing import DataFrame
 
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
@@ -75,6 +81,7 @@ class State:
     refresh_projects: Callable[[], Any]
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
+    querier: Querier
     filtering_state: FilteringState = field(default_factory=FilteringState)
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
@@ -99,6 +106,7 @@ class State:
                 refresh_projects=refresh_projects,
                 merged_metrics=MergedMetrics().all(),
                 all_tags=Tags().all(),
+                querier=Querier(project_dir),
             )
 
 
