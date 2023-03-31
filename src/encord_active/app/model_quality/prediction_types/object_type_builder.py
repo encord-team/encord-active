@@ -117,6 +117,28 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
         return True
 
+    def _render_iou_slider(self):
+        get_state().iou_threshold = st.slider(
+            "Select an IOU threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=State.iou_threshold,
+            help="The mean average precision (mAP) score is based on true positives and false positives. "
+            "The IOU threshold determines how closely predictions need to match labels to be considered "
+            "as true positives.",
+        )
+
+    def _render_ignore_empty_frames_checkbox(self):
+        st.write("")
+        st.write("")
+        # Ignore unmatched frames
+        get_state().ignore_frames_without_predictions = st.checkbox(
+            "Ignore frames without predictions",
+            value=State.ignore_frames_without_predictions,
+            help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
+            "which there exist no predictions. With this flag, you can ignore those.",
+        )
+
     def render_view_options(self, *args):
         if not get_state().predictions.all_classes_objects:
             get_state().predictions.all_classes_objects = get_class_idx(
@@ -168,17 +190,6 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             with c4:
                 self._render_ignore_empty_frames_checkbox()
 
-        with col3:
-            st.write("")
-            st.write("")
-            # Ignore unmatched frames
-            get_state().ignore_frames_without_predictions = st.checkbox(
-                "Ignore frames without predictions",
-                value=State.ignore_frames_without_predictions,
-                help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
-                "which there exist no predictions. With this flag, you can ignore those.",
-            )
-        self._topbar_additional_settings()
         divider()
         render_filter()
         divider()

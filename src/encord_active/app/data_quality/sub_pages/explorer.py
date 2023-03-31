@@ -112,7 +112,7 @@ class ExplorerPage(Page):
         if not metric_names:
             return
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, _ = st.columns([5, 3, 3])
         selected_metric_name = col1.selectbox(
             "Sort by",
             metric_names,
@@ -131,17 +131,6 @@ class ExplorerPage(Page):
         get_state().filtering_state.sorted_items = df
         if df.shape[0] <= 0:
             return None
-
-        class_set = natsorted(df[MetricSchema.object_class].dropna().unique().tolist())
-        with col3:
-            if len(class_set) > 0:
-                get_state().filtering_state.selected_classes = st.multiselect("Filter by class", class_set)
-
-        annotators = get_annotator_level_info(df)
-        annotator_set = natsorted(annotators.keys())
-        with col4:
-            if len(annotator_set) > 0:
-                get_state().filtering_state.selected_annotators = st.multiselect("Filter by annotator", annotator_set)
 
         render_filter()
         divider()
