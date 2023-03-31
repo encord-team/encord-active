@@ -133,6 +133,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             if not non_applicable.empty:
                 filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
                 filtered = pd.concat([filtered, filtered_objects_df])
+
     return filtered.drop("data_row_id", axis=1)
 
 
@@ -280,13 +281,12 @@ def actions():
     (
         generate_csv_col,
         generate_coco_col,
-        _,
         export_button_col,
         subset_button_col,
         delete_button_col,
         edit_button_col,
         augment_button_col,
-    ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
+    ) = st.columns((3, 3, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import streamlit as st
 
-from encord_active.app.actions_page.export_filter import actions
+from encord_active.app.actions_page.export_filter import actions, show_update_stats
 from encord_active.app.actions_page.versioning import version_form
 from encord_active.app.common.components.sticky.sticky import sticky_header
 from encord_active.app.common.components.tags.tag_creator import tag_creator
@@ -49,7 +49,13 @@ class Page(ABC):
                 with tag_tab:
                     tag_creator()
                 with actions_tab:
-                    actions()
+                    left, right = st.columns([5, 1])
+                    with left:
+                        actions()
+                    with right:
+                        filterd = get_state().filtering_state.merged_metrics
+                        if filterd is not None:
+                            show_update_stats(filterd)
                 with version_tab:
                     version_form()
 
