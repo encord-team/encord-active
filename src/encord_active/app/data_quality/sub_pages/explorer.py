@@ -1,11 +1,14 @@
 import re
+from time import perf_counter
 from typing import List, Optional
 
 import pandas as pd
 import streamlit as st
+from encord_active_components.components.explorer import explorer
 from natsort import natsorted
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.image import image_to_url
 
 from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.common.components import build_data_tags, divider
@@ -27,7 +30,10 @@ from encord_active.app.common.components.tags.individual_tagging import multisel
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
 from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.common.image_utils import show_image_and_draw_polygons
+from encord_active.lib.common.image_utils import (
+    ObjectDrawingConfigurations,
+    show_image_and_draw_polygons,
+)
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
@@ -188,24 +194,34 @@ def fill_data_quality_window(
         paginated_subset = paginate_df(current_df, page_number, n_items)
 
     with grid_container:
-        if form and form.submitted:
-            df = paginated_subset if form.level == BulkLevel.PAGE else current_df
-            action_bulk_tags(df, form.tags, form.action)
+        images = []
+        for i, (_, row) in enumerate(paginated_subset.iterrows()):
+            identifier_parts = 4 if embedding_information.has_annotations else 3
+            identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
+            image = show_image_and_draw_polygons(
+                row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
+            )
+            url = image_to_url(image, -1, False, "RGB", "JPEG", identifier)[1:]
+            images.append({"url": url})
 
-        if len(paginated_subset) == 0:
-            st.error("No data in selected interval")
-        else:
-            cols: List = []
-            similarity_expanders = []
-            for i, (_, row) in enumerate(paginated_subset.iterrows()):
-                if not cols:
-                    if i:
-                        divider()
-                    cols = list(st.columns(n_cols))
-                    similarity_expanders.append(st.expander("Similarities", expanded=True))
+        explorer(images)
 
-                with cols.pop(0):
-                    build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
+    # with grid_container:
+    #     if form and form.submitted:
+    #         df = paginated_subset if form.level == BulkLevel.PAGE else current_df
+    #         action_bulk_tags(df, form.tags, form.action)
+    #
+    #     if len(paginated_subset) == 0:
+    #         st.error("No data in selected interval")
+    #     else:
+    #         cols: List = []
+    #         similarity_expanders = []
+    #         for i, (_, row) in enumerate(paginated_subset.iterrows()):
+    #             if not cols:
+    #                 if i:
+    #                     divider()
+    #                 cols = list(st.columns(n_cols))
+    #                 similarity_expanders.append(st.expander("Similarities", expanded=True))
 
 
 def build_card(

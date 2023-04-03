@@ -16,3 +16,4 @@ else:
 class Components(str, Enum):
     PAGES_MENU = "PagesMenu"
     PROJECT_SELECTION = "ProjectsPage"
+    EXPLORER = "Explorer"
