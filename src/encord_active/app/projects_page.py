@@ -53,7 +53,7 @@ def prevent_detached_versions(path: Path):
 
 def image_url(image: AtomicImage, project_hash: str):
     id = f"project-{project_hash}-image"
-    return image_to_url(image, -1, False, "RGB", "JPEG", id)
+    return image_to_url(image, -1, False, "RGB", "JPEG", id)[1:]
 
 
 # TODO: repalce me with something smarter than just the first image

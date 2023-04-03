@@ -167,7 +167,7 @@ const ProjectCard = ({
       <img
         src={
           project.imageUrl
-            ? window.location.ancestorOrigins[0] + project.imageUrl
+            ? document.referrer + project.imageUrl
             : DEFAUL_PROJECT_IMAGE
         }
         alt={project.name}
