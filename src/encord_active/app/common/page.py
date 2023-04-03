@@ -42,7 +42,7 @@ class Page(ABC):
     def display_settings(self, show_label_checkbox: bool = False):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
-                view_tab, tag_tab, actions_tab, version_tab = st.tabs(["View", "Tag", "Action", "Version"])
+                view_tab, tag_tab, actions_tab, version_tab = st.tabs(["Filter", "Tag", "Action", "Version"])
 
                 with view_tab:
                     self.render_view_options(show_label_checkbox)
