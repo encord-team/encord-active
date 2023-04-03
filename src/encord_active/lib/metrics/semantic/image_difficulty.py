@@ -8,6 +8,7 @@ from sklearn.cluster import KMeans
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.cnn import get_cnn_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
@@ -43,7 +44,13 @@ merged by keeping the samples of classes the same for the first _N_ samples.
             if len(ontology_dict.get("objects", [])) > 0:
                 return len(ontology_dict["objects"])
             elif len(ontology_dict.get("classifications", [])) > 0:
-                return len(ontology_dict["classifications"])
+                if ontology_dict["classifications"][0]["attributes"][0]["type"] in [
+                    ClassificationType.RADIO.value,
+                    ClassificationType.CHECKLIST.value,
+                ]:
+                    return len(ontology_dict["classifications"][0]["attributes"][0]["options"])
+                else:
+                    return default_k_size
             else:
                 return default_k_size
         else:
