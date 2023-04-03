@@ -226,31 +226,36 @@ def fill_data_quality_window(
     st.write(f"Interval contains {current_df.shape[0]} of {current_df.shape[0]} {showing_description}")
 
     form = bulk_tagging_form(current_df.pipe(DataFrame[IdentifierSchema]))
-    page_number = UseState(1)
+
+    grid_container = st.container()
+    slider_container = st.container()
+
     n_items = n_cols * n_rows
-    paginated_subset = paginate_df(current_df, page_number.value, n_items)
+    last = len(current_df) // n_items
+    page_number = st.slider("Page", 1, last) if last > 1 else 1
 
-    if form and form.submitted:
-        df = paginated_subset if form.level == BulkLevel.PAGE else current_df
-        action_bulk_tags(df, form.tags, form.action)
+    with slider_container:
+        paginated_subset = paginate_df(current_df, page_number, n_items)
 
-    if len(paginated_subset) == 0:
-        st.error("No data in selected interval")
-    else:
-        cols: List = []
-        similarity_expanders = []
-        for i, (_, row) in enumerate(paginated_subset.iterrows()):
-            if not cols:
-                if i:
-                    divider()
-                cols = list(st.columns(n_cols))
-                similarity_expanders.append(st.expander("Similarities", expanded=True))
+    with grid_container:
+        if form and form.submitted:
+            df = paginated_subset if form.level == BulkLevel.PAGE else current_df
+            action_bulk_tags(df, form.tags, form.action)
 
-            with cols.pop(0):
-                build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
+        if len(paginated_subset) == 0:
+            st.error("No data in selected interval")
+        else:
+            cols: List = []
+            similarity_expanders = []
+            for i, (_, row) in enumerate(paginated_subset.iterrows()):
+                if not cols:
+                    if i:
+                        divider()
+                    cols = list(st.columns(n_cols))
+                    similarity_expanders.append(st.expander("Similarities", expanded=True))
 
-    last = len(current_df) // n_items + 1
-    page_number.set(st.slider("Page", 1, last) if last > 1 else 1)
+                with cols.pop(0):
+                    build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
 
 
 def build_card(
