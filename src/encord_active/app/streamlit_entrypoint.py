@@ -82,6 +82,7 @@ def main(target: str):
         refresh(clear_memo=True)
 
     if not has_state() or not initial_project.value:
+        select_project("b37a48e0-6462-472d-baaa-2fcaf5ab9521")
         render_projects_page(
             select_project=select_project,
             projects=memoized_projects.projects,
