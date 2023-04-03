@@ -202,7 +202,8 @@ def fill_data_quality_window(
                 row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
             )
             url = image_to_url(image, -1, False, "RGB", "JPEG", identifier)[1:]
-            images.append({"url": url})
+            metadata = get_state().merged_metrics.loc[identifier].dropna().to_dict()
+            images.append({"url": url, "metadata": metadata})
 
         explorer(images)
 
