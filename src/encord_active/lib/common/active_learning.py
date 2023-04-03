@@ -49,8 +49,13 @@ def get_classification_label(label_row, du_hash: str, class_name: str):
     if len(filtered_class) == 0:
         return None
     class_hash = filtered_class[0]["classificationHash"]
-    class_label = label_row["classification_answers"][class_hash]["classifications"][0]["answers"]
-    return class_label
+    answers = label_row["classification_answers"][class_hash]["classifications"][0]["answers"]
+    if isinstance(answers, str):
+        return answers
+    elif isinstance(answers, list):
+        return answers[0]["name"]
+    else:
+        return None
 
 
 def get_metric_results(project_fs: ProjectFileStructure, acq_func):
