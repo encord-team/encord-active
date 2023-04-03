@@ -4,7 +4,7 @@ import streamlit as st
 
 from encord_active.app.actions_page.export_filter import actions, show_update_stats
 from encord_active.app.actions_page.versioning import version_form
-from encord_active.app.common.components.search import render_search
+from encord_active.app.common.components.assistant import render_assistant
 from encord_active.app.common.components.sticky.sticky import sticky_header
 from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.state import PageGridSettings, State, get_state
@@ -44,7 +44,7 @@ class Page(ABC):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
                 view_tab, tag_tab, actions_tab, version_tab, search_tab = st.tabs(
-                    ["Filter", "Tag", "Action", "Version", "Search"]
+                    ["Filter", "Tag", "Action", "Version", "Assistant"]
                 )
 
                 with view_tab:
@@ -57,12 +57,11 @@ class Page(ABC):
                         actions()
                     with right:
                         filterd = get_state().filtering_state.merged_metrics
-                        if filterd is not None:
-                            show_update_stats(filterd)
+                        show_update_stats(filterd)
                 with version_tab:
                     version_form()
                 with search_tab:
-                    render_search()
+                    render_assistant()
 
     def render_view_options(self, show_label_checkbox: bool = False):
         self.render_common_settings(show_label_checkbox)

@@ -62,7 +62,8 @@ class PageGridSettings:
 
 @dataclass
 class FilteringState:
-    merged_metrics: Optional[pd.DataFrame] = None
+    merged_metrics: pd.DataFrame
+    last_assistant_result: Optional[pd.DataFrame] = None
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
@@ -101,12 +102,14 @@ class State:
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
             DBConnection.set_project_path(project_dir)
+            merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=ProjectFileStructure(project_dir),
                 refresh_projects=refresh_projects,
-                merged_metrics=MergedMetrics().all(),
+                merged_metrics=merged_metrics,
                 all_tags=Tags().all(),
                 querier=Querier(project_dir),
+                filtering_state=FilteringState(merged_metrics),
             )
 
 

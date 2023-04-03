@@ -201,3 +201,10 @@ def get_embedding_type(annotation_type: Optional[List[AnnotationTypeUnion]]) -> 
         return EmbeddingType.CLASSIFICATION
     else:
         return EmbeddingType.OBJECT
+
+
+def filter_none_empty_metrics(metric: MetricData) -> str:
+    with metric.path.open("r", encoding="utf-8") as f:
+        f.readline()  # header
+        key, *_ = f.readline().split(",")
+    return key
