@@ -27,7 +27,7 @@ PAGES = {
     },
 }
 
-DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
+DEFAULT_PAGE_PATH = ["Data Quality", "Explorer"]
 SEPARATOR = "#"
 
 
