@@ -92,10 +92,45 @@ export const Explorer = ({ images }: Props) => {
                   </div>
                 ))}
               </div>
-            </>
-          ) : null}
-        </>
+            </div>
+          ))}
+        </div>
+        {showMetadata ? (
+          <Metadata
+            metadata={showMetadata}
+            onClose={() => setShowMetadata(null)}
+          />
+        ) : null}
+      </>
       )}
     </div>
   );
 };
+
+const Metadata = ({
+  metadata,
+  onClose,
+}: {
+  metadata: Image["metadata"];
+  onClose?: JSX.IntrinsicElements["button"]["onClick"];
+}) => (
+  <>
+    <div className="divider divider-horizontal"></div>
+    <div className="w-72 flex flex-col">
+      <div className="flex justify-between">
+        <h1 className="font-medium text-3xl">Metadata</h1>
+        {onClose ? (
+          <button onClick={onClose} className="btn btn-square">
+            <FaWindowClose />
+          </button>
+        ) : null}
+      </div>
+      {Object.entries(metadata).map(([key, value]) => (
+        <div>
+          <span>{key}: </span>
+          <span>{value}</span>
+        </div>
+      ))}
+    </div>
+  </>
+);
