@@ -1,5 +1,4 @@
 import re
-from time import perf_counter
 from typing import List, Optional
 
 import pandas as pd
