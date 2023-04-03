@@ -50,7 +50,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
 
             # Object-level index
             if main_df_objects.shape[0] == 0:
-                columns_to_merge = metric_scores[["identifier", "url", "score"]]
+                columns_to_merge = metric_scores[["identifier", "url", "score", "object_class", "annotator"]]
             else:
                 columns_to_merge = metric_scores[["identifier", "score"]]
             main_df_objects = pd.merge(main_df_objects, columns_to_merge, how="outer", on="identifier")
@@ -70,9 +70,21 @@ def unmarshall_tags(tags_json: str) -> List[Tag]:
     return [Tag(tag[0], TagScope(tag[1])) for tag in json.loads(tags_json) or []]
 
 
+MANDATORY_COLUMNS = {"identifier", "url", "object_class", "annotator"}
+
+
 def ensure_initialised(fn):
     def wrapper(*args, **kwargs):
         try:
+            with DBConnection() as conn:
+                columns = pd.read_sql(f"pragma table_info({TABLE_NAME})", conn)
+            if not MANDATORY_COLUMNS.intersection(set(columns["name"])) == MANDATORY_COLUMNS:
+                prev = MergedMetrics()._unsafe_all()
+                new_merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
+                new_merged_metrics.drop("tags", axis=1, inplace=True)
+                new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
+                MergedMetrics().replace_all(new_merged_metrics)
+
             return fn(*args, **kwargs)
         except Exception as e:
             merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
@@ -102,6 +114,9 @@ class MergedMetrics(object):
 
     @ensure_initialised
     def all(self):
+        return self._unsafe_all()
+
+    def _unsafe_all(self):
         with DBConnection() as conn:
             merged_metrics = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)

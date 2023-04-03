@@ -16,14 +16,11 @@ from streamlit.delta_generator import DeltaGenerator
 from encord_active.app.app_config import app_config
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
-from encord_active.app.common.utils import human_format, set_page_config, setup_page
+from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
-from encord_active.lib.db.tags import Tags
-from encord_active.lib.encord.actions import (  # create_a_new_dataset,; create_new_project_on_encord_platform,; get_project_user_client,
-    DatasetUniquenessError,
-    EncordActions,
-)
+from encord_active.lib.db.tags import Tags, TagScope
+from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
 from encord_active.lib.project.metadata import ProjectNotFound
 
 
@@ -64,13 +61,14 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         columns_to_filter = df.columns.to_list()
         if "url" in columns_to_filter:
             columns_to_filter.remove("url")
-        # Move tags to first option.
-        tags_column = columns_to_filter.pop(columns_to_filter.index("tags"))
-        columns_to_filter = [tags_column] + columns_to_filter
+        # Move some columns to the begining
+        columns_to_filter.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
 
-        to_filter_columns = st.multiselect("Filter dataframe on", columns_to_filter)
+        to_filter_columns = st.multiselect(
+            "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
+        )
         filtered = df.copy()
-        filtered["data_row_id"] = filtered.index.str.split("_", n=2).str[0:2].str.join("_")
+        filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
@@ -82,12 +80,21 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 tag_filters = right.multiselect(
                     "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
                 )
-                filtered_rows = [True if set(tag_filters) <= set(x) else False for x in filtered["tags"]]
-                filtered_items = filtered.loc[filtered_rows]
-                filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
+                for tag in tag_filters:
+                    filtered_rows = [tag in x for x in filtered["tags"]]
+                    filtered_items = filtered.loc[filtered_rows]
+                    if tag.scope == TagScope.LABEL:
+                        non_applicable = filtered[filtered.index.isin(filtered_items["data_row_id"])]
+                        filtered = filtered[filtered.index.isin(filtered_items.index)]
+                    else:
+                        filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
             # Treat columns with < 10 unique values as categorical
-            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10:
+            elif (
+                is_categorical_dtype(filtered[column])
+                or filtered[column].nunique()
+                or column in ["object_class", "annotator"]
+            ):
                 if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
@@ -131,6 +138,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             if not non_applicable.empty:
                 filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
                 filtered = pd.concat([filtered, filtered_objects_df])
+
     return filtered.drop("data_row_id", axis=1)
 
 
@@ -212,6 +220,7 @@ def create_and_sync_remote_project(
 
 
 def show_update_stats(filtered_df: pd.DataFrame):
+    frames, labels = st.columns(2)
     project_path = get_state().project_paths.project_dir
 
     def get_key(counter_name: str):
@@ -219,24 +228,38 @@ def show_update_stats(filtered_df: pd.DataFrame):
 
     state_frame_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
     frame_count: int = len(filtered_df["identifier"].map(lambda x: tuple(x.split("_")[1:3])).unique())
-    st.metric(
-        "Selected Frames",
-        value=human_format(frame_count),
-        delta=state_frame_count.value and f"{human_format(frame_count - state_frame_count.value)} frames",
-    )
-    state_frame_count.set(frame_count)
+    with frames:
+        st.metric(
+            "Selected Frames",
+            value=human_format(frame_count),
+            delta=state_frame_count.value and f"{human_format(frame_count - state_frame_count.value)} frames",
+        )
+        state_frame_count.set(frame_count)
 
     state_label_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
     label_count: int = filtered_df[filtered_df["identifier"].map(lambda x: len(x.split("_")) > 3)].shape[0]
-    st.metric(
-        "Selected Labels",
-        value=human_format(label_count),
-        delta=state_label_count.value and f"{human_format(label_count - state_label_count.value)} labels",
-    )
-    state_label_count.set(label_count)
+    with labels:
+        st.metric(
+            "Selected Labels",
+            value=human_format(label_count),
+            delta=state_label_count.value and f"{human_format(label_count - state_label_count.value)} labels",
+        )
+        state_label_count.set(label_count)
 
 
-def export_filter():
+def render_filter():
+    filter_col, _, stats_col = st.columns([8, 1, 2])
+    with filter_col:
+        filtered_merged_metrics = filter_dataframe(get_state().merged_metrics.copy())
+        filtered_merged_metrics.reset_index(inplace=True)
+
+    with stats_col:
+        show_update_stats(filtered_merged_metrics)
+
+    get_state().filtering_state.merged_metrics = filtered_merged_metrics
+
+
+def actions():
     original_row_count = get_state().merged_metrics.shape[0]
     filtered_row_count = UseState(0)
 
@@ -244,10 +267,8 @@ def export_filter():
 
     updates = UseState[List[UpdateItem]]([])
 
-    setup_page()
     message_placeholder = st.empty()
 
-    st.header("Filter & Export")
     action_utils = _get_action_utils()
     project_has_remote = bool(action_utils.project_meta.get("has_remote", False)) if action_utils else False
     project_name = (
@@ -256,28 +277,21 @@ def export_filter():
         else get_state().project_paths.project_dir.name
     )
 
-    filter_col, _, stats_col = st.columns([8, 1, 2])
-    with filter_col:
-        filtered_df = filter_dataframe(get_state().merged_metrics.copy())
+    filtered_df = get_state().filtering_state.merged_metrics
+    if filtered_df is None:
+        filtered_df = get_state().merged_metrics
 
-    filtered_df.reset_index(inplace=True)
     row_count = filtered_df.shape[0]
-
-    with stats_col:
-        show_update_stats(filtered_df)
-
-    st.dataframe(filtered_df, use_container_width=True)
 
     (
         generate_csv_col,
         generate_coco_col,
-        _,
         export_button_col,
         subset_button_col,
         delete_button_col,
         edit_button_col,
         augment_button_col,
-    ) = st.columns((3, 3, 1, 3, 3, 2, 2, 2))
+    ) = st.columns((3, 3, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
@@ -538,4 +552,4 @@ def render_progress_bar():
 
 if __name__ == "__main__":
     set_page_config()
-    export_filter()
+    actions()

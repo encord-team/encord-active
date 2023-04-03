@@ -2,8 +2,6 @@ from typing import List
 
 import streamlit as st
 
-from encord_active.app.common.components import sticky_header
-from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.utils import setup_page
 from encord_active.app.model_quality.prediction_type_builder import (
     ModelQualityPage,
@@ -24,8 +22,6 @@ def model_quality(page_mode: ModelQualityPage):
 
     def render():
         setup_page()
-        with sticky_header():
-            tag_creator()
 
         available_predictions: List[PredictionTypeBuilder] = get_available_predictions()
 
@@ -33,11 +29,12 @@ def model_quality(page_mode: ModelQualityPage):
             st.markdown("## No predictions imported into this project.")
             return
 
-        tab_names = [m.title for m in available_predictions]
-        tabs = st.tabs(tab_names) if len(available_predictions) > 1 else [st.container()]
-
-        for tab, builder in zip(tabs, available_predictions):
-            with tab:
-                builder.build(page_mode)
+        if len(available_predictions) == 1:
+            available_predictions[0].build(page_mode)
+        else:
+            tab_names = [m.title for m in available_predictions]
+            for tab, builder in zip(st.tabs(tab_names), available_predictions):
+                with tab:
+                    builder.build(page_mode)
 
     return render

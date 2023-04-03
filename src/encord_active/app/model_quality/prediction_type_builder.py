@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Tuple, Union
 
@@ -44,7 +45,7 @@ class PredictionTypeBuilder(Page):
     def _render_class_filtering_component(
         self, all_classes: Union[Dict[str, OntologyObjectJSON], Dict[str, OntologyClassificationJSON]]
     ):
-        return st.multiselect(
+        selected_classes = st.multiselect(
             "Filter by class",
             list(all_classes.items()),
             format_func=lambda x: x[1]["name"],
@@ -54,6 +55,7 @@ This acts as a filter, i.e. when nothing is selected all classes are included.
 Performance metrics will be automatically updated according to the chosen classes.
                 """,
         )
+        return dict(selected_classes) or deepcopy(all_classes)
 
     def _description_expander(self, metric_datas: MetricNames):
         with st.expander("Details", expanded=False):
@@ -61,15 +63,15 @@ Performance metrics will be automatically updated according to the chosen classe
                 """### The View
 
 On this page, your model scores are displayed as a function of the metric that you selected in the top bar.
-Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value 
-in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive and false 
+Samples are discritized into $n$ equally sized buckets and the middle point of each bucket is displayed as the x-value
+in the plots. Bars indicate the number of samples in each bucket, while lines indicate the true positive and false
 negative rates of each bucket.
 
 Metrics marked with (P) are metrics computed on your predictions.
 Metrics marked with (F) are frame level metrics, which depends on the frame that each prediction is associated
 with. In the "False Negative Rate" plot, (O) means metrics computed on Object labels.
 
-For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics" 
+For metrics that are computed on predictions (P) in the "True Positive Rate" plot, the corresponding "label metrics"
 (O/F) computed on your labels are used for the "False Negative Rate" plot.
 """,
                 unsafe_allow_html=True,
@@ -142,7 +144,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         `st.session_state.model_predictions` data frame.
         """
         if metric_type == MetricType.LABEL:
-            column_names = list(metric_datas.predictions.keys())
+            column_names = list(metric_datas.labels.keys())
             metric_datas.selected_label = st.selectbox(
                 "Select metric for your labels",
                 column_names,

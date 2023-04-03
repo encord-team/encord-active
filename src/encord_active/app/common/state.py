@@ -15,7 +15,7 @@ from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
-from encord_active.lib.metrics.utils import MetricData
+from encord_active.lib.metrics.utils import MetricData, MetricSchema
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
 from encord_active.lib.project import ProjectFileStructure
@@ -55,6 +55,15 @@ class PageGridSettings:
 
 
 @dataclass
+class FilteringState:
+    merged_metrics: Optional[pd.DataFrame] = None
+    selected_annotators: List[str] = field(default_factory=list)
+    selected_classes: List[str] = field(default_factory=list)
+    sort_by_metric: Optional[MetricData] = None
+    sorted_items: Optional[DataFrame[MetricSchema]] = None
+
+
+@dataclass
 class State:
     """
     Use this only for getting default values, otherwise use `get_state()`
@@ -66,9 +75,9 @@ class State:
     refresh_projects: Callable[[], Any]
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
+    filtering_state: FilteringState = field(default_factory=FilteringState)
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
-    selected_metric: Optional[MetricData] = None
     page_grid_settings: PageGridSettings = field(default_factory=PageGridSettings)
     predictions: PredictionsState = field(default_factory=PredictionsState)
     similarities_count = 8

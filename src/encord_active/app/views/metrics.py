@@ -1,6 +1,5 @@
 import streamlit as st
 
-from encord_active.app.common.components import sticky_header
 from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
 from encord_active.app.data_quality.sub_pages.explorer import ExplorerPage
@@ -22,9 +21,7 @@ def summary(metric_type: MetricScope):
                 st.error("You don't seem to have any data in your project.")
                 return
 
-        with sticky_header():
-            page.sidebar_options(metric_type)
-
+        page.sidebar_options(metric_type)
         page.build(available_metrics, metric_type)
 
     return render
@@ -43,8 +40,7 @@ def explorer(metric_type: MetricScope):
                 st.error("You don't seem to have any data in your project.")
                 return
 
-        with sticky_header():
-            selected_df = page.sidebar_options(available_metrics, metric_type)
+        selected_df = page.sidebar_options(available_metrics, metric_type)
 
         if selected_df is None:
             return

@@ -55,7 +55,7 @@ def version_selector(project_path: Path):
 
 
 def version_form():
-    _, container, _ = st.columns(3)
+    _, container, _ = st.columns([1, 2, 1])
     versioner, _ = cached_versioner(get_state().project_paths.project_dir)
     version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
     show_success_message = UseState(False)

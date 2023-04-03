@@ -1,4 +1,3 @@
-from copy import deepcopy
 from enum import Enum
 from typing import List, Optional
 
@@ -8,7 +7,7 @@ from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
-from encord_active.app.common.components import sticky_header
+from encord_active.app.common.components.divider import divider
 from encord_active.app.common.components.prediction_grid import (
     prediction_grid_classifications,
 )
@@ -27,7 +26,6 @@ from encord_active.lib.charts.classification_metrics import (
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
-from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.classification_metrics import (
     match_predictions_and_labels,
 )
@@ -57,6 +55,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None
 
     def load_data(self, page_mode: ModelQualityPage) -> bool:
+        self.page_mode = page_mode
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.CLASSIFICATION, project_path=get_state().project_paths.project_dir.as_posix()
         )
@@ -73,9 +72,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             predictions={m.name: m for m in predictions_metric_datas},
         )
 
-        with sticky_header():
-            self._common_settings()
-            self._topbar_additional_settings(page_mode)
+        self.display_settings()
 
         model_predictions_matched = match_predictions_and_labels(model_predictions, labels)
 
@@ -116,21 +113,23 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         return True
 
-    def _common_settings(self):
+    def render_view_options(self, *args):
         if not get_state().predictions.all_classes_classifications:
             get_state().predictions.all_classes_classifications = get_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
             )
 
-        all_classes = get_state().predictions.all_classes_classifications
-        selected_classes = self._render_class_filtering_component(all_classes)
+        get_state().predictions.selected_classes_classifications = self._render_class_filtering_component(
+            get_state().predictions.all_classes_classifications
+        )
+        self._topbar_additional_settings()
+        divider()
+        super().render_view_options(*args)
 
-        get_state().predictions.selected_classes_classifications = dict(selected_classes) or deepcopy(all_classes)
-
-    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
-        if page_mode == ModelQualityPage.METRICS:
+    def _topbar_additional_settings(self):
+        if self.page_mode == ModelQualityPage.METRICS:
             return
-        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+        elif self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
                 self._topbar_metric_selection_component(
@@ -140,7 +139,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                 self._set_binning()
             with c3:
                 self._class_decomposition()
-        elif page_mode == ModelQualityPage.EXPLORER:
+        elif self.page_mode == ModelQualityPage.EXPLORER:
             c1, c2 = st.columns([4, 4])
 
             with c1:
@@ -154,8 +153,6 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                 self._topbar_metric_selection_component(
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
-
-            self.display_settings(MetricScope.MODEL_QUALITY)
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
@@ -247,14 +244,16 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             st.error("No prediction metric selected")
             return
 
-        if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS:
-            view_df = self._model_predictions[
-                self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 1.0
-            ].dropna(subset=[metric_name])
-        else:
-            view_df = self._model_predictions[
-                self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == 0.0
-            ].dropna(subset=[metric_name])
+        filtered_merged_metrics = get_state().filtering_state.merged_metrics
+        value = 1.0 if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS else 0.0
+        view_df = self._model_predictions[
+            self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
+        ].dropna(subset=[metric_name])
+
+        if filtered_merged_metrics is not None:
+            lr_du = filtered_merged_metrics.identifier.str.split("_", n=2).str[0:2].str.join("_")
+            view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
+            view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")
