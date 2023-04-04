@@ -164,9 +164,9 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 ### Core features:
 
-- [Data Exploration](https://docs.encord.com/active/docs/pages/data-quality/summary)
-- [Data Outlier detection](https://docs.encord.com/active/docs/workflows/improve-your-data/identify-outliers-edge-cases)
-- [Label Outlier detection](https://docs.encord.com/active/docs/workflows/improve-your-labels/identify-outliers)
+- [Data Exploration](https://docs.encord.com/active/docs/workflows/understand-data-distribution)
+- [Data Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases)
+- [Label Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases#label-outliers)
 - [Model Decomposition](https://docs.encord.com/active/docs/pages/model-quality/metrics)
 - [Similarity Search](https://docs.encord.com/active/docs/workflows/improve-your-data/similar-images)
 - [Annotator Benchmarks](https://docs.encord.com/active/docs/pages/label-quality/explorer/)
