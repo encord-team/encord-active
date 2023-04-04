@@ -42,7 +42,8 @@ class StatisticsObserver(MetricObserver):
 
 
 class Writer(ABC):
-    _observers: List[MetricObserver] = []
+    def __init__(self):
+        self._observers: List[MetricObserver] = []
 
     def attach(self, observer: MetricObserver):
         self._observers.append(observer)
