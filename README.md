@@ -27,7 +27,7 @@
 
 Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
 
-![video](docs/static/gifs/ea-demo.gif)
+![projects page](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/projects-page.jpg)
 
 ## 💡 When to use Encord Active?
 
@@ -42,9 +42,10 @@ Whether you've just started collecting data, labeled your first batch of samples
 Our full documentation is available [here](https://docs.encord.com/active/docs). In particular we recommend checking out:
 
 - [Getting Started](https://docs.encord.com/active/docs/getting-started)
+- [Imports](https://docs.encord.com/active/docs/import/)
 - [Workflows][encord-active-docs-workflow]
-- [Tutorials](https://docs.encord.com/active/docs/category/tutorials)
-- [CLI Documentation](https://docs.encord.com/active/docs/category/command-line-interface)
+- [User Guides](https://docs.encord.com/active/docs/category/user-guide)
+- [CLI Documentation](https://docs.encord.com/active/docs/cli)
 
 ## Installation
 
@@ -64,7 +65,7 @@ pip install encord-active
 
 > `encord-active` requires [python3.9][python-39].
 > If you have trouble installing `encord-active`, you find more detailed instructions on
-> installing it [here][encord-active-docs].
+> installing it [here](https://docs.encord.com/active/docs/installation).
 
 ## 👋 Quickstart
 
@@ -118,7 +119,7 @@ cd /path/to/project
 encord-active visualize
 ```
 
-You can find more details on the `init` command in the [CLI documentation][encord-active-docs-init].
+You can find more details on the `init` command in the [documentation][encord-active-docs-init].
 
 ### Import from COCO
 
@@ -139,8 +140,6 @@ encord-active import predictions --coco results.json
 
 This section requires [setting up an ssh key][encord-docs-ssh] with Encord, so slightly more technical.
 
-> If you haven't set up an ssh key with Encord, you can follow the tutorial in [this link][encord-docs-ssh].
-
 To import an Encord project, use this command:
 
 ```shell
@@ -148,10 +147,6 @@ encord-active import project
 ```
 
 The command will allow you to search through your Encord projects and choose which one to import.
-
-### Other options
-
-> There are also options for importing projects from, e.g,. KITTI and CVAT. Find more details in [the documentation][encord-active-docs-workflow-import-data].
 
 ## ⭐ Concepts and features
 
@@ -167,13 +162,12 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Data Exploration](https://docs.encord.com/active/docs/workflows/understand-data-distribution)
 - [Data Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases)
 - [Label Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases#label-outliers)
-- [Model Decomposition](https://docs.encord.com/active/docs/pages/model-quality/metrics)
-- [Similarity Search](https://docs.encord.com/active/docs/workflows/improve-your-data/similar-images)
-- [Annotator Benchmarks](https://docs.encord.com/active/docs/pages/label-quality/explorer/)
-- [Data Tagging](https://docs.encord.com/active/docs/workflows/tags/#steps)
-- [Visualize TP/FP/FN](https://docs.encord.com/active/docs/category/model-quality)
-- [Dataset Balancing](https://docs.encord.com/active/docs/pages/export/balance_export)
-- [COCO Exports](https://docs.encord.com/active/docs/pages/export/filter_export)
+- [Object Detection/segmentation Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-detection-model)
+- [Classification Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-classification-model)
+- [Similarity Search](https://docs.encord.com/active/docs/workflows/image-similarity)
+- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tags)
+- [Visualize TP/FP/FN](https://docs.encord.com/active/docs/workflows/evaluate-detection-model#exploring-the-individual-samples)
+- [COCO Exports](https://docs.encord.com/active/docs/user-guide/filter_export#export-to-coco-file)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.
@@ -185,7 +179,7 @@ Visit our [documentation][encord-active-docs] to learn more.
 | `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 50.000        |
 | `png`  | ✅  | Polygons        | ✅  | Videos        | 50.000 frames |
 | `tiff` | ✅  | Segmentation    | ✅  |               |               |
-| `mp4`  | ✅  | Classifications | 🟡  |               |               |
+| `mp4`  | ✅  | Classifications | ✅  |               |               |
 |        |     | Polylines       | 🟡  |               |               |
 
 ## 🧑🏽‍💻Development
@@ -221,8 +215,7 @@ This repository is published under the Apache 2.0 licence.
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-url]: https://docs.encord.com/active/docs/contributing
-[encord-active-docs-init]: https://docs.encord.com/active/docs/cli/initialising-project-from-image-directories
-[encord-active-docs-workflow-import-data]: https://docs.encord.com/active/docs/workflows/import-data
+[encord-active-docs-init]: https://docs.encord.com/active/docs/import/quick-import-data
 [encord-active-docs-workflow]: https://docs.encord.com/active/docs/category/workflows
 [encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
 [encord-active-docs]: https://docs.encord.com/active/docs
