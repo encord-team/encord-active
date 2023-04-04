@@ -51,7 +51,7 @@ def version_selector(project_path: Path):
     if versioner.is_latest(version):
         versioner.unstash()
 
-    refresh()
+    refresh(clear_memo=True)
 
 
 def version_form():
