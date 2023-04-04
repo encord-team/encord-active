@@ -101,7 +101,7 @@ class ExplorerPage(Page):
 
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
-    def render_view_options(self, *args):
+    def render_view_options(self):
         non_empty_metrics = [
             metric for metric in self.available_metrics if not load_metric_dataframe(metric, normalize=False).empty
         ]
@@ -133,8 +133,6 @@ class ExplorerPage(Page):
             return None
 
         render_filter()
-        divider()
-        super().render_common_settings(*args)
 
 
 def get_selected_rows(

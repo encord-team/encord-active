@@ -139,7 +139,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             "which there exist no predictions. With this flag, you can ignore those.",
         )
 
-    def render_view_options(self, *args):
+    def render_view_options(self):
         if not get_state().predictions.all_classes_objects:
             get_state().predictions.all_classes_objects = get_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.OBJECT.value
@@ -192,8 +192,6 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
         divider()
         render_filter()
-        divider()
-        super().render_view_options(*args)
 
     def _topbar_additional_settings(self):
         if self.page_mode == ModelQualityPage.METRICS:

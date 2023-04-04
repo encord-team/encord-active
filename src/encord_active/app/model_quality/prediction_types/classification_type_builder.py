@@ -7,7 +7,6 @@ from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
-from encord_active.app.common.components.divider import divider
 from encord_active.app.common.components.prediction_grid import (
     prediction_grid_classifications,
 )
@@ -113,7 +112,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         return True
 
-    def render_view_options(self, *args):
+    def render_view_options(self):
         if not get_state().predictions.all_classes_classifications:
             get_state().predictions.all_classes_classifications = get_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
@@ -123,8 +122,6 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             get_state().predictions.all_classes_classifications
         )
         self._topbar_additional_settings()
-        divider()
-        super().render_view_options(*args)
 
     def _topbar_additional_settings(self):
         if self.page_mode == ModelQualityPage.METRICS:

@@ -42,10 +42,12 @@ class Page(ABC):
     def display_settings(self, show_label_checkbox: bool = False):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
-                view_tab, tag_tab, actions_tab, version_tab = st.tabs(["Filter", "Tag", "Action", "Version"])
+                view_tab, tag_tab, actions_tab, version_tab, options_tab = st.tabs(
+                    ["Filter", "Tag", "Action", "Version", "Options"]
+                )
 
                 with view_tab:
-                    self.render_view_options(show_label_checkbox)
+                    self.render_view_options()
                 with tag_tab:
                     tag_creator()
                 with actions_tab:
@@ -58,9 +60,11 @@ class Page(ABC):
                             show_update_stats(filterd)
                 with version_tab:
                     version_form()
+                with options_tab:
+                    self.render_common_settings(show_label_checkbox)
 
-    def render_view_options(self, show_label_checkbox: bool = False):
-        self.render_common_settings(show_label_checkbox)
+    def render_view_options(self):
+        pass
 
     def render_common_settings(self, show_label_checkbox: bool = False):
         col_default_max, row_default_max = 10, 5
