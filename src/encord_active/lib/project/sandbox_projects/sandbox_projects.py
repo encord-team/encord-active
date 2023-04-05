@@ -93,6 +93,20 @@ PREBUILT_PROJECTS: dict[str, PrebuiltProject] = {
         image_path=(IMAGES_PATH / "quickstart.jpeg"),
         stats=ProjectStats(dataUnits=199, labels=1617, classes=71),
     ),
+    "[open-source][train]-Caltech-101": PrebuiltProject(
+        url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btrain%5D-Caltech-101.zip",
+        hash="d083bd28-fd4a-4b58-a80d-a1a9074d2cdc",
+        name="[open-source][train]-Caltech-101",
+        image_path=(IMAGES_PATH / "caltech101_train.jpeg"),
+        stats=ProjectStats(dataUnits=5171, labels=5171, classes=101),
+    ),
+    "[open-source][test]-Caltech-101": PrebuiltProject(
+        url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-Caltech-101.zip",
+        hash="c1679f72-6ad5-46f0-b011-f5b2c60e23d5",
+        name="[open-source][test]-Caltech-101",
+        image_path=(IMAGES_PATH / "caltech101_test.jpeg"),
+        stats=ProjectStats(dataUnits=3506, labels=3506, classes=101),
+    ),
 }
 
 

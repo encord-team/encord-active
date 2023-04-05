@@ -43,7 +43,6 @@ def get_data_sample(project_fs: ProjectFileStructure, data_hash: tuple[str, str]
 
 
 def get_classification_label(label_row, du_hash: str, class_name: str):
-    # only works for text classifications, extend if necessary
     data_unit = label_row["data_units"][du_hash]
     filtered_class = [_class for _class in data_unit["labels"]["classifications"] if _class["name"] == class_name]
     if len(filtered_class) == 0:
