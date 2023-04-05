@@ -92,6 +92,7 @@ class AcquisitionFunction(Metric):
         model: BaseModelWrapper,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
+        doc_url: Optional[str] = None,
     ):
         """
         Creates an instance of the acquisition function with a custom model to score data samples.
@@ -149,6 +150,7 @@ class Entropy(AcquisitionFunction):
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher entropy score should be offered for annotation."
             ),
+            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#entropy",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -179,6 +181,7 @@ class LeastConfidence(AcquisitionFunction):
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher **LC** score should be offered for annotation."
             ),
+            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#least-confidence",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -203,6 +206,7 @@ class Margin(AcquisitionFunction):
                 " image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower margin score should be offered for annotation."
             ),
+            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#margin",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -232,6 +236,7 @@ class Variance(AcquisitionFunction):
                 "image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower variance score should be offered for annotation."
             ),
+            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#variance",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,

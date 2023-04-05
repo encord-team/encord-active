@@ -14,7 +14,7 @@ class ObjectsCountMetric(Metric):
             title="Object Count",
             short_description="Counts number of objects in the image",
             long_description=r"""Counts number of objects in the image.""",
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#object-count",
+            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#object-count",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.ALL,
