@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 
@@ -28,6 +29,9 @@ class MetricData:
     meta: MetricMetadata
     level: str
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.path.__hash__()))
+
 
 class IdentifierSchema(pa.SchemaModel):
     identifier: Series[str] = pa.Field()
@@ -43,6 +47,7 @@ class MetricSchema(IdentifierSchema):
     url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
+@lru_cache
 def load_metric_dataframe(
     metric: MetricData, normalize: bool = False, *, sorting_key="score"
 ) -> DataFrame[MetricSchema]:
