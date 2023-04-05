@@ -175,6 +175,11 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         return None
 
 
+@st.cache_data
+def cached_histogram(_df: pd.DataFrame, column_name: str, metric_name: Optional[str] = None):
+    return get_histogram(_df, column_name, metric_name)
+
+
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -219,7 +224,7 @@ def fill_data_quality_window(
                 current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
             ]
 
-    chart = get_histogram(current_df, "score", metric.name)
+    chart = cached_histogram(current_df, "score", metric.name)
     st.altair_chart(chart, use_container_width=True)
 
     showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
