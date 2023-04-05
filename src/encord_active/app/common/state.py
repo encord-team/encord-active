@@ -74,6 +74,7 @@ class State:
     and to get/set the current value we would call `get_state().iou_threshold.`
     """
 
+    target_path: Path
     project_paths: ProjectFileStructure
     refresh_projects: Callable[[], Any]
     all_tags: List[Tag]
@@ -92,7 +93,7 @@ class State:
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
-    def init(cls, project_dir: Path, refresh_projects: Callable[[], Any]):
+    def init(cls, target_paht: Path, project_dir: Path, refresh_projects: Callable[[], Any]):
         if (
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
@@ -103,6 +104,7 @@ class State:
             merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,
+                target_path=target_paht,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
                 all_tags=Tags().all(),

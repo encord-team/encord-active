@@ -18,6 +18,12 @@ import { Streamlit } from "streamlit-component-lib";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
 
+/* type ChangePage = ["CHANGE_PAGE", number]; */
+/**/
+/* type Output = ChangePage; */
+
+/* const pushOutput = (output: Output) => Streamlit.setComponentValue(output); */
+
 type ItemMetadata = {
   metrics: Record<string, string>;
   annotator?: string | null;
@@ -37,20 +43,27 @@ type GroupedTags = {
   label: string[];
 };
 
-export type Props = { items: Item[]; tags: GroupedTags };
+type PaginationInfo = {
+  current: number;
+  total: number;
+};
+
+export type Props = {
+  items: Item[];
+  tags: GroupedTags;
+  pagination: PaginationInfo;
+};
 
 export const Explorer = ({ items, tags }: Props) => {
   const [previewedItem, setPreviewedItem] = useState<Item | null>(null);
   const [similarityItem, setSimilarityItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
 
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState<PageCount>(PAGE_COUNTS[0]);
+
   const [itemMap, setItemMap] = useState(
-    new Map(
-      items.map((item) => [
-        item.id,
-        { ...item, url: document.referrer + item.url },
-      ])
-    )
+    new Map(items.map((item) => [item.id, item]))
   );
 
   const toggleImageSelection = (id: Item["id"]) => {
@@ -73,7 +86,6 @@ export const Explorer = ({ items, tags }: Props) => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  const [page, setPage] = useState(1);
   /* console.log(itemMap); */
 
   return (
@@ -134,37 +146,66 @@ export const Explorer = ({ items, tags }: Props) => {
             onSubmit={(e) => e.preventDefault()}
             className="flex-1 grid gap-1 grid-cols-4"
           >
-            {[...itemMap.values()].map((item) => (
-              <GalleryItem
-                key={item.url}
-                item={item}
-                onExpand={() => setPreviewedItem(item)}
-                onShowSimilar={() => showSimilarItems(item)}
-                selected={selectedItems.has(item.url)}
-              />
-            ))}
+            {[...itemMap.values()]
+              .slice(page * pageCount, page * pageCount + pageCount)
+              .map((item) => (
+                <GalleryItem
+                  key={item.id}
+                  item={item}
+                  onExpand={() => setPreviewedItem(item)}
+                  onShowSimilar={() => showSimilarItems(item)}
+                  selected={selectedItems.has(item.id)}
+                />
+              ))}
           </form>
-          <Pagination current={page} total={100} onChange={setPage} />
+          <Pagination
+            current={page}
+            pageCount={pageCount}
+            totalItems={items.length}
+            onChange={setPage}
+            onChangePageCount={setPageCount}
+          />
         </div>
       )}
     </div>
   );
 };
 
+const PAGE_COUNTS = [20, 40, 60, 80] as const;
+type PageCount = typeof PAGE_COUNTS[number];
+
 const Pagination = ({
   current,
-  total,
+  pageCount,
+  totalItems,
   onChange,
+  onChangePageCount,
 }: {
   current: number;
-  total: number;
+  pageCount: number;
+  totalItems: number;
   onChange: (to: number) => void;
+  onChangePageCount: (count: PageCount) => void;
 }) => {
   const prev = current - 1;
   const next = current + 1;
 
+  let totalPages = (totalItems / pageCount) | 0;
+  if (totalItems % pageCount == 0) totalPages--;
+
   return (
     <div className="inline-flex gap-5">
+      <select
+        className="select max-w-xs"
+        onChange={(event) =>
+          onChangePageCount(parseInt(event.target.value) as PageCount)
+        }
+        defaultValue={pageCount}
+      >
+        {PAGE_COUNTS.map((count) => (
+          <option key={count}>{count}</option>
+        ))}
+      </select>
       <div className="btn-group">
         <button
           onClick={() => onChange(prev)}
@@ -187,22 +228,22 @@ const Pagination = ({
           </button>
         )}
         <button className="btn btn-active">{current}</button>
-        {next < total && (
-          <button onClick={() => onChange(prev)} className="btn">
+        {next < totalPages && (
+          <button onClick={() => onChange(next)} className="btn">
             {next}
           </button>
         )}
-        {next < total - 1 && (
+        {next < totalPages - 1 && (
           <>
             <button className="btn btn-disabled">...</button>
-            <button onClick={() => onChange(total)} className="btn">
-              {total}
+            <button onClick={() => onChange(totalPages)} className="btn">
+              {totalPages}
             </button>
           </>
         )}
         <button
           onClick={() => onChange(next)}
-          className={classy("btn", { "btn-disabled": current === total })}
+          className={classy("btn", { "btn-disabled": current === totalPages })}
         >
           <MdOutlineNavigateNext />
         </button>
@@ -212,7 +253,7 @@ const Pagination = ({
           event.preventDefault();
           const form = event.target as HTMLFormElement;
           const value = +(form[0] as HTMLInputElement).value;
-          onChange(Math.min(1, Math.max(total, value)));
+          onChange(Math.min(1, Math.max(totalPages, value)));
           form.reset();
         }}
       >
@@ -345,7 +386,7 @@ const GalleryItem = ({
   <div className="card relative align-middle form-control">
     <label className="group label cursor-pointer p-0">
       <input
-        name={item.url}
+        name={item.id}
         type="checkbox"
         checked={selected}
         readOnly
@@ -399,13 +440,19 @@ const MetadataMetrics = ({
   metrics,
 }: {
   metrics: Item["metadata"]["metrics"];
-}) => (
-  <div className="w-full flex flex-col">
-    {Object.entries(metrics).map(([key, value]) => (
-      <div key={key}>
-        <span>{key}: </span>
-        <span>{parseFloat(value.toString()).toFixed(4)}</span>
-      </div>
-    ))}
-  </div>
-);
+}) => {
+  return (
+    <div className="w-full flex flex-col">
+      {Object.entries(metrics).map(([key, value]) => {
+        const number = parseFloat(value.toString());
+
+        return (
+          <div key={key}>
+            <span>{key}: </span>
+            <span>{isNaN(number) ? value : number.toFixed(4)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};

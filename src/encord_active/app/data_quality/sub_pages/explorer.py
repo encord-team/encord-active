@@ -1,5 +1,8 @@
 import re
-from typing import List, Optional
+from pathlib import Path
+from time import perf_counter
+from typing import List, Optional, Tuple
+from urllib import parse
 
 import pandas as pd
 import streamlit as st
@@ -7,6 +10,9 @@ from encord_active_components.components.explorer import (
     GalleryItem,
     GroupedTags,
     Metadata,
+    Output,
+    OutputAction,
+    PaginationInfo,
     explorer,
 )
 from natsort import natsorted
@@ -33,6 +39,7 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     ObjectDrawingConfigurations,
@@ -187,43 +194,55 @@ def fill_data_quality_window(
     showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
     st.write(f"Interval contains {current_df.shape[0]} of {current_df.shape[0]} {showing_description}")
 
-    form = bulk_tagging_form(current_df.pipe(DataFrame[IdentifierSchema]))
-
-    grid_container = st.container()
-    slider_container = st.container()
-
-    n_items = n_cols * n_rows
-    last = len(current_df) // n_items
-    page_number = st.slider("Page", 1, last) if last > 1 else 1
-
-    with slider_container:
-        paginated_subset = paginate_df(current_df, page_number, n_items)
-
     items = []
-    for _, row in paginated_subset.iterrows():
-        identifier_parts = 4 if embedding_information.has_annotations else 3
-        identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
-        image = show_image_and_draw_polygons(
-            row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
-        )
-        url = image_to_url(image, -1, False, "RGB", "JPEG", identifier)[1:]
-        metadata = get_state().merged_metrics.loc[identifier].dropna().to_dict()
+
+    merged_metrics = get_state().merged_metrics
+    with_all_metrics = current_df[["identifier"]].join(merged_metrics, on="identifier", how="left").dropna(axis=1)
+
+    for row in with_all_metrics.to_dict("records"):
+        id_parts = 4 if embedding_information.has_annotations else 3
+        identifier = row.pop("identifier")
+        split_id = str(identifier).split("_")
+        lr, du, *_ = split_id
+        url = get_url(lr, du)
+        if not url:
+            continue
+
         items.append(
             GalleryItem(
-                id=identifier,
+                id="_".join(split_id[:id_parts]),
                 url=url,
-                editUrl=metadata.pop("url"),
-                tags=to_grouped_tags(metadata.pop("tags")),
+                editUrl=row.pop("url"),
+                tags=to_grouped_tags(row.pop("tags")),
                 metadata=Metadata(
-                    labelClass=metadata.pop("object_class"), annotator=metadata.pop("annotator"), metrics=metadata
+                    labelClass=row.pop("object_class", None),
+                    annotator=row.pop("annotator", None),
+                    metrics=row,
                 ),
             )
         )
 
-    # __import__("ipdb").set_trace()
+    output_state = UseState[Optional[Output]](None)
+    output = explorer(items, to_grouped_tags(Tags().all()))
+    print(output)
+    if output and output != output_state:
+        output_state.set(output)
+        action, payload = output
 
-    with grid_container:
-        explorer(items, to_grouped_tags(Tags().all()))
+
+def get_url(lr_hash: str, du_hash: str):
+    for data_unit in get_state().project_paths.label_row_structure(lr_hash).iter_data_unit():
+        if data_unit.hash == du_hash:
+            return "http://localhost:8000/" + parse.quote(
+                data_unit.path.relative_to(get_state().target_path).as_posix()
+            )
+
+
+@st.cache_data
+def get_image(id: str, _row):
+    return show_image_and_draw_polygons(
+        _row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
+    )
 
 
 def to_grouped_tags(tags: List[Tag]):

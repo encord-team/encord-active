@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional, Tuple, TypedDict
 
 from encord_active_components.renderer import Components, render
 
@@ -26,11 +26,19 @@ class GalleryItem(TypedDict):
     metadata: Metadata
 
 
-# class OutputAction(str, Enum):
-#     INIT = "INIT"
+class PaginationInfo(TypedDict):
+    current: int
+    total: int
 
 
-def explorer(items: List[GalleryItem], all_tags: GroupedTags):
+class OutputAction(str, Enum):
+    CHANGE_PAGE = "CHANGE_PAGE"
+
+
+Output = Tuple[OutputAction, Optional[int]]
+
+
+def explorer(items: List[GalleryItem], all_tags: GroupedTags) -> Output:
     return render(component=Components.EXPLORER, props={"items": items, "tags": all_tags})
 
 
