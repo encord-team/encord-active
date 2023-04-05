@@ -3,7 +3,12 @@ from typing import List, Optional
 
 import pandas as pd
 import streamlit as st
-from encord_active_components.components.explorer import explorer
+from encord_active_components.components.explorer import (
+    GalleryItem,
+    GroupedTags,
+    Metadata,
+    explorer,
+)
 from natsort import natsorted
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
@@ -33,6 +38,8 @@ from encord_active.lib.common.image_utils import (
     ObjectDrawingConfigurations,
     show_image_and_draw_polygons,
 )
+from encord_active.lib.db.merged_metrics import MANDATORY_COLUMNS
+from encord_active.lib.db.tags import Tag, Tags, TagScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
@@ -192,19 +199,44 @@ def fill_data_quality_window(
     with slider_container:
         paginated_subset = paginate_df(current_df, page_number, n_items)
 
-    with grid_container:
-        images = []
-        for i, (_, row) in enumerate(paginated_subset.iterrows()):
-            identifier_parts = 4 if embedding_information.has_annotations else 3
-            identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
-            image = show_image_and_draw_polygons(
-                row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
+    items = []
+    for _, row in paginated_subset.iterrows():
+        identifier_parts = 4 if embedding_information.has_annotations else 3
+        identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
+        image = show_image_and_draw_polygons(
+            row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
+        )
+        url = image_to_url(image, -1, False, "RGB", "JPEG", identifier)[1:]
+        metadata = get_state().merged_metrics.loc[identifier].dropna().to_dict()
+        items.append(
+            GalleryItem(
+                id=identifier,
+                url=url,
+                editUrl=metadata.pop("url"),
+                tags=to_grouped_tags(metadata.pop("tags")),
+                metadata=Metadata(
+                    labelClass=metadata.pop("object_class"), annotator=metadata.pop("annotator"), metrics=metadata
+                ),
             )
-            url = image_to_url(image, -1, False, "RGB", "JPEG", identifier)[1:]
-            metadata = get_state().merged_metrics.loc[identifier].dropna().to_dict()
-            images.append({"url": url, "metadata": metadata})
+        )
 
-        explorer(images)
+    # __import__("ipdb").set_trace()
+
+    with grid_container:
+        print("foo")
+        explorer(items, to_grouped_tags(Tags().all()))
+
+
+def to_grouped_tags(tags: List[Tag]):
+    grouped_tags = GroupedTags(data=[], label=[])
+
+    for name, scope in tags:
+        if scope == TagScope.DATA:
+            grouped_tags[scope.lower()].append(name)
+        elif scope == TagScope.LABEL:
+            grouped_tags["label"].append(name)
+
+    return grouped_tags
 
     # with grid_container:
     #     if form and form.submitted:
