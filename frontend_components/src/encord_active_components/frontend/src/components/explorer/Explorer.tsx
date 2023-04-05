@@ -2,7 +2,13 @@ import { Select } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
-import { MdClose, MdImageSearch, MdOutlineImage } from "react-icons/md";
+import {
+  MdClose,
+  MdImageSearch,
+  MdOutlineImage,
+  MdOutlineNavigateBefore,
+  MdOutlineNavigateNext,
+} from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 import { RiUserLine } from "react-icons/ri";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
@@ -67,6 +73,7 @@ export const Explorer = ({ items, tags }: Props) => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
+  const [page, setPage] = useState(1);
   /* console.log(itemMap); */
 
   return (
@@ -79,7 +86,7 @@ export const Explorer = ({ items, tags }: Props) => {
           onShowSimilar={() => showSimilarItems(previewedItem)}
         />
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-5 items-center pb-5">
           {similarityItem && (
             <div className="flex gap-3">
               <figure>
@@ -91,7 +98,7 @@ export const Explorer = ({ items, tags }: Props) => {
               <h1 className="text-lg">Similar items</h1>
             </div>
           )}
-          <div className="flex justify-between">
+          <div className="flex w-full justify-between">
             <div className="dropdown dropdown-bottom">
               <label
                 tabIndex={0}
@@ -137,8 +144,80 @@ export const Explorer = ({ items, tags }: Props) => {
               />
             ))}
           </form>
+          <Pagination current={page} total={100} onChange={setPage} />
         </div>
       )}
+    </div>
+  );
+};
+
+const Pagination = ({
+  current,
+  total,
+  onChange,
+}: {
+  current: number;
+  total: number;
+  onChange: (to: number) => void;
+}) => {
+  const prev = current - 1;
+  const next = current + 1;
+
+  return (
+    <div className="inline-flex gap-5">
+      <div className="btn-group">
+        <button
+          onClick={() => onChange(prev)}
+          className={classy("btn", { "btn-disabled": current === 1 })}
+        >
+          <MdOutlineNavigateBefore />
+        </button>
+        {prev > 1 && (
+          <>
+            <button onClick={() => onChange(1)} className="btn">
+              1
+            </button>
+            <button className="btn btn-disabled">...</button>
+          </>
+        )}
+
+        {prev > 0 && (
+          <button onClick={() => onChange(prev)} className="btn">
+            {prev}
+          </button>
+        )}
+        <button className="btn btn-active">{current}</button>
+        {next < total && (
+          <button onClick={() => onChange(prev)} className="btn">
+            {next}
+          </button>
+        )}
+        {next < total - 1 && (
+          <>
+            <button className="btn btn-disabled">...</button>
+            <button onClick={() => onChange(total)} className="btn">
+              {total}
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => onChange(next)}
+          className={classy("btn", { "btn-disabled": current === total })}
+        >
+          <MdOutlineNavigateNext />
+        </button>
+      </div>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = event.target as HTMLFormElement;
+          const value = +(form[0] as HTMLInputElement).value;
+          onChange(Math.min(1, Math.max(total, value)));
+          form.reset();
+        }}
+      >
+        <input type="number" placeholder="Go to page" className="input w-36" />
+      </form>
     </div>
   );
 };
@@ -196,6 +275,7 @@ const TaggingForm = ({
         <Select
           mode="tags"
           placeholder="Tags"
+          allowClear
           onChange={onChange}
           value={selectedTags[selectedTab.value]}
           options={tags[selectedTab.value].map((tag) => ({ value: tag }))}
@@ -220,40 +300,37 @@ const ItemPreview = ({
   tags: GroupedTags;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
-}) => {
-  return (
-    <div className="w-full flex flex-col items-center gap-3 p-1">
-      <div className="w-full flex justify-between">
-        <div className="flex gap-3">
-          <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
-            <MdImageSearch className="text-base" />
-            Similar
-          </button>
-          <button
-            className="btn btn-ghost gap-2"
-            onClick={() => window.open(item.editUrl, "_blank")}
-          >
-            <FaEdit />
-            Edit
-          </button>
-          <div className="dropdown dropdown-bottom">
-            <label tabIndex={0} className="btn btn-ghost gap-2">
-              <HiOutlineTag />
-              Tag
-            </label>
-            <TaggingForm tags={tags} tabIndex={0} />
-          </div>
-        </div>
-        <button onClick={onClose} className="btn btn-square btn-outline">
-          <MdClose className="text-base" />
+}) => (
+  <div className="w-full flex flex-col items-center gap-3 p-1">
+    <div className="w-full flex justify-between">
+      <div className="flex gap-3">
+        <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
+          <MdImageSearch className="text-base" />
+          Similar
         </button>
+        <button
+          className="btn btn-ghost gap-2"
+          onClick={() => window.open(item.editUrl, "_blank")}
+        >
+          <FaEdit />
+          Edit
+        </button>
+        <div className="dropdown dropdown-bottom">
+          <label tabIndex={0} className="btn btn-ghost gap-2">
+            <HiOutlineTag />
+            Tag
+          </label>
+          <TaggingForm tags={tags} tabIndex={0} />
+        </div>
       </div>
-      <img className="w-full h-auto object-cover rounded" src={item.url} />
-      <MetadataMetrics metrics={item.metadata.metrics} />
+      <button onClick={onClose} className="btn btn-square btn-outline">
+        <MdClose className="text-base" />
+      </button>
     </div>
-  );
-};
-
+    <img className="w-full h-auto object-cover rounded" src={item.url} />
+    <MetadataMetrics metrics={item.metadata.metrics} />
+  </div>
+);
 const GalleryItem = ({
   item,
   selected,
