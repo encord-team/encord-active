@@ -24,7 +24,7 @@ class ContrastMetric(SimpleMetric):
 
 Contrast is computed as the standard deviation of the pixel values.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#contrast",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#contrast",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -140,7 +140,7 @@ class BrightnessMetric(SimpleMetric):
 
 Brightness is computed as the average (normalized) pixel value across each image.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#brightness",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#brightness",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -166,7 +166,7 @@ image.
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#sharpness",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#sharpness",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -192,7 +192,7 @@ image. Note that this is $1 - \text{sharpness}$.
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#blur",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#blur",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -212,7 +212,7 @@ class AspectRatioMetric(Metric):
 
 Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#aspect-ratio",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#aspect-ratio",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -237,7 +237,7 @@ class AreaMetric(Metric):
 
 Area is computed as the product of image width and image height ($width \times height$).
     """,
-            doc_url="https://docs.encord.com/active/docs/metrics/heuristic#area",
+            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#area",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,

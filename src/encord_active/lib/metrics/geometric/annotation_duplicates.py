@@ -23,7 +23,7 @@ class AnnotationDuplicates(Metric):
             long_description=r"""Ranks annotations by how likely they are to represent the same object.
 > [Jaccard similarity coefficient](https://en.wikipedia.org/wiki/Jaccard_index)
 is used to measure closeness of two annotations.""",
-            doc_url="https://docs.encord.com/active/docs/metrics/geometric#annotation-duplicates",
+            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#annotation-duplicates",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[
