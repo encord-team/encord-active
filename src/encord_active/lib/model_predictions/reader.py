@@ -13,6 +13,7 @@ from encord_active.lib.common.utils import load_json
 from encord_active.lib.metrics.utils import (
     IdentifierSchema,
     MetricData,
+    filter_none_empty_metrics,
     load_available_metrics,
     load_metric_dataframe,
 )
@@ -84,13 +85,6 @@ class LabelMatchSchema(LabelSchema):
 def check_model_prediction_availability(predictions_dir):
     predictions_path = predictions_dir / "predictions.csv"
     return predictions_path.is_file()
-
-
-def filter_none_empty_metrics(metric: MetricData) -> str:
-    with metric.path.open("r", encoding="utf-8") as f:
-        f.readline()  # header
-        key, *_ = f.readline().split(",")
-    return key
 
 
 def filter_label_metrics_for_predictions(metric: MetricData) -> bool:
