@@ -92,7 +92,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             # Treat columns with < 10 unique values as categorical
             elif (
                 is_categorical_dtype(filtered[column])
-                or filtered[column].nunique()
+                or filtered[column].nunique() < 10
                 or column in ["object_class", "annotator"]
             ):
                 if filtered[column].isnull().sum() != filtered.shape[0]:
