@@ -1,9 +1,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, Path("/private/tmp/natural-language-query/natural-language-querying").expanduser().absolute().as_posix()
-)
+sys.path.insert(0, (Path.home() / "Projects" / "llm-experimental").as_posix())
 
 from dataclasses import dataclass, field
 from enum import Enum
