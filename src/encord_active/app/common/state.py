@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(
+    0, Path("/private/tmp/natural-language-query/natural-language-querying").expanduser().absolute().as_posix()
+)
+
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -5,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+from ea_query import Querier
 from pandera.typing import DataFrame
 
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
@@ -57,6 +65,7 @@ class PageGridSettings:
 @dataclass
 class FilteringState:
     merged_metrics: pd.DataFrame
+    last_assistant_result: Optional[pd.DataFrame] = None
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
@@ -76,6 +85,7 @@ class State:
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
     filtering_state: FilteringState
+    querier: Querier
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
     page_grid_settings: PageGridSettings = field(default_factory=PageGridSettings)
@@ -101,6 +111,7 @@ class State:
                 merged_metrics=merged_metrics,
                 all_tags=Tags().all(),
                 filtering_state=FilteringState(merged_metrics),
+                querier=Querier(project_dir),
             )
 
 
