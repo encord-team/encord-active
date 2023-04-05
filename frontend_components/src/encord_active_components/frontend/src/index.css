@@ -25,3 +25,12 @@ body {
   @apply m-0 px-4 flex place-items-center min-w-[320px] h-screen;
   padding: unset;
 }
+
+html {
+  box-sizing: border-box;
+}
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}

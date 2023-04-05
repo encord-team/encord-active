@@ -4,7 +4,8 @@ import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdClose, MdImageSearch, MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
-import { VscClearAll } from "react-icons/vsc";
+import { RiUserLine } from "react-icons/ri";
+import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 
 import { Streamlit } from "streamlit-component-lib";
 
@@ -66,7 +67,7 @@ export const Explorer = ({ items, tags }: Props) => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  console.log(itemMap);
+  /* console.log(itemMap); */
 
   return (
     <div ref={ref} className="flex">
@@ -275,12 +276,13 @@ const GalleryItem = ({
           "peer checkbox absolute left-1 top-1 opacity-0 group-hover:opacity-100 checked:opacity-100"
         )}
       />
-      <img
-        className={classy(
-          "w-full h-full object-cover group-hover:opacity-30 rounded transition-opacity peer-checked:transition-none"
-        )}
-        src={item.url}
-      />
+      {/* <figure className="group-hover:opacity-30 peer-checked:p-2 bg-base-300 rounded peer-checked:transition-none"> */}
+      <figure className="group-hover:opacity-30 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded peer-checked:transition-none">
+        <img
+          className="object-cover rounded transition-opacity"
+          src={item.url}
+        />
+      </figure>
       <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
         <button onClick={onExpand} className="btn btn-square">
           <FaExpand />
@@ -288,20 +290,30 @@ const GalleryItem = ({
       </div>
     </label>
     <div className="card-body p-2">
-      <div className="card-actions flex justify-between">
-        <div>
+      <div className="card-actions flex">
+        <div className="btn-group">
           <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
             <MdImageSearch className="text-base" />
-            Similar
+          </button>
+          <button
+            className="btn btn-ghost gap-2"
+            onClick={() => window.open(item.editUrl.toString(), "_blank")}
+          >
+            <FaEdit />
           </button>
         </div>
-        <button
-          className="btn btn-ghost gap-2"
-          onClick={() => window.open(item.editUrl.toString(), "_blank")}
-        >
-          <FaEdit />
-          Edit
-        </button>
+        {item.metadata.labelClass || item.metadata.annotator ? (
+          <div className="flex flex-col">
+            <span className="inline-flex items-center gap-1">
+              <VscSymbolClass />
+              {item.metadata.labelClass}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <RiUserLine />
+              {item.metadata.annotator}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   </div>
