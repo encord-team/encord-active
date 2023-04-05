@@ -223,7 +223,6 @@ def fill_data_quality_window(
     # __import__("ipdb").set_trace()
 
     with grid_container:
-        print("foo")
         explorer(items, to_grouped_tags(Tags().all()))
 
 
