@@ -14,7 +14,6 @@ from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
-from encord_active.app.common.components.divider import divider
 from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
@@ -44,6 +43,7 @@ from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
     MetricScope,
+    filter_none_empty_metrics,
     get_embedding_type,
     load_metric_dataframe,
 )
@@ -58,9 +58,11 @@ class ExplorerPage(Page):
         self.available_metrics = available_metrics
         self.display_settings(metric_scope == MetricScope.DATA_QUALITY)
 
-        df = get_state().filtering_state.sorted_items
-        if df is None:
+        selected_metric = get_state().filtering_state.sort_by_metric
+        if not selected_metric:
             return None
+
+        df = load_metric_dataframe(selected_metric)
 
         selected_classes = get_state().filtering_state.selected_classes
         is_class_selected = (
@@ -75,11 +77,8 @@ class ExplorerPage(Page):
 
         df = df[annotator_selected].pipe(DataFrame[MetricSchema])
 
-        filtered_merged_metrics = get_state().filtering_state.merged_metrics
-        if filtered_merged_metrics is not None:
-            df = df[df.identifier.isin(filtered_merged_metrics.identifier)]
-
-        return df
+        fmm = get_state().filtering_state.merged_metrics
+        return df.set_index("identifier").loc[fmm.index[fmm.index.isin(df.identifier)]].reset_index()
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
         selected_metric = get_state().filtering_state.sort_by_metric
@@ -102,36 +101,29 @@ class ExplorerPage(Page):
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
     def render_view_options(self):
-        non_empty_metrics = [
-            metric for metric in self.available_metrics if not load_metric_dataframe(metric, normalize=False).empty
-        ]
-        sorted_metrics = natsorted(non_empty_metrics, key=lambda i: i.name)
+        non_empty_metrics = list(filter(filter_none_empty_metrics, self.available_metrics))
+        metric_data_options = natsorted(non_empty_metrics, key=lambda i: i.name)
 
-        metric_names = list(map(lambda i: i.name, sorted_metrics))
-
-        if not metric_names:
+        if not metric_data_options:
             return
 
         col1, col2, _ = st.columns([5, 3, 3])
-        selected_metric_name = col1.selectbox(
+        selected_metric = col1.selectbox(
             "Sort by",
-            metric_names,
+            metric_data_options,
+            format_func=lambda x: x.meta.title,
             help="The data in the main view will be sorted by the selected metric. ",
         )
-        if not selected_metric_name:
+        if not selected_metric:
             return None
+
         sorting_order = col2.selectbox("Sort order", ["Ascending", "Descending"])
 
-        metric_idx = metric_names.index(selected_metric_name)
-        selected_metric = sorted_metrics[metric_idx]
         get_state().filtering_state.sort_by_metric = selected_metric
 
-        df: DataFrame[MetricSchema] = load_metric_dataframe(selected_metric)
-        df = df.sort_values(by="score", ascending=sorting_order == "Ascending").pipe(DataFrame[MetricSchema])
-        get_state().filtering_state.sorted_items = df
-        if df.shape[0] <= 0:
-            return None
-
+        get_state().filtering_state.merged_metrics = get_state().merged_metrics.sort_values(
+            by=selected_metric.meta.title, ascending=sorting_order == "Ascending"
+        )
         render_filter()
 
 

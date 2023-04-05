@@ -56,7 +56,7 @@ class PageGridSettings:
 
 @dataclass
 class FilteringState:
-    merged_metrics: Optional[pd.DataFrame] = None
+    merged_metrics: pd.DataFrame
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
@@ -75,7 +75,7 @@ class State:
     refresh_projects: Callable[[], Any]
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
-    filtering_state: FilteringState = field(default_factory=FilteringState)
+    filtering_state: FilteringState
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
     page_grid_settings: PageGridSettings = field(default_factory=PageGridSettings)
@@ -94,11 +94,13 @@ class State:
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
             DBConnection.set_project_path(project_dir)
+            merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=ProjectFileStructure(project_dir),
                 refresh_projects=refresh_projects,
-                merged_metrics=MergedMetrics().all(),
+                merged_metrics=merged_metrics,
                 all_tags=Tags().all(),
+                filtering_state=FilteringState(merged_metrics),
             )
 
 
