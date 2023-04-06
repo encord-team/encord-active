@@ -86,12 +86,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             st.error("Couldn't match ground truths")
             return False
 
-        (
-            predictions_filtered,
-            labels_filtered,
-            metrics,
-            precisions,
-        ) = compute_mAP_and_mAR(
+        (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
             model_predictions,
             labels,
             matched_gt,
