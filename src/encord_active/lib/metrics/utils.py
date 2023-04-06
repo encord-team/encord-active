@@ -143,15 +143,13 @@ def load_metric_metadata(meta_pth) -> MetricMetadata:
         return metadata
 
 
+@lru_cache
 def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope] = None) -> List[MetricData]:
     if not metric_dir.is_dir():
         return []
 
     paths = natsorted([p for p in metric_dir.iterdir() if p.suffix == ".csv"], key=lambda x: x.stem.split("_", 1)[1])
     levels = list(map(get_metric_operation_level, paths))
-
-    make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").title()
-    names = [f"{make_name(p)}" for p, l in zip(paths, levels)]
     meta_data = [load_metric_metadata(f.with_suffix(".meta.json")) for f in paths]
 
     out: List[MetricData] = []
@@ -159,11 +157,11 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
     if not meta_data:
         return out
 
-    for p, n, m, l in zip(paths, names, meta_data, levels):
+    for p, m, l in zip(paths, meta_data, levels):
         if m is None or not l or not is_valid_annotation_type(m.annotation_type, metric_scope):
             continue
 
-        out.append(MetricData(name=n, path=p, meta=m, level=l))  # type: ignore
+        out.append(MetricData(name=m.title, path=p, meta=m, level=l))  # type: ignore
 
     out = natsorted(out, key=lambda i: (i.level, i.name))  # type: ignore
     return out
@@ -175,14 +173,17 @@ class AnnotatorInfo(TypedDict):
     mean_score: float
 
 
-def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, AnnotatorInfo]:
+def get_annotator_level_info(df: DataFrame[MetricSchema], metric_name: str) -> dict[str, AnnotatorInfo]:
+    if not MetricSchema.annotator in df:
+        return {}
+
     annotator_set: List[str] = natsorted(df[MetricSchema.annotator].dropna().unique().tolist())
     annotators: Dict[str, AnnotatorInfo] = {}
     for annotator in annotator_set:
         annotators[annotator] = AnnotatorInfo(
             name=annotator,
             total_annotations=df[df[MetricSchema.annotator] == annotator].shape[0],
-            mean_score=df[df[MetricSchema.annotator] == annotator]["score"].mean(),
+            mean_score=df[df[MetricSchema.annotator] == annotator][metric_name].mean(),
         )
 
     return annotators

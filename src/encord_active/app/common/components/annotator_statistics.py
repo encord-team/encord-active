@@ -10,8 +10,8 @@ from encord_active.lib.metrics.utils import (
 )
 
 
-def render_annotator_properties(df: DataFrame[MetricSchema]):
-    annotators = get_annotator_level_info(df)
+def render_annotator_properties(df: DataFrame[MetricSchema], metric_name: str):
+    annotators = get_annotator_level_info(df, metric_name)
     if len(annotators) == 0:
         return
 

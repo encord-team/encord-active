@@ -8,6 +8,9 @@ from encord_active.lib.metrics.utils import MetricSchema
 
 
 def render_dataset_properties(current_df: DataFrame[MetricSchema]):
+    if not MetricSchema.object_class in current_df:
+        return
+
     cls_set = natsorted(current_df[MetricSchema.object_class].dropna().unique().tolist())
     if len(cls_set) == 0:
         return

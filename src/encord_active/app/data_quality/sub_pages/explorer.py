@@ -1,4 +1,3 @@
-import re
 from typing import List, Optional
 
 import pandas as pd
@@ -45,7 +44,6 @@ from encord_active.lib.metrics.utils import (
     MetricScope,
     filter_none_empty_metrics,
     get_embedding_type,
-    load_metric_dataframe,
 )
 
 
@@ -62,23 +60,8 @@ class ExplorerPage(Page):
         if not selected_metric:
             return None
 
-        df = load_metric_dataframe(selected_metric)
-
-        selected_classes = get_state().filtering_state.selected_classes
-        is_class_selected = (
-            df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
-        )
-        df = df[is_class_selected]
-
-        selected_annotators = get_state().filtering_state.selected_annotators
-        annotator_selected = (
-            df.shape[0] * [True] if not selected_annotators else df[MetricSchema.annotator].isin(selected_annotators)
-        )
-
-        df = df[annotator_selected].pipe(DataFrame[MetricSchema])
-
-        fmm = get_state().filtering_state.merged_metrics
-        return df.set_index("identifier").loc[fmm.index[fmm.index.isin(df.identifier)]].reset_index()
+        df = get_state().filtering_state.merged_metrics
+        return df[df[selected_metric.name].notna()].dropna(axis=1).reset_index()
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
         selected_metric = get_state().filtering_state.sort_by_metric
@@ -95,8 +78,9 @@ class ExplorerPage(Page):
 
         with st.expander("Dataset Properties", expanded=True):
             render_dataset_properties(selected_df)
+
         with st.expander("Annotator Statistics", expanded=False):
-            render_annotator_properties(selected_df)
+            render_annotator_properties(selected_df, selected_metric.name)
 
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
 
@@ -168,8 +152,8 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
 
 
 @st.cache_data
-def cached_histogram(_df: pd.DataFrame, column_name: str, metric_name: Optional[str] = None):
-    return get_histogram(_df, column_name, metric_name)
+def cached_histogram(_df: pd.DataFrame, metric_name: str):
+    return get_histogram(_df, metric_name)
 
 
 def fill_data_quality_window(
@@ -216,7 +200,7 @@ def fill_data_quality_window(
                 current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
             ]
 
-    chart = cached_histogram(current_df, "score", metric.name)
+    chart = get_histogram(current_df, metric.name)
     st.altair_chart(chart, use_container_width=True)
 
     showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
@@ -288,13 +272,13 @@ def build_card(
     if "object_class" in tags_row and not pd.isna(tags_row["object_class"]):
         tags_row["label_class_name"] = tags_row["object_class"]
         tags_row.drop("object_class")
-    tags_row[metric.name] = tags_row["score"]
+    tags_row[metric.name] = tags_row[metric.name]
     build_data_tags(tags_row, metric.name)
 
-    if not pd.isnull(row["description"]):
-        # Hacky way for now (with incorrect rounding)
-        description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
-        st.write(f"Description: {description}")
+    # if not pd.isnull(row["description"]):
+    #     # Hacky way for now (with incorrect rounding)
+    #     description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
+    #     st.write(f"Description: {description}")
 
     multiselect_tag(row, "explorer")
 
