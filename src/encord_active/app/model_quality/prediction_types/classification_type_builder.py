@@ -247,10 +247,9 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
         ].dropna(subset=[metric_name])
 
-        if filtered_merged_metrics is not None:
-            lr_du = filtered_merged_metrics.identifier.str.split("_", n=2).str[0:2].str.join("_")
-            view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
-            view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
+        lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
+        view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
+        view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")

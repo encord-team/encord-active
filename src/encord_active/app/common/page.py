@@ -56,8 +56,7 @@ class Page(ABC):
                         actions()
                     with right:
                         filterd = get_state().filtering_state.merged_metrics
-                        if filterd is not None:
-                            show_update_stats(filterd)
+                        show_update_stats(filterd)
                 with version_tab:
                     version_form()
                 with options_tab:

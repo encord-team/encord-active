@@ -227,7 +227,7 @@ def show_update_stats(filtered_df: pd.DataFrame):
         return f"{counter_name}_{project_path}"
 
     state_frame_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_FRAME_COUNT"))
-    frame_count: int = len(filtered_df["identifier"].map(lambda x: tuple(x.split("_")[1:3])).unique())
+    frame_count: int = len(filtered_df.index.map(lambda x: tuple(x.split("_")[1:3])).unique())
     with frames:
         st.metric(
             "Selected Frames",
@@ -237,7 +237,7 @@ def show_update_stats(filtered_df: pd.DataFrame):
         state_frame_count.set(frame_count)
 
     state_label_count = UseState[Optional[int]](None, key=get_key("FILTER_EXPORT_LABEL_COUNT"))
-    label_count: int = filtered_df[filtered_df["identifier"].map(lambda x: len(x.split("_")) > 3)].shape[0]
+    label_count: int = filtered_df[filtered_df.index.map(lambda x: len(x.split("_")) > 3)].shape[0]
     with labels:
         st.metric(
             "Selected Labels",
@@ -250,8 +250,7 @@ def show_update_stats(filtered_df: pd.DataFrame):
 def render_filter():
     filter_col, _, stats_col = st.columns([8, 1, 2])
     with filter_col:
-        filtered_merged_metrics = filter_dataframe(get_state().merged_metrics.copy())
-        filtered_merged_metrics.reset_index(inplace=True)
+        filtered_merged_metrics = filter_dataframe(get_state().filtering_state.merged_metrics)
 
     with stats_col:
         show_update_stats(filtered_merged_metrics)

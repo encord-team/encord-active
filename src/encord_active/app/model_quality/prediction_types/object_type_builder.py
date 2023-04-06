@@ -302,14 +302,13 @@ matched to any predictions. The remaining objects are predictions, where colors 
             view_df = self._model_predictions[
                 self._model_predictions[PredictionMatchSchema.is_true_positive] == value
             ].dropna(subset=[metric_name])
-            if filtered_merged_metrics is not None:
-                lr_du = filtered_merged_metrics.identifier.str.split("_", n=2).str[0:2].str.join("_")
-                view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
-                view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
+
+            lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
+            view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
+            view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
         elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
             view_df = self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
-            if filtered_merged_metrics is not None:
-                view_df = view_df[view_df.identifier.isin(filtered_merged_metrics.identifier)]
+            view_df = view_df[view_df.identifier.isin(filtered_merged_metrics.identifier)]
         else:
             return None
         return view_df
