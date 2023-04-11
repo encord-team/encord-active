@@ -2,6 +2,10 @@ import json
 from pathlib import Path
 from typing import Iterator, NamedTuple, Optional
 
+from encord_active.lib.db.base import DataUnit
+from encord_active.lib.db.data_units import DataUnits
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
+
 
 class DataUnitStructure(NamedTuple):
     hash: str
@@ -40,9 +44,9 @@ class LabelRowStructure:
         return self.path.is_dir()
 
 
-class ProjectFileStructure:
+class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Path):
-        self.project_dir: Path = project_dir.expanduser().resolve()
+        super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
     @property
@@ -88,6 +92,13 @@ class ProjectFileStructure:
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
+
+    def data_units(self) -> Iterator[DataUnit]:
+        yield iter(DataUnits().all())
+
+    def label_rows(self) -> Iterator:
+        # use internally iter_labels() while the label row table does not exist in the db
+        return self.iter_labels()
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
         for label_hash in self.data.iterdir():
