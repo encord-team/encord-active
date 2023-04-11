@@ -17,9 +17,9 @@ def create_key():
     return str(hash("&".join(frame_keys)))
 
 
-def use_memo(initial: Callable[[], T], key: Optional[str] = None) -> Tuple[T, Callable[[], T]]:
+def use_memo(initial: Callable[[], T], key: Optional[str] = None, clearable: bool = True) -> Tuple[T, Callable[[], T]]:
     key = key or create_key()
-    scope = st.session_state.setdefault(StateKey.MEMO, {})
+    scope = st.session_state.setdefault(StateKey.MEMO, {}) if clearable else st.session_state
 
     if key not in scope:
         scope[key] = initial()

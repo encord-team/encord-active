@@ -58,7 +58,7 @@ def main(target: str):
     initial_key_path = UseState[List[str]](DEFAULT_PAGE_PATH)
     selected_key_path = UseState(deepcopy(initial_key_path.value))
 
-    memoized_projects, refresh_projects = use_memo(lambda: get_projects(target_path))
+    memoized_projects, refresh_projects = use_memo(lambda: get_projects(target_path), clearable=False)
 
     def refresh_pages_menu():
         refresh_projects()

@@ -9,9 +9,7 @@ from encord_active_components.components.pages_menu import (
     pages_menu,
 )
 
-from encord_active.app.actions_page.export_balance import export_balance
-from encord_active.app.actions_page.export_filter import export_filter
-from encord_active.app.actions_page.versioning import is_latest, version_form
+from encord_active.app.actions_page.versioning import is_latest
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
@@ -27,7 +25,6 @@ PAGES = {
         "Performance By Metric": model_quality(ModelQualityPage.PERFORMANCE_BY_METRIC),
         "Explorer": model_quality(ModelQualityPage.EXPLORER),
     },
-    "Actions": {"Filter & Export": export_filter, "Balance & Export": export_balance, "Versioning": version_form},
 }
 
 DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]

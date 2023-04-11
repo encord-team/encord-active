@@ -9,6 +9,7 @@ from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_plotly_events import plotly_events
 
+from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
@@ -16,16 +17,14 @@ from encord_active.app.common.components.annotator_statistics import (
 from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
-from encord_active.app.common.components.paginator import render_pagination
+from encord_active.app.common.components.paginator import paginate_df
 from encord_active.app.common.components.similarities import show_similarities
-from encord_active.app.common.components.slicer import render_df_slicer
 from encord_active.app.common.components.tags.bulk_tagging_form import (
     BulkLevel,
     action_bulk_tags,
     bulk_tagging_form,
 )
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
-from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
@@ -44,7 +43,7 @@ from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
     MetricScope,
-    get_annotator_level_info,
+    filter_none_empty_metrics,
     get_embedding_type,
     load_metric_dataframe,
 )
@@ -56,63 +55,33 @@ class ExplorerPage(Page):
     def sidebar_options(
         self, available_metrics: List[MetricData], metric_scope: MetricScope
     ) -> Optional[DataFrame[MetricSchema]]:
-        tag_creator()
+        self.available_metrics = available_metrics
+        self.display_settings(metric_scope == MetricScope.DATA_QUALITY)
 
-        non_empty_metrics = [
-            metric for metric in available_metrics if not load_metric_dataframe(metric, normalize=False).empty
-        ]
-        sorted_metrics = natsorted(non_empty_metrics, key=lambda i: i.name)
-
-        metric_names = list(map(lambda i: i.name, sorted_metrics))
-
-        col1, col2, col3 = st.columns(3)
-        selected_metric_name = col1.selectbox(
-            "Select a metric to order your data by",
-            metric_names,
-            help="The data in the main view will be sorted by the selected metric. ",
-        )
-
-        if not selected_metric_name:
+        selected_metric = get_state().filtering_state.sort_by_metric
+        if not selected_metric:
             return None
-
-        metric_idx = metric_names.index(selected_metric_name)
-        selected_metric = sorted_metrics[metric_idx]
-        get_state().selected_metric = selected_metric
 
         df = load_metric_dataframe(selected_metric)
-        if df.shape[0] <= 0:
-            return None
 
-        class_set = natsorted(df[MetricSchema.object_class].dropna().unique().tolist())
-        with col2:
-            selected_classes = None
-            if len(class_set) > 0:
-                selected_classes = st.multiselect("Filter by class", class_set)
-
+        selected_classes = get_state().filtering_state.selected_classes
         is_class_selected = (
             df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
         )
-        df_class_selected: DataFrame[MetricSchema] = df[is_class_selected]
+        df = df[is_class_selected]
 
-        annotators = get_annotator_level_info(df_class_selected)
-        annotator_set = natsorted(annotators.keys())
-        with col3:
-            selected_annotators = None
-            if len(annotator_set) > 0:
-                selected_annotators = st.multiselect("Filter by annotator", annotator_set)
-
+        selected_annotators = get_state().filtering_state.selected_annotators
         annotator_selected = (
-            df_class_selected.shape[0] * [True]
-            if not selected_annotators
-            else df_class_selected[MetricSchema.annotator].isin(selected_annotators)
+            df.shape[0] * [True] if not selected_annotators else df[MetricSchema.annotator].isin(selected_annotators)
         )
 
-        self.display_settings(metric_scope)
-        # For now go the easy route and just filter the dataframe here
-        return df_class_selected[annotator_selected].pipe(DataFrame[MetricSchema])
+        df = df[annotator_selected].pipe(DataFrame[MetricSchema])
+
+        fmm = get_state().filtering_state.merged_metrics
+        return df.set_index("identifier").loc[fmm.index[fmm.index.isin(df.identifier)]].reset_index()
 
     def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
-        selected_metric = get_state().selected_metric
+        selected_metric = get_state().filtering_state.sort_by_metric
         if not selected_metric:
             return
 
@@ -130,6 +99,32 @@ class ExplorerPage(Page):
             render_annotator_properties(selected_df)
 
         fill_data_quality_window(selected_df, metric_scope, selected_metric)
+
+    def render_view_options(self):
+        non_empty_metrics = list(filter(filter_none_empty_metrics, self.available_metrics))
+        metric_data_options = natsorted(non_empty_metrics, key=lambda i: i.name)
+
+        if not metric_data_options:
+            return
+
+        col1, col2, _ = st.columns([5, 3, 3])
+        selected_metric = col1.selectbox(
+            "Sort by",
+            metric_data_options,
+            format_func=lambda x: x.meta.title,
+            help="The data in the main view will be sorted by the selected metric. ",
+        )
+        if not selected_metric:
+            return None
+
+        sorting_order = col2.selectbox("Sort order", ["Ascending", "Descending"])
+
+        get_state().filtering_state.sort_by_metric = selected_metric
+
+        get_state().filtering_state.merged_metrics = get_state().merged_metrics.sort_values(
+            by=selected_metric.meta.title, ascending=sorting_order == "Ascending"
+        )
+        render_filter()
 
 
 def get_selected_rows(
@@ -172,6 +167,11 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         return None
 
 
+@st.cache_data
+def cached_histogram(_df: pd.DataFrame, column_name: str, metric_name: Optional[str] = None):
+    return get_histogram(_df, column_name, metric_name)
+
+
 def fill_data_quality_window(
     current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
 ):
@@ -192,7 +192,7 @@ def fill_data_quality_window(
     n_cols = get_state().page_grid_settings.columns
     n_rows = get_state().page_grid_settings.rows
 
-    metric = get_state().selected_metric
+    metric = get_state().filtering_state.sort_by_metric
     if not metric:
         st.error("Metric not selected.")
         return
@@ -216,35 +216,43 @@ def fill_data_quality_window(
                 current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
             ]
 
-    chart = get_histogram(current_df, "score", metric.name)
+    chart = cached_histogram(current_df, "score", metric.name)
     st.altair_chart(chart, use_container_width=True)
-    subset = render_df_slicer(current_df, "score")
 
     showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
-    st.write(f"Interval contains {subset.shape[0]} of {current_df.shape[0]} {showing_description}")
+    st.write(f"Interval contains {current_df.shape[0]} of {current_df.shape[0]} {showing_description}")
 
-    paginated_subset = render_pagination(subset, n_cols, n_rows, "score")
+    form = bulk_tagging_form(current_df.pipe(DataFrame[IdentifierSchema]))
 
-    form = bulk_tagging_form(subset.pipe(DataFrame[IdentifierSchema]))
+    grid_container = st.container()
+    slider_container = st.container()
 
-    if form and form.submitted:
-        df = paginated_subset if form.level == BulkLevel.PAGE else subset
-        action_bulk_tags(df, form.tags, form.action)
+    n_items = n_cols * n_rows
+    last = len(current_df) // n_items
+    page_number = st.slider("Page", 1, last) if last > 1 else 1
 
-    if len(paginated_subset) == 0:
-        st.error("No data in selected interval")
-    else:
-        cols: List = []
-        similarity_expanders = []
-        for i, (_, row) in enumerate(paginated_subset.iterrows()):
-            if not cols:
-                if i:
-                    divider()
-                cols = list(st.columns(n_cols))
-                similarity_expanders.append(st.expander("Similarities", expanded=True))
+    with slider_container:
+        paginated_subset = paginate_df(current_df, page_number, n_items)
 
-            with cols.pop(0):
-                build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
+    with grid_container:
+        if form and form.submitted:
+            df = paginated_subset if form.level == BulkLevel.PAGE else current_df
+            action_bulk_tags(df, form.tags, form.action)
+
+        if len(paginated_subset) == 0:
+            st.error("No data in selected interval")
+        else:
+            cols: List = []
+            similarity_expanders = []
+            for i, (_, row) in enumerate(paginated_subset.iterrows()):
+                if not cols:
+                    if i:
+                        divider()
+                    cols = list(st.columns(n_cols))
+                    similarity_expanders.append(st.expander("Similarities", expanded=True))
+
+                with cols.pop(0):
+                    build_card(embedding_information, i, row, similarity_expanders, metric_scope, metric)
 
 
 def build_card(

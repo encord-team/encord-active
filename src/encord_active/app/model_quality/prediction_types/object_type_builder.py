@@ -1,6 +1,5 @@
 import json
 import re
-from copy import deepcopy
 from enum import Enum
 from typing import Optional, Union
 
@@ -10,7 +9,8 @@ from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
-from encord_active.app.common.components import sticky_header
+from encord_active.app.actions_page.export_filter import render_filter
+from encord_active.app.common.components.divider import divider
 from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import MetricNames, State, get_state
 from encord_active.app.common.state_hooks import use_memo
@@ -24,7 +24,6 @@ from encord_active.lib.charts.performance_by_metric import performance_rate_by_m
 from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.common.colors import Color
-from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
@@ -58,6 +57,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         self._precisions: Optional[DataFrame[PrecisionRecallSchema]] = None
 
     def load_data(self, page_mode: ModelQualityPage) -> bool:
+        self.page_mode = page_mode
         predictions_dir = get_state().project_paths.predictions / MainPredictionType.OBJECT.value
         predictions_metric_datas, label_metric_datas, model_predictions, labels = self._read_prediction_files(
             MainPredictionType.OBJECT, project_path=get_state().project_paths.project_dir.as_posix()
@@ -76,9 +76,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             labels={m.name: m for m in label_metric_datas},
         )
 
-        with sticky_header():
-            self._common_settings()
-            self._topbar_additional_settings(page_mode)
+        self.display_settings()
 
         matched_gt, _ = use_memo(
             lambda: reader.get_gt_matched(predictions_dir),
@@ -119,47 +117,49 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
         return True
 
-    def _common_settings(self):
+    def _render_iou_slider(self):
+        get_state().iou_threshold = st.slider(
+            "Select an IOU threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=State.iou_threshold,
+            help="The mean average precision (mAP) score is based on true positives and false positives. "
+            "The IOU threshold determines how closely predictions need to match labels to be considered "
+            "as true positives.",
+        )
+
+    def _render_ignore_empty_frames_checkbox(self):
+        st.write("")
+        st.write("")
+        # Ignore unmatched frames
+        get_state().ignore_frames_without_predictions = st.checkbox(
+            "Ignore frames without predictions",
+            value=State.ignore_frames_without_predictions,
+            help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
+            "which there exist no predictions. With this flag, you can ignore those.",
+        )
+
+    def render_view_options(self):
         if not get_state().predictions.all_classes_objects:
             get_state().predictions.all_classes_objects = get_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.OBJECT.value
             )
 
-        all_classes = get_state().predictions.all_classes_objects
-        col1, col2, col3 = st.columns([4, 4, 3])
+        def render_metrics_settings():
+            col1, col2, col3 = st.columns([4, 4, 3])
+            with col1:
+                get_state().predictions.selected_classes_objects = self._render_class_filtering_component(
+                    get_state().predictions.all_classes_objects
+                )
+            with col2:
+                self._render_iou_slider()
+            with col3:
+                self._render_ignore_empty_frames_checkbox()
 
-        with col1:
-            selected_classes = self._render_class_filtering_component(all_classes)
-
-        get_state().predictions.selected_classes_objects = dict(selected_classes) or deepcopy(all_classes)
-
-        with col2:
-            # IOU
-            get_state().iou_threshold = st.slider(
-                "Select an IOU threshold",
-                min_value=0.0,
-                max_value=1.0,
-                value=State.iou_threshold,
-                help="The mean average precision (mAP) score is based on true positives and false positives. "
-                "The IOU threshold determines how closely predictions need to match labels to be considered "
-                "as true positives.",
-            )
-
-        with col3:
-            st.write("")
-            st.write("")
-            # Ignore unmatched frames
-            get_state().ignore_frames_without_predictions = st.checkbox(
-                "Ignore frames without predictions",
-                value=State.ignore_frames_without_predictions,
-                help="Scores like mAP and mAR are effected negatively if there are frames in the dataset for /"
-                "which there exist no predictions. With this flag, you can ignore those.",
-            )
-
-    def _topbar_additional_settings(self, page_mode: ModelQualityPage):
-        if page_mode == ModelQualityPage.METRICS:
-            return
-        elif page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+        if self.page_mode == ModelQualityPage.METRICS:
+            render_metrics_settings()
+        elif self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+            render_metrics_settings()
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
                 self._topbar_metric_selection_component(MetricType.PREDICTION, get_state().predictions.metric_datas)
@@ -167,7 +167,44 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                 self._set_binning()
             with c3:
                 self._class_decomposition()
-        elif page_mode == ModelQualityPage.EXPLORER:
+        elif self.page_mode == ModelQualityPage.EXPLORER:
+            c1, c2, c3, c4 = st.columns([2, 4, 5, 4])
+            with c1:
+                self._explorer_outcome_type = st.selectbox(
+                    "Outcome",
+                    [x for x in self.OutcomeType],
+                    format_func=lambda x: x.value,
+                    help="Only the samples with this outcome will be shown",
+                )
+            with c2:
+                explorer_metric_type = (
+                    MetricType.PREDICTION
+                    if self._explorer_outcome_type
+                    in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]
+                    else MetricType.LABEL
+                )
+
+                self._topbar_metric_selection_component(explorer_metric_type, get_state().predictions.metric_datas)
+            with c3:
+                self._render_iou_slider()
+            with c4:
+                self._render_ignore_empty_frames_checkbox()
+
+        divider()
+        render_filter()
+
+    def _topbar_additional_settings(self):
+        if self.page_mode == ModelQualityPage.METRICS:
+            return
+        elif self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
+            c1, c2, c3 = st.columns([4, 4, 3])
+            with c1:
+                self._topbar_metric_selection_component(MetricType.PREDICTION, get_state().predictions.metric_datas)
+            with c2:
+                self._set_binning()
+            with c3:
+                self._class_decomposition()
+        elif self.page_mode == ModelQualityPage.EXPLORER:
             c1, c2 = st.columns([4, 4])
             with c1:
                 self._explorer_outcome_type = st.selectbox(
@@ -185,8 +222,6 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                 )
 
                 self._topbar_metric_selection_component(explorer_metric_type, get_state().predictions.metric_datas)
-
-            self.display_settings(MetricScope.MODEL_QUALITY)
 
     def _get_metric_name(self) -> Optional[str]:
         if self._explorer_outcome_type in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]:
@@ -208,7 +243,7 @@ the highest amongst predictions that overlap with the label.
 ---
 
 **Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value};
 font-weight: bold;">{color.name.lower()}</span> boxes marks the true positive predictions.
 The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
                                         """,
@@ -228,7 +263,7 @@ These are the predictions for which either of the following is true
 ---
 
 **Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value};
 font-weight: bold;">{color.name.lower()}</span> boxes marks the false positive predictions.
 The remaining colors correspond to the dataset labels with the colors you are used to from the label editor.
                             """,
@@ -244,9 +279,9 @@ These are the labels that were not matched with any predictions.
 
 ---
 **Color**:
-The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value}; 
-font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives. That is, the labels that were not 
-matched to any predictions. The remaining objects are predictions, where colors correspond to their predicted class 
+The <span style="border: solid 3px {color.value}; padding: 2px 3px 3px 3px; border-radius: 4px; color: {color.value};
+font-weight: bold;">{color.name.lower()}</span> boxes mark the false negatives. That is, the labels that were not
+matched to any predictions. The remaining objects are predictions, where colors correspond to their predicted class
 (identical colors to labels objects in the editor).
                 """,
                     unsafe_allow_html=True,
@@ -257,22 +292,26 @@ matched to any predictions. The remaining objects are predictions, where colors 
     def _get_target_df(
         self, metric_name: str
     ) -> Union[DataFrame[PredictionMatchSchema], DataFrame[LabelMatchSchema], None]:
+        filtered_merged_metrics = get_state().filtering_state.merged_metrics
 
-        if self._model_predictions is not None and self._labels is not None:
-            if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES:
-                return self._model_predictions[
-                    self._model_predictions[PredictionMatchSchema.is_true_positive] == 1.0
-                ].dropna(subset=[metric_name])
-            elif self._explorer_outcome_type == self.OutcomeType.FALSE_POSITIVES:
-                return self._model_predictions[
-                    self._model_predictions[PredictionMatchSchema.is_true_positive] == 0.0
-                ].dropna(subset=[metric_name])
-            elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
-                return self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
-            else:
-                return None
+        if self._model_predictions is None or self._labels is None:
+            return None
+
+        if self._explorer_outcome_type in [self.OutcomeType.TRUE_POSITIVES, self.OutcomeType.FALSE_POSITIVES]:
+            value = 1.0 if self._explorer_outcome_type == self.OutcomeType.TRUE_POSITIVES else 0.0
+            view_df = self._model_predictions[
+                self._model_predictions[PredictionMatchSchema.is_true_positive] == value
+            ].dropna(subset=[metric_name])
+
+            lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
+            view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
+            view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
+        elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
+            view_df = self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
+            view_df = view_df[view_df.identifier.isin(filtered_merged_metrics.identifier)]
         else:
             return None
+        return view_df
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
@@ -362,6 +401,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
             st.warning("An error occurred while rendering the explorer page")
 
         view_df = self._get_target_df(metric_name)
+
         if view_df is None:
             st.error(f"An error occurred during getting data according to the {metric_name} metric")
             return

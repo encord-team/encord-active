@@ -23,7 +23,7 @@ pip install encord-active
 
 :::info
 
-`encord-active` requires [python3.9](https://www.python.org/downloads/release/python-3915/) or above.
+`encord-active` requires [python3.9](https://www.python.org/downloads/release/python-3915/) or above and [git](https://git-scm.com/download) VCS.
 If you have trouble installing `encord-active`, you can find more detailed instructions on installing it [here](./installation).
 
 :::
