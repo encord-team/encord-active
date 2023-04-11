@@ -1,0 +1,232 @@
+{
+    "url": "static/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset/data/eb084b77-02d0-403b-a5a3-7396c32f2164/images/ab123f06-2dda-4cbf-8aad-8526521caad0.jpeg",
+    "label_hash": "eb084b77-02d0-403b-a5a3-7396c32f2164",
+    "dataset_hash": "d4fc781b-6319-4227-989a-96d6fd4e2af6",
+    "dataset_title": "[Open Source][Validation] BDD Dataset",
+    "data_title": "476",
+    "data_type": "image",
+    "data_units": {
+        "ab123f06-2dda-4cbf-8aad-8526521caad0": {
+            "data_hash": "ab123f06-2dda-4cbf-8aad-8526521caad0",
+            "data_title": "476",
+            "data_type": "image/jpeg",
+            "data_sequence": 0,
+            "labels": {
+                "objects": [
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "cdff0393",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "53cb198b",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "d602bf86",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "9b990bdc",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "e8d91fe5",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "car",
+                        "color": "#16406C",
+                        "shape": "polygon",
+                        "value": "car",
+                        "polygon": {
+                            "1": {
+                                "x": 0.8219,
+                                "y": 0.4583
+                            },
+                            "2": {
+                                "x": 0.8125,
+                                "y": 0.4583
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "c6aead00",
+                        "featureHash": "0f5c185a",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    },
+                    {
+                        "name": "pedestrian",
+                        "color": "#D33115",
+                        "shape": "polygon",
+                        "value": "pedestrian",
+                        "polygon": {
+                            "0": {
+                                "x": 0.6992,
+                                "y": 0.4333
+                            },
+                            "1": {
+                                "x": 0.6977,
+                                "y": 0.4361
+                            },
+                        },
+                        "reviews": [],
+                        "createdAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "createdBy": "robot@cord.tech",
+                        "confidence": 1,
+                        "objectHash": "3b33dc1e",
+                        "featureHash": "5dd0a674",
+                        "lastEditedAt": "Fri, 16 Sep 2022 11:44:27 GMT",
+                        "lastEditedBy": "robot@encord.com",
+                        "manualAnnotation": false
+                    }
+                ],
+                "classifications": []
+            },
+            "data_link": "https://storage.googleapis.com/cord-ai-platform.appspot.com/cord-images-prod/90PI2JMDvqVa6HmrpyiAymAFBVx1/ab123f06-2dda-4cbf-8aad-8526521caad0?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=firebase-adminsdk-64w1p%40cord-ai-platform.iam.gserviceaccount.com%2F20220929%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20220929T150119Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=755465082d39a4ed5d7a9bfc1dd8e0162dff3dbf0bc2321b7867941290bada9cc01dd2e1cf1801cb0aea2ab53e07139d6d14d61d38fde783cebd410e2907c69129a3cfb3b3c410c1c1190b3f9f7616951c57d749c7f2fe3e95ab8a08226e72b8b11601723c61d653e16c33a379dda26e026cd5f25ff49f27c0be2c5f8bf4984159d1323ba49023ff3b89f3385e9356ababded7bd27ab85cc3fd8bbd553825751ffc79b0a08a341b90943b00a1fc2bba5a5d67843bd89dc2f78f55db1a45b3a465ee6f1f7d1e26bf2600cc1ab87a27677549a8e7a5fb009454f43e7b1019ed2120bc6dcec593fd9315301c05d2d2b588635d050ad36b5d3b1f7e2535e3f1b1825",
+            "width": 1280,
+            "height": 720
+        }
+    },
+    "object_answers": {
+        "cdff0393": {
+            "objectHash": "cdff0393",
+            "classifications": []
+        },
+        "53cb198b": {
+            "objectHash": "53cb198b",
+            "classifications": []
+        },
+        "d602bf86": {
+            "objectHash": "d602bf86",
+            "classifications": []
+        },
+        "9b990bdc": {
+            "objectHash": "9b990bdc",
+            "classifications": []
+        },
+        "e8d91fe5": {
+            "objectHash": "e8d91fe5",
+            "classifications": []
+        },
+        "c6aead00": {
+            "objectHash": "c6aead00",
+            "classifications": []
+        },
+        "3b33dc1e": {
+            "objectHash": "3b33dc1e",
+            "classifications": []
+        }
+    },
+    "classification_answers": {},
+    "object_actions": {},
+    "label_status": "LABEL_IN_PROGRESS"
+}

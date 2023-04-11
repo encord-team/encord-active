@@ -1,4 +1,8 @@
+import http.server
+import os
+import socketserver
 import sys
+import threading
 from os import environ
 from pathlib import Path
 
@@ -17,6 +21,20 @@ def ensure_safe_project(path: Path):
         GitVersioner(path).jump_to("latest")
         ensure_initialised_merged_metrics(path)
 
+PORT = 8000
+
+
+class QuietServer(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+
+def run_file_server(target: Path):
+    os.chdir(target.resolve().as_posix())
+    with socketserver.TCPServer(("", PORT), QuietServer) as httpd:
+        print("Server started at localhost:" + str(PORT))
+        httpd.serve_forever()
+
 
 def launch_streamlit_app(target: Path):
     ensure_safe_project(target)
@@ -31,4 +49,7 @@ def launch_streamlit_app(target: Path):
         sys.argv.insert(3, "--server.fileWatcherType")
         sys.argv.insert(4, "auto")
 
-    sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+    # server_thread = threading.Thread(target=run_file_server, args=(target,))
+    # server_thread.start()
+
+    stcli.main()  # pylint: disable=no-value-for-parameter

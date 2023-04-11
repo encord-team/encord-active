@@ -21,6 +21,9 @@ class LabelRowStructure:
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
 
+    def __hash__(self) -> int:
+        return hash(self.path.as_posix())
+
     @property
     def label_row_file(self) -> Path:
         return self.path / "label_row.json"

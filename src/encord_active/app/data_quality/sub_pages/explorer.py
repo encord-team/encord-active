@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 from time import perf_counter
@@ -12,7 +13,6 @@ from encord_active_components.components.explorer import (
     Metadata,
     Output,
     OutputAction,
-    PaginationInfo,
     explorer,
 )
 from natsort import natsorted
@@ -43,6 +43,7 @@ from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import (
     ObjectDrawingConfigurations,
+    get_geometries,
     show_image_and_draw_polygons,
 )
 from encord_active.lib.db.merged_metrics import MANDATORY_COLUMNS
@@ -199,19 +200,16 @@ def fill_data_quality_window(
     merged_metrics = get_state().merged_metrics
     with_all_metrics = current_df[["identifier"]].join(merged_metrics, on="identifier", how="left").dropna(axis=1)
 
+    start = perf_counter()
+
     for row in with_all_metrics.to_dict("records"):
         id_parts = 4 if embedding_information.has_annotations else 3
         identifier = row.pop("identifier")
         split_id = str(identifier).split("_")
-        lr, du, *_ = split_id
-        url = get_url(lr, du)
-        if not url:
-            continue
 
         items.append(
             GalleryItem(
                 id="_".join(split_id[:id_parts]),
-                url=url,
                 editUrl=row.pop("url"),
                 tags=to_grouped_tags(row.pop("tags")),
                 metadata=Metadata(
@@ -222,12 +220,29 @@ def fill_data_quality_window(
             )
         )
 
+    print(perf_counter() - start)
+
     output_state = UseState[Optional[Output]](None)
-    output = explorer(items, to_grouped_tags(Tags().all()))
+    output = explorer(get_state().project_paths.project_dir.name, items, to_grouped_tags(Tags().all()))
     print(output)
     if output and output != output_state:
         output_state.set(output)
         action, payload = output
+
+
+def get_lr_json(lr_hash: str, du_hash: str):
+    label_row_structure = get_state().project_paths.label_row_structure(lr_hash)
+    # lr_json = json.loads(label_row_structure.label_row_file.read_text())
+    lr_json = None
+
+    for data_unit in label_row_structure.iter_data_unit():
+        if data_unit.hash == du_hash:
+            url = "http://localhost:8000/static/" + parse.quote(
+                data_unit.path.relative_to(get_state().target_path).as_posix()
+            )
+            return lr_json, url
+
+    return lr_json
 
 
 def get_url(lr_hash: str, du_hash: str):

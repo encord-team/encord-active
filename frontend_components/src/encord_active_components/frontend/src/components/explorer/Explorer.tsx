@@ -1,5 +1,11 @@
 import { Select } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
 import {
@@ -17,6 +23,14 @@ import { Streamlit } from "streamlit-component-lib";
 
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { IdParts, splitId } from "./id";
+import {
+  fetchProjectItem,
+  ItemResponse,
+  ProjectContext,
+  useProjectQueries,
+} from "./api";
 
 /* type ChangePage = ["CHANGE_PAGE", number]; */
 /**/
@@ -30,13 +44,14 @@ type ItemMetadata = {
   labelClass?: string | null;
 };
 
-type Item = {
+type InputItem = {
   id: string;
   editUrl: string;
   tags: GroupedTags;
-  url: string;
   metadata: ItemMetadata;
 };
+
+type Item = InputItem & ItemResponse & { idParts: IdParts };
 
 type GroupedTags = {
   data: string[];
@@ -49,12 +64,15 @@ type PaginationInfo = {
 };
 
 export type Props = {
-  items: Item[];
+  projectName: string;
+  items: InputItem[];
   tags: GroupedTags;
   pagination: PaginationInfo;
 };
 
-export const Explorer = ({ items, tags }: Props) => {
+const BASE_URL = "http://localhost:8000";
+
+export const Explorer = ({ projectName, items, tags }: Props) => {
   const [previewedItem, setPreviewedItem] = useState<Item | null>(null);
   const [similarityItem, setSimilarityItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
@@ -86,88 +104,106 @@ export const Explorer = ({ items, tags }: Props) => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  /* console.log(itemMap); */
+  const fetchItem = fetchProjectItem(projectName);
+
+  const itemQueries = useQueries({
+    queries: [...itemMap.values()]
+      .slice(page * pageCount, page * pageCount + pageCount)
+      .map((item) => {
+        return {
+          queryKey: ["item", item.id],
+          queryFn: async () => {
+            const { url } = await fetchItem(item.id);
+            return { ...item, url: `${BASE_URL}/${url}` } as Item;
+          },
+        };
+      }),
+  });
 
   return (
-    <div ref={ref} className="flex">
-      {previewedItem ? (
-        <ItemPreview
-          item={previewedItem}
-          tags={tags}
-          onClose={closePreview}
-          onShowSimilar={() => showSimilarItems(previewedItem)}
-        />
-      ) : (
-        <div className="flex flex-col gap-5 items-center pb-5">
-          {similarityItem && (
-            <div className="flex gap-3">
-              <figure>
-                <img
-                  className="w-48 h-auto object-cover rounded"
-                  src={similarityItem.url}
+    <ProjectContext.Provider value={projectName}>
+      <div ref={ref} className="flex">
+        {previewedItem ? (
+          <ItemPreview
+            item={previewedItem}
+            tags={tags}
+            onClose={closePreview}
+            onShowSimilar={() => showSimilarItems(previewedItem)}
+          />
+        ) : (
+          <div className="flex flex-col gap-5 items-center pb-5">
+            {similarityItem && (
+              <div className="flex gap-3">
+                <figure>
+                  <img
+                    className="w-48 h-auto object-cover rounded"
+                    src={similarityItem.url}
+                  />
+                </figure>
+                <h1 className="text-lg">Similar items</h1>
+              </div>
+            )}
+            <div className="flex w-full justify-between">
+              <div className="dropdown dropdown-bottom">
+                <label
+                  tabIndex={0}
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !selectedItems.size,
+                  })}
+                >
+                  <HiOutlineTag />
+                  Tag
+                </label>
+                <TaggingForm
+                  tags={tags}
+                  tabIndex={0}
+                  onApply={(tags) => (
+                    console.log(tags), setSelectedItems(new Set())
+                  )}
                 />
-              </figure>
-              <h1 className="text-lg">Similar items</h1>
-            </div>
-          )}
-          <div className="flex w-full justify-between">
-            <div className="dropdown dropdown-bottom">
-              <label
-                tabIndex={0}
+              </div>
+              <button
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
                 })}
+                onClick={() => setSelectedItems(new Set())}
               >
-                <HiOutlineTag />
-                Tag
-              </label>
-              <TaggingForm
-                tags={tags}
-                tabIndex={0}
-                onApply={(tags) => (
-                  console.log(tags), setSelectedItems(new Set())
-                )}
-              />
+                <VscClearAll />
+                Clear selection
+              </button>
             </div>
-            <button
-              className={classy("btn btn-ghost gap-2", {
-                "btn-disabled": !selectedItems.size,
-              })}
-              onClick={() => setSelectedItems(new Set())}
+            <form
+              onChange={({ target }) =>
+                toggleImageSelection((target as HTMLInputElement).name)
+              }
+              onSubmit={(e) => e.preventDefault()}
+              className="flex-1 grid gap-1 grid-cols-4"
             >
-              <VscClearAll />
-              Clear selection
-            </button>
+              {itemQueries.map(({ isLoading, data: item }, index) =>
+                isLoading || !item ? (
+                  <progress key={index} className="w-full"></progress>
+                ) : (
+                  <GalleryItem
+                    key={item.id}
+                    item={item}
+                    onExpand={() => setPreviewedItem(item)}
+                    onShowSimilar={() => showSimilarItems(item)}
+                    selected={selectedItems.has(item.id)}
+                  />
+                )
+              )}
+            </form>
+            <Pagination
+              current={page}
+              pageCount={pageCount}
+              totalItems={items.length}
+              onChange={setPage}
+              onChangePageCount={setPageCount}
+            />
           </div>
-          <form
-            onChange={({ target }) =>
-              toggleImageSelection((target as HTMLInputElement).name)
-            }
-            onSubmit={(e) => e.preventDefault()}
-            className="flex-1 grid gap-1 grid-cols-4"
-          >
-            {[...itemMap.values()]
-              .slice(page * pageCount, page * pageCount + pageCount)
-              .map((item) => (
-                <GalleryItem
-                  key={item.id}
-                  item={item}
-                  onExpand={() => setPreviewedItem(item)}
-                  onShowSimilar={() => showSimilarItems(item)}
-                  selected={selectedItems.has(item.id)}
-                />
-              ))}
-          </form>
-          <Pagination
-            current={page}
-            pageCount={pageCount}
-            totalItems={items.length}
-            onChange={setPage}
-            onChangePageCount={setPageCount}
-          />
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ProjectContext.Provider>
   );
 };
 
@@ -249,7 +285,7 @@ const Pagination = ({
         </button>
       </div>
       <form
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const form = event.target as HTMLFormElement;
           const value = +(form[0] as HTMLInputElement).value;
@@ -372,6 +408,7 @@ const ItemPreview = ({
     <MetadataMetrics metrics={item.metadata.metrics} />
   </div>
 );
+
 const GalleryItem = ({
   item,
   selected,
@@ -394,7 +431,6 @@ const GalleryItem = ({
           "peer checkbox absolute left-1 top-1 opacity-0 group-hover:opacity-100 checked:opacity-100"
         )}
       />
-      {/* <figure className="group-hover:opacity-30 peer-checked:p-2 bg-base-300 rounded peer-checked:transition-none"> */}
       <figure className="group-hover:opacity-30 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded peer-checked:transition-none">
         <img
           className="object-cover rounded transition-opacity"
@@ -402,7 +438,10 @@ const GalleryItem = ({
         />
       </figure>
       <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-        <button onClick={onExpand} className="btn btn-square">
+        <button
+          onClick={(e) => (console.log(item), onExpand?.(e))}
+          className="btn btn-square"
+        >
           <FaExpand />
         </button>
       </div>
