@@ -76,6 +76,8 @@ encord-active-components = { path="./frontend_components", develop=true}
 llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
+fastapi = "^0.95.0"
+uvicorn = {extras = ["standard"], version = "^0.21.1"}
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
