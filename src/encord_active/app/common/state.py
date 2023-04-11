@@ -18,6 +18,7 @@ from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
+from encord_active.lib.premium import Querier
 from encord_active.lib.project import ProjectFileStructure
 
 
@@ -57,6 +58,7 @@ class PageGridSettings:
 @dataclass
 class FilteringState:
     merged_metrics: pd.DataFrame
+    last_assistant_result: Optional[pd.DataFrame] = None
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
@@ -76,6 +78,7 @@ class State:
     all_tags: List[Tag]
     merged_metrics: pd.DataFrame
     filtering_state: FilteringState
+    querier: Querier
     ignore_frames_without_predictions = False
     iou_threshold = 0.5
     page_grid_settings: PageGridSettings = field(default_factory=PageGridSettings)
@@ -95,12 +98,14 @@ class State:
         ):
             DBConnection.set_project_path(project_dir)
             merged_metrics = MergedMetrics().all()
+            pfs = ProjectFileStructure(project_dir)
             st.session_state[StateKey.GLOBAL] = State(
-                project_paths=ProjectFileStructure(project_dir),
+                project_paths=pfs,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
                 all_tags=Tags().all(),
                 filtering_state=FilteringState(merged_metrics),
+                querier=Querier(pfs),
             )
 
 
