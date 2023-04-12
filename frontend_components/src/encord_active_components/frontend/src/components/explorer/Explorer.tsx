@@ -26,63 +26,45 @@ import { classy } from "../../helpers/classy";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { IdParts, splitId } from "./id";
 import {
+  BASE_URL,
+  EmbeddingType,
   fetchProjectItem,
-  ItemResponse,
+  getSimilarItems,
+  GroupedTags,
+  Item as Extras,
   ProjectContext,
   useProjectQueries,
 } from "./api";
 
-/* type ChangePage = ["CHANGE_PAGE", number]; */
-/**/
-/* type Output = ChangePage; */
+type Output = never;
 
-/* const pushOutput = (output: Output) => Streamlit.setComponentValue(output); */
+const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
 
-type ItemMetadata = {
-  metrics: Record<string, string>;
-  annotator?: string | null;
-  labelClass?: string | null;
-};
-
-type InputItem = {
-  id: string;
-  editUrl: string;
-  tags: GroupedTags;
-  metadata: ItemMetadata;
-};
-
-type Item = InputItem & ItemResponse & { idParts: IdParts };
-
-type GroupedTags = {
-  data: string[];
-  label: string[];
-};
-
-type PaginationInfo = {
-  current: number;
-  total: number;
-};
+type Item = Extras & { id: string; idParts: IdParts };
 
 export type Props = {
   projectName: string;
-  items: InputItem[];
+  items: string[];
+  embeddingsType: EmbeddingType;
   tags: GroupedTags;
-  pagination: PaginationInfo;
 };
 
-const BASE_URL = "http://localhost:8000";
-
-export const Explorer = ({ projectName, items, tags }: Props) => {
+export const Explorer = ({
+  projectName,
+  items,
+  tags,
+  embeddingsType,
+}: Props) => {
   const [previewedItem, setPreviewedItem] = useState<Item | null>(null);
   const [similarityItem, setSimilarityItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
 
   const [page, setPage] = useState(1);
-  const [pageCount, setPageCount] = useState<PageCount>(PAGE_COUNTS[0]);
+  const [pageSize, setPageSize] = useState<PageCount>(PAGE_SIZE[0]);
 
-  const [itemMap, setItemMap] = useState(
-    new Map(items.map((item) => [item.id, item]))
-  );
+  /* const [itemMap, setItemMap] = useState( */
+  /*   new Map(items.map((item) => [item.id, item])) */
+  /* ); */
 
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
@@ -97,24 +79,27 @@ export const Explorer = ({ projectName, items, tags }: Props) => {
 
   const closePreview = () => setPreviewedItem(null);
   const showSimilarItems = (item: Item) => (
-    closePreview(), setSimilarityItem(item)
+    closePreview(),
+    setSimilarityItem(item),
+    getSimilarItems(projectName)(item.id, embeddingsType, pageSize)
   );
+
+  /* const similarItems = useQuery(["similarities", ""]) */
 
   useEffect(() => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  const fetchItem = fetchProjectItem(projectName);
-
   const itemQueries = useQueries({
-    queries: [...itemMap.values()]
-      .slice(page * pageCount, page * pageCount + pageCount)
-      .map((item) => {
+    queries: items
+      .slice(page * pageSize, page * pageSize + pageSize)
+      .map((id) => {
         return {
-          queryKey: ["item", item.id],
+          queryKey: ["item", id],
           queryFn: async () => {
-            const { url } = await fetchItem(item.id);
-            return { ...item, url: `${BASE_URL}/${url}` } as Item;
+            const { url, ...rest } = await fetchProjectItem(projectName)(id);
+            const idParts = splitId(id);
+            return { ...rest, url: `${BASE_URL}/${url}`, id, idParts } as Item;
           },
         };
       }),
@@ -195,10 +180,10 @@ export const Explorer = ({ projectName, items, tags }: Props) => {
             </form>
             <Pagination
               current={page}
-              pageCount={pageCount}
+              pageCount={pageSize}
               totalItems={items.length}
               onChange={setPage}
-              onChangePageCount={setPageCount}
+              onChangePageCount={setPageSize}
             />
           </div>
         )}
@@ -207,8 +192,8 @@ export const Explorer = ({ projectName, items, tags }: Props) => {
   );
 };
 
-const PAGE_COUNTS = [20, 40, 60, 80] as const;
-type PageCount = typeof PAGE_COUNTS[number];
+const PAGE_SIZE = [20, 40, 60, 80] as const;
+type PageCount = typeof PAGE_SIZE[number];
 
 const Pagination = ({
   current,
@@ -238,7 +223,7 @@ const Pagination = ({
         }
         defaultValue={pageCount}
       >
-        {PAGE_COUNTS.map((count) => (
+        {PAGE_SIZE.map((count) => (
           <option key={count}>{count}</option>
         ))}
       </select>
@@ -475,6 +460,7 @@ const GalleryItem = ({
     </div>
   </div>
 );
+
 const MetadataMetrics = ({
   metrics,
 }: {
