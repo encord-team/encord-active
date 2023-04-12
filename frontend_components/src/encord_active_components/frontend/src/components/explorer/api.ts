@@ -1,11 +1,31 @@
 import { createContext, useContext } from "react";
-import { splitId } from "./id";
 import { z } from "zod";
 
 export const BASE_URL = "http://localhost:8000";
 
+export const PointSchema = z.object({ x: z.number(), y: z.number() });
+
+export const LabelRowObjectSchema = z.object({
+  color: z.string(),
+  confidence: z.number(),
+  createdAt: z.string(),
+  createdBy: z.string(),
+  featureHash: z.string(),
+  lastEditedAt: z.string(),
+  lastEditedBy: z.string(),
+  manualAnnotation: z.boolean(),
+  name: z.string(),
+  objectHash: z.string(),
+  polygon: z.record(PointSchema),
+});
+
+export const LabelsSchema = z.object({
+  classification: z.any().array().nullish(),
+  objects: LabelRowObjectSchema.array(),
+});
+
 export const ItemSchema = z.object({
-  // id: z.string(),
+  id: z.string(),
   url: z.string(),
   editUrl: z.string(),
   metadata: z.object({
@@ -14,22 +34,18 @@ export const ItemSchema = z.object({
     labelClass: z.string().nullish(),
   }),
   tags: z.object({ data: z.string().array(), label: z.string().array() }),
+  labels: LabelsSchema,
 });
 
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemMetadata = Item["metadata"];
 export type GroupedTags = Item["tags"];
-
+export type Point = z.infer<typeof PointSchema>;
 export type EmbeddingType = "image" | "object" | "classification";
 
 export const fetchProjectItem = (projectName: string) => async (id: string) => {
-  const { labelRow, data } = splitId(id);
-  const queryParams = new URLSearchParams({
-    full_id: id,
-  });
-
   const response = await fetch(
-    `${BASE_URL}/projects/${projectName}/label_rows/${labelRow}/data_units/${data}?${queryParams}`
+    `${BASE_URL}/projects/${projectName}/items/${id}`
   ).then((res) => res.json());
   return ItemSchema.parse(response);
 };
