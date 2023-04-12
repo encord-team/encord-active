@@ -50,13 +50,7 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
-@app.get("/projects/{project}/label_rows/{lr_hash}/data_units/{du_hash}")
-def read_item(project: str, lr_hash: str, du_hash: str, full_id: str):
-    project_file_structure = ProjectFileStructure(target_path / project)
-
-    DBConnection.set_project_path(project_file_structure.project_dir)
-    row = MergedMetrics().get_row(full_id).dropna(axis=1).to_dict("records")[0]
-
+def _build_item(row: dict, lr_hash: str, du_hash: str, project_file_structure: ProjectFileStructure):
     editUrl = row.pop("url")
     tags = row.pop("tags")
     metadata = Metadata(
@@ -72,14 +66,26 @@ def read_item(project: str, lr_hash: str, du_hash: str, full_id: str):
     return {"url": url, "editUrl": editUrl, "metadata": metadata, "tags": to_grouped_tags(tags)}
 
 
+@app.get("/projects/{project}/label_rows/{lr_hash}/data_units/{du_hash}")
+def read_item(project: str, lr_hash: str, du_hash: str, full_id: str):
+    project_file_structure = ProjectFileStructure(target_path / project)
+
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    row = MergedMetrics().get_row(full_id).dropna(axis=1).to_dict("records")[0]
+
+    return _build_item(row, lr_hash, du_hash, project_file_structure)
+
+
 @app.get("/projects/{project}/similarities/{id}")
-def get_similar_items(project: str, id: str, embedding_type: EmbeddingType, page_size: int = 8):
+def get_similar_items(project: str, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None):
     project_file_structure = ProjectFileStructure(target_path / project)
     finder = _get_similarity_finder(embedding_type, project_file_structure.embeddings, page_size)
     nearest_images = finder.get_similarities(id)
-    print(nearest_images)
+    # DBConnection.set_project_path(project_file_structure.project_dir)
+    # row = MergedMetrics().get_row(full_id).dropna(axis=1).to_dict("records")[0]
+    #
 
-    return {}
+    return [item["key"] for item in nearest_images]
 
 
 @lru_cache

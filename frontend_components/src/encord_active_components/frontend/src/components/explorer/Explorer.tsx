@@ -60,7 +60,7 @@ export const Explorer = ({
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageCount>(PAGE_SIZE[0]);
+  const [pageSize, setPageSize] = useState<PageSize>(PAGE_SIZE[0]);
 
   /* const [itemMap, setItemMap] = useState( */
   /*   new Map(items.map((item) => [item.id, item])) */
@@ -79,19 +79,23 @@ export const Explorer = ({
 
   const closePreview = () => setPreviewedItem(null);
   const showSimilarItems = (item: Item) => (
-    closePreview(),
-    setSimilarityItem(item),
-    getSimilarItems(projectName)(item.id, embeddingsType, pageSize)
+    closePreview(), setPage(1), setSimilarityItem(item)
   );
-
-  /* const similarItems = useQuery(["similarities", ""]) */
 
   useEffect(() => {
     Streamlit.setFrameHeight(height);
   }, [height]);
 
+  const { data: similarItems } = useQuery(
+    ["similarities", similarityItem?.id ?? ""],
+    () =>
+      similarityItem &&
+      getSimilarItems(projectName)(similarityItem.id, embeddingsType),
+    { enabled: !!similarityItem }
+  );
+
   const itemQueries = useQueries({
-    queries: items
+    queries: (similarItems ?? items)
       .slice(page * pageSize, page * pageSize + pageSize)
       .map((id) => {
         return {
@@ -107,7 +111,7 @@ export const Explorer = ({
 
   return (
     <ProjectContext.Provider value={projectName}>
-      <div ref={ref} className="flex">
+      <div ref={ref} className="w-full flex">
         {previewedItem ? (
           <ItemPreview
             item={previewedItem}
@@ -116,16 +120,24 @@ export const Explorer = ({
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
         ) : (
-          <div className="flex flex-col gap-5 items-center pb-5">
+          <div className="w-full flex flex-col gap-5 items-center pb-5">
             {similarityItem && (
-              <div className="flex gap-3">
-                <figure>
-                  <img
-                    className="w-48 h-auto object-cover rounded"
-                    src={similarityItem.url}
-                  />
-                </figure>
+              <div className="flex flex-col gap-2">
                 <h1 className="text-lg">Similar items</h1>
+                <div className="group relative">
+                  <figure className="group-hover:opacity-30">
+                    <img
+                      className="w-48 h-auto object-contain rounded"
+                      src={similarityItem.url}
+                    />
+                  </figure>
+                  <button
+                    onClick={() => setSimilarityItem(null)}
+                    className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+                  >
+                    <MdClose className="text-base" />
+                  </button>
+                </div>
               </div>
             )}
             <div className="flex w-full justify-between">
@@ -162,7 +174,7 @@ export const Explorer = ({
                 toggleImageSelection((target as HTMLInputElement).name)
               }
               onSubmit={(e) => e.preventDefault()}
-              className="flex-1 grid gap-1 grid-cols-4"
+              className="w-full flex-1 grid gap-1 grid-cols-4"
             >
               {itemQueries.map(({ isLoading, data: item }, index) =>
                 isLoading || !item ? (
@@ -180,10 +192,10 @@ export const Explorer = ({
             </form>
             <Pagination
               current={page}
-              pageCount={pageSize}
+              pageSize={pageSize}
               totalItems={items.length}
               onChange={setPage}
-              onChangePageCount={setPageSize}
+              onChangePageSize={setPageSize}
             />
           </div>
         )}
@@ -193,38 +205,38 @@ export const Explorer = ({
 };
 
 const PAGE_SIZE = [20, 40, 60, 80] as const;
-type PageCount = typeof PAGE_SIZE[number];
+type PageSize = typeof PAGE_SIZE[number];
 
 const Pagination = ({
   current,
-  pageCount,
+  pageSize,
   totalItems,
   onChange,
-  onChangePageCount,
+  onChangePageSize,
 }: {
   current: number;
-  pageCount: number;
+  pageSize: number;
   totalItems: number;
   onChange: (to: number) => void;
-  onChangePageCount: (count: PageCount) => void;
+  onChangePageSize: (size: PageSize) => void;
 }) => {
   const prev = current - 1;
   const next = current + 1;
 
-  let totalPages = (totalItems / pageCount) | 0;
-  if (totalItems % pageCount == 0) totalPages--;
+  let totalPages = (totalItems / pageSize) | 0;
+  if (totalItems % pageSize == 0) totalPages--;
 
   return (
     <div className="inline-flex gap-5">
       <select
         className="select max-w-xs"
         onChange={(event) =>
-          onChangePageCount(parseInt(event.target.value) as PageCount)
+          onChangePageSize(parseInt(event.target.value) as PageSize)
         }
-        defaultValue={pageCount}
+        defaultValue={pageSize}
       >
-        {PAGE_SIZE.map((count) => (
-          <option key={count}>{count}</option>
+        {PAGE_SIZE.map((size) => (
+          <option key={size}>{size}</option>
         ))}
       </select>
       <div className="btn-group">
@@ -406,7 +418,7 @@ const GalleryItem = ({
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => (
   <div className="card relative align-middle form-control">
-    <label className="group label cursor-pointer p-0">
+    <label className="h-full group label cursor-pointer p-0">
       <input
         name={item.id}
         type="checkbox"
@@ -416,9 +428,9 @@ const GalleryItem = ({
           "peer checkbox absolute left-1 top-1 opacity-0 group-hover:opacity-100 checked:opacity-100"
         )}
       />
-      <figure className="group-hover:opacity-30 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded peer-checked:transition-none">
+      <figure className="bg-base-200 w-full aspect-square group-hover:opacity-30 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded peer-checked:transition-none">
         <img
-          className="object-cover rounded transition-opacity"
+          className="w-full h-full object-contain rounded transition-opacity"
           src={item.url}
         />
       </figure>

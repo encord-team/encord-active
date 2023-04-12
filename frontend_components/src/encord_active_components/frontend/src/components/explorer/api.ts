@@ -5,6 +5,7 @@ import { z } from "zod";
 export const BASE_URL = "http://localhost:8000";
 
 export const ItemSchema = z.object({
+  // id: z.string(),
   url: z.string(),
   editUrl: z.string(),
   metadata: z.object({
@@ -35,16 +36,16 @@ export const fetchProjectItem = (projectName: string) => async (id: string) => {
 
 export const getSimilarItems =
   (projectName: string) =>
-  async (id: string, embeddingType: EmbeddingType, pageSize: number) => {
+  async (id: string, embeddingType: EmbeddingType, pageSize?: number) => {
     const queryParams = new URLSearchParams({
       embedding_type: embeddingType,
-      page_size: pageSize.toString(),
+      ...(pageSize ? { page_size: pageSize.toString() } : {}),
     });
 
     const response = await fetch(
       `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams}`
     ).then((res) => res.json());
-    return ItemSchema.parse(response);
+    return z.string().array().parse(response);
   };
 
 export const useProjectQueries = () => {
