@@ -50,7 +50,14 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
-def _build_item(row: dict, lr_hash: str, du_hash: str, project_file_structure: ProjectFileStructure):
+@app.get("/projects/{project}/items/{id}")
+def read_item(project: str, id: str):
+    lr_hash, du_hash, frame, *obj_hash = id.split("_")
+    project_file_structure = ProjectFileStructure(target_path / project)
+
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
+
     editUrl = row.pop("url")
     tags = row.pop("tags")
     metadata = Metadata(
@@ -61,19 +68,18 @@ def _build_item(row: dict, lr_hash: str, du_hash: str, project_file_structure: P
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
     url = _get_url(label_row_structure, du_hash)
-    _extra = json.loads(label_row_structure.label_row_file.read_text())
 
-    return {"url": url, "editUrl": editUrl, "metadata": metadata, "tags": to_grouped_tags(tags)}
+    label_row = json.loads(label_row_structure.label_row_file.read_text())
+    labels = label_row["data_units"][du_hash]["labels"]
 
-
-@app.get("/projects/{project}/label_rows/{lr_hash}/data_units/{du_hash}")
-def read_item(project: str, lr_hash: str, du_hash: str, full_id: str):
-    project_file_structure = ProjectFileStructure(target_path / project)
-
-    DBConnection.set_project_path(project_file_structure.project_dir)
-    row = MergedMetrics().get_row(full_id).dropna(axis=1).to_dict("records")[0]
-
-    return _build_item(row, lr_hash, du_hash, project_file_structure)
+    return {
+        "id": id,
+        "url": url,
+        "editUrl": editUrl,
+        "metadata": metadata,
+        "tags": to_grouped_tags(tags),
+        "labels": labels,
+    }
 
 
 @app.get("/projects/{project}/similarities/{id}")

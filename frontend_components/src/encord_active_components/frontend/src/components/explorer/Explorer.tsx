@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
@@ -32,6 +33,7 @@ import {
   getSimilarItems,
   GroupedTags,
   Item as Extras,
+  Point,
   ProjectContext,
   useProjectQueries,
 } from "./api";
@@ -102,8 +104,7 @@ export const Explorer = ({
           queryKey: ["item", id],
           queryFn: async () => {
             const { url, ...rest } = await fetchProjectItem(projectName)(id);
-            const idParts = splitId(id);
-            return { ...rest, url: `${BASE_URL}/${url}`, id, idParts } as Item;
+            return { ...rest, url: `${BASE_URL}/${url}` } as Item;
           },
         };
       }),
@@ -125,12 +126,10 @@ export const Explorer = ({
               <div className="flex flex-col gap-2">
                 <h1 className="text-lg">Similar items</h1>
                 <div className="group relative">
-                  <figure className="group-hover:opacity-30">
-                    <img
-                      className="w-48 h-auto object-contain rounded"
-                      src={similarityItem.url}
-                    />
-                  </figure>
+                  <ImageWithPolygons
+                    className="group-hover:opacity-30"
+                    item={similarityItem}
+                  />
                   <button
                     onClick={() => setSimilarityItem(null)}
                     className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
@@ -176,18 +175,18 @@ export const Explorer = ({
               onSubmit={(e) => e.preventDefault()}
               className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
             >
-              {itemQueries.map(({ isLoading, data: item }, index) =>
-                isLoading || !item ? (
-                  <progress key={index} className="w-full"></progress>
-                ) : (
-                  <GalleryItem
-                    key={item.id}
-                    item={item}
-                    onExpand={() => setPreviewedItem(item)}
-                    onShowSimilar={() => showSimilarItems(item)}
-                    selected={selectedItems.has(item.id)}
-                  />
-                )
+              {itemQueries.map(
+                ({ isLoading, data: item }) =>
+                  !isLoading &&
+                  item && (
+                    <GalleryItem
+                      key={item.id}
+                      item={item}
+                      onExpand={() => setPreviewedItem(item)}
+                      onShowSimilar={() => showSimilarItems(item)}
+                      selected={selectedItems.has(item.id)}
+                    />
+                  )
               )}
             </form>
             <Pagination
@@ -401,7 +400,9 @@ const ItemPreview = ({
         <MdClose className="text-base" />
       </button>
     </div>
-    <img className="w-full h-auto object-cover rounded" src={item.url} />
+    <div className="inline-block relative">
+      <ImageWithPolygons item={item} />
+    </div>
     <MetadataMetrics metrics={item.metadata.metrics} />
   </div>
 );
@@ -425,22 +426,19 @@ const GalleryItem = ({
         checked={selected}
         readOnly
         className={classy(
-          "peer checkbox absolute left-1 top-1 opacity-0 group-hover:opacity-100 checked:opacity-100"
+          "peer checkbox absolute left-2 top-2 opacity-0 group-hover:opacity-100 checked:opacity-100"
         )}
       />
-      <figure className="bg-base-200 w-full aspect-square group-hover:opacity-30 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded peer-checked:transition-none">
-        <img
-          className="w-full h-full object-contain rounded transition-opacity"
-          src={item.url}
-        />
-      </figure>
-      <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-        <button
-          onClick={(e) => (console.log(item), onExpand?.(e))}
-          className="btn btn-square"
-        >
-          <FaExpand />
-        </button>
+      <div className="bg-gray-100 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
+        <ImageWithPolygons className="group-hover:opacity-30" item={item} />
+        <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
+          <button
+            onClick={(e) => (console.log(item), onExpand?.(e))}
+            className="btn btn-square"
+          >
+            <FaExpand />
+          </button>
+        </div>
       </div>
     </label>
     <div className="card-body p-2">
@@ -472,6 +470,62 @@ const GalleryItem = ({
     </div>
   </div>
 );
+const ImageWithPolygons = ({
+  item,
+  className,
+  ...rest
+}: { item: Item } & JSX.IntrinsicElements["figure"]) => {
+  const image = useRef<HTMLImageElement>(null);
+  const [polygons, setPolygons] = useState<
+    { points: Point[]; color: string }[]
+  >([]);
+
+  useEffect(() => {
+    const { current } = image;
+    if (!current || !current.clientWidth || !current.clientHeight) return;
+
+    const { objectHash } = splitId(item.id);
+    const objects = objectHash
+      ? item.labels.objects.filter((object) => object.objectHash === objectHash)
+      : item.labels.objects;
+
+    setPolygons(
+      objects.map(({ polygon, color }) => ({
+        color,
+        points: Object.values(polygon).map(({ x, y }) => ({
+          x: x * current.clientWidth,
+          y: y * current.clientHeight,
+        })),
+      }))
+    );
+  }, [image.current?.clientWidth, image.current?.clientHeight]);
+
+  return (
+    <figure {...rest} className={classy("relative bg-base-200", className)}>
+      <img
+        ref={image}
+        className="object-contain rounded transition-opacity"
+        src={item.url}
+      />
+      {polygons.length > 0 ? (
+        <svg className="absolute w-full h-full top-0 right-0">
+          {polygons.map(({ points, color }, index) => (
+            <polygon
+              key={index}
+              style={{
+                fill: color,
+                fillOpacity: ".20",
+                stroke: color,
+                strokeWidth: "2px",
+              }}
+              points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
+            />
+          ))}
+        </svg>
+      ) : null}
+    </figure>
+  );
+};
 
 const MetadataMetrics = ({
   metrics,
