@@ -8,9 +8,7 @@ from urllib import parse
 import pandas as pd
 import streamlit as st
 from encord_active_components.components.explorer import (
-    GalleryItem,
     GroupedTags,
-    Metadata,
     Output,
     OutputAction,
     explorer,
@@ -46,6 +44,7 @@ from encord_active.lib.common.image_utils import (
     get_geometries,
     show_image_and_draw_polygons,
 )
+from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.db.merged_metrics import MANDATORY_COLUMNS
 from encord_active.lib.db.tags import Tag, Tags, TagScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
@@ -195,98 +194,21 @@ def fill_data_quality_window(
     showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
     st.write(f"Interval contains {current_df.shape[0]} of {current_df.shape[0]} {showing_description}")
 
-    items = []
-
-    merged_metrics = get_state().merged_metrics
-    with_all_metrics = current_df[["identifier"]].join(merged_metrics, on="identifier", how="left").dropna(axis=1)
-
-    start = perf_counter()
-
-    for row in with_all_metrics.to_dict("records"):
-        id_parts = 4 if embedding_information.has_annotations else 3
-        identifier = row.pop("identifier")
-        split_id = str(identifier).split("_")
-
-        items.append(
-            GalleryItem(
-                id="_".join(split_id[:id_parts]),
-                editUrl=row.pop("url"),
-                tags=to_grouped_tags(row.pop("tags")),
-                metadata=Metadata(
-                    labelClass=row.pop("object_class", None),
-                    annotator=row.pop("annotator", None),
-                    metrics=row,
-                ),
-            )
-        )
-
-    print(perf_counter() - start)
+    with_all_metrics = (
+        current_df[["identifier"]].join(get_state().merged_metrics, on="identifier", how="left").dropna(axis=1)
+    )
 
     output_state = UseState[Optional[Output]](None)
-    output = explorer(get_state().project_paths.project_dir.name, items, to_grouped_tags(Tags().all()))
-    print(output)
+    output = explorer(
+        project_name=get_state().project_paths.project_dir.name,
+        items=[id for id in with_all_metrics["identifier"].values],
+        all_tags=to_grouped_tags(Tags().all()),
+        embeddings_type=embedding_type.value,
+    )
     if output and output != output_state:
         output_state.set(output)
         action, payload = output
-
-
-def get_lr_json(lr_hash: str, du_hash: str):
-    label_row_structure = get_state().project_paths.label_row_structure(lr_hash)
-    # lr_json = json.loads(label_row_structure.label_row_file.read_text())
-    lr_json = None
-
-    for data_unit in label_row_structure.iter_data_unit():
-        if data_unit.hash == du_hash:
-            url = "http://localhost:8000/static/" + parse.quote(
-                data_unit.path.relative_to(get_state().target_path).as_posix()
-            )
-            return lr_json, url
-
-    return lr_json
-
-
-def get_url(lr_hash: str, du_hash: str):
-    for data_unit in get_state().project_paths.label_row_structure(lr_hash).iter_data_unit():
-        if data_unit.hash == du_hash:
-            return "http://localhost:8000/" + parse.quote(
-                data_unit.path.relative_to(get_state().target_path).as_posix()
-            )
-
-
-@st.cache_data
-def get_image(id: str, _row):
-    return show_image_and_draw_polygons(
-        _row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
-    )
-
-
-def to_grouped_tags(tags: List[Tag]):
-    grouped_tags = GroupedTags(data=[], label=[])
-
-    for name, scope in tags:
-        if scope == TagScope.DATA:
-            grouped_tags[scope.lower()].append(name)
-        elif scope == TagScope.LABEL:
-            grouped_tags["label"].append(name)
-
-    return grouped_tags
-
-    # with grid_container:
-    #     if form and form.submitted:
-    #         df = paginated_subset if form.level == BulkLevel.PAGE else current_df
-    #         action_bulk_tags(df, form.tags, form.action)
-    #
-    #     if len(paginated_subset) == 0:
-    #         st.error("No data in selected interval")
-    #     else:
-    #         cols: List = []
-    #         similarity_expanders = []
-    #         for i, (_, row) in enumerate(paginated_subset.iterrows()):
-    #             if not cols:
-    #                 if i:
-    #                     divider()
-    #                 cols = list(st.columns(n_cols))
-    #                 similarity_expanders.append(st.expander("Similarities", expanded=True))
+        print(output)
 
 
 def build_card(
