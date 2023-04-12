@@ -93,10 +93,11 @@ class State:
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
-            DBConnection.set_project_path(project_dir)
+            project_file_structure = ProjectFileStructure(project_dir)
+            DBConnection.set_project_file_structure(project_file_structure)
             merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
-                project_paths=ProjectFileStructure(project_dir),
+                project_paths=project_file_structure,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
                 all_tags=Tags().all(),

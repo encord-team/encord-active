@@ -228,10 +228,10 @@ def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
 
 
 def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):
-    curr_project_dir = DBConnection.project_file_structure().project_dir
-    DBConnection.set_project_path(target_project_dir)
+    cur_project_file_structure = DBConnection.project_file_structure()
+    DBConnection.set_project_file_structure(ProjectFileStructure(target_project_dir))
     f()
-    DBConnection.set_project_path(curr_project_dir)
+    DBConnection.set_project_file_structure(cur_project_file_structure)
 
 
 def create_filtered_metrics(
