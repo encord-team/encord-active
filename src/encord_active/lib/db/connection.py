@@ -1,5 +1,4 @@
 import sqlite3
-from pathlib import Path
 from typing import Optional
 
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
