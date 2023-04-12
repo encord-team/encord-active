@@ -19,6 +19,7 @@ from encord_active.app.page_menu import (
 from encord_active.app.projects_page import get_projects, render_projects_page
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.model_predictions.writer import MainPredictionType
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def provide_backcompatibility_for_old_predictions():
@@ -89,7 +90,7 @@ def main(target: str):
         )
         return
     else:
-        DBConnection.set_project_path(get_state().project_paths.project_dir)
+        DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
     with st.sidebar:
         render_help()

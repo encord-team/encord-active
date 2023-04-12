@@ -16,10 +16,6 @@ class DBConnection:
         self.conn.__exit__(type, value, traceback)
 
     @classmethod
-    def set_project_path(cls, project_path: Path):
-        pass
-
-    @classmethod
     def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
         cls._project_file_structure = project_file_structure
 
