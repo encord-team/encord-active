@@ -174,7 +174,7 @@ export const Explorer = ({
                 toggleImageSelection((target as HTMLInputElement).name)
               }
               onSubmit={(e) => e.preventDefault()}
-              className="w-full flex-1 grid gap-1 grid-cols-4"
+              className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
             >
               {itemQueries.map(({ isLoading, data: item }, index) =>
                 isLoading || !item ? (
