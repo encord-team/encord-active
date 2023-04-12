@@ -34,11 +34,11 @@ class LabelEmbedding(TypedDict):
 
 
 class SimilaritiesFinder:
-    def __init__(self, type: EmbeddingType, path: Path, num_of_neighbors: int = 8):
+    def __init__(self, type: EmbeddingType, path: Path, num_of_neighbors: int):
         self.type = type
         self.path = path
-        self.num_of_neighbors = num_of_neighbors
         self.collections = load_collections(self.type, self.path)
+        self.num_of_neighbors = num_of_neighbors or len(self.collections)
         self.faiss_index = get_faiss_index_object(self.collections)
         self.keys_having_similarity = build_keys_having_similarities(self.collections, self.has_annotations)
         self.similarities: Dict[str, List[Dict]] = {}
@@ -57,7 +57,7 @@ class SimilaritiesFinder:
         collection_id = self.keys_having_similarity[identifier]
         embedding = np.array([self.collections[collection_id]["embedding"]]).astype(np.float32)
         _, nearest_indexes = self.faiss_index.search(  # pylint: disable=no-value-for-parameter
-            embedding, self.num_of_neighbors + 1
+            embedding, self.num_of_neighbors
         )
 
         self.similarities[identifier] = []
