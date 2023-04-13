@@ -209,14 +209,14 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         )
 
         try:
-            tpr = performance_rate_by_metric(
+            precision = performance_rate_by_metric(
                 self._model_predictions,
                 metric_name,
                 scope=PredictionMatchScope.TRUE_POSITIVES,
                 **chart_args,
             )
-            if tpr is not None:
-                st.altair_chart(tpr.interactive(), use_container_width=True)
+            if precision is not None:
+                st.altair_chart(precision.interactive(), use_container_width=True)
         except Exception as e:
             logger.warning(e)
             pass
