@@ -66,7 +66,7 @@ your model performance and prioritize further data exploration and actions.
 7. Select the important metric you want to understand using the drop-down menu on the top bar.
 8. By default, the performance chart is shown in aggregate for all classes: optionally, you can choose to decompose
    performance by class or select individual classes to be shown in the top left drop down menu.
-9. The plot shows the _True Positive Rate_ (TPR) and the _False Negative Rate_ (FNR) by metric to help you identify
+9. The plot shows the _Precision_ and the _False Negative Rate_ (FNR) by metric to help you identify
    which metric characteristics your model has a hard time predicting.
 
 ## Performance by Metric
@@ -84,7 +84,7 @@ Let's examine _Object Area - Relative (P)_ metric:
 ![metric_importance](../images/object_area_relative_performance.png)
 
 As indicated in the details, this metric refers to the object area as a percentage of the total image area.
-The blue dashed horizontal line (around 0.17 TPR and 0.77 FNR) is the average true positive rate and false negative
+The blue dashed horizontal line (around 0.17 Precision and 0.77 FNR) is the average precision and false negative
 rate of the selected classes, respectively.
 So, what we get from the above graph is that objects, whose area is less than the 0.24%, have a very low performance.
 In other words, the model predictions that are small are very often incorrect.

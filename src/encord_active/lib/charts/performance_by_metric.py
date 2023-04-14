@@ -19,7 +19,7 @@ COUNT_FMT = ",d"
 
 
 CHART_TITLES = {
-    PredictionMatchScope.TRUE_POSITIVES: "True Positive Rate",
+    PredictionMatchScope.TRUE_POSITIVES: "Precision",
     PredictionMatchScope.FALSE_POSITIVES: "False Positive Rate",
     PredictionMatchScope.FALSE_NEGATIVES: "False Negative Rate",
 }

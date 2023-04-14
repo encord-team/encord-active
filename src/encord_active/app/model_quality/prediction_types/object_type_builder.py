@@ -366,13 +366,13 @@ matched to any predictions. The remaining objects are predictions, where colors 
 
         try:
             if metric_name in self._model_predictions.columns:
-                tpr = performance_rate_by_metric(
+                precision = performance_rate_by_metric(
                     self._model_predictions, metric_name, scope=PredictionMatchScope.TRUE_POSITIVES, **chart_args
                 )
-                if tpr is not None:
-                    st.altair_chart(tpr.interactive(), use_container_width=True)
+                if precision is not None:
+                    st.altair_chart(precision.interactive(), use_container_width=True)
             else:
-                st.info(f"True Positive Rate is not available for `{metric_name}` metric")
+                st.info(f"Precision is not available for `{metric_name}` metric")
         except Exception as e:
             logger.warning(e)
             pass
