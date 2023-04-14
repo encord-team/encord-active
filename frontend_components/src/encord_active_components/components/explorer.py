@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Tuple, TypedDict
+from typing import List, Literal, Optional, Tuple, TypedDict
 
 from encord_active_components.renderer import Components, render
 
@@ -13,10 +13,8 @@ class GalleryItem(TypedDict):
     id: str
 
 
-class EmbeddingType(str, Enum):
-    CLASSIFICATION = "classification"
-    OBJECT = "object"
-    IMAGE = "image"
+EmbeddingType = Literal["classification", "object", "image"]
+Scope = Literal["data_quality", "label_quality", "model_quality"]
 
 
 class OutputAction(str, Enum):
@@ -26,10 +24,18 @@ class OutputAction(str, Enum):
 Output = Tuple[OutputAction, Optional[int]]
 
 
-def explorer(project_name: str, items: List[str], all_tags: GroupedTags, embeddings_type: EmbeddingType) -> Output:
+def explorer(
+    project_name: str, items: List[str], all_tags: GroupedTags, scope: Scope, embeddings_type: EmbeddingType
+) -> Output:
     return render(
         component=Components.EXPLORER,
-        props={"projectName": project_name, "items": items, "tags": all_tags, "embeddingsType": embeddings_type},
+        props={
+            "projectName": project_name,
+            "items": items,
+            "tags": all_tags,
+            "scope": scope,
+            "embeddingsType": embeddings_type,
+        },
     )
 
 

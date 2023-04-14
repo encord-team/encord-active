@@ -1,14 +1,8 @@
 import { Select } from "antd";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
+import { BiSelectMultiple } from "react-icons/bi";
 import {
   MdClose,
   MdImageSearch,
@@ -16,7 +10,7 @@ import {
   MdOutlineNavigateBefore,
   MdOutlineNavigateNext,
 } from "react-icons/md";
-import { TbPolygon } from "react-icons/tb";
+import { TbPolygon, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { RiUserLine } from "react-icons/ri";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 
@@ -30,12 +24,13 @@ import {
   BASE_URL,
   EmbeddingType,
   fetchProjectItem,
+  fetchProjectItemIds,
+  fetchProjectMetrics,
   getSimilarItems,
   GroupedTags,
   Item as Extras,
   Point,
-  ProjectContext,
-  useProjectQueries,
+  Scope,
 } from "./api";
 
 type Output = never;
@@ -49,14 +44,17 @@ export type Props = {
   items: string[];
   embeddingsType: EmbeddingType;
   tags: GroupedTags;
+  scope: Scope;
 };
 
 export const Explorer = ({
   projectName,
   items,
   tags,
+  scope,
   embeddingsType,
 }: Props) => {
+  const itemSet = useMemo(() => new Set(items), []);
   const [previewedItem, setPreviewedItem] = useState<Item | null>(null);
   const [similarityItem, setSimilarityItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
@@ -64,9 +62,7 @@ export const Explorer = ({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(PAGE_SIZE[0]);
 
-  /* const [itemMap, setItemMap] = useState( */
-  /*   new Map(items.map((item) => [item.id, item])) */
-  /* ); */
+  const [selectedMetric, setSelectedMetric] = useState<string>();
 
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
@@ -88,6 +84,25 @@ export const Explorer = ({
     Streamlit.setFrameHeight(height);
   }, [height]);
 
+  const { data: metrics } = useQuery(["metrics"], () =>
+    fetchProjectMetrics(projectName)(scope)
+  );
+
+  useEffect(() => {
+    if (!selectedMetric && metrics && metrics?.length > 0)
+      setSelectedMetric(metrics[0]);
+  }, [metrics?.length]);
+
+  const { data: sortedItems, refetch } = useQuery(
+    ["item_ids"],
+    () => fetchProjectItemIds(projectName)(selectedMetric!),
+    { enabled: !!selectedMetric }
+  );
+
+  useEffect(() => {
+    selectedMetric && refetch?.();
+  }, [selectedMetric]);
+
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem?.id ?? ""],
     () =>
@@ -96,8 +111,16 @@ export const Explorer = ({
     { enabled: !!similarityItem }
   );
 
+  const [sortedAndFiltered, setSortedAndFiltered] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSortedAndFiltered(
+      sortedItems?.filter((item) => itemSet.has(item)) || []
+    );
+  }, [itemSet, sortedItems]);
+
   const itemQueries = useQueries({
-    queries: (similarItems ?? items)
+    queries: (similarItems ?? sortedAndFiltered)
       .slice(page * pageSize, page * pageSize + pageSize)
       .map((id) => {
         return {
@@ -110,54 +133,89 @@ export const Explorer = ({
       }),
   });
 
+  useEffect(() => itemQueries.forEach((q) => q.refetch()), [sortedAndFiltered]);
+
   return (
-    <ProjectContext.Provider value={projectName}>
-      <div ref={ref} className="w-full flex">
-        {previewedItem ? (
-          <ItemPreview
-            item={previewedItem}
-            tags={tags}
-            onClose={closePreview}
-            onShowSimilar={() => showSimilarItems(previewedItem)}
-          />
-        ) : (
-          <div className="w-full flex flex-col gap-5 items-center pb-5">
-            {similarityItem && (
-              <div className="flex flex-col gap-2">
-                <h1 className="text-lg">Similar items</h1>
-                <div className="group relative">
-                  <ImageWithPolygons
-                    className="group-hover:opacity-30"
-                    item={similarityItem}
-                  />
-                  <button
-                    onClick={() => setSimilarityItem(null)}
-                    className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
-                  >
-                    <MdClose className="text-base" />
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="flex w-full justify-between">
-              <div className="dropdown dropdown-bottom">
-                <label
-                  tabIndex={0}
-                  className={classy("btn btn-ghost gap-2", {
-                    "btn-disabled": !selectedItems.size,
-                  })}
-                >
-                  <HiOutlineTag />
-                  Tag
-                </label>
-                <TaggingForm
-                  tags={tags}
-                  tabIndex={0}
-                  onApply={(tags) => (
-                    console.log(tags), setSelectedItems(new Set())
-                  )}
+    <div ref={ref} className="w-full flex">
+      {previewedItem ? (
+        <ItemPreview
+          item={previewedItem}
+          tags={tags}
+          onClose={closePreview}
+          onShowSimilar={() => showSimilarItems(previewedItem)}
+        />
+      ) : (
+        <div className="w-full flex flex-col gap-5 items-center pb-5">
+          {similarityItem && (
+            <div className="flex flex-col gap-2">
+              <h1 className="text-lg">Similar items</h1>
+              <div className="group relative">
+                <ImageWithPolygons
+                  className="group-hover:opacity-30"
+                  item={similarityItem}
                 />
+                <button
+                  onClick={() => setSimilarityItem(null)}
+                  className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+                >
+                  <MdClose className="text-base" />
+                </button>
               </div>
+            </div>
+          )}
+          <div className="flex w-full justify-between">
+            <div className="dropdown dropdown-bottom">
+              <label
+                tabIndex={0}
+                className={classy("btn btn-ghost gap-2", {
+                  "btn-disabled": !selectedItems.size,
+                })}
+              >
+                <HiOutlineTag />
+                Tag
+              </label>
+              <TaggingForm
+                tags={tags}
+                tabIndex={0}
+                onApply={(tags) => (
+                  console.log(tags), setSelectedItems(new Set())
+                )}
+              />
+            </div>
+            <div className="form-control">
+              {metrics && metrics?.length > 0 ? (
+                <label className="input-group">
+                  <span>Sort by</span>
+                  <select
+                    onChange={(event) => setSelectedMetric(event.target.value)}
+                    className="select select-bordered focus:outline-none"
+                  >
+                    {metrics.map((metric) => (
+                      <option key={metric}>{metric}</option>
+                    ))}
+                  </select>
+                  <label className="btn swap swap-rotate">
+                    <input
+                      onChange={() =>
+                        setSortedAndFiltered((prev) => [...prev].reverse())
+                      }
+                      type="checkbox"
+                      defaultChecked={true}
+                    />
+                    <TbSortAscending className="swap-on text-base" />
+                    <TbSortDescending className="swap-off text-base" />
+                  </label>
+                </label>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="btn btn-ghost gap-2"
+                onClick={() => setSelectedItems(new Set(items))}
+              >
+                <BiSelectMultiple />
+                Select all
+              </button>
               <button
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
@@ -168,38 +226,38 @@ export const Explorer = ({
                 Clear selection
               </button>
             </div>
-            <form
-              onChange={({ target }) =>
-                toggleImageSelection((target as HTMLInputElement).name)
-              }
-              onSubmit={(e) => e.preventDefault()}
-              className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
-            >
-              {itemQueries.map(
-                ({ isLoading, data: item }) =>
-                  !isLoading &&
-                  item && (
-                    <GalleryItem
-                      key={item.id}
-                      item={item}
-                      onExpand={() => setPreviewedItem(item)}
-                      onShowSimilar={() => showSimilarItems(item)}
-                      selected={selectedItems.has(item.id)}
-                    />
-                  )
-              )}
-            </form>
-            <Pagination
-              current={page}
-              pageSize={pageSize}
-              totalItems={items.length}
-              onChange={setPage}
-              onChangePageSize={setPageSize}
-            />
           </div>
-        )}
-      </div>
-    </ProjectContext.Provider>
+          <form
+            onChange={({ target }) =>
+              toggleImageSelection((target as HTMLInputElement).name)
+            }
+            onSubmit={(e) => e.preventDefault()}
+            className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
+          >
+            {itemQueries.map(
+              ({ isLoading, data: item }) =>
+                !isLoading &&
+                item && (
+                  <GalleryItem
+                    key={item.id}
+                    item={item}
+                    onExpand={() => setPreviewedItem(item)}
+                    onShowSimilar={() => showSimilarItems(item)}
+                    selected={selectedItems.has(item.id)}
+                  />
+                )
+            )}
+          </form>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            totalItems={items.length}
+            onChange={setPage}
+            onChangePageSize={setPageSize}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 

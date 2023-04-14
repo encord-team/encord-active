@@ -203,6 +203,7 @@ def fill_data_quality_window(
         project_name=get_state().project_paths.project_dir.name,
         items=[id for id in with_all_metrics["identifier"].values],
         all_tags=to_grouped_tags(Tags().all()),
+        scope=metric_scope.value,
         embeddings_type=embedding_type.value,
     )
     if output and output != output_state:
