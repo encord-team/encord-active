@@ -1,4 +1,6 @@
 import { Select } from "antd";
+import { Column, Histogram } from "@ant-design/plots";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
@@ -28,16 +30,16 @@ import {
   fetchProjectMetrics,
   getSimilarItems,
   GroupedTags,
-  Item as Extras,
+  IdValue,
+  Item,
   Point,
   Scope,
 } from "./api";
+import { MetricDistribution } from "./Charts";
 
 type Output = never;
 
 const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
-
-type Item = Extras & { id: string; idParts: IdParts };
 
 export type Props = {
   projectName: string;
@@ -54,9 +56,16 @@ export const Explorer = ({
   scope,
   embeddingsType,
 }: Props) => {
+  const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
+  useEffect(() => {
+    Streamlit.setFrameHeight(height);
+  }, [height]);
+
   const itemSet = useMemo(() => new Set(items), []);
-  const [previewedItem, setPreviewedItem] = useState<Item | null>(null);
-  const [similarityItem, setSimilarityItem] = useState<Item | null>(null);
+
+  const [previewedItem, setPreviewedItem] = useState<string | null>(null);
+  const [similarityItem, setSimilarityItem] = useState<string | null>(null);
+
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
 
   const [page, setPage] = useState(1);
@@ -73,16 +82,10 @@ export const Explorer = ({
     });
   };
 
-  const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
-
   const closePreview = () => setPreviewedItem(null);
-  const showSimilarItems = (item: Item) => (
-    closePreview(), setPage(1), setSimilarityItem(item)
+  const showSimilarItems = (itemId: string) => (
+    closePreview(), setPage(1), setSimilarityItem(itemId)
   );
-
-  useEffect(() => {
-    Streamlit.setFrameHeight(height);
-  }, [height]);
 
   const { data: metrics } = useQuery(["metrics"], () =>
     fetchProjectMetrics(projectName)(scope)
@@ -104,64 +107,53 @@ export const Explorer = ({
   }, [selectedMetric]);
 
   const { data: similarItems } = useQuery(
-    ["similarities", similarityItem?.id ?? ""],
-    () =>
-      similarityItem &&
-      getSimilarItems(projectName)(similarityItem.id, embeddingsType),
+    ["similarities", similarityItem ?? ""],
+    () => getSimilarItems(projectName)(similarityItem!, embeddingsType),
     { enabled: !!similarityItem }
   );
 
-  const [sortedAndFiltered, setSortedAndFiltered] = useState<string[]>([]);
+  const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
 
   useEffect(() => {
     setSortedAndFiltered(
-      sortedItems?.filter((item) => itemSet.has(item)) || []
+      sortedItems?.filter(({ id }) => itemSet.has(id)) || []
     );
   }, [itemSet, sortedItems]);
 
-  const itemQueries = useQueries({
-    queries: (similarItems ?? sortedAndFiltered)
-      .slice(page * pageSize, page * pageSize + pageSize)
-      .map((id) => {
-        return {
-          queryKey: ["item", id],
-          queryFn: async () => {
-            const { url, ...rest } = await fetchProjectItem(projectName)(id);
-            return { ...rest, url: `${BASE_URL}/${url}` } as Item;
-          },
-        };
-      }),
-  });
+  const fetchItem = useCallback(fetchProjectItem(projectName), [
+    fetchProjectItem,
+    projectName,
+  ]);
 
-  useEffect(() => itemQueries.forEach((q) => q.refetch()), [sortedAndFiltered]);
+  const pageItems = (
+    similarItems ?? sortedAndFiltered.map(({ id }) => id)
+  ).slice(page * pageSize, page * pageSize + pageSize);
 
   return (
     <div ref={ref} className="w-full flex">
       {previewedItem ? (
         <ItemPreview
-          item={previewedItem}
+          itemId={previewedItem}
+          fetchItem={fetchItem}
           tags={tags}
           onClose={closePreview}
           onShowSimilar={() => showSimilarItems(previewedItem)}
         />
       ) : (
         <div className="w-full flex flex-col gap-5 items-center pb-5">
-          {similarityItem && (
-            <div className="flex flex-col gap-2">
-              <h1 className="text-lg">Similar items</h1>
-              <div className="group relative">
-                <ImageWithPolygons
-                  className="group-hover:opacity-30"
-                  item={similarityItem}
-                />
-                <button
-                  onClick={() => setSimilarityItem(null)}
-                  className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
-                >
-                  <MdClose className="text-base" />
-                </button>
-              </div>
+          {sortedAndFiltered && (
+            <div className="w-full h-52">
+              <MetricDistribution
+                values={sortedAndFiltered.map(({ value }) => value)}
+              />
             </div>
+          )}
+          {similarityItem && (
+            <SimilarityItem
+              itemId={similarityItem}
+              fetchItem={fetchItem}
+              onClose={() => setSimilarityItem(null)}
+            />
           )}
           <div className="flex w-full justify-between">
             <div className="dropdown dropdown-bottom">
@@ -234,19 +226,16 @@ export const Explorer = ({
             onSubmit={(e) => e.preventDefault()}
             className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
           >
-            {itemQueries.map(
-              ({ isLoading, data: item }) =>
-                !isLoading &&
-                item && (
-                  <GalleryItem
-                    key={item.id}
-                    item={item}
-                    onExpand={() => setPreviewedItem(item)}
-                    onShowSimilar={() => showSimilarItems(item)}
-                    selected={selectedItems.has(item.id)}
-                  />
-                )
-            )}
+            {pageItems.map((id) => (
+              <GalleryItem
+                key={id}
+                itemId={id}
+                onExpand={() => setPreviewedItem(id)}
+                onShowSimilar={() => showSimilarItems(id)}
+                selected={selectedItems.has(id)}
+                fetchItem={fetchItem}
+              />
+            ))}
           </form>
           <Pagination
             current={page}
@@ -421,113 +410,164 @@ const TaggingForm = ({
   );
 };
 
+const SimilarityItem = ({
+  itemId,
+  onClose,
+  fetchItem,
+}: {
+  itemId: string;
+  fetchItem: ReturnType<typeof fetchProjectItem>;
+  onClose: JSX.IntrinsicElements["button"]["onClick"];
+}) => {
+  const { data, isLoading } = useQuery(["item", itemId], () =>
+    fetchItem(itemId)
+  );
+
+  if (isLoading || !data) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h1 className="text-lg">Similar items</h1>
+      <div className="group max-w-xs relative">
+        <ImageWithPolygons className="group-hover:opacity-30" item={data} />
+        <button
+          onClick={onClose}
+          className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+        >
+          <MdClose className="text-base" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ItemPreview = ({
-  item,
+  itemId,
   onClose,
   onShowSimilar,
   tags,
+  fetchItem,
 }: {
-  item: Item;
+  itemId: string;
+  fetchItem: ReturnType<typeof fetchProjectItem>;
   tags: GroupedTags;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
-}) => (
-  <div className="w-full flex flex-col items-center gap-3 p-1">
-    <div className="w-full flex justify-between">
-      <div className="flex gap-3">
-        <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
-          <MdImageSearch className="text-base" />
-          Similar
-        </button>
-        <button
-          className="btn btn-ghost gap-2"
-          onClick={() => window.open(item.editUrl, "_blank")}
-        >
-          <FaEdit />
-          Edit
-        </button>
-        <div className="dropdown dropdown-bottom">
-          <label tabIndex={0} className="btn btn-ghost gap-2">
-            <HiOutlineTag />
-            Tag
-          </label>
-          <TaggingForm tags={tags} tabIndex={0} />
-        </div>
-      </div>
-      <button onClick={onClose} className="btn btn-square btn-outline">
-        <MdClose className="text-base" />
-      </button>
-    </div>
-    <div className="inline-block relative">
-      <ImageWithPolygons item={item} />
-    </div>
-    <MetadataMetrics metrics={item.metadata.metrics} />
-  </div>
-);
+}) => {
+  const { data, isLoading } = useQuery(["item", itemId], () =>
+    fetchItem(itemId)
+  );
 
-const GalleryItem = ({
-  item,
-  selected,
-  onExpand,
-  onShowSimilar,
-}: {
-  item: Item;
-  selected: boolean;
-  onExpand: JSX.IntrinsicElements["button"]["onClick"];
-  onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
-}) => (
-  <div className="card relative align-middle form-control">
-    <label className="h-full group label cursor-pointer p-0">
-      <input
-        name={item.id}
-        type="checkbox"
-        checked={selected}
-        readOnly
-        className={classy(
-          "peer checkbox absolute left-2 top-2 opacity-0 group-hover:opacity-100 checked:opacity-100"
-        )}
-      />
-      <div className="bg-gray-100 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
-        <ImageWithPolygons className="group-hover:opacity-30" item={item} />
-        <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-          <button
-            onClick={(e) => (console.log(item), onExpand?.(e))}
-            className="btn btn-square"
-          >
-            <FaExpand />
-          </button>
-        </div>
-      </div>
-    </label>
-    <div className="card-body p-2">
-      <div className="card-actions flex">
-        <div className="btn-group">
+  if (isLoading || !data) return null;
+  return (
+    <div className="w-full flex flex-col items-center gap-3 p-1">
+      <div className="w-full flex justify-between">
+        <div className="flex gap-3">
           <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
             <MdImageSearch className="text-base" />
+            Similar
           </button>
           <button
             className="btn btn-ghost gap-2"
-            onClick={() => window.open(item.editUrl.toString(), "_blank")}
+            onClick={() => window.open(data.editUrl, "_blank")}
           >
             <FaEdit />
+            Edit
           </button>
-        </div>
-        {item.metadata.labelClass || item.metadata.annotator ? (
-          <div className="flex flex-col">
-            <span className="inline-flex items-center gap-1">
-              <VscSymbolClass />
-              {item.metadata.labelClass}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <RiUserLine />
-              {item.metadata.annotator}
-            </span>
+          <div className="dropdown dropdown-bottom">
+            <label tabIndex={0} className="btn btn-ghost gap-2">
+              <HiOutlineTag />
+              Tag
+            </label>
+            <TaggingForm tags={tags} tabIndex={0} />
           </div>
-        ) : null}
+        </div>
+        <button onClick={onClose} className="btn btn-square btn-outline">
+          <MdClose className="text-base" />
+        </button>
+      </div>
+      <div className="inline-block relative">
+        <ImageWithPolygons item={data} />
+      </div>
+      <MetadataMetrics metrics={data.metadata.metrics} />
+    </div>
+  );
+};
+
+const GalleryItem = ({
+  itemId,
+  selected,
+  fetchItem,
+  onExpand,
+  onShowSimilar,
+}: {
+  itemId: string;
+  selected: boolean;
+  fetchItem: ReturnType<typeof fetchProjectItem>;
+  onExpand: JSX.IntrinsicElements["button"]["onClick"];
+  onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+}) => {
+  const { data, isLoading } = useQuery(["item", itemId], () =>
+    fetchItem(itemId)
+  );
+
+  if (isLoading || !data) return null;
+
+  return (
+    <div className="card relative align-middle form-control">
+      <label className="h-full group label cursor-pointer p-0">
+        <input
+          name={itemId}
+          type="checkbox"
+          checked={selected}
+          readOnly
+          className={classy(
+            "peer checkbox absolute left-2 top-2 opacity-0 group-hover:opacity-100 checked:opacity-100 checked:z-10"
+          )}
+        />
+        <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
+          <ImageWithPolygons className="group-hover:opacity-30" item={data} />
+          <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
+            <button
+              onClick={(e) => (console.log(data), onExpand?.(e))}
+              className="btn btn-square"
+            >
+              <FaExpand />
+            </button>
+          </div>
+        </div>
+      </label>
+      <div className="card-body p-2">
+        <div className="card-actions flex">
+          <div className="btn-group">
+            <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
+              <MdImageSearch className="text-base" />
+            </button>
+            <button
+              className="btn btn-ghost gap-2"
+              onClick={() => window.open(data.editUrl.toString(), "_blank")}
+            >
+              <FaEdit />
+            </button>
+          </div>
+          {data.metadata.labelClass || data.metadata.annotator ? (
+            <div className="flex flex-col">
+              <span className="inline-flex items-center gap-1">
+                <VscSymbolClass />
+                {data.metadata.labelClass}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <RiUserLine />
+                {data.metadata.annotator}
+              </span>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
 const ImageWithPolygons = ({
   item,
   className,
@@ -559,7 +599,7 @@ const ImageWithPolygons = ({
   }, [image.current?.clientWidth, image.current?.clientHeight]);
 
   return (
-    <figure {...rest} className={classy("relative bg-base-200", className)}>
+    <figure {...rest} className={classy("relative", className)}>
       <img
         ref={image}
         className="object-contain rounded transition-opacity"

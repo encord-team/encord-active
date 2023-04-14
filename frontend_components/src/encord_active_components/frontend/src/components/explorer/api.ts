@@ -37,6 +37,9 @@ export const ItemSchema = z.object({
   labels: LabelsSchema,
 });
 
+const IdValueSchema = z.object({ id: z.string(), value: z.number() });
+export type IdValue = z.infer<typeof IdValueSchema>;
+
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemMetadata = Item["metadata"];
 export type GroupedTags = Item["tags"];
@@ -60,15 +63,16 @@ export const fetchProjectItemIds =
       sort_by_metric: sortByMetric,
     });
 
-    const url = `${BASE_URL}/projects/${projectName}/item_ids?${queryParams}`;
+    const url = `${BASE_URL}/projects/${projectName}/items_id_by_metric?${queryParams}`;
     const result = await (await fetch(url)).json();
-    return z.string().array().parse(result);
+    return IdValueSchema.array().parse(result);
   };
 
 export const fetchProjectItem = (projectName: string) => async (id: string) => {
-  const url = `${BASE_URL}/projects/${projectName}/items/${id}`;
-  const response = await fetch(url).then((res) => res.json());
-  return ItemSchema.parse(response);
+  const { url, ...item } = await (
+    await fetch(`${BASE_URL}/projects/${projectName}/items/${id}`)
+  ).json();
+  return ItemSchema.parse({ ...item, url: `${BASE_URL}/${url}` }) as Item;
 };
 
 export const getSimilarItems =
@@ -84,18 +88,18 @@ export const getSimilarItems =
     return z.string().array().parse(response);
   };
 
-export const useProjectQueries = () => {
-  const projectName = useContext(ProjectContext);
-
-  if (!projectName)
-    throw new Error(
-      "useProjectQueries has to be used within <ProjectContext.Provider>"
-    );
-
-  return {
-    fetchItem: fetchProjectItem(projectName!),
-    getSimilarItems: getSimilarItems(projectName!),
-  };
-};
-
-export const ProjectContext = createContext<string | null>(null);
+// export const useProjectQueries = () => {
+//   const projectName = useContext(ProjectContext);
+//
+//   if (!projectName)
+//     throw new Error(
+//       "useProjectQueries has to be used within <ProjectContext.Provider>"
+//     );
+//
+//   return {
+//     fetchItem: fetchProjectItem(projectName!),
+//     getSimilarItems: getSimilarItems(projectName!),
+//   };
+// };
+//
+// export const ProjectContext = createContext<string | null>(null);

@@ -58,7 +58,7 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
-@app.get("/projects/{project}/item_ids")
+@app.get("/projects/{project}/items_id_by_metric")
 def read_item_ids(project: str, sort_by_metric: str, ascending: bool = True):
     project_file_structure = ProjectFileStructure(target_path / project)
     DBConnection.set_project_path(project_file_structure.project_dir)
@@ -67,7 +67,7 @@ def read_item_ids(project: str, sort_by_metric: str, ascending: bool = True):
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
 
-    return res.index.values.tolist()
+    return res.reset_index().rename({"identifier": "id", column: "value"}, axis=1).to_dict("records")
 
 
 @app.get("/projects/{project}/items/{id}")
