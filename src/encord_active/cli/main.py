@@ -18,6 +18,7 @@ from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import (
     bypass_streamlit_question,
+    ensure_project,
     find_child_projects,
 )
 from encord_active.cli.utils.prints import success_with_vizualise_command
@@ -32,6 +33,7 @@ class OrderedPanelGroup(TyperGroup):
         "download",
         "init",
         "import",
+        "refresh",
         "visualize",
         "metric",
         "print",
@@ -68,7 +70,7 @@ Made by Encord. [bold]Get in touch[/bold]:
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
 cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
-cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project's metrics.")
+cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project metrics :clipboard:")
 
 
 @cli.command()
@@ -79,7 +81,7 @@ def download(
     ),
 ):
     """
-    [green bold]Download[/green bold] a sandbox dataset to get started. 📁
+    [green bold]Download[/green bold] a sandbox dataset to get started 📁
 
     * If --project_name is not given as an argument, available sandbox projects will be listed
      and you can select one from the menu.
@@ -373,6 +375,30 @@ Consider removing the directory or setting the `--name` option.
         run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
 
     success_with_vizualise_command(project_path, "Project initialised :+1:")
+
+
+@cli.command(name="refresh")
+@ensure_project()
+def refresh(
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
+):
+    """
+    [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
+
+    The local project should have a reference to the remote Encord project in its config file (`project_meta.yaml`).
+    The required attributes are:
+    1. The remote flag set to `true` (has_remote: true).
+    2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
+    3. The path to the private Encord user SSH key (ssh_key_path: private-encord-user-ssh-key-path).
+    """
+    from encord_active.lib.project import Project
+
+    try:
+        Project(target).refresh()
+    except Exception as e:
+        rich.print(f"[red] ERROR: The data sync failed. Log: {e}.")
+    else:
+        rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
 @cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
