@@ -131,13 +131,14 @@ class MergedMetrics(object):
             conn.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
     @initialize_if_error
-    def all(self):
-        return self._unsafe_all()
+    def all(self, marshall: bool = True):
+        return self._unsafe_all(marshall)
 
-    def _unsafe_all(self):
+    def _unsafe_all(self, marshall: bool):
         with DBConnection() as conn:
             merged_metrics = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
-            merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
+            if marshall:
+                merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
             return merged_metrics
 
     @initialize_if_error

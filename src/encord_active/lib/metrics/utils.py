@@ -150,7 +150,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
     paths = natsorted([p for p in metric_dir.iterdir() if p.suffix == ".csv"], key=lambda x: x.stem.split("_", 1)[1])
     levels = list(map(get_metric_operation_level, paths))
 
-    make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").title()
+    make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").capitalize()
     names = [f"{make_name(p)}" for p, l in zip(paths, levels)]
     meta_data = [load_metric_metadata(f.with_suffix(".meta.json")) for f in paths]
 
