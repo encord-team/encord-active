@@ -1,18 +1,26 @@
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
+from time import perf_counter
 from typing import Dict, Optional, TypedDict, Union
 from urllib import parse
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from natsort import natsorted
 
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.utils import (
+    MetricScope,
+    filter_none_empty_metrics,
+    load_available_metrics,
+)
 from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
@@ -50,6 +58,18 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
+@app.get("/projects/{project}/item_ids")
+def read_item_ids(project: str, sort_by_metric: str, ascending: bool = True):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    merged_metrics = MergedMetrics().all(marshall=False)
+
+    column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
+    res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
+
+    return res.index.values.tolist()
+
+
 @app.get("/projects/{project}/items/{id}")
 def read_item(project: str, id: str):
     lr_hash, du_hash, frame, *obj_hash = id.split("_")
@@ -82,18 +102,23 @@ def read_item(project: str, id: str):
     }
 
 
+@lru_cache
+def _get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neighbors: int = 8):
+    return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
+
+
 @app.get("/projects/{project}/similarities/{id}")
 def get_similar_items(project: str, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None):
     project_file_structure = ProjectFileStructure(target_path / project)
     finder = _get_similarity_finder(embedding_type, project_file_structure.embeddings, page_size)
     nearest_images = finder.get_similarities(id)
-    # DBConnection.set_project_path(project_file_structure.project_dir)
-    # row = MergedMetrics().get_row(full_id).dropna(axis=1).to_dict("records")[0]
-    #
 
     return [item["key"] for item in nearest_images]
 
 
-@lru_cache
-def _get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neighbors: int = 8):
-    return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
+@app.get("/projects/{project}/metrics")
+def get_available_metrics(project: str, scope: Optional[MetricScope] = None):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    metrics = load_available_metrics(project_file_structure.metrics, scope)
+    non_empty_metrics = list(map(lambda i: i.name, filter(filter_none_empty_metrics, metrics)))
+    return natsorted(non_empty_metrics)

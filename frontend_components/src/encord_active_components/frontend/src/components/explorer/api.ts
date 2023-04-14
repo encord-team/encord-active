@@ -42,11 +42,32 @@ export type ItemMetadata = Item["metadata"];
 export type GroupedTags = Item["tags"];
 export type Point = z.infer<typeof PointSchema>;
 export type EmbeddingType = "image" | "object" | "classification";
+export type Scope = "data_quality" | "label_quality" | "model_quality";
+
+export const fetchProjectMetrics =
+  (projectName: string) => async (scope: Scope) => {
+    const queryParams = new URLSearchParams({
+      ...(scope ? { scope } : {}),
+    });
+    const url = `${BASE_URL}/projects/${projectName}/metrics?${queryParams}`;
+    const response = await (await fetch(url)).json();
+    return z.string().array().parse(response);
+  };
+
+export const fetchProjectItemIds =
+  (projectName: string) => async (sortByMetric: string) => {
+    const queryParams = new URLSearchParams({
+      sort_by_metric: sortByMetric,
+    });
+
+    const url = `${BASE_URL}/projects/${projectName}/item_ids?${queryParams}`;
+    const result = await (await fetch(url)).json();
+    return z.string().array().parse(result);
+  };
 
 export const fetchProjectItem = (projectName: string) => async (id: string) => {
-  const response = await fetch(
-    `${BASE_URL}/projects/${projectName}/items/${id}`
-  ).then((res) => res.json());
+  const url = `${BASE_URL}/projects/${projectName}/items/${id}`;
+  const response = await fetch(url).then((res) => res.json());
   return ItemSchema.parse(response);
 };
 
@@ -58,9 +79,8 @@ export const getSimilarItems =
       ...(pageSize ? { page_size: pageSize.toString() } : {}),
     });
 
-    const response = await fetch(
-      `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams}`
-    ).then((res) => res.json());
+    const url = `${BASE_URL} /projects/${projectName} /similarities/${id}?${queryParams} `;
+    const response = await fetch(url).then((res) => res.json());
     return z.string().array().parse(response);
   };
 
