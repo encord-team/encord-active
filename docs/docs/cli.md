@@ -248,12 +248,7 @@ The required attributes are:
 2. The hash of the remote Encord project.
 3. The path to the private Encord user SSH key.
 
-Use this snippet to fill the required fields and remember to substitute `project_hash` and `ssh_key_path` attributes with yours.
-```yaml
-has_remote: true
-project_hash: remote-encord-project-hash
-ssh_key_path: private-encord-user-ssh-key-path
-```
+This command works in local projects created via `encord-active import project` and those successfully exported to Encord from the "Actions" tab in the UI's toolbox.
 
 ## `metric`
 

@@ -14,6 +14,7 @@ from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
 from loguru import logger
 
+from encord_active.cli.config import app_config
 from encord_active.lib.common.utils import (
     collect_async,
     download_file,
@@ -105,13 +106,9 @@ class Project:
 
         project_hash = self.project_meta.get("project_hash")
         if project_hash is None:
-            raise AttributeError(
-                "The project metadata is missing the reference to the remote project in Encord Annotate. "
-                "Add the project hash of the remote project to the property `project_hash` in the file "
-                f"{self.file_structure.project_meta}."
-            )
+            raise AttributeError("The project does not have a remote project associated to it.")
 
-        ssh_key_path = self.project_meta.get("ssh_key_path")
+        ssh_key_path = self.project_meta.get("ssh_key_path", app_config.get_ssh_key())
         if ssh_key_path is None:
             raise AttributeError(
                 "The project metadata is missing the path to the private SSH key needed to log into Encord Annotate. "
