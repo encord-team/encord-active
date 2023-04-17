@@ -42,8 +42,8 @@ class Page(ABC):
     def display_settings(self, show_label_checkbox: bool = False):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
-                view_tab, tag_tab, actions_tab, version_tab, options_tab, assistant_tab = st.tabs(
-                    ["Filter", "Tag", "Action", "Version", "Options", "Assistant"]
+                view_tab, tag_tab, actions_tab, version_tab, assistant_tab = st.tabs(
+                    ["Filter", "Tag", "Action", "Version", "Assistant"]
                 )
 
                 with view_tab:
@@ -59,8 +59,6 @@ class Page(ABC):
                         show_update_stats(filterd)
                 with version_tab:
                     version_form()
-                with options_tab:
-                    self.render_common_settings(show_label_checkbox)
                 with assistant_tab:
                     from encord_active.app.common.components.assistant import (
                         render_assistant,

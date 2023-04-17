@@ -24,6 +24,11 @@ export const LabelsSchema = z.object({
   objects: LabelRowObjectSchema.array(),
 });
 
+export const GroupedTagsSchema = z.object({
+  data: z.string().array(),
+  label: z.string().array(),
+});
+
 export const ItemSchema = z.object({
   id: z.string(),
   url: z.string(),
@@ -33,16 +38,16 @@ export const ItemSchema = z.object({
     annotator: z.string().nullish(),
     labelClass: z.string().nullish(),
   }),
-  tags: z.object({ data: z.string().array(), label: z.string().array() }),
+  tags: GroupedTagsSchema,
   labels: LabelsSchema,
 });
 
 const IdValueSchema = z.object({ id: z.string(), value: z.number() });
 export type IdValue = z.infer<typeof IdValueSchema>;
 
+export type GroupedTags = z.infer<typeof GroupedTagsSchema>;
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemMetadata = Item["metadata"];
-export type GroupedTags = Item["tags"];
 export type Point = z.infer<typeof PointSchema>;
 export type EmbeddingType = "image" | "object" | "classification";
 export type Scope = "data_quality" | "label_quality" | "model_quality";
@@ -89,7 +94,7 @@ export const fetchProjectItem = (projectName: string) => async (id: string) => {
   return ItemSchema.parse({ ...item, url: `${BASE_URL}/${url}` }) as Item;
 };
 
-export const getSimilarItems =
+export const fetchSimilarItems =
   (projectName: string) =>
   async (id: string, embeddingType: EmbeddingType, pageSize?: number) => {
     const queryParams = new URLSearchParams({
@@ -101,6 +106,12 @@ export const getSimilarItems =
     const response = await fetch(url).then((res) => res.json());
     return z.string().array().parse(response);
   };
+
+export const fetchProjectTags = (projectName: string) => async () => {
+  return GroupedTagsSchema.parse(
+    await (await fetch(`${BASE_URL}/projects/${projectName}/tags`)).json()
+  );
+};
 
 // export const useProjectQueries = () => {
 //   const projectName = useContext(ProjectContext);
