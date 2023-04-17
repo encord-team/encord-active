@@ -97,20 +97,29 @@ class ExplorerPage(Page):
         if not selected_metric:
             return
 
-        if selected_metric.meta.doc_url is None:
-            st.markdown(f"### {selected_metric.meta.title}")
-        else:
-            st.markdown(f"### [{selected_metric.meta.title}]({selected_metric.meta.doc_url})")
-
-        if selected_df.empty:
-            return
-
         with st.expander("Dataset Properties", expanded=True):
             render_dataset_properties(selected_df)
         with st.expander("Annotator Statistics", expanded=False):
             render_annotator_properties(selected_df)
 
-        fill_data_quality_window(selected_df, metric_scope, selected_metric)
+        embedding_type = get_embedding_type(selected_metric.meta.annotation_type)
+
+        with_all_metrics = (
+            selected_df[["identifier"]].join(get_state().merged_metrics, on="identifier", how="left").dropna(axis=1)
+        )
+
+        output_state = UseState[Optional[Output]](None)
+        output = explorer(
+            project_name=get_state().project_paths.project_dir.name,
+            items=[id for id in with_all_metrics["identifier"].values],
+            all_tags=to_grouped_tags(Tags().all()),
+            scope=metric_scope.value,
+            embeddings_type=embedding_type.value,
+        )
+        if output and output != output_state:
+            output_state.set(output)
+            action, payload = output
+            print(output)
 
     def render_view_options(self):
         non_empty_metrics = list(filter(filter_none_empty_metrics, self.available_metrics))
@@ -119,147 +128,5 @@ class ExplorerPage(Page):
         if not metric_data_options:
             return
 
-        col1, col2, _ = st.columns([5, 3, 3])
-        selected_metric = col1.selectbox(
-            "Sort by",
-            metric_data_options,
-            format_func=lambda x: x.meta.title,
-            help="The data in the main view will be sorted by the selected metric. ",
-        )
-        if not selected_metric:
-            return None
-
-        sorting_order = col2.selectbox("Sort order", ["Ascending", "Descending"])
-
-        get_state().filtering_state.sort_by_metric = selected_metric
-
-        get_state().filtering_state.merged_metrics = get_state().merged_metrics.sort_values(
-            by=selected_metric.meta.title, ascending=sorting_order == "Ascending"
-        )
+        get_state().filtering_state.sort_by_metric = metric_data_options[0]
         render_filter()
-
-
-@st.cache_data
-def cached_histogram(_df: pd.DataFrame, column_name: str, metric_name: Optional[str] = None):
-    return get_histogram(_df, column_name, metric_name)
-
-
-def fill_data_quality_window(
-    current_df: DataFrame[MetricSchema], metric_scope: MetricScope, selected_metric: MetricData
-):
-    meta = selected_metric.meta
-    embedding_type = get_embedding_type(meta.annotation_type)
-    embeddings_dir = get_state().project_paths.embeddings
-    embedding_information = SimilaritiesFinder(
-        embedding_type, embeddings_dir, num_of_neighbors=get_state().similarities_count
-    )
-
-    if (embedding_information.type == EmbeddingType.CLASSIFICATION) and len(embedding_information.collections) == 0:
-        st.write("Image-level embedding file is not available for this project.")
-        return
-    if (embedding_information.type == EmbeddingType.OBJECT) and len(embedding_information.collections) == 0:
-        st.write("Object-level embedding file is not available for this project.")
-        return
-
-    n_cols = get_state().page_grid_settings.columns
-    n_rows = get_state().page_grid_settings.rows
-
-    metric = get_state().filtering_state.sort_by_metric
-    if not metric:
-        st.error("Metric not selected.")
-        return
-
-    if embedding_type not in get_state().reduced_embeddings:
-        get_state().reduced_embeddings[embedding_type] = get_2d_embedding_data(
-            get_state().project_paths.embeddings, embedding_type
-        )
-
-    if get_state().reduced_embeddings[embedding_type] is None:
-        st.info("There is no 2D embedding file to display.")
-    else:
-        # Apply if a high level filter (class or annotator) is applied
-        current_reduced_embedding = get_state().reduced_embeddings[embedding_type]
-        reduced_embedding_filtered = current_reduced_embedding[
-            current_reduced_embedding[Embedding2DSchema.identifier].isin(current_df[MetricSchema.identifier])
-        ]
-        selected_rows = render_plotly_events(reduced_embedding_filtered)
-        if selected_rows is not None:
-            current_df = current_df[
-                current_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
-            ]
-
-    chart = cached_histogram(current_df, "score", metric.name)
-    st.altair_chart(chart, use_container_width=True)
-
-    showing_description = "images" if metric_scope == MetricScope.DATA_QUALITY else "labels"
-    st.write(f"Interval contains {current_df.shape[0]} of {current_df.shape[0]} {showing_description}")
-
-    with_all_metrics = (
-        current_df[["identifier"]].join(get_state().merged_metrics, on="identifier", how="left").dropna(axis=1)
-    )
-
-    output_state = UseState[Optional[Output]](None)
-    output = explorer(
-        project_name=get_state().project_paths.project_dir.name,
-        items=[id for id in with_all_metrics["identifier"].values],
-        all_tags=to_grouped_tags(Tags().all()),
-        scope=metric_scope.value,
-        embeddings_type=embedding_type.value,
-    )
-    if output and output != output_state:
-        output_state.set(output)
-        action, payload = output
-        print(output)
-
-
-def build_card(
-    embedding_information: SimilaritiesFinder,
-    card_no: int,
-    row: pd.Series,
-    similarity_expanders: list[DeltaGenerator],
-    metric_scope: MetricScope,
-    metric: MetricData,
-):
-    """
-    Builds each sub card (the content displayed for each row in a csv file).
-    """
-    identifier_parts = 4 if embedding_information.has_annotations else 3
-    identifier = "_".join(str(row["identifier"]).split("_")[:identifier_parts])
-
-    if embedding_information.type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION]:
-        button_name = "Show similar images"
-    elif embedding_information.type == EmbeddingType.OBJECT:
-        button_name = "Show similar objects"
-    else:
-        st.write(f"{embedding_information.type.value} card type is not defined in EmbeddingTypes")
-        return
-
-    image = show_image_and_draw_polygons(
-        row, get_state().project_paths, draw_configurations=get_state().object_drawing_configurations
-    )
-    st.image(image)
-
-    # === Write scores and link to editor === #
-    tags_row = row.copy()
-
-    if "object_class" in tags_row and not pd.isna(tags_row["object_class"]):
-        tags_row["label_class_name"] = tags_row["object_class"]
-        tags_row.drop("object_class")
-    tags_row[metric.name] = tags_row["score"]
-    build_data_tags(tags_row, metric.name)
-
-    if not pd.isnull(row["description"]):
-        # Hacky way for now (with incorrect rounding)
-        description = re.sub(r"(\d+\.\d{0,3})\d*", r"\1", row["description"])
-        st.write(f"Description: {description}")
-
-    multiselect_tag(row, "explorer")
-
-    target_expander = similarity_expanders[card_no // get_state().page_grid_settings.columns]
-
-    st.button(
-        str(button_name),
-        key=f"similarity_button_{row['identifier']}",
-        on_click=show_similarities,
-        args=(identifier, target_expander, embedding_information),
-    )
