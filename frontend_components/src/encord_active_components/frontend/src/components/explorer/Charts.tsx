@@ -19,6 +19,12 @@ export const MetricDistribution = ({ values }: { values: number[] }) => {
   );
 };
 
+const SELECTION_EVENTS = [
+  "mouseup",
+  "brush-reset-button:click",
+  "legend-item:click",
+];
+
 export const ScatteredEmbeddings = ({
   embeddings,
   onSelectionChange,
@@ -28,7 +34,7 @@ export const ScatteredEmbeddings = ({
 }) => {
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
-      if (type === "mouseup" || type === "brush-reset-button:click")
+      if (SELECTION_EVENTS.includes(type))
         // @ts-ignore
         onSelectionChange(view.filteredData as Item2DEmbedding[]);
     },
