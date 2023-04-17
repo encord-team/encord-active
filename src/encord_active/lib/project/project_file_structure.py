@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Iterator, NamedTuple, Optional
+from typing import Iterator, NamedTuple, Optional, Union
 
 from encord_active.lib.db.base import DataUnit
 from encord_active.lib.db.data_units import DataUnits
@@ -45,7 +45,7 @@ class LabelRowStructure:
 
 
 class ProjectFileStructure(BaseProjectFileStructure):
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
