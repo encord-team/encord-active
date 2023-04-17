@@ -97,7 +97,7 @@ assistant_search_mode = AssistantMode(
     "Data Search", make_query_with_embedding(get_state().querier.search_with_metric_data, TextQuery)
 )
 assistant_clip_mode = AssistantMode(
-    "CLIP search", make_query_with_embedding(get_state().querier.search_with_clip, CLIPQuery)
+    "Search", make_query_with_embedding(get_state().querier.search_with_clip, CLIPQuery)
 )
 assistant_code_mode = AssistantMode("Code Generation", query_with_code)
 ASSISTANT_MODES = [assistant_clip_mode, assistant_search_mode, assistant_code_mode]
