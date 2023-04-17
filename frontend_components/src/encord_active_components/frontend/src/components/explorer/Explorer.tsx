@@ -4,7 +4,7 @@ import { Column, Histogram } from "@ant-design/plots";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
-import { BiSelectMultiple } from "react-icons/bi";
+import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
 import {
   MdClose,
   MdImageSearch,
@@ -138,7 +138,7 @@ export const Explorer = ({
   );
 
   return (
-    <div ref={ref} className="w-full flex">
+    <div ref={ref} className="w-fuacll flex">
       {previewedItem ? (
         <ItemPreview
           itemId={previewedItem}
@@ -149,23 +149,28 @@ export const Explorer = ({
         />
       ) : (
         <div className="w-full flex flex-col gap-5 items-center pb-5">
-          {scatteredEmbeddings && (
-            <div className="w-full h-52">
+          <div className="w-full flex gap-2 h-52 [&>*]:flex-1">
+            {scatteredEmbeddings ? (
               <ScatteredEmbeddings
                 embeddings={scatteredEmbeddings}
                 onSelectionChange={(selection) => (
                   setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
                 )}
               />
-            </div>
-          )}
-          {sortedAndFiltered && (
-            <div className="w-full h-52">
+            ) : (
+              <div className="alert shadow-lg h-fit">
+                <div>
+                  <BiInfoCircle className="text-base" />
+                  <span>2D embedding are not available for this project. </span>
+                </div>
+              </div>
+            )}
+            {sortedAndFiltered && (
               <MetricDistribution
                 values={sortedAndFiltered.map(({ value }) => value)}
               />
-            </div>
-          )}
+            )}
+          </div>
           {similarityItem && (
             <SimilarityItem
               itemId={similarityItem}
@@ -174,25 +179,25 @@ export const Explorer = ({
             />
           )}
           <div className="flex w-full justify-between">
-            <div className="dropdown dropdown-bottom">
-              <label
-                tabIndex={0}
-                className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": !selectedItems.size,
-                })}
-              >
-                <HiOutlineTag />
-                Tag
-              </label>
-              <TaggingForm
-                tags={tags}
-                tabIndex={0}
-                onApply={(tags) => (
-                  console.log(tags), setSelectedItems(new Set())
-                )}
-              />
-            </div>
-            <div className="form-control">
+            <div className="inline-flex gap-2">
+              <div className="dropdown dropdown-bottom min-w-fit">
+                <label
+                  tabIndex={0}
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !selectedItems.size,
+                  })}
+                >
+                  <HiOutlineTag />
+                  Tag
+                </label>
+                <TaggingForm
+                  tags={tags}
+                  tabIndex={0}
+                  onApply={(tags) => (
+                    console.log(tags), setSelectedItems(new Set())
+                  )}
+                />
+              </div>
               {metrics && metrics?.length > 0 ? (
                 <label className="input-group">
                   <span>Sort by</span>
@@ -218,14 +223,7 @@ export const Explorer = ({
                 </label>
               ) : null}
             </div>
-            <div className="flex gap-2">
-              <button
-                className="btn btn-ghost gap-2"
-                onClick={() => setSelectedItems(new Set(items))}
-              >
-                <BiSelectMultiple />
-                Select all
-              </button>
+            <div className="inline-flex gap-2">
               <button
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
@@ -233,7 +231,14 @@ export const Explorer = ({
                 onClick={() => setSelectedItems(new Set())}
               >
                 <VscClearAll />
-                Clear selection
+                Clear selection ({selectedItems.size})
+              </button>
+              <button
+                className="btn btn-ghost gap-2"
+                onClick={() => setSelectedItems(new Set(items))}
+              >
+                <BiSelectMultiple />
+                Select all ({itemsToRender.length})
               </button>
             </div>
           </div>
