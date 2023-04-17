@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { z } from "zod";
 
@@ -49,7 +50,6 @@ export type GroupedTags = z.infer<typeof GroupedTagsSchema>;
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
-export type EmbeddingType = "image" | "object" | "classification";
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
 export const Item2DEmbeddingSchema = PointSchema.extend({
@@ -113,18 +113,26 @@ export const fetchProjectTags = (projectName: string) => async () => {
   );
 };
 
-// export const useProjectQueries = () => {
-//   const projectName = useContext(ProjectContext);
-//
-//   if (!projectName)
-//     throw new Error(
-//       "useProjectQueries has to be used within <ProjectContext.Provider>"
-//     );
-//
-//   return {
-//     fetchItem: fetchProjectItem(projectName!),
-//     getSimilarItems: getSimilarItems(projectName!),
-//   };
-// };
-//
-// export const ProjectContext = createContext<string | null>(null);
+export const useProjectQueries = () => {
+  const projectName = useContext(ProjectContext);
+
+  if (!projectName)
+    throw new Error(
+      "useProjectQueries has to be used within <ProjectContext.Provider>"
+    );
+
+  return {
+    fetchItem: (itemId: Parameters<ReturnType<typeof fetchProjectItem>>[0]) =>
+      useQuery(["item", itemId], () => fetchProjectItem(projectName)(itemId)),
+    fetch2DEmbeddings: (
+      selectedMetric: Parameters<ReturnType<typeof fetchProject2DEmbeddings>>[0]
+    ) =>
+      useQuery(
+        ["2d_embeddings"],
+        () => fetchProject2DEmbeddings(projectName!)(selectedMetric),
+        { enabled: !!selectedMetric }
+      ),
+  };
+};
+
+export const ProjectContext = createContext<string | null>(null);
