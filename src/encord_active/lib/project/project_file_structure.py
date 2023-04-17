@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Iterator, NamedTuple, Optional, Union
 
 from encord_active.lib.db.base import DataUnit
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.data_units import DataUnits
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
@@ -47,6 +48,7 @@ class LabelRowStructure:
 class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
+        DBConnection.set_project_file_structure(self)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
     @property
@@ -93,8 +95,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
 
+    @property
     def data_units(self) -> Iterator[DataUnit]:
-        yield iter(DataUnits().all())
+        return iter(DataUnits().all())
 
     def label_rows(self) -> Iterator:
         # use internally iter_labels() while the label row table does not exist in the db
