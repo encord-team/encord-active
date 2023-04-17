@@ -24,15 +24,10 @@ class OutputAction(str, Enum):
 Output = Tuple[OutputAction, Optional[int]]
 
 
-def explorer(project_name: str, items: List[str], scope: Scope, embeddings_type: EmbeddingType) -> Output:
+def explorer(project_name: str, items: List[str], scope: Scope) -> Output:
     return render(
         component=Components.EXPLORER,
-        props={
-            "projectName": project_name,
-            "items": items,
-            "scope": scope,
-            "embeddingsType": embeddings_type,
-        },
+        props={"projectName": project_name, "items": items, "scope": scope},
     )
 
 

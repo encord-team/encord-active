@@ -43,16 +43,10 @@ const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
 export type Props = {
   projectName: string;
   items: string[];
-  embeddingsType: EmbeddingType;
   scope: Scope;
 };
 
-export const Explorer = ({
-  projectName,
-  items,
-  scope,
-  embeddingsType,
-}: Props) => {
+export const Explorer = ({ projectName, items, scope }: Props) => {
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -89,8 +83,10 @@ export const Explorer = ({
   );
 
   useEffect(() => {
-    if (!selectedMetric && metrics && metrics?.length > 0)
+    if (!selectedMetric && metrics && metrics?.length > 0) {
+      console.log("should set", metrics[0]);
       setSelectedMetric(metrics[0]);
+    }
   }, [metrics?.length]);
 
   const { data: sortedItems, refetch } = useQuery(
@@ -105,8 +101,8 @@ export const Explorer = ({
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
-    () => fetchSimilarItems(projectName)(similarityItem!, embeddingsType),
-    { enabled: !!similarityItem }
+    () => fetchSimilarItems(projectName)(similarityItem!, selectedMetric!),
+    { enabled: !!similarityItem && !!selectedMetric }
   );
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
@@ -150,8 +146,8 @@ export const Explorer = ({
       >
         <Charts
           values={sortedAndFiltered.map(({ value }) => value)}
+          selectedMetric={selectedMetric}
           fetch2DEmbeddings={fetchProject2DEmbeddings(projectName)}
-          embeddingsType={embeddingsType}
           onSelectionChange={(selection) => (
             setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
           )}
@@ -259,20 +255,21 @@ export const Explorer = ({
 
 const Charts = ({
   values,
-  embeddingsType,
+  selectedMetric,
   fetch2DEmbeddings,
   onSelectionChange,
 }: {
   values: number[];
-  embeddingsType: EmbeddingType;
+  selectedMetric?: string;
   fetch2DEmbeddings: ReturnType<typeof fetchProject2DEmbeddings>;
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
 }) => {
   const { isLoading, data: scatteredEmbeddings } = useQuery(
-    ["2d_embeddings", embeddingsType],
-    () => fetch2DEmbeddings(embeddingsType)
+    ["2d_embeddings"],
+    () => fetch2DEmbeddings(selectedMetric!),
+    { enabled: !!selectedMetric }
   );
 
   return (

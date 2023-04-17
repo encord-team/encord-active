@@ -21,8 +21,10 @@ from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricScope,
     filter_none_empty_metrics,
+    get_embedding_type,
     load_available_metrics,
 )
+from encord_active.lib.model_predictions.reader import MetricEntryPoint, get_metric_data
 from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
@@ -126,9 +128,13 @@ def get_available_metrics(project: str, scope: Optional[MetricScope] = None):
     return natsorted(non_empty_metrics)
 
 
-@app.get("/projects/{project}/2d_embeddings/{embedding_type}")
-def get_2d_embeddings(project: str, embedding_type: EmbeddingType):
+@app.get("/projects/{project}/2d_embeddings/{current_metric}")
+def get_2d_embeddings(project: str, current_metric: str):
     project_file_structure = ProjectFileStructure(target_path / project)
+    metric_data = get_metric_data(
+        [MetricEntryPoint(project_file_structure.metrics, False, lambda m: m.name.lower() == current_metric.lower())]
+    )[0]
+    embedding_type = get_embedding_type(metric_data.meta.annotation_type)
     embeddings_df = get_2d_embedding_data(project_file_structure.embeddings, embedding_type)
 
     if embeddings_df is None:

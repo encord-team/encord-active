@@ -28,7 +28,7 @@ from encord_active.lib.metrics.utils import (
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(self, available_metrics: List[MetricData], *args) -> Optional[DataFrame[MetricSchema]]:
+    def sidebar_options(self, available_metrics: List[MetricData], *_) -> Optional[DataFrame[MetricSchema]]:
         self.available_metrics = available_metrics
         self.display_settings()
 
@@ -64,18 +64,11 @@ class ExplorerPage(Page):
         with st.expander("Annotator Statistics", expanded=False):
             render_annotator_properties(selected_df)
 
-        embedding_type = get_embedding_type(selected_metric.meta.annotation_type)
-
-        with_all_metrics = (
-            selected_df[["identifier"]].join(get_state().merged_metrics, on="identifier", how="left").dropna(axis=1)
-        )
-
         output_state = UseState[Optional[Output]](None)
         output = explorer(
             project_name=get_state().project_paths.project_dir.name,
-            items=[id for id in with_all_metrics["identifier"].values],
+            items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
-            embeddings_type=embedding_type.value,
         )
         if output and output != output_state:
             output_state.set(output)

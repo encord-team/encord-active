@@ -60,8 +60,8 @@ export const Item2DEmbeddingSchema = PointSchema.extend({
 export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
 
 export const fetchProject2DEmbeddings =
-  (projectName: string) => async (embeddingType: EmbeddingType) => {
-    const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${embeddingType}`;
+  (projectName: string) => async (selectedMetric: string) => {
+    const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
     const response = await (await fetch(url)).json();
     return Item2DEmbeddingSchema.array().parse(response);
   };
@@ -96,9 +96,9 @@ export const fetchProjectItem = (projectName: string) => async (id: string) => {
 
 export const fetchSimilarItems =
   (projectName: string) =>
-  async (id: string, embeddingType: EmbeddingType, pageSize?: number) => {
+  async (id: string, selectedMetric: string, pageSize?: number) => {
     const queryParams = new URLSearchParams({
-      embedding_type: embeddingType,
+      current_metric: selectedMetric,
       ...(pageSize ? { page_size: pageSize.toString() } : {}),
     });
 
