@@ -47,6 +47,20 @@ export type Point = z.infer<typeof PointSchema>;
 export type EmbeddingType = "image" | "object" | "classification";
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
+export const Item2DEmbeddingSchema = PointSchema.extend({
+  id: z.string(),
+  label: z.string(),
+});
+
+export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
+
+export const fetchProject2DEmbeddings =
+  (projectName: string) => async (embeddingType: EmbeddingType) => {
+    const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${embeddingType}`;
+    const response = await (await fetch(url)).json();
+    return Item2DEmbeddingSchema.array().parse(response);
+  };
+
 export const fetchProjectMetrics =
   (projectName: string) => async (scope: Scope) => {
     const queryParams = new URLSearchParams({

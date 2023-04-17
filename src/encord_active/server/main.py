@@ -14,6 +14,7 @@ from natsort import natsorted
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
@@ -122,3 +123,14 @@ def get_available_metrics(project: str, scope: Optional[MetricScope] = None):
     metrics = load_available_metrics(project_file_structure.metrics, scope)
     non_empty_metrics = list(map(lambda i: i.name, filter(filter_none_empty_metrics, metrics)))
     return natsorted(non_empty_metrics)
+
+
+@app.get("/projects/{project}/2d_embeddings/{embedding_type}")
+def get_2d_embeddings(project: str, embedding_type: EmbeddingType):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    embeddings_df = get_2d_embedding_data(project_file_structure.embeddings, embedding_type)
+
+    if embeddings_df is None:
+        raise ValueError(f"Embeddings of type: {embedding_type} were not found for project: {project}")
+
+    return embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records")
