@@ -1,7 +1,7 @@
 import json
 import re
 from sqlite3 import OperationalError
-from typing import Callable
+from typing import Callable, Optional
 
 from encord_active.lib.db.base import DataUnit
 from encord_active.lib.db.connection import DBConnection
@@ -103,14 +103,20 @@ class DataUnits:
             ]
 
     @ensure_existence
-    def get_row(self, du_hash: str, frame: int = 0) -> DataUnit:
+    def get_row(self, du_hash: str, frame: Optional[int] = None) -> DataUnit:
+        sql_where_content = f"hash={du_hash}"
+        if frame is not None:
+            sql_where_content += f" and frame={frame}"
+        sql_query = f"SELECT hash, group_hash, location, title, frame FROM {TABLE_NAME} where " + sql_where_content
+
         with DBConnection() as conn:
-            row = conn.execute(
-                f"SELECT hash, group_hash, location, title, frame FROM {TABLE_NAME} where hash = {du_hash} and frame = {frame}"
-            ).fetchone()
-            if row is None:
-                raise KeyError(f"There is no data unit with hash={du_hash}")
-            return DataUnit(*row)
+            # capture up to two db rows to check for uniqueness of 'query by hash only' results
+            rows = conn.execute(sql_query).fetchmany(size=2)
+            if len(rows) == 0:
+                raise KeyError(f"No data unit found with {sql_where_content}")
+            if len(rows) > 1:  # throw error when frame param is not explicitly set when looking for video data units
+                raise KeyError(f"More than one data unit found with {sql_where_content}")
+            return DataUnit(*rows[0])
 
     @ensure_existence
     def create(self, data_unit: DataUnit):
