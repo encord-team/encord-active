@@ -21,9 +21,6 @@ import { classy } from "../../helpers/classy";
 import { useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
-  EmbeddingType,
-  fetchProject2DEmbeddings,
-  fetchProjectItem,
   fetchProjectItemIds,
   fetchProjectMetrics,
   fetchProjectTags,
@@ -32,7 +29,9 @@ import {
   IdValue,
   Item,
   Point,
+  ProjectContext,
   Scope,
+  useProjectQueries,
 } from "./api";
 import { MetricDistribution, ScatteredEmbeddings } from "./Charts";
 
@@ -113,11 +112,6 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
     );
   }, [itemSet, sortedItems]);
 
-  const fetchItem = useCallback(fetchProjectItem(projectName), [
-    fetchProjectItem,
-    projectName,
-  ]);
-
   const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
   const pageItems = itemsToRender.slice(
     (page - 1) * pageSize,
@@ -129,148 +123,145 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   });
 
   return (
-    <div ref={ref} className="w-full">
-      {previewedItem && (
-        <ItemPreview
-          itemId={previewedItem}
-          fetchItem={fetchItem}
-          tags={tags}
-          onClose={closePreview}
-          onShowSimilar={() => showSimilarItems(previewedItem)}
-        />
-      )}
-      <div
-        className={classy("w-full flex flex-col gap-5 items-center pb-5", {
-          hidden: previewedItem,
-        })}
-      >
-        <Charts
-          values={sortedAndFiltered.map(({ value }) => value)}
-          selectedMetric={selectedMetric}
-          fetch2DEmbeddings={fetchProject2DEmbeddings(projectName)}
-          onSelectionChange={(selection) => (
-            setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
-          )}
-        />
-        {similarityItem && (
-          <SimilarityItem
-            itemId={similarityItem}
-            fetchItem={fetchItem}
-            onClose={() => setSimilarityItem(null)}
+    <ProjectContext.Provider value={projectName}>
+      <div ref={ref} className="w-full">
+        {previewedItem && (
+          <ItemPreview
+            itemId={previewedItem}
+            tags={tags}
+            onClose={closePreview}
+            onShowSimilar={() => showSimilarItems(previewedItem)}
           />
         )}
-        <div className="flex w-full justify-between">
-          <div className="inline-flex gap-2">
-            <div className="dropdown dropdown-bottom min-w-fit">
-              <label
-                tabIndex={0}
+        <div
+          className={classy("w-full flex flex-col gap-5 items-center pb-5", {
+            hidden: previewedItem,
+          })}
+        >
+          {selectedMetric && (
+            <Charts
+              values={sortedAndFiltered.map(({ value }) => value)}
+              selectedMetric={selectedMetric}
+              onSelectionChange={(selection) => (
+                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
+              )}
+            />
+          )}
+          {similarityItem && (
+            <SimilarityItem
+              itemId={similarityItem}
+              onClose={() => setSimilarityItem(null)}
+            />
+          )}
+          <div className="flex w-full justify-between">
+            <div className="inline-flex gap-2">
+              <div className="dropdown dropdown-bottom min-w-fit">
+                <label
+                  tabIndex={0}
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !selectedItems.size,
+                  })}
+                >
+                  <HiOutlineTag />
+                  Tag
+                </label>
+                <TaggingForm
+                  tags={tags}
+                  tabIndex={0}
+                  onApply={(tags) => (
+                    console.log(tags), setSelectedItems(new Set())
+                  )}
+                />
+              </div>
+              {metrics && metrics?.length > 0 ? (
+                <label className="input-group">
+                  <span>Sort by</span>
+                  <select
+                    onChange={(event) => setSelectedMetric(event.target.value)}
+                    className="select select-bordered focus:outline-none"
+                  >
+                    {metrics.map((metric) => (
+                      <option key={metric}>{metric}</option>
+                    ))}
+                  </select>
+                  <label className="btn swap swap-rotate">
+                    <input
+                      onChange={() =>
+                        setSortedAndFiltered((prev) => [...prev].reverse())
+                      }
+                      type="checkbox"
+                      defaultChecked={true}
+                    />
+                    <TbSortAscending className="swap-on text-base" />
+                    <TbSortDescending className="swap-off text-base" />
+                  </label>
+                </label>
+              ) : null}
+            </div>
+            <div className="inline-flex gap-2">
+              <button
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
                 })}
+                onClick={() => setSelectedItems(new Set())}
               >
-                <HiOutlineTag />
-                Tag
-              </label>
-              <TaggingForm
-                tags={tags}
-                tabIndex={0}
-                onApply={(tags) => (
-                  console.log(tags), setSelectedItems(new Set())
-                )}
-              />
+                <VscClearAll />
+                Clear selection ({selectedItems.size})
+              </button>
+              <button
+                className="btn btn-ghost gap-2"
+                onClick={() =>
+                  setSelectedItems(new Set(sortedItems?.map(({ id }) => id)))
+                }
+              >
+                <BiSelectMultiple />
+                Select all ({itemsToRender.length})
+              </button>
             </div>
-            {metrics && metrics?.length > 0 ? (
-              <label className="input-group">
-                <span>Sort by</span>
-                <select
-                  onChange={(event) => setSelectedMetric(event.target.value)}
-                  className="select select-bordered focus:outline-none"
-                >
-                  {metrics.map((metric) => (
-                    <option key={metric}>{metric}</option>
-                  ))}
-                </select>
-                <label className="btn swap swap-rotate">
-                  <input
-                    onChange={() =>
-                      setSortedAndFiltered((prev) => [...prev].reverse())
-                    }
-                    type="checkbox"
-                    defaultChecked={true}
-                  />
-                  <TbSortAscending className="swap-on text-base" />
-                  <TbSortDescending className="swap-off text-base" />
-                </label>
-              </label>
-            ) : null}
           </div>
-          <div className="inline-flex gap-2">
-            <button
-              className={classy("btn btn-ghost gap-2", {
-                "btn-disabled": !selectedItems.size,
-              })}
-              onClick={() => setSelectedItems(new Set())}
-            >
-              <VscClearAll />
-              Clear selection ({selectedItems.size})
-            </button>
-            <button
-              className="btn btn-ghost gap-2"
-              onClick={() => setSelectedItems(new Set(items))}
-            >
-              <BiSelectMultiple />
-              Select all ({itemsToRender.length})
-            </button>
-          </div>
+          <form
+            onChange={({ target }) =>
+              toggleImageSelection((target as HTMLInputElement).name)
+            }
+            onSubmit={(e) => e.preventDefault()}
+            className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
+          >
+            {pageItems.map((id) => (
+              <GalleryItem
+                key={id}
+                itemId={id}
+                onExpand={() => setPreviewedItem(id)}
+                onShowSimilar={() => showSimilarItems(id)}
+                selected={selectedItems.has(id)}
+              />
+            ))}
+          </form>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            totalItems={itemsToRender.length}
+            onChange={setPage}
+            onChangePageSize={setPageSize}
+          />
         </div>
-        <form
-          onChange={({ target }) =>
-            toggleImageSelection((target as HTMLInputElement).name)
-          }
-          onSubmit={(e) => e.preventDefault()}
-          className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
-        >
-          {pageItems.map((id) => (
-            <GalleryItem
-              key={id}
-              itemId={id}
-              onExpand={() => setPreviewedItem(id)}
-              onShowSimilar={() => showSimilarItems(id)}
-              selected={selectedItems.has(id)}
-              fetchItem={fetchItem}
-            />
-          ))}
-        </form>
-        <Pagination
-          current={page}
-          pageSize={pageSize}
-          totalItems={itemsToRender.length}
-          onChange={setPage}
-          onChangePageSize={setPageSize}
-        />
       </div>
-    </div>
+    </ProjectContext.Provider>
   );
 };
 
 const Charts = ({
   values,
   selectedMetric,
-  fetch2DEmbeddings,
   onSelectionChange,
 }: {
   values: number[];
-  selectedMetric?: string;
-  fetch2DEmbeddings: ReturnType<typeof fetchProject2DEmbeddings>;
+  selectedMetric: string;
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
 }) => {
-  const { isLoading, data: scatteredEmbeddings } = useQuery(
-    ["2d_embeddings"],
-    () => fetch2DEmbeddings(selectedMetric!),
-    { enabled: !!selectedMetric }
-  );
+  const { isLoading, data: scatteredEmbeddings } =
+    useProjectQueries().fetch2DEmbeddings(selectedMetric);
 
   return (
     <div className="w-full flex gap-2 h-52 [&>*]:flex-1 items-center">
@@ -457,15 +448,11 @@ const TaggingForm = ({
 const SimilarityItem = ({
   itemId,
   onClose,
-  fetchItem,
 }: {
   itemId: string;
-  fetchItem: ReturnType<typeof fetchProjectItem>;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useQuery(["item", itemId], () =>
-    fetchItem(itemId)
-  );
+  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
 
   if (isLoading || !data) return null;
 
@@ -490,17 +477,13 @@ const ItemPreview = ({
   onClose,
   onShowSimilar,
   tags,
-  fetchItem,
 }: {
   itemId: string;
-  fetchItem: ReturnType<typeof fetchProjectItem>;
   tags: GroupedTags;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useQuery(["item", itemId], () =>
-    fetchItem(itemId)
-  );
+  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
 
   if (isLoading || !data) return null;
   return (
@@ -541,20 +524,18 @@ const ItemPreview = ({
 const GalleryItem = ({
   itemId,
   selected,
-  fetchItem,
   onExpand,
   onShowSimilar,
 }: {
   itemId: string;
   selected: boolean;
-  fetchItem: ReturnType<typeof fetchProjectItem>;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useQuery(["item", itemId], () =>
-    fetchItem(itemId)
-  );
-
+  {
+  }
+  useProjectQueries();
+  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
   if (isLoading || !data) return null;
 
   return (
