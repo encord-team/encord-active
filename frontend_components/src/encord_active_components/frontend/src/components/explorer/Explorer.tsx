@@ -138,8 +138,8 @@ export const Explorer = ({
   );
 
   return (
-    <div ref={ref} className="w-fuacll flex">
-      {previewedItem ? (
+    <div ref={ref} className="w-full">
+      {previewedItem && (
         <ItemPreview
           itemId={previewedItem}
           fetchItem={fetchItem}
@@ -147,128 +147,131 @@ export const Explorer = ({
           onClose={closePreview}
           onShowSimilar={() => showSimilarItems(previewedItem)}
         />
-      ) : (
-        <div className="w-full flex flex-col gap-5 items-center pb-5">
-          <div className="w-full flex gap-2 h-52 [&>*]:flex-1">
-            {scatteredEmbeddings ? (
-              <ScatteredEmbeddings
-                embeddings={scatteredEmbeddings}
-                onSelectionChange={(selection) => (
-                  setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
-                )}
-              />
-            ) : (
-              <div className="alert shadow-lg h-fit">
-                <div>
-                  <BiInfoCircle className="text-base" />
-                  <span>2D embedding are not available for this project. </span>
-                </div>
+      )}
+      <div
+        className={classy("w-full flex flex-col gap-5 items-center pb-5", {
+          hidden: previewedItem,
+        })}
+      >
+        <div className="w-full flex gap-2 h-52 [&>*]:flex-1">
+          {scatteredEmbeddings ? (
+            <ScatteredEmbeddings
+              embeddings={scatteredEmbeddings}
+              onSelectionChange={(selection) => (
+                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
+              )}
+            />
+          ) : (
+            <div className="alert shadow-lg h-fit">
+              <div>
+                <BiInfoCircle className="text-base" />
+                <span>2D embedding are not available for this project. </span>
               </div>
-            )}
-            {sortedAndFiltered && (
-              <MetricDistribution
-                values={sortedAndFiltered.map(({ value }) => value)}
-              />
-            )}
-          </div>
-          {similarityItem && (
-            <SimilarityItem
-              itemId={similarityItem}
-              fetchItem={fetchItem}
-              onClose={() => setSimilarityItem(null)}
+            </div>
+          )}
+          {sortedAndFiltered && (
+            <MetricDistribution
+              values={sortedAndFiltered.map(({ value }) => value)}
             />
           )}
-          <div className="flex w-full justify-between">
-            <div className="inline-flex gap-2">
-              <div className="dropdown dropdown-bottom min-w-fit">
-                <label
-                  tabIndex={0}
-                  className={classy("btn btn-ghost gap-2", {
-                    "btn-disabled": !selectedItems.size,
-                  })}
-                >
-                  <HiOutlineTag />
-                  Tag
-                </label>
-                <TaggingForm
-                  tags={tags}
-                  tabIndex={0}
-                  onApply={(tags) => (
-                    console.log(tags), setSelectedItems(new Set())
-                  )}
-                />
-              </div>
-              {metrics && metrics?.length > 0 ? (
-                <label className="input-group">
-                  <span>Sort by</span>
-                  <select
-                    onChange={(event) => setSelectedMetric(event.target.value)}
-                    className="select select-bordered focus:outline-none"
-                  >
-                    {metrics.map((metric) => (
-                      <option key={metric}>{metric}</option>
-                    ))}
-                  </select>
-                  <label className="btn swap swap-rotate">
-                    <input
-                      onChange={() =>
-                        setSortedAndFiltered((prev) => [...prev].reverse())
-                      }
-                      type="checkbox"
-                      defaultChecked={true}
-                    />
-                    <TbSortAscending className="swap-on text-base" />
-                    <TbSortDescending className="swap-off text-base" />
-                  </label>
-                </label>
-              ) : null}
-            </div>
-            <div className="inline-flex gap-2">
-              <button
+        </div>
+        {similarityItem && (
+          <SimilarityItem
+            itemId={similarityItem}
+            fetchItem={fetchItem}
+            onClose={() => setSimilarityItem(null)}
+          />
+        )}
+        <div className="flex w-full justify-between">
+          <div className="inline-flex gap-2">
+            <div className="dropdown dropdown-bottom min-w-fit">
+              <label
+                tabIndex={0}
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
                 })}
-                onClick={() => setSelectedItems(new Set())}
               >
-                <VscClearAll />
-                Clear selection ({selectedItems.size})
-              </button>
-              <button
-                className="btn btn-ghost gap-2"
-                onClick={() => setSelectedItems(new Set(items))}
-              >
-                <BiSelectMultiple />
-                Select all ({itemsToRender.length})
-              </button>
-            </div>
-          </div>
-          <form
-            onChange={({ target }) =>
-              toggleImageSelection((target as HTMLInputElement).name)
-            }
-            onSubmit={(e) => e.preventDefault()}
-            className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
-          >
-            {pageItems.map((id) => (
-              <GalleryItem
-                key={id}
-                itemId={id}
-                onExpand={() => setPreviewedItem(id)}
-                onShowSimilar={() => showSimilarItems(id)}
-                selected={selectedItems.has(id)}
-                fetchItem={fetchItem}
+                <HiOutlineTag />
+                Tag
+              </label>
+              <TaggingForm
+                tags={tags}
+                tabIndex={0}
+                onApply={(tags) => (
+                  console.log(tags), setSelectedItems(new Set())
+                )}
               />
-            ))}
-          </form>
-          <Pagination
-            current={page}
-            pageSize={pageSize}
-            totalItems={itemsToRender.length}
-            onChange={setPage}
-            onChangePageSize={setPageSize}
-          />
+            </div>
+            {metrics && metrics?.length > 0 ? (
+              <label className="input-group">
+                <span>Sort by</span>
+                <select
+                  onChange={(event) => setSelectedMetric(event.target.value)}
+                  className="select select-bordered focus:outline-none"
+                >
+                  {metrics.map((metric) => (
+                    <option key={metric}>{metric}</option>
+                  ))}
+                </select>
+                <label className="btn swap swap-rotate">
+                  <input
+                    onChange={() =>
+                      setSortedAndFiltered((prev) => [...prev].reverse())
+                    }
+                    type="checkbox"
+                    defaultChecked={true}
+                  />
+                  <TbSortAscending className="swap-on text-base" />
+                  <TbSortDescending className="swap-off text-base" />
+                </label>
+              </label>
+            ) : null}
+          </div>
+          <div className="inline-flex gap-2">
+            <button
+              className={classy("btn btn-ghost gap-2", {
+                "btn-disabled": !selectedItems.size,
+              })}
+              onClick={() => setSelectedItems(new Set())}
+            >
+              <VscClearAll />
+              Clear selection ({selectedItems.size})
+            </button>
+            <button
+              className="btn btn-ghost gap-2"
+              onClick={() => setSelectedItems(new Set(items))}
+            >
+              <BiSelectMultiple />
+              Select all ({itemsToRender.length})
+            </button>
+          </div>
         </div>
-      )}
+        <form
+          onChange={({ target }) =>
+            toggleImageSelection((target as HTMLInputElement).name)
+          }
+          onSubmit={(e) => e.preventDefault()}
+          className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
+        >
+          {pageItems.map((id) => (
+            <GalleryItem
+              key={id}
+              itemId={id}
+              onExpand={() => setPreviewedItem(id)}
+              onShowSimilar={() => showSimilarItems(id)}
+              selected={selectedItems.has(id)}
+              fetchItem={fetchItem}
+            />
+          ))}
+        </form>
+        <Pagination
+          current={page}
+          pageSize={pageSize}
+          totalItems={itemsToRender.length}
+          onChange={setPage}
+          onChangePageSize={setPageSize}
+        />
+      </div>
     </div>
   );
 };
