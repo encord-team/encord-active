@@ -29,7 +29,8 @@ import {
   fetchProjectItem,
   fetchProjectItemIds,
   fetchProjectMetrics,
-  getSimilarItems,
+  fetchProjectTags,
+  fetchSimilarItems,
   GroupedTags,
   IdValue,
   Item,
@@ -46,14 +47,12 @@ export type Props = {
   projectName: string;
   items: string[];
   embeddingsType: EmbeddingType;
-  tags: GroupedTags;
   scope: Scope;
 };
 
 export const Explorer = ({
   projectName,
   items,
-  tags,
   scope,
   embeddingsType,
 }: Props) => {
@@ -109,7 +108,7 @@ export const Explorer = ({
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
-    () => getSimilarItems(projectName)(similarityItem!, embeddingsType),
+    () => fetchSimilarItems(projectName)(similarityItem!, embeddingsType),
     { enabled: !!similarityItem }
   );
 
@@ -136,6 +135,10 @@ export const Explorer = ({
     ["2d_embeddings", embeddingsType],
     () => fetchProject2DEmbeddings(projectName)(embeddingsType)
   );
+
+  const { data: tags } = useQuery(["tags"], fetchProjectTags(projectName), {
+    initialData: { data: [], label: [] },
+  });
 
   return (
     <div ref={ref} className="w-full">
