@@ -25,6 +25,7 @@ import { IdParts, splitId } from "./id";
 import {
   BASE_URL,
   EmbeddingType,
+  fetchProject2DEmbeddings,
   fetchProjectItem,
   fetchProjectItemIds,
   fetchProjectMetrics,
@@ -35,7 +36,7 @@ import {
   Point,
   Scope,
 } from "./api";
-import { MetricDistribution } from "./Charts";
+import { MetricDistribution, ScatteredEmbeddings } from "./Charts";
 
 type Output = never;
 
@@ -61,7 +62,7 @@ export const Explorer = ({
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  const itemSet = useMemo(() => new Set(items), []);
+  const [itemSet, setItemSet] = useState(new Set(items));
 
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
@@ -125,9 +126,16 @@ export const Explorer = ({
     projectName,
   ]);
 
-  const pageItems = (
-    similarItems ?? sortedAndFiltered.map(({ id }) => id)
-  ).slice(page * pageSize, page * pageSize + pageSize);
+  const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
+  const pageItems = itemsToRender.slice(
+    (page - 1) * pageSize,
+    (page + 1) * pageSize + pageSize
+  );
+
+  const { data: scatteredEmbeddings } = useQuery(
+    ["2d_embeddings", embeddingsType],
+    () => fetchProject2DEmbeddings(projectName)(embeddingsType)
+  );
 
   return (
     <div ref={ref} className="w-full flex">
@@ -141,6 +149,16 @@ export const Explorer = ({
         />
       ) : (
         <div className="w-full flex flex-col gap-5 items-center pb-5">
+          {scatteredEmbeddings && (
+            <div className="w-full h-52">
+              <ScatteredEmbeddings
+                embeddings={scatteredEmbeddings}
+                onSelectionChange={(selection) => (
+                  setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
+                )}
+              />
+            </div>
+          )}
           {sortedAndFiltered && (
             <div className="w-full h-52">
               <MetricDistribution
@@ -240,7 +258,7 @@ export const Explorer = ({
           <Pagination
             current={page}
             pageSize={pageSize}
-            totalItems={items.length}
+            totalItems={itemsToRender.length}
             onChange={setPage}
             onChangePageSize={setPageSize}
           />
