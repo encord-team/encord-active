@@ -20,8 +20,8 @@ def filter_merged_metrics_by_query_result(result: SearchResponse):
     if result.is_ordered:
         new_filter = current_filter.loc[identifiers]  # type: ignore
     else:
-        identifiers = set(identifiers)
-        new_filter = current_filter[current_filter.index.isin(identifiers)]
+        identifier_set = set(identifiers)
+        new_filter = current_filter[current_filter.index.isin(identifier_set)]
 
     get_state().filtering_state.merged_metrics = new_filter
 

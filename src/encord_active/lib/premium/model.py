@@ -26,6 +26,7 @@ class CLIPQuery(SubsetQueryDefinition):
     """
 
     @root_validator(allow_reuse=True)
+    @classmethod
     def validate_at_least_one(cls, values):
         text = values.get("text")
         image = values.get("image")
@@ -50,6 +51,7 @@ class EmbeddingQuery(BaseModel):
     """
 
     @root_validator(allow_reuse=True)
+    @classmethod
     def validate_at_least_one(cls, values):
         text = values.get("text")
         image = values.get("image")
