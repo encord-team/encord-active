@@ -14,6 +14,7 @@ from natsort import natsorted
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tags
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
@@ -134,3 +135,10 @@ def get_2d_embeddings(project: str, embedding_type: EmbeddingType):
         raise ValueError(f"Embeddings of type: {embedding_type} were not found for project: {project}")
 
     return embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records")
+
+
+@app.get("/projects/{project}/tags")
+def get_tags(project: str):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    return to_grouped_tags(Tags().all())

@@ -1,57 +1,21 @@
-import json
-import re
-from pathlib import Path
-from time import perf_counter
-from typing import List, Optional, Tuple
-from urllib import parse
+from typing import List, Optional
 
-import pandas as pd
 import streamlit as st
-from encord_active_components.components.explorer import (
-    GroupedTags,
-    Output,
-    OutputAction,
-    explorer,
-)
+from encord_active_components.components.explorer import Output, explorer
 from natsort import natsorted
 from pandera.typing import DataFrame
-from streamlit.delta_generator import DeltaGenerator
-from streamlit.elements.image import image_to_url
 
 from encord_active.app.actions_page.export_filter import render_filter
-from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
-from encord_active.app.common.components.interative_plots import render_plotly_events
 from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
-from encord_active.app.common.components.paginator import paginate_df
-from encord_active.app.common.components.similarities import show_similarities
-from encord_active.app.common.components.tags.bulk_tagging_form import (
-    BulkLevel,
-    action_bulk_tags,
-    bulk_tagging_form,
-)
-from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
-from encord_active.lib.charts.histogram import get_histogram
-from encord_active.lib.common.image_utils import (
-    ObjectDrawingConfigurations,
-    get_geometries,
-    show_image_and_draw_polygons,
-)
-from encord_active.lib.db.helpers.tags import to_grouped_tags
-from encord_active.lib.db.merged_metrics import MANDATORY_COLUMNS
-from encord_active.lib.db.tags import Tag, Tags, TagScope
-from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
-from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
-    IdentifierSchema,
     MetricData,
     MetricSchema,
     MetricScope,
@@ -64,11 +28,9 @@ from encord_active.lib.metrics.utils import (
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(
-        self, available_metrics: List[MetricData], metric_scope: MetricScope
-    ) -> Optional[DataFrame[MetricSchema]]:
+    def sidebar_options(self, available_metrics: List[MetricData], *args) -> Optional[DataFrame[MetricSchema]]:
         self.available_metrics = available_metrics
-        self.display_settings(metric_scope == MetricScope.DATA_QUALITY)
+        self.display_settings()
 
         selected_metric = get_state().filtering_state.sort_by_metric
         if not selected_metric:
@@ -112,7 +74,6 @@ class ExplorerPage(Page):
         output = explorer(
             project_name=get_state().project_paths.project_dir.name,
             items=[id for id in with_all_metrics["identifier"].values],
-            all_tags=to_grouped_tags(Tags().all()),
             scope=metric_scope.value,
             embeddings_type=embedding_type.value,
         )
