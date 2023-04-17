@@ -1,7 +1,5 @@
-import { Select } from "antd";
-import { Column, Histogram } from "@ant-design/plots";
-
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Select, Spin } from "antd";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
@@ -20,10 +18,9 @@ import { Streamlit } from "streamlit-component-lib";
 
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { IdParts, splitId } from "./id";
+import { useQuery } from "@tanstack/react-query";
+import { splitId } from "./id";
 import {
-  BASE_URL,
   EmbeddingType,
   fetchProject2DEmbeddings,
   fetchProjectItem,
@@ -131,11 +128,6 @@ export const Explorer = ({
     (page + 1) * pageSize + pageSize
   );
 
-  const { data: scatteredEmbeddings } = useQuery(
-    ["2d_embeddings", embeddingsType],
-    () => fetchProject2DEmbeddings(projectName)(embeddingsType)
-  );
-
   const { data: tags } = useQuery(["tags"], fetchProjectTags(projectName), {
     initialData: { data: [], label: [] },
   });
@@ -156,28 +148,14 @@ export const Explorer = ({
           hidden: previewedItem,
         })}
       >
-        <div className="w-full flex gap-2 h-52 [&>*]:flex-1">
-          {scatteredEmbeddings ? (
-            <ScatteredEmbeddings
-              embeddings={scatteredEmbeddings}
-              onSelectionChange={(selection) => (
-                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
-              )}
-            />
-          ) : (
-            <div className="alert shadow-lg h-fit">
-              <div>
-                <BiInfoCircle className="text-base" />
-                <span>2D embedding are not available for this project. </span>
-              </div>
-            </div>
+        <Charts
+          values={sortedAndFiltered.map(({ value }) => value)}
+          fetch2DEmbeddings={fetchProject2DEmbeddings(projectName)}
+          embeddingsType={embeddingsType}
+          onSelectionChange={(selection) => (
+            setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
           )}
-          {sortedAndFiltered && (
-            <MetricDistribution
-              values={sortedAndFiltered.map(({ value }) => value)}
-            />
-          )}
-        </div>
+        />
         {similarityItem && (
           <SimilarityItem
             itemId={similarityItem}
@@ -275,6 +253,46 @@ export const Explorer = ({
           onChangePageSize={setPageSize}
         />
       </div>
+    </div>
+  );
+};
+
+const Charts = ({
+  values,
+  embeddingsType,
+  fetch2DEmbeddings,
+  onSelectionChange,
+}: {
+  values: number[];
+  embeddingsType: EmbeddingType;
+  fetch2DEmbeddings: ReturnType<typeof fetchProject2DEmbeddings>;
+  onSelectionChange: Parameters<
+    typeof ScatteredEmbeddings
+  >[0]["onSelectionChange"];
+}) => {
+  const { isLoading, data: scatteredEmbeddings } = useQuery(
+    ["2d_embeddings", embeddingsType],
+    () => fetch2DEmbeddings(embeddingsType)
+  );
+
+  return (
+    <div className="w-full flex gap-2 h-52 [&>*]:flex-1 items-center">
+      {scatteredEmbeddings ? (
+        <ScatteredEmbeddings
+          embeddings={scatteredEmbeddings}
+          onSelectionChange={onSelectionChange}
+        />
+      ) : isLoading ? (
+        <Spin />
+      ) : (
+        <div className="alert shadow-lg h-fit">
+          <div>
+            <BiInfoCircle className="text-base" />
+            <span>2D embedding are not available for this project. </span>
+          </div>
+        </div>
+      )}
+      {values && <MetricDistribution values={values} />}
     </div>
   );
 };
