@@ -1,14 +1,14 @@
-from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 
-@dataclass
-class DataUnit:
+class DataUnit(NamedTuple):
     hash: str
-    location: Path
+    group_hash: str
+    location: str
     title: str
     frame: int
 
-    def __post_init__(self):
-        # enforce conversion from probable str to Path
-        self.location = Path(self.location)
+    @property
+    def location_(self) -> Path:
+        return Path(self.location)
