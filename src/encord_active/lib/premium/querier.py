@@ -20,14 +20,16 @@ class Querier:
     def __init__(self, pfs: ProjectFileStructure):
         self.pfs = pfs
         self.api_url = os.getenv("PREMIUM_API_URL", "http://localhost:5051")
-        self._premium_available = None
+        self._premium_available: Optional[bool] = None
 
     def set_project(self, pfs: ProjectFileStructure):
         self.pfs = pfs
 
-    def execute(self, endpoint: str = "", data: Optional[dict] = None) -> Optional[dict]:
+    def execute(
+        self, endpoint: str = "", data: Optional[dict] = None, timeout: Optional[float] = None
+    ) -> Optional[dict]:
         params = {"project": self.pfs.project_dir.as_posix()}
-        response = requests.post(f"{self.api_url}/{endpoint}", params=params, json=data)
+        response = requests.post(f"{self.api_url}/{endpoint}", params=params, json=data, timeout=timeout)
         if response.status_code != 200:
             return None
 
@@ -37,7 +39,7 @@ class Querier:
     def premium_available(self) -> bool:
         if self._premium_available is None:
             try:
-                self._premium_available = bool(self.execute())
+                self._premium_available = bool(self.execute(timeout=0.5))
             except (ConnectionError, ConnectionRefusedError, Exception):
                 pass
         return self._premium_available or False
@@ -48,6 +50,9 @@ class Querier:
             return res
         else:
             return response_type.parse_obj(res)
+
+    def infer_labels(self):
+        self.execute("inference/sam")
 
     def search_with_clip(self, query: CLIPQuery) -> Optional[SearchResponse]:
         return self._search_with("search/clip", query, SearchResponse)
