@@ -1,9 +1,7 @@
 import json
-import logging
 from functools import lru_cache
 from pathlib import Path
-from time import perf_counter
-from typing import Dict, Optional, TypedDict, Union
+from typing import Dict, Optional, TypedDict
 from urllib import parse
 
 from fastapi import FastAPI
@@ -24,7 +22,6 @@ from encord_active.lib.metrics.utils import (
     get_embedding_type,
     load_available_metrics,
 )
-from encord_active.lib.model_predictions.reader import MetricEntryPoint, get_metric_data
 from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
@@ -112,8 +109,9 @@ def _get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_nei
 
 
 @app.get("/projects/{project}/similarities/{id}")
-def get_similar_items(project: str, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None):
+def get_similar_items(project: str, id: str, current_metric: str, page_size: Optional[int] = None):
     project_file_structure = ProjectFileStructure(target_path / project)
+    embedding_type = _get_metric_embedding_type(project, current_metric)
     finder = _get_similarity_finder(embedding_type, project_file_structure.embeddings, page_size)
     nearest_images = finder.get_similarities(id)
 
@@ -122,8 +120,7 @@ def get_similar_items(project: str, id: str, embedding_type: EmbeddingType, page
 
 @app.get("/projects/{project}/metrics")
 def get_available_metrics(project: str, scope: Optional[MetricScope] = None):
-    project_file_structure = ProjectFileStructure(target_path / project)
-    metrics = load_available_metrics(project_file_structure.metrics, scope)
+    metrics = _load_project_metrics(project, scope)
     non_empty_metrics = list(map(lambda i: i.name, filter(filter_none_empty_metrics, metrics)))
     return natsorted(non_empty_metrics)
 
@@ -131,16 +128,25 @@ def get_available_metrics(project: str, scope: Optional[MetricScope] = None):
 @app.get("/projects/{project}/2d_embeddings/{current_metric}")
 def get_2d_embeddings(project: str, current_metric: str):
     project_file_structure = ProjectFileStructure(target_path / project)
-    metric_data = get_metric_data(
-        [MetricEntryPoint(project_file_structure.metrics, False, lambda m: m.name.lower() == current_metric.lower())]
-    )[0]
-    embedding_type = get_embedding_type(metric_data.meta.annotation_type)
+    embedding_type = _get_metric_embedding_type(project, current_metric)
     embeddings_df = get_2d_embedding_data(project_file_structure.embeddings, embedding_type)
 
     if embeddings_df is None:
         raise ValueError(f"Embeddings of type: {embedding_type} were not found for project: {project}")
 
     return embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records")
+
+
+@lru_cache
+def _load_project_metrics(project_name: str, scope: Optional[MetricScope] = None):
+    project_file_structure = ProjectFileStructure(target_path / project_name)
+    return load_available_metrics(project_file_structure.metrics, scope)
+
+
+def _get_metric_embedding_type(project_name: str, metric_name: str):
+    metrics = _load_project_metrics(project_name)
+    metric_data = [metric for metric in metrics if metric.name.lower() == metric_name.lower()][0]
+    return get_embedding_type(metric_data.meta.annotation_type)
 
 
 @app.get("/projects/{project}/tags")

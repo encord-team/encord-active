@@ -102,7 +102,7 @@ export const fetchSimilarItems =
       ...(pageSize ? { page_size: pageSize.toString() } : {}),
     });
 
-    const url = `${BASE_URL} /projects/${projectName} /similarities/${id}?${queryParams} `;
+    const url = `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams} `;
     const response = await fetch(url).then((res) => res.json());
     return z.string().array().parse(response);
   };
