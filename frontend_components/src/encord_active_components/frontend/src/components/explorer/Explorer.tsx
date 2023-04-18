@@ -179,17 +179,23 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
                   <select
                     onChange={(event) => setSelectedMetric(event.target.value)}
                     className="select select-bordered focus:outline-none"
+                    disabled={!!similarItems?.length}
                   >
                     {metrics.map((metric) => (
                       <option key={metric}>{metric}</option>
                     ))}
                   </select>
-                  <label className="btn swap swap-rotate">
+                  <label
+                    className={classy("btn swap swap-rotate", {
+                      "btn-disabled": !!similarItems?.length,
+                    })}
+                  >
                     <input
                       onChange={() =>
                         setSortedAndFiltered((prev) => [...prev].reverse())
                       }
                       type="checkbox"
+                      disabled={!!similarItems?.length}
                       defaultChecked={true}
                     />
                     <TbSortAscending className="swap-on text-base" />
@@ -621,7 +627,7 @@ const ImageWithPolygons = ({
         })),
       }))
     );
-  }, [image.current?.clientWidth, image.current?.clientHeight]);
+  }, [image.current?.clientWidth, image.current?.clientHeight, item.id]);
 
   return (
     <figure {...rest} className={classy("relative", className)}>

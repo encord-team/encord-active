@@ -20,7 +20,6 @@ from encord_active.lib.metrics.utils import (
     MetricSchema,
     MetricScope,
     filter_none_empty_metrics,
-    get_embedding_type,
     load_metric_dataframe,
 )
 
