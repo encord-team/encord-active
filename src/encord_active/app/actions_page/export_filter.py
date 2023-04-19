@@ -68,6 +68,10 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         to_filter_columns = st.multiselect(
             "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
         )
+
+        if not to_filter_columns:
+            return df
+
         filtered = df.copy()
         filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:
@@ -251,7 +255,7 @@ def show_update_stats(filtered_df: pd.DataFrame):
 def render_filter():
     filter_col, _, stats_col = st.columns([8, 1, 2])
     with filter_col:
-        filtered_merged_metrics = filter_dataframe(get_state().filtering_state.merged_metrics)
+        filtered_merged_metrics = filter_dataframe(get_state().merged_metrics)
 
     with stats_col:
         show_update_stats(filtered_merged_metrics)
