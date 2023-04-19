@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict
 from urllib import parse
 
 from encord_active_components.components.explorer import GroupedTags
@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from natsort import natsorted
+from pandas import Series
 from pydantic import BaseModel
 
 from encord_active.app.common.components.tags.utils import all_tags
@@ -73,14 +74,7 @@ def read_item_ids(project: str, sort_by_metric: str, ascending: bool = True):
     return res.reset_index().rename({"identifier": "id", column: "value"}, axis=1).to_dict("records")
 
 
-@app.get("/projects/{project}/items/{id}")
-def read_item(project: str, id: str):
-    lr_hash, du_hash, frame, *obj_hash = id.split("_")
-    project_file_structure = ProjectFileStructure(target_path / project)
-
-    DBConnection.set_project_path(project_file_structure.project_dir)
-    row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
-
+def _to_item(row: Dict, project_file_structure: ProjectFileStructure, lr_hash: str, du_hash: str):
     editUrl = row.pop("url")
     tags = row.pop("tags")
     identifier = row.pop("identifier")
@@ -106,16 +100,37 @@ def read_item(project: str, id: str):
     }
 
 
+@app.get("/projects/{project}/tagged_items")
+def tagged_items(project: str):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    df = MergedMetrics().all(columns=["tags"]).reset_index()
+    records = df[df["tags"].str.len() > 0].to_dict("records")
+    return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
+
+
+@app.get("/projects/{project}/items/{id}")
+def read_item(project: str, id: str):
+    lr_hash, du_hash, frame, *obj_hash = id.split("_")
+    project_file_structure = ProjectFileStructure(target_path / project)
+
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
+
+    return _to_item(row, project_file_structure, lr_hash, du_hash)
+
+
 class ItemTags(BaseModel):
     id: str
     grouped_tags: GroupedTags
 
 
 @app.put("/projects/{project}/item_tags")
-def tag_items(project: str, item_tags: ItemTags):
+def tag_items(project: str, payload: List[ItemTags]):
     project_file_structure = ProjectFileStructure(target_path / project)
     DBConnection.set_project_path(project_file_structure.project_dir)
-    MergedMetrics().update_tags(item_tags.id, from_grouped_tags(item_tags.grouped_tags))
+    for item in payload:
+        MergedMetrics().update_tags(item.id, from_grouped_tags(item.grouped_tags))
 
 
 @lru_cache
@@ -168,5 +183,4 @@ def _get_metric_embedding_type(project_name: str, metric_name: str):
 def get_tags(project: str):
     project_file_structure = ProjectFileStructure(target_path / project)
     DBConnection.set_project_path(project_file_structure.project_dir)
-    foo = all_tags()
-    return to_grouped_tags(foo)
+    return to_grouped_tags(all_tags())
