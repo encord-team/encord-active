@@ -4,15 +4,17 @@ from pathlib import Path
 from typing import Dict, Optional, TypedDict
 from urllib import parse
 
+from encord_active_components.components.explorer import GroupedTags
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from natsort import natsorted
+from pydantic import BaseModel
 
+from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.helpers.tags import to_grouped_tags
+from encord_active.lib.db.helpers.tags import from_grouped_tags, to_grouped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.db.tags import Tags
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
@@ -81,6 +83,7 @@ def read_item(project: str, id: str):
 
     editUrl = row.pop("url")
     tags = row.pop("tags")
+    identifier = row.pop("identifier")
     metadata = Metadata(
         labelClass=row.pop("object_class", None),
         annotator=row.pop("annotator", None),
@@ -94,13 +97,25 @@ def read_item(project: str, id: str):
     labels = label_row["data_units"][du_hash]["labels"]
 
     return {
-        "id": id,
+        "id": identifier,
         "url": url,
         "editUrl": editUrl,
         "metadata": metadata,
         "tags": to_grouped_tags(tags),
         "labels": labels,
     }
+
+
+class ItemTags(BaseModel):
+    id: str
+    grouped_tags: GroupedTags
+
+
+@app.put("/projects/{project}/item_tags")
+def tag_items(project: str, item_tags: ItemTags):
+    project_file_structure = ProjectFileStructure(target_path / project)
+    DBConnection.set_project_path(project_file_structure.project_dir)
+    MergedMetrics().update_tags(item_tags.id, from_grouped_tags(item_tags.grouped_tags))
 
 
 @lru_cache
@@ -153,4 +168,5 @@ def _get_metric_embedding_type(project_name: str, metric_name: str):
 def get_tags(project: str):
     project_file_structure = ProjectFileStructure(target_path / project)
     DBConnection.set_project_path(project_file_structure.project_dir)
-    return to_grouped_tags(Tags().all())
+    foo = all_tags()
+    return to_grouped_tags(foo)
