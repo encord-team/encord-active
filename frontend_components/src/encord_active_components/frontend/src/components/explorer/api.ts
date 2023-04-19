@@ -94,6 +94,16 @@ export const fetchProjectItem = (projectName: string) => async (id: string) => {
   return ItemSchema.parse({ ...item, url: `${BASE_URL}/${url}` }) as Item;
 };
 
+export const fetchedTaggedItems = async (projectName: string) =>
+  z
+    .record(GroupedTagsSchema)
+    .transform((record) => new Map(Object.entries(record)))
+    .parse(
+      await (
+        await fetch(`${BASE_URL}/projects/${projectName}/tagged_items`)
+      ).json()
+    );
+
 export const fetchSimilarItems =
   (projectName: string) =>
   async (id: string, selectedMetric: string, pageSize?: number) => {
@@ -113,11 +123,16 @@ export const fetchProjectTags = async (projectName: string) => {
   );
 };
 
+export const defaultTags = { data: [], label: [] };
+
 export const updateItemTags =
   (projectName: string) =>
-  async ({ id, groupedTags }: { id: string; groupedTags: GroupedTags }) => {
+  async (itemTags: { id: string; groupedTags: GroupedTags }[]) => {
     const url = `${BASE_URL}/projects/${projectName}/item_tags`;
-    const data = { id, grouped_tags: groupedTags };
+    const data = itemTags.map(({ id, groupedTags }) => ({
+      id,
+      grouped_tags: groupedTags,
+    }));
 
     return fetch(url, {
       method: "put",
@@ -143,30 +158,81 @@ export const useProjectQueries = () => {
       (...args: Parameters<ReturnType<typeof updateItemTags>>) =>
         updateItemTags(projectName)(...args),
       {
-        onMutate: async (itemTags) => {
-          const queryKey = ["item", itemTags.id];
-          await queryClient.cancelQueries({ queryKey });
-
-          const previousItem = queryClient.getQueryData(queryKey) as Item;
-
-          queryClient.setQueryData(queryKey, {
-            ...previousItem,
-            tags: itemTags.groupedTags,
+        onMutate: async (itemTagsList) => {
+          Promise.all(
+            itemTagsList.map(({ id }) =>
+              queryClient.cancelQueries({ queryKey: ["item", id] })
+            )
+          );
+          const previousItems = itemTagsList.map((itemTags) => {
+            const itemKey = ["item", itemTags.id];
+            const previousItem = queryClient.getQueryData(itemKey) as Item;
+            queryClient.setQueryData(itemKey, {
+              ...previousItem,
+              tags: itemTags.groupedTags,
+            });
+            return previousItem;
           });
 
-          return { previousItem };
+          await queryClient.cancelQueries(["tagged_items"]);
+          const previousTaggedItems = queryClient.getQueryData([
+            "tagged_items",
+          ]) as Awaited<ReturnType<typeof fetchedTaggedItems>>;
+          const nextTaggedItems = new Map(previousTaggedItems);
+          itemTagsList.forEach(({ id, groupedTags }) =>
+            nextTaggedItems.set(id, groupedTags)
+          );
+          queryClient.setQueryData(["tagged_items"], nextTaggedItems);
+
+          await queryClient.cancelQueries(["tags"]);
+          const previousTags = queryClient.getQueryData([
+            "tags",
+          ]) as GroupedTags;
+          const nextTags = itemTagsList.reduce(
+            (nextTags, { groupedTags }) => {
+              groupedTags.data.forEach(nextTags.data.add, nextTags.data);
+              groupedTags.label.forEach(nextTags.label.add, nextTags.label);
+              return nextTags;
+            },
+            { data: new Set<string>(), label: new Set<string>() }
+          );
+          queryClient.setQueryData(["tags"], {
+            data: [...nextTags.data],
+            label: [...nextTags.label],
+          });
+
+          return {
+            previousTaggedItems,
+            previousItems,
+            previousTags,
+          };
         },
         onError: (_, __, context) => {
-          queryClient.setQueryData(["todos"], context?.previousItem);
+          context?.previousItems.forEach((item) =>
+            queryClient.setQueryData(["items", item.id], item)
+          );
+          queryClient.setQueryData(
+            ["tagged_items"],
+            context?.previousTaggedItems
+          );
+          queryClient.setQueryData(["tags"], context?.previousTags);
         },
         onSettled: (_, __, variables) => {
-          queryClient.invalidateQueries({ queryKey: ["items", variables.id] });
+          variables.forEach(({ id }) =>
+            queryClient.invalidateQueries({ queryKey: ["items", id] })
+          );
+          queryClient.invalidateQueries({ queryKey: ["tagged_items"] });
+          queryClient.invalidateQueries({ queryKey: ["tags"] });
         },
       }
     ),
     fetchProjectTags: () =>
       useQuery(["tags"], () => fetchProjectTags(projectName), {
-        initialData: { data: [], label: [] },
+        initialData: defaultTags,
+      }),
+    fetchTaggedItems: () =>
+      useQuery(["tagged_items"], () => fetchedTaggedItems(projectName), {
+        initialData: new Map<string, GroupedTags>(),
       }),
     fetchItem: (...args: Parameters<ReturnType<typeof fetchProjectItem>>) =>
       useQuery(["item", ...args], () => fetchProjectItem(projectName)(...args)),
