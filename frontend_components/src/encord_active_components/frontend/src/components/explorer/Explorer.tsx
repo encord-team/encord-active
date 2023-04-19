@@ -18,7 +18,7 @@ import { Streamlit } from "streamlit-component-lib";
 
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
   fetchProjectItemIds,
@@ -34,6 +34,8 @@ import {
   useProjectQueries,
 } from "./api";
 import { MetricDistribution, ScatteredEmbeddings } from "./Charts";
+import { capitalize } from "radash";
+import { IconType } from "react-icons";
 
 type Output = never;
 
@@ -82,10 +84,8 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   );
 
   useEffect(() => {
-    if (!selectedMetric && metrics && metrics?.length > 0) {
-      console.log("should set", metrics[0]);
+    if (!selectedMetric && metrics && metrics?.length > 0)
       setSelectedMetric(metrics[0]);
-    }
   }, [metrics?.length]);
 
   const { data: sortedItems, refetch } = useQuery(
@@ -118,17 +118,12 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
     (page + 1) * pageSize + pageSize
   );
 
-  const { data: tags } = useQuery(["tags"], fetchProjectTags(projectName), {
-    initialData: { data: [], label: [] },
-  });
-
   return (
     <ProjectContext.Provider value={projectName}>
       <div ref={ref} className="w-full">
         {previewedItem && (
           <ItemPreview
-            itemId={previewedItem}
-            tags={tags}
+            id={previewedItem}
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
@@ -166,9 +161,9 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
                   Tag
                 </label>
                 <TaggingForm
-                  tags={tags}
+                  initialSelectedTags={{ label: [], data: [] }}
                   tabIndex={0}
-                  onApply={(tags) => (
+                  onChange={(tags) => (
                     console.log(tags), setSelectedItems(new Set())
                   )}
                 />
@@ -383,71 +378,70 @@ const Pagination = ({
   );
 };
 
-const TABS = [
+const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
   { value: "label", label: "Label", Icon: TbPolygon },
 ] as const;
 
-const TaggingForm = ({
-  tags,
-  className,
-  onApply,
-  ...rest
-}: { tags: GroupedTags; onApply?: (tags: GroupedTags) => void } & Omit<
-  JSX.IntrinsicElements["form"],
-  "onSubmit"
->) => {
-  const [selectedTab, setTab] = useState<typeof TABS[number]>(TABS[0]);
-  const [selectedTags, setSelectedTags] = useState<GroupedTags>({
-    data: [],
-    label: [],
-  });
+/* const BulkTaggingForm = ({ items }: { items: string[] }) => { */
+/*   const foo = useQuery(); */
+/*   return <TaggingForm initialSelectedTags={} allTags={} />; */
+/* }; */
 
-  const onChange = useCallback(
-    (tags: string[]) =>
-      setSelectedTags((prev) => ({ ...prev, [selectedTab.value]: tags })),
-    [selectedTab.value]
+const TaggingForm = ({
+  initialSelectedTags,
+  className,
+  onChange,
+  ...rest
+}: {
+  initialSelectedTags: GroupedTags;
+  onChange: (tags: GroupedTags) => void;
+} & Omit<JSX.IntrinsicElements["div"], "onChange">) => {
+  const { data: allTags } = useProjectQueries().fetchProjectTags();
+
+  const [selectedTab, setTab] = useState<typeof TAG_GROUPS[number]>(
+    TAG_GROUPS[0]
   );
 
   return (
-    <form
+    <div
       {...rest}
-      onSubmit={(event) => (event.preventDefault(), onApply?.(selectedTags))}
       className={classy(
         "dropdown-content card card-compact w-64 p-2 shadow bg-base-100 text-primary-content",
         className
       )}
     >
       <div className="tabs flex justify-center bg-base-100">
-        {TABS.map((tab) => (
+        {TAG_GROUPS.map((group) => (
           <a
-            key={tab.value}
+            key={group.value}
             className={classy("tab tab-bordered gap-2", {
-              "tab-active": selectedTab.label == tab.label,
+              "tab-active": selectedTab.label == group.label,
             })}
-            onClick={() => setTab(tab)}
+            onClick={() => setTab(group)}
           >
-            <tab.Icon className="text-base" />
-            {tab.label}
+            <group.Icon className="text-base" />
+            {group.label}
           </a>
         ))}
       </div>
       <div className="card-body">
-        <Select
-          mode="tags"
-          placeholder="Tags"
-          allowClear
-          onChange={onChange}
-          value={selectedTags[selectedTab.value]}
-          options={tags[selectedTab.value].map((tag) => ({ value: tag }))}
-        />
+        {TAG_GROUPS.map(({ value }) => (
+          <Select
+            key={value}
+            className={classy({ hidden: value !== selectedTab.value })}
+            mode="tags"
+            placeholder="Tags"
+            allowClear
+            onChange={(tags) =>
+              onChange({ ...initialSelectedTags, [value]: tags })
+            }
+            defaultValue={initialSelectedTags[value]}
+            options={allTags[value].map((tag) => ({ value: tag }))}
+          />
+        ))}
       </div>
-      {onApply && (
-        <div className="card-actions flex justify-center">
-          <button className="btn btn-ghost">Apply</button>
-        </div>
-      )}
-    </form>
+    </div>
   );
 };
 
@@ -479,19 +473,19 @@ const SimilarityItem = ({
 };
 
 const ItemPreview = ({
-  itemId,
+  id,
   onClose,
   onShowSimilar,
-  tags,
 }: {
-  itemId: string;
-  tags: GroupedTags;
+  id: string;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
+  const { data, isLoading } = useProjectQueries().fetchItem(id);
+  const { mutate } = useProjectQueries().itemTagsMutation;
 
-  if (isLoading || !data) return null;
+  if (isLoading || !data) return <Spin />;
+
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
@@ -512,17 +506,44 @@ const ItemPreview = ({
               <HiOutlineTag />
               Tag
             </label>
-            <TaggingForm tags={tags} tabIndex={0} />
+            <TaggingForm
+              onChange={(groupedTags) => mutate({ id, groupedTags })}
+              initialSelectedTags={data.tags}
+              tabIndex={0}
+            />
           </div>
         </div>
         <button onClick={onClose} className="btn btn-square btn-outline">
           <MdClose className="text-base" />
         </button>
       </div>
-      <div className="inline-block relative">
-        <ImageWithPolygons item={data} />
+      <div className="w-full flex justify-between">
+        <div className="flex flex-col gap-5">
+          <MetadataMetrics metrics={data.metadata.metrics} />
+          <div className="flex flex-col gap-3">
+            {TAG_GROUPS.map((group) => (
+              <div>
+                <div className="inline-flex items-center gap-1">
+                  <group.Icon className="text-base" />
+                  <span>{group.label} tags:</span>
+                </div>
+                <div className="flex-wrap">
+                  {data.tags[group.value].length ? (
+                    data.tags[group.value].map((t) => (
+                      <span className="badge">{t}</span>
+                    ))
+                  ) : (
+                    <span>None</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="w-fit inline-block relative">
+          <ImageWithPolygons item={data} />
+        </div>
       </div>
-      <MetadataMetrics metrics={data.metadata.metrics} />
     </div>
   );
 };
@@ -662,7 +683,7 @@ const MetadataMetrics = ({
   metrics: Item["metadata"]["metrics"];
 }) => {
   return (
-    <div className="w-full flex flex-col">
+    <div className="flex flex-col">
       {Object.entries(metrics).map(([key, value]) => {
         const number = parseFloat(value.toString());
 

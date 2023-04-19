@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -92,7 +92,7 @@ def ensure_initialised_merged_metrics(path: Path):
 
         missing_columns = MANDATORY_COLUMNS - MANDATORY_COLUMNS.intersection(set(columns["name"]))
         if missing_columns:
-            prev = MergedMetrics()._unsafe_all()
+            prev = MergedMetrics()._unsafe_all(False, None)
             new_merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
             new_merged_metrics.drop("tags", axis=1, inplace=True)
             new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
@@ -131,12 +131,16 @@ class MergedMetrics(object):
             conn.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
     @initialize_if_error
-    def all(self, marshall: bool = True):
-        return self._unsafe_all(marshall)
+    def all(self, marshall: bool = True, columns: Optional[List[str]] = None):
+        return self._unsafe_all(marshall, columns)
 
-    def _unsafe_all(self, marshall: bool):
+    def _unsafe_all(self, marshall: bool, columns: Optional[List[str]]):
         with DBConnection() as conn:
-            merged_metrics = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
+            if columns and "identifier" not in columns:
+                columns.append("identifier")
+            merged_metrics = pd.read_sql(
+                f"SELECT {','.join(columns) if columns else '*'} FROM {TABLE_NAME}", conn, index_col="identifier"
+            )
             if marshall:
                 merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
             return merged_metrics

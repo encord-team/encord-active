@@ -14,12 +14,13 @@ from pandas.api.types import (
 from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
+from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
-from encord_active.lib.db.tags import Tags, TagScope
+from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
 from encord_active.lib.project.metadata import ProjectNotFound
 
@@ -78,7 +79,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
             if column == "tags":
                 tag_filters = right.multiselect(
-                    "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
+                    "Choose tags to filter", options=all_tags(), format_func=lambda x: x.name, key=key
                 )
                 for tag in tag_filters:
                     filtered_rows = [tag in x for x in filtered["tags"]]

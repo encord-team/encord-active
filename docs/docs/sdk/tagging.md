@@ -3,33 +3,7 @@ sidebar_position: 3
 title: Tagging
 ---
 
-## Creating Tags
-
-To create new tags, you follow this template:
-
-```python
-from pathlib import Path
-
-from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.tags import Tag, Tags, TagScope
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
-
-project_path = Path("/path/to/your/project/root")
-DBConnection.set_project_file_structure(ProjectFileStructure(project_path))
-
-# Getting tags
-tags = Tags()
-existing_tags = tags.all()
-
-# Creating tags
-data_tag = Tag("Data tag name", TagScope.DATA)
-label_tag = Tag("Label tag name", TagScope.DATA)
-
-tags.create_tag(data_tag)
-tags.create_tag(label_tag)
-# or
-tags.create_multiple([data_tag, label_tag])
-```
+## Scopes
 
 Note that there are two different scopes to which you can apply tags.
 One is the `TagScope.DATA` scope which applies tags to the images.

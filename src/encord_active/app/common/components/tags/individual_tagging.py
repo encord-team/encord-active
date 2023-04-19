@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Set
 import streamlit as st
 from pandas import Series
 
-from encord_active.app.common.components.tags.tag_creator import scoped_tags
+from encord_active.app.common.components.tags.utils import scoped_tags
 from encord_active.app.common.state import get_state
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
