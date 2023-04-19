@@ -1,4 +1,4 @@
-import { Select, Spin } from "antd";
+import { Select, Spin, RefSelectProps, SelectProps } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { HiOutlineTag } from "react-icons/hi";
@@ -24,6 +24,7 @@ import {
   fetchProjectItemIds,
   fetchProjectMetrics,
   fetchProjectTags,
+  defaultTags,
   fetchSimilarItems,
   GroupedTags,
   IdValue,
@@ -150,24 +151,11 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
           )}
           <div className="flex w-full justify-between">
             <div className="inline-flex gap-2">
-              <div className="dropdown dropdown-bottom min-w-fit">
-                <label
-                  tabIndex={0}
-                  className={classy("btn btn-ghost gap-2", {
-                    "btn-disabled": !selectedItems.size,
-                  })}
-                >
-                  <HiOutlineTag />
-                  Tag
-                </label>
-                <TaggingForm
-                  initialSelectedTags={{ label: [], data: [] }}
-                  tabIndex={0}
-                  onChange={(tags) => (
-                    console.log(tags), setSelectedItems(new Set())
-                  )}
-                />
-              </div>
+              <TaggingDropdown
+                className={classy({ "btn-disabled": !selectedItems.size })}
+              >
+                <BulkTaggingForm items={[...selectedItems]} />
+              </TaggingDropdown>
               {metrics && metrics?.length > 0 ? (
                 <label className="input-group">
                   <span>Sort by</span>
@@ -383,29 +371,126 @@ const TAG_GROUPS = [
   { value: "label", label: "Label", Icon: TbPolygon },
 ] as const;
 
-/* const BulkTaggingForm = ({ items }: { items: string[] }) => { */
-/*   const foo = useQuery(); */
-/*   return <TaggingForm initialSelectedTags={} allTags={} />; */
-/* }; */
+const TaggingDropdown = ({
+  disabled = false,
+  children,
+  className,
+  ...rest
+}: { disabled?: boolean } & JSX.IntrinsicElements["div"]) => (
+  <div
+    {...rest}
+    className={classy("dropdown dropdown-bottom  min-w-fit", className)}
+  >
+    <label
+      tabIndex={0}
+      className={classy("btn btn-ghost gap-2", {
+        "btn-disabled": disabled,
+      })}
+    >
+      <HiOutlineTag />
+      Tag
+    </label>
+    {children}
+  </div>
+);
+
+const BulkTaggingForm = ({ items }: { items: string[] }) => {
+  const { isLoading, data: taggedItems } =
+    useProjectQueries().fetchTaggedItems();
+  const { mutate, isLoading: isMutating } =
+    useProjectQueries().itemTagsMutation;
+
+  const itemSet = new Set(items);
+  const { data: allDataTags, label: allLabelTags } = [...taggedItems]
+    .filter(([id, _]) => itemSet.has(id))
+    .map(([_, tags]) => tags)
+    .reduce(
+      (allTags, { data, label }) => (
+        data.forEach(allTags.data.add, allTags.data),
+        label.forEach(allTags.label.add, allTags.label),
+        allTags
+      ),
+      { data: new Set<string>(), label: new Set<string>() }
+    );
+
+  return (
+    <TaggingForm
+      loading={isLoading || isMutating}
+      controlled={true}
+      allowClear={false}
+      onSelect={(scope, selected) =>
+        mutate(
+          items.map((id) => {
+            const itemTags = taggedItems.get(id);
+            return {
+              id,
+              groupedTags: itemTags
+                ? { ...itemTags, [scope]: [...itemTags[scope], selected] }
+                : { ...defaultTags, [scope]: [selected] },
+            };
+          })
+        )
+      }
+      onDeselect={(scope, deselected) =>
+        mutate(
+          items.reduce((payload, id) => {
+            const itemPreviousTags = taggedItems.get(id);
+            if (
+              itemPreviousTags &&
+              itemPreviousTags[scope].includes(deselected)
+            ) {
+              payload.push({
+                id,
+                groupedTags: {
+                  ...itemPreviousTags,
+                  [scope]: itemPreviousTags[scope].filter(
+                    (tag) => tag !== deselected
+                  ),
+                },
+              });
+            }
+            return payload;
+          }, [] as Parameters<typeof mutate>[0])
+        )
+      }
+      seletedTags={{ data: [...allDataTags], label: [...allLabelTags] }}
+    />
+  );
+};
 
 const TaggingForm = ({
-  initialSelectedTags,
+  seletedTags: selectedTags,
   className,
+  controlled = false,
+  loading = false,
   onChange,
+  onSelect,
+  onDeselect,
+  allowClear = true,
   ...rest
 }: {
-  initialSelectedTags: GroupedTags;
-  onChange: (tags: GroupedTags) => void;
-} & Omit<JSX.IntrinsicElements["div"], "onChange">) => {
+  seletedTags: GroupedTags;
+  controlled?: boolean;
+  loading?: boolean;
+  onChange?: (tags: GroupedTags) => void;
+  onDeselect?: (scope: keyof GroupedTags, tag: string) => void;
+  onSelect?: (scope: keyof GroupedTags, tag: string) => void;
+  allowClear?: SelectProps["allowClear"];
+} & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
   const { data: allTags } = useProjectQueries().fetchProjectTags();
 
   const [selectedTab, setTab] = useState<typeof TAG_GROUPS[number]>(
     TAG_GROUPS[0]
   );
 
+  // NOTE: hack to prevent loosing focus when loading
+  const ref = useRef<HTMLDivElement>(null);
+  if (loading) ref.current && ref.current.focus();
+
   return (
     <div
       {...rest}
+      tabIndex={0}
       className={classy(
         "dropdown-content card card-compact w-64 p-2 shadow bg-base-100 text-primary-content",
         className
@@ -425,21 +510,32 @@ const TaggingForm = ({
           </a>
         ))}
       </div>
-      <div className="card-body">
-        {TAG_GROUPS.map(({ value }) => (
-          <Select
-            key={value}
-            className={classy({ hidden: value !== selectedTab.value })}
-            mode="tags"
-            placeholder="Tags"
-            allowClear
-            onChange={(tags) =>
-              onChange({ ...initialSelectedTags, [value]: tags })
-            }
-            defaultValue={initialSelectedTags[value]}
-            options={allTags[value].map((tag) => ({ value: tag }))}
-          />
-        ))}
+      <div ref={ref} tabIndex={-1} className="card-body">
+        {loading ? (
+          <Spin />
+        ) : (
+          TAG_GROUPS.map(({ value }) => (
+            <Select
+              key={value}
+              className={classy({
+                hidden: value !== selectedTab.value,
+              })}
+              loading={loading}
+              mode="tags"
+              placeholder="Tags"
+              allowClear={allowClear}
+              onChange={(tags) =>
+                onChange?.({ ...selectedTags, [value]: tags })
+              }
+              onDeselect={(tag: string) => onDeselect?.(selectedTab.value, tag)}
+              onSelect={(tag: string) => onSelect?.(selectedTab.value, tag)}
+              options={allTags[value].map((tag) => ({ value: tag }))}
+              {...(controlled
+                ? { value: selectedTags[value] }
+                : { defaultValue: selectedTags[value] })}
+            />
+          ))
+        )}
       </div>
     </div>
   );
@@ -501,17 +597,13 @@ const ItemPreview = ({
             <FaEdit />
             Edit
           </button>
-          <div className="dropdown dropdown-bottom">
-            <label tabIndex={0} className="btn btn-ghost gap-2">
-              <HiOutlineTag />
-              Tag
-            </label>
+          <TaggingDropdown>
             <TaggingForm
-              onChange={(groupedTags) => mutate({ id, groupedTags })}
-              initialSelectedTags={data.tags}
+              onChange={(groupedTags) => mutate([{ id, groupedTags }])}
+              seletedTags={data.tags}
               tabIndex={0}
             />
-          </div>
+          </TaggingDropdown>
         </div>
         <button onClick={onClose} className="btn btn-square btn-outline">
           <MdClose className="text-base" />
@@ -522,15 +614,17 @@ const ItemPreview = ({
           <MetadataMetrics metrics={data.metadata.metrics} />
           <div className="flex flex-col gap-3">
             {TAG_GROUPS.map((group) => (
-              <div>
+              <div key={group.value}>
                 <div className="inline-flex items-center gap-1">
                   <group.Icon className="text-base" />
                   <span>{group.label} tags:</span>
                 </div>
                 <div className="flex-wrap">
                   {data.tags[group.value].length ? (
-                    data.tags[group.value].map((t) => (
-                      <span className="badge">{t}</span>
+                    data.tags[group.value].map((tag, index) => (
+                      <span key={index} className="badge">
+                        {tag}
+                      </span>
                     ))
                   ) : (
                     <span>None</span>
@@ -580,10 +674,7 @@ const GalleryItem = ({
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
           <ImageWithPolygons className="group-hover:opacity-30" item={data} />
           <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-            <button
-              onClick={(e) => (console.log(data), onExpand?.(e))}
-              className="btn btn-square"
-            >
+            <button onClick={(e) => onExpand?.(e)} className="btn btn-square">
               <FaExpand />
             </button>
           </div>

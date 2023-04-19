@@ -20,6 +20,7 @@ from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
 from encord_active.lib.project.metadata import ProjectNotFound
@@ -255,7 +256,7 @@ def show_update_stats(filtered_df: pd.DataFrame):
 def render_filter():
     filter_col, _, stats_col = st.columns([8, 1, 2])
     with filter_col:
-        filtered_merged_metrics = filter_dataframe(get_state().merged_metrics)
+        filtered_merged_metrics = filter_dataframe(MergedMetrics().all())
 
     with stats_col:
         show_update_stats(filtered_merged_metrics)
