@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { z } from "zod";
 
@@ -107,14 +107,30 @@ export const fetchSimilarItems =
     return z.string().array().parse(response);
   };
 
-export const fetchProjectTags = (projectName: string) => async () => {
+export const fetchProjectTags = async (projectName: string) => {
   return GroupedTagsSchema.parse(
     await (await fetch(`${BASE_URL}/projects/${projectName}/tags`)).json()
   );
 };
 
+export const updateItemTags =
+  (projectName: string) =>
+  async ({ id, groupedTags }: { id: string; groupedTags: GroupedTags }) => {
+    const url = `${BASE_URL}/projects/${projectName}/item_tags`;
+    const data = { id, grouped_tags: groupedTags };
+
+    return fetch(url, {
+      method: "put",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  };
+
 export const useProjectQueries = () => {
   const projectName = useContext(ProjectContext);
+  const queryClient = useQueryClient();
 
   if (!projectName)
     throw new Error(
@@ -122,8 +138,38 @@ export const useProjectQueries = () => {
     );
 
   return {
-    fetchItem: (itemId: Parameters<ReturnType<typeof fetchProjectItem>>[0]) =>
-      useQuery(["item", itemId], () => fetchProjectItem(projectName)(itemId)),
+    itemTagsMutation: useMutation(
+      ["updateItemTags"],
+      (...args: Parameters<ReturnType<typeof updateItemTags>>) =>
+        updateItemTags(projectName)(...args),
+      {
+        onMutate: async (itemTags) => {
+          const queryKey = ["item", itemTags.id];
+          await queryClient.cancelQueries({ queryKey });
+
+          const previousItem = queryClient.getQueryData(queryKey) as Item;
+
+          queryClient.setQueryData(queryKey, {
+            ...previousItem,
+            tags: itemTags.groupedTags,
+          });
+
+          return { previousItem };
+        },
+        onError: (_, __, context) => {
+          queryClient.setQueryData(["todos"], context?.previousItem);
+        },
+        onSettled: (_, __, variables) => {
+          queryClient.invalidateQueries({ queryKey: ["items", variables.id] });
+        },
+      }
+    ),
+    fetchProjectTags: () =>
+      useQuery(["tags"], () => fetchProjectTags(projectName), {
+        initialData: { data: [], label: [] },
+      }),
+    fetchItem: (...args: Parameters<ReturnType<typeof fetchProjectItem>>) =>
+      useQuery(["item", ...args], () => fetchProjectItem(projectName)(...args)),
     fetch2DEmbeddings: (
       selectedMetric: Parameters<ReturnType<typeof fetchProject2DEmbeddings>>[0]
     ) =>

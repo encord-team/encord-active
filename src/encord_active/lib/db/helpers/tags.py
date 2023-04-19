@@ -3,11 +3,12 @@ from typing import Dict, List
 import pandas as pd
 from encord_active_components.components.explorer import GroupedTags
 
-from encord_active.lib.db.tags import Tag, Tags, TagScope
+from encord_active.app.common.components.tags.utils import all_tags
+from encord_active.lib.db.tags import Tag, TagScope
 
 
 def count_of_tags(df: pd.DataFrame) -> Dict[str, int]:
-    tag_list = Tags().all()
+    tag_list = all_tags()
     if not tag_list:
         return {}
 
@@ -21,7 +22,7 @@ def count_of_tags(df: pd.DataFrame) -> Dict[str, int]:
     return total_tags_count
 
 
-def to_grouped_tags(tags: List[Tag]):
+def to_grouped_tags(tags: List[Tag]) -> GroupedTags:
     grouped_tags = GroupedTags(data=[], label=[])
 
     for name, scope in tags:
@@ -31,3 +32,9 @@ def to_grouped_tags(tags: List[Tag]):
             grouped_tags["label"].append(name)
 
     return grouped_tags
+
+
+def from_grouped_tags(tags: GroupedTags) -> List[Tag]:
+    data_tags = [Tag(tag, TagScope.DATA) for tag in tags["data"]]
+    label_tags = [Tag(tag, TagScope.LABEL) for tag in tags["label"]]
+    return [*data_tags, *label_tags]
