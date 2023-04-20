@@ -8,7 +8,7 @@ inputs:
     required: false
   poetry:
     description: "Poetry version to use"
-    default: 1.1.12
+    default: 1.2.2
     required: false
 
 runs:
@@ -38,4 +38,5 @@ runs:
         poetry lock --no-update
         poetry install --no-interaction
         source .venv/bin/activate
+        prisma generate --schema=./src/encord_active/lib/db/prisma.schema
       shell: bash
