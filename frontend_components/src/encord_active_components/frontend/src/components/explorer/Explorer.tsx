@@ -124,7 +124,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
         >
           {selectedMetric && (
             <Charts
-              values={sortedAndFiltered.map(({ value }) => value)}
+              idValues={sortedAndFiltered}
               selectedMetric={selectedMetric}
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
@@ -227,11 +227,11 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
 };
 
 const Charts = ({
-  values,
+  idValues,
   selectedMetric,
   onSelectionChange,
 }: {
-  values: number[];
+  idValues: IdValue[];
   selectedMetric: string;
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
@@ -240,11 +240,15 @@ const Charts = ({
   const { isLoading, data: scatteredEmbeddings } =
     useProjectQueries().fetch2DEmbeddings(selectedMetric);
 
+  const ids = idValues.map(({ id }) => id);
+  const values = idValues.map(({ value }) => value);
+  const filtered = scatteredEmbeddings?.filter(({ id }) => ids.includes(id));
+
   return (
     <div className="w-full flex gap-2 h-52 [&>*]:flex-1 items-center">
-      {scatteredEmbeddings ? (
+      {filtered ? (
         <ScatteredEmbeddings
-          embeddings={scatteredEmbeddings}
+          embeddings={filtered}
           onSelectionChange={onSelectionChange}
         />
       ) : isLoading ? (
