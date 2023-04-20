@@ -293,7 +293,7 @@ const Pagination = ({
   const prev = current - 1;
   const next = current + 1;
 
-  let totalPages = (totalItems / pageSize) | 0;
+  let totalPages = Math.max((totalItems / pageSize) | 0, 1);
   if (totalItems % pageSize == 0) totalPages--;
 
   return (
