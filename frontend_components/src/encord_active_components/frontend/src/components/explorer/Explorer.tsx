@@ -1,16 +1,9 @@
-import { Select, Spin, RefSelectProps, SelectProps } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Spin } from "antd";
+import { useEffect, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
-import { HiOutlineTag } from "react-icons/hi";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
-import {
-  MdClose,
-  MdImageSearch,
-  MdOutlineImage,
-  MdOutlineNavigateBefore,
-  MdOutlineNavigateNext,
-} from "react-icons/md";
-import { TbPolygon, TbSortAscending, TbSortDescending } from "react-icons/tb";
+import { MdClose, MdImageSearch } from "react-icons/md";
+import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { RiUserLine } from "react-icons/ri";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 
@@ -18,15 +11,12 @@ import { Streamlit } from "streamlit-component-lib";
 
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
   fetchProjectItemIds,
   fetchProjectMetrics,
-  fetchProjectTags,
-  defaultTags,
   fetchSimilarItems,
-  GroupedTags,
   IdValue,
   Item,
   Point,
@@ -35,12 +25,18 @@ import {
   useProjectQueries,
 } from "./api";
 import { MetricDistribution, ScatteredEmbeddings } from "./Charts";
-import { capitalize } from "radash";
-import { IconType } from "react-icons";
-
-type Output = never;
-
-const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
+import {
+  defaultPageSize,
+  PageSize,
+  Pagination,
+  usePagination,
+} from "./Pagination";
+import {
+  BulkTaggingForm,
+  TaggingDropdown,
+  TaggingForm,
+  TagList,
+} from "./Tagging";
 
 export type Props = {
   projectName: string;
@@ -60,11 +56,27 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
 
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSize>(PAGE_SIZE[0]);
-
   const [selectedMetric, setSelectedMetric] = useState<string>();
+
+  const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
+
+  const { data: similarItems } = useQuery(
+    ["similarities", similarityItem ?? ""],
+    () => fetchSimilarItems(projectName)(similarityItem!, selectedMetric!),
+    { enabled: !!similarityItem && !!selectedMetric }
+  );
+  const { data: sortedItems, refetch } = useQuery(
+    ["item_ids"],
+    () => fetchProjectItemIds(projectName)(selectedMetric!),
+    { enabled: !!selectedMetric }
+  );
+  const { data: metrics } = useQuery(["metrics"], () =>
+    fetchProjectMetrics(projectName)(scope)
+  );
+
+  const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
+  const { pageSize, pageItems, page, setPage, setPageSize } =
+    usePagination(itemsToRender);
 
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
@@ -80,44 +92,20 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
 
-  const { data: metrics } = useQuery(["metrics"], () =>
-    fetchProjectMetrics(projectName)(scope)
-  );
-
   useEffect(() => {
     if (!selectedMetric && metrics && metrics?.length > 0)
       setSelectedMetric(metrics[0]);
   }, [metrics?.length]);
 
-  const { data: sortedItems, refetch } = useQuery(
-    ["item_ids"],
-    () => fetchProjectItemIds(projectName)(selectedMetric!),
-    { enabled: !!selectedMetric }
-  );
-
   useEffect(() => {
     selectedMetric && refetch?.();
   }, [selectedMetric]);
-
-  const { data: similarItems } = useQuery(
-    ["similarities", similarityItem ?? ""],
-    () => fetchSimilarItems(projectName)(similarityItem!, selectedMetric!),
-    { enabled: !!similarityItem && !!selectedMetric }
-  );
-
-  const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
 
   useEffect(() => {
     setSortedAndFiltered(
       sortedItems?.filter(({ id }) => itemSet.has(id)) || []
     );
   }, [itemSet, sortedItems]);
-
-  const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
-  const pageItems = itemsToRender.slice(
-    (page - 1) * pageSize,
-    (page + 1) * pageSize + pageSize
-  );
 
   return (
     <ProjectContext.Provider value={projectName}>
@@ -274,273 +262,6 @@ const Charts = ({
   );
 };
 
-const PAGE_SIZE = [20, 40, 60, 80] as const;
-type PageSize = typeof PAGE_SIZE[number];
-
-const Pagination = ({
-  current,
-  pageSize,
-  totalItems,
-  onChange,
-  onChangePageSize,
-}: {
-  current: number;
-  pageSize: number;
-  totalItems: number;
-  onChange: (to: number) => void;
-  onChangePageSize: (size: PageSize) => void;
-}) => {
-  const prev = current - 1;
-  const next = current + 1;
-
-  let totalPages = Math.max((totalItems / pageSize) | 0, 1);
-  if (totalItems % pageSize == 0) totalPages--;
-
-  return (
-    <div className="inline-flex gap-5">
-      <select
-        className="select max-w-xs"
-        onChange={(event) =>
-          onChangePageSize(parseInt(event.target.value) as PageSize)
-        }
-        defaultValue={pageSize}
-      >
-        {PAGE_SIZE.map((size) => (
-          <option key={size}>{size}</option>
-        ))}
-      </select>
-      <div className="btn-group">
-        <button
-          onClick={() => onChange(prev)}
-          className={classy("btn", { "btn-disabled": current === 1 })}
-        >
-          <MdOutlineNavigateBefore />
-        </button>
-        {prev > 1 && (
-          <>
-            <button onClick={() => onChange(1)} className="btn">
-              1
-            </button>
-            <button className="btn btn-disabled">...</button>
-          </>
-        )}
-
-        {prev > 0 && (
-          <button onClick={() => onChange(prev)} className="btn">
-            {prev}
-          </button>
-        )}
-        <button className="btn btn-active">{current}</button>
-        {next < totalPages && (
-          <button onClick={() => onChange(next)} className="btn">
-            {next}
-          </button>
-        )}
-        {next < totalPages - 1 && (
-          <>
-            <button className="btn btn-disabled">...</button>
-            <button onClick={() => onChange(totalPages)} className="btn">
-              {totalPages}
-            </button>
-          </>
-        )}
-        <button
-          onClick={() => onChange(next)}
-          className={classy("btn", { "btn-disabled": current === totalPages })}
-        >
-          <MdOutlineNavigateNext />
-        </button>
-      </div>
-      <form
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const form = event.target as HTMLFormElement;
-          const value = +(form[0] as HTMLInputElement).value;
-          onChange(Math.min(1, Math.max(totalPages, value)));
-          form.reset();
-        }}
-      >
-        <input type="number" placeholder="Go to page" className="input w-36" />
-      </form>
-    </div>
-  );
-};
-
-const TAG_GROUPS = [
-  { value: "data", label: "Data", Icon: MdOutlineImage },
-  { value: "label", label: "Label", Icon: TbPolygon },
-] as const;
-
-const TaggingDropdown = ({
-  disabled = false,
-  children,
-  className,
-  ...rest
-}: { disabled?: boolean } & JSX.IntrinsicElements["div"]) => (
-  <div
-    {...rest}
-    className={classy("dropdown dropdown-bottom  min-w-fit", className)}
-  >
-    <label
-      tabIndex={0}
-      className={classy("btn btn-ghost gap-2", {
-        "btn-disabled": disabled,
-      })}
-    >
-      <HiOutlineTag />
-      Tag
-    </label>
-    {children}
-  </div>
-);
-
-const BulkTaggingForm = ({ items }: { items: string[] }) => {
-  const { isLoading, data: taggedItems } =
-    useProjectQueries().fetchTaggedItems();
-  const { mutate, isLoading: isMutating } =
-    useProjectQueries().itemTagsMutation;
-
-  const itemSet = new Set(items);
-  const { data: allDataTags, label: allLabelTags } = [...taggedItems]
-    .filter(([id, _]) => itemSet.has(id))
-    .map(([_, tags]) => tags)
-    .reduce(
-      (allTags, { data, label }) => (
-        data.forEach(allTags.data.add, allTags.data),
-        label.forEach(allTags.label.add, allTags.label),
-        allTags
-      ),
-      { data: new Set<string>(), label: new Set<string>() }
-    );
-
-  return (
-    <TaggingForm
-      loading={isLoading || isMutating}
-      controlled={true}
-      allowClear={false}
-      onSelect={(scope, selected) =>
-        mutate(
-          items.map((id) => {
-            const itemTags = taggedItems.get(id);
-            return {
-              id,
-              groupedTags: itemTags
-                ? { ...itemTags, [scope]: [...itemTags[scope], selected] }
-                : { ...defaultTags, [scope]: [selected] },
-            };
-          })
-        )
-      }
-      onDeselect={(scope, deselected) =>
-        mutate(
-          items.reduce((payload, id) => {
-            const itemPreviousTags = taggedItems.get(id);
-            if (
-              itemPreviousTags &&
-              itemPreviousTags[scope].includes(deselected)
-            ) {
-              payload.push({
-                id,
-                groupedTags: {
-                  ...itemPreviousTags,
-                  [scope]: itemPreviousTags[scope].filter(
-                    (tag) => tag !== deselected
-                  ),
-                },
-              });
-            }
-            return payload;
-          }, [] as Parameters<typeof mutate>[0])
-        )
-      }
-      seletedTags={{ data: [...allDataTags], label: [...allLabelTags] }}
-    />
-  );
-};
-
-const TaggingForm = ({
-  seletedTags: selectedTags,
-  className,
-  controlled = false,
-  loading = false,
-  onChange,
-  onSelect,
-  onDeselect,
-  allowClear = true,
-  ...rest
-}: {
-  seletedTags: GroupedTags;
-  controlled?: boolean;
-  loading?: boolean;
-  onChange?: (tags: GroupedTags) => void;
-  onDeselect?: (scope: keyof GroupedTags, tag: string) => void;
-  onSelect?: (scope: keyof GroupedTags, tag: string) => void;
-  allowClear?: SelectProps["allowClear"];
-} & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
-  const { data: allTags } = useProjectQueries().fetchProjectTags();
-
-  const [selectedTab, setTab] = useState<typeof TAG_GROUPS[number]>(
-    TAG_GROUPS[0]
-  );
-
-  // NOTE: hack to prevent loosing focus when loading
-  const ref = useRef<HTMLDivElement>(null);
-  if (loading) ref.current && ref.current.focus();
-
-  return (
-    <div
-      {...rest}
-      tabIndex={0}
-      className={classy(
-        "dropdown-content card card-compact w-64 p-2 shadow bg-base-100 text-primary-content",
-        className
-      )}
-    >
-      <div className="tabs flex justify-center bg-base-100">
-        {TAG_GROUPS.map((group) => (
-          <a
-            key={group.value}
-            className={classy("tab tab-bordered gap-2", {
-              "tab-active": selectedTab.label == group.label,
-            })}
-            onClick={() => setTab(group)}
-          >
-            <group.Icon className="text-base" />
-            {group.label}
-          </a>
-        ))}
-      </div>
-      <div ref={ref} tabIndex={-1} className="card-body">
-        {loading ? (
-          <Spin />
-        ) : (
-          TAG_GROUPS.map(({ value }) => (
-            <Select
-              key={value}
-              className={classy({
-                hidden: value !== selectedTab.value,
-              })}
-              loading={loading}
-              mode="tags"
-              placeholder="Tags"
-              allowClear={allowClear}
-              onChange={(tags) =>
-                onChange?.({ ...selectedTags, [value]: tags })
-              }
-              onDeselect={(tag: string) => onDeselect?.(selectedTab.value, tag)}
-              onSelect={(tag: string) => onSelect?.(selectedTab.value, tag)}
-              options={allTags[value].map((tag) => ({ value: tag }))}
-              {...(controlled
-                ? { value: selectedTags[value] }
-                : { defaultValue: selectedTags[value] })}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
 const SimilarityItem = ({
   itemId,
   onClose,
@@ -612,27 +333,7 @@ const ItemPreview = ({
       <div className="w-full flex justify-between">
         <div className="flex flex-col gap-5">
           <MetadataMetrics metrics={data.metadata.metrics} />
-          <div className="flex flex-col gap-3">
-            {TAG_GROUPS.map((group) => (
-              <div key={group.value}>
-                <div className="inline-flex items-center gap-1">
-                  <group.Icon className="text-base" />
-                  <span>{group.label} tags:</span>
-                </div>
-                <div className="flex-wrap">
-                  {data.tags[group.value].length ? (
-                    data.tags[group.value].map((tag, index) => (
-                      <span key={index} className="badge">
-                        {tag}
-                      </span>
-                    ))
-                  ) : (
-                    <span>None</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <TagList tags={data.tags} />
         </div>
         <div className="w-fit inline-block relative">
           <ImageWithPolygons item={data} />
