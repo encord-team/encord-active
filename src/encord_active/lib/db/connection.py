@@ -2,13 +2,23 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from prisma import Prisma
-from prisma.cli.prisma import run
-from prisma.types import DatasourceOverride
-
 from encord_active.lib.project import ProjectFileStructure
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
+from prisma.cli.prisma import run
+
+try:
+    import prisma
+    from prisma import Prisma
+    from prisma.types import DatasourceOverride
+except RuntimeError:
+    run(["generate", f"--schema={PRISMA_SCHEMA_FILE}"])
+
+    from importlib import reload
+
+    reload(prisma)
+    from prisma import Prisma
+    from prisma.types import DatasourceOverride
 
 
 class DBConnection:
