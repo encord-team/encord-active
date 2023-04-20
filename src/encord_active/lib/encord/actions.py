@@ -21,6 +21,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
+from encord_active.lib.common.utils import try_execute
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
     copy_filtered_data,
@@ -158,8 +159,16 @@ class EncordActions:
                 if data_unit_hash not in uploaded_data_units:
                     # Since create_image_group does not return info related to the uploaded images, we should find its
                     # data_hash in a hacky way
-                    new_data_unit_hash = self._upload_item(
-                        dataset, label_row_hash, data_unit_hash, data_hashes, new_du_to_original
+                    new_data_unit_hash = try_execute(
+                        self._upload_item,
+                        5,
+                        {
+                            "dataset": dataset,
+                            "label_row_hash": label_row_hash,
+                            "data_unit_hash": data_unit_hash,
+                            "data_unit_hashes": data_hashes,
+                            "new_du_to_original": new_du_to_original,
+                        },
                     )
                     uploaded_data_units.add(data_unit_hash)
                     if not new_data_unit_hash:
@@ -237,7 +246,7 @@ class EncordActions:
 
         for counter, new_label_row_metadata in enumerate(new_project.label_rows):
             new_label_data_unit_hash = new_label_row_metadata["data_hash"]
-            new_label_row = new_project.create_label_row(new_label_data_unit_hash)
+            new_label_row = try_execute(new_project.create_label_row, 5, {"uid": new_label_data_unit_hash})
             original_lr_du = dataset_creation_result.du_original_mapping[new_label_data_unit_hash]
 
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
@@ -255,7 +264,7 @@ class EncordActions:
                 data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
                 for data_unit in label_row["data_units"].values()
             ):
-                new_project.save_label_row(label_row["label_hash"], label_row)
+                try_execute(new_project.save_label_row, 5, {"uid": label_row["label_hash"], "label": label_row})
 
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
