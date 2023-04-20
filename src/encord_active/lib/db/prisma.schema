@@ -1,0 +1,30 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("MY_DATABASE_URL")
+}
+
+generator db {
+  provider             = "prisma-client-py"
+  interface            = "sync"
+  recursive_type_depth = 5
+}
+
+model Tag {
+  id      Int       @id @default(autoincrement())
+  name    String
+  scope   String
+  ItemTag ItemTag[]
+
+  @@unique([name, scope])
+}
+
+model ItemTag {
+  label_hash  String
+  data_hash   String
+  frame       Int
+  object_hash String
+  tag         Tag    @relation(fields: [tag_id], references: [id])
+  tag_id      Int
+
+  @@id([label_hash, data_hash, frame, object_hash, tag_id])
+}

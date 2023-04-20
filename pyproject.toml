@@ -75,6 +75,7 @@ streamlit-plotly-events = "^0.0.6"
 encord-active-components = "^0.0.9"
 llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
 gitpython = "^3.1.31"
+prisma = "^0.8.2"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

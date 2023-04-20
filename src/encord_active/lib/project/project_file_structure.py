@@ -70,6 +70,10 @@ class ProjectFileStructure:
         return self.project_dir / "sqlite.db"
 
     @property
+    def prisma_db(self) -> Path:
+        return self.project_dir / "prisma.db"
+
+    @property
     def label_row_meta(self) -> Path:
         return self.project_dir / "label_row_meta.json"
 
