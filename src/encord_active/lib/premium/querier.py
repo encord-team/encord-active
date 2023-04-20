@@ -18,17 +18,20 @@ T = TypeVar("T", bound=BaseModel)
 
 class Querier:
     def __init__(self, pfs: ProjectFileStructure):
-        self.pfs = pfs
+        self.set_project(pfs)
         self.api_url = os.getenv("PREMIUM_API_URL", "http://localhost:5051")
         self._premium_available: Optional[bool] = None
 
+    def get_project(self) -> ProjectFileStructure:
+        return self._pfs
+
     def set_project(self, pfs: ProjectFileStructure):
-        self.pfs = pfs
+        self._pfs = pfs
 
     def execute(
         self, endpoint: str = "", data: Optional[dict] = None, timeout: Optional[float] = None
     ) -> Optional[dict]:
-        params = {"project": self.pfs.project_dir.as_posix()}
+        params = {"project": self.get_project().project_dir.as_posix()}
         response = requests.post(f"{self.api_url}/{endpoint}", params=params, json=data, timeout=timeout)
         if response.status_code != 200:
             return None
@@ -50,9 +53,6 @@ class Querier:
             return res
         else:
             return response_type.parse_obj(res)
-
-    def infer_labels(self):
-        self.execute("inference/sam")
 
     def search_with_clip(self, query: CLIPQuery) -> Optional[SearchResponse]:
         return self._search_with("search/clip", query, SearchResponse)

@@ -71,36 +71,26 @@ def query_with_code(query, same_mode: bool, same_query: bool):
         )
 
 
-def make_query_with_embedding(query_fn, query_parameters):
-    def query_with_embedding(query: str, same_mode: bool, same_query: bool):
-        if same_query and same_mode and (get_state().filtering_state.last_assistant_result is not None):
-            filter_merged_metrics_by_query_result(get_state().filtering_state.last_assistant_result)  # type: ignore
-            return
+def query_with_embedding(query: str, same_mode: bool, same_query: bool):
+    if same_query and same_mode and (get_state().filtering_state.last_assistant_result is not None):
+        filter_merged_metrics_by_query_result(get_state().filtering_state.last_assistant_result)  # type: ignore
+        return
 
-        with st.spinner():
-            result: Optional[SearchResponse] = query_fn(
-                query_parameters(
-                    text=query, limit=-1, identifiers=get_state().filtering_state.merged_metrics.index.tolist()
-                )
-            )
-        if not result:
-            st.warning("Couldn't find any data of that sort. Try rephrasing your query.")
-            return
+    with st.spinner():
+        result: Optional[SearchResponse] = get_state().querier.search_with_clip(
+            CLIPQuery(text=query, limit=-1, identifiers=get_state().filtering_state.merged_metrics.index.tolist())
+        )
+    if not result:
+        st.warning("Couldn't find any data of that sort. Try rephrasing your query.")
+        return
 
-        get_state().filtering_state.last_assistant_result = result
-        filter_merged_metrics_by_query_result(result)
-
-    return query_with_embedding
+    get_state().filtering_state.last_assistant_result = result
+    filter_merged_metrics_by_query_result(result)
 
 
-assistant_search_mode = AssistantMode(
-    "Data Search", make_query_with_embedding(get_state().querier.search_with_metric_data, TextQuery)
-)
-assistant_clip_mode = AssistantMode(
-    "Search", make_query_with_embedding(get_state().querier.search_with_clip, CLIPQuery)
-)
+assistant_clip_mode = AssistantMode("Search", query_with_embedding)
 assistant_code_mode = AssistantMode("Code Generation", query_with_code)
-ASSISTANT_MODES = [assistant_clip_mode, assistant_search_mode, assistant_code_mode]
+ASSISTANT_MODES = [assistant_clip_mode, assistant_code_mode]
 
 
 def render_assistant():
@@ -120,7 +110,7 @@ def render_assistant():
             )
         )
 
-    assistant_mode = UseState[Optional[AssistantMode]](assistant_search_mode)
+    assistant_mode = UseState[Optional[AssistantMode]](assistant_clip_mode)
     old_mode = assistant_mode.value
     with query_select_col:
         assistant_mode.set(
