@@ -16,7 +16,7 @@ except RuntimeError:
 
     from importlib import reload
 
-    reload(prisma)
+    reload(prisma)  # pylint: disable=used-before-assignment
     from prisma import Prisma
     from prisma.types import DatasourceOverride
 
