@@ -95,7 +95,7 @@ class State:
         ):
             project_file_structure = ProjectFileStructure(project_dir)
             DBConnection.set_project_file_structure(project_file_structure)
-            PrismaConnection.set_project_path(project_dir)
+            PrismaConnection.set_project_file_structure(project_file_structure)
             merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,

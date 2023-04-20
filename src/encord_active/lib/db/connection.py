@@ -7,7 +7,6 @@ from prisma.cli.prisma import run
 from prisma.types import DatasourceOverride
 
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
-from encord_active.lib.project import ProjectFileStructure
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
 
@@ -48,8 +47,8 @@ class PrismaConnection:
             self.db.disconnect()
 
     @classmethod
-    def set_project_path(cls, project_path: Path):
-        db_file = ProjectFileStructure(project_path).prisma_db
+    def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
+        db_file = project_file_structure.prisma_db
         url = f"file:{db_file}"
         env = {"MY_DATABASE_URL": url}
 
@@ -60,6 +59,6 @@ class PrismaConnection:
     def datasource(cls) -> DatasourceOverride:
         if not cls._datasource:
             raise ConnectionError(
-                "`project_path` was not set, call `PrismaConnection.set_project_path('path/to/project')`"
+                "`project_file_structure` is not set, call `PrismaConnection.set_project_file_structure(..)` first"
             )
         return cls._datasource

@@ -43,6 +43,11 @@ class BaseProjectFileStructure:
 
     @property
     @abstractmethod
+    def prisma_db(self) -> Path:
+        pass
+
+    @property
+    @abstractmethod
     def label_row_meta(self) -> Path:
         pass
 
