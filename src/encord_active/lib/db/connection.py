@@ -1,7 +1,15 @@
 import sqlite3
+from pathlib import Path
 from typing import Optional
 
+from prisma import Prisma
+from prisma.cli.prisma import run
+from prisma.types import DatasourceOverride
+
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
+from encord_active.lib.project import ProjectFileStructure
+
+PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
 
 
 class DBConnection:
@@ -25,3 +33,33 @@ class DBConnection:
                 "`project_file_structure` is not set, call `DBConnection.set_project_file_structure(..)` first"
             )
         return cls._project_file_structure
+
+
+class PrismaConnection:
+    _datasource: Optional[DatasourceOverride] = None
+
+    def __enter__(self):
+        self.db = Prisma(datasource=self.datasource())
+        self.db.connect()
+        return self.db
+
+    def __exit__(self, type, value, traceback):
+        if self.db.is_connected():
+            self.db.disconnect()
+
+    @classmethod
+    def set_project_path(cls, project_path: Path):
+        db_file = ProjectFileStructure(project_path).prisma_db
+        url = f"file:{db_file}"
+        env = {"MY_DATABASE_URL": url}
+
+        run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}"], env=env)
+        cls._datasource = DatasourceOverride(url=url)
+
+    @classmethod
+    def datasource(cls) -> DatasourceOverride:
+        if not cls._datasource:
+            raise ConnectionError(
+                "`project_path` was not set, call `PrismaConnection.set_project_path('path/to/project')`"
+            )
+        return cls._datasource
