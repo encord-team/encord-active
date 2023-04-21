@@ -28,3 +28,13 @@ model ItemTag {
 
   @@id([label_hash, data_hash, frame, object_hash, tag_id])
 }
+
+model DataUnit {
+  id         Int    @id @default(autoincrement())
+  hash       String
+  group_hash String
+  location   String
+  title      String
+  frame      Int
+  @@unique([hash, frame])
+}
