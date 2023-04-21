@@ -91,8 +91,8 @@ class Project:
 
         self.__save_project_meta(encord_project)
         self.save_ontology(OntologyStructure.from_dict(encord_project.ontology))
-        self.__save_label_row_meta(encord_project)
         self.__download_and_save_label_rows(encord_project)
+        self.__save_label_row_meta(encord_project)
 
         return self.load()
 
