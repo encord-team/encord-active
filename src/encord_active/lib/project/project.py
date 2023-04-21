@@ -22,7 +22,6 @@ from encord_active.lib.common.utils import (
     try_execute,
 )
 from encord_active.lib.db.connection import PrismaConnection
-from encord_active.lib.db.data_units import DataUnit, DataUnits, DBConnection
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project.metadata import fetch_project_meta
@@ -42,7 +41,6 @@ class Project:
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
-        DBConnection.set_project_file_structure(self.file_structure)  # to delete
         PrismaConnection.set_project_file_structure(self.file_structure)
 
     def load(self, subset_size: Optional[int] = None) -> Project:
@@ -302,16 +300,6 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
                         "frame": int(du["data_sequence"]),
                     }
                 )
-            # to delete
-            DataUnits().create(
-                DataUnit(
-                    hash=du["data_hash"],
-                    group_hash=label_row.data_hash,
-                    location=destination.resolve().as_posix(),
-                    title=du["data_title"],
-                    frame=int(du["data_sequence"]),
-                )
-            )
 
 
 def download_label_row_and_data(
@@ -358,20 +346,5 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                         "frame": frame_num,
                     }
                 )
-
-        # to delete
-        # add video type of data to the db (individual frames)
-        DataUnits().create_many(
-            [
-                DataUnit(
-                    hash=du["data_hash"],
-                    group_hash=label_row.data_hash,
-                    location=frame_path.resolve().as_posix(),
-                    title=du["data_title"],
-                    frame=frame_num,
-                )
-                for frame_num, frame_path in sliced_frames.items()
-            ]
-        )
         return True
     return False
