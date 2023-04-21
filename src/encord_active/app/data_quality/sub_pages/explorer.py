@@ -2,18 +2,17 @@ import re
 from typing import List, Optional
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 from natsort import natsorted
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
-from streamlit_plotly_events import plotly_events
 
 from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
+from encord_active.app.common.components.interative_plots import render_plotly_events
 from encord_active.app.common.components.label_statistics import (
     render_dataset_properties,
 )
@@ -27,16 +26,10 @@ from encord_active.app.common.components.tags.bulk_tagging_form import (
 from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import (
-    Embedding2DSchema,
-    PointSchema2D,
-    PointSelectionSchema,
-    SimilaritiesFinder,
-)
+from encord_active.lib.embeddings.utils import Embedding2DSchema, SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     IdentifierSchema,
@@ -125,46 +118,6 @@ class ExplorerPage(Page):
             by=selected_metric.meta.title, ascending=sorting_order == "Ascending"
         )
         render_filter()
-
-
-def get_selected_rows(
-    embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
-) -> DataFrame[Embedding2DSchema]:
-    selection_raw = DataFrame[PointSelectionSchema](pd.DataFrame(selected_points))
-    selected_rows = embeddings_2d.copy().merge(
-        selection_raw[[PointSchema2D.x, PointSchema2D.y]],
-        on=[PointSchema2D.x, PointSchema2D.y],
-        how="inner",
-    )
-    return DataFrame[Embedding2DSchema](selected_rows)
-
-
-def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
-    should_select = UseState(True)
-    selection = UseState[Optional[List[dict]]](None)
-
-    fig = px.scatter(
-        embedding_2d,
-        x=Embedding2DSchema.x,
-        y=Embedding2DSchema.y,
-        color=Embedding2DSchema.label,
-        title="2D embedding plot",
-        template="plotly",
-    )
-
-    new_selection = plotly_events(fig, click_event=False, select_event=True)
-
-    if new_selection != selection.value:
-        should_select.set(True)
-        selection.set(new_selection)
-
-    if st.button("Reset selection"):
-        should_select.set(False)
-
-    if should_select.value and len(new_selection) > 0:
-        return get_selected_rows(embedding_2d, new_selection)
-    else:
-        return None
 
 
 @st.cache_data
