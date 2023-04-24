@@ -30,11 +30,24 @@ model ItemTag {
 }
 
 model DataUnit {
-  id         Int    @id @default(autoincrement())
-  hash       String
-  group_hash String
-  location   String
-  title      String
-  frame      Int
-  @@unique([hash, frame])
+  id           Int    @id @default(autoincrement())
+  data_hash    String
+  data_title   String
+  frame        Int
+  location     String
+  lr_data_hash String
+  LabelRow     LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
+  @@unique([data_hash, frame])
+}
+
+model LabelRow {
+  id             Int     @id @default(autoincrement())
+  label_hash     String? @unique
+  data_hash      String  @unique
+  data_title     String
+  data_type      String
+  created_at     DateTime
+  last_edited_at DateTime
+  location       String
+  data_units     DataUnit[]
 }
