@@ -10,10 +10,8 @@ export const usePagination = <T extends any[]>(items: T) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(defaultPageSize);
 
-  const pageItems = items.slice(
-    (page - 1) * pageSize,
-    (page + 1) * pageSize + pageSize
-  );
+  const index = page - 1;
+  const pageItems = items.slice(index * pageSize, index * pageSize + pageSize);
 
   return { page, setPage, pageSize, setPageSize, pageItems };
 };
@@ -34,8 +32,8 @@ export const Pagination = ({
   const prev = current - 1;
   const next = current + 1;
 
-  let totalPages = Math.max((totalItems / pageSize) | 0, 1);
-  if (totalItems % pageSize == 0) totalPages--;
+  let totalPages = (totalItems / pageSize) | 0;
+  if (totalItems % pageSize !== 0) totalPages++;
 
   return (
     <div className="inline-flex gap-5">
