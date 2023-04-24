@@ -55,11 +55,11 @@ async def project(project: str):
     return ProjectFileStructure(Path(environ.get("SERVER_START_PATH", "")) / project)
 
 
-Project = Annotated[ProjectFileStructure, Depends(project)]
+ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(project)]
 
 
 @app.get("/projects/{project}/items_id_by_metric")
-def read_item_ids(project: Project, sort_by_metric: str, ascending: bool = True):
+def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascending: bool = True):
     DBConnection.set_project_path(project.project_dir)
     merged_metrics = MergedMetrics().all(marshall=False)
 
@@ -70,7 +70,7 @@ def read_item_ids(project: Project, sort_by_metric: str, ascending: bool = True)
 
 
 @app.get("/projects/{project}/tagged_items")
-def tagged_items(project: Project):
+def tagged_items(project: ProjectFileStructureDep):
     DBConnection.set_project_path(project.project_dir)
     df = MergedMetrics().all(columns=["tags"]).reset_index()
     records = df[df["tags"].str.len() > 0].to_dict("records")
@@ -78,7 +78,7 @@ def tagged_items(project: Project):
 
 
 @app.get("/projects/{project}/items/{id}")
-def read_item(project: Project, id: str):
+def read_item(project: ProjectFileStructureDep, id: str):
     lr_hash, du_hash, frame, *obj_hash = id.split("_")
     DBConnection.set_project_path(project.project_dir)
     row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
@@ -92,14 +92,14 @@ class ItemTags(BaseModel):
 
 
 @app.put("/projects/{project}/item_tags")
-def tag_items(project: Project, payload: List[ItemTags]):
+def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     DBConnection.set_project_path(project.project_dir)
     for item in payload:
         MergedMetrics().update_tags(item.id, from_grouped_tags(item.grouped_tags))
 
 
 @app.get("/projects/{project}/similarities/{id}")
-def get_similar_items(project: Project, id: str, current_metric: str, page_size: Optional[int] = None):
+def get_similar_items(project: ProjectFileStructureDep, id: str, current_metric: str, page_size: Optional[int] = None):
     embedding_type = get_metric_embedding_type(project, current_metric)
     finder = get_similarity_finder(embedding_type, project.embeddings, page_size)
     nearest_images = finder.get_similarities(id)
@@ -108,14 +108,14 @@ def get_similar_items(project: Project, id: str, current_metric: str, page_size:
 
 
 @app.get("/projects/{project}/metrics")
-def get_available_metrics(project: Project, scope: Optional[MetricScope] = None):
+def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[MetricScope] = None):
     metrics = load_project_metrics(project, scope)
     non_empty_metrics = list(map(lambda i: i.name, filter(filter_none_empty_metrics, metrics)))
     return natsorted(non_empty_metrics)
 
 
 @app.get("/projects/{project}/2d_embeddings/{current_metric}")
-def get_2d_embeddings(project: Project, current_metric: str):
+def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
     embedding_type = get_metric_embedding_type(project, current_metric)
     embeddings_df = get_2d_embedding_data(project.embeddings, embedding_type)
 
@@ -126,7 +126,7 @@ def get_2d_embeddings(project: Project, current_metric: str):
 
 
 @app.get("/projects/{project}/tags")
-def get_tags(project: Project):
+def get_tags(project: ProjectFileStructureDep):
     DBConnection.set_project_path(project.project_dir)
     return to_grouped_tags(all_tags())
 
