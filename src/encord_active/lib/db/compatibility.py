@@ -35,11 +35,11 @@ def fill_data_units_table():
                     data_units.append(
                         DataUnit(
                             id=-1,  # add dummy id value because `id` is a required attribute
-                            hash=du_hash,
-                            group_hash=label_row["data_hash"],
-                            location=du_frame_path.resolve().as_posix(),
-                            title=du_title,
+                            data_hash=du_hash,
+                            data_title=du_title,
                             frame=du_frame,
+                            location=du_frame_path.resolve().as_posix(),
+                            lr_data_hash=label_row["data_hash"],
                         )
                     )
             else:
@@ -49,11 +49,11 @@ def fill_data_units_table():
                     data_units.append(
                         DataUnit(
                             id=-1,  # add dummy id value because `id` is a required attribute
-                            hash=du_hash,
-                            group_hash=label_row["data_hash"],
-                            location=du_frame_path.resolve().as_posix(),
-                            title=du_title,
+                            data_hash=du_hash,
+                            data_title=du_title,
                             frame=du_frame,
+                            location=du_frame_path.resolve().as_posix(),
+                            lr_data_hash=label_row["data_hash"],
                         )
                     )
 
