@@ -14,12 +14,12 @@ from pandas.api.types import (
 from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.app_config import app_config
-from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
+from encord_active.lib.db.helpers.tags import all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions

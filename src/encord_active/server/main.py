@@ -9,10 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from natsort import natsorted
 from pydantic import BaseModel
 
-from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
+    all_tags,
     from_grouped_tags,
     to_grouped_tags,
 )
