@@ -261,6 +261,10 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
         view_df = view_df[view_df.data_row_id.isin(lr_du)]
 
+        if view_df.shape[0] == 0:
+            st.write("There are no predictions for the given class(es).")
+            return
+
         if get_state().reduced_embeddings[EmbeddingType.IMAGE] is None:
             st.info("There is no 2D embedding file to display.")
         else:
