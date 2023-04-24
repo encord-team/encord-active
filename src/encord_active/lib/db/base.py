@@ -15,8 +15,8 @@ class DataUnit(NamedTuple):
 
 
 class DataUnitLike(NamedTuple):
-    hash: Optional[str] = None
-    group_hash: Optional[str] = None
-    location: Optional[str] = None
-    title: Optional[str] = None
+    data_hash: Optional[str] = None
+    data_title: Optional[str] = None
     frame: Optional[int] = None
+    location: Optional[str] = None
+    lr_data_hash: Optional[str] = None
