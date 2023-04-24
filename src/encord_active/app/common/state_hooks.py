@@ -69,4 +69,4 @@ class UseState(Generic[T]):
 
     @property
     def value(self) -> T:
-        return st.session_state.get(StateKey.SCOPED, {}).get(self._key) or self._initial
+        return st.session_state.get(StateKey.SCOPED, {}).get(self._key, self._initial)
