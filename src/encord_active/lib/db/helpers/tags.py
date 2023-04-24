@@ -1,14 +1,23 @@
-from typing import Dict, List, TypedDict
+from typing import Dict, List, Set, TypedDict
 
 import pandas as pd
 
-from encord_active.app.common.components.tags.utils import all_tags
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
 
 
 class GroupedTags(TypedDict):
     data: List[str]
     label: List[str]
+
+
+def scoped_tags(scopes: Set[TagScope]) -> List[Tag]:
+    return [tag for tag in all_tags() if tag.scope in scopes]
+
+
+def all_tags():
+    tag_list = MergedMetrics().all(columns=["tags"])["tags"].values
+    return list({tag for tag_list in tag_list for tag in tag_list})
 
 
 def count_of_tags(df: pd.DataFrame) -> Dict[str, int]:
