@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Iterator, NamedTuple, Optional, Union
 
-from prisma.models import DataUnit
+from prisma import models
 
 from encord_active.lib.db.base import DataUnitLike
 from encord_active.lib.db.compatibility import fill_data_units_table
@@ -101,7 +101,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
 
-    def data_units(self, pattern: Optional[DataUnitLike] = None) -> Iterator[DataUnit]:
+    def data_units(self, pattern: Optional[DataUnitLike] = None) -> Iterator[models.DataUnit]:
         with PrismaConnection() as conn:
             # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
             if conn.dataunit.count() == 0:
@@ -116,9 +116,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
                         and_clause.append({field: value})
                 return iter(conn.dataunit.find_many(where={"AND": and_clause}))
 
-    def label_rows(self) -> Iterator:
-        # use internally iter_labels() while the label row table does not exist in the db
-        return self.iter_labels()
+    def label_rows(self) -> Iterator[models.LabelRow]:
+        with PrismaConnection() as conn:
+            return iter(conn.labelrow.find_many())
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
         for label_hash in self.data.iterdir():

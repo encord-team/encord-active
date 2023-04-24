@@ -2,7 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Iterator, Optional, Union
 
-from prisma.models import DataUnit
+from prisma import models
 
 from encord_active.lib.db.base import DataUnitLike
 
@@ -69,9 +69,9 @@ class BaseProjectFileStructure:
         pass
 
     @abstractmethod
-    def label_rows(self) -> Iterator:
+    def data_units(self, pattern: Optional[list[DataUnitLike]] = None) -> Iterator[models.DataUnit]:
         pass
 
     @abstractmethod
-    def data_units(self, pattern: Optional[list[DataUnitLike]] = None) -> Iterator[DataUnit]:
+    def label_rows(self) -> Iterator[models.LabelRow]:
         pass
