@@ -91,7 +91,7 @@ class State:
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
-    def init(cls, target_paht: Path, project_dir: Path, refresh_projects: Callable[[], Any]):
+    def init(cls, target_path: Path, project_dir: Path, refresh_projects: Callable[[], Any]):
         if (
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
@@ -102,7 +102,7 @@ class State:
             pfs = ProjectFileStructure(project_dir)
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=pfs,
-                target_path=target_paht,
+                target_path=target_path,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
                 filtering_state=FilteringState(merged_metrics),
