@@ -69,7 +69,9 @@ class BaseProjectFileStructure:
         pass
 
     @abstractmethod
-    def data_units(self, pattern: Optional[list[DataUnitLike]] = None) -> Iterator[models.DataUnit]:
+    def data_units(
+        self, pattern: Optional[list[DataUnitLike]] = None, include_label_row: bool = False
+    ) -> Iterator[models.DataUnit]:
         pass
 
     @abstractmethod

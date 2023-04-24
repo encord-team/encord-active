@@ -101,20 +101,23 @@ class ProjectFileStructure(BaseProjectFileStructure):
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
 
-    def data_units(self, pattern: Optional[DataUnitLike] = None) -> Iterator[models.DataUnit]:
+    def data_units(
+        self, pattern: Optional[DataUnitLike] = None, include_label_row: bool = False
+    ) -> Iterator[models.DataUnit]:
+        to_include = {"label_row": True} if include_label_row else {}
         with PrismaConnection() as conn:
             # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
             if conn.dataunit.count() == 0:
                 fill_data_units_table()
             # end backwards compatibility code.
             if pattern is None:
-                return iter(conn.dataunit.find_many())
+                return iter(conn.dataunit.find_many(include=to_include))
             else:
                 and_clause = []
                 for field in pattern._fields:
                     if (value := getattr(pattern, field)) is not None:
                         and_clause.append({field: value})
-                return iter(conn.dataunit.find_many(where={"AND": and_clause}))
+                return iter(conn.dataunit.find_many(where={"AND": and_clause}, include=to_include))
 
     def label_rows(self) -> Iterator[models.LabelRow]:
         with PrismaConnection() as conn:

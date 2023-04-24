@@ -36,7 +36,7 @@ model DataUnit {
   frame        Int
   location     String
   lr_data_hash String
-  LabelRow     LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
+  label_row    LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
   @@unique([data_hash, frame])
 }
 
