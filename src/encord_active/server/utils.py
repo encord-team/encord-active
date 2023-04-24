@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Dict, Optional, TypedDict
 from urllib import parse
 
-from encord_active_components.components.explorer import GroupedTags
-
 from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.metrics.metric import EmbeddingType

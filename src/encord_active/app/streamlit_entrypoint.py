@@ -54,7 +54,7 @@ def provide_backcompatibility_for_old_predictions():
 
 def main(target: str):
     set_page_config()
-    target_path = Path(target).resolve()
+    target_path = Path(target).expanduser().resolve()
     initial_project = UseState[Optional[Project]](None)
     initial_key_path = UseState[List[str]](DEFAULT_PAGE_PATH)
     selected_key_path = UseState(deepcopy(initial_key_path.value))

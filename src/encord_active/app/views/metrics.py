@@ -1,5 +1,3 @@
-from time import perf_counter
-
 import streamlit as st
 
 from encord_active.app.common.state import get_state
@@ -42,13 +40,11 @@ def explorer(metric_type: MetricScope):
                 st.error("You don't seem to have any data in your project.")
                 return
 
-        start = perf_counter()
         selected_df = page.sidebar_options(available_metrics, metric_type)
 
         if selected_df is None:
             return
 
         page.build(selected_df, metric_type)
-        print("Done", perf_counter() - start)
 
     return render
