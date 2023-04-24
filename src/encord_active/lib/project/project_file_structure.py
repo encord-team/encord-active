@@ -112,7 +112,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
                 for field in pattern._fields:
                     if (value := getattr(pattern, field)) is not None:
                         and_clause.append({field: value})
-                conn.dataunit.find_many(where={"AND": and_clause})
+                return iter(conn.dataunit.find_many(where={"AND": and_clause}))
 
     def label_rows(self) -> Iterator:
         # use internally iter_labels() while the label row table does not exist in the db
