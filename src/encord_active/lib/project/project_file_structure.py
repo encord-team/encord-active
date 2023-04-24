@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 from typing import Iterator, NamedTuple, Optional, Union
 
-from encord_active.lib.db.base import DataUnit, DataUnitLike
+from prisma.models import DataUnit
+
+from encord_active.lib.db.base import DataUnitLike
 from encord_active.lib.db.compatibility import fill_data_units_table
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
