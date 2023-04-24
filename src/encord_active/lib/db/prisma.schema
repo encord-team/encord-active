@@ -46,8 +46,8 @@ model LabelRow {
   data_hash      String  @unique
   data_title     String
   data_type      String
-  created_at     DateTime
-  last_edited_at DateTime
+  created_at     String
+  last_edited_at String
   location       String
   data_units     DataUnit[]
 }
