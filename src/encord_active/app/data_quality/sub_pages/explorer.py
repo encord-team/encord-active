@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import streamlit as st
-from encord_active_components.components.explorer import Output, explorer
+from encord_active_components.components.explorer import explorer
 from natsort import natsorted
 from pandera.typing import DataFrame
 
@@ -63,16 +63,11 @@ class ExplorerPage(Page):
         with st.expander("Annotator Statistics", expanded=False):
             render_annotator_properties(selected_df)
 
-        output_state = UseState[Optional[Output]](None)
-        output = explorer(
+        explorer(
             project_name=get_state().project_paths.project_dir.name,
             items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
         )
-        if output and output != output_state:
-            output_state.set(output)
-            action, payload = output
-            print(output)
 
     def render_view_options(self):
         non_empty_metrics = list(filter(filter_none_empty_metrics, self.available_metrics))

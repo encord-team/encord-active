@@ -1,10 +1,14 @@
-from typing import Dict, List
+from typing import Dict, List, TypedDict
 
 import pandas as pd
-from encord_active_components.components.explorer import GroupedTags
 
 from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.lib.db.tags import Tag, TagScope
+
+
+class GroupedTags(TypedDict):
+    data: List[str]
+    label: List[str]
 
 
 def count_of_tags(df: pd.DataFrame) -> Dict[str, int]:
@@ -27,7 +31,7 @@ def to_grouped_tags(tags: List[Tag]) -> GroupedTags:
 
     for name, scope in tags:
         if scope == TagScope.DATA:
-            grouped_tags[scope.lower()].append(name)
+            grouped_tags["data"].append(name)
         elif scope == TagScope.LABEL:
             grouped_tags["label"].append(name)
 
