@@ -246,7 +246,7 @@ class EncordActions:
 
         for counter, new_label_row_metadata in enumerate(new_project.label_rows):
             new_label_data_unit_hash = new_label_row_metadata["data_hash"]
-            new_label_row = try_execute(new_project.create_label_row, 5, {"uid": new_label_data_unit_hash})
+            new_label_row = new_project.create_label_row(new_label_data_unit_hash)
             original_lr_du = dataset_creation_result.du_original_mapping[new_label_data_unit_hash]
 
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
