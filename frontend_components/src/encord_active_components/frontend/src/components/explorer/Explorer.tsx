@@ -2,7 +2,7 @@ import { Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
-import { MdClose, MdImageSearch } from "react-icons/md";
+import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { RiUserLine } from "react-icons/ri";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
@@ -24,13 +24,8 @@ import {
   Scope,
   useProjectQueries,
 } from "./api";
-import { MetricDistribution, ScatteredEmbeddings } from "./Charts";
-import {
-  defaultPageSize,
-  PageSize,
-  Pagination,
-  usePagination,
-} from "./Pagination";
+import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
+import { Pagination, usePagination } from "./Pagination";
 import {
   BulkTaggingForm,
   TaggingDropdown,
@@ -129,6 +124,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
+              onReset={() => setItemSet(new Set(items))}
             />
           )}
           {similarityItem && (
@@ -137,45 +133,61 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
               onClose={() => setSimilarityItem(null)}
             />
           )}
-          <div className="flex w-full justify-between">
-            <div className="inline-flex gap-2">
+          <div className="flex w-full justify-between gap-5 flex-wrap">
+            <div className="flex gap-2 max-w-[50%]">
               <TaggingDropdown
                 className={classy({ "btn-disabled": !selectedItems.size })}
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
               {metrics && metrics?.length > 0 ? (
-                <label className="input-group">
-                  <span>Sort by</span>
-                  <select
-                    onChange={(event) => setSelectedMetric(event.target.value)}
-                    className="select select-bordered focus:outline-none"
-                    disabled={!!similarItems?.length}
-                  >
-                    {metrics.map((metric) => (
-                      <option key={metric}>{metric}</option>
-                    ))}
-                  </select>
-                  <label
-                    className={classy("btn swap swap-rotate", {
-                      "btn-disabled": !!similarItems?.length,
-                    })}
-                  >
-                    <input
-                      onChange={() =>
-                        setSortedAndFiltered((prev) => [...prev].reverse())
+                <>
+                  <label className="input-group">
+                    <select
+                      onChange={(event) =>
+                        setSelectedMetric(event.target.value)
                       }
-                      type="checkbox"
+                      className="select select-bordered focus:outline-none"
                       disabled={!!similarItems?.length}
-                      defaultChecked={true}
-                    />
-                    <TbSortAscending className="swap-on text-base" />
-                    <TbSortDescending className="swap-off text-base" />
+                    >
+                      {metrics.map((metric) => (
+                        <option key={metric}>{metric}</option>
+                      ))}
+                    </select>
+                    <label
+                      className={classy("btn swap swap-rotate", {
+                        "btn-disabled": !!similarItems?.length,
+                      })}
+                    >
+                      <input
+                        onChange={() =>
+                          setSortedAndFiltered((prev) => [...prev].reverse())
+                        }
+                        type="checkbox"
+                        disabled={!!similarItems?.length}
+                        defaultChecked={true}
+                      />
+                      <TbSortAscending className="swap-on text-base" />
+                      <TbSortDescending className="swap-off text-base" />
+                    </label>
                   </label>
-                </label>
+                  <MetricDistributionTiny
+                    values={sortedAndFiltered || []}
+                    setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                  />
+                </>
               ) : null}
             </div>
-            <div className="inline-flex gap-2">
+            <div className="flex gap-2">
+              <button
+                className={classy("btn btn-ghost gap-2", {
+                  "btn-disabled": itemsToRender.length === sortedItems?.length,
+                })}
+                onClick={() => setItemSet(new Set(items))}
+              >
+                <MdFilterAltOff />
+                Reset filters
+              </button>
               <button
                 className={classy("btn btn-ghost gap-2", {
                   "btn-disabled": !selectedItems.size,
@@ -187,9 +199,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
               </button>
               <button
                 className="btn btn-ghost gap-2"
-                onClick={() =>
-                  setSelectedItems(new Set(sortedItems?.map(({ id }) => id)))
-                }
+                onClick={() => setSelectedItems(new Set(itemsToRender))}
               >
                 <BiSelectMultiple />
                 Select all ({itemsToRender.length})
@@ -230,26 +240,28 @@ const Charts = ({
   idValues,
   selectedMetric,
   onSelectionChange,
+  onReset,
 }: {
   idValues: IdValue[];
   selectedMetric: string;
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
+  onReset: () => void;
 }) => {
   const { isLoading, data: scatteredEmbeddings } =
     useProjectQueries().fetch2DEmbeddings(selectedMetric);
 
   const ids = idValues.map(({ id }) => id);
-  const values = idValues.map(({ value }) => value);
   const filtered = scatteredEmbeddings?.filter(({ id }) => ids.includes(id));
 
   return (
-    <div className="w-full flex gap-2 h-52 [&>*]:flex-1 items-center">
+    <div className="w-full flex gap-2 h-96 [&>*]:flex-1 items-center">
       {filtered ? (
         <ScatteredEmbeddings
           embeddings={filtered}
           onSelectionChange={onSelectionChange}
+          onReset={onReset}
         />
       ) : isLoading ? (
         <Spin />
@@ -261,7 +273,6 @@ const Charts = ({
           </div>
         </div>
       )}
-      {values && <MetricDistribution values={values} />}
     </div>
   );
 };
@@ -400,11 +411,11 @@ const GalleryItem = ({
           </div>
           {data.metadata.labelClass || data.metadata.annotator ? (
             <div className="flex flex-col">
-              <span className="inline-flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 <VscSymbolClass />
                 {data.metadata.labelClass}
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 <RiUserLine />
                 {data.metadata.annotator}
               </span>
