@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 from typing import Iterator, NamedTuple, Optional, Union
 
-from encord_active.lib.db.base import DataUnit
-from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.data_units import DataUnits
+from encord_active.lib.db.base import DataUnit, DataUnitLike
+from encord_active.lib.db.compatibility import fill_data_units_table
+from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
@@ -99,9 +99,20 @@ class ProjectFileStructure(BaseProjectFileStructure):
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
 
-    @property
-    def data_units(self) -> Iterator[DataUnit]:
-        return iter(DataUnits().all())
+    def data_units(self, pattern: Optional[DataUnitLike] = None) -> Iterator[DataUnit]:
+        with PrismaConnection() as conn:
+            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
+            if conn.dataunit.count() == 0:
+                fill_data_units_table()
+            # end backwards compatibility code.
+            if pattern is None:
+                return iter(conn.dataunit.find_many())
+            else:
+                and_clause = []
+                for field in pattern._fields:
+                    if (value := getattr(pattern, field)) is not None:
+                        and_clause.append({field: value})
+                conn.dataunit.find_many(where={"AND": and_clause})
 
     def label_rows(self) -> Iterator:
         # use internally iter_labels() while the label row table does not exist in the db
