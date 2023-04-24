@@ -17,6 +17,10 @@ from encord_active.app.projects_page import (
     get_projects,
     project_list,
 )
+from encord_active.lib.charts.project_similarity import (
+    ProjectSimilaritySchema,
+    plot_project_similarity_metric_wise,
+)
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.metrics.metadata import fetch_metrics_meta
@@ -50,16 +54,19 @@ def project_similarity():
             project: fetch_project_meta(project) for project in project_list(get_state().global_root_folder)
         }
 
-        selected_project = st.selectbox(
+        project_selection_col, _, average_similarity_col = st.columns((5, 1, 2))
+
+        selected_project = project_selection_col.selectbox(
             "Select project to compare",
             options=project_metas,
             format_func=(lambda x: project_metas[x]["project_title"]),
         )
 
+        # TODO this is a hacky way to get MergedMetrics of another project, it should be fixed later
         DBConnection.set_project_path(selected_project)
         merged_metrics_2 = MergedMetrics().all()
-
         DBConnection.set_project_path(get_state().project_paths.project_dir)
+
         all_metrics = fetch_metrics_meta(get_state().project_paths)
 
         metric_similarities = {"metric": [], "similarity_score": []}
@@ -87,19 +94,12 @@ def project_similarity():
         metric_similarities_df = pd.DataFrame(metric_similarities)
         metric_similarities_df = metric_similarities_df.pipe(ProjectSimilaritySchema)
 
-        st.metric(
+        average_similarity_col.metric(
             "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.similarity_score].mean():.2f}"
         )
 
-        metric_similarities_df.sort_values(by=ProjectSimilaritySchema.similarity_score, inplace=True)
+        figure = plot_project_similarity_metric_wise(metric_similarities_df)
 
-        fig = px.bar(
-            metric_similarities_df,
-            x=ProjectSimilaritySchema.similarity_score,
-            y=ProjectSimilaritySchema.metric,
-            orientation="h",
-        )
-
-        st.plotly_chart(fig)
+        st.plotly_chart(figure)
 
     return render
