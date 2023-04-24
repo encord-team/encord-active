@@ -46,6 +46,7 @@ class DBConnection:
 
 class PrismaConnection:
     _datasource: Optional[DatasourceOverride] = None
+    _project_file_structure: Optional[BaseProjectFileStructure] = None
 
     def __enter__(self):
         self.db = Prisma(datasource=self.datasource())
@@ -58,12 +59,21 @@ class PrismaConnection:
 
     @classmethod
     def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
-        db_file = project_file_structure.prisma_db
+        cls._project_file_structure = project_file_structure
+        db_file = cls._project_file_structure.prisma_db
         url = f"file:{db_file}"
         env = {"MY_DATABASE_URL": url}
 
         run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}"], env=env)
         cls._datasource = DatasourceOverride(url=url)
+
+    @classmethod
+    def project_file_structure(cls):
+        if not cls._project_file_structure:
+            raise ConnectionError(
+                "`project_file_structure` is not set, call `PrismaConnection.set_project_file_structure(..)` first"
+            )
+        return cls._project_file_structure
 
     @classmethod
     def datasource(cls) -> DatasourceOverride:
