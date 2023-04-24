@@ -3,7 +3,6 @@ from os import environ
 from pathlib import Path
 from typing import Annotated, List, Optional
 
-from encord_active_components.components.explorer import GroupedTags
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,7 +11,11 @@ from pydantic import BaseModel
 
 from encord_active.app.common.components.tags.utils import all_tags
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.helpers.tags import from_grouped_tags, to_grouped_tags
+from encord_active.lib.db.helpers.tags import (
+    GroupedTags,
+    from_grouped_tags,
+    to_grouped_tags,
+)
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.metrics.utils import MetricScope, filter_none_empty_metrics
