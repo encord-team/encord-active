@@ -61,7 +61,7 @@ def image_url(image: AtomicImage, project_hash: str):
 def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
     for data_unit in project_structure.data_units(include_label_row=True):
-        if not Path(data_unit.location).is_file():
+        if not Path(data_unit.location).is_file() or data_unit.label_row is None:
             continue
         du_hash = data_unit.data_hash
         lr_hash = data_unit.label_row.label_hash
