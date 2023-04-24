@@ -5,8 +5,8 @@ from typing import Iterator, NamedTuple, Optional, Union
 from prisma import models
 
 from encord_active.lib.db.base import DataUnitLike
-from encord_active.lib.db.compatibility import fill_data_units_table
-from encord_active.lib.db.connection import DBConnection, PrismaConnection
+from encord_active.lib.db.compatibility import fill_missing_tables
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
@@ -50,7 +50,7 @@ class LabelRowStructure:
 class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
-        DBConnection.set_project_file_structure(self)
+        PrismaConnection.set_project_file_structure(self)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
     @property
@@ -108,7 +108,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         with PrismaConnection() as conn:
             # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
             if conn.dataunit.count() == 0:
-                fill_data_units_table()
+                fill_missing_tables()
             # end backwards compatibility code.
             if pattern is None:
                 return iter(conn.dataunit.find_many(include=to_include))
@@ -121,6 +121,10 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
     def label_rows(self) -> Iterator[models.LabelRow]:
         with PrismaConnection() as conn:
+            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
+            if conn.labelrow.count() == 0:
+                fill_missing_tables()
+            # end backwards compatibility code.
             return iter(conn.labelrow.find_many())
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
