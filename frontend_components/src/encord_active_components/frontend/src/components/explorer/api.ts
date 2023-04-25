@@ -62,8 +62,12 @@ export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
 export const fetchProject2DEmbeddings =
   (projectName: string) => async (selectedMetric: string) => {
     const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
-    const response = await (await fetch(url)).json();
-    return Item2DEmbeddingSchema.array().parse(response);
+    try {
+      const response = await (await fetch(url)).json();
+      return Item2DEmbeddingSchema.array().parse(response);
+    } catch {
+      return [];
+    }
   };
 
 export const fetchProjectMetrics =

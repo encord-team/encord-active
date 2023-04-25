@@ -118,7 +118,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
           })}
         >
           {selectedMetric && (
-            <Charts
+            <Embeddings
               idValues={sortedAndFiltered}
               selectedMetric={selectedMetric}
               onSelectionChange={(selection) => (
@@ -236,7 +236,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   );
 };
 
-const Charts = ({
+const Embeddings = ({
   idValues,
   selectedMetric,
   onSelectionChange,
@@ -255,23 +255,23 @@ const Charts = ({
   const ids = idValues.map(({ id }) => id);
   const filtered = scatteredEmbeddings?.filter(({ id }) => ids.includes(id));
 
-  return (
-    <div className="w-full flex gap-2 h-96 [&>*]:flex-1 items-center">
-      {filtered ? (
+  return !isLoading && !scatteredEmbeddings?.length ? (
+    <div className="alert shadow-lg h-fit">
+      <div>
+        <BiInfoCircle className="text-base" />
+        <span>2D embedding are not available for this project. </span>
+      </div>
+    </div>
+  ) : (
+    <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
+      {isLoading ? (
+        <Spin />
+      ) : (
         <ScatteredEmbeddings
-          embeddings={filtered}
+          embeddings={filtered || []}
           onSelectionChange={onSelectionChange}
           onReset={onReset}
         />
-      ) : isLoading ? (
-        <Spin />
-      ) : (
-        <div className="alert shadow-lg h-fit">
-          <div>
-            <BiInfoCircle className="text-base" />
-            <span>2D embedding are not available for this project. </span>
-          </div>
-        </div>
       )}
     </div>
   );
