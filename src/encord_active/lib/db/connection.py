@@ -59,6 +59,9 @@ class PrismaConnection:
 
     @classmethod
     def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
+        if cls._project_file_structure is project_file_structure:  # skip if it was already set
+            return
+
         cls._project_file_structure = project_file_structure
         db_file = cls._project_file_structure.prisma_db
         url = f"file:{db_file}"
