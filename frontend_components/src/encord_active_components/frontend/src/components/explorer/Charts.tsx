@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IdValue, Item2DEmbedding } from "./api";
 import { bin } from "d3-array";
+import { Spin } from "antd";
 
 const BINS = 20;
 
@@ -115,7 +116,7 @@ export const ScatteredEmbeddings = ({
         onSelectionChange(view.filteredData as Item2DEmbedding[]);
       else if (type === "brush-reset-button:click") onReset();
     },
-    [JSON.stringify(embeddings)]
+    [embeddings.length]
   );
 
   return (

@@ -1,5 +1,5 @@
 import { Spin } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
 import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
@@ -32,7 +32,6 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { polygon } from "@antv/g2plot";
 
 export type Props = {
   projectName: string;
@@ -253,8 +252,10 @@ const Embeddings = ({
   const { isLoading, data: scatteredEmbeddings } =
     useProjectQueries().fetch2DEmbeddings(selectedMetric);
 
-  const ids = idValues.map(({ id }) => id);
-  const filtered = scatteredEmbeddings?.filter(({ id }) => ids.includes(id));
+  const filtered = useMemo(() => {
+    const ids = new Set(idValues.map(({ id }) => id));
+    return scatteredEmbeddings?.filter(({ id }) => ids.has(id));
+  }, [idValues, scatteredEmbeddings]);
 
   return !isLoading && !scatteredEmbeddings?.length ? (
     <div className="alert shadow-lg h-fit">
