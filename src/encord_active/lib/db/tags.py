@@ -1,8 +1,5 @@
 from enum import Enum
-from sqlite3 import OperationalError
-from typing import Callable, List, NamedTuple
-
-from encord_active.lib.db.connection import DBConnection
+from typing import NamedTuple
 
 TABLE_NAME = "tags"
 
