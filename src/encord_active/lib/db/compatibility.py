@@ -10,8 +10,11 @@ DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def fill_missing_tables():
-    fill_label_rows_table()
-    fill_data_units_table()
+    with PrismaConnection() as conn:
+        if conn.labelrow.count() == 0:
+            fill_label_rows_table()
+        if conn.dataunit.count() == 0:
+            fill_data_units_table()
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
@@ -64,8 +67,10 @@ def fill_data_units_table():
 
     # store data unit references in the db
     with PrismaConnection() as conn:
-        for data_unit in data_units:
-            conn.dataunit.create(data_unit.dict(exclude={"id"}))  # remove dummy id value
+        with conn.batch_() as batcher:
+            for data_unit in data_units:
+                batcher.dataunit.create(data_unit.dict(exclude={"id", "label_row"}))  # remove dummy values
+            batcher.commit()
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
@@ -105,5 +110,7 @@ def fill_label_rows_table():
 
     # store label row references in the db
     with PrismaConnection() as conn:
-        for label_row in label_rows:
-            conn.labelrow.create(label_row.dict(exclude={"id"}))  # remove dummy id value
+        with conn.batch_() as batcher:
+            for label_row in label_rows:
+                batcher.labelrow.create(label_row.dict(exclude={"id", "data_units"}))  # remove dummy values
+            batcher.commit()
