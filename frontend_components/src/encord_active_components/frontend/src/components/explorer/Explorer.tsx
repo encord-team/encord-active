@@ -32,6 +32,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
+import { polygon } from "@antv/g2plot";
 
 export type Props = {
   projectName: string;
@@ -136,7 +137,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
-              {metrics && metrics?.length > 0 ? (
+              {metrics && metrics?.length && (
                 <>
                   <label className="input-group">
                     <select
@@ -167,17 +168,21 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
                       <TbSortDescending className="swap-off text-base" />
                     </label>
                   </label>
-                  <MetricDistributionTiny
-                    values={sortedAndFiltered || []}
-                    setSeletedIds={(ids) => setItemSet(new Set(ids))}
-                  />
+                  {!similarityItem && (
+                    <MetricDistributionTiny
+                      values={sortedAndFiltered || []}
+                      setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                    />
+                  )}
                 </>
-              ) : null}
+              )}
             </div>
             <div className="flex gap-2">
               <button
                 className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": itemsToRender.length === sortedItems?.length,
+                  "btn-disabled":
+                    itemsToRender.length ===
+                    (similarItems || sortedItems)?.length,
                 })}
                 onClick={() => setItemSet(new Set(items))}
               >
@@ -365,14 +370,17 @@ const GalleryItem = ({
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  {
-  }
-  useProjectQueries();
   const { data, isLoading } = useProjectQueries().fetchItem(itemId);
-  if (isLoading || !data) return null;
+
+  if (isLoading || !data)
+    return (
+      <div className="w-full h-full flex justify-center items-center min-h-[250px]">
+        <Spin />
+      </div>
+    );
 
   return (
-    <div className="card relative align-middle form-control">
+    <div className="card relative align-middle form-control min-h-[250px]">
       <label className="h-full group label cursor-pointer p-0">
         <input
           name={itemId}
@@ -460,7 +468,7 @@ const ImageWithPolygons = ({
         className="object-contain rounded transition-opacity"
         src={item.url}
       />
-      {polygons.length > 0 ? (
+      {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(({ points, color }, index) => (
             <polygon
@@ -475,7 +483,7 @@ const ImageWithPolygons = ({
             />
           ))}
         </svg>
-      ) : null}
+      )}
     </figure>
   );
 };
