@@ -21,6 +21,7 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
+from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
 from encord_active.lib.metrics.metric import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
 from encord_active.lib.model_predictions.writer import (
@@ -45,10 +46,11 @@ def project_list(path: Path):
         return [parent_project] if parent_project else child_projects
 
 
-def prevent_detached_versions(path: Path):
+def ensure_safe_project(path: Path):
     paths = [path] if is_project(path) else find_child_projects(path)
     for path in paths:
         GitVersioner(path).jump_to("latest")
+        ensure_initialised_merged_metrics(path)
 
 
 def image_url(image: AtomicImage, project_hash: str):
@@ -98,7 +100,7 @@ class GetProjectsResult(NamedTuple):
 
 
 def get_projects(path: Path) -> GetProjectsResult:
-    prevent_detached_versions(path)
+    ensure_safe_project(path)
     project_metas = {project: fetch_project_meta(project) for project in project_list(path)}
     project_paths = {project["project_hash"]: path for path, project in project_metas.items()}
     projects = {}
