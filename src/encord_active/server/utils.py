@@ -62,6 +62,15 @@ def to_item(row: Dict, project_file_structure: ProjectFileStructure, lr_hash: st
     label_row = json.loads(label_row_structure.label_row_file.read_text())
     labels = label_row["data_units"][du_hash]["labels"]
 
+    try:
+        classifications = labels.get("classifications")
+        if classifications and metadata["labelClass"]:
+            classification_hash = classifications[0]["classificationHash"]
+            classification = label_row["classification_answers"][classification_hash]["classifications"][0]
+            metadata["labelClass"] += f": {classification['answers'][0]['name']}"
+    except:
+        pass
+
     return {
         "id": identifier,
         "url": url,
