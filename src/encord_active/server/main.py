@@ -3,7 +3,7 @@ from os import environ
 from pathlib import Path
 from typing import Annotated, List, Optional
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from natsort import natsorted
@@ -120,7 +120,9 @@ def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
     embeddings_df = get_2d_embedding_data(project.embeddings, embedding_type)
 
     if embeddings_df is None:
-        raise ValueError(f"Embeddings of type: {embedding_type} were not found for project: {project}")
+        raise HTTPException(
+            status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
+        )
 
     return embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records")
 
