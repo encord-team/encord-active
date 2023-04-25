@@ -27,6 +27,7 @@ from encord_active.server.utils import (
     to_item,
 )
 
+path = environ["SERVER_START_PATH"]
 app = FastAPI()
 
 origins = [
@@ -34,21 +35,14 @@ origins = [
     "http://localhost:8501",
 ]
 
-
-def start(path: Path):
-    from uvicorn import run
-
-    environ["SERVER_START_PATH"] = path.as_posix()
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    app.mount("/static", StaticFiles(directory=path), name="static")
-    run(app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory=path), name="static")
 
 
 async def project(project: str):
@@ -131,7 +125,3 @@ def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
 def get_tags(project: ProjectFileStructureDep):
     DBConnection.set_project_path(project.project_dir)
     return to_grouped_tags(all_tags())
-
-
-if __name__ == "__main__":
-    start(Path(sys.argv[1]))

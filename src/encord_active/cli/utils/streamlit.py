@@ -1,5 +1,5 @@
+import subprocess
 import sys
-import threading
 from os import environ
 from pathlib import Path
 
@@ -9,7 +9,6 @@ from encord_active.app.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
 from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
 from encord_active.lib.versioning.git import GitVersioner
-from encord_active.server.main import start
 
 
 def ensure_safe_project(path: Path):
@@ -27,13 +26,16 @@ def launch_streamlit_app(target: Path):
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
     # NOTE: we need to set PYTHONPATH for file watching
-    environ["PYTHONPATH"] = (Path(__file__).parents[2]).as_posix()
+    python_path = Path(__file__).parents[2]
+    environ["PYTHONPATH"] = (python_path).as_posix()
+
+    server_args = [(python_path / "server" / "start_server.py").as_posix(), target.as_posix()]
 
     if app_config.is_dev:
         sys.argv.insert(3, "--server.fileWatcherType")
         sys.argv.insert(4, "auto")
+        server_args.append("--reload")
 
-    server_thread = threading.Thread(target=start, args=(target,))
-    server_thread.start()
+    subprocess.Popen([sys.executable, *server_args])
 
     stcli.main()  # pylint: disable=no-value-for-parameter
