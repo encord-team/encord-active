@@ -1,4 +1,3 @@
-import sys
 from os import environ
 from pathlib import Path
 from typing import Annotated, List, Optional
@@ -45,11 +44,11 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=path), name="static")
 
 
-async def project(project: str):
+async def get_project_file_structure(project: str):
     return ProjectFileStructure(Path(environ.get("SERVER_START_PATH", "")) / project)
 
 
-ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(project)]
+ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
 
 
 @app.get("/projects/{project}/items_id_by_metric")

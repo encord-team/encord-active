@@ -14,7 +14,6 @@ from encord_active.app.common.components.label_statistics import (
 )
 from encord_active.app.common.page import Page
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricSchema,
