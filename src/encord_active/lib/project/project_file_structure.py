@@ -135,3 +135,6 @@ class ProjectFileStructure(BaseProjectFileStructure):
     @property
     def mappings(self) -> Path:
         return self.project_dir / "hash_mappings.json"
+
+    def __repr__(self) -> str:
+        return f"ProjectFileStructure({self.project_dir})"
