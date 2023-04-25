@@ -99,11 +99,7 @@ def get_metric_operation_level(pth: Path) -> str:
 def is_valid_annotation_type(metric: MetricMetadata, metric_scope: Optional[MetricScope] = None) -> bool:
     if not metric_scope:
         return True
-
-    if metric.title in ["Object Count", "Frame object density"]:
-        return metric_scope == MetricScope.DATA_QUALITY
-
-    if metric_scope == MetricScope.DATA_QUALITY:
+    elif metric_scope == MetricScope.DATA_QUALITY:
         return not metric.annotation_type
     elif metric_scope == MetricScope.LABEL_QUALITY:
         return bool(metric.annotation_type) and isinstance(metric.annotation_type, list)
