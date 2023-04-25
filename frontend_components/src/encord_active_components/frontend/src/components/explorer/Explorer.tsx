@@ -60,8 +60,8 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
     () => fetchSimilarItems(projectName)(similarityItem!, selectedMetric!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
-  const { data: sortedItems, refetch } = useQuery(
-    ["item_ids"],
+  const { data: sortedItems } = useQuery(
+    ["item_ids", selectedMetric],
     () => fetchProjectItemIds(projectName)(selectedMetric!),
     { enabled: !!selectedMetric }
   );
@@ -91,10 +91,6 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
     if (!selectedMetric && metrics && metrics?.length > 0)
       setSelectedMetric(metrics[0]);
   }, [metrics?.length]);
-
-  useEffect(() => {
-    selectedMetric && refetch?.();
-  }, [selectedMetric]);
 
   useEffect(() => {
     setSortedAndFiltered(
