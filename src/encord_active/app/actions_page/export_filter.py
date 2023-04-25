@@ -276,7 +276,7 @@ def actions():
         else get_state().project_paths.project_dir.name
     )
 
-    filtered_df = get_state().filtering_state.merged_metrics
+    filtered_df = get_state().filtering_state.merged_metrics.reset_index()
     if filtered_df is None:
         filtered_df = get_state().merged_metrics
 
