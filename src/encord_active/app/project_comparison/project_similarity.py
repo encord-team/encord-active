@@ -1,22 +1,11 @@
-import stat
-import statistics
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
-import pandera as pa
-import plotly.express as px
 import streamlit as st
-from pandera.typing import DataFrame, Series
 from scipy.stats import ks_2samp
 
 from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
-from encord_active.app.projects_page import (
-    GetProjectsResult,
-    get_projects,
-    project_list,
-)
+from encord_active.app.projects_page import project_list
 from encord_active.lib.charts.project_similarity import (
     ProjectSimilaritySchema,
     plot_project_similarity_metric_wise,
@@ -24,7 +13,6 @@ from encord_active.lib.charts.project_similarity import (
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.metrics.metadata import fetch_metrics_meta
-from encord_active.lib.metrics.utils import MetricScope, load_available_metrics
 from encord_active.lib.project.metadata import fetch_project_meta
 
 METRICS_TO_EXCLUDE = [
@@ -36,14 +24,62 @@ METRICS_TO_EXCLUDE = [
 ]
 
 
-class ProjectSimilaritySchema(pa.SchemaModel):
-    metric: Series[str] = pa.Field()
-    similarity_score: Series[float] = pa.Field(coerce=True)
-
-
 def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> float:
     D, _ = ks_2samp(array_1, array_2)
     return 1 - D
+
+
+def render_2d_metric_similarity_plot(all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame):
+    metrics_filtered = {}
+    for metric_name in all_metrics.keys():
+        if metric_name in merged_metrics_1 and merged_metrics_1[metric_name].dropna().shape[0] > 0:
+            metrics_filtered[metric_name] = all_metrics[metric_name]
+
+    if len(metrics_filtered) <= 1:
+        st.write("At least two metrics should be generated for 2D metric similarity plot")
+        return
+
+    metric_selection_col_1, metric_selection_col_2 = st.columns(2)
+    metric_name_1 = metric_selection_col_1.selectbox(
+        "Select the first metric",
+        options=metrics_filtered,
+        index=0,
+        format_func=(lambda x: metrics_filtered[x]["title"]),
+        key="project_comparison_metric_selection_1",
+    )
+
+    # Second selectbox should be populated according to the selected metric in the first one
+    # due to different metric types. E.g., 'Area' is not compatible with 'object aspect ratio'
+    options_for_second_metric = {}
+    for metric_name in metrics_filtered.keys():
+        if metric_name == metric_name_1:
+            continue
+        metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
+        metric_df_2 = merged_metrics_1[metric_name].dropna().to_frame()
+
+        merged_metric = metric_df_1.join(metric_df_2, how="inner")
+        if merged_metric.shape[0] > 0:
+            options_for_second_metric[metric_name] = metrics_filtered[metric_name]
+
+    if len(options_for_second_metric) == 0:
+        st.write("There is no compatible metric")
+        return
+
+    metric_name_2 = metric_selection_col_2.selectbox(
+        "Select the second metric",
+        options=options_for_second_metric,
+        index=1 if len(options_for_second_metric) > 1 else 0,
+        format_func=(lambda x: options_for_second_metric[x]["title"]),
+        key="project_comparison_metric_selection_2",
+    )
+
+    project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy()
+    project_values_1["project"] = "project-1"
+
+    import plotly.express as px
+
+    fig = px.scatter(project_values_1, x=metric_name_1, y=metric_name_2)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def project_similarity():
@@ -71,6 +107,7 @@ def project_similarity():
 
         metric_similarities = {"metric": [], "similarity_score": []}
         for metric in all_metrics.keys():
+            # TODO make the following if-else more concise by using or operation
             if metric in METRICS_TO_EXCLUDE:
                 continue
 
@@ -98,8 +135,13 @@ def project_similarity():
             "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.similarity_score].mean():.2f}"
         )
 
-        figure = plot_project_similarity_metric_wise(metric_similarities_df)
+        metric_wise_similarity_col, metrics_scatter_col = st.columns(2)
 
-        st.plotly_chart(figure)
+        figure = plot_project_similarity_metric_wise(metric_similarities_df)
+        metric_wise_similarity_col.plotly_chart(figure, use_container_width=True)
+
+        # 2D metrics view
+        with metrics_scatter_col:
+            render_2d_metric_similarity_plot(all_metrics, get_state().merged_metrics, merged_metrics_2)
 
     return render

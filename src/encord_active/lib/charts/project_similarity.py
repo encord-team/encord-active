@@ -25,3 +25,7 @@ def plot_project_similarity_metric_wise(metric_wise_similarity: DataFrame[Projec
     )
 
     return fig
+
+
+def plot_project_metric_values_comparison():
+    pass
