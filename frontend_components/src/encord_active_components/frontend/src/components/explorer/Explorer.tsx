@@ -350,6 +350,12 @@ const ItemPreview = ({
       </div>
       <div className="w-full flex justify-between">
         <div className="flex flex-col gap-5">
+          <div className="flex flex-col">
+            <div>
+              <span>Title: </span>
+              <span>{data.data_title ? data.data_title : "unknown"}</span>
+            </div>
+          </div>
           <MetadataMetrics metrics={data.metadata.metrics} />
           <TagList tags={data.tags} />
         </div>
