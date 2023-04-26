@@ -9,6 +9,7 @@ from encord_active.app.projects_page import project_list
 from encord_active.lib.charts.project_similarity import (
     ProjectSimilaritySchema,
     plot_project_similarity_metric_wise,
+    render_2d_metric_similarity_plot,
 )
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
@@ -29,7 +30,9 @@ def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> flo
     return 1 - D
 
 
-def render_2d_metric_similarity_plot(all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame):
+def render_2d_metric_similarity_container(
+    all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_2_name: str
+):
     metrics_filtered = {}
     for metric_name in all_metrics.keys():
         if metric_name in merged_metrics_1 and merged_metrics_1[metric_name].dropna().shape[0] > 0:
@@ -73,12 +76,27 @@ def render_2d_metric_similarity_plot(all_metrics: dict, merged_metrics_1: pd.Dat
         key="project_comparison_metric_selection_2",
     )
 
-    project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy()
-    project_values_1["project"] = "project-1"
+    project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy().dropna()
+    project_1_name = fetch_project_meta(get_state().project_paths.project_dir)["project_title"]
+    project_values_1["project"] = project_1_name
 
-    import plotly.express as px
+    # Check if the selected metrics are also available in the second project
+    if metric_name_1 not in merged_metrics_2 or merged_metrics_2[metric_name_1].dropna().shape[0] == 0:
+        st.write(f"Metric **{metric_name_1}** is not available for the project `{project_2_name}`.")
+        return
 
-    fig = px.scatter(project_values_1, x=metric_name_1, y=metric_name_2)
+    if metric_name_2 not in merged_metrics_2 or merged_metrics_2[metric_name_2].dropna().shape[0] == 0:
+        st.write(f"Metric **{metric_name_2}** is not available for the project `{project_2_name}`.")
+        return
+
+    project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
+    project_values_2["project"] = project_2_name
+
+    project_values = project_values_1.append(project_values_2, ignore_index=True)
+
+    st.write(project_values)
+
+    fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_1_name, project_2_name)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -101,6 +119,7 @@ def project_similarity():
         # TODO this is a hacky way to get MergedMetrics of another project, it should be fixed later
         DBConnection.set_project_path(selected_project)
         merged_metrics_2 = MergedMetrics().all()
+        project_2_name = project_metas[selected_project]["project_title"]
         DBConnection.set_project_path(get_state().project_paths.project_dir)
 
         all_metrics = fetch_metrics_meta(get_state().project_paths)
@@ -142,6 +161,8 @@ def project_similarity():
 
         # 2D metrics view
         with metrics_scatter_col:
-            render_2d_metric_similarity_plot(all_metrics, get_state().merged_metrics, merged_metrics_2)
+            render_2d_metric_similarity_container(
+                all_metrics, get_state().merged_metrics, merged_metrics_2, project_2_name
+            )
 
     return render
