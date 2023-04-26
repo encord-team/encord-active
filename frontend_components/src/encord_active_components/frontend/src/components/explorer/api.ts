@@ -6,18 +6,26 @@ export const BASE_URL = "http://localhost:8000";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
+const LabelRowObjectShapeEnum = z.enum([
+  "polygon",
+  "bounding_box",
+  "rotatable_bounding_box",
+]);
+type LabelRowObjectShapeEnum = z.infer<typeof LabelRowObjectShapeEnum>;
+
 export const LabelRowObjectSchema = z.object({
   color: z.string(),
   confidence: z.number(),
   createdAt: z.string(),
   createdBy: z.string(),
   featureHash: z.string(),
-  lastEditedAt: z.string(),
-  lastEditedBy: z.string(),
+  lastEditedAt: z.string().nullish(),
+  lastEditedBy: z.string().nullish(),
   manualAnnotation: z.boolean(),
   name: z.string(),
   objectHash: z.string(),
   polygon: z.record(PointSchema),
+  shape: LabelRowObjectShapeEnum,
 });
 
 export const LabelsSchema = z.object({
@@ -33,6 +41,7 @@ export const GroupedTagsSchema = z.object({
 export const ItemSchema = z.object({
   id: z.string(),
   url: z.string(),
+  data_title: z.string().nullish(),
   editUrl: z.string(),
   metadata: z.object({
     metrics: z.record(z.coerce.string()),
@@ -110,16 +119,16 @@ export const fetchedTaggedItems = async (projectName: string) =>
 
 export const fetchSimilarItems =
   (projectName: string) =>
-  async (id: string, selectedMetric: string, pageSize?: number) => {
-    const queryParams = new URLSearchParams({
-      current_metric: selectedMetric,
-      ...(pageSize ? { page_size: pageSize.toString() } : {}),
-    });
+    async (id: string, selectedMetric: string, pageSize?: number) => {
+      const queryParams = new URLSearchParams({
+        current_metric: selectedMetric,
+        ...(pageSize ? { page_size: pageSize.toString() } : {}),
+      });
 
-    const url = `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams} `;
-    const response = await fetch(url).then((res) => res.json());
-    return z.string().array().parse(response);
-  };
+      const url = `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams} `;
+      const response = await fetch(url).then((res) => res.json());
+      return z.string().array().parse(response);
+    };
 
 export const fetchProjectTags = async (projectName: string) => {
   return GroupedTagsSchema.parse(
@@ -131,21 +140,21 @@ export const defaultTags = { data: [], label: [] };
 
 export const updateItemTags =
   (projectName: string) =>
-  async (itemTags: { id: string; groupedTags: GroupedTags }[]) => {
-    const url = `${BASE_URL}/projects/${projectName}/item_tags`;
-    const data = itemTags.map(({ id, groupedTags }) => ({
-      id,
-      grouped_tags: groupedTags,
-    }));
+    async (itemTags: { id: string; groupedTags: GroupedTags }[]) => {
+      const url = `${BASE_URL}/projects/${projectName}/item_tags`;
+      const data = itemTags.map(({ id, groupedTags }) => ({
+        id,
+        grouped_tags: groupedTags,
+      }));
 
-    return fetch(url, {
-      method: "put",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-  };
+      return fetch(url, {
+        method: "put",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    };
 
 export const useProjectQueries = () => {
   const projectName = useContext(ProjectContext);

@@ -76,7 +76,7 @@ def read_item(project: ProjectFileStructureDep, id: str):
     DBConnection.set_project_path(project.project_dir)
     row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
 
-    return to_item(row, project, lr_hash, du_hash)
+    return to_item(row, project, lr_hash, du_hash, frame)
 
 
 class ItemTags(BaseModel):
