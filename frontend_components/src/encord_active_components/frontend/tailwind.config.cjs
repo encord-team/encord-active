@@ -17,5 +17,12 @@ module.exports = {
       },
     ],
   },
-  plugins: [require("@tailwindcss/line-clamp"), require("daisyui")],
+  plugins: [
+    require("@tailwindcss/line-clamp"),
+    require("daisyui"),
+    ({ addVariant }) => {
+      addVariant("not-first", "& > *:not(:first-child)");
+      addVariant("not-last", "& > *:not(:last-child)");
+    },
+  ],
 };
