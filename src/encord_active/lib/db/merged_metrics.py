@@ -78,9 +78,14 @@ def ensure_initialised_merged_metrics(path: Path):
     try:
         with DBConnection() as conn:
             columns = pd.read_sql(f"pragma table_info({TABLE_NAME})", conn)
-        if not MANDATORY_COLUMNS.intersection(set(columns["name"])) == MANDATORY_COLUMNS:
+
+        missing_columns = MANDATORY_COLUMNS - MANDATORY_COLUMNS.intersection(set(columns["name"]))
+        if missing_columns:
             prev = MergedMetrics()._unsafe_all()
             new_merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
+            for column in missing_columns:
+                if column not in new_merged_metrics:
+                    new_merged_metrics[column] = ""
             new_merged_metrics.drop("tags", axis=1, inplace=True)
             new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
             MergedMetrics().replace_all(new_merged_metrics)

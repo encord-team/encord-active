@@ -21,6 +21,7 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
+from encord_active.lib.common.utils import collect_async
 from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
 from encord_active.lib.metrics.metric import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
@@ -48,9 +49,12 @@ def project_list(path: Path):
 
 def ensure_safe_project(path: Path):
     paths = [path] if is_project(path) else find_child_projects(path)
-    for path in paths:
-        GitVersioner(path).jump_to("latest")
-        ensure_initialised_merged_metrics(path)
+
+    def _fn(_path: Path):
+        GitVersioner(_path).jump_to("latest")
+        ensure_initialised_merged_metrics(_path)
+
+    collect_async(_fn, paths, desc="Ensuring all projects are up to date")
 
 
 def image_url(image: AtomicImage, project_hash: str):
