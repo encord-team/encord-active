@@ -9,6 +9,7 @@ from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.metrics.metric import DataType, EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_metadata
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 TABLE_NAME = "merged_metrics"
 
@@ -79,7 +80,7 @@ MANDATORY_COLUMNS = {"identifier", "url", "object_class", "annotator"}
 
 
 def ensure_initialised_merged_metrics(path: Path):
-    DBConnection.set_project_path(path)
+    DBConnection.set_project_file_structure(ProjectFileStructure(path))
     try:
         with DBConnection() as conn:
             columns = pd.read_sql(f"pragma table_info({TABLE_NAME})", conn)
