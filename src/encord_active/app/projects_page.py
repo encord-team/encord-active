@@ -33,7 +33,6 @@ from encord_active.lib.project.sandbox_projects import (
     fetch_prebuilt_project,
     unpack_archive,
 )
-from encord_active.lib.versioning.git import GitVersioner
 
 
 def project_list(path: Path):
@@ -43,12 +42,6 @@ def project_list(path: Path):
     else:
         parent_project = try_find_parent_project(path)
         return [parent_project] if parent_project else child_projects
-
-
-def prevent_detached_versions(path: Path):
-    paths = [path] if is_project(path) else find_child_projects(path)
-    for path in paths:
-        GitVersioner(path).jump_to("latest")
 
 
 def image_url(image: AtomicImage, project_hash: str):
@@ -101,7 +94,6 @@ class GetProjectsResult(NamedTuple):
 
 
 def get_projects(path: Path) -> GetProjectsResult:
-    prevent_detached_versions(path)
     project_metas = {project: fetch_project_meta(project) for project in project_list(path)}
     project_paths = {project["project_hash"]: path for path, project in project_metas.items()}
     projects = {}
