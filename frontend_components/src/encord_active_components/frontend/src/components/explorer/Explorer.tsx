@@ -378,13 +378,20 @@ const GalleryItem = ({
 
   if (isLoading || !data)
     return (
-      <div className="w-full h-full flex justify-center items-center min-h-[200px]">
+      <div className="w-full h-full flex justify-center items-center min-h-[230px]">
         <Spin />
       </div>
     );
 
+  const [metric, value] = Object.entries(data.metadata.metrics).find(
+    ([metric, _]) => metric.toLowerCase() === selectedMetric?.toLowerCase()
+  ) || [selectedMetric, ""];
+  const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
+  const displayValue =
+    intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
+
   return (
-    <div className="card relative align-middle form-control min-h-[200px]">
+    <div className="card relative align-middle form-control min-h-[230px]">
       <label className="relative h-full group label cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
         <input
           name={itemId}
@@ -393,12 +400,13 @@ const GalleryItem = ({
           readOnly
           className="peer checkbox absolute left-2 top-2 checked:!opacity-100 group-hover:opacity-100"
         />
-        <div className="absolute top-7 p-2 group-hover:opacity-100">
-          {selectedMetric && (
-            <span>
-              {selectedMetric}: {data.metadata.metrics[selectedMetric]}
-            </span>
-          )}
+        {selectedMetric && (
+          <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
+            <span>{metric}:</span>
+            <span>{displayValue}</span>
+          </div>
+        )}
+        <div className="absolute h-full top-7 p-2 flex flex-col flex-wrap w-full group-hover:opacity-100">
           <TagList tags={data.tags} />
         </div>
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">

@@ -181,7 +181,7 @@ export const TagList = ({
   className,
   ...rest
 }: { tags: GroupedTags } & JSX.IntrinsicElements["div"]) => (
-  <div {...rest} className={`flex flex-col gap-3 ${className}`}>
+  <div {...rest} className={`flex flex-col gap-1 ${className}`}>
     {TAG_GROUPS.map((group) => (
       <div key={group.value}>
         <div className="inline-flex items-center gap-1">
