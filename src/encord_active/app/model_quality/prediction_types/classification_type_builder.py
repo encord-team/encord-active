@@ -38,6 +38,7 @@ from encord_active.lib.model_predictions.filters import (
 )
 from encord_active.lib.model_predictions.reader import (
     ClassificationLabelSchema,
+    ClassificationPredictionMatchSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
     get_class_idx,
@@ -283,13 +284,23 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             )
 
             reduced_embedding_filtered = current_reduced_embedding[current_reduced_embedding.data_row_id.isin(lr_du)]
-            reduced_embedding_filtered[Embedding2DSchema.label] = self._model_predictions[
-                self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.identifier].isin(
-                    reduced_embedding_filtered[Embedding2DSchema.identifier]
-                )
-            ][ClassificationPredictionMatchSchemaWithClassNames.is_true_positive].apply(
-                lambda x: "True prediction" if x == 1.0 else "False prediction"
+
+            predictions_matched = self._model_predictions[
+                [ClassificationPredictionMatchSchema.identifier, ClassificationPredictionMatchSchema.is_true_positive]
+            ]
+
+            reduced_embedding_filtered = reduced_embedding_filtered.merge(
+                predictions_matched, on=ClassificationPredictionMatchSchema.identifier
             )
+
+            reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
+            reduced_embedding_filtered.rename(
+                columns={ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label}, inplace=True
+            )
+
+            reduced_embedding_filtered[Embedding2DSchema.label] = reduced_embedding_filtered[
+                Embedding2DSchema.label
+            ].apply(lambda x: "True prediction" if x == 1.0 else "False prediction")
 
             selected_rows = render_plotly_events(reduced_embedding_filtered)
             if selected_rows is not None:
