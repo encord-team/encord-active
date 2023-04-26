@@ -40,3 +40,6 @@ runs:
         source .venv/bin/activate
         prisma generate --schema=./src/encord_active/lib/db/prisma.schema
       shell: bash
+
+    - name: Push latest prisma schema
+      run: prisma generate --schema=./src/encord_active/lib/db/prisma.schema
