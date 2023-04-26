@@ -73,6 +73,11 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         self.display_settings()
 
+        model_predictions = model_predictions.sort_values(by=ClassificationPredictionSchema.img_id).reset_index(
+            drop=True
+        )
+        labels = labels.sort_values(by=ClassificationLabelSchema.img_id).reset_index(drop=True)
+
         model_predictions_matched = match_predictions_and_labels(model_predictions, labels)
 
         (
