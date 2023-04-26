@@ -58,6 +58,11 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
 
     main_df = pd.concat([main_df_images, main_df_objects, main_df_image_quality])
     main_df["tags"] = [[] for _ in range(len(main_df))]
+
+    for column in MANDATORY_COLUMNS:
+        if column not in main_df:
+            main_df[column] = ""
+
     main_df.set_index("identifier", inplace=True)
     return main_df
 
@@ -83,12 +88,9 @@ def ensure_initialised_merged_metrics(path: Path):
         if missing_columns:
             prev = MergedMetrics()._unsafe_all()
             new_merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
-            for column in missing_columns:
-                if column not in new_merged_metrics:
-                    new_merged_metrics[column] = ""
             new_merged_metrics.drop("tags", axis=1, inplace=True)
             new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
-            MergedMetrics().replace_all(new_merged_metrics)
+            MergedMetrics().replace_all(new_merged_metrics, marshall=False)
     except:
         merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
         MergedMetrics().replace_all(merged_metrics)
@@ -119,10 +121,11 @@ class MergedMetrics(object):
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
             return merged_metrics
 
-    def replace_all(self, df: pd.DataFrame):
+    def replace_all(self, df: pd.DataFrame, marshall=True):
         with DBConnection() as conn:
             copy = df.copy()
-            copy.tags = copy.tags.apply(marshall_tags)
+            if marshall:
+                copy.tags = copy.tags.apply(marshall_tags)
             copy.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
 
     def replace_identifiers(self, mappings: dict[str, str]):

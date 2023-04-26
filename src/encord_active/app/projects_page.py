@@ -21,8 +21,6 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.common.utils import collect_async
-from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
 from encord_active.lib.metrics.metric import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
 from encord_active.lib.model_predictions.writer import (
@@ -35,7 +33,6 @@ from encord_active.lib.project.sandbox_projects import (
     fetch_prebuilt_project,
     unpack_archive,
 )
-from encord_active.lib.versioning.git import GitVersioner
 
 
 def project_list(path: Path):
@@ -45,16 +42,6 @@ def project_list(path: Path):
     else:
         parent_project = try_find_parent_project(path)
         return [parent_project] if parent_project else child_projects
-
-
-def ensure_safe_project(path: Path):
-    paths = [path] if is_project(path) else find_child_projects(path)
-
-    def _fn(_path: Path):
-        GitVersioner(_path).jump_to("latest")
-        ensure_initialised_merged_metrics(_path)
-
-    collect_async(_fn, paths, desc="Ensuring all projects are up to date")
 
 
 def image_url(image: AtomicImage, project_hash: str):
@@ -104,7 +91,6 @@ class GetProjectsResult(NamedTuple):
 
 
 def get_projects(path: Path) -> GetProjectsResult:
-    ensure_safe_project(path)
     project_metas = {project: fetch_project_meta(project) for project in project_list(path)}
     project_paths = {project["project_hash"]: path for path, project in project_metas.items()}
     projects = {}
