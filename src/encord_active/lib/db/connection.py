@@ -2,10 +2,13 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from prisma.cli.prisma import run
+
+from encord_active.lib.common.decorators import silence_stdout
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
-from prisma.cli.prisma import run
+run = silence_stdout(run)
 
 try:
     import prisma
