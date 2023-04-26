@@ -78,6 +78,11 @@ def unmarshall_tags(tags_json: str) -> List[Tag]:
 MANDATORY_COLUMNS = {"identifier", "url", "object_class", "annotator"}
 
 
+def initialize_merged_metrics():
+    merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
+    MergedMetrics().replace_all(merged_metrics)
+
+
 def ensure_initialised_merged_metrics(path: Path):
     DBConnection.set_project_path(path)
     try:
@@ -92,8 +97,18 @@ def ensure_initialised_merged_metrics(path: Path):
             new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
             MergedMetrics().replace_all(new_merged_metrics, marshall=False)
     except:
-        merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
-        MergedMetrics().replace_all(merged_metrics)
+        initialize_merged_metrics()
+
+
+def initialize_if_error(fn):
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except:
+            initialize_merged_metrics()
+            return fn(*args, **kwargs)
+
+    return wrapper
 
 
 class MergedMetrics(object):
@@ -102,16 +117,19 @@ class MergedMetrics(object):
             cls.instance = super(MergedMetrics, cls).__new__(cls)
         return cls.instance
 
+    @initialize_if_error
     def get_row(self, id: str):
         with DBConnection() as conn:
             r = pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", conn)
             r.tags = r.tags.apply(unmarshall_tags)
             return r
 
+    @initialize_if_error
     def update_tags(self, id: str, tags: List[Tag]):
         with DBConnection() as conn:
             conn.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
+    @initialize_if_error
     def all(self):
         return self._unsafe_all()
 
@@ -121,6 +139,7 @@ class MergedMetrics(object):
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
             return merged_metrics
 
+    @initialize_if_error
     def replace_all(self, df: pd.DataFrame, marshall=True):
         with DBConnection() as conn:
             copy = df.copy()
@@ -128,6 +147,7 @@ class MergedMetrics(object):
                 copy.tags = copy.tags.apply(marshall_tags)
             copy.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
 
+    @initialize_if_error
     def replace_identifiers(self, mappings: dict[str, str]):
         def _replace_identifiers(id: str):
             lr, du, *rest = id.split("_")
