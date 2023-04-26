@@ -215,6 +215,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
           >
             {pageItems.map((id) => (
               <GalleryItem
+                selectedMetric={selectedMetric}
                 key={id}
                 itemId={id}
                 onExpand={() => setPreviewedItem(id)}
@@ -294,7 +295,7 @@ const SimilarityItem = ({
     <div className="flex flex-col gap-2">
       <h1 className="text-lg">Similar items</h1>
       <div className="group max-w-xs relative">
-        <ImageWithPolygons className="group-hover:opacity-30" item={data} />
+        <ImageWithPolygons className="group-hover:opacity-20" item={data} />
         <button
           onClick={onClose}
           className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
@@ -363,11 +364,13 @@ const ItemPreview = ({
 const GalleryItem = ({
   itemId,
   selected,
+  selectedMetric,
   onExpand,
   onShowSimilar,
 }: {
   itemId: string;
   selected: boolean;
+  selectedMetric?: string;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
@@ -375,23 +378,29 @@ const GalleryItem = ({
 
   if (isLoading || !data)
     return (
-      <div className="w-full h-full flex justify-center items-center min-h-[250px]">
+      <div className="w-full h-full flex justify-center items-center min-h-[200px]">
         <Spin />
       </div>
     );
 
   return (
-    <div className="card relative align-middle form-control min-h-[250px]">
-      <label className="h-full group label cursor-pointer p-0">
+    <div className="card relative align-middle form-control min-h-[200px]">
+      <label className="h-full group label cursor-pointer p-0 not-last:opacity-0">
         <input
           name={itemId}
           type="checkbox"
           checked={selected}
           readOnly
-          className={classy(
-            "peer checkbox absolute left-2 top-2 opacity-0 group-hover:opacity-100 checked:opacity-100 checked:z-10"
-          )}
+          className="peer checkbox absolute left-2 top-2 checked:!opacity-100 checked:z-10 group-hover:opacity-100"
         />
+        <div className="absolute top-7 p-2 group-hover:opacity-100">
+          {selectedMetric && (
+            <span>
+              {selectedMetric}: {data.metadata.metrics[selectedMetric]}
+            </span>
+          )}
+          <TagList tags={data.tags} />
+        </div>
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
           <ImageWithPolygons className="group-hover:opacity-30" item={data} />
           <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">

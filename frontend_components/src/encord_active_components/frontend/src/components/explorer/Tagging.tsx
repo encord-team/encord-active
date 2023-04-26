@@ -176,8 +176,12 @@ export const TaggingForm = ({
   );
 };
 
-export const TagList = ({ tags }: { tags: GroupedTags }) => (
-  <div className="flex flex-col gap-3">
+export const TagList = ({
+  tags,
+  className,
+  ...rest
+}: { tags: GroupedTags } & JSX.IntrinsicElements["div"]) => (
+  <div {...rest} className={`flex flex-col gap-3 ${className}`}>
     {TAG_GROUPS.map((group) => (
       <div key={group.value}>
         <div className="inline-flex items-center gap-1">
