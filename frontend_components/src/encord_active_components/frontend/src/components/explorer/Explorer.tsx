@@ -385,13 +385,13 @@ const GalleryItem = ({
 
   return (
     <div className="card relative align-middle form-control min-h-[200px]">
-      <label className="h-full group label cursor-pointer p-0 not-last:opacity-0">
+      <label className="relative h-full group label cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
         <input
           name={itemId}
           type="checkbox"
           checked={selected}
           readOnly
-          className="peer checkbox absolute left-2 top-2 checked:!opacity-100 checked:z-10 group-hover:opacity-100"
+          className="peer checkbox absolute left-2 top-2 checked:!opacity-100 group-hover:opacity-100"
         />
         <div className="absolute top-7 p-2 group-hover:opacity-100">
           {selectedMetric && (
@@ -404,7 +404,10 @@ const GalleryItem = ({
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
           <ImageWithPolygons className="group-hover:opacity-30" item={data} />
           <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-            <button onClick={(e) => onExpand?.(e)} className="btn btn-square">
+            <button
+              onClick={(e) => onExpand?.(e)}
+              className="btn btn-square z-20"
+            >
               <FaExpand />
             </button>
           </div>
