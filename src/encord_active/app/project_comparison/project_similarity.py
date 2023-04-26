@@ -94,8 +94,6 @@ def render_2d_metric_similarity_container(
 
     project_values = project_values_1.append(project_values_2, ignore_index=True)
 
-    st.write(project_values)
-
     fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_1_name, project_2_name)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -108,9 +106,7 @@ def project_similarity():
             project: fetch_project_meta(project) for project in project_list(get_state().global_root_folder)
         }
 
-        project_selection_col, _, average_similarity_col = st.columns((5, 1, 2))
-
-        selected_project = project_selection_col.selectbox(
+        selected_project = st.selectbox(
             "Select project to compare",
             options=project_metas,
             format_func=(lambda x: project_metas[x]["project_title"]),
@@ -126,23 +122,18 @@ def project_similarity():
 
         metric_similarities = {"metric": [], "similarity_score": []}
         for metric in all_metrics.keys():
-            # TODO make the following if-else more concise by using or operation
             if metric in METRICS_TO_EXCLUDE:
                 continue
 
-            if metric not in get_state().merged_metrics:
+            if (metric not in get_state().merged_metrics) or (
+                get_state().merged_metrics[metric].dropna().shape[0] == 0
+            ):
                 continue
             values_1 = get_state().merged_metrics[metric].dropna()
 
-            if values_1.shape[0] == 0:
-                continue
-
-            if metric not in merged_metrics_2:
+            if (metric not in merged_metrics_2) or (merged_metrics_2[metric].dropna().shape[0] == 0):
                 continue
             values_2 = merged_metrics_2[metric].dropna()
-
-            if values_2.shape[0] == 0:
-                continue
 
             metric_similarities["metric"].append(metric)
             metric_similarities["similarity_score"].append(calculate_metric_similarity(values_1, values_2))
@@ -150,13 +141,12 @@ def project_similarity():
         metric_similarities_df = pd.DataFrame(metric_similarities)
         metric_similarities_df = metric_similarities_df.pipe(ProjectSimilaritySchema)
 
-        average_similarity_col.metric(
-            "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.similarity_score].mean():.2f}"
-        )
-
         metric_wise_similarity_col, metrics_scatter_col = st.columns(2)
 
         figure = plot_project_similarity_metric_wise(metric_similarities_df)
+        metric_wise_similarity_col.metric(
+            "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.similarity_score].mean():.2f}"
+        )
         metric_wise_similarity_col.plotly_chart(figure, use_container_width=True)
 
         # 2D metrics view
