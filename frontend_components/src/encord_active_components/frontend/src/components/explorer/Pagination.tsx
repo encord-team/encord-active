@@ -75,7 +75,7 @@ export const Pagination = ({
             {next}
           </button>
         )}
-        {next < totalPages - 1 && (
+        {next <= totalPages && (
           <>
             <button className="btn btn-disabled">...</button>
             <button onClick={() => onChange(totalPages)} className="btn">
