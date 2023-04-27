@@ -33,7 +33,6 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { sort } from "radash";
 
 export type Props = {
   projectName: string;
@@ -524,53 +523,39 @@ const ImageWithPolygons = ({
       />
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
-          {polygons.map(({ points, color, shape }, index) => (
-            <>
-              {shape === "polyline" && (
-                <polyline
-                  key={index}
-                  style={{
-                    fill: "none",
-                    stroke: color,
-                    strokeWidth: "2px",
-                  }}
-                  points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
+          {polygons.map(({ points, color, shape }, index) =>
+            shape === "point" ? (
+              <>
+                <circle
+                  key={index + "_inner"}
+                  cx={points[0].x}
+                  cy={points[0].y}
+                  r="5px"
+                  fill={color}
                 />
-              )}
-              {shape === "point" && (
-                <>
-                  <circle
-                    key={index + "_inner"}
-                    cx={points[0].x}
-                    cy={points[0].y}
-                    r="5px"
-                    fill={color}
-                  />
-                  <circle
-                    key={index + "_outer"}
-                    cx={points[0].x}
-                    cy={points[0].y}
-                    r="7px"
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="1px"
-                  />
-                </>
-              )}
-              {!["point", "polyline"].includes(shape) && (
-                <polygon
-                  key={index}
-                  style={{
-                    fill: color,
-                    fillOpacity: ".20",
-                    stroke: color,
-                    strokeWidth: "2px",
-                  }}
-                  points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
+                <circle
+                  key={index + "_outer"}
+                  cx={points[0].x}
+                  cy={points[0].y}
+                  r="7px"
+                  fill="none"
+                  stroke={color}
+                  strokeWidth="1px"
                 />
-              )}
-            </>
-          ))}
+              </>
+            ) : (
+              <polygon
+                key={index}
+                style={{
+                  fill: shape === "polyline" ? "none" : color,
+                  fillOpacity: ".20",
+                  stroke: color,
+                  strokeWidth: "2px",
+                }}
+                points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
+              />
+            )
+          )}
         </svg>
       )}
     </figure>
