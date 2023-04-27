@@ -10,10 +10,6 @@ DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def fill_missing_tables():
-    # print(" sjdflfj dflds fkdls fjsdl fjsdl fj")
-    # project_file_structure = PrismaConnection.project_file_structure()
-    # print(project_file_structure.project_dir)
-
     with PrismaConnection() as conn:
         if conn.labelrow.count() == 0:
             fill_label_rows_table()
