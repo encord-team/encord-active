@@ -5,7 +5,6 @@ from typing import Optional
 from prisma.cli.prisma import run
 
 from encord_active.lib.common.decorators import silence_stdout
-from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
 run = silence_stdout(run)
@@ -13,15 +12,20 @@ run = silence_stdout(run)
 try:
     import prisma
     from prisma import Prisma
+    from prisma.models import DataUnit, LabelRow
     from prisma.types import DatasourceOverride
-except RuntimeError:
+except (RuntimeError, ImportError):
     run(["generate", f"--schema={PRISMA_SCHEMA_FILE}"])
 
     from importlib import reload
 
     reload(prisma)  # pylint: disable=used-before-assignment
+    reload(prisma.models)
     from prisma import Prisma
     from prisma.types import DatasourceOverride
+
+# uses prisma so must appear after prisma schema generation
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
 class DBConnection:
