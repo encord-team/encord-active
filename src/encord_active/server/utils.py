@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 from urllib import parse
 
-from encord.ontology import OntologyStructure
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -95,11 +94,9 @@ def _transform_object(object_: dict):
 def to_item(
     row: Dict,
     project_file_structure: ProjectFileStructure,
-    ontology: OntologyStructure,
     lr_hash: str,
     du_hash: str,
     frame: str,
-    label_hash: List[str],
 ):
     editUrl = row.pop("url")
     tags = row.pop("tags")
