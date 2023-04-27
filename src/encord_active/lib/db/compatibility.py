@@ -22,6 +22,7 @@ def fill_data_units_table():
     # Adds the content missing from the data units table when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
     project_file_structure = PrismaConnection.project_file_structure()
+    label_row_meta = json.loads(project_file_structure.label_row_meta.read_text(encoding="utf-8"))
 
     pattern = re.compile(DATA_HASH_REGEX)
     with PrismaConnection() as conn:
@@ -48,7 +49,7 @@ def fill_data_units_table():
                                     data_title=du_title,
                                     frame=du_frame,
                                     location=du_frame_path.resolve().as_posix(),
-                                    lr_data_hash=label_row["data_hash"],
+                                    lr_data_hash=label_row_meta[label_hash]["data_hash"],
                                 ).dict(exclude={"id", "label_row"})
                             )
                     else:
@@ -62,7 +63,7 @@ def fill_data_units_table():
                                     data_title=du_title,
                                     frame=du_frame,
                                     location=du_frame_path.resolve().as_posix(),
-                                    lr_data_hash=label_row["data_hash"],
+                                    lr_data_hash=label_row_meta[label_hash]["data_hash"],
                                 ).dict(exclude={"id", "label_row"})
                             )
             batcher.commit()
@@ -90,8 +91,8 @@ def fill_label_rows_table():
                 data_hash = label_row_meta[label_hash]["data_hash"]
                 data_title = label_row["data_title"]
                 data_type = label_row["data_type"]
-                created_at = label_row["created_at"]
-                last_edited_at = label_row["last_edited_at"]
+                created_at = label_row_meta[label_hash]["created_at"]
+                last_edited_at = label_row_meta[label_hash]["last_edited_at"]
 
                 batcher.labelrow.create(
                     models.LabelRow(
