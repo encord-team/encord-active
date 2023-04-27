@@ -130,9 +130,11 @@ def to_item(
     try:
         classifications = labels.get("classifications")
         if classifications and metadata["labelClass"]:
-            classification_hash = classifications[0]["classificationHash"]
-            classification = label_row["classification_answers"][classification_hash]["classifications"][0]
-            metadata["labelClass"] += f": {classification['answers'][0]['name']}"
+            clf_instance = classifications[0]
+            question = clf_instance["name"]
+            clf_hash = clf_instance["classificationHash"]
+            classification = label_row["classification_answers"][clf_hash]["classifications"][0]
+            metadata["labelClass"] = f"{question}: {classification['answers'][0]['name']}"
     except:
         pass
 
