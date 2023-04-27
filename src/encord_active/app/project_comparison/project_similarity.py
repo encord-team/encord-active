@@ -97,7 +97,7 @@ def render_2d_metric_similarity_container(
     project_values_2["project"] = project_name_2
 
     # TODO change append to concat
-    project_values = project_values_1.append(project_values_2, ignore_index=True)
+    project_values = pd.concat([project_values_1, project_values_2], ignore_index=True)
 
     fig = render_2d_metric_similarity_plot(
         project_values, cast(str, metric_name_1), cast(str, metric_name_2), project_name_1, project_name_2
