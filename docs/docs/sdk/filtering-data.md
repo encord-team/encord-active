@@ -11,9 +11,10 @@ from pathlib import Path
 import pandas as pd
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 project_path = Path("/path/to/your/project/root")
-DBConnection.set_project_path(project_path)
+DBConnection.set_project_file_structure(ProjectFileStructure(project_path))
 
 metrics: pd.DataFrame = MergedMetrics().all().reset_index()
 

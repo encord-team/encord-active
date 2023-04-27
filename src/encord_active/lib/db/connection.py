@@ -2,27 +2,34 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from encord_active.lib.project import ProjectFileStructure
+from prisma.cli.prisma import run
+
+from encord_active.lib.common.decorators import silence_stdout
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
-from prisma.cli.prisma import run
+run = silence_stdout(run)
 
 try:
     import prisma
     from prisma import Prisma
+    from prisma.models import DataUnit, LabelRow  # pylint: disable=unused-import
     from prisma.types import DatasourceOverride
-except RuntimeError:
+except (RuntimeError, ImportError):
     run(["generate", f"--schema={PRISMA_SCHEMA_FILE}"])
 
     from importlib import reload
 
     reload(prisma)  # pylint: disable=used-before-assignment
+    reload(prisma.models)
     from prisma import Prisma
     from prisma.types import DatasourceOverride
 
+# uses prisma so must appear after prisma schema generation
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
+
 
 class DBConnection:
-    _project_file_structure: Optional[ProjectFileStructure] = None
+    _project_file_structure: Optional[BaseProjectFileStructure] = None
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.project_file_structure().db)
@@ -32,18 +39,21 @@ class DBConnection:
         self.conn.__exit__(type, value, traceback)
 
     @classmethod
-    def set_project_path(cls, project_path: Path):
-        cls._project_file_structure = ProjectFileStructure(project_path)
+    def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
+        cls._project_file_structure = project_file_structure
 
     @classmethod
     def project_file_structure(cls):
         if not cls._project_file_structure:
-            raise ConnectionError("`project_path` was not set, call `DBConnection.set_project_path('path/to/project')`")
+            raise ConnectionError(
+                "`project_file_structure` is not set, call `DBConnection.set_project_file_structure(..)` first"
+            )
         return cls._project_file_structure
 
 
 class PrismaConnection:
     _datasource: Optional[DatasourceOverride] = None
+    _project_file_structure: Optional[BaseProjectFileStructure] = None
 
     def __enter__(self):
         self.db = Prisma(datasource=self.datasource())
@@ -55,8 +65,12 @@ class PrismaConnection:
             self.db.disconnect()
 
     @classmethod
-    def set_project_path(cls, project_path: Path):
-        db_file = ProjectFileStructure(project_path).prisma_db
+    def set_project_file_structure(cls, project_file_structure: BaseProjectFileStructure):
+        if cls._project_file_structure is project_file_structure:  # skip if it was already set
+            return
+
+        cls._project_file_structure = project_file_structure
+        db_file = cls._project_file_structure.prisma_db
         url = f"file:{db_file}"
         env = {"MY_DATABASE_URL": url}
 
@@ -64,9 +78,17 @@ class PrismaConnection:
         cls._datasource = DatasourceOverride(url=url)
 
     @classmethod
+    def project_file_structure(cls):
+        if not cls._project_file_structure:
+            raise ConnectionError(
+                "`project_file_structure` is not set, call `PrismaConnection.set_project_file_structure(..)` first"
+            )
+        return cls._project_file_structure
+
+    @classmethod
     def datasource(cls) -> DatasourceOverride:
         if not cls._datasource:
             raise ConnectionError(
-                "`project_path` was not set, call `PrismaConnection.set_project_path('path/to/project')`"
+                "`project_file_structure` is not set, call `PrismaConnection.set_project_file_structure(..)` first"
             )
         return cls._datasource

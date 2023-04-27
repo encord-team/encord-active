@@ -1,6 +1,13 @@
 import json
 from pathlib import Path
-from typing import Iterator, NamedTuple, Optional
+from typing import Iterator, NamedTuple, Optional, Union
+
+from prisma import models
+
+from encord_active.lib.db.base import DataUnitLike
+from encord_active.lib.db.compatibility import fill_missing_tables
+from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
 class DataUnitStructure(NamedTuple):
@@ -40,9 +47,9 @@ class LabelRowStructure:
         return self.path.is_dir()
 
 
-class ProjectFileStructure:
-    def __init__(self, project_dir: Path):
-        self.project_dir: Path = project_dir.expanduser().resolve()
+class ProjectFileStructure(BaseProjectFileStructure):
+    def __init__(self, project_dir: Union[str, Path]):
+        super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
     @property
@@ -92,6 +99,32 @@ class ProjectFileStructure:
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
         path = self.data / self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(path=path, mappings=self._mappings)
+
+    def data_units(
+        self, pattern: Optional[DataUnitLike] = None, include_label_row: bool = False
+    ) -> Iterator[models.DataUnit]:
+        PrismaConnection.set_project_file_structure(self)
+        to_include = {"label_row": True} if include_label_row else {}
+        with PrismaConnection() as conn:
+            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
+            fill_missing_tables()
+            # end backwards compatibility code.
+            if pattern is None:
+                return iter(conn.dataunit.find_many(include=to_include))
+            else:
+                and_clause = []
+                for field in pattern._fields:
+                    if (value := getattr(pattern, field)) is not None:
+                        and_clause.append({field: value})
+                return iter(conn.dataunit.find_many(where={"AND": and_clause}, include=to_include))
+
+    def label_rows(self) -> Iterator[models.LabelRow]:
+        PrismaConnection.set_project_file_structure(self)
+        with PrismaConnection() as conn:
+            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
+            fill_missing_tables()
+            # end backwards compatibility code.
+            return iter(conn.labelrow.find_many())
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
         for label_hash in self.data.iterdir():

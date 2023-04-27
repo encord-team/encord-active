@@ -21,6 +21,7 @@ from encord_active.lib.common.utils import (
     slice_video_into_frames,
     try_execute,
 )
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project.metadata import fetch_project_meta
@@ -40,6 +41,7 @@ class Project:
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
+        PrismaConnection.set_project_file_structure(self.file_structure)
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
@@ -274,6 +276,29 @@ def download_label_row(
     lr_structure.path.mkdir(parents=True, exist_ok=True)
     label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
     lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
+    with PrismaConnection() as conn:
+        conn.labelrow.upsert(
+            where={"data_hash": label_row.data_hash},
+            data={
+                "create": {
+                    "label_hash": label_row.label_hash,
+                    "data_hash": label_row.data_hash,
+                    "data_title": label_row.data_title,
+                    "data_type": label_row.data_type,
+                    "created_at": label_row.created_at,
+                    "last_edited_at": label_row.last_edited_at,
+                    "location": lr_structure.label_row_file.as_posix(),
+                },
+                "update": {
+                    "label_hash": label_row.label_hash,
+                    "data_title": label_row.data_title,
+                    "created_at": label_row.created_at,  # don't update this field if it's set in unannotated data
+                    "last_edited_at": label_row.last_edited_at,
+                    "location": lr_structure.label_row_file.as_posix(),
+                },
+            },
+        )
+
     return label_row
 
 
@@ -285,6 +310,26 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         suffix = f".{du['data_type'].split('/')[1]}"
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
+
+        # add non-video type of data to the db (frames of videos are added after pre-processing)
+        if "data_sequence" in du:
+            with PrismaConnection() as conn:
+                conn.dataunit.upsert(
+                    where={"data_hash": du["data_hash"]},
+                    data={
+                        "create": {
+                            "data_hash": du["data_hash"],
+                            "data_title": du["data_title"],
+                            "frame": int(du["data_sequence"]),
+                            "location": destination.resolve().as_posix(),
+                            "lr_data_hash": label_row.data_hash,
+                        },
+                        "update": {
+                            "data_title": du["data_title"],
+                            "location": destination.resolve().as_posix(),
+                        },
+                    },
+                )
 
 
 def download_label_row_and_data(
@@ -317,6 +362,21 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         du = label_row.data_units[data_hash]
         suffix = f".{du['data_type'].split('/')[1]}"
         video_path = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        slice_video_into_frames(video_path)
+        sliced_frames, _ = slice_video_into_frames(video_path)
+
+        # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
+        with PrismaConnection() as conn:
+            with conn.batch_() as batcher:
+                for frame_num, frame_path in sliced_frames.items():
+                    batcher.dataunit.create(
+                        data={
+                            "data_hash": du["data_hash"],
+                            "data_title": du["data_title"],
+                            "frame": frame_num,
+                            "location": frame_path.resolve().as_posix(),
+                            "lr_data_hash": label_row.data_hash,
+                        }
+                    )
+                batcher.commit()
         return True
     return False

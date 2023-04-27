@@ -49,18 +49,21 @@ def image_url(image: AtomicImage, project_hash: str):
     return image_to_url(image, -1, False, "RGB", "JPEG", id)[1:]
 
 
-# TODO: repalce me with something smarter than just the first image
+# TODO: replace me with something smarter than just the first image
 @st.cache_data(show_spinner=False)
 def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
-    for label_structure in project_structure.iter_labels():
-        if not (label_structure.label_row_file.is_file() and label_structure.images_dir.is_dir()):
+    for data_unit in project_structure.data_units(include_label_row=True):
+        if not Path(data_unit.location).is_file() or data_unit.label_row is None:
             continue
-        label_hash = label_structure.path.stem
-        image_path = next(label_structure.iter_data_unit(), None)
-        if not image_path:
+        du_hash = data_unit.data_hash
+        lr_hash = data_unit.label_row.label_hash
+        du_frame = data_unit.frame
+
+        if lr_hash is None:  # avoid label rows without label hash while the id depends on them
             continue
-        id = f"{label_hash}_{image_path.hash}_00000"
+
+        id = f"{lr_hash}_{du_hash}_{du_frame:05d}"
         return show_image_and_draw_polygons(id, project_structure)
 
 
