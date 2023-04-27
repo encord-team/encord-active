@@ -1,10 +1,9 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict
 from urllib import parse
 
-from encord.objects import RadioAttribute
 from encord.ontology import OntologyStructure
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
@@ -80,14 +79,13 @@ def _transform_object(object_: dict):
                 [b["x"], b["y"] + b["h"]],
             ]
             rotated_polygon = rotate(Polygon(no_rotate_points), b["theta"])
-            if not rotated_polygon.exterior:
-                raise
-            points = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
+            if rotated_polygon.exterior:
+                points = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
         elif shape == ObjectShape.KEY_POINT:
             points = object_.pop("point")
 
         if not points:
-            raise
+            raise Exception
 
         return {**object_, "shape": shape, "points": points}
     except:
