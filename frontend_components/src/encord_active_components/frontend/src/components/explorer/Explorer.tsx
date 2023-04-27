@@ -322,6 +322,8 @@ const ItemPreview = ({
 
   if (isLoading || !data) return <Spin />;
 
+  const { description, ...metrics } = data.metadata.metrics
+
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
@@ -354,10 +356,16 @@ const ItemPreview = ({
           <div className="flex flex-col">
             <div>
               <span>Title: </span>
-              <span>{data.data_title ? data.data_title : "unknown"}</span>
+              <span>{data.dataTitle || "unknown"}</span>
             </div>
+            {description &&
+              <div>
+                <span>Description: </span>
+                <span>{description}</span>
+              </div>
+            }
           </div>
-          <MetadataMetrics metrics={data.metadata.metrics} />
+          <MetadataMetrics metrics={metrics} />
           <TagList tags={data.tags} />
         </div>
         <div className="w-fit inline-block relative">
@@ -396,12 +404,10 @@ const GalleryItem = ({
   const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
   const displayValue =
     intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
-  const [_, description] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) => metric.toLowerCase() == "description"
-  ) || ["", ""];
+  const { description } = data.metadata.metrics
 
   return (
-    <div className="card relative align-middle bg-gray-50 form-control min-h-[230px]">
+    <div className="card relative align-middle bg-gray-100 form-control min-h-[230px]">
       <label className="relative h-full group label cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
         <input
           name={itemId}
@@ -411,27 +417,24 @@ const GalleryItem = ({
           className="peer checkbox absolute left-2 top-2 checked:!opacity-100 group-hover:opacity-100"
         />
         {selectedMetric && (
-          <div className="absolute p-2 m-2 top-3 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-scroll">
-            <div className="justify-center">
-              <span>{metric}:</span>
-              <span>{displayValue}</span>
-            </div>
-            <div>
-              <TagList tags={data.tags} />
-            </div>
-            {description && (
-              <>
-                <div className="inline-flex items-center gap-1">
-                  <BsCardText className="text-base" />
-                  <span>Description:</span>
-                </div>
-                <div className="flex-wrap">
-                  <span>{description}</span>
-                </div>
-              </>
-            )}
+          <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
+            <span>{metric}:</span>
+            <span>{displayValue}</span>
           </div>
         )}
+
+        <div className="absolute p-2 top-7 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-scroll">
+          <TagList tags={data.tags} />
+          {description && (
+            <div className="flex flex-col">
+              <div className="inline-flex items-center gap-1">
+                <BsCardText className="text-base" />
+                <span>Description:</span>
+              </div>
+              <span>{description}</span>
+            </div>
+          )}
+        </div>
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
           <ImageWithPolygons className="group-hover:opacity-30" item={data} />
           <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
@@ -500,9 +503,9 @@ const ImageWithPolygons = ({
       : item.labels.objects;
 
     setPolygons(
-      objects.map(({ polygon, color, shape }) => ({
+      objects.map(({ points, color, shape }) => ({
         color,
-        points: Object.values(polygon).map(({ x, y }) => ({
+        points: Object.values(points).map(({ x, y }) => ({
           x: x * current.clientWidth,
           y: y * current.clientHeight,
         })),
@@ -521,47 +524,51 @@ const ImageWithPolygons = ({
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(({ points, color, shape }, index) =>
-            shape === "polyline" ? (
-              <polyline
-                key={index}
-                style={{
-                  fill: "none",
-                  stroke: color,
-                  strokeWidth: "2px",
-                }}
-                points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
-              />
-            ) : shape === "point" ? (
-              <>
-                <circle
-                  key={index + "_inner"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="5px"
-                  fill={color}
+            <>
+              {shape === "polyline" && (
+                <polyline
+                  key={index}
+                  style={{
+                    fill: "none",
+                    stroke: color,
+                    strokeWidth: "2px",
+                  }}
+                  points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
                 />
-                <circle
-                  key={index + "_outer"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="7px"
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="1px"
+              )}
+              {shape === "point" && (
+                <>
+                  <circle
+                    key={index + "_inner"}
+                    cx={points[0].x}
+                    cy={points[0].y}
+                    r="5px"
+                    fill={color}
+                  />
+                  <circle
+                    key={index + "_outer"}
+                    cx={points[0].x}
+                    cy={points[0].y}
+                    r="7px"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="1px"
+                  />
+                </>
+              )}
+              {!["point", "polyline"].includes(shape) && (
+                <polygon
+                  key={index}
+                  style={{
+                    fill: color,
+                    fillOpacity: ".20",
+                    stroke: color,
+                    strokeWidth: "2px",
+                  }}
+                  points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
                 />
-              </>
-            ) : (
-              <polygon
-                key={index}
-                style={{
-                  fill: color,
-                  fillOpacity: ".20",
-                  stroke: color,
-                  strokeWidth: "2px",
-                }}
-                points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
-              />
-            )
+              )}
+            </>
           )}
         </svg>
       )}

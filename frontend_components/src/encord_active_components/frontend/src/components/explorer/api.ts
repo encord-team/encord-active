@@ -6,14 +6,13 @@ export const BASE_URL = "http://localhost:8000";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
-const LabelRowObjectShapeEnum = z.enum([
-  "polygon",
-  "polyline",
-  "point",
-  "bounding_box",
-  "rotatable_bounding_box",
+const LabelRowObjectShapeSchema = z.union([
+  z.literal("polygon"),
+  z.literal("polyline"),
+  z.literal("point"),
+  z.literal("bounding_box"),
+  z.literal("rotatable_bounding_box"),
 ]);
-type LabelRowObjectShapeEnum = z.infer<typeof LabelRowObjectShapeEnum>;
 
 export const LabelRowObjectSchema = z.object({
   color: z.string(),
@@ -26,8 +25,8 @@ export const LabelRowObjectSchema = z.object({
   manualAnnotation: z.boolean(),
   name: z.string(),
   objectHash: z.string(),
-  polygon: z.record(PointSchema),
-  shape: LabelRowObjectShapeEnum,
+  points: z.record(PointSchema),
+  shape: LabelRowObjectShapeSchema,
 });
 
 export const LabelsSchema = z.object({
@@ -43,7 +42,7 @@ export const GroupedTagsSchema = z.object({
 export const ItemSchema = z.object({
   id: z.string(),
   url: z.string(),
-  data_title: z.string().nullish(),
+  dataTitle: z.string().nullish(),
   editUrl: z.string(),
   metadata: z.object({
     metrics: z.record(z.coerce.string()),
@@ -103,7 +102,6 @@ export const fetchProjectItemIds =
   };
 
 export const fetchProjectItem = (projectName: string) => async (id: string) => {
-  console.log(id);
   const { url, ...item } = await (
     await fetch(
       `${BASE_URL}/projects/${projectName}/items/${encodeURIComponent(id)}`

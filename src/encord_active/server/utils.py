@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 from urllib import parse
 
 from encord.objects import RadioAttribute
@@ -55,50 +55,43 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
 
 
 def _transform_object(object_: dict):
-    if object_["shape"] == ObjectShape.POLYGON:
-        p = object_.get("polygon")
-        if not p:
-            return None
-    elif object_["shape"] == ObjectShape.POLYLINE:
-        p = object_.get("polyline", {})
-        if not p:
-            return None
-        object_["polygon"] = p
-        del object_["polyline"]
-    elif object_["shape"] == ObjectShape.BOUNDING_BOX:
-        b = object_.get("boundingBox", {})
-        if not b:
-            return None
-        object_["polygon"] = {
-            0: {"x": b["x"], "y": b["y"]},
-            1: {"x": b["x"] + b["w"], "y": b["y"]},
-            2: {"x": b["x"] + b["w"], "y": b["y"] + b["h"]},
-            3: {"x": b["x"], "y": b["y"] + b["h"]},
-        }
-        del object_["boundingBox"]
-    elif object_["shape"] == ObjectShape.ROTATABLE_BOUNDING_BOX:
-        b = object_["rotatableBoundingBox"]
-        no_rotate_points = [
-            [b["x"], b["y"]],
-            [b["x"] + b["w"], b["y"]],
-            [b["x"] + b["w"], b["y"] + b["h"]],
-            [b["x"], b["y"] + b["h"]],
-        ]
-        rotated_polygon = rotate(Polygon(no_rotate_points), b["theta"])
-        if not rotated_polygon or not rotated_polygon.exterior:
-            return None
-        object_["polygon"] = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
-        del object_["rotatableBoundingBox"]
-    elif object_["shape"] == ObjectShape.KEY_POINT:
-        p = object_.get("point", {})
-        if not p:
-            return None
-        object_["polygon"] = p
-        del object_["point"]
-    else:
-        return None
+    shape = object_["shape"]
+    points = None
 
-    return object_
+    try:
+        if shape == ObjectShape.POLYGON:
+            points = object_.pop("polygon")
+        elif shape == ObjectShape.POLYLINE:
+            points = object_.pop("polyline")
+        elif shape == ObjectShape.BOUNDING_BOX:
+            b = object_.pop("boundingBox")
+            points = {
+                0: {"x": b["x"], "y": b["y"]},
+                1: {"x": b["x"] + b["w"], "y": b["y"]},
+                2: {"x": b["x"] + b["w"], "y": b["y"] + b["h"]},
+                3: {"x": b["x"], "y": b["y"] + b["h"]},
+            }
+        elif shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
+            b = object_.pop("rotatableBoundingBox")
+            no_rotate_points = [
+                [b["x"], b["y"]],
+                [b["x"] + b["w"], b["y"]],
+                [b["x"] + b["w"], b["y"] + b["h"]],
+                [b["x"], b["y"] + b["h"]],
+            ]
+            rotated_polygon = rotate(Polygon(no_rotate_points), b["theta"])
+            if not rotated_polygon.exterior:
+                raise
+            points = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
+        elif shape == ObjectShape.KEY_POINT:
+            points = object_.pop("point")
+
+        if not points:
+            raise
+
+        return {**object_, "shape": shape, "points": points}
+    except:
+        return None
 
 
 def to_item(
@@ -126,37 +119,27 @@ def to_item(
     du = label_row["data_units"][du_hash]
     data_title = du.get("data_title", label_row.get("data_title"))
 
+    labels: Dict[str, List[Dict]] = {"objects": [], "classifications": []}
     if label_row["data_type"] in {"video", "dicom"}:
-        labels = du.get("labels", {}).get(str(int(frame)), {"objects": [], "classifications": []})
+        labels = du.get("labels", {}).get(str(int(frame)), labels)
     else:
-        labels = du.get("labels", {"objects": [], "classifications": []})
+        labels = du.get("labels", labels)
 
     labels["objects"] = list(filter(None, map(_transform_object, labels.get("objects", []))))
 
     try:
         classifications = labels.get("classifications")
         if classifications and metadata["labelClass"]:
-            clf_instance = classifications[0]
-            classification_hash = clf_instance["classificationHash"]
-            clf_answer = label_row["classification_answers"][classification_hash]["classifications"][0]
-            metadata["annotator"] = (
-                metadata["annotator"] or clf_instance.get("lastEditedBy") or clf_instance.get("createdBy")
-            )
-
-            question = ontology.get_child_by_hash(clf_answer["featureHash"])
-            if (
-                isinstance(question, RadioAttribute)
-                and label_hash
-                and clf_instance["classificationHash"] == label_hash[0]
-            ):
-                metadata["labelClass"] = f"{question.name}: {clf_answer['answers'][0]['name']}"
+            classification_hash = classifications[0]["classificationHash"]
+            classification = label_row["classification_answers"][classification_hash]["classifications"][0]
+            metadata["labelClass"] += f": {classification['answers'][0]['name']}"
     except:
         pass
 
     return {
         "id": identifier,
         "url": url,
-        "data_title": data_title,
+        "dataTitle": data_title,
         "editUrl": editUrl,
         "metadata": metadata,
         "tags": to_grouped_tags(tags),
