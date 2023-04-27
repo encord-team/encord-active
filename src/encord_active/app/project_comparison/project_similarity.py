@@ -48,7 +48,7 @@ def render_2d_metric_similarity_container(
         options=metrics_filtered,
         index=0,
         format_func=(lambda x: metrics_filtered[x]["title"]),
-        key="project_comparison_metric_selection_1",
+        key=f"project_comparison_metric_selection_1_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
     # Second selectbox should be populated according to the selected metric in the first one
@@ -73,7 +73,7 @@ def render_2d_metric_similarity_container(
         "Select the second metric",
         options=options_for_second_metric,
         format_func=(lambda x: options_for_second_metric[x]["title"]),
-        key="project_comparison_metric_selection_2",
+        key=f"project_comparison_metric_selection_2_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
     if metric_name_1 == metric_name_2:
