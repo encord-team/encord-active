@@ -31,12 +31,12 @@ def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> flo
 
 
 def render_2d_metric_similarity_container(
-    all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_name_2: str
+    all_metrics: list, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_name_2: str
 ):
-    metrics_filtered = {}
-    for metric_name in all_metrics.keys():
+    metrics_filtered = []
+    for metric_name in all_metrics:
         if metric_name in merged_metrics_1 and merged_metrics_1[metric_name].dropna().shape[0] > 0:
-            metrics_filtered[metric_name] = all_metrics[metric_name]
+            metrics_filtered.append(metric_name)
 
     if len(metrics_filtered) <= 1:
         st.write("At least two metrics should be generated for 2D metric similarity plot")
@@ -47,15 +47,14 @@ def render_2d_metric_similarity_container(
         "Select the first metric",
         options=metrics_filtered,
         index=0,
-        format_func=(lambda x: metrics_filtered[x]["title"]),
         key=f"project_comparison_metric_selection_1_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
     # Second selectbox should be populated according to the selected metric in the first one
     # due to different metric types. E.g., 'Area' is not compatible with 'object aspect ratio'
-    options_for_second_metric = {}
+    options_for_second_metric = []
 
-    for metric_name in metrics_filtered.keys():
+    for metric_name in metrics_filtered:
         if metric_name == metric_name_1:
             continue
         metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
@@ -63,7 +62,7 @@ def render_2d_metric_similarity_container(
 
         merged_metric = metric_df_1.join(metric_df_2, how="inner")
         if merged_metric.shape[0] > 0:
-            options_for_second_metric[metric_name] = metrics_filtered[metric_name]
+            options_for_second_metric.append(metric_name)
 
     if len(options_for_second_metric) == 0:
         st.write("There is no compatible metric")
@@ -72,7 +71,6 @@ def render_2d_metric_similarity_container(
     metric_name_2 = metric_selection_col_2.selectbox(
         "Select the second metric",
         options=options_for_second_metric,
-        format_func=(lambda x: options_for_second_metric[x]["title"]),
         key=f"project_comparison_metric_selection_2_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
@@ -124,10 +122,10 @@ def project_similarity():
         project_name_2 = project_metas[selected_project]["project_title"]
         DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
-        all_metrics = fetch_metrics_meta(get_state().project_paths)
+        all_metrics = sorted([metric for metric in fetch_metrics_meta(get_state().project_paths)])
 
         metric_similarities = {"metric": [], "similarity_score": []}
-        for metric in all_metrics.keys():
+        for metric in all_metrics:
             if metric in METRICS_TO_EXCLUDE:
                 continue
 
