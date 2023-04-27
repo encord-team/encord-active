@@ -1,3 +1,4 @@
+import subprocess
 import sys
 from os import environ
 from pathlib import Path
@@ -25,10 +26,16 @@ def launch_streamlit_app(target: Path):
     sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
 
     # NOTE: we need to set PYTHONPATH for file watching
-    environ["PYTHONPATH"] = (Path(__file__).parents[2]).as_posix()
+    python_path = Path(__file__).parents[2]
+    environ["PYTHONPATH"] = (python_path).as_posix()
+
+    server_args = [(python_path / "server" / "start_server.py").as_posix(), target.as_posix()]
 
     if app_config.is_dev:
         sys.argv.insert(3, "--server.fileWatcherType")
         sys.argv.insert(4, "auto")
+        server_args.append("--reload")
 
-    sys.exit(stcli.main())  # pylint: disable=no-value-for-parameter
+    subprocess.Popen([sys.executable, *server_args])
+
+    stcli.main()  # pylint: disable=no-value-for-parameter

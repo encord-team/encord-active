@@ -5,7 +5,6 @@ import streamlit as st
 from encord_active.app.actions_page.export_filter import actions, show_update_stats
 from encord_active.app.actions_page.versioning import version_form
 from encord_active.app.common.components.sticky.sticky import sticky_header
-from encord_active.app.common.components.tags.tag_creator import tag_creator
 from encord_active.app.common.state import PageGridSettings, State, get_state
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 
@@ -39,17 +38,15 @@ class Page(ABC):
     def __repr__(self):
         return f"{type(self).__name__}()"
 
-    def display_settings(self, show_label_checkbox: bool = False):
+    def display_settings(self):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
-                view_tab, tag_tab, actions_tab, version_tab, options_tab, assistant_tab = st.tabs(
-                    ["Filter", "Tag", "Action", "Version", "Options", "Assistant"]
+                view_tab, actions_tab, version_tab, assistant_tab = st.tabs(
+                    ["Filter", "Action", "Version", "Assistant"]
                 )
 
                 with view_tab:
                     self.render_view_options()
-                with tag_tab:
-                    tag_creator()
                 with actions_tab:
                     left, right = st.columns([5, 1])
                     with left:
@@ -59,8 +56,6 @@ class Page(ABC):
                         show_update_stats(filterd)
                 with version_tab:
                     version_form()
-                with options_tab:
-                    self.render_common_settings(show_label_checkbox)
                 with assistant_tab:
                     from encord_active.app.common.components.assistant import (
                         render_assistant,

@@ -12,7 +12,6 @@ from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.db.tags import Tag, Tags
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
@@ -74,9 +73,9 @@ class State:
     and to get/set the current value we would call `get_state().iou_threshold.`
     """
 
+    target_path: Path
     project_paths: ProjectFileStructure
     refresh_projects: Callable[[], Any]
-    all_tags: List[Tag]
     merged_metrics: pd.DataFrame
     filtering_state: FilteringState
     querier: Querier
@@ -92,7 +91,7 @@ class State:
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
-    def init(cls, project_dir: Path, refresh_projects: Callable[[], Any]):
+    def init(cls, target_path: Path, project_dir: Path, refresh_projects: Callable[[], Any]):
         if (
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
@@ -103,9 +102,9 @@ class State:
             merged_metrics = MergedMetrics().all()
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,
+                target_path=target_path,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
-                all_tags=Tags().all(),
                 filtering_state=FilteringState(merged_metrics),
                 querier=Querier(project_file_structure),
             )

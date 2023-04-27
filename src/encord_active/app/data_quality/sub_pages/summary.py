@@ -21,8 +21,8 @@ class SummaryPage(Page):
     _moderate_outlier_color = "orange"
     _summary_item_background_color = "#fbfbfb"
 
-    def sidebar_options(self, metric_scope: MetricScope):
-        self.display_settings(metric_scope)
+    def sidebar_options(self, *_):
+        self.display_settings()
 
     def build(self, metrics: List[MetricData], metric_scope: MetricScope):
         if metric_scope == MetricScope.DATA_QUALITY:

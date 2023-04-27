@@ -11,7 +11,6 @@ import yaml
 from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.db.tags import Tags
 from encord_active.lib.embeddings.utils import (
     EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
@@ -223,8 +222,6 @@ def copy_filtered_data(
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     to_save_df = filtered_df.set_index("identifier")
     perform_db_fn_with_switched_paths(target_project_dir, lambda: MergedMetrics().replace_all(to_save_df))
-    all_tags = Tags().all()
-    perform_db_fn_with_switched_paths(target_project_dir, lambda: Tags().create_many(all_tags))
 
 
 def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):

@@ -7,8 +7,8 @@ from pandera.typing import DataFrame
 from encord_active.app.common.components.tags.individual_tagging import (
     target_identifier,
 )
-from encord_active.app.common.components.tags.tag_creator import scoped_tags
 from encord_active.app.common.state import get_state
+from encord_active.lib.db.helpers.tags import scoped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.metrics.utils import IdentifierSchema

@@ -42,7 +42,7 @@ export const PagesMenu = ({
   );
 
   return (
-    <div ref={ref} className="flex flex-col gap-5">
+    <div ref={ref} className="flex flex-col gap-5 pr-4">
       <div className="form-control">
         <div className="input-group input-group-vertical">
           <button
