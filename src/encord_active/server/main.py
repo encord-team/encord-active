@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from natsort import natsorted
 from pydantic import BaseModel
 
+from encord_active.cli.utils.decorators import is_project
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
@@ -26,7 +27,10 @@ from encord_active.server.utils import (
     to_item,
 )
 
-path = environ["SERVER_START_PATH"]
+path = Path(environ["SERVER_START_PATH"])
+if is_project(path):
+    path = path.parent
+
 app = FastAPI()
 
 origins = [
@@ -41,11 +45,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.mount("/static", StaticFiles(directory=path), name="static")
 
 
 async def get_project_file_structure(project: str) -> ProjectFileStructure:
-    return ProjectFileStructure(Path(environ.get("SERVER_START_PATH", "")) / project)
+    return ProjectFileStructure(path / project)
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
@@ -53,7 +58,7 @@ ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_fi
 
 @app.get("/projects/{project}/items_id_by_metric")
 def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascending: bool = True):
-    DBConnection.set_project_path(project.project_dir)
+    DBConnection.set_project_file_structure(project)
     merged_metrics = MergedMetrics().all(marshall=False)
 
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
@@ -64,7 +69,7 @@ def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascendi
 
 @app.get("/projects/{project}/tagged_items")
 def tagged_items(project: ProjectFileStructureDep):
-    DBConnection.set_project_path(project.project_dir)
+    DBConnection.set_project_file_structure(project)
     df = MergedMetrics().all(columns=["tags"]).reset_index()
     records = df[df["tags"].str.len() > 0].to_dict("records")
     return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
@@ -73,7 +78,7 @@ def tagged_items(project: ProjectFileStructureDep):
 @app.get("/projects/{project}/items/{id:path}")
 def read_item(project: ProjectFileStructureDep, id: str):
     lr_hash, du_hash, frame, *_ = id.split("_")
-    DBConnection.set_project_path(project.project_dir)
+    DBConnection.set_project_file_structure(project)
     row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
 
     return to_item(row, project, lr_hash, du_hash, frame)
@@ -86,7 +91,7 @@ class ItemTags(BaseModel):
 
 @app.put("/projects/{project}/item_tags")
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
-    DBConnection.set_project_path(project.project_dir)
+    DBConnection.set_project_file_structure(project)
     for item in payload:
         MergedMetrics().update_tags(item.id, from_grouped_tags(item.grouped_tags))
 
@@ -122,5 +127,5 @@ def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
 
 @app.get("/projects/{project}/tags")
 def get_tags(project: ProjectFileStructureDep):
-    DBConnection.set_project_path(project.project_dir)
+    DBConnection.set_project_file_structure(project)
     return to_grouped_tags(all_tags())
