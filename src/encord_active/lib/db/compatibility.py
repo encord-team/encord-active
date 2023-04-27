@@ -4,13 +4,16 @@ import re
 from prisma import models
 
 from encord_active.lib.db.connection import PrismaConnection
-from encord_active.lib.project.metadata import fetch_project_meta
 
 DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def fill_missing_tables():
+    # print(" sjdflfj dflds fkdls fjsdl fjsdl fj")
+    # project_file_structure = PrismaConnection.project_file_structure()
+    # print(project_file_structure.project_dir)
+
     with PrismaConnection() as conn:
         if conn.labelrow.count() == 0:
             fill_label_rows_table()
@@ -74,7 +77,7 @@ def fill_label_rows_table():
     # Adds the content missing from the label rows table when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
     project_file_structure = PrismaConnection.project_file_structure()
-    project_meta = fetch_project_meta(PrismaConnection.project_file_structure().project_dir)
+    label_row_meta = json.loads(project_file_structure.label_row_meta.read_text(encoding="utf-8"))
 
     pattern = re.compile(DATA_HASH_REGEX)
     with PrismaConnection() as conn:
@@ -88,7 +91,7 @@ def fill_label_rows_table():
 
                 label_hash = label_row["label_hash"]
                 # data_hash = label_row["data_hash"] # don't supported in previous sdk version
-                data_hash = project_meta[label_hash]["data_hash"]
+                data_hash = label_row_meta[label_hash]["data_hash"]
                 data_title = label_row["data_title"]
                 data_type = label_row["data_type"]
                 created_at = label_row["created_at"]
