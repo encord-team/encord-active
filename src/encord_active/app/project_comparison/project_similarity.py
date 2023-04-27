@@ -4,6 +4,7 @@ import streamlit as st
 from scipy.stats import ks_2samp
 
 from encord_active.app.common.state import get_state
+from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import setup_page
 from encord_active.app.projects_page import project_list
 from encord_active.lib.charts.project_similarity import (
@@ -31,6 +32,20 @@ def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> flo
 def render_2d_metric_similarity_container(
     all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_2_name: str
 ):
+    def _populate_second_metric_options(options_for_second_metric: UseState):
+        second_metric_options = {}
+        for metric_name in metrics_filtered.keys():
+            if metric_name == metric_name_1:
+                continue
+            metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
+            metric_df_2 = merged_metrics_1[metric_name].dropna().to_frame()
+
+            merged_metric = metric_df_1.join(metric_df_2, how="inner")
+            if merged_metric.shape[0] > 0:
+                second_metric_options[metric_name] = metrics_filtered[metric_name]
+
+        options_for_second_metric.set(second_metric_options)
+
     metrics_filtered = {}
     for metric_name in all_metrics.keys():
         if metric_name in merged_metrics_1 and merged_metrics_1[metric_name].dropna().shape[0] > 0:
@@ -51,28 +66,35 @@ def render_2d_metric_similarity_container(
 
     # Second selectbox should be populated according to the selected metric in the first one
     # due to different metric types. E.g., 'Area' is not compatible with 'object aspect ratio'
-    options_for_second_metric = {}
-    for metric_name in metrics_filtered.keys():
-        if metric_name == metric_name_1:
-            continue
-        metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
-        metric_df_2 = merged_metrics_1[metric_name].dropna().to_frame()
+    options_for_second_metric = UseState({})
 
-        merged_metric = metric_df_1.join(metric_df_2, how="inner")
-        if merged_metric.shape[0] > 0:
-            options_for_second_metric[metric_name] = metrics_filtered[metric_name]
+    if len(options_for_second_metric.value) == 0:
+        _populate_second_metric_options(options_for_second_metric)
+    else:
+        a_metric_from_second_metrics = next(iter(options_for_second_metric.value.values()))["title"]
+        if a_metric_from_second_metrics != metric_name_1:
+            metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
+            metric_df_2 = merged_metrics_1[a_metric_from_second_metrics].dropna().to_frame()
 
-    if len(options_for_second_metric) == 0:
+            merged_metric = metric_df_1.join(metric_df_2, how="inner")
+            if merged_metric.shape[0] == 0:
+                _populate_second_metric_options(options_for_second_metric)
+
+    if len(options_for_second_metric.value) == 0:
         st.write("There is no compatible metric")
         return
 
     metric_name_2 = metric_selection_col_2.selectbox(
         "Select the second metric",
-        options=options_for_second_metric,
-        index=1 if len(options_for_second_metric) > 1 else 0,
-        format_func=(lambda x: options_for_second_metric[x]["title"]),
+        options=options_for_second_metric.value,
+        index=0,
+        format_func=(lambda x: options_for_second_metric.value[x]["title"]),
         key="project_comparison_metric_selection_2",
     )
+
+    if metric_name_1 == metric_name_2:
+        st.warning("Please choose a different metric")
+        return
 
     project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy().dropna()
     project_1_name = fetch_project_meta(get_state().project_paths.project_dir)["project_title"]
@@ -90,7 +112,7 @@ def render_2d_metric_similarity_container(
     project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
     project_values_2["project"] = project_2_name
 
-    # TODO chage append to concat
+    # TODO change append to concat
     project_values = project_values_1.append(project_values_2, ignore_index=True)
 
     fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_1_name, project_2_name)
