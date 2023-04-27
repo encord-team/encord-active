@@ -4,7 +4,6 @@ import streamlit as st
 from scipy.stats import ks_2samp
 
 from encord_active.app.common.state import get_state
-from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import setup_page
 from encord_active.app.projects_page import project_list
 from encord_active.lib.charts.project_similarity import (
@@ -18,6 +17,7 @@ from encord_active.lib.metrics.metadata import fetch_metrics_meta
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
 
+# The following metrics does not give any information comparable to another project
 METRICS_TO_EXCLUDE = [
     "Random Values on Objects",
     "Random Values on Images",
@@ -26,12 +26,12 @@ METRICS_TO_EXCLUDE = [
 
 
 def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> float:
-    D, _ = ks_2samp(array_1, array_2)
-    return 1 - D
+    ks_score, _ = ks_2samp(array_1, array_2)
+    return 1 - ks_score
 
 
 def render_2d_metric_similarity_container(
-    all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_2_name: str
+    all_metrics: dict, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_name_2: str
 ):
     metrics_filtered = {}
     for metric_name in all_metrics.keys():
@@ -81,25 +81,25 @@ def render_2d_metric_similarity_container(
         return
 
     project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy().dropna()
-    project_1_name = fetch_project_meta(get_state().project_paths.project_dir)["project_title"]
-    project_values_1["project"] = project_1_name
+    project_name_1 = get_state().project_paths.project_dir.name
+    project_values_1["project"] = project_name_1
 
     # Check if the selected metrics are also available in the second project
     if metric_name_1 not in merged_metrics_2 or merged_metrics_2[metric_name_1].dropna().shape[0] == 0:
-        st.write(f"Metric **{metric_name_1}** is not available for the project `{project_2_name}`.")
+        st.write(f"Metric **{metric_name_1}** is not available for the project `{project_name_2}`.")
         return
 
     if metric_name_2 not in merged_metrics_2 or merged_metrics_2[metric_name_2].dropna().shape[0] == 0:
-        st.write(f"Metric **{metric_name_2}** is not available for the project `{project_2_name}`.")
+        st.write(f"Metric **{metric_name_2}** is not available for the project `{project_name_2}`.")
         return
 
     project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
-    project_values_2["project"] = project_2_name
+    project_values_2["project"] = project_name_2
 
     # TODO change append to concat
     project_values = project_values_1.append(project_values_2, ignore_index=True)
 
-    fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_1_name, project_2_name)
+    fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_name_1, project_name_2)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -120,7 +120,7 @@ def project_similarity():
         # TODO this is a hacky way to get MergedMetrics of another project, it should be fixed later
         DBConnection.set_project_file_structure(ProjectFileStructure(selected_project))
         merged_metrics_2 = MergedMetrics().all()
-        project_2_name = project_metas[selected_project]["project_title"]
+        project_name_2 = project_metas[selected_project]["project_title"]
         DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
         all_metrics = fetch_metrics_meta(get_state().project_paths)
@@ -143,8 +143,7 @@ def project_similarity():
             metric_similarities["metric"].append(metric)
             metric_similarities["similarity_score"].append(calculate_metric_similarity(values_1, values_2))
 
-        metric_similarities_df = pd.DataFrame(metric_similarities)
-        metric_similarities_df = metric_similarities_df.pipe(ProjectSimilaritySchema)
+        metric_similarities_df = pd.DataFrame(metric_similarities).pipe(ProjectSimilaritySchema)
 
         metric_wise_similarity_col, metrics_scatter_col = st.columns(2)
 
@@ -157,7 +156,7 @@ def project_similarity():
         # 2D metrics view
         with metrics_scatter_col:
             render_2d_metric_similarity_container(
-                all_metrics, get_state().merged_metrics, merged_metrics_2, project_2_name
+                all_metrics, get_state().merged_metrics, merged_metrics_2, project_name_2
             )
 
     return render

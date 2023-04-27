@@ -44,11 +44,8 @@ def render_2d_metric_similarity_plot(
 
     fig.update_traces(
         marker=dict(
-            symbol="circle",  # Choose the shape of the marker
-            size=8,  # Set the size of the marker
-            # line=dict(  # Configure the lines around the markers
-            #     color="black", width=1  # Set the line color  # Set the line width
-            # ),
+            symbol="circle",
+            size=8,
         )
     )
 
