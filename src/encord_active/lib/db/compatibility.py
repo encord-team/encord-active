@@ -28,14 +28,15 @@ def fill_data_units_table():
     with PrismaConnection() as conn:
         with conn.batch_() as batcher:
             # fetch data units from local storage and store their references in the prisma db
-            for label_hash in project_file_structure.data.iterdir():
-                if pattern.match(label_hash.name) is None:  # avoid unexpected folders in the data directory
+            for label_row_dir in project_file_structure.data.iterdir():
+                if pattern.match(label_row_dir.name) is None:  # avoid unexpected folders in the data directory
                     continue
-                label_row_path = project_file_structure.data / label_hash / "label_row.json"
+                label_row_path = project_file_structure.data / label_row_dir.name / "label_row.json"
                 label_row = json.loads(label_row_path.read_text(encoding="utf-8"))
-                images_dir = project_file_structure.data / label_hash / "images"
+                images_dir = project_file_structure.data / label_row_dir.name / "images"
 
                 for data_unit in label_row["data_units"].values():
+                    label_hash = label_row["label_hash"]
                     du_hash = data_unit["data_hash"]
                     du_title = data_unit["data_title"]
 
@@ -80,10 +81,10 @@ def fill_label_rows_table():
     with PrismaConnection() as conn:
         with conn.batch_() as batcher:
             # fetch label rows from local storage and store their references in the prisma db
-            for label_hash in project_file_structure.data.iterdir():
-                if pattern.match(label_hash.name) is None:  # avoid unexpected folders in the data directory
+            for label_row_dir in project_file_structure.data.iterdir():
+                if pattern.match(label_row_dir.name) is None:  # avoid unexpected folders in the data directory
                     continue
-                label_row_path = project_file_structure.data / label_hash / "label_row.json"
+                label_row_path = project_file_structure.data / label_row_dir.name / "label_row.json"
                 label_row = json.loads(label_row_path.read_text(encoding="utf-8"))
 
                 label_hash = label_row["label_hash"]
