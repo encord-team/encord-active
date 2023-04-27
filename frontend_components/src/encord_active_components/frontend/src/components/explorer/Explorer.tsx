@@ -424,11 +424,16 @@ const GalleryItem = ({
       <div className="card-body p-2">
         <div className="card-actions flex">
           <div className="btn-group">
-            <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
+            <button
+              className="btn btn-ghost gap-2 tooltip"
+              data-tip="Similar items"
+              onClick={onShowSimilar}
+            >
               <MdImageSearch className="text-base" />
             </button>
             <button
-              className="btn btn-ghost gap-2"
+              className="btn btn-ghost gap-2 tooltip"
+              data-tip="Open in Encord Annotate"
               onClick={() => window.open(data.editUrl.toString(), "_blank")}
             >
               <FaEdit />
