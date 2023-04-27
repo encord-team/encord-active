@@ -33,6 +33,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
+import { sort } from "radash";
 
 export type Props = {
   projectName: string;
@@ -322,7 +323,7 @@ const ItemPreview = ({
 
   if (isLoading || !data) return <Spin />;
 
-  const { description, ...metrics } = data.metadata.metrics
+  const { description, ...metrics } = data.metadata.metrics;
 
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
@@ -358,12 +359,12 @@ const ItemPreview = ({
               <span>Title: </span>
               <span>{data.dataTitle || "unknown"}</span>
             </div>
-            {description &&
+            {description && (
               <div>
                 <span>Description: </span>
                 <span>{description}</span>
               </div>
-            }
+            )}
           </div>
           <MetadataMetrics metrics={metrics} />
           <TagList tags={data.tags} />
@@ -404,7 +405,7 @@ const GalleryItem = ({
   const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
   const displayValue =
     intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
-  const { description } = data.metadata.metrics
+  const { description } = data.metadata.metrics;
 
   return (
     <div className="card relative align-middle bg-gray-100 form-control min-h-[230px]">
@@ -523,7 +524,7 @@ const ImageWithPolygons = ({
       />
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
-          {polygons.map(({ points, color, shape }, index) =>
+          {polygons.map(({ points, color, shape }, index) => (
             <>
               {shape === "polyline" && (
                 <polyline
@@ -569,7 +570,7 @@ const ImageWithPolygons = ({
                 />
               )}
             </>
-          )}
+          ))}
         </svg>
       )}
     </figure>
@@ -581,9 +582,12 @@ const MetadataMetrics = ({
 }: {
   metrics: Item["metadata"]["metrics"];
 }) => {
+  const entries = Object.entries(metrics);
+  entries.sort();
+
   return (
     <div className="flex flex-col">
-      {Object.entries(metrics).map(([key, value]) => {
+      {entries.map(([key, value]) => {
         const number = parseFloat(value.toString());
 
         return (
