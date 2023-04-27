@@ -123,9 +123,7 @@ def project_similarity():
     def render():
         setup_page()
 
-        project_metas = {
-            project: fetch_project_meta(project) for project in project_list(get_state().global_root_folder)
-        }
+        project_metas = {project: fetch_project_meta(project) for project in project_list(get_state().target_path)}
 
         selected_project = st.selectbox(
             "Select project to compare",
