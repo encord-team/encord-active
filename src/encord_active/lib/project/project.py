@@ -166,6 +166,10 @@ class Project:
             for lrm in encord_project.list_label_rows()
             if lrm.label_hash is not None
         }
+        for meta in label_row_meta.values():
+            meta["created_at"] = meta["created_at"].rsplit(".", maxsplit=1)[0]
+            meta["last_edited_at"] = meta["last_edited_at"].rsplit(".", maxsplit=1)[0]
+
         self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int] = None) -> dict[str, LabelRowMetadata]:
@@ -230,17 +234,24 @@ class Project:
                 label_rows_to_update,
                 desc="Updating label rows",
             )
+        else:
+            logger.info("No existent data needs to be updated.")
 
         # Download new project data
-        downloaded_label_rows = collect_async(
-            partial(
-                download_label_row_and_data,
-                project=project,
-                project_file_structure=project_file_structure,
-            ),
-            label_rows_to_download,
-            desc="Collecting new data",
-        )
+        if len(label_rows_to_download) > 0:
+            downloaded_label_rows = collect_async(
+                partial(
+                    download_label_row_and_data,
+                    project=project,
+                    project_file_structure=project_file_structure,
+                ),
+                label_rows_to_download,
+                desc="Collecting new data",
+            )
+        else:
+            downloaded_label_rows = []
+            logger.info("No new data to be downloaded.")
+
         return downloaded_label_rows
 
     def __load_label_rows(self):
