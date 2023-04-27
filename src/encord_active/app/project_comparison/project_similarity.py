@@ -130,6 +130,7 @@ def project_similarity():
         selected_project = st.selectbox(
             "Select project to compare",
             options=project_metas,
+            index=0,
             format_func=(lambda x: project_metas[x]["project_title"]),
         )
 
