@@ -12,7 +12,7 @@ run = silence_stdout(run)
 try:
     import prisma
     from prisma import Prisma
-    from prisma.models import DataUnit, LabelRow
+    from prisma.models import DataUnit, LabelRow  # pylint: disable=unused-import
     from prisma.types import DatasourceOverride
 except (RuntimeError, ImportError):
     run(["generate", f"--schema={PRISMA_SCHEMA_FILE}"])
