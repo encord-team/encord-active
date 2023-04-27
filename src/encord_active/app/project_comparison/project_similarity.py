@@ -19,8 +19,6 @@ from encord_active.lib.project.metadata import fetch_project_meta
 METRICS_TO_EXCLUDE = [
     "Random Values on Objects",
     "Random Values on Images",
-    "Object Annotation Quality",
-    "Image Annotation Quality",
     "Image Difficulty",
 ]
 
@@ -92,6 +90,7 @@ def render_2d_metric_similarity_container(
     project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
     project_values_2["project"] = project_2_name
 
+    # TODO chage append to concat
     project_values = project_values_1.append(project_values_2, ignore_index=True)
 
     fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_1_name, project_2_name)
