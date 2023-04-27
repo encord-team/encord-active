@@ -15,6 +15,7 @@ from encord_active.lib.charts.project_similarity import (
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.metrics.metadata import fetch_metrics_meta
+from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
 
 METRICS_TO_EXCLUDE = [
@@ -133,10 +134,10 @@ def project_similarity():
         )
 
         # TODO this is a hacky way to get MergedMetrics of another project, it should be fixed later
-        DBConnection.set_project_path(selected_project)
+        DBConnection.set_project_file_structure(ProjectFileStructure(selected_project))
         merged_metrics_2 = MergedMetrics().all()
         project_2_name = project_metas[selected_project]["project_title"]
-        DBConnection.set_project_path(get_state().project_paths.project_dir)
+        DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
         all_metrics = fetch_metrics_meta(get_state().project_paths)
 
