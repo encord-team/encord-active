@@ -108,6 +108,7 @@ def project_similarity():
         setup_page()
 
         project_metas = {project: fetch_project_meta(project) for project in project_list(get_state().target_path)}
+        project_metas = {k: v for k, v in sorted(project_metas.items(), key=lambda item: item[0])}
 
         selected_project = st.selectbox(
             "Select project to compare",
