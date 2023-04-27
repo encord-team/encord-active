@@ -1,7 +1,9 @@
+import json
 from os import environ
 from pathlib import Path
 from typing import Annotated, List, Optional
 
+from encord.ontology import OntologyStructure
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -44,11 +46,18 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=path), name="static")
 
 
-async def get_project_file_structure(project: str):
+async def get_project_file_structure(project: str) -> ProjectFileStructure:
     return ProjectFileStructure(Path(environ.get("SERVER_START_PATH", "")) / project)
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
+
+
+async def get_project_ontology(project: ProjectFileStructureDep) -> OntologyStructure:
+    return OntologyStructure.from_dict(json.loads(project.ontology.read_text()))
+
+
+OntologyDep = Annotated[OntologyStructure, Depends(get_project_ontology)]
 
 
 @app.get("/projects/{project}/items_id_by_metric")
@@ -70,13 +79,13 @@ def tagged_items(project: ProjectFileStructureDep):
     return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
 
 
-@app.get("/projects/{project}/items/{id}")
-def read_item(project: ProjectFileStructureDep, id: str):
+@app.get("/projects/{project}/items/{id:path}")
+def read_item(project: ProjectFileStructureDep, ontology: OntologyDep, id: str):
     lr_hash, du_hash, frame, *obj_hash = id.split("_")
     DBConnection.set_project_path(project.project_dir)
     row = MergedMetrics().get_row(id).dropna(axis=1).to_dict("records")[0]
 
-    return to_item(row, project, lr_hash, du_hash, frame)
+    return to_item(row, project, ontology, lr_hash, du_hash, frame, obj_hash)
 
 
 class ItemTags(BaseModel):

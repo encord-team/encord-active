@@ -1,14 +1,15 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict
 from urllib import parse
 
+from encord.objects import RadioAttribute
+from encord.ontology import OntologyStructure
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
 from encord_active.lib.db.helpers.tags import to_grouped_tags
-from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import EmbeddingType
@@ -45,17 +46,25 @@ def get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neig
     return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
 
 
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str):
-    for data_unit in label_row_structure.iter_data_unit():
-        if data_unit.hash == du_hash:
-            return f"static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
+def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
+    data_unit = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit(du_hash), None
+    )
+    if data_unit:
+        return f"static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
 
 
 def _transform_object(object_: dict):
     if object_["shape"] == ObjectShape.POLYGON:
-        p = object_.get("polygon", {})
+        p = object_.get("polygon")
         if not p:
             return None
+    elif object_["shape"] == ObjectShape.POLYLINE:
+        p = object_.get("polyline", {})
+        if not p:
+            return None
+        object_["polygon"] = p
+        del object_["polyline"]
     elif object_["shape"] == ObjectShape.BOUNDING_BOX:
         b = object_.get("boundingBox", {})
         if not b:
@@ -80,12 +89,27 @@ def _transform_object(object_: dict):
             return None
         object_["polygon"] = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
         del object_["rotatableBoundingBox"]
+    elif object_["shape"] == ObjectShape.KEY_POINT:
+        p = object_.get("point", {})
+        if not p:
+            return None
+        object_["polygon"] = p
+        del object_["point"]
     else:
         return None
+
     return object_
 
 
-def to_item(row: Dict, project_file_structure: ProjectFileStructure, lr_hash: str, du_hash: str, frame: str):
+def to_item(
+    row: Dict,
+    project_file_structure: ProjectFileStructure,
+    ontology: OntologyStructure,
+    lr_hash: str,
+    du_hash: str,
+    frame: str,
+    label_hash: List[str],
+):
     editUrl = row.pop("url")
     tags = row.pop("tags")
     identifier = row.pop("identifier")
@@ -96,14 +120,14 @@ def to_item(row: Dict, project_file_structure: ProjectFileStructure, lr_hash: st
     )
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(label_row_structure, du_hash)
+    url = _get_url(label_row_structure, du_hash, frame)
 
     label_row = json.loads(label_row_structure.label_row_file.read_text())
     du = label_row["data_units"][du_hash]
     data_title = du.get("data_title", label_row.get("data_title"))
 
     if label_row["data_type"] in {"video", "dicom"}:
-        labels = du.get("labels", {}).get(frame, {"objects": [], "classifications": []})
+        labels = du.get("labels", {}).get(str(int(frame)), {"objects": [], "classifications": []})
     else:
         labels = du.get("labels", {"objects": [], "classifications": []})
 
@@ -112,9 +136,20 @@ def to_item(row: Dict, project_file_structure: ProjectFileStructure, lr_hash: st
     try:
         classifications = labels.get("classifications")
         if classifications and metadata["labelClass"]:
-            classification_hash = classifications[0]["classificationHash"]
-            classification = label_row["classification_answers"][classification_hash]["classifications"][0]
-            metadata["labelClass"] += f": {classification['answers'][0]['name']}"
+            clf_instance = classifications[0]
+            classification_hash = clf_instance["classificationHash"]
+            clf_answer = label_row["classification_answers"][classification_hash]["classifications"][0]
+            metadata["annotator"] = (
+                metadata["annotator"] or clf_instance.get("lastEditedBy") or clf_instance.get("createdBy")
+            )
+
+            question = ontology.get_child_by_hash(clf_answer["featureHash"])
+            if (
+                isinstance(question, RadioAttribute)
+                and label_hash
+                and clf_instance["classificationHash"] == label_hash[0]
+            ):
+                metadata["labelClass"] = f"{question.name}: {clf_answer['answers'][0]['name']}"
     except:
         pass
 

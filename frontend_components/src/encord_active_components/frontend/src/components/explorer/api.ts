@@ -8,6 +8,8 @@ export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
 const LabelRowObjectShapeEnum = z.enum([
   "polygon",
+  "polyline",
+  "point",
   "bounding_box",
   "rotatable_bounding_box",
 ]);
@@ -101,8 +103,11 @@ export const fetchProjectItemIds =
   };
 
 export const fetchProjectItem = (projectName: string) => async (id: string) => {
+  console.log(id);
   const { url, ...item } = await (
-    await fetch(`${BASE_URL}/projects/${projectName}/items/${id}`)
+    await fetch(
+      `${BASE_URL}/projects/${projectName}/items/${encodeURIComponent(id)}`
+    )
   ).json();
   return ItemSchema.parse({ ...item, url: `${BASE_URL}/${url}` }) as Item;
 };
@@ -125,7 +130,9 @@ export const fetchSimilarItems =
         ...(pageSize ? { page_size: pageSize.toString() } : {}),
       });
 
-      const url = `${BASE_URL}/projects/${projectName}/similarities/${id}?${queryParams} `;
+      const url = `${BASE_URL}/projects/${projectName}/similarities/${encodeURIComponent(
+        id
+      )}?${queryParams} `;
       const response = await fetch(url).then((res) => res.json());
       return z.string().array().parse(response);
     };
