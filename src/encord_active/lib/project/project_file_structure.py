@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Union
 
@@ -25,7 +24,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
     with PrismaConnection() as conn:
         fill_label_rows = conn.labelrow.count() == 0
         fill_data_units = conn.dataunit.count() == 0
-        if not fill_label_rows or fill_data_units:
+        if not (fill_label_rows or fill_data_units):
             return
 
         with conn.batch_() as batcher:
@@ -61,10 +60,6 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             )
                         )
             batcher.commit()
-
-
-def test():
-    print("TEST")
 
 
 class DataUnitStructure:
@@ -179,10 +174,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection() as conn:
             _fill_missing_tables(self)
-            if where is None:
-                return conn.dataunit.find_many(include=to_include)
-            else:
-                return conn.dataunit.find_many(where=where, include=to_include)
+            return conn.dataunit.find_many(where=where, include=to_include)
 
     def label_rows(self) -> List[models.LabelRow]:
         PrismaConnection.set_project_file_structure(self)

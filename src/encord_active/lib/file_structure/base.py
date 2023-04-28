@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Iterator, Optional, Union
+from typing import Iterator, List, Optional, Union
 
 from prisma import models
 from prisma.types import DataUnitWhereInput
@@ -69,10 +69,10 @@ class BaseProjectFileStructure:
 
     @abstractmethod
     def data_units(
-        self, where: Optional[list[DataUnitWhereInput]] = None, include_label_row: bool = False
-    ) -> Iterator[models.DataUnit]:
+        self, where: Optional[List[DataUnitWhereInput]] = None, include_label_row: bool = False
+    ) -> List[models.DataUnit]:
         pass
 
     @abstractmethod
-    def label_rows(self) -> Iterator[models.LabelRow]:
+    def label_rows(self) -> List[models.LabelRow]:
         pass
