@@ -7,6 +7,7 @@ generator db {
   provider             = "prisma-client-py"
   interface            = "sync"
   recursive_type_depth = 5
+  output               = "./__autogen__"
 }
 
 model Tag {
@@ -30,20 +31,21 @@ model ItemTag {
 }
 
 model DataUnit {
-  id           Int    @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   data_hash    String
   data_title   String
   frame        Int
   location     String
   lr_data_hash String
   label_row    LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
+
   @@unique([data_hash, frame])
 }
 
 model LabelRow {
-  id             Int     @id @default(autoincrement())
-  label_hash     String? @unique
-  data_hash      String  @unique
+  id             Int        @id @default(autoincrement())
+  label_hash     String?    @unique
+  data_hash      String     @unique
   data_title     String
   data_type      String
   created_at     String

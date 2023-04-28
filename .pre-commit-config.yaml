@@ -4,24 +4,28 @@ repos:
       - id: black
         name: black
         entry: poetry run black --config=pyproject.toml
-        types_or: [ python, pyi ]
+        types_or: [python, pyi]
         language: system
+        exclude: .*/__autogen__/.*
 
       - id: isort
         name: isort
         entry: poetry run isort --sp=pyproject.toml
-        types_or: [ python, pyi ]
+        types_or: [python, pyi]
         language: system
+        exclude: .*/__autogen__/.*
 
       - id: mypy
         name: mypy
         entry: poetry run mypy . --config-file=pyproject.toml
-        types_or: [ python, pyi ]
+        types_or: [python, pyi]
         language: system
         pass_filenames: false
+        exclude: .*/__autogen__/.*
 
       - id: pylint
         name: pylint
         entry: poetry run pylint -j 0 --rcfile pyproject.toml
-        types_or: [ python, pyi ]
+        types_or: [python, pyi]
         language: system
+        exclude: .*/__autogen__/.*
