@@ -4,8 +4,8 @@ from typing import Optional
 
 from prisma.cli.prisma import run
 
-from encord_active.__autogen__.client import Prisma
-from encord_active.__autogen__.types import DatasourceOverride
+from encord_active.lib.db.__autogen__.client import Prisma
+from encord_active.lib.db.__autogen__.types import DatasourceOverride
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
