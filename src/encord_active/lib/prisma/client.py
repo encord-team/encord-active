@@ -4,53 +4,54 @@
 # fmt: off
 from __future__ import annotations
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
 # -- template client.py.jinja --
 from pathlib import Path
 from types import TracebackType
 
-from . import types, models, errors, actions
-from .types import DatasourceOverride, HttpConfig
-from ._types import BaseModelT
-from .bases import _PrismaModel
-from .engine import AbstractEngine, QueryEngine
-from .builder import QueryBuilder
-from .generator.models import EngineType, OptionalValueFromEnvVar, BinaryPaths
+from . import actions, errors, models, types
 from ._compat import removeprefix
 from ._raw_query import deserialize_raw_results
+from ._types import BaseModelT
+from .bases import _PrismaModel
+from .builder import QueryBuilder
+from .engine import AbstractEngine, QueryEngine
+from .generator.models import BinaryPaths, EngineType, OptionalValueFromEnvVar
+from .types import DatasourceOverride, HttpConfig
 
 __all__ = (
     'ENGINE_TYPE',

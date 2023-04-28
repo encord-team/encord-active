@@ -1,27 +1,26 @@
 from __future__ import annotations
 
-import os
-import time
 import asyncio
+import contextlib
 import inspect
 import logging
+import os
+import time
 import warnings
-import contextlib
 from importlib.util import find_spec
-from typing import Any, TypeVar, Union, Dict, Iterator, Coroutine, NoReturn
+from typing import Any, Coroutine, Dict, Iterator, NoReturn, TypeVar, Union
 
-from ._types import FuncType, CoroType, TypeGuard
+from ._types import CoroType, FuncType, TypeGuard
 
-
-_T = TypeVar('_T')
+_T = TypeVar("_T")
 
 
 def _env_bool(key: str) -> bool:
-    return os.environ.get(key, '').lower() in {'1', 't', 'true'}
+    return os.environ.get(key, "").lower() in {"1", "t", "true"}
 
 
-DEBUG = _env_bool('PRISMA_PY_DEBUG')
-DEBUG_GENERATOR = _env_bool('PRISMA_PY_DEBUG_GENERATOR')
+DEBUG = _env_bool("PRISMA_PY_DEBUG")
+DEBUG_GENERATOR = _env_bool("PRISMA_PY_DEBUG_GENERATOR")
 
 
 class _NoneType:  # pyright: ignore[reportUnusedClass]
@@ -32,12 +31,12 @@ class _NoneType:  # pyright: ignore[reportUnusedClass]
 def time_since(start: float, precision: int = 4) -> str:
     # TODO: prettier output
     delta = round(time.monotonic() - start, precision)
-    return f'{delta}s'
+    return f"{delta}s"
 
 
 def setup_logging() -> None:
     if DEBUG:
-        logging.getLogger('prisma').setLevel(logging.DEBUG)
+        logging.getLogger("prisma").setLevel(logging.DEBUG)
 
 
 def maybe_async_run(
@@ -108,7 +107,7 @@ def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
     that preserves the old behaviour.
     """
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         try:
             return asyncio.get_event_loop()
@@ -123,9 +122,7 @@ def assert_never(value: NoReturn) -> NoReturn:
 
     https://github.com/microsoft/pyright/issues/767
     """
-    assert False, 'Unhandled type: {}'.format(
-        type(value).__name__
-    )  # pragma: no cover
+    assert False, "Unhandled type: {}".format(type(value).__name__)  # pragma: no cover
 
 
 def make_optional(value: _T) -> _T | None:

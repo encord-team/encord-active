@@ -4,38 +4,39 @@
 # fmt: off
 from __future__ import annotations
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
 # -- template builder.py.jinja --
@@ -50,20 +51,20 @@ LiteralString = str
 #       not ideal, context should be local to each node
 
 
+import inspect
 import json
 import logging
-import inspect
-from textwrap import indent
+from abc import ABC, abstractmethod
 from datetime import timezone
-from abc import abstractmethod, ABC
 from functools import singledispatch
+from textwrap import indent
 
 from pydantic.fields import ModelField
 
 from . import fields
-from .types import Serializable
-from .errors import UnknownModelError, UnknownRelationalFieldError, InvalidModelError
 from ._constants import QUERY_BUILDER_ALIASES
+from .errors import InvalidModelError, UnknownModelError, UnknownRelationalFieldError
+from .types import Serializable
 
 if TYPE_CHECKING:
     from .bases import _PrismaModel as PrismaModel

@@ -1,28 +1,27 @@
 from __future__ import annotations
 
-import re
-import os
-import sys
-import shutil
 import logging
+import os
+import re
+import shutil
 import subprocess
-from pathlib import Path
+import sys
 from abc import ABC, abstractmethod
-from typing import IO, Union, Any, Mapping, cast
-from typing_extensions import Literal
+from pathlib import Path
+from typing import IO, Any, Mapping, Union, cast
 
 from pydantic.typing import get_args
+from typing_extensions import Literal
 
 from .. import config
+from .._compat import nodejs
 from .._proxy import LazyProxy
 from ..binaries import platform
 from ..errors import PrismaError
-from .._compat import nodejs
-
 
 log: logging.Logger = logging.getLogger(__name__)
 File = Union[int, IO[Any]]
-Target = Literal['node', 'npm']
+Target = Literal["node", "npm"]
 
 # taken from https://github.com/prisma/prisma/blob/main/package.json
 MIN_NODE_VERSION = (14, 17)
@@ -31,7 +30,7 @@ MIN_NODE_VERSION = (14, 17)
 MIN_NPM_VERSION = (6, 14)
 
 # we only care about the first two entries in the version number
-VERSION_RE = re.compile(r'v?(\d+)(?:\.?(\d+))')
+VERSION_RE = re.compile(r"v?(\d+)(?:\.?(\d+))")
 
 
 # TODO: remove the possibility to get mismatched paths for `node` and `npm`
@@ -39,21 +38,19 @@ VERSION_RE = re.compile(r'v?(\d+)(?:\.?(\d+))')
 
 class UnknownTargetError(PrismaError):
     def __init__(self, *, target: str) -> None:
-        super().__init__(
-            f'Unknown target: {target}; Valid choices are: {", ".join(get_args(cast(type, Target)))}'
-        )
+        super().__init__(f'Unknown target: {target}; Valid choices are: {", ".join(get_args(cast(type, Target)))}')
 
 
 # TODO: add tests for this error
 class MissingNodejsBinError(PrismaError):
     def __init__(self) -> None:
         super().__init__(
-            'Attempted to access a function that requires the `nodejs-bin` package to be installed but it is not.'
+            "Attempted to access a function that requires the `nodejs-bin` package to be installed but it is not."
         )
 
 
 class Strategy(ABC):
-    resolver: Literal['nodejs-bin', 'global', 'nodeenv']
+    resolver: Literal["nodejs-bin", "global", "nodeenv"]
 
     # TODO: support more options
     def run(
@@ -110,14 +107,14 @@ class Strategy(ABC):
 
 class NodeBinaryStrategy(Strategy):
     target: Target
-    resolver: Literal['global', 'nodeenv']
+    resolver: Literal["global", "nodeenv"]
 
     def __init__(
         self,
         *,
         path: Path,
         target: Target,
-        resolver: Literal['global', 'nodeenv'],
+        resolver: Literal["global", "nodeenv"],
     ) -> None:
         self.path = path
         self.target = target
@@ -137,7 +134,7 @@ class NodeBinaryStrategy(Strategy):
         env: Mapping[str, str] | None = None,
     ) -> subprocess.CompletedProcess[bytes]:
         path = str(self.path.absolute())
-        log.debug('Executing binary at %s with args: %s', path, args)
+        log.debug("Executing binary at %s with args: %s", path, args)
         return subprocess.run(
             [path, *args],
             check=check,
@@ -157,7 +154,7 @@ class NodeBinaryStrategy(Strategy):
             return NodeBinaryStrategy(
                 path=path,
                 target=target,
-                resolver='global',
+                resolver="global",
             )
 
         return NodeBinaryStrategy.from_nodeenv(target)
@@ -167,16 +164,16 @@ class NodeBinaryStrategy(Strategy):
         cache_dir = config.nodeenv_cache_dir.absolute()
         if cache_dir.exists():
             log.debug(
-                'Skipping nodeenv installation as it already exists at %s',
+                "Skipping nodeenv installation as it already exists at %s",
                 cache_dir,
             )
         else:
-            log.debug('Installing nodeenv to %s', cache_dir)
+            log.debug("Installing nodeenv to %s", cache_dir)
             subprocess.run(
                 [
                     sys.executable,
-                    '-m',
-                    'nodeenv',
+                    "-m",
+                    "nodeenv",
                     str(cache_dir),
                     *config.nodeenv_extra_args,
                 ],
@@ -187,34 +184,34 @@ class NodeBinaryStrategy(Strategy):
 
         if not cache_dir.exists():
             raise RuntimeError(
-                'Could not install nodeenv to the expected directory; See the output above for more details.'
+                "Could not install nodeenv to the expected directory; See the output above for more details."
             )
 
         # TODO: what hapens on cygwin?
-        if platform.name() == 'windows':
-            bin_dir = cache_dir / 'Scripts'
-            if target == 'node':
-                path = bin_dir / 'node.exe'
+        if platform.name() == "windows":
+            bin_dir = cache_dir / "Scripts"
+            if target == "node":
+                path = bin_dir / "node.exe"
             else:
-                path = bin_dir / f'{target}.cmd'
+                path = bin_dir / f"{target}.cmd"
         else:
-            path = cache_dir / 'bin' / target
+            path = cache_dir / "bin" / target
 
-        if target == 'npm':
-            return cls(path=path, resolver='nodeenv', target=target)
-        elif target == 'node':
-            return cls(path=path, resolver='nodeenv', target=target)
+        if target == "npm":
+            return cls(path=path, resolver="nodeenv", target=target)
+        elif target == "node":
+            return cls(path=path, resolver="nodeenv", target=target)
         else:
             raise UnknownTargetError(target=target)
 
 
 class NodeJSPythonStrategy(Strategy):
     target: Target
-    resolver: Literal['nodejs-bin']
+    resolver: Literal["nodejs-bin"]
 
     def __init__(self, *, target: Target) -> None:
         self.target = target
-        self.resolver = 'nodejs-bin'
+        self.resolver = "nodejs-bin"
 
     def __run__(
         self,
@@ -229,15 +226,15 @@ class NodeJSPythonStrategy(Strategy):
             raise MissingNodejsBinError()
 
         func = None
-        if self.target == 'node':
+        if self.target == "node":
             func = nodejs.node.run
-        elif self.target == 'npm':
+        elif self.target == "npm":
             func = nodejs.npm.run
         else:
             raise UnknownTargetError(target=self.target)
 
         return cast(
-            'subprocess.CompletedProcess[bytes]',
+            "subprocess.CompletedProcess[bytes]",
             func(
                 args,
                 check=check,
@@ -265,13 +262,13 @@ Node = Union[NodeJSPythonStrategy, NodeBinaryStrategy]
 
 
 def resolve(target: Target) -> Node:
-    if target not in {'node', 'npm'}:
+    if target not in {"node", "npm"}:
         raise UnknownTargetError(target=target)
 
     if config.use_nodejs_bin:
-        log.debug('Checking if nodejs-bin is installed')
+        log.debug("Checking if nodejs-bin is installed")
         if nodejs is not None:
-            log.debug('Using nodejs-bin with version: %s', nodejs.node_version)
+            log.debug("Using nodejs-bin with version: %s", nodejs.node_version)
             return NodeJSPythonStrategy(target=target)
 
     return NodeBinaryStrategy.resolve(target)
@@ -289,22 +286,22 @@ def _update_path_env(
     if env is None:
         env = dict(os.environ)
 
-    log.debug('Attempting to preprend %s to the PATH', target_bin)
-    assert target_bin.exists(), 'Target `bin` directory does not exist'
+    log.debug("Attempting to preprend %s to the PATH", target_bin)
+    assert target_bin.exists(), "Target `bin` directory does not exist"
 
-    path = env.get('PATH', '') or os.environ.get('PATH', '')
+    path = env.get("PATH", "") or os.environ.get("PATH", "")
     if path:
         # handle the case where the PATH already starts with the separator (this probably shouldn't happen)
         if path.startswith(sep):
-            path = f'{target_bin.absolute()}{path}'
+            path = f"{target_bin.absolute()}{path}"
         else:
-            path = f'{target_bin.absolute()}{sep}{path}'
+            path = f"{target_bin.absolute()}{sep}{path}"
     else:
         # handle the case where there is no PATH set (unlikely / impossible to actually happen?)
         path = str(target_bin.absolute())
 
-    log.debug('Using PATH environment variable: %s', path)
-    return {**env, 'PATH': path}
+    log.debug("Using PATH environment variable: %s", path)
+    return {**env, "PATH": path}
 
 
 def _get_global_binary(target: Target) -> Path | None:
@@ -312,24 +309,24 @@ def _get_global_binary(target: Target) -> Path | None:
 
     This also ensures that the binary is of the right version.
     """
-    log.debug('Checking for global target binary: %s', target)
+    log.debug("Checking for global target binary: %s", target)
 
     which = shutil.which(target)
     if which is None:
-        log.debug('Global target binary: %s not found', target)
+        log.debug("Global target binary: %s not found", target)
         return None
 
-    log.debug('Found global binary at: %s', which)
+    log.debug("Found global binary at: %s", which)
 
     path = Path(which)
     if not path.exists():
-        log.debug('Global binary does not exist at: %s', which)
+        log.debug("Global binary does not exist at: %s", which)
         return None
 
     if not _should_use_binary(target=target, path=path):
         return None
 
-    log.debug('Using global %s binary at %s', target, path)
+    log.debug("Using global %s binary at %s", target, path)
     return path
 
 
@@ -341,9 +338,9 @@ def _should_use_binary(target: Target, path: Path) -> bool:
     - the minimum version of `nodejs-bin` is higher than our requirement
     - `nodeenv` defaults to the latest stable version of node
     """
-    if target == 'node':
+    if target == "node":
         min_version = MIN_NODE_VERSION
-    elif target == 'npm':
+    elif target == "npm":
         min_version = MIN_NPM_VERSION
     else:
         raise UnknownTargetError(target=target)
@@ -351,7 +348,7 @@ def _should_use_binary(target: Target, path: Path) -> bool:
     version = _get_binary_version(target, path)
     if version is None:
         log.debug(
-            'Could not resolve %s version, ignoring global %s installation',
+            "Could not resolve %s version, ignoring global %s installation",
             target,
             target,
         )
@@ -359,7 +356,7 @@ def _should_use_binary(target: Target, path: Path) -> bool:
 
     if version < min_version:
         log.debug(
-            'Global %s version (%s) is lower than the minimum required version (%s), ignoring',
+            "Global %s version (%s) is lower than the minimum required version (%s), ignoring",
             target,
             version,
             min_version,
@@ -371,22 +368,22 @@ def _should_use_binary(target: Target, path: Path) -> bool:
 
 def _get_binary_version(target: Target, path: Path) -> tuple[int, ...] | None:
     proc = subprocess.run(
-        [str(path), '--version'],
+        [str(path), "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         check=False,
     )
-    log.debug('%s version check exited with code %s', target, proc.returncode)
+    log.debug("%s version check exited with code %s", target, proc.returncode)
 
-    output = proc.stdout.decode('utf-8').rstrip('\n')
-    log.debug('%s version check output: %s', target, output)
+    output = proc.stdout.decode("utf-8").rstrip("\n")
+    log.debug("%s version check output: %s", target, output)
 
     match = VERSION_RE.search(output)
     if not match:
         return None
 
     version = tuple(int(value) for value in match.groups())
-    log.debug('%s version check returning %s', target, version)
+    log.debug("%s version check returning %s", target, version)
     return version
 
 
@@ -401,5 +398,5 @@ class LazyBinaryProxy(LazyProxy[Node]):
         return resolve(self.target)
 
 
-npm = LazyBinaryProxy('npm').__as_proxied__()
-node = LazyBinaryProxy('node').__as_proxied__()
+npm = LazyBinaryProxy("npm").__as_proxied__()
+node = LazyBinaryProxy("node").__as_proxied__()

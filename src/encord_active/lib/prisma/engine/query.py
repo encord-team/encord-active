@@ -4,60 +4,59 @@
 # fmt: off
 from __future__ import annotations
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
 # -- template engine/query.py.jinja --
 
-import os
-import time
-import atexit
-import signal
 import asyncio
+import atexit
 import logging
+import os
+import signal
 import subprocess
+import time
 from pathlib import Path
 
-from . import utils, errors
-from .http import HTTPEngine
 from .. import config
-from ..utils import DEBUG
 from ..binaries import platform
-from ..utils import time_since, _env_bool
-from ..types import DatasourceOverride
 from ..builder import dumps
-
+from ..types import DatasourceOverride
+from ..utils import DEBUG, _env_bool, time_since
+from . import errors, utils
+from .http import HTTPEngine
 
 __all__ = ('QueryEngine',)
 

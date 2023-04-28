@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import os
-import sys
 import json
 import logging
+import os
 import subprocess
+import sys
 from pathlib import Path
-from typing import Any, List, Optional, Dict, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Optional
 
 import click
 
-from ._node import node, npm
 from .. import config
 from ..errors import PrismaError
-
+from ._node import node, npm
 
 log: logging.Logger = logging.getLogger(__name__)
 
@@ -23,12 +22,12 @@ def run(
     check: bool = False,
     env: Optional[Dict[str, str]] = None,
 ) -> int:
-    log.debug('Running prisma command with args: %s', args)
+    log.debug("Running prisma command with args: %s", args)
 
     default_env = {
         **os.environ,
-        'PRISMA_HIDE_UPDATE_MESSAGE': 'true',
-        'PRISMA_CLI_QUERY_ENGINE_TYPE': 'binary',
+        "PRISMA_HIDE_UPDATE_MESSAGE": "true",
+        "PRISMA_CLI_QUERY_ENGINE_TYPE": "binary",
     }
     env = {**default_env, **env} if env is not None else default_env
 
@@ -43,13 +42,9 @@ def run(
         stderr=sys.stderr,
     )
 
-    if args and args[0] in {'--help', '-h'}:
-        click.echo(click.style('Python Commands\n', bold=True))
-        click.echo(
-            '  '
-            + 'For Prisma Client Python commands run '
-            + click.style('prisma py --help', bold=True)
-        )
+    if args and args[0] in {"--help", "-h"}:
+        click.echo(click.style("Python Commands\n", bold=True))
+        click.echo("  " + "For Prisma Client Python commands run " + click.style("prisma py --help", bold=True))
 
     return process.returncode
 
@@ -60,19 +55,19 @@ class CLICache(NamedTuple):
 
 
 DEFAULT_PACKAGE_JSON: dict[str, Any] = {
-    'name': 'prisma-binaries',
-    'version': '1.0.0',
-    'private': True,
-    'description': 'Cache directory created by Prisma Client Python to store Prisma Engines',
-    'main': 'node_modules/prisma/build/index.js',
-    'author': 'RobertCraigie',
-    'license': 'Apache-2.0',
+    "name": "prisma-binaries",
+    "version": "1.0.0",
+    "private": True,
+    "description": "Cache directory created by Prisma Client Python to store Prisma Engines",
+    "main": "node_modules/prisma/build/index.js",
+    "author": "RobertCraigie",
+    "license": "Apache-2.0",
 }
 
 
 def ensure_cached() -> CLICache:
     cache_dir = config.binary_cache_dir
-    entrypoint = cache_dir / 'node_modules' / 'prisma' / 'build' / 'index.js'
+    entrypoint = cache_dir / "node_modules" / "prisma" / "build" / "index.js"
 
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True)
@@ -82,17 +77,17 @@ def ensure_cached() -> CLICache:
     #
     # If it finds a different `package.json` file then the `prisma` package
     # will be installed there instead of our cache directory.
-    package = cache_dir / 'package.json'
+    package = cache_dir / "package.json"
     if not package.exists():
         package.write_text(json.dumps(DEFAULT_PACKAGE_JSON))
 
     if not entrypoint.exists():
-        click.echo('Installing Prisma CLI')
+        click.echo("Installing Prisma CLI")
 
         try:
             proc = npm.run(
-                'install',
-                f'prisma@{config.prisma_version}',
+                "install",
+                f"prisma@{config.prisma_version}",
                 cwd=config.binary_cache_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -115,7 +110,7 @@ def ensure_cached() -> CLICache:
 
     if not entrypoint.exists():
         raise PrismaError(
-            f'CLI installation appeared to complete but the expected entrypoint ({entrypoint}) could not be found.'
+            f"CLI installation appeared to complete but the expected entrypoint ({entrypoint}) could not be found."
         )
 
     return CLICache(cache_dir=cache_dir, entrypoint=entrypoint)

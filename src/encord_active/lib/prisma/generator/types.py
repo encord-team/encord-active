@@ -1,10 +1,10 @@
 from typing import Mapping, Optional
+
 from .._types import TypedDict
 
-
 __all__ = (
-    'PartialModel',
-    'PartialModelField',
+    "PartialModel",
+    "PartialModelField",
 )
 
 

@@ -1,18 +1,17 @@
 import sys
-from types import ModuleType
 from functools import lru_cache
-from typing import Type, TypeVar, Any, cast
+from types import ModuleType
+from typing import Any, Type, TypeVar, cast
 
 from pydantic import BaseModel, Extra, create_model_from_typeddict
 from pydantic.typing import is_typeddict
 
 from ._types import Protocol, runtime_checkable
 
-
-__all__ = ('validate',)
+__all__ = ("validate",)
 
 # NOTE: we should use bound=TypedDict but mypy does not support this
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Config:
@@ -38,10 +37,8 @@ def patch_pydantic() -> None:
 
     create_model = annotated_types.create_model_from_typeddict
 
-    def patched_create_model(
-        typeddict_cls: Any, **kwargs: Any
-    ) -> Type[BaseModel]:
-        kwargs.setdefault('__module__', typeddict_cls.__module__)
+    def patched_create_model(typeddict_cls: Any, **kwargs: Any) -> Type[BaseModel]:
+        kwargs.setdefault("__module__", typeddict_cls.__module__)
         return create_model(typeddict_cls, **kwargs)
 
     annotated_types.create_model_from_typeddict = patched_create_model
@@ -64,9 +61,7 @@ def validate(type: Type[T], data: Any) -> T:
     patch_pydantic()
 
     if not is_typeddict(type):
-        raise TypeError(
-            f'Only TypedDict types are supported, got: {type} instead.'
-        )
+        raise TypeError(f"Only TypedDict types are supported, got: {type} instead.")
 
     # we cannot use pydantic's builtin type -> model resolver
     # as we need to be able to update forward references
@@ -78,9 +73,7 @@ def validate(type: Type[T], data: Any) -> T:
         # pyright is more strict than mypy here, we also don't care about the
         # incorrectly inferred type as we have verified that the given type
         # is indeed a TypedDict
-        model = create_model_from_typeddict(
-            type, __config__=Config  # pyright: ignore[reportGeneralTypeIssues]
-        )
+        model = create_model_from_typeddict(type, __config__=Config)  # pyright: ignore[reportGeneralTypeIssues]
         model.update_forward_refs(**vars(_get_module(type)))
         type.__pydantic_model__ = model  # type: ignore
 

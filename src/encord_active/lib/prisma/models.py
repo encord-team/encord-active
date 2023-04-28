@@ -3,54 +3,55 @@
 # pyright: reportUnusedImport=false
 # fmt: off
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
+import inspect
+import logging
+
 # -- template models.py.jinja --
 import os
-import logging
-import inspect
 import warnings
 from collections import OrderedDict
 
 from pydantic import BaseConfig, BaseModel, Field, validator
 
-from . import types, enums, errors, fields, bases
+from . import bases, enums, errors, fields, types
 from ._types import FuncType
 from .builder import serialize_base64
-from .generator import partial_models_ctx, PartialModelField
-
+from .generator import PartialModelField, partial_models_ctx
 
 log: logging.Logger = logging.getLogger(__name__)
 _created_partial_types: Set[str] = set()
@@ -834,7 +835,7 @@ _LabelRow_fields: Dict['types.LabelRowKeys', PartialModelField] = OrderedDict(
 
 # we have to import ourselves as relation types are namespaced to models
 # e.g. models.Post
-from . import models, actions
+from . import actions, models
 
 # required to support relationships between models
 Tag.update_forward_refs()

@@ -1,27 +1,26 @@
 import click
 
-from .utils import PathlibPath
 from .._types import FuncType
-
+from .utils import PathlibPath
 
 schema: FuncType = click.option(
-    '--schema',
+    "--schema",
     type=PathlibPath(exists=True, dir_okay=False, resolve_path=True),
-    help='The location of the Prisma schema file.',
+    help="The location of the Prisma schema file.",
     required=False,
 )
 
 watch: FuncType = click.option(
-    '--watch',
+    "--watch",
     is_flag=True,
     default=False,
     required=False,
-    help='Watch the Prisma schema and rerun after a change',
+    help="Watch the Prisma schema and rerun after a change",
 )
 
 skip_generate: FuncType = click.option(
-    '--skip-generate',
+    "--skip-generate",
     is_flag=True,
     default=False,
-    help='Skip triggering generators (e.g. Prisma Client Python)',
+    help="Skip triggering generators (e.g. Prisma Client Python)",
 )

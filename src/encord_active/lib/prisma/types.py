@@ -3,47 +3,47 @@
 # pyright: reportUnusedImport=false
 # fmt: off
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
 # -- template types.py.jinja --
 from typing import TypeVar
 
 import httpx
+
 from .utils import _NoneType
-
-
 
 # TODO: filters with aggregates should have their own recursive fields
 # TODO: cleanup whitespace control
@@ -4740,4 +4740,4 @@ LabelRowRelationalFieldKeys = Literal[
 
 
 # we have to import ourselves as types can be namespaced to types
-from . import types, enums, models, fields
+from . import enums, fields, models, types

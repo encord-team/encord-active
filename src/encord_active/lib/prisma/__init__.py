@@ -1,27 +1,24 @@
 # -*- coding: utf-8 -*-
 
-__title__ = 'prisma'
-__author__ = 'RobertCraigie'
-__license__ = 'APACHE'
-__copyright__ = 'Copyright 2020-2023 RobertCraigie'
-__version__ = '0.8.2'
+__title__ = "prisma"
+__author__ = "RobertCraigie"
+__license__ = "APACHE"
+__copyright__ = "Copyright 2020-2023 RobertCraigie"
+__version__ = "0.8.2"
 
 from typing import TYPE_CHECKING
 
+from . import errors as errors
 from ._config import config as config
 from .utils import setup_logging
-from . import errors as errors
 from .validator import *
 
-
 try:
+    from . import models as models
+    from . import partials as partials
+    from . import types as types
     from .client import *
     from .fields import *
-    from . import (
-        models as models,
-        partials as partials,
-        types as types,
-    )
 except ModuleNotFoundError:
     # code has not been generated yet
     # TODO: this could swallow unexpected errors
@@ -38,12 +35,12 @@ except ModuleNotFoundError:
                 return globals()[name]
             except KeyError:
                 # TODO: support checking for 'models' here too
-                if name in {'Prisma', 'Client'}:
+                if name in {"Prisma", "Client"}:
                     # TODO: remove this frame from the stack trace
                     raise RuntimeError(
                         "The Client hasn't been generated yet, "
-                        'you must run `prisma generate` before you can use the client.\n'
-                        'See https://prisma-client-py.readthedocs.io/en/stable/reference/troubleshooting/#client-has-not-been-generated-yet'
+                        "you must run `prisma generate` before you can use the client.\n"
+                        "See https://prisma-client-py.readthedocs.io/en/stable/reference/troubleshooting/#client-has-not-been-generated-yet"
                     ) from None
 
                 # leaves handling of this potential error to Python as per PEP 562

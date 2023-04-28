@@ -4,10 +4,9 @@ from typing import Any
 import httpx
 
 from ._types import Method
-from .http_abstract import AbstractResponse, AbstractHTTP
+from .http_abstract import AbstractHTTP, AbstractResponse
 
-
-__all__ = ('HTTP', 'Response', 'client')
+__all__ = ("HTTP", "Response", "client")
 
 
 class HTTP(AbstractHTTP[httpx.AsyncClient, httpx.Response]):
@@ -16,15 +15,13 @@ class HTTP(AbstractHTTP[httpx.AsyncClient, httpx.Response]):
     __slots__ = ()
 
     async def download(self, url: str, dest: str) -> None:
-        async with self.session.stream('GET', url, timeout=None) as resp:
+        async with self.session.stream("GET", url, timeout=None) as resp:
             resp.raise_for_status()
-            with open(dest, 'wb') as fd:
+            with open(dest, "wb") as fd:
                 async for chunk in resp.aiter_bytes():
                     fd.write(chunk)
 
-    async def request(
-        self, method: Method, url: str, **kwargs: Any
-    ) -> 'Response':
+    async def request(self, method: Method, url: str, **kwargs: Any) -> "Response":
         return Response(await self.session.request(method, url, **kwargs))
 
     def open(self) -> None:
@@ -54,6 +51,4 @@ class Response(AbstractResponse[httpx.Response]):
         return json.loads(await self.original.aread(), **kwargs)
 
     async def text(self, **kwargs: Any) -> str:
-        return ''.join(
-            [part async for part in self.original.aiter_text(**kwargs)]
-        )
+        return "".join([part async for part in self.original.aiter_text(**kwargs)])

@@ -4,49 +4,51 @@
 # fmt: off
 from __future__ import annotations
 
+import datetime
+import decimal
+import sys
+
 # global imports for type checking
 from builtins import bool as _bool
-from builtins import int as _int
 from builtins import float as _float
+from builtins import int as _int
 from builtins import str as _str
-import sys
-import decimal
-import datetime
 from typing import (
     TYPE_CHECKING,
-    Optional,
-    Iterable,
-    Iterator,
-    Sequence,
+    Any,
     Callable,
     ClassVar,
-    NoReturn,
-    TypeVar,
-    Generic,
-    Mapping,
-    Tuple,
-    Union,
-    List,
     Dict,
-    Type,
-    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Sequence,
     Set,
-    overload,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
     cast,
+    overload,
 )
-from typing_extensions import TypedDict, Literal
 
+from typing_extensions import Literal, TypedDict
 
 LiteralString = str
-# -- template actions.py.jinja --
-from typing import TypeVar
 import warnings
 
-from . import types, errors, bases
+# -- template actions.py.jinja --
+from typing import TypeVar
+
+from . import bases, errors, types
 
 if TYPE_CHECKING:
-    from .client import Client
     from .bases import _PrismaModel
+    from .client import Client
 
 
 _PrismaModelT = TypeVar('_PrismaModelT', bound='_PrismaModel')

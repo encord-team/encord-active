@@ -1,10 +1,9 @@
 import sys
-from typing import TYPE_CHECKING, Callable
 from asyncio import get_running_loop as get_running_loop
+from typing import TYPE_CHECKING, Callable
 
 from ._types import CallableT
 from .utils import make_optional
-
 
 if TYPE_CHECKING:
     # in pyright >= 1.190 classmethod is a generic type, this causes errors when
@@ -33,10 +32,8 @@ if TYPE_CHECKING:
         ...
 
 else:
-    from pydantic import (
-        validator as validator,
-        root_validator as root_validator,
-    )
+    from pydantic import root_validator as root_validator
+    from pydantic import validator as validator
 
 
 if sys.version_info[:2] < (3, 8):

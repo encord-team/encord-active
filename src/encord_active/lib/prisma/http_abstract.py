@@ -1,31 +1,20 @@
-from abc import abstractmethod, ABC
-from typing import (
-    Any,
-    Union,
-    Coroutine,
-    Type,
-    Dict,
-    TypeVar,
-    Generic,
-    Optional,
-    cast,
-)
+from abc import ABC, abstractmethod
+from typing import Any, Coroutine, Dict, Generic, Optional, Type, TypeVar, Union, cast
 
 from httpx import Limits, Timeout
 
 from ._types import Method
-from .utils import _NoneType
 from .errors import HTTPClientClosedError
+from .utils import _NoneType
 
-
-Session = TypeVar('Session')
-Response = TypeVar('Response')
-ReturnType = TypeVar('ReturnType')
+Session = TypeVar("Session")
+Response = TypeVar("Response")
+ReturnType = TypeVar("ReturnType")
 MaybeCoroutine = Union[Coroutine[Any, Any, ReturnType], ReturnType]
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    'limits': Limits(max_connections=1000),
-    'timeout': Timeout(30),
+    "limits": Limits(max_connections=1000),
+    "timeout": Timeout(30),
 }
 
 
@@ -33,8 +22,8 @@ class AbstractHTTP(ABC, Generic[Session, Response]):
     session_kwargs: Dict[str, Any]
 
     __slots__ = (
-        '_session',
-        'session_kwargs',
+        "_session",
+        "session_kwargs",
     )
 
     # NOTE: ParamSpec wouldn't be valid here:
@@ -54,9 +43,7 @@ class AbstractHTTP(ABC, Generic[Session, Response]):
         ...
 
     @abstractmethod
-    def request(
-        self, method: Method, url: str, **kwargs: Any
-    ) -> MaybeCoroutine['AbstractResponse[Response]']:
+    def request(self, method: Method, url: str, **kwargs: Any) -> MaybeCoroutine["AbstractResponse[Response]"]:
         ...
 
     @abstractmethod
@@ -85,9 +72,7 @@ class AbstractHTTP(ABC, Generic[Session, Response]):
         return cast(Session, session)
 
     @session.setter
-    def session(
-        self, value: Optional[Session]
-    ) -> None:  # pyright: ignore[reportPropertyTypeMismatch]
+    def session(self, value: Optional[Session]) -> None:  # pyright: ignore[reportPropertyTypeMismatch]
         self._session = value
 
     def should_close(self) -> bool:
@@ -97,13 +82,13 @@ class AbstractHTTP(ABC, Generic[Session, Response]):
         return str(self)
 
     def __str__(self) -> str:
-        return f'<HTTP closed={self.closed}>'
+        return f"<HTTP closed={self.closed}>"
 
 
 class AbstractResponse(ABC, Generic[Response]):
     original: Response
 
-    __slots__ = ('original',)
+    __slots__ = ("original",)
 
     def __init__(self, original: Response) -> None:
         self.original = original
@@ -125,4 +110,4 @@ class AbstractResponse(ABC, Generic[Response]):
         return str(self)
 
     def __str__(self) -> str:
-        return f'<Response wrapped={self.original} >'
+        return f"<Response wrapped={self.original} >"

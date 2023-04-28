@@ -3,8 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Generic, Iterable, TypeVar, cast
 
-
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # NOTE: this is not an exhaustive list of supported data methods.

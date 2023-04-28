@@ -1,43 +1,32 @@
-import sys
 import logging
+import sys
 from enum import Enum
 from pathlib import Path
-from typing import (
-    Optional,
-    List,
-    Union,
-    NoReturn,
-    Mapping,
-    Any,
-    Type,
-    overload,
-    cast,
-)
+from typing import Any, List, Mapping, NoReturn, Optional, Type, Union, cast, overload
 
 import click
 
-from . import prisma
-from ..utils import module_exists
 from .._types import Literal
-
+from ..utils import module_exists
+from . import prisma
 
 log: logging.Logger = logging.getLogger(__name__)
 
 
 class PrismaCLI(click.MultiCommand):
 
-    base_package: str = 'prisma.cli.commands'
-    folder: Path = Path(__file__).parent / 'commands'
+    base_package: str = "prisma.cli.commands"
+    folder: Path = Path(__file__).parent / "commands"
 
     def list_commands(self, ctx: click.Context) -> List[str]:
         commands: List[str] = []
 
         for path in self.folder.iterdir():
             name = path.name
-            if name.startswith('_'):
+            if name.startswith("_"):
                 continue
 
-            if name.endswith('.py'):
+            if name.endswith(".py"):
                 commands.append(path.stem)
             elif is_module(path):
                 commands.append(name)
@@ -45,22 +34,18 @@ class PrismaCLI(click.MultiCommand):
         commands.sort()
         return commands
 
-    def get_command(
-        self, ctx: click.Context, cmd_name: str
-    ) -> Optional[click.Command]:
-        name = f'{self.base_package}.{cmd_name}'
+    def get_command(self, ctx: click.Context, cmd_name: str) -> Optional[click.Command]:
+        name = f"{self.base_package}.{cmd_name}"
         if not module_exists(name):
             # command not found
             return None
 
-        mod = __import__(name, None, None, ['cli'])
+        mod = __import__(name, None, None, ["cli"])
 
-        assert hasattr(
-            mod, 'cli'
-        ), f'Expected command module {name} to contain a "cli" attribute'
+        assert hasattr(mod, "cli"), f'Expected command module {name} to contain a "cli" attribute'
         assert isinstance(mod.cli, click.Command), (
-            f'Expected command module attribute {name}.cli to be a {click.Command} '
-            f'instance but got {type(mod.cli)} instead'
+            f"Expected command module attribute {name}.cli to be a {click.Command} "
+            f"instance but got {type(mod.cli)} instead"
         )
 
         return mod.cli
@@ -91,7 +76,7 @@ class EnumChoice(click.Choice):
 
     def __init__(self, enum: Type[Enum]) -> None:
         if str not in enum.__mro__:
-            raise TypeError('Enum does not subclass `str`')
+            raise TypeError("Enum does not subclass `str`")
 
         self.__enum = enum
         super().__init__([item.value for item in enum.__members__.values()])
@@ -102,13 +87,11 @@ class EnumChoice(click.Choice):
         param: Optional[click.Parameter],
         ctx: Optional[click.Context],
     ) -> str:
-        return str(
-            cast(Any, self.__enum(super().convert(value, param, ctx)).value)
-        )
+        return str(cast(Any, self.__enum(super().convert(value, param, ctx)).value))
 
 
 def is_module(path: Path) -> bool:
-    return path.is_dir() and path.joinpath('__init__.py').exists()
+    return path.is_dir() and path.joinpath("__init__.py").exists()
 
 
 def maybe_exit(retcode: int) -> None:
@@ -117,27 +100,22 @@ def maybe_exit(retcode: int) -> None:
         sys.exit(retcode)
 
 
-def generate_client(
-    schema: Optional[str] = None, *, reload: bool = False
-) -> None:
+def generate_client(schema: Optional[str] = None, *, reload: bool = False) -> None:
     """Run `prisma generate` and update sys.modules"""
-    args = ['generate']
+    args = ["generate"]
     if schema is not None:
-        args.append(f'--schema={schema}')
+        args.append(f"--schema={schema}")
 
     maybe_exit(prisma.run(args))
 
     if reload:
         for name in sys.modules.copy():
-            if 'prisma' in name and 'generator' not in name:
+            if "prisma" in name and "generator" not in name:
                 sys.modules.pop(name, None)
 
 
 def warning(message: str) -> None:
-    click.echo(
-        click.style('WARNING: ', fg='bright_yellow')
-        + click.style(message, bold=True)
-    )
+    click.echo(click.style("WARNING: ", fg="bright_yellow") + click.style(message, bold=True))
 
 
 @overload
@@ -156,7 +134,7 @@ def error(message: str, exit_: Literal[False]) -> None:
 
 
 def error(message: str, exit_: bool = True) -> Union[None, NoReturn]:
-    click.echo(click.style(message, fg='bright_red', bold=True), err=True)
+    click.echo(click.style(message, fg="bright_red", bold=True), err=True)
     if exit_:
         sys.exit(1)
     else:
@@ -172,4 +150,4 @@ def pretty_info(mapping: Mapping[str, Any]) -> str:
     hello : 1
     """
     pad = max(len(k) for k in mapping.keys())
-    return '\n'.join(f'{k.ljust(pad)} : {v}' for k, v in mapping.items())
+    return "\n".join(f"{k.ljust(pad)} : {v}" for k, v in mapping.items())
