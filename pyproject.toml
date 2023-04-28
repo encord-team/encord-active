@@ -120,30 +120,28 @@ build-backend = "poetry.core.masonry.api"
 [tool.black]
 line-length = 120
 target-version = ['py39']
-include = '.*\/.*\.i?py(nb)?$'
-exclude = '/(\.direnv|\.eggs|\.git|\.h g|\.mypy_cache|\.nox|\.tox|\.venv|venv|\.svn|\.ipynb_checkpoints|_build|buck- out|build|dist|__pypackages__|frontend_components/src/encord_active_components/frontend/node_modules)/'
+include = '.(src/encord_active/[a-zA-Z].*|frontend_components|examples)\/.*\.i?py(nb)?$'
 
 [tool.isort]
 profile = "black"
-skip = [
-  "./frontend_components/src/encord_active_components/frontend/node_modules",
+extend_skip_glob = [
+  "*/*/node_modules/*",
+  "*/*/__autogen__/*",
 ]
 
 [tool.mypy]
 ignore_missing_imports = true
 enable_recursive_aliases = true
 exclude = [
-  'examples/',
-  'src/encord_active/lib/prisma',
-  'frontend_components/src/encord_active_components/frontend/node_modules',
+  '^examples/',
+  'src/encord_active/lib/db/__autogen__/*',
 ]
 
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"
 ignore-paths = [
-  '^examples/.*',
-  '^src/encord_active/lib/prisma',
-  '^frontend_components/src/encord_active_components/frontend/node_modules',
+  '^examples/',
+  'src/encord_active/lib/db/__autogen__/',
 ]
 
 [tool.pylint.'TYPING']
