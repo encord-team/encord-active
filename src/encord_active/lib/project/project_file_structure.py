@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Union
+from typing import Iterator, List, NamedTuple, Optional, Union
 
 from prisma import models
 from prisma.types import (
@@ -50,11 +50,12 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                 if fill_data_units:
                     data_units = label_row_dict["data_units"]
                     for data_unit in label_row.iter_data_unit():
+                        du = data_units[data_unit.hash]
                         batcher.dataunit.create(
                             DataUnitCreateInput(
                                 data_hash=data_unit.hash,
-                                data_title=data_units[data_unit.hash]["data_title"],
-                                frame=data_unit.frame,
+                                data_title=du["data_title"],
+                                frame=int(du["data_sequence"]),
                                 location=data_unit.path.as_posix(),
                                 lr_data_hash=lr_data_hash,
                             )
@@ -62,22 +63,9 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
             batcher.commit()
 
 
-class DataUnitStructure:
-    def __init__(self, hash: str, path: Path, old_hash: str, frame: int):
-        self.hash = hash
-        self.path = path
-        self.old_hash = old_hash
-        self.frame = frame
-
-    @property
-    def _tuple(self):
-        return (self.hash, self.path, self.old_hash, self.frame)
-
-    def __getitem__(self, val: Any):
-        return self._tuple[val]
-
-    def __iter__(self):
-        return self._tuple.__iter__()
+class DataUnitStructure(NamedTuple):
+    hash: str
+    path: Path
 
 
 class LabelRowStructure:
@@ -105,10 +93,9 @@ class LabelRowStructure:
             glob_string += f"_{frame}"
         glob_string += ".*"
         for du_path in self.images_dir.glob(glob_string):
-            old_du_hash, *frame_str = du_path.stem.split("_")
+            old_du_hash, *_ = du_path.stem.split("_")
             new_du_hash = self._rev_mappings.get(old_du_hash, old_du_hash)
-            frame = int(frame_str[0]) if frame_str else 0
-            yield DataUnitStructure(new_du_hash, du_path, old_du_hash, frame)
+            yield DataUnitStructure(new_du_hash, du_path)
 
     def is_present(self):
         return self.path.is_dir()
