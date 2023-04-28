@@ -1,10 +1,9 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Iterator, Optional, Union
+from typing import List, Optional, Union
 
 from prisma import models
-
-from encord_active.lib.db.base import DataUnitLike
+from prisma.types import DataUnitWhereInput
 
 
 class BaseProjectFileStructure:
@@ -70,10 +69,10 @@ class BaseProjectFileStructure:
 
     @abstractmethod
     def data_units(
-        self, pattern: Optional[list[DataUnitLike]] = None, include_label_row: bool = False
-    ) -> Iterator[models.DataUnit]:
+        self, where: Optional[List[DataUnitWhereInput]] = None, include_label_row: bool = False
+    ) -> List[models.DataUnit]:
         pass
 
     @abstractmethod
-    def label_rows(self) -> Iterator[models.LabelRow]:
+    def label_rows(self) -> List[models.LabelRow]:
         pass

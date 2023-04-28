@@ -1,13 +1,66 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Iterator, NamedTuple, Optional, Union
+from typing import Iterator, List, NamedTuple, Optional, Union
 
 from prisma import models
+from prisma.types import (
+    DataUnitCreateInput,
+    DataUnitInclude,
+    DataUnitWhereInput,
+    LabelRowCreateInput,
+)
 
-from encord_active.lib.db.base import DataUnitLike
-from encord_active.lib.db.compatibility import fill_missing_tables
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
+
+
+# To be deprecated when Encord Active version is >= 0.1.60.
+def _fill_missing_tables(pfs: ProjectFileStructure):
+    # Adds the content missing from the data units table when projects with
+    # older versions of Encord Active are handled with versions greater than 0.1.52.
+    label_row_meta = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+    with PrismaConnection() as conn:
+        fill_label_rows = conn.labelrow.count() == 0
+        fill_data_units = conn.dataunit.count() == 0
+        if not (fill_label_rows or fill_data_units):
+            return
+
+        with conn.batch_() as batcher:
+            for label_row in pfs.iter_labels():
+                label_row_dict = json.loads(label_row.label_row_file.read_text(encoding="utf-8"))
+                label_hash = label_row_dict["label_hash"]
+                lr_data_hash = label_row_meta[label_hash]["data_hash"]
+
+                if fill_label_rows:
+                    label_hash = label_row_dict["label_hash"]
+                    batcher.labelrow.create(
+                        LabelRowCreateInput(
+                            label_hash=label_hash,
+                            data_hash=lr_data_hash,
+                            data_title=label_row_dict["data_title"],
+                            data_type=label_row_dict["data_type"],
+                            created_at=label_row_meta[label_hash]["created_at"],
+                            last_edited_at=label_row_meta[label_hash]["last_edited_at"],
+                            location=label_row.label_row_file.as_posix(),
+                        )
+                    )
+
+                if fill_data_units:
+                    data_units = label_row_dict["data_units"]
+                    for data_unit in label_row.iter_data_unit():
+                        du = data_units[data_unit.hash]
+                        batcher.dataunit.create(
+                            DataUnitCreateInput(
+                                data_hash=data_unit.hash,
+                                data_title=du["data_title"],
+                                frame=int(du["data_sequence"]),
+                                location=data_unit.path.as_posix(),
+                                lr_data_hash=lr_data_hash,
+                            )
+                        )
+            batcher.commit()
 
 
 class DataUnitStructure(NamedTuple):
@@ -40,8 +93,9 @@ class LabelRowStructure:
             glob_string += f"_{frame}"
         glob_string += ".*"
         for du_path in self.images_dir.glob(glob_string):
-            du_hash = du_path.name.split(".")[0].split("_")[0]
-            yield DataUnitStructure(self._rev_mappings.get(du_hash, du_hash), du_path)
+            old_du_hash, *_ = du_path.stem.split("_")
+            new_du_hash = self._rev_mappings.get(old_du_hash, old_du_hash)
+            yield DataUnitStructure(new_du_hash, du_path)
 
     def is_present(self):
         return self.path.is_dir()
@@ -101,30 +155,19 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(path=path, mappings=self._mappings)
 
     def data_units(
-        self, pattern: Optional[DataUnitLike] = None, include_label_row: bool = False
-    ) -> Iterator[models.DataUnit]:
+        self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
+    ) -> List[models.DataUnit]:
         PrismaConnection.set_project_file_structure(self)
-        to_include = {"label_row": True} if include_label_row else {}
+        to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection() as conn:
-            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
-            fill_missing_tables()
-            # end backwards compatibility code.
-            if pattern is None:
-                return iter(conn.dataunit.find_many(include=to_include))
-            else:
-                and_clause = []
-                for field in pattern._fields:
-                    if (value := getattr(pattern, field)) is not None:
-                        and_clause.append({field: value})
-                return iter(conn.dataunit.find_many(where={"AND": and_clause}, include=to_include))
+            _fill_missing_tables(self)
+            return conn.dataunit.find_many(where=where, include=to_include)
 
-    def label_rows(self) -> Iterator[models.LabelRow]:
+    def label_rows(self) -> List[models.LabelRow]:
         PrismaConnection.set_project_file_structure(self)
         with PrismaConnection() as conn:
-            # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
-            fill_missing_tables()
-            # end backwards compatibility code.
-            return iter(conn.labelrow.find_many())
+            _fill_missing_tables(self)
+            return conn.labelrow.find_many()
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
         for label_hash in self.data.iterdir():
