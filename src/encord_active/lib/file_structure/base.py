@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
+from typing import List, Optional, Union
 
 from prisma import models
 from prisma.types import DataUnitWhereInput
