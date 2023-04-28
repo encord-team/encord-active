@@ -53,7 +53,7 @@ export const ItemSchema = z.object({
   labels: LabelsSchema,
 });
 
-const IdValueSchema = z.object({ id: z.string(), value: z.number() });
+const IdValueSchema = z.object({ id: z.string(), value: z.number().nullish() });
 export type IdValue = z.infer<typeof IdValueSchema>;
 
 export type GroupedTags = z.infer<typeof GroupedTagsSchema>;
@@ -68,6 +68,18 @@ export const Item2DEmbeddingSchema = PointSchema.extend({
 });
 
 export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
+
+export const searchTypeOptions = {
+  search: "Search",
+  codegen: "Code Generation",
+} as const;
+type SearchType = keyof typeof searchTypeOptions;
+
+const searchResultSchema = z.object({
+  ids: z.string().array(),
+  snippet: z.string().nullish(),
+});
+export type SeachResult = z.infer<typeof searchResultSchema>;
 
 export const fetchProject2DEmbeddings =
   (projectName: string) => async (selectedMetric: string) => {
@@ -159,6 +171,24 @@ export const updateItemTags =
         },
         body: JSON.stringify(data),
       });
+    };
+
+export const searchInProject =
+  (projectName: string) =>
+    async (
+      { scope, query, type }: { scope: Scope; query: string; type: SearchType },
+      signal?: AbortSignal
+    ) => {
+      const queryParams = new URLSearchParams({ query, scope, type });
+
+      const response = await fetch(
+        `${BASE_URL}/projects/${projectName}/search?${queryParams}`,
+        {
+          signal,
+        }
+      );
+
+      return searchResultSchema.parse(await response.json());
     };
 
 export const useProjectQueries = () => {
@@ -262,6 +292,8 @@ export const useProjectQueries = () => {
         () => fetchProject2DEmbeddings(projectName!)(selectedMetric),
         { enabled: !!selectedMetric }
       ),
+    search: (...args: Parameters<ReturnType<typeof searchInProject>>) =>
+      searchInProject(projectName)(...args),
   };
 };
 

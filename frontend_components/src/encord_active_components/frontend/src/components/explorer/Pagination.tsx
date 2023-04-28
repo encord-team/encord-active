@@ -85,7 +85,9 @@ export const Pagination = ({
         )}
         <button
           onClick={() => onChange(next)}
-          className={classy("btn", { "btn-disabled": current === totalPages })}
+          className={classy("btn", {
+            "btn-disabled": !totalPages || current === totalPages,
+          })}
         >
           <MdOutlineNavigateNext />
         </button>

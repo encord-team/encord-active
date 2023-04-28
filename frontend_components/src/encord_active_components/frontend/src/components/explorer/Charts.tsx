@@ -8,7 +8,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IdValue, Item2DEmbedding } from "./api";
 import { bin } from "d3-array";
-import { Spin } from "antd";
 
 const BINS = 20;
 

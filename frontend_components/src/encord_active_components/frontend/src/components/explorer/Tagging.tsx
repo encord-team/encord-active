@@ -1,4 +1,4 @@
-import { Select, Spin, SelectProps } from "antd";
+import { Select, SelectProps } from "antd";
 import { useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
@@ -6,6 +6,7 @@ import { TbPolygon } from "react-icons/tb";
 
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useProjectQueries } from "./api";
+import { Spin } from "./Spinner";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
