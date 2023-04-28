@@ -422,8 +422,7 @@ const GalleryItem = ({
             <span>{displayValue}</span>
           </div>
         )}
-
-        <div className="absolute p-2 top-7 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-scroll">
+        <div className="absolute p-2 top-7 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-y-auto">
           <TagList tags={data.tags} />
           {description && (
             <div className="flex flex-col">
