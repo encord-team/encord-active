@@ -15,7 +15,9 @@ def ensure_safe_project(path: Path):
     paths = [path] if is_project(path) else find_child_projects(path)
 
     for path in paths:
-        GitVersioner(path).jump_to("latest")
+        versioner = GitVersioner(path)
+        if versioner.available:
+            versioner.jump_to("latest")
         ensure_initialised_merged_metrics(path)
 
 
