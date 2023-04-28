@@ -1,6 +1,7 @@
-import { Spin } from "antd";
+import { Spin } from "./Spinner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
+import { TbMoodSad2 } from "react-icons/tb";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
 import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
@@ -33,6 +34,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
+import { Assistant } from "./Assistant";
 
 export type Props = {
   projectName: string;
@@ -110,9 +112,12 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
           />
         )}
         <div
-          className={classy("w-full flex flex-col gap-5 items-center pb-5", {
-            hidden: previewedItem,
-          })}
+          className={classy(
+            "w-full flex flex-col gap-5 items-center pb-5 m-auto",
+            {
+              hidden: previewedItem,
+            }
+          )}
         >
           {selectedMetric && (
             <Embeddings
@@ -207,31 +212,46 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
               </button>
             </div>
           </div>
-          <form
-            onChange={({ target }) =>
-              toggleImageSelection((target as HTMLInputElement).name)
+          <Assistant
+            scope={scope}
+            setResults={(ids) =>
+              setSortedAndFiltered(ids.map((id) => ({ id })))
             }
-            onSubmit={(e) => e.preventDefault()}
-            className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
-          >
-            {pageItems.map((id) => (
-              <GalleryItem
-                selectedMetric={selectedMetric}
-                key={id}
-                itemId={id}
-                onExpand={() => setPreviewedItem(id)}
-                onShowSimilar={() => showSimilarItems(id)}
-                selected={selectedItems.has(id)}
-              />
-            ))}
-          </form>
-          <Pagination
-            current={page}
-            pageSize={pageSize}
-            totalItems={itemsToRender.length}
-            onChange={setPage}
-            onChangePageSize={setPageSize}
           />
+          {itemsToRender.length ? (
+            <>
+              <form
+                onChange={({ target }) =>
+                  toggleImageSelection((target as HTMLInputElement).name)
+                }
+                onSubmit={(e) => e.preventDefault()}
+                className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
+              >
+                {pageItems.map((id) => (
+                  <GalleryItem
+                    selectedMetric={selectedMetric}
+                    key={id}
+                    itemId={id}
+                    onExpand={() => setPreviewedItem(id)}
+                    onShowSimilar={() => showSimilarItems(id)}
+                    selected={selectedItems.has(id)}
+                  />
+                ))}
+              </form>
+              <Pagination
+                current={page}
+                pageSize={pageSize}
+                totalItems={itemsToRender.length}
+                onChange={setPage}
+                onChangePageSize={setPageSize}
+              />
+            </>
+          ) : (
+            <div className="h-32 flex items-center gap-2">
+              <TbMoodSad2 className="text-3xl" />
+              <span className="text-xl">No results</span>
+            </div>
+          )}
         </div>
       </div>
     </ProjectContext.Provider>
@@ -446,18 +466,19 @@ const GalleryItem = ({
           </div>
         </div>
       </label>
+      <div className="divider m-0"></div>
       <div className="card-body p-2">
         <div className="card-actions flex">
           <div className="btn-group">
             <button
-              className="btn btn-ghost gap-2 tooltip"
+              className="btn btn-ghost gap-2 tooltip tooltip-right"
               data-tip="Similar items"
               onClick={onShowSimilar}
             >
               <MdImageSearch className="text-base" />
             </button>
             <button
-              className="btn btn-ghost gap-2 tooltip"
+              className="btn btn-ghost gap-2 tooltip tooltip-right"
               data-tip="Open in Encord Annotate"
               onClick={() => window.open(data.editUrl.toString(), "_blank")}
             >

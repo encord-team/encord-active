@@ -41,9 +41,7 @@ class Page(ABC):
     def display_settings(self):
         with sticky_header():
             with st.expander("Toolbox", expanded=True):
-                view_tab, actions_tab, version_tab, assistant_tab = st.tabs(
-                    ["Filter", "Action", "Version", "Assistant"]
-                )
+                view_tab, actions_tab, version_tab = st.tabs(["Filter", "Action", "Version"])
 
                 with view_tab:
                     self.render_view_options()
@@ -56,12 +54,6 @@ class Page(ABC):
                         show_update_stats(filterd)
                 with version_tab:
                     version_form()
-                with assistant_tab:
-                    from encord_active.app.common.components.assistant import (
-                        render_assistant,
-                    )
-
-                    render_assistant()
 
     def render_view_options(self):
         pass
