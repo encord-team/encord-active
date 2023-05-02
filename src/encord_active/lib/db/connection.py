@@ -1,28 +1,20 @@
 import sqlite3
-from pathlib import Path
 from typing import Optional
 
-from prisma.cli.prisma import run
-
-from encord_active.lib.common.decorators import silence_stdout
-
-PRISMA_SCHEMA_FILE = Path(__file__).parent / "schema.prisma"
-run = silence_stdout(run)
+from encord_active.lib.db.prisma_init import generate_prisma_client
 
 try:
     import prisma
-    from prisma import Prisma
-    from prisma.models import DataUnit, LabelRow  # pylint: disable=unused-import
-    from prisma.types import DatasourceOverride
+    import prisma.client
 except (RuntimeError, ImportError):
-    run(["generate", f"--schema={PRISMA_SCHEMA_FILE}"])
-
+    generate_prisma_client()
     from importlib import reload
 
     reload(prisma)  # pylint: disable=used-before-assignment
-    reload(prisma.models)
+finally:
     from prisma import Prisma
     from prisma.types import DatasourceOverride
+
 
 # uses prisma so must appear after prisma schema generation
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
@@ -74,7 +66,7 @@ class PrismaConnection:
         url = f"file:{db_file}"
         env = {"MY_DATABASE_URL": url}
 
-        run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}", "--skip-generate"], env=env)
+        prisma_run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}", "--skip-generate"], env=env)
         cls._datasource = DatasourceOverride(url=url)
 
     @classmethod
