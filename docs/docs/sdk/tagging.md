@@ -26,8 +26,8 @@ from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 project_path = Path("/path/to/your/project/root")
-DBConnection.set_project_file_structure(ProjectFileStructure(project_path))
-metrics = MergedMetrics()
+with DBConnection(ProjectFileStructure(project_path)) as conn:
+    metrics = MergedMetrics(conn).all()
 
 iterator = DatasetIterator(project_path)
 for data_unit, image_path in iterator.iterate():
@@ -51,8 +51,8 @@ from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 project_path = Path("/path/to/your/project/root")
-DBConnection.set_project_file_structure(ProjectFileStructure(project_path))
-metrics = MergedMetrics()
+with DBConnection(ProjectFileStructure(project_path)) as conn:
+    metrics = MergedMetrics(conn).all()
 
 iterator = DatasetIterator(project_path)
 for data_unit, image_path in iterator.iterate():

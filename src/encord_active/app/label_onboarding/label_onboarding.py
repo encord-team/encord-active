@@ -4,6 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.app.common.state import get_state
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
 from encord_active.lib.labels.classification import (
     create_ontology_structure,
@@ -35,7 +36,8 @@ def update_merged_metrics():
     merged_metrics = build_merged_metrics(get_state().project_paths.metrics)
     merged_metrics.update(get_state().merged_metrics.tags)
     get_state().merged_metrics = merged_metrics
-    MergedMetrics().replace_all(merged_metrics)
+    with DBConnection(get_state().project_paths) as conn:
+        MergedMetrics(conn).replace_all(merged_metrics)
 
 
 def label_onboarding_page():

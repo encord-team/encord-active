@@ -97,9 +97,9 @@ class State:
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
             project_file_structure = ProjectFileStructure(project_dir)
-            DBConnection.set_project_file_structure(project_file_structure)
-            PrismaConnection.set_project_file_structure(project_file_structure)
-            merged_metrics = MergedMetrics().all()
+            with DBConnection(project_file_structure) as conn:
+                merged_metrics = MergedMetrics(conn).all()
+
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,
                 target_path=target_path,

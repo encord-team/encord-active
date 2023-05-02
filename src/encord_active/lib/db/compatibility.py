@@ -1,30 +1,29 @@
 import json
 import re
 
-from prisma import models
+from prisma import Prisma, models
 
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
-def fill_missing_tables():
-    with PrismaConnection() as conn:
+def fill_missing_tables(project_file_structure: BaseProjectFileStructure):
+    with PrismaConnection(project_file_structure) as conn:
         if conn.labelrow.count() == 0:
-            fill_label_rows_table()
+            fill_label_rows_table(project_file_structure, conn)
         if conn.dataunit.count() == 0:
-            fill_data_units_table()
+            fill_data_units_table(project_file_structure, conn)
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
-def fill_data_units_table():
+def fill_data_units_table(project_file_structure: BaseProjectFileStructure, conn: Prisma):
     # Adds the content missing from the data units table when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
-    project_file_structure = PrismaConnection.project_file_structure()
-
     pattern = re.compile(DATA_HASH_REGEX)
-    with PrismaConnection() as conn:
+    with PrismaConnection(project_file_structure) as conn:
         with conn.batch_() as batcher:
             # fetch data units from local storage and store their references in the prisma db
             for label_hash in project_file_structure.data.iterdir():
@@ -69,40 +68,37 @@ def fill_data_units_table():
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
-def fill_label_rows_table():
+def fill_label_rows_table(project_file_structure: BaseProjectFileStructure, conn: Prisma):
     # Adds the content missing from the label rows table when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
-    project_file_structure = PrismaConnection.project_file_structure()
-
     pattern = re.compile(DATA_HASH_REGEX)
-    with PrismaConnection() as conn:
-        with conn.batch_() as batcher:
-            # fetch label rows from local storage and store their references in the prisma db
-            for label_hash in project_file_structure.data.iterdir():
-                if pattern.match(label_hash.name) is None:  # avoid unexpected folders in the data directory
-                    continue
-                label_row_path = project_file_structure.data / label_hash / "label_row.json"
-                label_row = json.loads(label_row_path.read_text(encoding="utf-8"))
+    with conn.batch_() as batcher:
+        # fetch label rows from local storage and store their references in the prisma db
+        for label_hash in project_file_structure.data.iterdir():
+            if pattern.match(label_hash.name) is None:  # avoid unexpected folders in the data directory
+                continue
+            label_row_path = project_file_structure.data / label_hash / "label_row.json"
+            label_row = json.loads(label_row_path.read_text(encoding="utf-8"))
 
-                label_hash = label_row["label_hash"]
-                data_hash = label_row["data_hash"]
-                data_title = label_row["data_title"]
-                data_type = label_row["data_type"]
-                created_at = label_row["created_at"]
-                last_edited_at = label_row["last_edited_at"]
+            label_hash = label_row["label_hash"]
+            data_hash = label_row["data_hash"]
+            data_title = label_row["data_title"]
+            data_type = label_row["data_type"]
+            created_at = label_row["created_at"]
+            last_edited_at = label_row["last_edited_at"]
 
-                batcher.labelrow.create(
-                    models.LabelRow(
-                        id=-1,  # add dummy id value because `id` is a required attribute
-                        label_hash=label_hash,
-                        data_hash=data_hash,
-                        data_title=data_title,
-                        data_type=data_type,
-                        created_at=created_at,
-                        last_edited_at=last_edited_at,
-                        location=label_row_path.resolve().as_posix(),
-                    ).dict(
-                        exclude={"id", "data_units"}  # remove dummy values
-                    )
+            batcher.labelrow.create(
+                models.LabelRow(
+                    id=-1,  # add dummy id value because `id` is a required attribute
+                    label_hash=label_hash,
+                    data_hash=data_hash,
+                    data_title=data_title,
+                    data_type=data_type,
+                    created_at=created_at,
+                    last_edited_at=last_edited_at,
+                    location=label_row_path.resolve().as_posix(),
+                ).dict(
+                    exclude={"id", "data_units"}  # remove dummy values
                 )
-            batcher.commit()
+            )
+        batcher.commit()

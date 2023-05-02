@@ -106,11 +106,10 @@ class ProjectFileStructure(BaseProjectFileStructure):
     def data_units(
         self, pattern: Optional[DataUnitLike] = None, include_label_row: bool = False
     ) -> Iterator[models.DataUnit]:
-        PrismaConnection.set_project_file_structure(self)
         to_include = {"label_row": True} if include_label_row else {}
-        with PrismaConnection() as conn:
+        with PrismaConnection(self) as conn:
             # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
-            fill_missing_tables()
+            fill_missing_tables(self)
             # end backwards compatibility code.
             if pattern is None:
                 return iter(conn.dataunit.find_many(include=to_include))
@@ -122,10 +121,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
                 return iter(conn.dataunit.find_many(where={"AND": and_clause}, include=to_include))
 
     def label_rows(self) -> Iterator[models.LabelRow]:
-        PrismaConnection.set_project_file_structure(self)
-        with PrismaConnection() as conn:
+        with PrismaConnection(self) as conn:
             # add backwards compatibility code. Remove when Encord Active version is >= 0.1.60.
-            fill_missing_tables()
+            fill_missing_tables(self)
             # end backwards compatibility code.
             return iter(conn.labelrow.find_many())
 
