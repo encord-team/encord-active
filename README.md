@@ -8,7 +8,7 @@
 
 <h1 align="center">
   <p align="center">Encord Active</p>
-  <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_logo.png" width="150" alt="Encord logo"/></a>
+  <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
 </h1>
 
 [![PRs-Welcome][contribute-image]][contribute-url]
@@ -23,9 +23,57 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source active learning tookit that helps you find failure modes in your models and improve your data quality and model performance.
+[Encord Active][encord-active-landing] is an open-source tookit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
 
-Use Encord Active to visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
+
+Use Encord Active to:
+
+* Test, validate, and evaluate your models with advanced error analysis
+* Generate model explainability reports
+* Surface, curate, and prioritize the most valuable data for labeling
+* Search through your data using natural language (beta feature)
+* Find and fix dataset errors and biases (duplicates, outliers, label errors)
+
+
+
+## Installation
+
+The simplest way to install the CLI is using `pip` in a suitable virtual environment:
+
+```shell
+pip install encord-active
+```
+
+We recommend using a virtual environment, such as `venv`:
+
+```shell
+python3.9 -m venv ea-venv
+source ea-venv/bin/activate
+pip install encord-active
+```
+
+> `encord-active` requires [python3.9][python-39].
+> If you have trouble installing `encord-active`, you find more detailed instructions on
+> installing it [here](https://docs.encord.com/active/docs/installation). If just want to see it in action try out [this Colab notebook][colab-notebook].
+
+## 👋 Quickstart
+
+Get started immediately by sourcing your environment and running the code below.
+This downloads a small dataset and launches the Encord Active App for you to explore:
+
+```shell
+encord-active quickstart
+```
+
+or you can use <a href="https://hub.docker.com/r/encord/encord-active"><img src="https://www.docker.com/wp-content/uploads/2022/03/horizontal-logo-monochromatic-white.png" height="20"/></a>:
+
+```shell
+docker run -it --rm -p 8501:8501 -v ${PWD}:/data encord/encord-active quickstart
+```
+
+After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
+
+
 
 ![projects page](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/projects-page.jpg)
 
@@ -47,42 +95,6 @@ Our full documentation is available [here](https://docs.encord.com/active/docs).
 - [User Guides](https://docs.encord.com/active/docs/category/user-guide)
 - [CLI Documentation](https://docs.encord.com/active/docs/cli)
 
-## Installation
-
-The simplest way to install the CLI is using `pip` in a suitable virtual environment:
-
-```shell
-pip install encord-active
-```
-
-We recommend using a virtual environment, such as `venv`:
-
-```shell
-python3.9 -m venv ea-venv
-source ea-venv/bin/activate
-pip install encord-active
-```
-
-> `encord-active` requires [python3.9][python-39].
-> If you have trouble installing `encord-active`, you find more detailed instructions on
-> installing it [here](https://docs.encord.com/active/docs/installation).
-
-## 👋 Quickstart
-
-Get started immediately by sourcing your environment and running the code below.
-This downloads a small dataset and launches the Encord Active App for you to explore:
-
-```shell
-encord-active quickstart
-```
-
-or you can use <a href="https://hub.docker.com/r/encord/encord-active"><img src="https://www.docker.com/wp-content/uploads/2022/03/horizontal-logo-monochromatic-white.png" height="20"/></a>:
-
-```shell
-docker run -it --rm -p 8501:8501 -v ${PWD}:/data encord/encord-active quickstart
-```
-
-After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
 ## ⬇️  Download a sandbox dataset
 
