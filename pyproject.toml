@@ -120,7 +120,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.black]
 line-length = 120
 target-version = ['py39']
-include = '.(src/encord_active/[a-zA-Z].*|frontend_components|examples)\/.*\.i?py(nb)?$'
+include = '.*\/.*\.i?py(nb)?$'
+extend_exclude='src/encord_active/lib/db/__autogen__'
 
 [tool.isort]
 profile = "black"
