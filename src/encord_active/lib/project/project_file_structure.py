@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 from typing import Iterator, NamedTuple, Optional, Union
 
-from prisma import models
-
+from encord_active.lib.db.__autogen__ import models
 from encord_active.lib.db.base import DataUnitLike
 from encord_active.lib.db.compatibility import fill_missing_tables
 from encord_active.lib.db.connection import PrismaConnection
