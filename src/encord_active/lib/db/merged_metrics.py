@@ -84,8 +84,8 @@ def initialize_merged_metrics():
     MergedMetrics().replace_all(merged_metrics)
 
 
-def ensure_initialised_merged_metrics(path: Path):
-    DBConnection.set_project_file_structure(ProjectFileStructure(path))
+def ensure_initialised_merged_metrics(project_file_structure: ProjectFileStructure):
+    DBConnection.set_project_file_structure(project_file_structure)
     try:
         with DBConnection() as conn:
             columns = pd.read_sql(f"pragma table_info({TABLE_NAME})", conn)
