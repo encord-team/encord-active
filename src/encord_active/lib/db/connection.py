@@ -1,22 +1,9 @@
 import sqlite3
 from typing import Optional
 
-from encord_active.lib.db.prisma_init import generate_prisma_client
+from prisma import Prisma
+from prisma.types import DatasourceOverride
 
-try:
-    import prisma
-    import prisma.client
-except (RuntimeError, ImportError):
-    generate_prisma_client()
-    from importlib import reload
-
-    reload(prisma)  # pylint: disable=used-before-assignment
-finally:
-    from prisma import Prisma
-    from prisma.types import DatasourceOverride
-
-
-# uses prisma so must appear after prisma schema generation
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
