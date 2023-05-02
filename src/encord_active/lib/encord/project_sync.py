@@ -3,7 +3,7 @@ import pickle
 import subprocess
 import uuid
 from pathlib import Path
-from typing import Callable, NamedTuple
+from typing import NamedTuple
 
 import pandas as pd
 import yaml

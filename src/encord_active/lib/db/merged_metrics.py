@@ -103,12 +103,12 @@ def ensure_initialised_merged_metrics(project_file_structure: ProjectFileStructu
 
 
 def initialize_if_error(fn):
-    def wrapper(*args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         try:
-            return fn(*args, **kwargs)
+            return fn(self, *args, **kwargs)
         except:
-            initialize_merged_metrics()
-            return fn(*args, **kwargs)
+            initialize_merged_metrics(self.connection)
+            return fn(self, *args, **kwargs)
 
     return wrapper
 

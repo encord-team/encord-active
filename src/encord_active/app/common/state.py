@@ -10,7 +10,7 @@ from pandera.typing import DataFrame
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
-from encord_active.lib.db.connection import DBConnection, PrismaConnection
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType

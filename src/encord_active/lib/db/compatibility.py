@@ -1,7 +1,8 @@
 import json
 import re
 
-from prisma import Prisma, models
+from prisma import Prisma
+from prisma.types import DataUnitCreateInput, LabelRowCreateInput
 
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
@@ -41,28 +42,24 @@ def fill_data_units_table(project_file_structure: BaseProjectFileStructure, conn
                         for du_frame_path in images_dir.glob(f"{du_hash}_*"):
                             du_frame = int(du_frame_path.stem.rsplit("_", maxsplit=1)[-1])
                             batcher.dataunit.create(
-                                models.DataUnit(
-                                    id=-1,  # add dummy id value because `id` is a required attribute
+                                DataUnitCreateInput(
                                     data_hash=du_hash,
                                     data_title=du_title,
                                     frame=du_frame,
                                     location=du_frame_path.resolve().as_posix(),
-                                    lr_data_hash=label_row["data_hash"],
-                                ).dict(exclude={"id", "label_row"})
+                                )
                             )
                     else:
                         du_frame = int(data_unit["data_sequence"])
                         du_frame_path = next(images_dir.glob(f"{du_hash}.*"), None)
                         if du_frame_path is not None:
                             batcher.dataunit.create(
-                                models.DataUnit(
-                                    id=-1,  # add dummy id value because `id` is a required attribute
+                                DataUnitCreateInput(
                                     data_hash=du_hash,
                                     data_title=du_title,
                                     frame=du_frame,
                                     location=du_frame_path.resolve().as_posix(),
-                                    lr_data_hash=label_row["data_hash"],
-                                ).dict(exclude={"id", "label_row"})
+                                )
                             )
             batcher.commit()
 
@@ -88,8 +85,7 @@ def fill_label_rows_table(project_file_structure: BaseProjectFileStructure, conn
             last_edited_at = label_row["last_edited_at"]
 
             batcher.labelrow.create(
-                models.LabelRow(
-                    id=-1,  # add dummy id value because `id` is a required attribute
+                LabelRowCreateInput(
                     label_hash=label_hash,
                     data_hash=data_hash,
                     data_title=data_title,
@@ -97,8 +93,6 @@ def fill_label_rows_table(project_file_structure: BaseProjectFileStructure, conn
                     created_at=created_at,
                     last_edited_at=last_edited_at,
                     location=label_row_path.resolve().as_posix(),
-                ).dict(
-                    exclude={"id", "data_units"}  # remove dummy values
                 )
             )
         batcher.commit()

@@ -85,7 +85,10 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
             if column == "tags":
                 tag_filters = right.multiselect(
-                    "Choose tags to filter", options=all_tags(get_state().project_paths), format_func=lambda x: x.name, key=key
+                    "Choose tags to filter",
+                    options=all_tags(get_state().project_paths),
+                    format_func=lambda x: x.name,
+                    key=key,
                 )
                 for tag in tag_filters:
                     filtered_rows = [tag in x for x in filtered["tags"]]
