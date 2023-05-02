@@ -2,7 +2,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Iterator, Optional, Union
 
-from encord_active.lib.db.__autogen__ import models
+from prisma import models
+
 from encord_active.lib.db.base import DataUnitLike
 
 
