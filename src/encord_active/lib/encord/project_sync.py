@@ -100,9 +100,8 @@ def _replace_uids(
         original_mappings = json.loads(project_file_structure.mappings.read_text())
 
     replace_in_files(project_file_structure, renaming_map)
-    perform_db_fn_with_switched_paths(
-        project_file_structure.project_dir, lambda: MergedMetrics().replace_identifiers(renaming_map)
-    )
+    with DBConnection(project_file_structure) as conn:
+        MergedMetrics(conn).replace_identifiers(renaming_map)
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         update_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
         update_2d_embedding_identifiers(project_file_structure, embedding_type, renaming_map)
@@ -221,14 +220,8 @@ def copy_filtered_data(
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
     to_save_df = filtered_df.set_index("identifier")
-    perform_db_fn_with_switched_paths(target_project_dir, lambda: MergedMetrics().replace_all(to_save_df))
-
-
-def perform_db_fn_with_switched_paths(target_project_dir: Path, f: Callable):
-    cur_project_file_structure = DBConnection.project_file_structure()
-    DBConnection.set_project_file_structure(ProjectFileStructure(target_project_dir))
-    f()
-    DBConnection.set_project_file_structure(cur_project_file_structure)
+    with DBConnection(ProjectFileStructure(target_project_dir)) as conn:
+        MergedMetrics(conn).replace_all(to_save_df)
 
 
 def create_filtered_metrics(

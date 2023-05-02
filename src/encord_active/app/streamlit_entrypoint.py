@@ -89,8 +89,6 @@ def main(target: str):
             download_path=target_path,
         )
         return
-    else:
-        DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
     with st.sidebar:
         render_help()

@@ -41,7 +41,6 @@ class Project:
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
-        PrismaConnection.set_project_file_structure(self.file_structure)
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
@@ -287,7 +286,7 @@ def download_label_row(
     lr_structure.path.mkdir(parents=True, exist_ok=True)
     label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
     lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
-    with PrismaConnection() as conn:
+    with PrismaConnection(project_file_structure) as conn:
         conn.labelrow.upsert(
             where={"data_hash": label_row.data_hash},
             data={
@@ -324,7 +323,7 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
 
         # add non-video type of data to the db (frames of videos are added after pre-processing)
         if "data_sequence" in du:
-            with PrismaConnection() as conn:
+            with PrismaConnection(project_file_structure) as conn:
                 conn.dataunit.upsert(
                     where={"data_hash": du["data_hash"]},
                     data={
@@ -376,7 +375,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         sliced_frames, _ = slice_video_into_frames(video_path)
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
-        with PrismaConnection() as conn:
+        with PrismaConnection(project_file_structure) as conn:
             with conn.batch_() as batcher:
                 for frame_num, frame_path in sliced_frames.items():
                     batcher.dataunit.create(
