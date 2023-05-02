@@ -6,7 +6,7 @@ from prisma.cli.prisma import run
 
 from encord_active.lib.common.decorators import silence_stdout
 
-PRISMA_SCHEMA_FILE = Path(__file__).parent / "prisma.schema"
+PRISMA_SCHEMA_FILE = Path(__file__).parent / "schema.prisma"
 run = silence_stdout(run)
 
 try:
@@ -74,7 +74,7 @@ class PrismaConnection:
         url = f"file:{db_file}"
         env = {"MY_DATABASE_URL": url}
 
-        run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}"], env=env)
+        run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}", "--skip-generate"], env=env)
         cls._datasource = DatasourceOverride(url=url)
 
     @classmethod
