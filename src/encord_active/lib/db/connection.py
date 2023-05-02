@@ -62,11 +62,7 @@ class PrismaConnection:
             return
 
         cls._project_file_structure = project_file_structure
-        db_file = cls._project_file_structure.prisma_db
-        url = f"file:{db_file}"
-        env = {"MY_DATABASE_URL": url}
-
-        prisma_run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}", "--skip-generate"], env=env)
+        url = f"file:{cls._project_file_structure.prisma_db}"
         cls._datasource = DatasourceOverride(url=url)
 
     @classmethod
