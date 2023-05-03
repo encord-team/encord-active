@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Iterator, List, NamedTuple, Optional, Union
 
@@ -171,7 +172,12 @@ class ProjectFileStructure(BaseProjectFileStructure):
             return conn.labelrow.find_many()
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
+        DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
+        pattern = re.compile(DATA_HASH_REGEX)
         for label_hash in self.data.iterdir():
+            # Avoid unexpected folders in the data directory like `.DS_Store`
+            if pattern.match(label_hash.name) is None:
+                continue
             path = self.data / label_hash
             yield LabelRowStructure(path=path, mappings=self._mappings)
 
