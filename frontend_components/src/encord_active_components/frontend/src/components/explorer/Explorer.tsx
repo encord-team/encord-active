@@ -16,6 +16,7 @@ import { classy } from "../../helpers/classy";
 import { useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
+  DEFAULT_BASE_URL,
   fetchHasPremiumFeatures,
   fetchProjectItemIds,
   fetchProjectMetrics,
@@ -41,9 +42,15 @@ export type Props = {
   projectName: string;
   items: string[];
   scope: Scope;
+  baseUrl: string;
 };
 
-export const Explorer = ({ projectName, items, scope }: Props) => {
+export const Explorer = ({
+  projectName,
+  items,
+  scope,
+  baseUrl = DEFAULT_BASE_URL,
+}: Props) => {
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -59,23 +66,23 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
 
-  const { data: hasPremiumFeatures } = useQuery(
-    ["hasPremiumFeatures"],
-    fetchHasPremiumFeatures
+  const { data: hasPremiumFeatures } = useQuery(["hasPremiumFeatures"], () =>
+    fetchHasPremiumFeatures(baseUrl)
   );
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
-    () => fetchSimilarItems(projectName)(similarityItem!, selectedMetric!),
+    () =>
+      fetchSimilarItems(baseUrl, projectName)(similarityItem!, selectedMetric!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
   const { data: sortedItems } = useQuery(
     ["item_ids", selectedMetric],
-    () => fetchProjectItemIds(projectName)(selectedMetric!),
+    () => fetchProjectItemIds(baseUrl, projectName)(selectedMetric!),
     { enabled: !!selectedMetric }
   );
   const { data: metrics } = useQuery(["metrics"], () =>
-    fetchProjectMetrics(projectName)(scope)
+    fetchProjectMetrics(baseUrl, projectName)(scope)
   );
 
   const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
@@ -108,7 +115,9 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   }, [itemSet, sortedItems]);
 
   return (
-    <ProjectContext.Provider value={{ projectName, hasPremiumFeatures }}>
+    <ProjectContext.Provider
+      value={{ projectName, hasPremiumFeatures, baseUrl }}
+    >
       <div ref={ref} className="w-full">
         {previewedItem && (
           <ItemPreview
