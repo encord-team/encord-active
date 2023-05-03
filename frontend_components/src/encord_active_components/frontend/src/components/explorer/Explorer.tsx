@@ -16,6 +16,7 @@ import { classy } from "../../helpers/classy";
 import { useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
+  fetchHasPremiumFeatures,
   fetchProjectItemIds,
   fetchProjectMetrics,
   fetchSimilarItems,
@@ -57,6 +58,11 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   const [selectedMetric, setSelectedMetric] = useState<string>();
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
+
+  const { data: hasPremiumFeatures } = useQuery(
+    ["hasPremiumFeatures"],
+    fetchHasPremiumFeatures
+  );
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
@@ -102,7 +108,7 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
   }, [itemSet, sortedItems]);
 
   return (
-    <ProjectContext.Provider value={projectName}>
+    <ProjectContext.Provider value={{ projectName, hasPremiumFeatures }}>
       <div ref={ref} className="w-full">
         {previewedItem && (
           <ItemPreview
