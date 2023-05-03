@@ -21,6 +21,7 @@ from encord_active.lib.metrics.utils import (
     filter_none_empty_metrics,
     load_metric_dataframe,
 )
+from encord_active.server.settings import settings
 
 
 class ExplorerPage(Page):
@@ -66,6 +67,7 @@ class ExplorerPage(Page):
             project_name=get_state().project_paths.project_dir.name,
             items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
+            api_url=settings.API_URL,
         )
 
     def render_view_options(self):
