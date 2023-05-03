@@ -1,7 +1,8 @@
 import json
 import re
 
-from encord_active.lib.db.__autogen__ import models
+from prisma import models
+
 from encord_active.lib.db.connection import PrismaConnection
 
 DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"

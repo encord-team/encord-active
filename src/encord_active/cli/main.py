@@ -11,6 +11,7 @@ from typer.core import TyperGroup
 
 import encord_active.app.conf  # pylint: disable=unused-import
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
+import encord_active.lib.db  # pylint: disable=unused-import
 from encord_active.app.app_config import APP_NAME
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli

@@ -1,13 +1,10 @@
 import sqlite3
-from pathlib import Path
 from typing import Optional
 
-from encord_active.lib.db.__autogen__.cli.prisma import run
-from encord_active.lib.db.__autogen__.client import Prisma
-from encord_active.lib.db.__autogen__.types import DatasourceOverride
-from encord_active.lib.file_structure.base import BaseProjectFileStructure
+from prisma import Prisma
+from prisma.types import DatasourceOverride
 
-PRISMA_SCHEMA_FILE = Path(__file__).parent / "schema.prisma"
+from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
 class DBConnection:
@@ -52,11 +49,7 @@ class PrismaConnection:
             return
 
         cls._project_file_structure = project_file_structure
-        db_file = cls._project_file_structure.prisma_db
-        url = f"file:{db_file}"
-        env = {"MY_DATABASE_URL": url}
-
-        run(["db", "push", f"--schema={PRISMA_SCHEMA_FILE}", "--skip-generate"], env=env)
+        url = f"file:{cls._project_file_structure.prisma_db}"
         cls._datasource = DatasourceOverride(url=url)
 
     @classmethod

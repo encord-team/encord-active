@@ -7,7 +7,6 @@ generator db {
   provider             = "prisma-client-py"
   interface            = "sync"
   recursive_type_depth = 5
-  output               = "./__autogen__"
 }
 
 model Tag {
