@@ -122,7 +122,7 @@ class EncordActions:
                 dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
                 # Since `create_image_group()` does not return info related to the uploaded images,
                 # we need to find the data hash of the image group in a hacky way
-                new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original)
+                new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original)
                 new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
 
                 # Obtain the data unit hashes of the images contained in the image group
