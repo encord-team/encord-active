@@ -20,7 +20,7 @@ class DBConnection:
 
 class PrismaConnection:
     def __init__(self, project_file_structure: BaseProjectFileStructure) -> None:
-        self.datasource = DatasourceOverride(url=f"file:{project_file_structure}")
+        self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
 
     def __enter__(self):
         self.db = Prisma(datasource=self.datasource)
