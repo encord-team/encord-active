@@ -53,7 +53,7 @@ export const ItemSchema = z.object({
   labels: LabelsSchema,
 });
 
-const IdValueSchema = z.object({ id: z.string(), value: z.number().nullish() });
+const IdValueSchema = z.object({ id: z.string(), value: z.number() });
 export type IdValue = z.infer<typeof IdValueSchema>;
 
 export type GroupedTags = z.infer<typeof GroupedTagsSchema>;

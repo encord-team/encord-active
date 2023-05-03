@@ -21,7 +21,7 @@ export const MetricDistributionTiny = ({
   const { bins, columns } = useMemo(() => {
     const bins = bin<IdValue, number>()
       .thresholds(BINS)
-      .value((v) => v.value)(values);
+      .value((v) => v.value as number)(values);
     const columns = bins.map((items, bin) => ({ value: items.length, bin }));
     return { bins, columns };
   }, [JSON.stringify(values)]);
@@ -80,13 +80,13 @@ export const MetricDistributionTiny = ({
       brush={
         bins.length > 1
           ? {
-              enabled: true,
-              type: "x-rect",
-              action: "filter",
-              mask: {
-                style: { fill: "rgba(255,0,0,0.15)" },
-              },
-            }
+            enabled: true,
+            type: "x-rect",
+            action: "filter",
+            mask: {
+              style: { fill: "rgba(255,0,0,0.15)" },
+            },
+          }
           : {}
       }
       onEvent={onEvent}

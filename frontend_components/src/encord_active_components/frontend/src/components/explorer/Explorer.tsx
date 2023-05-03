@@ -220,9 +220,14 @@ export const Explorer = ({ projectName, items, scope }: Props) => {
           </div>
           <Assistant
             scope={scope}
-            setResults={(ids) =>
-              setSortedAndFiltered(ids.map((id) => ({ id })))
-            }
+            setResults={(ids) => {
+              const idValues = new Map(
+                sortedAndFiltered.map(({ id, value }) => [id, value])
+              );
+              setSortedAndFiltered(
+                ids.map((id) => ({ id, value: idValues.get(id) || 0 }))
+              );
+            }}
           />
           {itemsToRender.length ? (
             <>
