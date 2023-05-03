@@ -142,6 +142,10 @@ def get_tags(project: ProjectFileStructureDep):
 
 @lru_cache
 def get_querier(project: ProjectFileStructure):
+    if settings.DEPLOYMENT_NAME is not None:
+        project_dir = project.project_dir
+        new_root = project_dir.parent / settings.DEPLOYMENT_NAME / project_dir.name
+        project = ProjectFileStructure(new_root)
     return Querier(project)
 
 
