@@ -84,6 +84,7 @@ def initialize_merged_metrics(project_file_structure: ProjectFileStructure):
     merged_metrics = build_merged_metrics(project_file_structure.metrics)
     with DBConnection(project_file_structure) as conn:
         MergedMetrics(conn).replace_all(merged_metrics)
+    return merged_metrics
 
 
 def ensure_initialised_merged_metrics(project_file_structure: ProjectFileStructure):
@@ -102,32 +103,18 @@ def ensure_initialised_merged_metrics(project_file_structure: ProjectFileStructu
         initialize_merged_metrics(project_file_structure)
 
 
-def initialize_if_error(fn):
-    def wrapper(self, *args, **kwargs):
-        try:
-            return fn(self, *args, **kwargs)
-        except:
-            initialize_merged_metrics(self.connection)
-            return fn(self, *args, **kwargs)
-
-    return wrapper
-
-
 class MergedMetrics(object):
     def __init__(self, connection: Connection):
         self.connection = connection
 
-    @initialize_if_error
     def get_row(self, id: str):
         r = pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", self.connection)
         r.tags = r.tags.apply(unmarshall_tags)
         return r
 
-    @initialize_if_error
     def update_tags(self, id: str, tags: List[Tag]):
         self.connection.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
-    @initialize_if_error
     def all(self, marshall: bool = True, columns: Optional[List[str]] = None):
         return self._unsafe_all(marshall, columns)
 
@@ -141,14 +128,12 @@ class MergedMetrics(object):
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
         return merged_metrics
 
-    @initialize_if_error
     def replace_all(self, df: pd.DataFrame, marshall=True):
         copy = df.copy()
         if marshall:
             copy.tags = copy.tags.apply(marshall_tags)
         copy.to_sql(name=TABLE_NAME, con=self.connection, if_exists="replace", index=True, index_label="identifier")
 
-    @initialize_if_error
     def replace_identifiers(self, mappings: dict[str, str]):
         def _replace_identifiers(id: str):
             lr, du, *rest = id.split("_")

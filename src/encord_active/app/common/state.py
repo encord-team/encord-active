@@ -11,7 +11,7 @@ from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.merged_metrics import MergedMetrics, initialize_merged_metrics
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
@@ -97,8 +97,11 @@ class State:
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
             project_file_structure = ProjectFileStructure(project_dir)
-            with DBConnection(project_file_structure) as conn:
-                merged_metrics = MergedMetrics(conn).all()
+            try:
+                with DBConnection(project_file_structure) as conn:
+                    merged_metrics = MergedMetrics(conn).all()
+            except:
+                merged_metrics = initialize_merged_metrics(project_file_structure)
 
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,
