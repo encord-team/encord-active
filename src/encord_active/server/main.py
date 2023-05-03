@@ -1,3 +1,5 @@
+from enum import Enum
+from functools import lru_cache
 from os import environ
 from pathlib import Path
 from typing import Annotated, List, Optional
@@ -19,7 +21,10 @@ from encord_active.lib.db.helpers.tags import (
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.metrics.utils import MetricScope, filter_none_empty_metrics
+from encord_active.lib.premium.model import TextQuery
+from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.server.settings import Env, settings
 from encord_active.server.utils import (
     get_metric_embedding_type,
     get_similarity_finder,
@@ -54,6 +59,11 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
+
+
+@app.get("/premium_available")
+def premium_available():
+    return settings.ENV != Env.LOCAL
 
 
 @app.get("/projects/{project}/items_id_by_metric")
@@ -128,3 +138,55 @@ def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
 @app.get("/projects/{project}/tags")
 def get_tags(project: ProjectFileStructureDep):
     return to_grouped_tags(all_tags(project))
+
+
+@lru_cache
+def get_querier(project: ProjectFileStructure):
+    if settings.DEPLOYMENT_NAME is not None:
+        project_dir = project.project_dir
+        new_root = project_dir.parent / settings.DEPLOYMENT_NAME / project_dir.name
+        project = ProjectFileStructure(new_root)
+    return Querier(project)
+
+
+class SearchType(str, Enum):
+    SEARCH = "search"
+    CODEGEN = "codegen"
+
+
+@app.get("/projects/{project}/search")
+def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope: Optional[MetricScope] = None):
+    if not premium_available():
+        raise HTTPException(status_code=403, detail="Search is not enabled")
+
+    if not query:
+        raise HTTPException(status_code=422, detail="Invalid query")
+    querier = get_querier(project)
+
+    with DBConnection(project) as conn:
+        df = MergedMetrics(conn).all(False, columns=["identifier"])
+
+    if scope == MetricScope.DATA_QUALITY:
+        ids = df.index.str.split("_", n=3).str[0:3].str.join("_").unique().tolist()
+    elif scope == MetricScope.LABEL_QUALITY:
+        data_ids = df.index.str.split("_", n=3).str[0:3].str.join("_")
+        ids = df.index[~df.index.isin(data_ids)].tolist()
+    else:
+        ids = df.index.tolist()
+
+    snippet = None
+    text_query = TextQuery(text=query, limit=-1, identifiers=ids)
+    if type == SearchType.SEARCH:
+        result = querier.search_semantics(text_query)
+    else:
+        result = querier.search_with_code(text_query)
+        if result:
+            snippet = result.snippet
+
+    if not result:
+        raise HTTPException(status_code=422, detail="Invalid query")
+
+    return {
+        "ids": [item.identifier for item in result.result_identifiers],
+        "snippet": snippet,
+    }

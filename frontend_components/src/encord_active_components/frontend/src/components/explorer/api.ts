@@ -69,6 +69,23 @@ export const Item2DEmbeddingSchema = PointSchema.extend({
 
 export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
 
+export const searchTypeOptions = {
+  search: "Search",
+  codegen: "Code Generation",
+} as const;
+type SearchType = keyof typeof searchTypeOptions;
+
+const searchResultSchema = z.object({
+  ids: z.string().array(),
+  snippet: z.string().nullish(),
+});
+export type SeachResult = z.infer<typeof searchResultSchema>;
+
+export const fetchHasPremiumFeatures = async () =>
+  z
+    .boolean()
+    .parse(await (await fetch(`${BASE_URL}/premium_available`)).json());
+
 export const fetchProject2DEmbeddings =
   (projectName: string) => async (selectedMetric: string) => {
     const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
@@ -161,14 +178,34 @@ export const updateItemTags =
       });
     };
 
-export const useProjectQueries = () => {
-  const projectName = useContext(ProjectContext);
-  const queryClient = useQueryClient();
+export const searchInProject =
+  (projectName: string) =>
+    async (
+      { scope, query, type }: { scope: Scope; query: string; type: SearchType },
+      signal?: AbortSignal
+    ) => {
+      const queryParams = new URLSearchParams({ query, scope, type });
 
-  if (!projectName)
+      const response = await fetch(
+        `${BASE_URL}/projects/${projectName}/search?${queryParams}`,
+        {
+          signal,
+        }
+      );
+
+      return searchResultSchema.parse(await response.json());
+    };
+
+export const useProjectQueries = () => {
+  const projectContext = useContext(ProjectContext);
+
+  if (!projectContext)
     throw new Error(
       "useProjectQueries has to be used within <ProjectContext.Provider>"
     );
+
+  const queryClient = useQueryClient();
+  const { projectName } = projectContext;
 
   return {
     itemTagsMutation: useMutation(
@@ -262,7 +299,12 @@ export const useProjectQueries = () => {
         () => fetchProject2DEmbeddings(projectName!)(selectedMetric),
         { enabled: !!selectedMetric }
       ),
+    search: (...args: Parameters<ReturnType<typeof searchInProject>>) =>
+      searchInProject(projectName)(...args),
   };
 };
 
-export const ProjectContext = createContext<string | null>(null);
+export const ProjectContext = createContext<{
+  projectName: string;
+  hasPremiumFeatures?: boolean;
+} | null>(null);
