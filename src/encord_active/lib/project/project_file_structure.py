@@ -18,10 +18,10 @@ from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def _fill_missing_tables(pfs: ProjectFileStructure):
-    # Adds the content missing from the data units table when projects with
+    # Adds the content missing from the data units and label rows tables when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
     label_row_meta = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
-    with PrismaConnection() as conn:
+    with PrismaConnection(pfs) as conn:
         fill_label_rows = conn.labelrow.count() == 0
         fill_data_units = conn.dataunit.count() == 0
         if not (fill_label_rows or fill_data_units):
@@ -73,6 +73,9 @@ class LabelRowStructure:
         self.path: Path = path
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
+
+    def __hash__(self) -> int:
+        return hash(self.path.as_posix())
 
     @property
     def label_row_file(self) -> Path:
@@ -157,15 +160,13 @@ class ProjectFileStructure(BaseProjectFileStructure):
     def data_units(
         self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
     ) -> List[models.DataUnit]:
-        PrismaConnection.set_project_file_structure(self)
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
-        with PrismaConnection() as conn:
+        with PrismaConnection(self) as conn:
             _fill_missing_tables(self)
             return conn.dataunit.find_many(where=where, include=to_include)
 
     def label_rows(self) -> List[models.LabelRow]:
-        PrismaConnection.set_project_file_structure(self)
-        with PrismaConnection() as conn:
+        with PrismaConnection(self) as conn:
             _fill_missing_tables(self)
             return conn.labelrow.find_many()
 

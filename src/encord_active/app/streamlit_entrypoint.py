@@ -17,9 +17,7 @@ from encord_active.app.page_menu import (
     render_pages_menu,
 )
 from encord_active.app.projects_page import get_projects, render_projects_page
-from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.model_predictions.writer import MainPredictionType
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def provide_backcompatibility_for_old_predictions():
@@ -54,7 +52,7 @@ def provide_backcompatibility_for_old_predictions():
 
 def main(target: str):
     set_page_config()
-    target_path = Path(target)
+    target_path = Path(target).expanduser().resolve()
     initial_project = UseState[Optional[Project]](None)
     initial_key_path = UseState[List[str]](DEFAULT_PAGE_PATH)
     selected_key_path = UseState(deepcopy(initial_key_path.value))
@@ -79,7 +77,7 @@ def main(target: str):
             initial_project.set(project)
 
         project_dir = project_path.expanduser().absolute()
-        State.init(project_dir, refresh_pages_menu)
+        State.init(target_path, project_dir, refresh_pages_menu)
         refresh(clear_memo=True)
 
     if not has_state() or not initial_project.value:
@@ -89,8 +87,6 @@ def main(target: str):
             download_path=target_path,
         )
         return
-    else:
-        DBConnection.set_project_file_structure(ProjectFileStructure(get_state().project_paths.project_dir))
 
     with st.sidebar:
         render_help()

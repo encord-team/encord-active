@@ -41,7 +41,6 @@ class Project:
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
-        PrismaConnection.set_project_file_structure(self.file_structure)
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
@@ -166,6 +165,10 @@ class Project:
             for lrm in encord_project.list_label_rows()
             if lrm.label_hash is not None
         }
+        for meta in label_row_meta.values():
+            meta["created_at"] = meta["created_at"].rsplit(".", maxsplit=1)[0]
+            meta["last_edited_at"] = meta["last_edited_at"].rsplit(".", maxsplit=1)[0]
+
         self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
 
     def __load_label_row_meta(self, subset_size: Optional[int] = None) -> dict[str, LabelRowMetadata]:
@@ -230,17 +233,24 @@ class Project:
                 label_rows_to_update,
                 desc="Updating label rows",
             )
+        else:
+            logger.info("No existent data needs to be updated.")
 
         # Download new project data
-        downloaded_label_rows = collect_async(
-            partial(
-                download_label_row_and_data,
-                project=project,
-                project_file_structure=project_file_structure,
-            ),
-            label_rows_to_download,
-            desc="Collecting new data",
-        )
+        if len(label_rows_to_download) > 0:
+            downloaded_label_rows = collect_async(
+                partial(
+                    download_label_row_and_data,
+                    project=project,
+                    project_file_structure=project_file_structure,
+                ),
+                label_rows_to_download,
+                desc="Collecting new data",
+            )
+        else:
+            downloaded_label_rows = []
+            logger.info("No new data to be downloaded.")
+
         return downloaded_label_rows
 
     def __load_label_rows(self):
@@ -276,7 +286,7 @@ def download_label_row(
     lr_structure.path.mkdir(parents=True, exist_ok=True)
     label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
     lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
-    with PrismaConnection() as conn:
+    with PrismaConnection(project_file_structure) as conn:
         conn.labelrow.upsert(
             where={"data_hash": label_row.data_hash},
             data={
@@ -313,7 +323,7 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
 
         # add non-video type of data to the db (frames of videos are added after pre-processing)
         if "data_sequence" in du:
-            with PrismaConnection() as conn:
+            with PrismaConnection(project_file_structure) as conn:
                 conn.dataunit.upsert(
                     where={
                         "data_hash_frame": {  # state the values of the compound key
@@ -370,7 +380,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         sliced_frames, _ = slice_video_into_frames(video_path)
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
-        with PrismaConnection() as conn:
+        with PrismaConnection(project_file_structure) as conn:
             with conn.batch_() as batcher:
                 for frame_num, frame_path in sliced_frames.items():
                     batcher.dataunit.create(

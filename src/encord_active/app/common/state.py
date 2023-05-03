@@ -10,9 +10,8 @@ from pandera.typing import DataFrame
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
-from encord_active.lib.db.connection import DBConnection, PrismaConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.db.tags import Tag, Tags
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.merged_metrics import MergedMetrics, initialize_merged_metrics
 from encord_active.lib.embeddings.utils import Embedding2DSchema
 from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
@@ -74,9 +73,9 @@ class State:
     and to get/set the current value we would call `get_state().iou_threshold.`
     """
 
+    target_path: Path
     project_paths: ProjectFileStructure
     refresh_projects: Callable[[], Any]
-    all_tags: List[Tag]
     merged_metrics: pd.DataFrame
     filtering_state: FilteringState
     querier: Querier
@@ -92,20 +91,23 @@ class State:
     reduced_embeddings: dict[EmbeddingType, Optional[DataFrame[Embedding2DSchema]]] = field(default_factory=dict)
 
     @classmethod
-    def init(cls, project_dir: Path, refresh_projects: Callable[[], Any]):
+    def init(cls, target_path: Path, project_dir: Path, refresh_projects: Callable[[], Any]):
         if (
             st.session_state.get(StateKey.GLOBAL) is None
             or project_dir != st.session_state[StateKey.GLOBAL].project_paths.project_dir
         ):
             project_file_structure = ProjectFileStructure(project_dir)
-            DBConnection.set_project_file_structure(project_file_structure)
-            PrismaConnection.set_project_file_structure(project_file_structure)
-            merged_metrics = MergedMetrics().all()
+            try:
+                with DBConnection(project_file_structure) as conn:
+                    merged_metrics = MergedMetrics(conn).all()
+            except:
+                merged_metrics = initialize_merged_metrics(project_file_structure)
+
             st.session_state[StateKey.GLOBAL] = State(
                 project_paths=project_file_structure,
+                target_path=target_path,
                 refresh_projects=refresh_projects,
                 merged_metrics=merged_metrics,
-                all_tags=Tags().all(),
                 filtering_state=FilteringState(merged_metrics),
                 querier=Querier(project_file_structure),
             )

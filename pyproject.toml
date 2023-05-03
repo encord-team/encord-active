@@ -72,10 +72,12 @@ inquirerpy = "^0.3.4"
 statsmodels = "^0.13.5"
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
-encord-active-components = "^0.0.9"
+encord-active-components = "^0.0.10"
 llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
+fastapi = "^0.95.0"
+uvicorn = {extras = ["standard"], version = "^0.21.1"}
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

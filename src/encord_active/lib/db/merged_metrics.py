@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
-from typing import List
+from sqlite3 import Connection
+from typing import List, Optional
 
 import pandas as pd
 
@@ -79,83 +80,66 @@ def unmarshall_tags(tags_json: str) -> List[Tag]:
 MANDATORY_COLUMNS = {"identifier", "url", "object_class", "annotator"}
 
 
-def initialize_merged_metrics():
-    merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
-    MergedMetrics().replace_all(merged_metrics)
+def initialize_merged_metrics(project_file_structure: ProjectFileStructure):
+    merged_metrics = build_merged_metrics(project_file_structure.metrics)
+    with DBConnection(project_file_structure) as conn:
+        MergedMetrics(conn).replace_all(merged_metrics)
+    return merged_metrics
 
 
-def ensure_initialised_merged_metrics(path: Path):
-    DBConnection.set_project_file_structure(ProjectFileStructure(path))
+def ensure_initialised_merged_metrics(project_file_structure: ProjectFileStructure):
     try:
-        with DBConnection() as conn:
+        with DBConnection(project_file_structure) as conn:
             columns = pd.read_sql(f"pragma table_info({TABLE_NAME})", conn)
 
-        missing_columns = MANDATORY_COLUMNS - MANDATORY_COLUMNS.intersection(set(columns["name"]))
-        if missing_columns:
-            prev = MergedMetrics()._unsafe_all()
-            new_merged_metrics = build_merged_metrics(DBConnection.project_file_structure().metrics)
-            new_merged_metrics.drop("tags", axis=1, inplace=True)
-            new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
-            MergedMetrics().replace_all(new_merged_metrics, marshall=False)
+            missing_columns = MANDATORY_COLUMNS - MANDATORY_COLUMNS.intersection(set(columns["name"]))
+            if missing_columns:
+                prev = MergedMetrics(conn)._unsafe_all(False, None)
+                new_merged_metrics = build_merged_metrics(project_file_structure.metrics)
+                new_merged_metrics.drop("tags", axis=1, inplace=True)
+                new_merged_metrics = new_merged_metrics.join(prev["tags"], on="identifier", how="left")
+                MergedMetrics(conn).replace_all(new_merged_metrics, marshall=False)
     except:
-        initialize_merged_metrics()
-
-
-def initialize_if_error(fn):
-    def wrapper(*args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-        except:
-            initialize_merged_metrics()
-            return fn(*args, **kwargs)
-
-    return wrapper
+        initialize_merged_metrics(project_file_structure)
 
 
 class MergedMetrics(object):
-    def __new__(cls):
-        if not hasattr(cls, "instance"):
-            cls.instance = super(MergedMetrics, cls).__new__(cls)
-        return cls.instance
+    def __init__(self, connection: Connection):
+        self.connection = connection
 
-    @initialize_if_error
     def get_row(self, id: str):
-        with DBConnection() as conn:
-            r = pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", conn)
-            r.tags = r.tags.apply(unmarshall_tags)
-            return r
+        r = pd.read_sql(f"SELECT * FROM {TABLE_NAME} where IDENTIFIER = '{id}'", self.connection)
+        r.tags = r.tags.apply(unmarshall_tags)
+        return r
 
-    @initialize_if_error
     def update_tags(self, id: str, tags: List[Tag]):
-        with DBConnection() as conn:
-            conn.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
+        self.connection.execute(f"UPDATE {TABLE_NAME} SET tags = ? WHERE IDENTIFIER = ?", (marshall_tags(tags), id))
 
-    @initialize_if_error
-    def all(self):
-        return self._unsafe_all()
+    def all(self, marshall: bool = True, columns: Optional[List[str]] = None):
+        return self._unsafe_all(marshall, columns)
 
-    def _unsafe_all(self):
-        with DBConnection() as conn:
-            merged_metrics = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
+    def _unsafe_all(self, marshall: bool, columns: Optional[List[str]]):
+        if columns and "identifier" not in columns:
+            columns.append("identifier")
+        merged_metrics = pd.read_sql(
+            f"SELECT {','.join(columns) if columns else '*'} FROM {TABLE_NAME}", self.connection, index_col="identifier"
+        )
+        if marshall:
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
-            return merged_metrics
+        return merged_metrics
 
-    @initialize_if_error
     def replace_all(self, df: pd.DataFrame, marshall=True):
-        with DBConnection() as conn:
-            copy = df.copy()
-            if marshall:
-                copy.tags = copy.tags.apply(marshall_tags)
-            copy.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
+        copy = df.copy()
+        if marshall:
+            copy.tags = copy.tags.apply(marshall_tags)
+        copy.to_sql(name=TABLE_NAME, con=self.connection, if_exists="replace", index=True, index_label="identifier")
 
-    @initialize_if_error
     def replace_identifiers(self, mappings: dict[str, str]):
         def _replace_identifiers(id: str):
             lr, du, *rest = id.split("_")
             mapped_lr, mapped_du = mappings.get(lr, lr), mappings.get(du, du)
             return "_".join([mapped_lr, mapped_du, *rest])
 
-        with DBConnection() as conn:
-            df = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", conn, index_col="identifier")
-            df.index = df.index.map(_replace_identifiers)
-            df.to_sql(name=TABLE_NAME, con=conn, if_exists="replace", index=True, index_label="identifier")
+        df = pd.read_sql(f"SELECT * FROM {TABLE_NAME}", self.connection, index_col="identifier")
+        df.index = df.index.map(_replace_identifiers)
+        df.to_sql(name=TABLE_NAME, con=self.connection, if_exists="replace", index=True, index_label="identifier")

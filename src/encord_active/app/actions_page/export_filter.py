@@ -19,7 +19,10 @@ from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
-from encord_active.lib.db.tags import Tags, TagScope
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.helpers.tags import all_tags
+from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
 from encord_active.lib.project.metadata import ProjectNotFound
 
@@ -67,6 +70,10 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         to_filter_columns = st.multiselect(
             "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
         )
+
+        if not to_filter_columns:
+            return df
+
         filtered = df.copy()
         filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
         for column in to_filter_columns:
@@ -78,7 +85,10 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
             if column == "tags":
                 tag_filters = right.multiselect(
-                    "Choose tags to filter", options=Tags().all(), format_func=lambda x: x.name, key=key
+                    "Choose tags to filter",
+                    options=all_tags(get_state().project_paths),
+                    format_func=lambda x: x.name,
+                    key=key,
                 )
                 for tag in tag_filters:
                     filtered_rows = [tag in x for x in filtered["tags"]]
@@ -250,7 +260,8 @@ def show_update_stats(filtered_df: pd.DataFrame):
 def render_filter():
     filter_col, _, stats_col = st.columns([8, 1, 2])
     with filter_col:
-        filtered_merged_metrics = filter_dataframe(get_state().filtering_state.merged_metrics)
+        with DBConnection(get_state().project_paths) as conn:
+            filtered_merged_metrics = filter_dataframe(MergedMetrics(conn).all())
 
     with stats_col:
         show_update_stats(filtered_merged_metrics)
@@ -425,10 +436,8 @@ def render_export_button(
     render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: current_form.set(CurrentForm.EXPORT),  # type: ignore
-        disabled=not action_utils or is_filtered,
-        help="Export to an Encord dataset and project"
-        if not is_filtered
-        else "Export is allowed only for entire datasets, create a subset first or remove all filters",
+        disabled=True,
+        help="Contact Encord",
     )
     if current_form.value == CurrentForm.EXPORT:
         df = get_state().merged_metrics

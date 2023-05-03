@@ -96,15 +96,15 @@ def get_metric_operation_level(pth: Path) -> str:
     return "O" if object_hashes else "F"
 
 
-def is_valid_annotation_type(
-    annotation_type: List[AnnotationTypeUnion], metric_scope: Optional[MetricScope] = None
-) -> bool:
-    if metric_scope == MetricScope.DATA_QUALITY:
-        return not annotation_type
-    elif metric_scope == MetricScope.LABEL_QUALITY:
-        return bool(annotation_type) and isinstance(annotation_type, list)
-    else:
+def is_valid_annotation_type(metric: MetricMetadata, metric_scope: Optional[MetricScope] = None) -> bool:
+    if not metric_scope:
         return True
+    elif metric_scope == MetricScope.DATA_QUALITY:
+        return not metric.annotation_type
+    elif metric_scope == MetricScope.LABEL_QUALITY:
+        return bool(metric.annotation_type) and isinstance(metric.annotation_type, list)
+    else:
+        return False
 
 
 def load_metric_metadata(meta_pth) -> MetricMetadata:
@@ -150,7 +150,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
     paths = natsorted([p for p in metric_dir.iterdir() if p.suffix == ".csv"], key=lambda x: x.stem.split("_", 1)[1])
     levels = list(map(get_metric_operation_level, paths))
 
-    make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").title()
+    make_name = lambda p: p.name.split("_", 1)[1].rsplit(".", 1)[0].replace("_", " ").capitalize()
     names = [f"{make_name(p)}" for p, l in zip(paths, levels)]
     meta_data = [load_metric_metadata(f.with_suffix(".meta.json")) for f in paths]
 
@@ -160,7 +160,7 @@ def load_available_metrics(metric_dir: Path, metric_scope: Optional[MetricScope]
         return out
 
     for p, n, m, l in zip(paths, names, meta_data, levels):
-        if m is None or not l or not is_valid_annotation_type(m.annotation_type, metric_scope):
+        if m is None or not l or not is_valid_annotation_type(m, metric_scope):
             continue
 
         out.append(MetricData(name=n, path=p, meta=m, level=l))  # type: ignore

@@ -12,12 +12,17 @@ CURRENT_VERSION_KEY = "current_version"
 @st.cache_resource(show_spinner=False)
 def cached_versioner(project_path: Path):
     versioner = GitVersioner(project_path)
-    index = versioner.versions.index(versioner.current_version)
+    if versioner.available:
+        index = versioner.versions.index(versioner.current_version)
+    else:
+        index = None
     return versioner, index
 
 
 def is_latest(project_path: Path):
     versioner, _ = cached_versioner(project_path)
+    if not versioner.available:
+        return True
     return versioner.is_latest()
 
 
@@ -57,6 +62,11 @@ def version_selector(project_path: Path):
 def version_form():
     _, container, _ = st.columns([1, 2, 1])
     versioner, _ = cached_versioner(get_state().project_paths.project_dir)
+
+    if not versioner.available:
+        st.info("Versioning not available on hosted version")
+        return
+
     version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
     show_success_message = UseState(False)
 

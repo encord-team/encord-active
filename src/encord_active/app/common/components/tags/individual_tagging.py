@@ -4,8 +4,9 @@ from typing import Dict, List, Optional, Set
 import streamlit as st
 from pandas import Series
 
-from encord_active.app.common.components.tags.tag_creator import scoped_tags
 from encord_active.app.common.state import get_state
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.helpers.tags import all_tags, scoped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
 
@@ -33,11 +34,12 @@ def update_tags(identifier: str, key: str, scopes: Set[TagScope]):
         if target_id:
             targeted_tags[target_id] = [tag for tag in tags_for_update if tag.scope == scope]
 
-    for id, tags in targeted_tags.items():
-        tag_arr = get_state().merged_metrics.at[id, "tags"]
-        tag_arr.clear()
-        tag_arr.extend(tags)
-        MergedMetrics().update_tags(id, tags)
+    with DBConnection(get_state().project_paths) as conn:
+        for id, tags in targeted_tags.items():
+            tag_arr = get_state().merged_metrics.at[id, "tags"]
+            tag_arr.clear()
+            tag_arr.extend(tags)
+            MergedMetrics(conn).update_tags(id, tags)
 
 
 def multiselect_tag(row: Series, key_prefix: str, is_predictions=False):
@@ -63,7 +65,7 @@ def multiselect_tag(row: Series, key_prefix: str, is_predictions=False):
 
     st.multiselect(
         label="Tag image",
-        options=scoped_tags(metric_scopes),
+        options=scoped_tags(all_tags(get_state().project_paths), metric_scopes),
         format_func=lambda x: x.name,
         default=tag_status if len(tag_status) else None,
         key=key,
