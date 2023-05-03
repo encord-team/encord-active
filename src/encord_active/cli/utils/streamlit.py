@@ -8,6 +8,12 @@ from streamlit.web import cli as stcli
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
 from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
+from encord_active.lib.db.prisma_init import (
+    did_schema_change,
+    ensure_prisma_db,
+    generate_prisma_client,
+)
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.versioning.git import GitVersioner
 
 
@@ -15,11 +21,17 @@ def ensure_safe_project(path: Path):
     paths = [path] if is_project(path) else find_child_projects(path)
 
     for path in paths:
-        GitVersioner(path).jump_to("latest")
-        ensure_initialised_merged_metrics(path)
+        versioner = GitVersioner(path)
+        if versioner.available:
+            versioner.jump_to("latest")
+        project_file_structure = ProjectFileStructure(path)
+        ensure_initialised_merged_metrics(project_file_structure)
+        ensure_prisma_db(project_file_structure.prisma_db)
 
 
 def launch_streamlit_app(target: Path):
+    if did_schema_change():
+        generate_prisma_client()
     ensure_safe_project(target)
     streamlit_page = (Path(__file__).parents[2] / "app" / "streamlit_entrypoint.py").expanduser().absolute()
     data_dir = target.expanduser().absolute().as_posix()
