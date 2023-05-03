@@ -270,12 +270,12 @@ class EncordActions:
         # Three things to copy: labels, object_answers, classification_answers
 
         for counter, new_label_row_metadata in enumerate(new_project.label_rows):
-            new_label_data_unit_hash = new_label_row_metadata["data_hash"]
-            new_label_row = new_project.create_label_row(new_label_data_unit_hash)
-            original_lr_du = dataset_creation_result.du_original_mapping[new_label_data_unit_hash]
+            new_lr_data_hash = new_label_row_metadata["data_hash"]
+            new_label_row = new_project.create_label_row(new_lr_data_hash)
+            original_lr_du = dataset_creation_result.du_original_mapping[new_lr_data_hash]
 
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
-                new_label_row["label_hash"], new_label_data_unit_hash
+                new_label_row["label_hash"], new_lr_data_hash
             )
             original_label_row = json.loads(
                 self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
@@ -283,7 +283,7 @@ class EncordActions:
                 )
             )
             label_row = self.prepare_label_row(
-                original_label_row, new_label_row, new_label_data_unit_hash, original_lr_du.data_unit
+                original_label_row, new_label_row, new_lr_data_hash, original_lr_du.data_unit
             )
             if any(
                 data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
