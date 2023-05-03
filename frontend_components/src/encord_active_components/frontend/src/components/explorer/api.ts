@@ -81,6 +81,11 @@ const searchResultSchema = z.object({
 });
 export type SeachResult = z.infer<typeof searchResultSchema>;
 
+export const fetchHasPremiumFeatures = async () =>
+  z
+    .boolean()
+    .parse(await (await fetch(`${BASE_URL}/premium_available`)).json());
+
 export const fetchProject2DEmbeddings =
   (projectName: string) => async (selectedMetric: string) => {
     const url = `${BASE_URL}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
@@ -192,13 +197,15 @@ export const searchInProject =
     };
 
 export const useProjectQueries = () => {
-  const projectName = useContext(ProjectContext);
-  const queryClient = useQueryClient();
+  const projectContext = useContext(ProjectContext);
 
-  if (!projectName)
+  if (!projectContext)
     throw new Error(
       "useProjectQueries has to be used within <ProjectContext.Provider>"
     );
+
+  const queryClient = useQueryClient();
+  const { projectName } = projectContext;
 
   return {
     itemTagsMutation: useMutation(
@@ -297,4 +304,7 @@ export const useProjectQueries = () => {
   };
 };
 
-export const ProjectContext = createContext<string | null>(null);
+export const ProjectContext = createContext<{
+  projectName: string;
+  hasPremiumFeatures?: boolean;
+} | null>(null);

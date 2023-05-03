@@ -24,6 +24,7 @@ from encord_active.lib.metrics.utils import MetricScope, filter_none_empty_metri
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.server.settings import Env, settings
 from encord_active.server.utils import (
     get_metric_embedding_type,
     get_similarity_finder,
@@ -58,6 +59,11 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
+
+
+@app.get("/premium_available")
+def premium_available():
+    return settings.ENV != Env.LOCAL
 
 
 @app.get("/projects/{project}/items_id_by_metric")
@@ -146,6 +152,9 @@ class SearchType(str, Enum):
 
 @app.get("/projects/{project}/search")
 def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope: Optional[MetricScope] = None):
+    if not premium_available():
+        raise HTTPException(status_code=403, detail="Search is not enabled")
+
     if not query:
         raise HTTPException(status_code=422, detail="Invalid query")
     querier = get_querier(project)
