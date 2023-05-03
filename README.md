@@ -36,6 +36,8 @@ Use Encord Active to:
 - Search through your data using natural language (beta feature)
 - Find and fix dataset errors and biases (duplicates, outliers, label errors)
 
+![homepage-visual]
+
 ## Installation
 
 The simplest way to install the CLI is using `pip` in a suitable virtual environment:
@@ -245,3 +247,4 @@ This repository is published under the Apache 2.0 licence.
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
+[homepage-visual]: ./homepage_visual.png
