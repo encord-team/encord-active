@@ -7,9 +7,10 @@
 </p>
 
 <h1 align="center">
-  <p align="center">Encord Active</p>
   <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
 </h1>
+
+<div align="center">
 
 [![PRs-Welcome][contribute-image]][contribute-url]
 ![Licence][license-image]
@@ -21,20 +22,21 @@
 [!["Join us on Slack"][slack-image]][join-slack]
 [![Twitter Follow][twitter-image]][twitter-url]
 
+</div>
+
 ## ❓ What is Encord Active?
 
 [Encord Active][encord-active-landing] is an open-source tookit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
 
-
 Use Encord Active to:
 
-* Test, validate, and evaluate your models with advanced error analysis
-* Generate model explainability reports
-* Surface, curate, and prioritize the most valuable data for labeling
-* Search through your data using natural language (beta feature)
-* Find and fix dataset errors and biases (duplicates, outliers, label errors)
+- Test, validate, and evaluate your models with advanced error analysis
+- Generate model explainability reports
+- Surface, curate, and prioritize the most valuable data for labeling
+- Search through your data using natural language (beta feature)
+- Find and fix dataset errors and biases (duplicates, outliers, label errors)
 
-
+![homepage-visual]
 
 ## Installation
 
@@ -73,8 +75,6 @@ docker run -it --rm -p 8501:8501 -v ${PWD}:/data encord/encord-active quickstart
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
-
-
 ![projects page](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/projects-page.jpg)
 
 ## 💡 When to use Encord Active?
@@ -94,7 +94,6 @@ Our full documentation is available [here](https://docs.encord.com/active/docs).
 - [Workflows][encord-active-docs-workflow]
 - [User Guides](https://docs.encord.com/active/docs/category/user-guide)
 - [CLI Documentation](https://docs.encord.com/active/docs/cli)
-
 
 ## ⬇️  Download a sandbox dataset
 
@@ -248,3 +247,4 @@ This repository is published under the Apache 2.0 licence.
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
+[homepage-visual]: ./homepage_visual.png
