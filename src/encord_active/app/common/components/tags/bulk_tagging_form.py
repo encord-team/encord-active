@@ -8,7 +8,8 @@ from encord_active.app.common.components.tags.individual_tagging import (
     target_identifier,
 )
 from encord_active.app.common.state import get_state
-from encord_active.lib.db.helpers.tags import scoped_tags
+from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.helpers.tags import all_tags, scoped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.metrics.utils import IdentifierSchema
@@ -46,7 +47,8 @@ def action_bulk_tags(subset: DataFrame[IdentifierSchema], selected_tags: List[Ta
                 tags.remove(selected_tag)
 
     get_state().merged_metrics = all_df
-    MergedMetrics().replace_all(all_df)
+    with DBConnection(get_state().project_paths) as conn:
+        MergedMetrics(conn).replace_all(all_df)
 
 
 def bulk_tagging_form(df: DataFrame[IdentifierSchema], is_predictions: bool = False) -> Optional[TaggingFormResult]:
@@ -57,7 +59,7 @@ def bulk_tagging_form(df: DataFrame[IdentifierSchema], is_predictions: bool = Fa
             all_rows_have_objects = df[IdentifierSchema.identifier].map(lambda x: len(x.split("_")) > 3).all()
             if all_rows_have_objects and not is_predictions:
                 allowed_tag_scopes.add(TagScope.LABEL)
-            allowed_tags = scoped_tags(allowed_tag_scopes)
+            allowed_tags = scoped_tags(all_tags(get_state().project_paths), allowed_tag_scopes)
 
             selected_tags = select.multiselect(
                 label="Tags", options=allowed_tags, format_func=lambda x: x[0], label_visibility="collapsed"
