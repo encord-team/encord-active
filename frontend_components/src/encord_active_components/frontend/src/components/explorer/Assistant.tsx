@@ -34,7 +34,8 @@ export const Assistant = ({
     ["search"],
     ({ signal }) => {
       const { query, type } = formRef.current!;
-      return search({ scope, query: query.value, type: type.value }, signal);
+      if (query.value)
+        return search({ scope, query: query.value, type: type.value }, signal);
     },
     { enabled: false }
   );
