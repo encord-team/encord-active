@@ -141,9 +141,9 @@ class EncordActions:
                 # we need to find the data hash of the video in a hacky way
                 dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
                 # The data unit hash and label row data hash of a video (type) are the same
-                new_lr_data_hash = _find_new_data_row(dataset, new_lr_data_hash_to_original)
-                new_lr_data_hash_to_original[new_lr_data_hash] = label_row["data_hash"]
-                return {new_lr_data_hash: data_unit_hash}
+                new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original)
+                new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
+                return {new_data_row.uid: data_unit_hash}
 
         else:
             raise Exception(f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}')
