@@ -18,10 +18,17 @@ from encord.orm.project import (
     ReviewApprovalState,
 )
 from encord.utilities.label_utilities import construct_answer_dictionaries
+from prisma.types import (
+    DataUnitUpdateManyMutationInput,
+    DataUnitWhereInput,
+    LabelRowUpdateInput,
+    _LabelRowWhereUnique_data_hash_Input,
+)
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.utils import try_execute
+from encord_active.lib.common.utils import DataHashMapping, try_execute
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
     copy_filtered_data,
@@ -34,7 +41,7 @@ from encord_active.lib.encord.project_sync import (
     replace_uids,
 )
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.project import Project, ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 
 
@@ -42,6 +49,8 @@ class DatasetCreationResult(NamedTuple):
     hash: str
     du_original_mapping: dict[str, LabelRowDataUnit]
     lr_du_mapping: dict[LabelRowDataUnit, LabelRowDataUnit]
+    new_du_hash_to_original_mapping: DataHashMapping
+    new_lr_data_hash_to_original_mapping: DataHashMapping
 
 
 class ProjectCreationResult(NamedTuple):
@@ -90,21 +99,23 @@ class EncordActions:
         dataset: Dataset,
         label_row_hash: str,
         data_unit_hashes: set[str],
-        new_lr_data_hash_to_original: dict[str, str],
-    ) -> Optional[dict[str, str]]:
+        new_lr_data_hash_to_original_mapping: DataHashMapping,
+    ) -> Optional[DataHashMapping]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
 
         if label_row["data_type"] == DataType.IMAGE.value:
-            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in an image (type)
+            data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in an image (type)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
                 image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
                 new_lr_data_hash = dataset.upload_image(
                     file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
                 )["data_hash"]
+                new_lr_data_hash_to_original_mapping.set(new_lr_data_hash, label_row["data_hash"])
                 # The data unit hash and label row data hash of an image (type) are the same
-                new_lr_data_hash_to_original[new_lr_data_hash] = label_row["data_hash"]
-                return {new_lr_data_hash: data_unit_hash}
+                new_du_hash_to_original_mapping = DataHashMapping()
+                new_du_hash_to_original_mapping.set(new_lr_data_hash, data_unit_hash)
+                return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
             image_paths = []
@@ -122,28 +133,31 @@ class EncordActions:
                 dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
                 # Since `create_image_group()` does not return info related to the uploaded images,
                 # we need to find the data hash of the image group in a hacky way
-                new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original)
-                new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
+                new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)
+                new_lr_data_hash_to_original_mapping.set(new_data_row.uid, label_row["data_hash"])
 
                 # Obtain the data unit hashes of the images contained in the image group
                 new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
-                return {
-                    new_data_row.images_data[i].image_hash: sorted_data_units[i]["data_hash"]
-                    for i in range(len(sorted_data_units))
-                }
+                new_du_hash_to_original_mapping = DataHashMapping()
+                for i, data_unit in enumerate(sorted_data_units):
+                    new_du_hash_to_original_mapping.set(new_data_row.images_data[i].image_hash, data_unit["data_hash"])
+                return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:
-            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in a video (type)
+            data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in a video (type)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
                 video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
 
+                dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
                 # Since `upload_video()` does not return info related to the uploaded video,
                 # we need to find the data hash of the video in a hacky way
-                dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
+                new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)
+                new_lr_data_hash_to_original_mapping.set(new_data_row.uid, label_row["data_hash"])
+
                 # The data unit hash and label row data hash of a video (type) are the same
-                new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original)
-                new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
-                return {new_data_row.uid: data_unit_hash}
+                new_du_hash_to_original_mapping = DataHashMapping()
+                new_du_hash_to_original_mapping.set(new_data_row.uid, data_unit_hash)
+                return new_du_hash_to_original_mapping
 
         else:
             raise Exception(f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}')
@@ -180,34 +194,41 @@ class EncordActions:
 
         total_amount_of_data_units: int = sum(map(len, label_hash_to_data_units.values()))
         current_number_of_uploaded_data_units: int = 0
-        new_lr_data_hash_to_original: dict[str, str] = dict()
+        new_du_hash_to_original_mapping = DataHashMapping()
+        new_lr_data_hash_to_original_mapping = DataHashMapping()
         for label_row_hash, data_hashes in label_hash_to_data_units.items():
-            new_du_hashes_to_original: Optional[dict[str, str]] = try_execute(
+            output_new_du_hash_to_original_mapping: Optional[DataHashMapping] = try_execute(
                 self._upload_label_row,
                 5,
                 {
                     "dataset": dataset,
                     "label_row_hash": label_row_hash,
                     "data_unit_hashes": data_hashes,
-                    "new_lr_data_hash_to_original": new_lr_data_hash_to_original,
+                    "new_lr_data_hash_to_original_mapping": new_lr_data_hash_to_original_mapping,
                 },
             )
-            if new_du_hashes_to_original is None:
+            if output_new_du_hash_to_original_mapping is None:
                 raise Exception("Data upload failed")
 
-            for new_data_unit_hash, data_unit_hash in new_du_hashes_to_original.items():
+            for new_data_unit_hash, data_unit_hash in output_new_du_hash_to_original_mapping.items():
                 new_du_to_original[new_data_unit_hash] = LabelRowDataUnit(label_row_hash, data_unit_hash)
                 # TODO: check if lrdu_mapping without label row's data hash works ok for image groups (old behaviour)
                 lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit(
                     "", new_data_unit_hash
                 )
 
-            # Advance progress bar
-            current_number_of_uploaded_data_units += len(new_du_hashes_to_original)
+            # Update global data unit mapping and advance progress bar
+            new_du_hash_to_original_mapping.update(output_new_du_hash_to_original_mapping)
             if progress_callback:
-                progress_callback(current_number_of_uploaded_data_units / total_amount_of_data_units)
+                progress_callback(len(new_du_hash_to_original_mapping) / total_amount_of_data_units)
 
-        return DatasetCreationResult(dataset_hash, new_du_to_original, lrdu_mapping)
+        return DatasetCreationResult(
+            dataset_hash,
+            new_du_to_original,
+            lrdu_mapping,
+            new_du_hash_to_original_mapping,
+            new_lr_data_hash_to_original_mapping,
+        )
 
     def create_ontology(self, title: str, description: str):
         ontology_dict = json.loads(self.project_file_structure.ontology.read_text(encoding="utf-8"))
@@ -304,6 +325,8 @@ class EncordActions:
             new_project.project_hash,
             dataset_creation_result.hash,
         )
+
+        replace_db_uids(self.project_file_structure, dataset_creation_result)
 
         return new_project
 
@@ -434,10 +457,10 @@ class EncordActions:
         return cloned_project_hash
 
 
-def _find_new_data_row(dataset: Dataset, out_mapping: dict) -> Optional[DataRow]:
+def _find_new_data_row(dataset: Dataset, mapping: DataHashMapping) -> Optional[DataRow]:
     dataset.refetch_data()  # ensure the dataset instance include the latest changes
     for data_row in dataset.data_rows:
-        if data_row["data_hash"] not in out_mapping:
+        if data_row["data_hash"] not in mapping:
             return data_row
     return None
 
@@ -465,3 +488,21 @@ class DatasetUniquenessError(Exception):
         super().__init__(
             f"Dataset title '{dataset_title}' already exists in your list of datasets at Encord. Please use a different title."
         )
+
+
+def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creation_result: DatasetCreationResult):
+    # Update the data hash changes in the DataUnit and LabelRow db tables
+    with PrismaConnection(project_file_structure) as conn:
+        with conn.batch_() as batcher:
+            for new_du_hash, du_hash in dataset_creation_result.new_du_hash_to_original_mapping.items():
+                batcher.dataunit.update_many(
+                    where=DataUnitWhereInput(data_hash=du_hash),
+                    data=DataUnitUpdateManyMutationInput(data_hash=new_du_hash),
+                )
+            for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
+                batcher.labelrow.update(
+                    where=_LabelRowWhereUnique_data_hash_Input(data_hash=lr_data_hash),
+                    data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
+                )
+            batcher.commit()
+    Project(project_file_structure.project_dir).refresh()
