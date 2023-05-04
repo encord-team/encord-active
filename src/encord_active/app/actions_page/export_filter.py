@@ -436,8 +436,10 @@ def render_export_button(
     render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: current_form.set(CurrentForm.EXPORT),  # type: ignore
-        disabled=True,
-        help="Contact Encord",
+        disabled=not action_utils or is_filtered,
+        help="Export to an Encord dataset and project"
+        if not is_filtered
+        else "Export is allowed only for entire datasets, create a subset first or remove all filters",
     )
     if current_form.value == CurrentForm.EXPORT:
         df = get_state().merged_metrics
