@@ -120,6 +120,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
 
+    def cache_clear(self) -> None:
+        self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
+
     @property
     def data(self) -> Path:
         return self.project_dir / "data"

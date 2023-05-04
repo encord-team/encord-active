@@ -12,6 +12,13 @@ class BaseProjectFileStructure:
             project_dir = Path(project_dir)
         self.project_dir: Path = project_dir.expanduser().resolve()
 
+    @abstractmethod
+    def cache_clear(self) -> None:
+        """
+        Clear any cached data and fetch the latest changes.
+        """
+        pass
+
     @property
     @abstractmethod
     def data(self) -> Path:
