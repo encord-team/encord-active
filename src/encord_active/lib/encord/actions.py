@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
 import pandas as pd
-from encord import Dataset, EncordUserClient, Project
+from encord import Dataset, Project
 from encord.constants.enums import DataType
 from encord.exceptions import AuthorisationError
 from encord.objects.ontology_structure import OntologyStructure
-from encord.orm.dataset import StorageLocation
+from encord.orm.dataset import DataRow, ImagesDataFetchOptions, StorageLocation
 from encord.orm.label_row import LabelRow
 from encord.orm.project import (
     CopyDatasetAction,
@@ -85,45 +85,70 @@ class EncordActions:
 
         return self._original_project
 
-    def _upload_item(
+    def _upload_label_row(
         self,
         dataset: Dataset,
         label_row_hash: str,
-        data_unit_hash: str,
         data_unit_hashes: set[str],
-        new_du_to_original: dict[str, LabelRowDataUnit],
-    ) -> Optional[str]:
+        new_lr_data_hash_to_original: dict[str, str],
+    ) -> Optional[dict[str, str]]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
-        dataset_hash = dataset.dataset_hash
 
         if label_row["data_type"] == DataType.IMAGE.value:
-            image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-            return dataset.upload_image(
-                file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
-            )["data_hash"]
+            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in an image (type)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
+                image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
+                new_lr_data_hash = dataset.upload_image(
+                    file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
+                )["data_hash"]
+                # The data unit hash and label row data hash of an image (type) are the same
+                new_lr_data_hash_to_original[new_lr_data_hash] = label_row["data_hash"]
+                return {new_lr_data_hash: data_unit_hash}
 
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
             image_paths = []
-            image_names = []
-            if len(data_unit_hashes) > 0:
-                for data_unit_hash in data_unit_hashes:
-                    img_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-                    image_paths.append(img_path.as_posix())
-                    image_names.append(img_path.name)
-                # Unfortunately the following function does not return metadata related to the uploaded items
+            sorted_data_units = sorted(
+                (du for du in label_row["data_units"].values() if du["data_hash"] in data_unit_hashes),
+                key=lambda data_unit: int(data_unit["data_sequence"]),
+            )
+            for du in sorted_data_units:
+                data_unit_hash = du["data_hash"]
+                img_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
+                image_paths.append(img_path.as_posix())
+
+            if len(image_paths) > 0:
+                # create_image_group() method doesn't allow to send data unit names, so their hashes are used instead
                 dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
-            return _find_new_row_hash(self.user_client, dataset_hash, new_du_to_original)
+                # Since `create_image_group()` does not return info related to the uploaded images,
+                # we need to find the data hash of the image group in a hacky way
+                new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original)
+                new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
+
+                # Obtain the data unit hashes of the images contained in the image group
+                new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
+                return {
+                    new_data_row.images_data[i].image_hash: sorted_data_units[i]["data_hash"]
+                    for i in range(len(sorted_data_units))
+                }
 
         elif label_row["data_type"] == DataType.VIDEO.value:
-            video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
+            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in a video (type)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
+                video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
 
-            # Unfortunately the following function does not return metadata related to the uploaded items
-            dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
-            return _find_new_row_hash(self.user_client, dataset_hash, new_du_to_original)
+                # Since `upload_video()` does not return info related to the uploaded video,
+                # we need to find the data hash of the video in a hacky way
+                dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
+                # The data unit hash and label row data hash of a video (type) are the same
+                new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original)
+                new_lr_data_hash_to_original[new_data_row.uid] = label_row["data_hash"]
+                return {new_data_row.uid: data_unit_hash}
 
         else:
             raise Exception(f'Undefined data type {label_row["data_type"]} for label_row={label_row["label_hash"]}')
+
+        return None  # No data unit in the label row matched those in `data_unit_hashes`
 
     def create_dataset(
         self,
@@ -153,35 +178,35 @@ class EncordActions:
             label_row_hash, data_unit_hash, *_ = str(identifier).split("_")
             label_hash_to_data_units.setdefault(label_row_hash, set()).add(data_unit_hash)
 
-        uploaded_data_units: set[str] = set()
+        total_amount_of_data_units: int = sum(map(len, label_hash_to_data_units.values()))
+        current_number_of_uploaded_data_units: int = 0
+        new_lr_data_hash_to_original: dict[str, str] = dict()
         for label_row_hash, data_hashes in label_hash_to_data_units.items():
-            for data_unit_hash in data_hashes:
-                if data_unit_hash not in uploaded_data_units:
-                    # Since create_image_group does not return info related to the uploaded images, we should find its
-                    # data_hash in a hacky way
-                    new_data_unit_hash = try_execute(
-                        self._upload_item,
-                        5,
-                        {
-                            "dataset": dataset,
-                            "label_row_hash": label_row_hash,
-                            "data_unit_hash": data_unit_hash,
-                            "data_unit_hashes": data_hashes,
-                            "new_du_to_original": new_du_to_original,
-                        },
-                    )
-                    uploaded_data_units.add(data_unit_hash)
-                    if not new_data_unit_hash:
-                        raise Exception("Data unit upload failed")
+            new_du_hashes_to_original: Optional[dict[str, str]] = try_execute(
+                self._upload_label_row,
+                5,
+                {
+                    "dataset": dataset,
+                    "label_row_hash": label_row_hash,
+                    "data_unit_hashes": data_hashes,
+                    "new_lr_data_hash_to_original": new_lr_data_hash_to_original,
+                },
+            )
+            if new_du_hashes_to_original is None:
+                raise Exception("Data upload failed")
 
-                    new_du_to_original[new_data_unit_hash] = LabelRowDataUnit(label_row_hash, data_unit_hash)
-                    lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit(
-                        "", new_data_unit_hash
-                    )
-                    uploaded_data_units.add(data_unit_hash)
+            for new_data_unit_hash, data_unit_hash in new_du_hashes_to_original.items():
+                new_du_to_original[new_data_unit_hash] = LabelRowDataUnit(label_row_hash, data_unit_hash)
+                # TODO: check if lrdu_mapping without label row's data hash works ok for image groups (old behaviour)
+                lrdu_mapping[LabelRowDataUnit(label_row_hash, data_unit_hash)] = LabelRowDataUnit(
+                    "", new_data_unit_hash
+                )
 
-                if progress_callback:
-                    progress_callback(len(uploaded_data_units) / dataset_df.shape[0])
+            # Advance progress bar
+            current_number_of_uploaded_data_units += len(new_du_hashes_to_original)
+            if progress_callback:
+                progress_callback(current_number_of_uploaded_data_units / total_amount_of_data_units)
+
         return DatasetCreationResult(dataset_hash, new_du_to_original, lrdu_mapping)
 
     def create_ontology(self, title: str, description: str):
@@ -245,12 +270,12 @@ class EncordActions:
         # Three things to copy: labels, object_answers, classification_answers
 
         for counter, new_label_row_metadata in enumerate(new_project.label_rows):
-            new_label_data_unit_hash = new_label_row_metadata["data_hash"]
-            new_label_row = new_project.create_label_row(new_label_data_unit_hash)
-            original_lr_du = dataset_creation_result.du_original_mapping[new_label_data_unit_hash]
+            new_lr_data_hash = new_label_row_metadata["data_hash"]
+            new_label_row = new_project.create_label_row(new_lr_data_hash)
+            original_lr_du = dataset_creation_result.du_original_mapping[new_lr_data_hash]
 
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
-                new_label_row["label_hash"], new_label_data_unit_hash
+                new_label_row["label_hash"], new_lr_data_hash
             )
             original_label_row = json.loads(
                 self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
@@ -258,7 +283,7 @@ class EncordActions:
                 )
             )
             label_row = self.prepare_label_row(
-                original_label_row, new_label_row, new_label_data_unit_hash, original_lr_du.data_unit
+                original_label_row, new_label_row, new_lr_data_hash, original_lr_du.data_unit
             )
             if any(
                 data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
@@ -409,11 +434,11 @@ class EncordActions:
         return cloned_project_hash
 
 
-def _find_new_row_hash(user_client: EncordUserClient, new_dataset_hash: str, out_mapping: dict) -> Optional[str]:
-    updated_dataset = user_client.get_dataset(new_dataset_hash)
-    for new_data_row in updated_dataset.data_rows:
-        if new_data_row["data_hash"] not in out_mapping:
-            return new_data_row["data_hash"]
+def _find_new_data_row(dataset: Dataset, out_mapping: dict) -> Optional[DataRow]:
+    dataset.refetch_data()  # ensure the dataset instance include the latest changes
+    for data_row in dataset.data_rows:
+        if data_row["data_hash"] not in out_mapping:
+            return data_row
     return None
 
 

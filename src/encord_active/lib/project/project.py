@@ -325,7 +325,12 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         if "data_sequence" in du:
             with PrismaConnection(project_file_structure) as conn:
                 conn.dataunit.upsert(
-                    where={"data_hash": du["data_hash"]},
+                    where={
+                        "data_hash_frame": {  # state the values of the compound key
+                            "data_hash": du["data_hash"],
+                            "frame": int(du["data_sequence"]),
+                        }
+                    },
                     data={
                         "create": {
                             "data_hash": du["data_hash"],
