@@ -34,6 +34,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                 label_row_dict = json.loads(label_row.label_row_file.read_text(encoding="utf-8"))
                 label_hash = label_row_dict["label_hash"]
                 lr_data_hash = label_row_meta[label_hash]["data_hash"]
+                data_type = label_row_dict["data_type"]
 
                 if fill_label_rows:
                     label_hash = label_row_dict["label_hash"]
@@ -42,7 +43,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             label_hash=label_hash,
                             data_hash=lr_data_hash,
                             data_title=label_row_dict["data_title"],
-                            data_type=label_row_dict["data_type"],
+                            data_type=data_type,
                             created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
                             last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
                             location=label_row.label_row_file.as_posix(),
@@ -53,11 +54,19 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                     data_units = label_row_dict["data_units"]
                     for data_unit in label_row.iter_data_unit():
                         du = data_units[data_unit.hash]
+                        if data_type == "video":
+                            if "_" not in data_unit.path.stem:
+                                continue
+                            _, frame_str = data_unit.path.stem.rsplit("_", 1)
+                        else:
+                            frame_str = du.get("data_sequence", 0)
+                        frame = int(frame_str)
+
                         batcher.dataunit.create(
                             DataUnitCreateInput(
                                 data_hash=data_unit.hash,
                                 data_title=du["data_title"],
-                                frame=int(du["data_sequence"]),
+                                frame=frame,
                                 location=data_unit.path.as_posix(),
                                 lr_data_hash=lr_data_hash,
                             )
