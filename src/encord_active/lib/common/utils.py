@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -36,6 +38,38 @@ from encord_active.lib.labels.object import BoxShapes, ObjectShape, SimpleShapes
 # Silence shapely deprecation warnings from v1.* to v2.0
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 from encord_active.lib.coco.datastructure import CocoBbox
+
+
+class DataHashMapping:
+    _mapping: dict[str, str]
+    _inverse_mapping: dict[str, str]
+
+    def __init__(self):
+        self._mapping = dict()
+        self._inverse_mapping = dict()
+
+    def __contains__(self, data_hash: str):
+        return data_hash in self._mapping
+
+    def __len__(self):
+        return len(self._mapping)
+
+    def set(self, from_hash: str, to_hash: str):
+        self._mapping[from_hash] = to_hash
+        self._inverse_mapping[to_hash] = from_hash
+
+    def get(self, from_hash: str, inverse: bool = False):
+        return self._mapping[from_hash] if not inverse else self._inverse_mapping[from_hash]
+
+    def keys(self, inverse: bool = False):
+        return self._mapping.keys() if not inverse else self._inverse_mapping.keys()
+
+    def items(self, inverse: bool = False):
+        return self._mapping.items() if not inverse else self._inverse_mapping.items()
+
+    def update(self, other: DataHashMapping):
+        self._mapping.update(other._mapping)
+        self._inverse_mapping.update(other._inverse_mapping)
 
 
 def load_json(json_file: Path) -> Optional[dict]:
