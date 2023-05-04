@@ -24,6 +24,7 @@ from encord_active.lib.db.helpers.tags import all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
+from encord_active.lib.metrics.utils import load_metric_dataframe
 from encord_active.lib.project.metadata import ProjectNotFound
 
 
@@ -456,6 +457,12 @@ def render_export_button(
             return
         project_creation_result = create_and_sync_remote_project(action_utils, cols, df)
         if project_creation_result:
+            # Clean summaries' cache to avoid hit old data hashes
+            get_state().metrics_data_summary = None
+            get_state().metrics_label_summary = None
+            load_metric_dataframe.cache_clear()
+            get_state().project_paths.cache_clear()
+
             new_project_link = f"https://app.encord.com/projects/view/{project_creation_result.project_hash}/summary"
             new_dataset_link = f"https://app.encord.com/datasets/view/{project_creation_result.dataset_hash}"
             update_items = [
