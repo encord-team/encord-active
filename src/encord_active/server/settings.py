@@ -12,7 +12,7 @@ class Env(str, Enum):
 class Settings(BaseSettings):
     ENV: Env = Env.LOCAL
     DEPLOYMENT_NAME: Optional[str] = None
-    API_URL: str = "localhost"
+    API_URL: str = "http://localhost:8000"
     ALLOWED_ORIGIN: Optional[str] = None
 
     class Config:
