@@ -105,7 +105,7 @@ class EncordActions:
         label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
 
         if label_row["data_type"] == DataType.IMAGE.value:
-            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in an image (type)
+            data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in an image (type)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
                 image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
                 new_lr_data_hash = dataset.upload_image(
@@ -144,7 +144,7 @@ class EncordActions:
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:
-            data_unit_hash = next(label_row["data_units"], None)  # There is only one data unit in a video (type)
+            data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in a video (type)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
                 video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
 
