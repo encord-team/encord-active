@@ -136,6 +136,7 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
             "dataset_hash": meta.dataset_hash,
             "dataset_title": dataset_title,
             "data_title": meta.data_title,
+            "data_hash": meta.data_hash,
             "data_type": "image",
             "data_units": data_units,
             "object_answers": {},
