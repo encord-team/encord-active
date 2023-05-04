@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, NamedTuple, Optional, Union
 
@@ -42,8 +43,8 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             data_hash=lr_data_hash,
                             data_title=label_row_dict["data_title"],
                             data_type=label_row_dict["data_type"],
-                            created_at=label_row_meta[label_hash]["created_at"],
-                            last_edited_at=label_row_meta[label_hash]["last_edited_at"],
+                            created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
+                            last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
                             location=label_row.label_row_file.as_posix(),
                         )
                     )
