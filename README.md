@@ -17,6 +17,7 @@
 [![PyPi project][pypi-package-image]][pypi-package]
 ![PyPi version][pypi-version-image]
 [![Open In Colab][colab-image]][colab-notebook]
+![downloads-badge][downloads-badge]
 
 [![docs][docs-image]][encord-active-docs]
 [!["Join us on Slack"][slack-image]][join-slack]
@@ -224,27 +225,28 @@ If you want to share your custom metrics or improve the tool, please see our [c
 This repository is published under the Apache 2.0 licence.
 
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
+[colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
+[contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
 [contribute-url]: https://docs.encord.com/active/docs/contributing
+[docs-image]: https://img.shields.io/badge/docs-online-blue
+[downloads-badge]: https://static.pepy.tech/badge/encord-active
 [encord-active-docs-init]: https://docs.encord.com/active/docs/import/quick-import-data
 [encord-active-docs-workflow]: https://docs.encord.com/active/docs/category/workflows
 [encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
 [encord-active-docs]: https://docs.encord.com/active/docs
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[homepage-visual]: ./homepage_visual.png
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
+[pypi-package-image]: https://img.shields.io/pypi/v/encord-active
 [pypi-package]: https://www.piwheels.org/project/encord-active/
+[pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
 [slack-community]: https://encord-active.slack.com
-[twitter-url]: https://twitter.com/encord_team
-[colab-image]: https://colab.research.google.com/assets/colab-badge.svg
-[contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
-[docs-image]: https://img.shields.io/badge/docs-online-blue
-[license-image]: https://img.shields.io/github/license/encord-team/encord-active
-[pypi-package-image]: https://img.shields.io/pypi/v/encord-active
-[pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
-[homepage-visual]: ./homepage_visual.png
+[twitter-url]: https://twitter.com/encord_team
