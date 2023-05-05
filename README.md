@@ -215,7 +215,7 @@ If you want to share your custom metrics or improve the tool, please see our [c
 ### 🦸 Contributors
 
 <a href="https://github.com/encord-team/encord-active/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=encord-team/encord-active" />
+  <img src="https://contrib.rocks/image?repo=encord-team/encord-active" alt="Contributors graph"/>
 </a>
 
 [@Javi Leguina](https://github.com/jleguina)
