@@ -2921,7 +2921,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "e2354002c4e58c08e9b20b54e7d77ce00fc801f32e8183dbb690fb0b8d6930e1"
+content-hash = "c96140dd9a461a18c79e6b7c31e843ca0ddfe60e134f66ed5b360e2d5a6be335"
 
 [metadata.files]
 aiofiles = [

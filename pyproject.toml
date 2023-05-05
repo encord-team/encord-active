@@ -79,6 +79,7 @@ prisma = "^0.8.2"
 fastapi = "^0.95.0"
 uvicorn = {extras = ["standard"], version = "^0.21.1"}
 nodejs-bin = "^18.4.0a4"
+urllib3 = "^1.26.15" # Pinning, while cachecontrol package is incompatible with requests (urllib3) newer versions
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
