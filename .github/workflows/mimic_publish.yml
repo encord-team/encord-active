@@ -1,0 +1,29 @@
+name: Mimic Publish
+
+env:
+  PYTHON: 3.9.14
+  POETRY: 1.1.12
+  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+jobs:
+  fakepublish:
+    name: Mimic Publish Encord Active
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON }}
+
+      - name: Setup Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY }}
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+
+      - name: Build
+        run: poetry build
