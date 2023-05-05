@@ -141,7 +141,7 @@ To import your data, labels, and predictions from COCO, save your data in a dire
 # install COCO extras
 (ea-venv)$ python -m pip install encord-active[coco]
 
-# import samples with COCO annotaions
+# import samples with COCO annotations
 encord-active import project --coco -i ./images -a ./annotations.json
 
 # import COCO model predictions
