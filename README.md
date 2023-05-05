@@ -27,7 +27,7 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source tookit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
+[Encord Active][encord-active-landing] is an open-source toolkit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
 
 Use Encord Active to:
 
