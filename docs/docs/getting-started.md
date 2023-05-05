@@ -33,7 +33,7 @@ If you have trouble installing `encord-active`, you can find more detailed instr
 You can also run the docker image instead of install Encord Active
 
 ```shell
-docker run -it -p 8501:8501 -v ${PWD}:/data encord/encord-active <command>
+docker run -it -p 8501:8501 -p 8000:8000 -v ${PWD}:/data encord/encord-active <command>
 ```
 
 :::
