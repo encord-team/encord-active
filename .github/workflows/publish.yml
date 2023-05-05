@@ -4,11 +4,6 @@ on:
   release:
     types: [published]
 
-env:
-  PYTHON: 3.9.14
-  POETRY: 1.1.12
-  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-
 concurrency:
   group: encord-active-${{ github.ref }}-publish
   cancel-in-progress: true
@@ -24,16 +19,8 @@ jobs:
           token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
           ref: main
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON }}
-
-      - name: Setup Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY }}
-          virtualenvs-in-project: true
+      - name: Setup root poetry environment
+        uses: ./.github/actions/setup-root-poetry-environment
 
       - name: Poetry Version Bump
         run: "poetry version ${{ github.ref_name }}"
@@ -55,5 +42,5 @@ jobs:
 
       - name: Publish
         run: |
-          poetry config pypi-token.pypi ${{ env.PYPI_TOKEN }}
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
           poetry publish
