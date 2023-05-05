@@ -23,7 +23,7 @@ from encord_active.lib.project import Project
 
 project_path = Path("/path/to/your/project/root")
 
-predictions: List[Prediction] = ...  # Your list of predictions
+predictions: list[Prediction] = ...  # Your list of predictions
 
 import_predictions(Project(project_path), project_path, predictions)
 ```
