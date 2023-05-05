@@ -153,7 +153,7 @@ Below, you find examples of how to create an object of each of the three support
 <Tabs groupId="data-type">
   <TabItem value="classification" label="Classification" default>
 
-Since we can have multiple classifications for for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
+Since we can have multiple classifications for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
 
 ```python
 prediction = Prediction(
@@ -220,7 +220,7 @@ BoundingBox(x=10/img_w, y=25/img_h, w=200/img_w, h=150/img_h)
   </TabItem>
   <TabItem value="mask" label="Segmentation Mask">
 
-You specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
+You should specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
 
 ```python
 from encord_active.lib.db.predictions import Prediction, Format
@@ -313,7 +313,7 @@ with open("/path/to/predictions.pkl", "wb") as f:
     pickle.dump(predictions_to_store, f)
 ```
 
-In the above code snippet, you will have to fetch the `data_hash`, `class_id`, etc. ready from the for loop in line 5.
+In the above code snippet, you will have to fetch `data_hash`, `class_id`, etc., from the for loop in line 5.
 
 ## 3. Import Your Predictions via the CLI
 
