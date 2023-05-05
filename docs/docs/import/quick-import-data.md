@@ -35,7 +35,7 @@ You have some additional options to tailor the initialisation of the project for
 
 If you want to include labels as well, this is also an option.
 To do so, you will have to define how to parse your labels.
-You do this by implementing the [`LabelTransformer`][gh-label-transformer] interface.
+You do this by implementing the [`LabelTransformer`][gh-label-transformer-interface] interface.
 
 ```python
 from pathlib import Path
@@ -104,4 +104,5 @@ More concrete examples for, e.g., bounding boxes and polygons, are included in o
 
 :::
 
+[gh-label-transformer-interface]: https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/labels/label_transformer.py#L61-L79
 [gh-transformer-examples]: https://github.com/encord-team/encord-active/blob/main/examples/label-transformers
