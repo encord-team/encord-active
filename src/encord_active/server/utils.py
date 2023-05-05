@@ -49,7 +49,7 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
         label_row_structure.iter_data_unit(du_hash), None
     )
     if data_unit:
-        return f"static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
+        return f"ea-static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
 
 
 def _transform_object(object_: dict):
