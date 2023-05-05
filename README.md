@@ -88,7 +88,7 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ## 🔖 Documentation
 
-Our full documentation is available [here](https://docs.encord.com/active/docs). In particular we recommend checking out:
+Our full documentation is available [here](https://docs.encord.com/active/docs). In particular, we recommend checking out:
 
 - [Getting Started](https://docs.encord.com/active/docs/getting-started)
 - [Imports](https://docs.encord.com/active/docs/import/)
@@ -98,7 +98,7 @@ Our full documentation is available [here](https://docs.encord.com/active/docs).
 
 ## ⬇️  Download a sandbox dataset
 
-Another way to start quickly is by downloading an existing dataset from the sandbox.
+Another way to quickly get familiar with Encord Active is to download a dataset from its sandbox.
 The download command will ask which pre-built dataset to use and will download it into a new directory in the current working directory.
 
 ```shell
