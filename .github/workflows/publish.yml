@@ -34,9 +34,6 @@ jobs:
           commit_message: "Version bump to ${{ github.ref_name }}"
           push_options: --force
 
-      - name: Install dependencies
-        run: |
-          poetry install --no-interaction
       - name: Build
         run: poetry build
 
