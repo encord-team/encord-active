@@ -188,6 +188,7 @@ def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope
         "snippet": snippet,
     }
 
+
 @app.get("/health")
 def health_check() -> bool:
     return True
