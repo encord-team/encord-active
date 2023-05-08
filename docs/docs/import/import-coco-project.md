@@ -60,6 +60,6 @@ When the process is done, follow the printed instructions to open the app or see
 
 :::info
 
-If you want the dataset to be available on Encord platform, please refer to the [Export documentation](../user-guide/filter_export#export-to-encord).
+If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](../user-guide/filter_export#export-to-encord).
 
 :::
