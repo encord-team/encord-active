@@ -48,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory=path), name="static")
+app.mount("/ea-static", StaticFiles(directory=path), name="static")
 
 
 async def get_project_file_structure(project: str) -> ProjectFileStructure:
@@ -187,3 +187,8 @@ def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope
         "ids": [item.identifier for item in result.result_identifiers],
         "snippet": snippet,
     }
+
+
+@app.get("/health")
+def health_check() -> bool:
+    return True
