@@ -203,7 +203,7 @@ def import_KITTI_labels(
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
 
-    label_files = [f for f in (data_root / "labels").iterdir() if f.suffix == ".txt"]
+    label_files = [f for f in (data_root / "labels").iterdir() if f.suffix.lower() in [".txt", ".csv"]]
 
     # === Prepare ontology lookup === #
     with (data_root / "ontology_label_map.json").open("r", encoding="utf-8") as f:
