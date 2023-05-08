@@ -27,7 +27,7 @@
 
 ## ❓ What is Encord Active?
 
-[Encord Active][encord-active-landing] is an open-source tookit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
+[Encord Active][encord-active-landing] is an open-source toolkit to test, validate, and evaluate your models and surface, curate, and prioritize the most valuable data for labeling to supercharge model performance.
 
 Use Encord Active to:
 
@@ -88,7 +88,7 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ## 🔖 Documentation
 
-Our full documentation is available [here](https://docs.encord.com/active/docs). In particular we recommend checking out:
+Our full documentation is available [here](https://docs.encord.com/active/docs). In particular, we recommend checking out:
 
 - [Getting Started](https://docs.encord.com/active/docs/getting-started)
 - [Imports](https://docs.encord.com/active/docs/import/)
@@ -98,7 +98,7 @@ Our full documentation is available [here](https://docs.encord.com/active/docs).
 
 ## ⬇️  Download a sandbox dataset
 
-Another way to start quickly is by downloading an existing dataset from the sandbox.
+Another way to quickly get familiar with Encord Active is to download a dataset from its sandbox.
 The download command will ask which pre-built dataset to use and will download it into a new directory in the current working directory.
 
 ```shell
@@ -141,7 +141,7 @@ To import your data, labels, and predictions from COCO, save your data in a dire
 # install COCO extras
 (ea-venv)$ python -m pip install encord-active[coco]
 
-# import samples with COCO annotaions
+# import samples with COCO annotations
 encord-active import project --coco -i ./images -a ./annotations.json
 
 # import COCO model predictions
@@ -215,7 +215,7 @@ If you want to share your custom metrics or improve the tool, please see our [c
 ### 🦸 Contributors
 
 <a href="https://github.com/encord-team/encord-active/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=encord-team/encord-active" />
+  <img src="https://contrib.rocks/image?repo=encord-team/encord-active" alt="Contributors graph"/>
 </a>
 
 [@Javi Leguina](https://github.com/jleguina)
@@ -237,7 +237,7 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-docs]: https://docs.encord.com/active/docs
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
-[homepage-visual]: ./homepage_visual.png
+[homepage-visual]: https://github.com/encord-team/encord-active/blob/main/homepage_visual.png
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
