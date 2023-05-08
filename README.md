@@ -237,7 +237,7 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-docs]: https://docs.encord.com/active/docs
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
-[homepage-visual]: ./homepage_visual.png
+[homepage-visual]: https://github.com/encord-team/encord-active/blob/main/homepage_visual.png
 [join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
