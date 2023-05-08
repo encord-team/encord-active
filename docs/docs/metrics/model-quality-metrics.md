@@ -11,12 +11,12 @@ Model quality metrics help you evaluate your data and labels based on a trained 
 
 Acquisition functions are a special type of model quality metric, primarily used in active learning to score data samples according to how informative they are for the model and enable smart labeling of unannotated data.
 
-| Title                                                                                             | Metric Type | Data Type |
-|---------------------------------------------------------------------------------------------------|-------------|-----------|
-| [Entropy](#entropy) - <small>Rank images by their entropy</small>                                 | `image`     |           |
-| [LeastConfidence](#least-confidence) - <small>Rank images by their least confidence score</small> | `image`     |           |
-| [Margin](#margin) - <small>Rank images by their margin score</small>                              | `image`     |           |
-| [Variance](#variance) - <small>Rank images by their variance</small>                              | `image`     |           |
+| Title                                                                                              | Metric Type | Data Type |
+|----------------------------------------------------------------------------------------------------|-------------|-----------|
+| [Entropy](#entropy) - <small>Rank images by their entropy.</small>                                 | `image`     |           |
+| [LeastConfidence](#least-confidence) - <small>Rank images by their least confidence score.</small> | `image`     |           |
+| [Margin](#margin) - <small>Rank images by their margin score.</small>                              | `image`     |           |
+| [Variance](#variance) - <small>Rank images by their variance.</small>                              | `image`     |           |
 
 
 ### Entropy

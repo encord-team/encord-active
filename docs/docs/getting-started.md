@@ -8,8 +8,6 @@ import Link from '@docusaurus/Link';
 
 # Getting Started
 
-**Encord Active** is an open-source active learning tookit that helps you visualize your data, evaluate your models, surface model failure modes, find labeling mistakes, prioritize high-value data for re-labeling and more!
-
 ## Install Encord Active
 
 Install `encord-active` in your favorite Python environment with the following commands:

@@ -39,7 +39,7 @@ All commands going forward assume you are in the project directory, if now eithe
 
 :::
 
-### Uniquiely Identifying Data Units
+### Uniquely Identifying Data Units
 
 At Encord, every data unit has a `data_hash` which uniquely defines it.
 To see the mapping between the `data_hash`es in your Encord project and the filenames that you uploaded, you can use:
@@ -70,7 +70,7 @@ encord-active print --json data-mapping
 
 :::
 
-Note that for `image_groups`, each image in the group has it's own `data_hash`, while
+Note that for `image_groups`, each image in the group has its own `data_hash`, while
 videos have one `data_hash` for the entire video.
 As a consequence, predictions for videos will also need a `frame` to uniquely define where the prediction belongs.
 
@@ -146,14 +146,14 @@ Now, you can prepare a pickle file (`.pkl`) to be imported by Encord Active.
 You do this by building a list of `Prediction` objects.
 A prediction object holds a unique identifier of the data unit (the `data_hash` and potentially a `frame`), the `class_id`, a model `confidence` score, the actual prediction `data`, and the `format` of that data.
 
-#### Creating a `Prediction` Object
+#### Creating a `Prediction` Label
 
-Below, you find examples of how to create an object of each of the three supported types.
+Below, you can find examples of how to create a label of each of the four supported types.
 
 <Tabs groupId="data-type">
   <TabItem value="classification" label="Classification" default>
 
-Since we can have multiple classifications for for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
+Since we can have multiple classifications for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
 
 ```python
 prediction = Prediction(
@@ -220,7 +220,7 @@ BoundingBox(x=10/img_w, y=25/img_h, w=200/img_w, h=150/img_h)
   </TabItem>
   <TabItem value="mask" label="Segmentation Mask">
 
-You specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
+You should specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
 
 ```python
 from encord_active.lib.db.predictions import Prediction, Format
@@ -313,7 +313,7 @@ with open("/path/to/predictions.pkl", "wb") as f:
     pickle.dump(predictions_to_store, f)
 ```
 
-In the above code snippet, you will have to fetch the `data_hash`, `class_id`, etc. ready from the for loop in line 5.
+In the above code snippet, you will have to fetch `data_hash`, `class_id`, etc., from the for loop in line 5.
 
 ## 3. Import Your Predictions via the CLI
 
