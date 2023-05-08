@@ -29,7 +29,7 @@ RUN curl -sSL https://install.python-poetry.org |  \
 
 ENV PATH="/home/appuser/.local/bin:$PATH"
 
-COPY .env pyproject.toml poetry.lock /home/appuser
+COPY .env pyproject.toml poetry.lock /home/appuser/
 
 RUN poetry cache clear pypi --all
 RUN poetry config virtualenvs.create true  \
