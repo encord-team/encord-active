@@ -16,10 +16,9 @@ Make sure to [version your project][project-versioning] if you want to be able t
 
 :::
 
-If you have KITTI predictions stored in TXT or CSV files, there is a utility function to import the predictions from those files.
-For this, the files must be associated with one image each and their file names must contain the `data_hash` of the associated image.
+If you possess KITTI predictions saved as TXT or CSV files, a utility function is available to import the predictions from those files, provided that each file is associated with a single image and its filename contains the `data_hash` of the related image.
 
-The file structure needs to be as follows:
+The following file structure is required:
 
 ```
 labels_root
@@ -32,14 +31,14 @@ labels_root
 
 That is, a root directory with two components:
 
-1. A subdirectory named "labels" that contains TXT/CSV files with names that start with the `data_hash` followed by two underscores.
+1. A subdirectory named "labels" that contains TXT/CSV files, with filenames that begin with the `data_hash` followed by two underscores.
 2. A json file which maps class names to Encord ontology classes.
 
 We cover these two components in detail below.
 
-### Text File Format
+### Label Files Format
 
-The KITTI importer supports the format described [here](https://docs.nvidia.com/tao/tao-toolkit-archive/tlt-20/tlt-user-guide/text/preparing_data_input.html#label-files) with the addition of a column corresponding to the model confidence.
+The KITTI importer supports the label format described [here](https://docs.nvidia.com/tao/tao-toolkit-archive/tlt-20/tlt-user-guide/text/preparing_data_input.html#label-files) with the addition of a column corresponding to the model confidence.
 
 An example:
 
@@ -68,11 +67,15 @@ Columns are:
 - ~~`rotation_y`: float~~ ignored
 - `confidence`: float
 
-Note, the ignored items need to be there but will be ignored.
+:::note
+
+The columns flagged as `ignored` have to appear in the label format but their values will be ignored.
+
+:::
 
 ### The JSON Class Map
 
-The JSON class map needs to follow the following structure:
+The JSON class map should follow a specific format where the keys should correspond to the `featureNodeHash` of the bounding box objects in the project ontology, and the values should correspond to their respective KITTI class names.
 
 ```json
 {
@@ -83,46 +86,57 @@ The JSON class map needs to follow the following structure:
 }
 ```
 
-The keys should correspond to the `featureNodeHash` of a bounding box object in the project ontology.
-To list the available hashes from your project, you can do this in your script:
+:::info
+
+You can list your project's available `featureNodeHash`es with the following script:
 
 ```python
 from pathlib import Path
 
-import yaml
+from encord_active.lib.project.metadata import fetch_project_meta
 from encord import EncordUserClient
 
-data_dir = Path("/path/to/the/data")
-meta = yaml.safe_load((data_dir / "project_meta.yaml").read_text())
-private_key = Path(meta["ssh_key_path"]).read_text()
+project_path = Path("/path/to/your/project/folder")
+project_meta = fetch_project_meta(project_path)
+private_key = Path(project_meta["ssh_key_path"]).read_text()
 
 client = EncordUserClient.create_with_ssh_private_key(private_key)
-project = client.get_project(project_hash=meta["project_hash"])
+encord_project = client.get_project(project_hash=project_meta["project_hash"])
 
-# NB: Remember to include the first code snippet on this page.
-print({o["featureNodeHash"]: o["name"] for o in project.ontology["objects"]})
-# Outputs somtihing similar to
+print({o["featureNodeHash"]: o["name"] for o in encord_project.ontology["objects"]})
+# Example output:
 # {'OTk2MzM3': 'Pedestrian', 'NzYyMjcx': 'Cyclist', 'Nzg2ODEx': 'Car'}
 ```
 
-The values of the JSON file should be the values that can appear in the first column of text files described above.
+:::
 
 ### Importing the Predictions
 
-To import the predictions, you do the following
+Once you have a valid KITTI predictions folder, you can import the predictions running the following script:
 
 ```python
 import json
+from pathlib import Path
+
+from encord import EncordUserClient
 
 from encord_active.lib.model_predictions.importers import import_KITTI_labels
 from encord_active.lib.model_predictions.writer import PredictionWriter
+from encord_active.lib.project import Project
+from encord_active.lib.project.metadata import fetch_project_meta
 
-# highlight-next-line
-predictions_root = Path("/path/to/your/predictions")
+project_path = Path("/path/to/your/project/folder")
+project_meta = fetch_project_meta(project_path)
+private_key = Path(project_meta["ssh_key_path"]).read_text()
+
+client = EncordUserClient.create_with_ssh_private_key(private_key)
+encord_project = client.get_project(project_hash=project_meta["project_hash"])
+
+predictions_root = Path("/path/to/your/predictions/folder")
 object_map = json.loads((predictions_root / "ontology_label_map.json").read_text())
 
-with PredictionWriter(cache_dir=data_dir, project=project, custom_object_map=object_map) as writer:
-    import_KITTI_labels(project, data_root=predictions_root, prediction_writer=writer)
+with PredictionWriter(project=Project(project_path), custom_object_map=object_map) as writer:
+    import_KITTI_labels(encord_project, data_root=predictions_root, prediction_writer=writer)
 ```
 
 [project-versioning]: ../../user-guide/versioning
