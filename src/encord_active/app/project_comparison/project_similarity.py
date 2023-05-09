@@ -100,8 +100,13 @@ def render_2d_metric_similarity_container(
     # TODO change append to concat
     project_values = pd.concat([project_values_1, project_values_2], ignore_index=True)
 
-    fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_name_1, project_name_2)
-    st.plotly_chart(fig, use_container_width=True)
+    if isinstance(metric_name_1, str) and isinstance(metric_name_2, str):
+        fig = render_2d_metric_similarity_plot(
+            project_values, metric_name_1, metric_name_2, project_name_1, project_name_2
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Error on selecting metrics, please select again.")
 
 
 def project_similarity():
