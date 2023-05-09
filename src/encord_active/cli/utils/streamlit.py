@@ -3,6 +3,7 @@ import sys
 from os import environ
 from pathlib import Path
 
+import rich
 from streamlit.web import cli as stcli
 
 from encord_active.app.app_config import app_config
@@ -29,7 +30,22 @@ def ensure_safe_project(path: Path):
         ensure_prisma_db(project_file_structure.prisma_db)
 
 
+def is_port_in_use(port: int) -> bool:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
 def launch_streamlit_app(target: Path):
+    if is_port_in_use(8501):
+        import typer
+
+        rich.print("[red]Port already in use...")
+        raise typer.Exit()
+    else:
+        rich.print("[yellow]Bear with us, this might take a short while...")
+
     if did_schema_change():
         generate_prisma_client()
     ensure_safe_project(target)
