@@ -13,6 +13,7 @@ from encord_active.app.actions_page.versioning import is_latest
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
+from encord_active.app.project_comparison.project_similarity import project_similarity
 from encord_active.app.views.metrics import explorer, summary
 from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.metrics.utils import MetricScope
@@ -25,6 +26,7 @@ PAGES = {
         "Performance By Metric": model_quality(ModelQualityPage.PERFORMANCE_BY_METRIC),
         "Explorer": model_quality(ModelQualityPage.EXPLORER),
     },
+    "Project Comparison": project_similarity(),
 }
 
 DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]

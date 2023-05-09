@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
 import cv2
 
-# NOTE: this statement enusres faiss is imported before torch.
+# NOTE: this statement ensures faiss is imported before torch.
 # removing it will trigger segmentation faults in certain metrics
 import faiss  # pylint: disable=unused-import
 from loguru import logger
