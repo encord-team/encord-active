@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 import yaml
 from encord import Project as EncordProject
+from encord.constants.enums import DataType
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
@@ -322,30 +323,33 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
 
-        # add non-video type of data to the db (frames of videos are added after pre-processing)
-        if "data_sequence" in du:
-            with PrismaConnection(project_file_structure) as conn:
-                conn.dataunit.upsert(
-                    where={
-                        "data_hash_frame": {  # state the values of the compound key
-                            "data_hash": du["data_hash"],
-                            "frame": int(du["data_sequence"]),
-                        }
+        # Skip data units of type video from being added to the db (they are added after the video processing stage)
+        if label_row.data_type == DataType.VIDEO.value:
+            return
+
+        # Add non-video type of data to the db
+        with PrismaConnection(project_file_structure) as conn:
+            conn.dataunit.upsert(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": du["data_hash"],
+                        "frame": int(du["data_sequence"]),
+                    }
+                },
+                data={
+                    "create": {
+                        "data_hash": du["data_hash"],
+                        "data_title": du["data_title"],
+                        "frame": int(du["data_sequence"]),
+                        "location": destination.resolve().as_posix(),
+                        "lr_data_hash": label_row.data_hash,
                     },
-                    data={
-                        "create": {
-                            "data_hash": du["data_hash"],
-                            "data_title": du["data_title"],
-                            "frame": int(du["data_sequence"]),
-                            "location": destination.resolve().as_posix(),
-                            "lr_data_hash": label_row.data_hash,
-                        },
-                        "update": {
-                            "data_title": du["data_title"],
-                            "location": destination.resolve().as_posix(),
-                        },
+                    "update": {
+                        "data_title": du["data_title"],
+                        "location": destination.resolve().as_posix(),
                     },
-                )
+                },
+            )
 
 
 def download_label_row_and_data(
