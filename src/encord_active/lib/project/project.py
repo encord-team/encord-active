@@ -387,6 +387,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:
             with conn.batch_() as batcher:
+                sliced_frames[-1] = video_path  # To include a reference to the video location in the DataUnit table
                 for frame_num, frame_path in sliced_frames.items():
                     batcher.dataunit.create(
                         data={
