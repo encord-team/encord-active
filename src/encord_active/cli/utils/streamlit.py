@@ -41,10 +41,10 @@ def launch_streamlit_app(target: Path):
     if is_port_in_use(8501):
         import typer
 
-        rich.print(f"[red]Port already in use...")
+        rich.print("[red]Port already in use...")
         raise typer.Exit()
     else:
-        rich.print(f"[yellow]Bear with us, this might take a short while...")
+        rich.print("[yellow]Bear with us, this might take a short while...")
 
     if did_schema_change():
         generate_prisma_client()
