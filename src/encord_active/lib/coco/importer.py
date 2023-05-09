@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -8,6 +9,7 @@ from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
 from encord.utilities import label_utilities
+from loguru import logger
 from PIL import Image as pil_image
 from PIL import ImageOps
 from tqdm.auto import tqdm
@@ -33,6 +35,14 @@ from encord_active.lib.encord.utils import make_object_dict
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
+
+logger = logger.opt(colors=True)
+
+
+@dataclass
+class CocoCategoryInfo:
+    shapes: Set[Shape] = field(default_factory=set)
+    has_rotation: bool = False
 
 
 def upload_img(
@@ -80,11 +90,30 @@ def upload_img(
             return None
 
 
+def crop_box_to_image_size(x, y, w, h, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+    if x > img_w:
+        raise ValueError(f"x coordinate {x} of bounding box outside the image of width {img_w}")
+    if y > img_h:
+        raise ValueError(f"y coordinate {y} of bounding box outside the image of height {img_h}.")
+    if x < 0:
+        w += x
+        x = 0
+    if y < 0:
+        h += y
+        y = 0
+    if x + w > img_w:
+        w -= x + w - img_w
+    if y + h > img_h:
+        h -= y + h - img_h
+    return x, y, w, h
+
+
 def upload_annotation(
     project: LocalProject,
     annotations: Dict[int, List[CocoAnnotation]],
     data_row: LocalDataRow,
     id_shape_to_obj: Dict[Tuple[int, Shape], Object],
+    category_shapes: Dict[int, CocoCategoryInfo],
 ):
     data_hash = data_row.uid
     lr_dict = project.create_label_row(data_hash)
@@ -106,23 +135,25 @@ def upload_annotation(
             polygon_points = [Point(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
             objects.append(make_object_dict(ontology_object=obj, object_data=polygon_points))
         elif len(annot.bbox or []) == 4:
-            x, y, w, h = annot.bbox
-            x = max(0.0, x)
-            y = max(0.0, y)
-            bounding_box = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
-            if annot.rotation is not None:
-                bounding_box.theta = annot.rotation
-                obj = id_shape_to_obj[(annot.category_id, Shape.ROTATABLE_BOUNDING_BOX)]
-            else:
-                obj = id_shape_to_obj[(annot.category_id, Shape.BOUNDING_BOX)]
+            try:
+                x, y, w, h = crop_box_to_image_size(*annot.bbox, img_w=img_w, img_h=img_h)
+            except ValueError as e:
+                logger.warning(f"<magenta>Skipping annotation with id {annot.id_}</magenta> {str(e)}")
+                continue
 
+            use_rotation = category_shapes[annot.category_id].has_rotation
+            shape = Shape.ROTATABLE_BOUNDING_BOX if use_rotation else Shape.BOUNDING_BOX
+            obj = id_shape_to_obj[(annot.category_id, shape)]
+            bounding_box = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
+            if use_rotation:
+                bounding_box.theta = annot.rotation or 0.0
             objects.append(make_object_dict(ontology_object=obj, object_data=bounding_box.dict()))
 
     lr["data_units"][data_hash]["labels"] = {"objects": objects, "classifications": []}
     updated_lr = label_utilities.construct_answer_dictionaries(lr)
     project.save_label_row(uid=label_hash, label=updated_lr)
 
-    return data_hash, updated_lr
+    return data_hash
 
 
 class CocoImporter:
@@ -177,9 +208,11 @@ class CocoImporter:
     def create_ontology(self) -> LocalOntology:
         print(f"Creating a new ontology: {self.title}")
         ontology_structure = OntologyStructure()
+        default_category_info = CocoCategoryInfo(shapes={Shape.POLYGON})
         for cat in self.categories:
             # NOTE: default to polygon when there is no way to infer the shape
-            shapes = self.category_shapes.get(cat.id_) or [Shape.POLYGON]
+            category_info = self.category_shapes.get(cat.id_, default_category_info)
+            shapes = category_info.shapes
             for i, shape in enumerate(shapes):
                 new_id = cat.id_ * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
@@ -232,7 +265,7 @@ class CocoImporter:
         image_to_du = {}
 
         for data_unit in tqdm(dataset.data_rows, desc="Uploading annotations"):
-            data_hash, lr = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj)
+            data_hash = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj, self.category_shapes)
             image_id = self.data_hash_to_image_id[data_hash]
             image = self.images[str(image_id)]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
@@ -242,20 +275,21 @@ class CocoImporter:
         return project
 
 
-def _infer_category_shapes(annotations: Dict[int, List[CocoAnnotation]]):
-    category_shapes: Dict[int, Set[Shape]] = {}
+def _infer_category_shapes(annotations: Dict[int, List[CocoAnnotation]]) -> Dict[int, CocoCategoryInfo]:
+    category_shapes: Dict[int, CocoCategoryInfo] = {}
     flat_annotations = [annotation for annotations in annotations.values() for annotation in annotations]
-    has_rotation = any(annotation.rotation is not None for annotation in flat_annotations)
-    box_shape = Shape.ROTATABLE_BOUNDING_BOX if has_rotation else Shape.BOUNDING_BOX
-
-    if all(annotation.segmentation for annotation in flat_annotations):
-        return {annotation.category_id: {Shape.POLYGON} for annotation in flat_annotations}
 
     for annotation in flat_annotations:
-        shapes = category_shapes.setdefault(annotation.category_id, set())
+        category_info = category_shapes.setdefault(annotation.category_id, CocoCategoryInfo())
         if annotation.segmentation:
-            shapes.add(Shape.POLYGON)
-        if len(annotation.bbox) == 4:
-            shapes.add(box_shape)
+            category_info.shapes.add(Shape.POLYGON)
+        if len(annotation.bbox or []) == 4:
+            category_info.shapes.add(Shape.ROTATABLE_BOUNDING_BOX)
+        category_info.has_rotation |= bool(annotation.rotation)
+
+    for category_info in category_shapes.values():
+        if not category_info.has_rotation and Shape.ROTATABLE_BOUNDING_BOX in category_info.shapes:
+            category_info.shapes.remove(Shape.ROTATABLE_BOUNDING_BOX)
+            category_info.shapes.add(Shape.BOUNDING_BOX)
 
     return category_shapes
