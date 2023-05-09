@@ -91,19 +91,14 @@ The JSON class map should follow a specific format where the keys should corresp
 To obtain a list of available `featureNodeHash`es for your project, you can use the following script:
 
 ```python
-from pathlib import Path
+import json
 
-from encord_active.lib.project.metadata import fetch_project_meta
-from encord import EncordUserClient
+from encord_active.lib.project import ProjectFileStructure
 
-project_path = Path("/path/to/your/project/folder")
-project_meta = fetch_project_meta(project_path)
-private_key = Path(project_meta["ssh_key_path"]).read_text()
+fs = ProjectFileStructure("/path/to/your/project/root")
+ontology = json.loads(fs.ontology.read_text())
 
-client = EncordUserClient.create_with_ssh_private_key(private_key)
-encord_project = client.get_project(project_hash=project_meta["project_hash"])
-
-print({o["featureNodeHash"]: o["name"] for o in encord_project.ontology["objects"]})
+print({o["featureNodeHash"]: o["name"] for o in ontology["objects"]})
 # Example output:
 # {'OTk2MzM3': 'Pedestrian', 'NzYyMjcx': 'Cyclist', 'Nzg2ODEx': 'Car'}
 ```
@@ -125,14 +120,14 @@ from encord_active.lib.model_predictions.writer import PredictionWriter
 from encord_active.lib.project import Project
 from encord_active.lib.project.metadata import fetch_project_meta
 
-project_path = Path("/path/to/your/project/folder")
+project_path = Path("/path/to/your/project/root")
 project_meta = fetch_project_meta(project_path)
 private_key = Path(project_meta["ssh_key_path"]).read_text()
 
 client = EncordUserClient.create_with_ssh_private_key(private_key)
 encord_project = client.get_project(project_hash=project_meta["project_hash"])
 
-predictions_root = Path("/path/to/your/predictions/folder")
+predictions_root = Path("/path/to/your/predictions/root")
 object_map = json.loads((predictions_root / "ontology_label_map.json").read_text())
 
 with PredictionWriter(project=Project(project_path), custom_object_map=object_map) as writer:
