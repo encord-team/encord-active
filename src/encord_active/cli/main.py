@@ -415,6 +415,8 @@ def visualize(
     """
     from encord_active.cli.utils.streamlit import launch_streamlit_app
 
+    rich.print(f"[yellow] Bear with us, this might take a short while...")
+
     launch_streamlit_app(target)
 
 
