@@ -56,8 +56,9 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                         du = data_units[data_unit.hash]
                         if data_type == "video":
                             if "_" not in data_unit.path.stem:
-                                continue
-                            _, frame_str = data_unit.path.stem.rsplit("_", 1)
+                                frame_str = "-1"  # To include a reference to the video location in the DataUnit table
+                            else:
+                                _, frame_str = data_unit.path.stem.rsplit("_", 1)
                         else:
                             frame_str = du.get("data_sequence", 0)
                         frame = int(frame_str)

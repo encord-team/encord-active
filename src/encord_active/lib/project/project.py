@@ -5,10 +5,11 @@ import json
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import yaml
 from encord import Project as EncordProject
+from encord.constants.enums import DataType
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
@@ -24,7 +25,11 @@ from encord_active.lib.common.utils import (
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.project.metadata import fetch_project_meta
+from encord_active.lib.project.metadata import (
+    ProjectMeta,
+    ProjectNotFound,
+    fetch_project_meta,
+)
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
@@ -33,9 +38,15 @@ encord_logger.setLevel(logging.ERROR)
 
 
 class Project:
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Union[str, Path]):
         self.file_structure = ProjectFileStructure(project_dir)
-        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
+        self.project_meta: ProjectMeta
+        try:
+            self.project_meta = fetch_project_meta(self.file_structure.project_dir)
+        except ProjectNotFound:
+            self.project_meta = ProjectMeta(
+                project_description="", project_hash="", project_title="", ssh_key_path="", has_remote=False
+            )
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
@@ -102,6 +113,7 @@ class Project:
         :return: The updated project instance.
         """
 
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         if not self.project_meta.get("has_remote", False):
             raise AttributeError("The project does not have a remote project associated to it.")
 
@@ -321,30 +333,33 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
         try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
 
-        # add non-video type of data to the db (frames of videos are added after pre-processing)
-        if "data_sequence" in du:
-            with PrismaConnection(project_file_structure) as conn:
-                conn.dataunit.upsert(
-                    where={
-                        "data_hash_frame": {  # state the values of the compound key
-                            "data_hash": du["data_hash"],
-                            "frame": int(du["data_sequence"]),
-                        }
+        # Skip data units of type video from being added to the db (they are added after the video processing stage)
+        if label_row.data_type == DataType.VIDEO.value:
+            return
+
+        # Add non-video type of data to the db
+        with PrismaConnection(project_file_structure) as conn:
+            conn.dataunit.upsert(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": du["data_hash"],
+                        "frame": int(du["data_sequence"]),
+                    }
+                },
+                data={
+                    "create": {
+                        "data_hash": du["data_hash"],
+                        "data_title": du["data_title"],
+                        "frame": int(du["data_sequence"]),
+                        "location": destination.resolve().as_posix(),
+                        "lr_data_hash": label_row.data_hash,
                     },
-                    data={
-                        "create": {
-                            "data_hash": du["data_hash"],
-                            "data_title": du["data_title"],
-                            "frame": int(du["data_sequence"]),
-                            "location": destination.resolve().as_posix(),
-                            "lr_data_hash": label_row.data_hash,
-                        },
-                        "update": {
-                            "data_title": du["data_title"],
-                            "location": destination.resolve().as_posix(),
-                        },
+                    "update": {
+                        "data_title": du["data_title"],
+                        "location": destination.resolve().as_posix(),
                     },
-                )
+                },
+            )
 
 
 def download_label_row_and_data(
@@ -382,6 +397,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:
             with conn.batch_() as batcher:
+                sliced_frames[-1] = video_path  # To include a reference to the video location in the DataUnit table
                 for frame_num, frame_path in sliced_frames.items():
                     batcher.dataunit.create(
                         data={
