@@ -164,4 +164,4 @@ You can also have a look at how to [write custom metrics](./metrics/write-your-o
 
 ### Need Support?
 
-If you got any issues with Encord Active you are more than welcome to [connect with us on Slack](https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q) or reach out to us at active@encord.com
+If you got any issues with Encord Active you are more than welcome to [connect with us on Discord](https://discord.gg/TU6yT7Uvx3) or reach out to us at active@encord.com

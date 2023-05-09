@@ -18,7 +18,7 @@ from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
-from encord_active.lib.constants import ENCORD_EMAIL, SLACK_URL
+from encord_active.lib.constants import DISCORD_URL, ENCORD_EMAIL
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
@@ -493,7 +493,7 @@ def render_unimplemented_buttons(
             f"""
 <div class="encord-active-info-box">
     For more information and help on using this feature reach out to us on the
-    <a href="{SLACK_URL}" target="_blank"><i class="fa-brands fa-slack"></i> Encord Active Slack
+    <a href="{DISCORD_URL}" target="_blank"><i class="fa-brands fa-discord"></i> Encord Active Discord
 community</a>
     or shoot us an
     <a href="mailto:{ENCORD_EMAIL}" target="_blank"><i class="fa fa-envelope"></i> email</a>🙏
