@@ -35,7 +35,7 @@ encord_logger.setLevel(logging.ERROR)
 class Project:
     def __init__(self, project_dir: Path):
         self.file_structure = ProjectFileStructure(project_dir)
-        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
+        self.project_meta = {}
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
@@ -102,6 +102,7 @@ class Project:
         :return: The updated project instance.
         """
 
+        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         if not self.project_meta.get("has_remote", False):
             raise AttributeError("The project does not have a remote project associated to it.")
 
