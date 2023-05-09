@@ -38,7 +38,7 @@ if is_project(path):
 
 app = FastAPI()
 
-origins = ["http://localhost:5173", "http://localhost:8501", settings.ALLOWED_ORIGIN]
+origins = [settings.ALLOWED_ORIGIN]
 
 app.add_middleware(
     CORSMiddleware,
