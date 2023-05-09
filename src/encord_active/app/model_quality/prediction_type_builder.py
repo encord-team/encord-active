@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -25,6 +25,7 @@ from encord_active.lib.model_predictions.writer import (
     MainPredictionType,
     OntologyClassificationJSON,
 )
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 class ModelQualityPage(str, Enum):
@@ -39,6 +40,8 @@ class MetricType(str, Enum):
 
 
 class PredictionTypeBuilder(Page):
+    _project_file_structure: Optional[ProjectFileStructure] = None
+
     def sidebar_options(self, *args, **kwargs):
         pass
 

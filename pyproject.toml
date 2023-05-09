@@ -78,7 +78,7 @@ statsmodels = "^0.14.0" # TDOD: remove me when we don't use plotly on the stream
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
 llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
-encord-active-components = "0.0.24"
+encord-active-components = { path = "./frontend_components", develop = true}
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.0"
@@ -92,6 +92,7 @@ ftfy = "^6.1.1"
 regex = "^2023.5.5"
 poethepoet = "^0.16.5"
 orjson = "^3.9.0"
+pyinstrument = "^4.5.0"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

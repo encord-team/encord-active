@@ -26,6 +26,7 @@ export const LabelRowObjectSchema = z.object({
   name: z.string(),
   objectHash: z.string(),
   points: z.record(PointSchema),
+  boundingBoxPoints: z.record(PointSchema).nullish(),
   shape: LabelRowObjectShapeSchema,
 });
 
@@ -52,6 +53,7 @@ export const ItemSchema = z.object({
   }),
   tags: GroupedTagsSchema,
   labels: LabelsSchema,
+  predictions: LabelsSchema,
 });
 
 const IdValueSchema = z.object({ id: z.string(), value: z.number() });

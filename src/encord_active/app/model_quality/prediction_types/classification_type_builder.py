@@ -17,6 +17,9 @@ from encord_active.app.model_quality.prediction_type_builder import (
     ModelQualityPage,
     PredictionTypeBuilder,
 )
+from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
+    ClassificationOutcomeType,
+)
 from encord_active.lib.charts.classification_metrics import (
     get_accuracy,
     get_confusion_matrix,
@@ -52,12 +55,8 @@ from encord_active.server.settings import Env, get_settings
 class ClassificationTypeBuilder(PredictionTypeBuilder):
     title = "Classification"
 
-    class OutcomeType(str, Enum):
-        CORRECT_CLASSIFICATIONS = "Correct Classifications"
-        MISCLASSIFICATIONS = "Misclassifications"
-
     def __init__(self):
-        self._explorer_outcome_type = self.OutcomeType.CORRECT_CLASSIFICATIONS
+        self._explorer_outcome_type = ClassificationOutcomeType.CORRECT_CLASSIFICATIONS
         self._labels: Optional[List] = None
         self._predictions: Optional[List] = None
         self._model_predictions: Optional[DataFrame[ClassificationPredictionMatchSchemaWithClassNames]] = None

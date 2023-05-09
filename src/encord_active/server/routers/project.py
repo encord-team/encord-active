@@ -1,12 +1,19 @@
 from enum import Enum
-from functools import lru_cache
-from typing import Annotated, List, Optional
+from functools import cache, lru_cache
+from pathlib import Path
+from typing import Annotated, Any, List, Optional, Tuple
 
+import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
+from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
+from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
+    ObjectDetectionOutcomeType,
+    get_model_predictions,
+)
 from encord_active.lib.common.filtering import Filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
@@ -24,6 +31,7 @@ from encord_active.lib.metrics.utils import (
     filter_none_empty_metrics,
     get_embedding_type,
 )
+from encord_active.lib.model_predictions.reader import get_class_idx as _get_class_idx
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
@@ -56,8 +64,21 @@ def read_item_ids(
     ids: Annotated[Optional[list[str]], Body()] = None,
 ):
     merged_metrics = filtered_merged_metrics(project, filters)
-    column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
-    res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
+
+    try:
+        column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
+        df = merged_metrics
+    except:
+        try:
+            df, _ = get_model_predictions(project, filters.prediction_filters)
+            column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
+            # TODO: Filter items
+            # df = df[df.index.isin(merged_metrics.index)]
+            # df = df[df.is_true_positive == 1]
+        except:
+            raise Exception("Couldn't find the selected metric in the the project")
+
+    res = df[[column]].dropna().sort_values(by=[column], ascending=ascending)
     if ids:
         res = res[res.index.isin(ids)]
     res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
@@ -88,7 +109,14 @@ def tagged_items(project: ProjectFileStructureDep):
 
 @router.get("/{project}/items/{id:path}")
 def read_item(project: ProjectFileStructureDep, id: str):
-    lr_hash, du_hash, frame, *_ = id.split("_")
+    lr_hash, du_hash, frame, *object_hash = id.split("_")
+
+    df, _ = get_model_predictions(project)
+
+    if df is not None and id in df.index:
+        row = {**df.loc[id].to_dict(), "identifier": id}
+        return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)
+
     with DBConnection(project) as conn:
         row = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")[0]
 
@@ -138,7 +166,10 @@ def get_similar_items(
 
 @router.get("/{project}/metrics")
 def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[MetricScope] = None):
-    metrics = load_project_metrics(project, scope)
+    if scope == MetricScope.MODEL_QUALITY:
+        _, metrics = get_model_predictions(project)
+    else:
+        metrics = load_project_metrics(project, scope)
     return [
         {"name": metric.name, "embeddingType": get_embedding_type(metric.meta.annotation_type)}
         for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name)

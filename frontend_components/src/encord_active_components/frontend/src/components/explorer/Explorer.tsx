@@ -20,7 +20,6 @@ import {
   getApi,
   IdValue,
   Item,
-  Point,
   ApiContext,
   Scope,
   useApi,
@@ -188,7 +187,8 @@ export const Explorer = ({
             }
           )}
         >
-          {selectedMetric && (
+          {/* TODO: move model predictions embeddings plot to FE */}
+          {scope !== "model_quality" && selectedMetric && (
             <Embeddings
               isloadingItems={isLoadingSortedItems}
               idValues={sortedItems || []}
@@ -609,11 +609,49 @@ const GalleryItem = ({
   );
 };
 
+const getObjects = (item: Item) => {
+  const { objectHash } = splitId(item.id);
+  const object = item.labels.objects.find(
+    (object) => object.objectHash === objectHash
+  );
+  const prediction = item.predictions.objects.find(
+    (object) => object.objectHash === objectHash
+  );
+
+  if (object) return [object];
+
+  return prediction
+    ? [...item.labels.objects, prediction]
+    : item.labels.objects;
+};
+
+const pointsRecordToList = (
+  points: Item["labels"]["objects"][0]["points"],
+  width: number,
+  height: number
+) =>
+  Object.values(points).map(({ x, y }) => ({
+    x: x * width,
+    y: y * height,
+  }));
+
+type ItemLabelObject = Item["labels"]["objects"][0];
+
+const pointsRecordToPolygonPoints = (
+  points: ItemLabelObject["points"],
+  width: number,
+  height: number
+) =>
+  Object.values(points)
+    .map(({ x, y }) => `${x * width},${y * height}`)
+    .join(" ");
+
 const ImageWithPolygons = ({
   item,
   className,
+  /* splitLabels = false, */
   ...rest
-}: { item: Item } & JSX.IntrinsicElements["figure"]) => {
+}: { item: Item; splitLabels?: boolean } & JSX.IntrinsicElements["figure"]) => {
   const {
     ref: image,
     width: imageWidth,
@@ -627,28 +665,23 @@ const ImageWithPolygons = ({
   const width = item.videoTimestamp != null ? videoWidth : imageWidth;
   const height = item.videoTimestamp != null ? videoHeight : imageHeight;
   const [polygons, setPolygons] = useState<
-    { points: Point[]; color: string; shape: string }[]
+    Pick<ItemLabelObject, "points" | "boundingBoxPoints" | "shape" | "color">[]
   >([]);
 
   useEffect(() => {
     if (width == null || height == null) return;
-
-    const { objectHash } = splitId(item.id);
-    const objects = objectHash
-      ? item.labels.objects.filter((object) => object.objectHash === objectHash)
-      : item.labels.objects;
+    const objects = getObjects(item);
 
     setPolygons(
-      objects.map(({ points, color, shape }) => ({
+      objects.map(({ points, color, shape, boundingBoxPoints }) => ({
         color,
-        points: Object.values(points).map(({ x, y }) => ({
-          x: x * width,
-          y: y * height,
-        })),
+        points,
         shape,
+        boundingBoxPoints,
       }))
     );
   }, [width, height, item.id]);
+
   return (
     <figure {...rest} className={classy("relative", className)}>
       {item.videoTimestamp != null ? (
@@ -673,39 +706,59 @@ const ImageWithPolygons = ({
           src={item.url}
         />
       )}
-      {polygons.length > 0 && (
+      {width && height && polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
-          {polygons.map(({ points, color, shape }, index) =>
-            shape === "point" ? (
+          {polygons.map(
+            ({ points, boundingBoxPoints, color, shape }, index) => (
               <>
-                <circle
-                  key={index + "_inner"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="5px"
-                  fill={color}
-                />
-                <circle
-                  key={index + "_outer"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="7px"
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="1px"
-                />
+                {shape === "point" ? (
+                  <>
+                    <circle
+                      key={index + "_inner"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="5px"
+                      fill={color}
+                    />
+                    <circle
+                      key={index + "_outer"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="7px"
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1px"
+                    />
+                  </>
+                ) : (
+                  <polygon
+                    key={index}
+                    style={{
+                      fill: shape === "polyline" ? "none" : color,
+                      fillOpacity: ".20",
+                      stroke: color,
+                      strokeWidth: "2px",
+                    }}
+                    points={pointsRecordToPolygonPoints(points, width, height)}
+                  />
+                )}
+                {boundingBoxPoints && (
+                  <polygon
+                    key={index + "_box"}
+                    style={{
+                      fill: shape === "polyline" ? "none" : color,
+                      fillOpacity: ".40",
+                      stroke: color,
+                      strokeWidth: "4px",
+                    }}
+                    points={pointsRecordToPolygonPoints(
+                      boundingBoxPoints,
+                      width,
+                      height
+                    )}
+                  />
+                )}
               </>
-            ) : (
-              <polygon
-                key={index}
-                style={{
-                  fill: shape === "polyline" ? "none" : color,
-                  fillOpacity: ".20",
-                  stroke: color,
-                  strokeWidth: "2px",
-                }}
-                points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
-              />
             )
           )}
         </svg>
