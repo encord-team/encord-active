@@ -3,7 +3,7 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack Community</a>
+<a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Community</a>
 </p>
 
 <h1 align="center">
@@ -16,7 +16,7 @@
 [![PyPi project][pypi-package-image]][pypi-package]
 ![PyPi version][pypi-version-image]
 [![docs][docs-image]][encord-active-docs]
-[!["Join us on Slack"][slack-image]][join-slack]
+[!["Join us on Discord"][discord-image]][join-discord]
 [![Twitter Follow][twitter-image]][twitter-url]
 
 In this directory, you find examples of how to use Encord Active.
@@ -110,7 +110,7 @@ To use the notebooks, you will have to set up an Ngrok account in order to be ab
 
 ## Community and Support
 
-Join our community on [Slack][join-slack] to connect with the team behind Encord Active.
+Join our community on [Discord][join-discord] to connect with the team behind Encord Active.
 
 Also, feel free to [suggest improvements or report problems][report-issue] via github issues.
 
@@ -128,13 +128,12 @@ If you want to share your notebooks, custom metrics, or improve the tool, please
 [docs-image]: https://img.shields.io/badge/docs-online-blue
 [encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
 [encord-active-docs]: https://docs.encord.com/active/docs
-[join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[join-discord]: https://discord.gg/TU6yT7Uvx3
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [pypi-package-image]: https://img.shields.io/pypi/v/encord-active
 [pypi-package]: https://www.piwheels.org/project/encord-active/
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
-[slack-community]: https://encord-active.slack.com
-[slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
+[discord-image]: https://shields.io/badge/Discord-chat-blue?logo=discord&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
 [twitter-url]: https://twitter.com/encord_team

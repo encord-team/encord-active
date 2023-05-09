@@ -61,7 +61,7 @@ our main documentation: [blue]{ea_constants.DOCS_URL}[/blue]
 Made by Encord. [bold]Get in touch[/bold]:
 
 
-:call_me_hand: Slack Channel: [blue]{ea_constants.SLACK_URL}[/blue]
+:call_me_hand: Discord: [blue]{ea_constants.DISCORD_URL}[/blue]
 
 :e-mail: Email: [blue]{ea_constants.ENCORD_EMAIL}[/blue]
 
@@ -450,13 +450,14 @@ def docs():
 
 
 @cli.command(name="join-slack", rich_help_panel="Resources")
-def join_slack():
+@cli.command(name="join-discord", rich_help_panel="Resources")
+def join_discord():
     """
-    [green bold]Join[/green bold] the Slack community :family:
+    [green bold]Join[/green bold] the Discord :family:
     """
     import webbrowser
 
-    webbrowser.open(ea_constants.SLACK_INVITE_URL)
+    webbrowser.open(ea_constants.JOIN_DISCORD_URL)
 
 
 @cli.callback(invoke_without_command=True)
