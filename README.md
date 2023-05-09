@@ -1,6 +1,6 @@
 <p align="center">
 <a href="https://docs.encord.com/active/docs" target="_blank">Documentation</a> |
-<a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
+<a href="https://encord-active-demo.encord.com/" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
 <a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Channel</a>
