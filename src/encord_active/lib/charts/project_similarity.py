@@ -4,6 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pandera.typing import DataFrame, Series
 
+from encord_active.lib.common.colors import Color
+
 
 class ProjectSimilaritySchema(pa.SchemaModel):
     metric: Series[str] = pa.Field()
@@ -36,7 +38,7 @@ def render_2d_metric_similarity_plot(
         x=metric_name_1,
         y=metric_name_2,
         color="project",
-        color_discrete_map={project_name_1: "#5658dd", project_name_2: "red"},  # Encord brand colors: #5658dd, #89e7b6
+        color_discrete_map={project_name_1: Color.PURPLE.value, project_name_2: Color.RED.value},
         opacity=0.7,
         title="2D metric comparison",
         template="plotly",

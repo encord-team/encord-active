@@ -1,4 +1,4 @@
-from typing import cast
+from typing import List, cast
 
 import numpy as np
 import pandas as pd
@@ -33,9 +33,9 @@ def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> flo
 
 
 def render_2d_metric_similarity_container(
-    all_metrics: list, merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_name_2: str
+    all_metrics: List[str], merged_metrics_1: pd.DataFrame, merged_metrics_2: pd.DataFrame, project_name_2: str
 ):
-    metrics_filtered = []
+    metrics_filtered: List[str] = []
     for metric_name in all_metrics:
         if metric_name in merged_metrics_1 and merged_metrics_1[metric_name].dropna().shape[0] > 0:
             metrics_filtered.append(metric_name)
@@ -48,7 +48,7 @@ def render_2d_metric_similarity_container(
     metric_name_1 = metric_selection_col_1.selectbox(
         "Select the first metric",
         options=metrics_filtered,
-        index=0,
+        index=metrics_filtered.index("Brightness") if "Brightness" in metrics_filtered else 0,
         key=f"project_comparison_metric_selection_1_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
@@ -56,10 +56,10 @@ def render_2d_metric_similarity_container(
     # due to different metric types. E.g., 'Area' is not compatible with 'object aspect ratio'
     options_for_second_metric = []
 
+    metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
     for metric_name in metrics_filtered:
         if metric_name == metric_name_1:
             continue
-        metric_df_1 = merged_metrics_1[metric_name_1].dropna().to_frame()
         metric_df_2 = merged_metrics_1[metric_name].dropna().to_frame()
 
         merged_metric = metric_df_1.join(metric_df_2, how="inner")
@@ -73,6 +73,7 @@ def render_2d_metric_similarity_container(
     metric_name_2 = metric_selection_col_2.selectbox(
         "Select the second metric",
         options=options_for_second_metric,
+        index=metrics_filtered.index("Contrast") if "Contrast" in metrics_filtered else 0,
         key=f"project_comparison_metric_selection_2_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
@@ -99,9 +100,7 @@ def render_2d_metric_similarity_container(
     # TODO change append to concat
     project_values = pd.concat([project_values_1, project_values_2], ignore_index=True)
 
-    fig = render_2d_metric_similarity_plot(
-        project_values, cast(str, metric_name_1), cast(str, metric_name_2), project_name_1, project_name_2
-    )
+    fig = render_2d_metric_similarity_plot(project_values, metric_name_1, metric_name_2, project_name_1, project_name_2)
     st.plotly_chart(fig, use_container_width=True)
 
 
