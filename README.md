@@ -3,7 +3,7 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack Channel</a>
+<a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Channel</a>
 </p>
 
 <h1 align="center">
@@ -20,7 +20,7 @@
 ![downloads-badge][downloads-badge]
 
 [![docs][docs-image]][encord-active-docs]
-[!["Join us on Slack"][slack-image]][join-slack]
+[!["Join us on Discord"][discord-image]][join-discord]
 [![Twitter Follow][twitter-image]][twitter-url]
 
 </div>
@@ -198,11 +198,11 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ### 🛠 Build your own quality metrics
 
-Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[Slack channel](https://encordactive.slack.com)**!
+Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[Discord channel](https://discord.gg/TU6yT7Uvx3)**!
 
 ## 👪 Community and support
 
-Join our channel on [Slack][join-slack] to connect with the team behind Encord Active.
+Join our channel on [Discord][join-discord] to connect with the team behind Encord Active.
 
 Also, feel free to [suggest improvements or report problems][report-issue] via GitHub issues.
 
@@ -238,7 +238,7 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
 [homepage-visual]: https://github.com/encord-team/encord-active/blob/main/homepage_visual.png
-[join-slack]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[join-discord]: https://discord.gg/TU6yT7Uvx3
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [new-issue]: https://github.com/encord-team/encord-active/issues/new
 [pypi-package-image]: https://img.shields.io/pypi/v/encord-active
@@ -246,7 +246,6 @@ This repository is published under the Apache 2.0 licence.
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
-[slack-community]: https://encord-active.slack.com
-[slack-image]: https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white
+[discord-image]: https://shields.io/badge/Discord-chat-blue?logo=discord&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
 [twitter-url]: https://twitter.com/encord_team
