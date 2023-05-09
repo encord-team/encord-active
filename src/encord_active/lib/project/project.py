@@ -5,7 +5,7 @@ import json
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import yaml
 from encord import Project as EncordProject
@@ -25,7 +25,11 @@ from encord_active.lib.common.utils import (
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.encord.utils import get_client
-from encord_active.lib.project.metadata import ProjectMeta, fetch_project_meta
+from encord_active.lib.project.metadata import (
+    ProjectMeta,
+    ProjectNotFound,
+    fetch_project_meta,
+)
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
@@ -34,11 +38,15 @@ encord_logger.setLevel(logging.ERROR)
 
 
 class Project:
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Union[str, Path]):
         self.file_structure = ProjectFileStructure(project_dir)
-        self.project_meta: ProjectMeta = ProjectMeta(
-            project_description="", project_hash="", project_title="", ssh_key_path="", has_remote=False
-        )
+        self.project_meta: ProjectMeta
+        try:
+            self.project_meta = fetch_project_meta(self.file_structure.project_dir)
+        except ProjectNotFound:
+            self.project_meta = ProjectMeta(
+                project_description="", project_hash="", project_title="", ssh_key_path="", has_remote=False
+            )
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
