@@ -4,8 +4,8 @@ sidebar_position: 2
 ---
 
 The KITTI dataset is a widely-used computer vision dataset for benchmarking and evaluating autonomous driving systems.
-It consists of a collection of high-resolution images, lidar data, and camera calibration parameters captured from a moving platform driving through urban environments.
-The dataset includes a variety of tasks such as object detection, tracking, 3D object detection, and semantic segmentation.
+Due to the popularity of this dataset, many researchers and developers have adopted its label format for their own datasets and applications.
+Encord Active enhances your experience by migrating such labels to the Encord format.
 
 :::caution
 
@@ -31,7 +31,7 @@ labels_root
 
 That is, a root directory with two components:
 
-1. A subdirectory named "labels" that contains TXT/CSV files, with filenames that begin with the `data_hash` followed by two underscores.
+1. A subdirectory named "labels" that contains TXT/CSV files with filenames that begin with the `data_hash` followed by two underscores.
 2. A json file which maps class names to Encord ontology classes.
 
 We cover these two components in detail below.
