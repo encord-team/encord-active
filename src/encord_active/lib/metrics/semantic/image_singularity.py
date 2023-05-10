@@ -10,7 +10,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
-from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
@@ -87,7 +87,7 @@ This metric gives each image a score that shows each image's uniqueness.
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if self.metadata.embedding_type:
-            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"

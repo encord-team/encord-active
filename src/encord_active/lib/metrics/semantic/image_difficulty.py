@@ -6,7 +6,7 @@ from loguru import logger
 from sklearn.cluster import KMeans
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
@@ -90,7 +90,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if self.metadata.embedding_type:
-            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
