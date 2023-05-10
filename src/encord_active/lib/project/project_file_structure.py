@@ -104,7 +104,7 @@ class LabelRowStructure:
             glob_string = self._mappings.get(data_unit_hash, data_unit_hash)
         else:
             glob_string = "*"
-        if frame:
+        if frame is not None:
             glob_string += f"_{frame}"
         glob_string += ".*"
         for du_path in self.images_dir.glob(glob_string):
