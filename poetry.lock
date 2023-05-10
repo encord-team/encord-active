@@ -417,7 +417,7 @@ python-versions = "*"
 
 [[package]]
 name = "encord"
-version = "0.1.74"
+version = "0.1.75"
 description = "Encord Python SDK Client"
 category = "main"
 optional = false
@@ -2921,7 +2921,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "e2354002c4e58c08e9b20b54e7d77ce00fc801f32e8183dbb690fb0b8d6930e1"
+content-hash = "9811f26a7195e9d459871a623f9f708469a44f2763d5bded0edf655682f4171f"
 
 [metadata.files]
 aiofiles = [
@@ -3354,8 +3354,8 @@ distlib = [
     {file = "distlib-0.3.6.tar.gz", hash = "sha256:14bad2d9b04d3a36127ac97f30b12a19268f211063d8f8ee4f47108896e11b46"},
 ]
 encord = [
-    {file = "encord-0.1.74-py3-none-any.whl", hash = "sha256:078c6363ecbe05ffb76ef52258353b84b1800166910aa4b38b6af298cb09800e"},
-    {file = "encord-0.1.74.tar.gz", hash = "sha256:09748b2d345b3343465b8fdfa4ad1e0fd68ed61a9b6b8298b7cacd354606432a"},
+    {file = "encord-0.1.75-py3-none-any.whl", hash = "sha256:bf688ad9a304f21d0e775230cf6f865998ec09c84bbf4142cc87a36b5716e862"},
+    {file = "encord-0.1.75.tar.gz", hash = "sha256:df283a2686d13e4e339c2d9cf044d9b1598c3f6dc068ff1c2977647ebab93fe3"},
 ]
 encord-active-components = [
     {file = "encord_active_components-0.0.12-py3-none-any.whl", hash = "sha256:38d9a3abbffc74de31809ed1c4cf6827cdecf844081ac3e4ad7c5b520f6f1a00"},
