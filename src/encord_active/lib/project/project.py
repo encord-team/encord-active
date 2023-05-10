@@ -23,6 +23,7 @@ from encord_active.lib.common.utils import (
     try_execute,
 )
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
 from encord_active.lib.encord.utils import get_client
 from encord_active.lib.project.metadata import (
@@ -52,6 +53,8 @@ class Project:
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
         self.image_paths: Dict[str, Dict[str, Path]] = {}
+
+        ensure_prisma_db(self.file_structure.prisma_db)
 
     def load(self, subset_size: Optional[int] = None) -> Project:
         """
