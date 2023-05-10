@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get -y clean  \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install .
+RUN pip install ".[coco]"
 
 WORKDIR /data
 
