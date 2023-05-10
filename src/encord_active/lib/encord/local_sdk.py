@@ -338,6 +338,7 @@ class LocalProject:
                         height=du["height"],
                         width=du["width"],
                         annotation_task_status=AnnotationTaskStatus.QUEUED,
+                        workflow_graph_node=None,
                         label_status=LabelStatus.NOT_LABELLED,
                         created_at=dr.created_at or datetime.now(),
                         last_edited_at=dr.created_at or datetime.now(),
