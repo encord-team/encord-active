@@ -27,6 +27,7 @@ import av
 import cv2
 import numpy as np
 import requests
+from PIL import Image
 from encord.exceptions import EncordException, UnknownException
 from loguru import logger
 from shapely.errors import ShapelyDeprecationWarning
@@ -419,8 +420,8 @@ def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), 
 def download_file(
     url: str,
     destination: Path,
-    byte_size=1024,
-):
+    byte_size: int = 1024,
+) -> Path:
     if destination.is_file():
         return destination
 
@@ -436,6 +437,15 @@ def download_file(
                 f.flush()
 
     return destination
+
+
+def download_image(url: str) -> Image:
+    r = requests.get(url)
+
+    if r.status_code != 200:
+        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
+
+    return Image.open(r.content)
 
 
 def iterate_in_batches(seq: Sequence, size: int):

@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytz
+from PIL import Image
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from pandas import Series
@@ -161,7 +162,7 @@ class PredictionIterator(Iterator):
             manualAnnotation=False,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Path]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         if self.row_cache:
             for self.label_hash, self.du_hash, self.frame, du, pth in self.row_cache:
@@ -203,7 +204,7 @@ class PredictionIterator(Iterator):
 
                 du["labels"] = {"objects": objects, "classifications": classifications}
                 pth = self.get_image_path(fr_preds.iloc[0])
-                yield du, pth
+                yield du, Image.open(pth)
                 self.row_cache.append((self.label_hash, self.du_hash, self.frame, du, pth))
                 pbar.update(1)
 
