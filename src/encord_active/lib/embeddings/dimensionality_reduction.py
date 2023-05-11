@@ -29,7 +29,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
 
     embeddings = np.array([collection["embedding"] for collection in collections])
 
-    reducer = umap.UMAP(random_state=0, verbose=False)
+    reducer = umap.UMAP(random_state=0)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection: dict[str, list] = {"identifier": [], "x": [], "y": [], "label": []}
