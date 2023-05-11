@@ -7,6 +7,7 @@ from functools import reduce
 from itertools import chain
 from json import JSONDecodeError
 from pathlib import Path
+from PIL import Image
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from encord.exceptions import EncordException
@@ -14,6 +15,7 @@ from encord.orm.label_log import LabelLog
 from loguru import logger
 from tqdm.auto import tqdm
 
+from encord_active.lib.common.utils import download_image
 from encord_active.lib.project import Project, ProjectFileStructure
 
 
@@ -35,7 +37,7 @@ class Iterator(Sized):
         self.label_rows = self.project.label_rows
 
     @abstractmethod
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Path]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
         pass
 
     @abstractmethod
@@ -67,7 +69,7 @@ class DatasetIterator(Iterator):
             0,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Path]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         for label_hash, label_row in self.label_rows.items():
             self.dataset_title = label_row["dataset_title"]
@@ -79,9 +81,15 @@ class DatasetIterator(Iterator):
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
                     try:
-                        yield data_unit, next(
-                            self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash)
-                        ).path
+                        img_path = next(
+                            self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
+                            None
+                        )
+                        if img_path is not None:
+                            image = Image.open(img_path.path)
+                        else:
+                            image = download_image(data_unit["data_link"])
+                        yield data_unit, image
                     except KeyError:
                         logger.error(
                             f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
@@ -102,7 +110,7 @@ class DatasetIterator(Iterator):
                         image_folder = self.project.file_structure.label_row_structure(self.label_hash).images_dir
                         image_path = next(image_folder.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
 
-                    yield fake_data_unit, image_path
+                    yield fake_data_unit, Image.open(image_path)
                     pbar.update(1)
             else:
                 logger.error(f"Label row '{label_hash}' with data type '{label_row.data_type}' is not recognized")
