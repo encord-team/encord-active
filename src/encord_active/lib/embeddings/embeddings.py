@@ -23,13 +23,8 @@ def get_default_embedder() -> ImageEmbedder:
     return CLIPEmbedder()
 
 
-def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
-    try:
-        image = np.asarray(Image.open(img_path).convert("RGB"))
-    except OSError:
-        logger.warning(f"Image with path {img_path} seems to be broken. Skipping.")
-        return []
-
+def assemble_object_batch(data_unit: dict, image: Image.Image) -> List[Image.Image]:
+    image = np.asarray(image.convert("RGB"))
     img_h, img_w, *_ = image.shape
     img_batch: List[Image.Image] = []
 
@@ -94,7 +89,7 @@ def generate_image_embeddings(
 
     collections: List[LabelEmbedding] = []
     offset = 0
-    for i, (data_unit, img_pth) in enumerate(iterator.iterate(desc="Storing embeddings.")):
+    for i, (data_unit, _) in enumerate(iterator.iterate(desc="Storing embeddings.")):
         if i in skip:
             offset += 1
             continue
@@ -131,11 +126,11 @@ def generate_object_embeddings(
         feature_extractor = get_default_embedder()
 
     collections: List[LabelEmbedding] = []
-    for data_unit, img_pth in iterator.iterate(desc="Embedding object data."):
-        if img_pth is None:
+    for data_unit, image in iterator.iterate(desc="Embedding object data."):
+        if image is None:
             continue
 
-        batch = assemble_object_batch(data_unit, img_pth)
+        batch = assemble_object_batch(data_unit, image)
         if not batch:
             continue
 
@@ -198,8 +193,8 @@ def generate_classification_embeddings(
         feature_extractor = get_default_embedder()
 
     collections = []
-    for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
-        if img_pth is None:
+    for data_unit, image in iterator.iterate(desc="Embedding classification data."):
+        if image is None:
             continue
 
         matching_image_collections = [
@@ -211,12 +206,7 @@ def generate_classification_embeddings(
         ]
 
         if not matching_image_collections:
-            try:
-                image = Image.open(img_pth).convert("RGB")
-            except OSError:
-                logger.warning(f"Image with path {img_pth} seems to be broken. Skipping.")
-                continue
-
+            image = image.convert("RGB")
             embedding = feature_extractor.embed_image(image)
         else:
             embedding = matching_image_collections[0]["embedding"]
