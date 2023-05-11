@@ -1,4 +1,5 @@
 import pickle
+import warnings
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,8 @@ from encord_active.lib.embeddings.utils import (
     load_collections,
 )
 
+warnings.filterwarnings("ignore", "n_neighbors is larger than the dataset size", category=UserWarning)
+
 
 def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path):
     """
@@ -26,7 +29,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
 
     embeddings = np.array([collection["embedding"] for collection in collections])
 
-    reducer = umap.UMAP(random_state=0, verbose=True)
+    reducer = umap.UMAP(random_state=0, verbose=False)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection: dict[str, list] = {"identifier": [], "x": [], "y": [], "label": []}
