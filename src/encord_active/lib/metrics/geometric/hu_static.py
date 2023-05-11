@@ -51,7 +51,7 @@ class HuMomentsStatic(Metric):
         obj_list: List[dict] = []
         obj_hashes: List[str] = []
         cls_list: List[str] = []
-        for data_unit, img_pth in iterator.iterate(desc="Computing HU moments"):
+        for data_unit, _ in iterator.iterate(desc="Computing HU moments"):
             for obj in data_unit["labels"].get("objects", []):
                 if obj["shape"] not in valid_annotation_types:
                     continue
@@ -80,7 +80,7 @@ class HuMomentsStatic(Metric):
 
         distance_vector = 1 / compute_cls_distances(X, cls_ary)
         n = len(obj_list)
-        for data_unit, img_pth in iterator.iterate(desc="writing scores"):
+        for data_unit, _ in iterator.iterate(desc="writing scores"):
             for obj in data_unit["labels"].get("objects", []):
                 try:
                     index = obj_hashes.index(obj["objectHash"])
@@ -91,7 +91,7 @@ class HuMomentsStatic(Metric):
 
         pca_coordinates = PCA(n_components=2).fit_transform(X)
         with CSVEmbeddingWriter(iterator.cache_dir, iterator, prefix="hu_2d-embedding") as coords_writer:
-            for data_unit, img_pth in iterator.iterate(desc="writing scores"):
+            for data_unit, _ in iterator.iterate(desc="writing scores"):
                 if "objects" not in data_unit["labels"]:
                     continue
 

@@ -123,8 +123,8 @@ class AbsoluteObjectAreaMetric(Metric):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
-        for data_unit, img_pth in iterator.iterate(desc="Computing pixel area"):
-            size = get_du_size(data_unit, img_pth)
+        for data_unit, image in iterator.iterate(desc="Computing pixel area"):
+            size = get_du_size(data_unit, image)
             if not size:
                 continue
             img_h, img_w = size
@@ -164,8 +164,8 @@ class ObjectAspectRatioMetric(Metric):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
-        for data_unit, img_pth in iterator.iterate(desc="Computing aspect ratio"):
-            size = get_du_size(data_unit, img_pth)
+        for data_unit, image in iterator.iterate(desc="Computing aspect ratio"):
+            size = get_du_size(data_unit, image)
             if not size:
                 continue
             img_h, img_w = size

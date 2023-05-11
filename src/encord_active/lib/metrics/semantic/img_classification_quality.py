@@ -282,7 +282,7 @@ class ImageLevelQualityTest(Metric):
             nearest_indexes = self.get_nearest_indexes()
             self.fix_nearest_indexes(nearest_indexes)
             key_score_pairs = self.create_key_score_pairs(nearest_indexes)
-            for data_unit, img_pth in iterator.iterate(desc="Storing index"):
+            for data_unit, _ in iterator.iterate(desc="Storing index"):
                 key = iterator.get_identifier()
                 is_multiclass = is_multiclass_ontology(iterator.project.ontology)
 

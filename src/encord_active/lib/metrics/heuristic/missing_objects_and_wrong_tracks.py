@@ -96,7 +96,7 @@ hash, they will be flagged as a potentially broken track.
         # Prepare sliding window of previous two frames to compare polygons over time
         window: List[List[Tuple[dict, Polygon]]] = []
 
-        for data_unit, img_pth in iterator.iterate(desc="Looking for broken tracks"):
+        for data_unit, _ in iterator.iterate(desc="Looking for broken tracks"):
             label_row = iterator.label_rows[iterator.label_hash]
             frame = iterator.frame
 

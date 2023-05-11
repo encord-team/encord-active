@@ -20,6 +20,6 @@ class ObjectsCountMetric(Metric):
         if not iterator.project.ontology.objects:
             return
 
-        for data_unit, img_pth in iterator.iterate(desc="Counting objects"):
+        for data_unit, _ in iterator.iterate(desc="Counting objects"):
             score = len(data_unit["labels"]["objects"]) if "objects" in data_unit["labels"] else 0
             writer.write(score)

@@ -14,8 +14,8 @@ HU_FILENAME = "hu_moments-embeddings"
 
 def generate_hu_embeddings(iterator: Iterator):
     with CSVEmbeddingWriter(iterator.cache_dir, iterator, prefix=HU_FILENAME) as writer:
-        for data_unit, img_pth in iterator.iterate(desc="Generating HU embeddings"):
-            size = get_du_size(data_unit, img_pth)
+        for data_unit, image in iterator.iterate(desc="Generating HU embeddings"):
+            size = get_du_size(data_unit, image)
             if not size:
                 continue
             height, width = size
