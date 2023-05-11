@@ -107,6 +107,8 @@ To use the notebooks, you will have to set up an Ngrok account in order to be ab
 
 - [Downloading a Sandbox Dataset ![Google Colab][colab-image]](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=share_link)
 - [Importing an Existing Encord Project ![Google Colab][colab-image]](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
+- [Analyze a TorchVision Dataset ![Google Colab][colab-image]](https://colab.research.google.com/drive/1x44IGQBUgz9jIKIooNGV8ZEnGwf73hxZ?usp=share_link)
+- [Analyze a HuggingFace Dataset ![Google Colab][colab-image]](https://colab.research.google.com/drive/1Ohsd1BrO6s9HuliYdHqMsIblaR9KXbpk?usp=sharing)
 
 ## Community and Support
 
