@@ -99,6 +99,10 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
         if len(self.collections) > 0:
             cluster_size = self._get_cluster_size(iterator)
+            if len(self.collections) < cluster_size:
+                logger.info("<yellow>[Skipping]</yellow> There are very few samples compared to the number of classes.")
+                return
+
             data_hash_to_score = self._get_difficulty_ranking(cluster_size)
 
             for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
