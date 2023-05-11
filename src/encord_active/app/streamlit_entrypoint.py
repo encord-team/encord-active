@@ -7,6 +7,7 @@ from typing import List, Optional
 import streamlit as st
 from encord_active_components.components.projects_page import Project
 
+from encord_active.app.auth.jwt import auth
 from encord_active.app.common.components.help.help import render_help
 from encord_active.app.common.state import State, get_state, has_state, refresh
 from encord_active.app.common.state_hooks import UseState, use_memo
@@ -51,6 +52,7 @@ def provide_backcompatibility_for_old_predictions():
 
 
 def main(target: str):
+    auth()
     set_page_config()
     target_path = Path(target).expanduser().resolve()
     initial_project = UseState[Optional[Project]](None)

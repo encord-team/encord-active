@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     DEPLOYMENT_NAME: Optional[str] = None
     API_URL: str = "http://localhost:8000"
     ALLOWED_ORIGIN: Optional[str] = None
+    JWT_SECRET: Optional[str] = None
 
     class Config:
         env_file = ".env"
