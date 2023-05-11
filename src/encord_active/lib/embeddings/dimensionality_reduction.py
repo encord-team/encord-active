@@ -28,7 +28,9 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
         return
 
     embeddings = np.array([collection["embedding"] for collection in collections])
-    if embeddings.shape[0] < 4:
+    if (
+        embeddings.shape[0] < 4
+    ):  # The number 4 is experimentally determined, less than this creates error for UMAP calculation
         return
     reducer = umap.UMAP(random_state=0)
     embeddings_2d = reducer.fit_transform(embeddings)
