@@ -84,17 +84,12 @@ def load_json(json_file: Path) -> Optional[dict]:
             return None
 
 
-def get_du_size(data_unit: dict, img_pth: Optional[Path] = None) -> Optional[Tuple[int, int]]:
+def get_du_size(data_unit: dict, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]]:
     if "width" in data_unit and "height" in data_unit:
         return int(data_unit["height"]), int(data_unit["width"])
 
-    image_corrupted = False
-    if img_pth is not None and img_pth.is_file():
-        try:
-            image = cv2.imread(img_pth.as_posix())
-            return image.shape[:2]
-        except Exception:
-            image_corrupted = True
+    if image is not None:
+        return image.size
 
     return None
 
@@ -190,7 +185,7 @@ def get_iou(p1: Polygon, p2: Polygon):
 
 
 def slice_video_into_frames(
-    video_path: Path, out_dir: Path = None, wanted_frames: Collection[int] = None
+        video_path: Path, out_dir: Path = None, wanted_frames: Collection[int] = None
 ) -> Tuple[Dict[int, Path], List[int]]:
     frames_dir = out_dir if out_dir else video_path.parent
     frames_dir_existed = frames_dir.exists()
@@ -212,10 +207,10 @@ def slice_video_into_frames(
 
         with av.open(str(video_path), mode="r") as container:
             for frame in tqdm(
-                container.decode(video=0),
-                desc="Extracting frames from video",
-                leave=True,
-                total=container.streams.video[0].frames,
+                    container.decode(video=0),
+                    desc="Extracting frames from video",
+                    leave=True,
+                    total=container.streams.video[0].frames,
             ):
                 frame_num = frame.index
 
@@ -338,7 +333,7 @@ def rle_to_binary_mask(rle: RLEData) -> np.ndarray:
     idx = 0
     for count in counts:
         if val == 1:
-            mask[idx : idx + count] = val
+            mask[idx: idx + count] = val
         val = 1 - val
         idx += count
 
@@ -418,9 +413,9 @@ def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), 
 
 
 def download_file(
-    url: str,
-    destination: Path,
-    byte_size: int = 1024,
+        url: str,
+        destination: Path,
+        byte_size: int = 1024,
 ) -> Path:
     if destination.is_file():
         return destination
@@ -439,7 +434,7 @@ def download_file(
     return destination
 
 
-def download_image(url: str) -> Image:
+def download_image(url: str) -> Image.Image:
     r = requests.get(url)
 
     if r.status_code != 200:
@@ -448,8 +443,15 @@ def download_image(url: str) -> Image:
     return Image.open(r.content)
 
 
+def convert_image_to_cv2(image: Image.Image) -> np.array:
+    rgb_image = image.convert('RGB')
+    np_image = np.array(rgb_image)
+    ocv_image = np_image[:, :, ::-1].copy()
+    return ocv_image
+
+
 def iterate_in_batches(seq: Sequence, size: int):
-    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos: pos + size] for pos in range(0, len(seq), size))
 
 
 def patch_sklearn_linalg(func):

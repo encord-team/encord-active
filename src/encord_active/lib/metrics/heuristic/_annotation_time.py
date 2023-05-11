@@ -24,7 +24,7 @@ If no logs are available for a particular object, it will get score 0.""",
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         found_any = False
 
-        for data_unit, img_pth in iterator.iterate(desc="Computing annotation times"):
+        for data_unit, _ in iterator.iterate(desc="Computing annotation times"):
             for obj in data_unit["labels"].get("objects", []):
                 object_label_logs = iterator.get_label_logs(object_hash=obj["objectHash"])
 

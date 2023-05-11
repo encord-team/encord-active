@@ -105,7 +105,7 @@ class OcclusionDetectionOnVideo(Metric):
         if not videos:
             logger.info("<yellow>[Skipping]</yellow> No videos in dataset. ")
 
-        for data_unit, img_pth in iterator.iterate(desc="Storing occlusion index"):
+        for data_unit, _ in iterator.iterate(desc="Storing occlusion index"):
             label_row_hash = iterator.label_hash
             if label_row_hash not in videos.keys():
                 continue

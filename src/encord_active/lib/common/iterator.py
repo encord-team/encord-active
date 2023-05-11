@@ -37,7 +37,7 @@ class Iterator(Sized):
         self.label_rows = self.project.label_rows
 
     @abstractmethod
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pass
 
     @abstractmethod
@@ -69,7 +69,7 @@ class DatasetIterator(Iterator):
             0,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         for label_hash, label_row in self.label_rows.items():
             self.dataset_title = label_row["dataset_title"]

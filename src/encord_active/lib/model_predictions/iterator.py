@@ -162,7 +162,7 @@ class PredictionIterator(Iterator):
             manualAnnotation=False,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         if self.row_cache:
             for self.label_hash, self.du_hash, self.frame, du, pth in self.row_cache:

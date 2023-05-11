@@ -40,7 +40,7 @@ $$h_{\lambda}(x) = \frac{1}{x^\intercal x}$$
         # Preprocessing happens here.
         # You can build/load databases of embeddings, compute statistics, etc
 
-        for data_unit, img_pth in iterator.iterate(desc="Progress bar description"):
+        for data_unit, _ in iterator.iterate(desc="Progress bar description"):
             # Frame level score (data quality)
             writer.write(1337, description="Your description of the score [can be omitted]")
 

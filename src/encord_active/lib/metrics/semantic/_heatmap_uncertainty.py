@@ -80,7 +80,7 @@ def get_batches(iterator, batch_size=6):
     name_to_idx = {"background": 0}
     idx_to_counts = {0: 0}
     image_list, mask_list, key_list = [], [], []
-    for du, img_pth in iterator.iterate(desc="Loading data"):
+    for du, _ in iterator.iterate(desc="Loading data"):
         img_mask = np.zeros((height, width), dtype=np.uint8)
 
         for obj in du["labels"].get("objects", []):
