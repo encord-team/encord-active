@@ -334,7 +334,10 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
     for du in data_units:
         suffix = f".{du['data_type'].split('/')[1]}"
         destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
+        if label_row.data_type != DataType.IMAGE:
+            # Standard images are now fetched on-demand
+            # FIXME: incrementally remove caching as extra formats become supported
+            try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
 
         # Skip data units of type video from being added to the db (they are added after the video processing stage)
         if label_row.data_type == DataType.VIDEO.value:
