@@ -95,7 +95,6 @@ This metric gives each image a score that shows each image's uniqueness.
             return
 
         if len(self.collections) > 0:
-
             embeddings, db_index = self.convert_to_index()
             # For more information why we set the below threshold
             # see here: https://github.com/facebookresearch/faiss/wiki/Implementation-notes#matrix-multiplication-to-do-many-l2-distance-computations
@@ -112,10 +111,10 @@ This metric gives each image a score that shows each image's uniqueness.
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
 
-        for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
-
-            data_unit_info = self.scores[data_unit["data_hash"]]
-            writer.write(
-                score=float(data_unit_info.score),
-                description=data_unit_info.description,
-            )
+        for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+            data_unit_info = self.scores.get(data_unit["data_hash"])
+            if data_unit_info is not None:
+                writer.write(
+                    score=float(data_unit_info.score),
+                    description=data_unit_info.description,
+                )

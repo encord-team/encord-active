@@ -105,7 +105,9 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
             data_hash_to_score = self._get_difficulty_ranking(cluster_size)
 
-            for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
-                writer.write(score=data_hash_to_score[data_unit["data_hash"]])
+            for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+                score = data_hash_to_score.get(data_unit["data_hash"])
+                if score is not None:
+                    writer.write(score=score)
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
