@@ -7,12 +7,12 @@ from functools import reduce
 from itertools import chain
 from json import JSONDecodeError
 from pathlib import Path
-from PIL import Image
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from encord.exceptions import EncordException
 from encord.orm.label_log import LabelLog
 from loguru import logger
+from PIL import Image
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import download_image
@@ -83,7 +83,7 @@ class DatasetIterator(Iterator):
                     try:
                         img_path = next(
                             self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
-                            None
+                            None,
                         )
                         if img_path is not None:
                             image = Image.open(img_path.path)
