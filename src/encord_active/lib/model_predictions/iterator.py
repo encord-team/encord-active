@@ -9,10 +9,10 @@ import cv2
 import numpy as np
 import pandas as pd
 import pytz
-from PIL import Image
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from pandas import Series
+from PIL import Image
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
