@@ -8,8 +8,8 @@ import torch
 import torchvision
 import tqdm
 from torch import nn
-from torchvision.transforms import PILToTensor
 from torchvision.models.segmentation import DeepLabV3_MobileNet_V3_Large_Weights
+from torchvision.transforms import PILToTensor
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import Metric
