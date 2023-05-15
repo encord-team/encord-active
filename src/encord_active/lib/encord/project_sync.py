@@ -12,7 +12,6 @@ from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
-    EMBEDDING_REDUCED_TO_FILENAME,
     LabelEmbedding,
     load_collections,
     save_collections,
@@ -51,7 +50,7 @@ def update_2d_embedding_identifiers(
         new_lr, new_du = renaming_map.get(old_lr, old_lr), renaming_map.get(old_du, old_du)
         return identifier.replace(old_du, new_du).replace(old_lr, new_lr)
 
-    embedding_file = project_file_structure.embeddings / EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
+    embedding_file = project_file_structure.get_embeddings_file(embedding_type, reduced=True)
     if not embedding_file.is_file():
         return
 
@@ -133,14 +132,14 @@ def create_filtered_embeddings(
         save_collections(embedding_type, target_project_structure.embeddings, collection)
 
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-        embedding_file_name = EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
-        if not (curr_project_structure.embeddings / embedding_file_name).exists():
+        curr_embedding_file = curr_project_structure.get_embeddings_file(embedding_type)
+        if not curr_embedding_file.exists():
             continue
-        embeddings = pickle.loads(Path(curr_project_structure.embeddings / embedding_file_name).read_bytes())
+        embeddings = pickle.loads(curr_embedding_file.read_bytes())
         embeddings_df = pd.DataFrame.from_dict(embeddings)
         embeddings_df = embeddings_df[embeddings_df["identifier"].isin(filtered_df.identifier)]
         filtered_embeddings = embeddings_df.to_dict(orient="list")
-        (target_project_structure.embeddings / embedding_file_name).write_bytes(pickle.dumps(filtered_embeddings))
+        target_project_structure.get_embeddings_file(embedding_type).write_bytes(pickle.dumps(filtered_embeddings))
 
 
 def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, objects):

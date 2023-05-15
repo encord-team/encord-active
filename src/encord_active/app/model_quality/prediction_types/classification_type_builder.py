@@ -253,7 +253,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         if EmbeddingType.IMAGE not in get_state().reduced_embeddings:
             get_state().reduced_embeddings[EmbeddingType.IMAGE] = get_2d_embedding_data(
-                get_state().project_paths.embeddings, EmbeddingType.IMAGE
+                get_state().project_paths, EmbeddingType.IMAGE
             )
 
         metric_name = get_state().predictions.metric_datas_classification.selected_prediction

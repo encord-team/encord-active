@@ -1,8 +1,7 @@
-import os
 import pickle
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -13,18 +12,13 @@ from PIL import Image
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
-from encord_active.lib.embeddings.models.clip import CLIPEmbedder
-from encord_active.lib.embeddings.utils import (
-    EMBEDDING_TYPE_TO_FILENAME,
-    ClassificationAnswer,
-    LabelEmbedding,
-)
+from encord_active.lib.embeddings.models import CLIPEmbedder, ImageEmbedder
+from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
 from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-def get_image_embedder() -> CLIPEmbedder:
+def get_default_embedder() -> ImageEmbedder:
     return CLIPEmbedder()
 
 
@@ -64,9 +58,12 @@ def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
 
 
 @torch.inference_mode()
-def generate_image_embeddings(iterator: Iterator, batch_size=100) -> List[LabelEmbedding]:
+def generate_image_embeddings(
+    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
+) -> List[LabelEmbedding]:
     start = time.perf_counter()
-    feature_extractor = get_image_embedder()
+    if feature_extractor is None:
+        feature_extractor = get_default_embedder()
 
     raw_embeddings: list[np.ndarray] = []
     batch = []
@@ -125,9 +122,12 @@ def generate_image_embeddings(iterator: Iterator, batch_size=100) -> List[LabelE
 
 
 @torch.inference_mode()
-def generate_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
+def generate_object_embeddings(
+    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
+) -> List[LabelEmbedding]:
     start = time.perf_counter()
-    feature_extractor = get_image_embedder()
+    if feature_extractor is None:
+        feature_extractor = get_default_embedder()
 
     collections: List[LabelEmbedding] = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding object data."):
@@ -173,7 +173,9 @@ def generate_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
 
 
 @torch.inference_mode()
-def generate_classification_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
+def generate_classification_embeddings(
+    iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
+) -> List[LabelEmbedding]:
     image_collections = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
     ontology_class_hash_to_index: dict[str, dict] = {}
@@ -191,7 +193,8 @@ def generate_classification_embeddings(iterator: Iterator) -> List[LabelEmbeddin
                 ontology_class_hash_to_index[ontology_class_hash][option.feature_node_hash] = index
 
     start = time.perf_counter()
-    feature_extractor = get_image_embedder()
+    if feature_extractor is None:
+        feature_extractor = get_default_embedder()
 
     collections = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
@@ -276,39 +279,39 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
 
-    target_folder = os.path.join(iterator.cache_dir, "embeddings")
-    embedding_path = os.path.join(target_folder, f"{EMBEDDING_TYPE_TO_FILENAME[embedding_type]}")
+    pfs = ProjectFileStructure(iterator.cache_dir)
+    embedding_path = pfs.get_embeddings_file(embedding_type)
 
     if force:
         logger.info("Regenerating CNN embeddings...")
-        cnn_embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+        embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
     else:
         try:
             with open(embedding_path, "rb") as f:
-                cnn_embeddings = pickle.load(f)
+                embeddings = pickle.load(f)
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
+            embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
 
-            cnn_embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
-
-    return cnn_embeddings
+    return embeddings
 
 
-def generate_embeddings(iterator: Iterator, embedding_type: EmbeddingType, target: str):
+def generate_embeddings(
+    iterator: Iterator, embedding_type: EmbeddingType, target: Path, feature_extractor: Optional[ImageEmbedder] = None
+):
     if embedding_type == EmbeddingType.IMAGE:
-        cnn_embeddings = generate_image_embeddings(iterator)
+        embeddings = generate_image_embeddings(iterator, feature_extractor=feature_extractor)
     elif embedding_type == EmbeddingType.OBJECT:
-        cnn_embeddings = generate_object_embeddings(iterator)
+        embeddings = generate_object_embeddings(iterator, feature_extractor=feature_extractor)
     elif embedding_type == EmbeddingType.CLASSIFICATION:
-        cnn_embeddings = generate_classification_embeddings(iterator)
+        embeddings = generate_classification_embeddings(iterator, feature_extractor=feature_extractor)
     else:
         raise ValueError(f"Unsupported embedding type {embedding_type}")
 
-    if cnn_embeddings:
-        target_path = Path(target)
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_bytes(pickle.dumps(cnn_embeddings))
+    if embeddings:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(pickle.dumps(embeddings))
 
     logger.info("Done!")
 
-    return cnn_embeddings
+    return embeddings
