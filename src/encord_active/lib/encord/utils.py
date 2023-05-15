@@ -25,6 +25,11 @@ def get_client(ssh_key_path: Path):
     )
 
 
+def get_encord_project(ssh_key_path: Path, project_hash: str):
+    client = get_client(ssh_key_path)
+    return client.get_project(project_hash)
+
+
 def get_encord_projects(ssh_key_path: Path, query: Optional[dict] = None) -> List[Project]:
     client = get_client(ssh_key_path)
     if query is None:  # Get all projects
