@@ -300,16 +300,14 @@ def actions():
         export_button_col,
         subset_button_col,
         delete_button_col,
-        edit_button_col,
+        relabel_button_col,
         augment_button_col,
     ) = st.columns((3, 3, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
     render_generate_coco(generate_coco_col, file_prefix, filtered_df)
-    render_unimplemented_buttons(
-        delete_button_col, edit_button_col, augment_button_col, message_placeholder, current_form.set
-    )
+    render_unimplemented_buttons(delete_button_col, augment_button_col, message_placeholder, current_form.set)
 
     if filtered_row_count.value != row_count:
         filtered_row_count.set(row_count)
@@ -475,7 +473,6 @@ def render_export_button(
 
 def render_unimplemented_buttons(
     delete_button_column: DeltaGenerator,
-    edit_button_column: DeltaGenerator,
     augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
     set_current_form: Callable,
@@ -483,11 +480,8 @@ def render_unimplemented_buttons(
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
     )
-    edit_btn = edit_button_column.button(
-        "🖋 Re-label", help="Assign the filtered data for relabelling on the Encord platform"
-    )
     augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
-    if any([delete_btn, edit_btn, augment_btn]):
+    if any([delete_btn, augment_btn]):
         set_current_form(CurrentForm.NONE)
         message_placeholder.markdown(
             f"""
