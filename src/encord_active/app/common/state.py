@@ -24,6 +24,7 @@ from encord_active.lib.project import ProjectFileStructure
 class StateKey(str, Enum):
     GLOBAL = "GLOBAL"
     SCOPED = "SCOPED"
+    SCOPED_AND_PERSISTED = "SCOPED_AND_PERSISTED"
     MEMO = "MEMO"
 
 
@@ -130,7 +131,9 @@ def refresh(
     nuke: bool = False,
 ):
     if nuke:
+        persisted = st.session_state.pop(StateKey.SCOPED_AND_PERSISTED)
         st.session_state.clear()
+        st.session_state[StateKey.SCOPED_AND_PERSISTED] = persisted
     else:
         if clear_global:
             st.session_state.pop(StateKey.GLOBAL, None)
