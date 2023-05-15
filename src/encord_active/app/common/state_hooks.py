@@ -46,7 +46,7 @@ class UseState(Generic[T]):
     def __init__(self, initial: T, key: Optional[str] = None, clearable=True) -> None:
         self._initial = initial
         self._key = key or create_key()
-        self._scope = StateKey.SCOPED_AND_PERSISTED if clearable else StateKey.SCOPED
+        self._scope = StateKey.SCOPED if clearable else StateKey.SCOPED_AND_PERSISTED
         st.session_state.setdefault(self._scope, {}).setdefault(self._key, initial)
 
     @overload

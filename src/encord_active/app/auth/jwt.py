@@ -11,7 +11,7 @@ def auth():
     if not settings.JWT_SECRET:
         return
 
-    token_state = UseState[Optional[str]](None)
+    token_state = UseState[Optional[str]](None, clearable=False)
 
     try:
         if token_state.value is None:
