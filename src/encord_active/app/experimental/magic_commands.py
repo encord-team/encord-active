@@ -57,8 +57,7 @@ def magic_commands():
     def _get_chatgpt_response(instruct: str, question: str, start_code_tag: str, end_code_tag: str) -> str:
         config = configparser.ConfigParser()
         config.read(Path(__file__).parent / "keys.ini")
-
-        openai.api_key = config.get("DEFAULT", "OPENAI_API_KEY")
+        openai.api_key = config.get("KEY", "OPENAI_API_KEY")
 
         messages = [
             {
@@ -90,14 +89,7 @@ def magic_commands():
         if last_line == "plt.show()":
             return plt.subplots()[0]  # this does not work for now
         try:
-            return eval(
-                last_line,
-                # {
-                #     "pd": pd,
-                #     "df": df,
-                #     "plt": plt,
-                # },
-            )
+            return eval(last_line)
         except Exception:  # pylint: disable=W0718
             return None
 
