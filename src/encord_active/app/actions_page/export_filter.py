@@ -563,20 +563,20 @@ def render_relabel_button(
     # Check the conditions to be able to send the filtered data back to labeling on Encord (remote project)
     is_disabled = False
     extra_help_text = ""
-    if not project_meta.get("has_remote", True):
+    if not project_meta.get("has_remote", False):
         # Local projects
         is_disabled = True
         extra_help_text = (
-            " The current project is local so it doesn't support data relabeling."
-            "Please, first export the project to the Encord platform."
+            " Relabeling is only supported on workflow projects and this project is local."
+            " Please, first export the data to a workflow project in the Encord platform."
         )
 
-    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is not None:
+    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
         # Non-workflow projects
         is_disabled = True
         extra_help_text = (
             " Relabeling is only supported on workflow projects."
-            "Please, first upgrade your project so it uses workflows."
+            " Please, first upgrade your project so it uses workflows."
         )
 
     relabel_placeholder = render_column.empty()
