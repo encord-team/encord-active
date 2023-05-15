@@ -30,7 +30,7 @@ def print_encord_projects(
     """
     from encord_active.lib.encord.utils import get_projects_json
 
-    json_projects = get_projects_json(app_config.get_or_query_ssh_key(), query)
+    json_projects = get_projects_json(app_config.get_or_query_ssh_key(), query={"title_like": query})
     if state.get("json_output"):
         Path("./encord-projects.json").write_text(json_projects, encoding="utf-8")
     else:

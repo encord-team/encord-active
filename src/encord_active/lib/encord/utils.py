@@ -25,13 +25,15 @@ def get_client(ssh_key_path: Path):
     )
 
 
-def get_encord_projects(ssh_key_path: Path, query: Optional[str] = None) -> List[Project]:
+def get_encord_projects(ssh_key_path: Path, query: Optional[dict] = None) -> List[Project]:
     client = get_client(ssh_key_path)
-    projects: List[Project] = list(map(lambda x: x["project"], client.get_projects(title_like=query)))
+    if query is None:  # Get all projects
+        query = dict()
+    projects: List[Project] = list(map(lambda x: x["project"], client.get_projects(**query)))
     return projects
 
 
-def get_projects_json(ssh_key_path: Path, query: Optional[str] = None) -> str:
+def get_projects_json(ssh_key_path: Path, query: Optional[dict] = None) -> str:
     projects = get_encord_projects(ssh_key_path, query)
     return json_dumps({p.project_hash: p.title for p in projects}, indent=2)
 
