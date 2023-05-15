@@ -149,7 +149,6 @@ def generate_cnn_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
                 ObjectShape.BOUNDING_BOX.value,
                 ObjectShape.ROTATABLE_BOUNDING_BOX.value,
             ]:
-
                 last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
 
                 entry = LabelEmbedding(
@@ -216,7 +215,6 @@ def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbe
 
         classification_answers = iterator.label_rows[iterator.label_hash]["classification_answers"]
         for classification in data_unit["labels"].get("classifications", []):
-
             last_edited_by = (
                 classification["lastEditedBy"]
                 if "lastEditedBy" in classification.keys()

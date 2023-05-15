@@ -139,7 +139,7 @@ def make_object_dict(
             raise ValueError(f"The `object_data` for {shape} should float values.")
 
         box = {k: round(v, 4) for k, v in object_data.items()}
-        if shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
+        if shape.value == ObjectShape.ROTATABLE_BOUNDING_BOX:
             if "theta" not in object_data:
                 raise ValueError(f"The `object_data` for {shape} should contain a `theta` field.")
 
