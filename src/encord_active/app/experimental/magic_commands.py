@@ -53,7 +53,7 @@ Make sure to prefix the requested python code with {START_CODE_TAG} exactly and 
 
 def magic_commands():
     def _get_chatgpt_response(instruct: str, question: str, start_code_tag: str, end_code_tag: str) -> str:
-        openai.api_key = "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"
+        openai.api_key = "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"
 
         messages = [
             {
@@ -83,7 +83,7 @@ def magic_commands():
             last_line = last_line[6:-1]
 
         if last_line == "plt.show()":
-            return plt.subplots()[0]
+            return plt.subplots()[0]  # this does not work for now
         try:
             return eval(
                 last_line,
@@ -169,8 +169,6 @@ def magic_commands():
 
                 if return_object is None:
                     st.write("The generated code could not produce output")
-                elif isinstance(return_object, plt.Figure):
-                    st.pyplot(return_object)
                 else:
                     st.write(return_object)
             else:
