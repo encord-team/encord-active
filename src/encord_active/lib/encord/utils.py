@@ -25,7 +25,9 @@ def get_client(ssh_key_path: Path):
     )
 
 
-def get_encord_project(ssh_key_path: Path, project_hash: str):
+def get_encord_project(ssh_key_path: Union[str, Path], project_hash: str):
+    if isinstance(ssh_key_path, str):
+        ssh_key_path = Path(ssh_key_path)
     client = get_client(ssh_key_path)
     return client.get_project(project_hash)
 
