@@ -1,4 +1,6 @@
+import configparser
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -53,7 +55,10 @@ Make sure to prefix the requested python code with {START_CODE_TAG} exactly and 
 
 def magic_commands():
     def _get_chatgpt_response(instruct: str, question: str, start_code_tag: str, end_code_tag: str) -> str:
-        openai.api_key = "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"
+        config = configparser.ConfigParser()
+        config.read(Path(__file__).parent / "keys.ini")
+
+        openai.api_key = config.get("DEFAULT", "OPENAI_API_KEY")
 
         messages = [
             {
