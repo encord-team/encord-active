@@ -24,8 +24,10 @@ from encord_active.lib.db.helpers.tags import all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.utils import load_metric_dataframe
-from encord_active.lib.project.metadata import ProjectNotFound
+from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.project.metadata import ProjectNotFound, fetch_project_meta
 
 
 @dataclass
@@ -307,6 +309,7 @@ def actions():
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
     render_generate_coco(generate_coco_col, file_prefix, filtered_df)
+    render_relabel_button(relabel_button_col, get_state().project_paths, filtered_df)
     render_unimplemented_buttons(delete_button_col, augment_button_col, message_placeholder, current_form.set)
 
     if filtered_row_count.value != row_count:
@@ -547,6 +550,50 @@ def render_generate_csv(
             file_name=f"{file_prefix}-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.csv",
             help="Ensure you have generated an updated COCO file before downloading",
         )
+
+
+def render_relabel_button(
+    render_column: DeltaGenerator,
+    pfs: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
+):
+    project_meta = fetch_project_meta(pfs.project_dir)
+    label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+
+    # Check the conditions to be able to send the filtered data back to labeling on Encord (remote project)
+    is_disabled = False
+    extra_help_text = ""
+    if not project_meta.get("has_remote", True):
+        # Local projects
+        is_disabled = True
+        extra_help_text = (
+            " The current project is local so it doesn't support data relabeling."
+            "Please, first export the project to the Encord platform."
+        )
+
+    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is not None:
+        # Non-workflow projects
+        is_disabled = True
+        extra_help_text = (
+            " Relabeling is only supported on workflow projects."
+            "Please, first upgrade your project so it uses workflows."
+        )
+
+    relabel_placeholder = render_column.empty()
+    relabel_data = relabel_placeholder.button(
+        "🖋 Re-label",
+        help="Assign the filtered data for relabeling on the Encord platform." + extra_help_text,
+        disabled=is_disabled,
+    )
+    if relabel_data:
+        with st.spinner(text="Sending data to relabel"):
+            # Get the label row to send to relabel
+            lr_hashes = set(str(identifier).split(maxsplit=1)[0] for identifier in filtered_df["identifier"].to_list())
+
+            encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
+
+            for label_row in encord_project.list_label_rows_v2(label_hashes=list(lr_hashes)):
+                label_row.workflow_reopen()
 
 
 def render_progress_bar():
