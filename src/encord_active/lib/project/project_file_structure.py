@@ -16,7 +16,7 @@ from prisma.types import (
 
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.types import EmbeddingType
 
 EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images.pkl",

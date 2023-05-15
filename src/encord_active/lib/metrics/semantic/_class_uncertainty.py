@@ -11,11 +11,11 @@ from torch.nn import LeakyReLU
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.embeddings import get_embeddings
-from encord_active.lib.metrics.metric import (
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import (
     AnnotationType,
     DataType,
     EmbeddingType,
-    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter

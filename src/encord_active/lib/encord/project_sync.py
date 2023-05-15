@@ -16,7 +16,8 @@ from encord_active.lib.embeddings.utils import (
     load_collections,
     save_collections,
 )
-from encord_active.lib.metrics.metric import EmbeddingType, MetricMetadata
+from encord_active.lib.metrics.metric import MetricMetadata
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
 

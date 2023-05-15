@@ -14,11 +14,11 @@ from encord_active.lib.embeddings.dimensionality_reduction import (
 )
 from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
-from encord_active.lib.metrics.metric import (
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import (
     AnnotationType,
     DataType,
     EmbeddingType,
-    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.utils import is_multiclass_ontology

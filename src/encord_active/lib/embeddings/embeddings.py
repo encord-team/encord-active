@@ -14,7 +14,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
 from encord_active.lib.embeddings.models import CLIPEmbedder, ImageEmbedder
 from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 

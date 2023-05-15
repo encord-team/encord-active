@@ -1,44 +1,19 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 from hashlib import md5
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.writer import StatisticsObserver
-from encord_active.lib.labels.classification import ClassificationType
-from encord_active.lib.labels.object import ObjectShape
+from encord_active.lib.metrics.types import (
+    AnnotationTypeUnion,
+    DataType,
+    EmbeddingType,
+    MetricType,
+)
 from encord_active.lib.metrics.writer import CSVMetricWriter
-
-
-class MetricType(str, Enum):
-    SEMANTIC = "semantic"
-    GEOMETRIC = "geometric"
-    HEURISTIC = "heuristic"
-
-
-class DataType(str, Enum):
-    IMAGE = "image"
-    SEQUENCE = "sequence"
-
-
-class EmbeddingType(str, Enum):
-    CLASSIFICATION = "classification"
-    OBJECT = "object"
-    HU_MOMENTS = "hu_moments"
-    IMAGE = "image"
-
-
-AnnotationTypeUnion = Union[ObjectShape, ClassificationType]
-
-
-class AnnotationType:
-    NONE: List[AnnotationTypeUnion] = []
-    OBJECT = ObjectShape
-    CLASSIFICATION = ClassificationType
-    ALL = [*OBJECT, *CLASSIFICATION]
 
 
 class StatsMetadata(BaseModel):
@@ -81,7 +56,7 @@ class SimpleMetric(ABC):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        annotation_type: List[Union[ObjectShape, ClassificationType]],
+        annotation_type: List[AnnotationTypeUnion],
         embedding_type: Optional[EmbeddingType] = None,
         doc_url: Optional[str] = None,
     ):
@@ -110,7 +85,7 @@ class Metric(ABC):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        annotation_type: List[Union[ObjectShape, ClassificationType]] = [],
+        annotation_type: List[AnnotationTypeUnion] = [],
         embedding_type: Optional[EmbeddingType] = None,
         doc_url: Optional[str] = None,
     ):

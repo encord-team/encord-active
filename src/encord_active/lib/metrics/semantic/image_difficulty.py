@@ -9,7 +9,8 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.labels.classification import ClassificationType
-from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
