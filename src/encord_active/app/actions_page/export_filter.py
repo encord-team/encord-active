@@ -588,7 +588,7 @@ def render_relabel_button(
     if relabel_data:
         with st.spinner(text="Sending data to relabel"):
             # Get the label row to send to relabel
-            lr_hashes = set(str(identifier).split(maxsplit=1)[0] for identifier in filtered_df["identifier"].to_list())
+            lr_hashes = set(str(_id).split("_", maxsplit=1)[0] for _id in filtered_df["identifier"].to_list())
 
             encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
 
