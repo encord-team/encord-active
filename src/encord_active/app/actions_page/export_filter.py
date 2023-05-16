@@ -560,11 +560,11 @@ def render_relabel_button(
     project_meta = fetch_project_meta(pfs.project_dir)
     label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
 
-    # Check the conditions to be able to send the filtered data back to labeling on Encord (remote project)
+    # Check the conditions to be able to send the filtered data to labeling on Encord (remote project)
     is_disabled = False
     extra_help_text = ""
     if not project_meta.get("has_remote", False):
-        # Local projects
+        # Shouldn't work with local projects
         is_disabled = True
         extra_help_text = (
             " Relabeling is only supported on workflow projects and this project is local."
@@ -572,7 +572,7 @@ def render_relabel_button(
         )
 
     elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
-        # Non-workflow projects
+        # Relabeling is not supported on non-workflow projects
         is_disabled = True
         extra_help_text = (
             " Relabeling is only supported on workflow projects."
@@ -582,18 +582,29 @@ def render_relabel_button(
     relabel_placeholder = render_column.empty()
     relabel_data = relabel_placeholder.button(
         "🖋 Re-label",
-        help="Assign the filtered data for relabeling on the Encord platform." + extra_help_text,
+        help="Assign the filtered data for relabeling in the Encord platform." + extra_help_text,
         disabled=is_disabled,
     )
     if relabel_data:
-        with st.spinner(text="Sending data to relabel"):
-            # Get the label row to send to relabel
-            lr_hashes = set(str(_id).split("_", maxsplit=1)[0] for _id in filtered_df["identifier"].to_list())
+        label = st.empty()
+        label.text("Sending the selected data to labeling.")
+        update_progress_bar, clear_progress_bar = render_progress_bar()
+        update_progress_bar(0)  # Show progress bar
 
-            encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
+        # Get the label rows to send to relabel
+        unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in filtered_df["identifier"].to_list()))
 
-            for label_row in encord_project.list_label_rows_v2(label_hashes=list(lr_hashes)):
-                label_row.workflow_reopen()
+        encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
+        for index, label_row in enumerate(encord_project.list_label_rows_v2(label_hashes=unique_lr_hashes), start=1):
+            label_row.workflow_reopen()
+            update_progress_bar(index / len(unique_lr_hashes))
+
+        clear_progress_bar()
+        label.empty()
+        label.text(
+            f"Data successfully sent to labeling in Encord Annotate.\n"
+            f"A total of {len(unique_lr_hashes)} tasks were assigned to the first labeling stage."
+        )
 
 
 def render_progress_bar():
