@@ -30,7 +30,7 @@ with DBConnection(ProjectFileStructure(project_path)) as conn:
     metrics = MergedMetrics(conn).all()
 
 iterator = DatasetIterator(project_path)
-for data_unit, image_path in iterator.iterate():
+for data_unit, image in iterator.iterate():
     identifier = f"{iterator.label_hash}_{iterator.du_hash}_{iterator.frame:05d}"
     tags = metrics.get_row(identifier).tags
     tags.append(data_tag)  # Only use TagScope.DATA tags here.
@@ -55,7 +55,7 @@ with DBConnection(ProjectFileStructure(project_path)) as conn:
     metrics = MergedMetrics(conn).all()
 
 iterator = DatasetIterator(project_path)
-for data_unit, image_path in iterator.iterate():
+for data_unit, image in iterator.iterate():
     # For bounding boxes and polygons
     for obj in data_unit.get("labels", {}).get("objects", []):
         obj_hash = obj["objectHash"]

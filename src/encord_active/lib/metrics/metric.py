@@ -115,7 +115,7 @@ class Metric(ABC):
 
             Use::
 
-                for data_unit, img_pth in iterator.iterate(desc="Progress bar description"):
+                for data_unit, image in iterator.iterate(desc="Progress bar description"):
                     pass
 
 

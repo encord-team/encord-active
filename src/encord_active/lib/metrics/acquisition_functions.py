@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from pathlib import Path
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -24,12 +23,12 @@ class BaseModelWrapper:
 
     @classmethod
     @abstractmethod
-    def prepare_data(cls, data_paths: list[Path]) -> list[Any]:
+    def prepare_data(cls, images: list[Image]) -> list[Any]:
         """
         Reads and prepares data samples from local storage to feed the model with it.
 
         Args:
-            data_paths (list[Path]): Path to the data samples.
+            images (list[Image]): Images to use as data samples.
 
         Returns:
             Data samples prepared to be used as input of `self.predict_probabilities()` method.
@@ -74,8 +73,8 @@ class BaseModelWrapper:
 
 class SKLearnModelWrapper(BaseModelWrapper):
     @classmethod
-    def prepare_data(cls, data_paths: list[Path]) -> list[Any]:
-        return [np.asarray(Image.open(data_path)).flatten() / 255 for data_path in data_paths]
+    def prepare_data(cls, images: list[Image]) -> list[Any]:
+        return [np.asarray(image).flatten() / 255 for image in images]
 
     def _predict_proba(self, X) -> Optional[np.ndarray]:
         return self._model.predict_proba(X)
@@ -106,10 +105,10 @@ class AcquisitionFunction(Metric):
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for _, img_pth in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
-            if img_pth is None:
+        for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
+            if image is None:
                 continue
-            prepared_data = self._model.prepare_data([img_pth])
+            prepared_data = self._model.prepare_data([image])
             if not prepared_data:
                 continue
             pred_proba = self._model.predict_probabilities(prepared_data)
