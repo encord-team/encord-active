@@ -1,5 +1,5 @@
 import json
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 from urllib import parse
@@ -52,7 +52,7 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
         return f"ea-static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
 
 
-def _transform_object(object_: dict):
+def _transform_object(object_: dict, img_w: int, img_h: int):
     shape = object_["shape"]
     points = None
 
@@ -72,14 +72,16 @@ def _transform_object(object_: dict):
         elif shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
             b = object_.pop("rotatableBoundingBox")
             no_rotate_points = [
-                [b["x"], b["y"]],
-                [b["x"] + b["w"], b["y"]],
-                [b["x"] + b["w"], b["y"] + b["h"]],
-                [b["x"], b["y"] + b["h"]],
+                [b["x"] * img_w, b["y"] * img_h],
+                [(b["x"] + b["w"]) * img_w, b["y"] * img_h],
+                [(b["x"] + b["w"]) * img_w, (b["y"] + b["h"]) * img_h],
+                [b["x"] * img_w, (b["y"] + b["h"]) * img_h],
             ]
             rotated_polygon = rotate(Polygon(no_rotate_points), b["theta"])
             if rotated_polygon.exterior:
-                points = {i: {"x": c[0], "y": c[1]} for i, c in enumerate(rotated_polygon.exterior.coords)}
+                points = {
+                    i: {"x": c[0] / img_w, "y": c[1] / img_h} for i, c in enumerate(rotated_polygon.exterior.coords)
+                }
         elif shape == ObjectShape.KEY_POINT:
             points = object_.pop("point")
 
@@ -112,6 +114,7 @@ def to_item(
 
     label_row = json.loads(label_row_structure.label_row_file.read_text())
     du = label_row["data_units"][du_hash]
+    img_w, img_h = du["width"], du["height"]
     data_title = du.get("data_title", label_row.get("data_title"))
 
     labels: Dict[str, List[Dict]] = {"objects": [], "classifications": []}
@@ -120,7 +123,9 @@ def to_item(
     else:
         labels = du.get("labels", labels)
 
-    labels["objects"] = list(filter(None, map(_transform_object, labels.get("objects", []))))
+    labels["objects"] = list(
+        filter(None, map(partial(_transform_object, img_w=img_w, img_h=img_h), labels.get("objects", [])))
+    )
 
     try:
         classifications = labels.get("classifications")
