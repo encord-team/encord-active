@@ -8,11 +8,11 @@ from PIL import Image
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.metrics.metric import (
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import (
     AnnotationType,
     DataType,
     EmbeddingType,
-    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter

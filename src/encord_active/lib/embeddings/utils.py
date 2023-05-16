@@ -9,7 +9,7 @@ import pandera as pa
 from faiss import IndexFlatL2
 from pandera.typing import Series
 
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import IdentifierSchema
 
 

@@ -13,12 +13,11 @@ from natsort import natsorted
 from pandera.typing import DataFrame, Series
 from pydantic import ValidationError
 
-from encord_active.lib.metrics.metric import (
+from encord_active.lib.metrics.metric import MetricMetadata, StatsMetadata
+from encord_active.lib.metrics.types import (
     AnnotationType,
     AnnotationTypeUnion,
     EmbeddingType,
-    MetricMetadata,
-    StatsMetadata,
 )
 
 

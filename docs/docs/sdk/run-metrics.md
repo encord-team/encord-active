@@ -45,7 +45,7 @@ There is a utility function you can use to run targeted subsets of metrics:
 from encord_active.lib.metrics.execute import (
     run_metrics_by_embedding_type,
 )
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.types import EmbeddingType
 
 run_metrics_by_embedding_type(EmbeddingType.IMAGE, **options)
 run_metrics_by_embedding_type(EmbeddingType.OBJECT, **options)
