@@ -12,7 +12,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from encord.exceptions import EncordException
 from encord.orm.label_log import LabelLog
 from loguru import logger
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import download_image
@@ -85,8 +85,12 @@ class DatasetIterator(Iterator):
                             self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
                             None,
                         )
+                        image = None
                         if img_path is not None:
-                            image = Image.open(img_path.path)
+                            try:
+                                image = Image.open(img_path.path)
+                            except (FileNotFoundError, UnidentifiedImageError) as ex:
+                                logger.error(f"Failed to open Image at: {img_path.path}: {ex}")
                         else:
                             image = download_image(data_unit["data_link"])
                         yield data_unit, image
