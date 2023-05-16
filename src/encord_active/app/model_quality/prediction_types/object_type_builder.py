@@ -145,21 +145,17 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                 get_state().project_paths.predictions / MainPredictionType.OBJECT.value
             )
 
-        def render_metrics_settings():
-            col1, col2, col3 = st.columns([4, 4, 3])
-            with col1:
-                get_state().predictions.selected_classes_objects = self._render_class_filtering_component(
-                    get_state().predictions.all_classes_objects
-                )
-            with col2:
-                self._render_iou_slider()
-            with col3:
-                self._render_ignore_empty_frames_checkbox()
+        col1, col2, col3 = st.columns([4, 4, 3])
+        with col1:
+            get_state().predictions.selected_classes_objects = self._render_class_filtering_component(
+                get_state().predictions.all_classes_objects
+            )
+        with col2:
+            self._render_iou_slider()
+        with col3:
+            self._render_ignore_empty_frames_checkbox()
 
-        if self.page_mode == ModelQualityPage.METRICS:
-            render_metrics_settings()
-        elif self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
-            render_metrics_settings()
+        if self.page_mode == ModelQualityPage.PERFORMANCE_BY_METRIC:
             c1, c2, c3 = st.columns([4, 4, 3])
             with c1:
                 self._topbar_metric_selection_component(MetricType.PREDICTION, get_state().predictions.metric_datas)
@@ -168,15 +164,8 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             with c3:
                 self._class_decomposition()
         elif self.page_mode == ModelQualityPage.EXPLORER:
-            c1, c2, c3, c4 = st.columns([2, 4, 5, 4])
+            c1, c2, _ = st.columns([4, 4, 3])
             with c1:
-                self._explorer_outcome_type = st.selectbox(
-                    "Outcome",
-                    [x for x in self.OutcomeType],
-                    format_func=lambda x: x.value,
-                    help="Only the samples with this outcome will be shown",
-                )
-            with c2:
                 explorer_metric_type = (
                     MetricType.PREDICTION
                     if self._explorer_outcome_type
@@ -185,10 +174,13 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
                 )
 
                 self._topbar_metric_selection_component(explorer_metric_type, get_state().predictions.metric_datas)
-            with c3:
-                self._render_iou_slider()
-            with c4:
-                self._render_ignore_empty_frames_checkbox()
+            with c2:
+                self._explorer_outcome_type = st.selectbox(
+                    "Outcome",
+                    [x for x in self.OutcomeType],
+                    format_func=lambda x: x.value,
+                    help="Only the samples with this outcome will be shown",
+                )
 
         divider()
         render_filter()
@@ -308,7 +300,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
             view_df = view_df[view_df.data_row_id.isin(lr_du)].drop("data_row_id", axis=1)
         elif self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
             view_df = self._labels[self._labels[LabelMatchSchema.is_false_negative]].dropna(subset=[metric_name])
-            view_df = view_df[view_df.identifier.isin(filtered_merged_metrics.identifier)]
+            view_df = view_df[view_df.identifier.isin(filtered_merged_metrics.index)]
         else:
             return None
         return view_df

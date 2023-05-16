@@ -43,10 +43,11 @@ def use_lazy_state(initial: Callable[[], T], key: Optional[str] = None):
 
 
 class UseState(Generic[T]):
-    def __init__(self, initial: T, key: Optional[str] = None) -> None:
+    def __init__(self, initial: T, key: Optional[str] = None, clearable=True) -> None:
         self._initial = initial
         self._key = key or create_key()
-        st.session_state.setdefault(StateKey.SCOPED, {}).setdefault(self._key, initial)
+        self._scope = StateKey.SCOPED if clearable else StateKey.SCOPED_AND_PERSISTED
+        st.session_state.setdefault(self._scope, {}).setdefault(self._key, initial)
 
     @overload
     def set(self, arg: T):
@@ -58,15 +59,15 @@ class UseState(Generic[T]):
 
     def set(self, arg: Union[T, Reducer[T]]):
         if callable(arg):
-            new_value = arg(st.session_state[StateKey.SCOPED][self._key])
+            new_value = arg(st.session_state[self._scope][self._key])
         else:
             new_value = arg
 
         if new_value == self.value:
             return
 
-        st.session_state.setdefault(StateKey.SCOPED, {})[self._key] = new_value
+        st.session_state.setdefault(self._scope, {})[self._key] = new_value
 
     @property
     def value(self) -> T:
-        return st.session_state.get(StateKey.SCOPED, {}).get(self._key, self._initial)
+        return st.session_state.get(self._scope, {}).get(self._key, self._initial)
