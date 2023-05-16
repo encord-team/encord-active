@@ -6,6 +6,7 @@ from natsort import natsorted
 from pandera.typing import DataFrame
 
 from encord_active.app.actions_page.export_filter import render_filter
+from encord_active.app.auth.jwt import get_auth_token
 from encord_active.app.common.components.annotator_statistics import (
     render_annotator_properties,
 )
@@ -21,7 +22,7 @@ from encord_active.lib.metrics.utils import (
     filter_none_empty_metrics,
     load_metric_dataframe,
 )
-from encord_active.server.settings import settings
+from encord_active.server.settings import get_settings
 
 
 class ExplorerPage(Page):
@@ -64,10 +65,11 @@ class ExplorerPage(Page):
             render_annotator_properties(selected_df)
 
         explorer(
+            auth_token=get_auth_token(),
             project_name=get_state().project_paths.project_dir.name,
             items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
-            api_url=settings.API_URL,
+            api_url=get_settings().API_URL,
         )
 
     def render_view_options(self):
