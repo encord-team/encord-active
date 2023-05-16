@@ -10,6 +10,9 @@ import streamlit as st
 
 from encord_active.app.common.state import get_state
 from encord_active.app.common.utils import setup_page
+from encord_active.app.model_quality.prediction_types.classification_type_builder import (
+    ClassificationTypeBuilder,
+)
 from encord_active.lib.metrics.metadata import fetch_metrics_meta
 
 image_id = "image_id"
@@ -17,6 +20,8 @@ data_type = "data_type"
 object_id = "object_id"
 START_CODE_TAG = "START_CODE"
 END_CODE_TAG = "END_CODE"
+INSTRUCT_TEMP = 0.4
+TRIAL_TEMP = 0.8
 TOTAL_TRIAL = 5
 
 instruct_message = """Today is {today_date}.
@@ -54,7 +59,7 @@ Make sure to prefix the requested python code with {START_CODE_TAG} exactly and 
 
 
 def magic_commands():
-    def _get_chatgpt_response(instruct: str, question: str, start_code_tag: str, end_code_tag: str) -> str:
+    def _get_chatgpt_response(instruct: str, question: str, start_code_tag: str, end_code_tag: str, temperature) -> str:
         config = configparser.ConfigParser()
         config.read(Path(__file__).parent / "keys.ini")
         openai.api_key = config.get("KEY", "OPENAI_API_KEY")
@@ -69,10 +74,7 @@ def magic_commands():
         if question != "":
             messages.append({"role": "user", "content": question})
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-        )
+        response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, temperature=temperature)
 
         result = response["choices"][0]["message"]["content"]
         result = result.replace(start_code_tag, "")
@@ -96,81 +98,92 @@ def magic_commands():
     def render():
         setup_page()
 
-        all_metrics = sorted([metric for metric in fetch_metrics_meta(get_state().project_paths)])
+        project_tab, model_performance_tab = st.tabs(["Project metrics", "Model performance"])
 
-        df = get_state().merged_metrics.copy()
+        with project_tab:
+            all_metrics = sorted([metric for metric in fetch_metrics_meta(get_state().project_paths)])
+            df = get_state().merged_metrics.copy()
 
-        st.write("Top 5 rows")
-        st.dataframe(df.head(5))
-        magic_prompt = st.text_input("What do you want to get?")
+            st.write("Top 5 rows")
+            st.dataframe(df.head(5))
+            magic_prompt = st.text_input("What do you want to get?")
 
-        # Make it a bit more verbose for the LLM
-        df[data_type] = df.index.map(lambda x: "image" if len(x.split("_")) == 3 else "object")
-        df[image_id] = df.index.map(lambda x: "_".join(x.split("_")[:3]))
-        df[object_id] = df.index.map(lambda x: None if len(x.split("_")) == 3 else x.split("_")[-1])
+            # Make it a bit more verbose for the LLM
+            df[data_type] = df.index.map(lambda x: "image" if len(x.split("_")) == 3 else "object")
+            df[image_id] = df.index.map(lambda x: "_".join(x.split("_")[:3]))
+            df[object_id] = df.index.map(lambda x: None if len(x.split("_")) == 3 else x.split("_")[-1])
 
-        if magic_prompt != "":
-            code_to_run = _get_chatgpt_response(
-                instruct=instruct_message.format(
-                    today_date=date.today(),
-                    df_num_rows=df.shape[0],
-                    df_num_cols=df.shape[1],
-                    df_head=df.head(),
-                    all_metrics=all_metrics,
-                    image_id=image_id,
-                    object_id=object_id,
-                    data_type=data_type,
-                    START_CODE_TAG=START_CODE_TAG,
-                    END_CODE_TAG=END_CODE_TAG,
-                ),
-                question=magic_prompt,
-                start_code_tag=START_CODE_TAG,
-                end_code_tag=END_CODE_TAG,
-            )
+            if magic_prompt != "":
+                code_to_run = _get_chatgpt_response(
+                    instruct=instruct_message.format(
+                        today_date=date.today(),
+                        df_num_rows=df.shape[0],
+                        df_num_cols=df.shape[1],
+                        df_head=pd.concat([df.head(5), df[df["data_type"] == "object"][:5]], axis=0),
+                        all_metrics=all_metrics,
+                        image_id=image_id,
+                        object_id=object_id,
+                        data_type=data_type,
+                        START_CODE_TAG=START_CODE_TAG,
+                        END_CODE_TAG=END_CODE_TAG,
+                    ),
+                    question=magic_prompt,
+                    start_code_tag=START_CODE_TAG,
+                    end_code_tag=END_CODE_TAG,
+                    temperature=0.2,
+                )
 
-            count = 0
-            valid_code = False
-            while count < TOTAL_TRIAL:
-                try:
-                    exec(code_to_run, {"pd": pd, "df": df})
-                    valid_code = True
-                    break
-                except Exception as e:
-                    count += 1
-                    code_to_run = _get_chatgpt_response(
-                        instruct=error_correction_message.format(
-                            today_date=date.today(),
-                            df_num_rows=df.shape[0],
-                            df_num_cols=df.shape[1],
-                            df_head=df.head(),
-                            all_metrics=all_metrics,
-                            image_id=image_id,
-                            object_id=object_id,
-                            data_type=data_type,
-                            question=magic_prompt,
-                            code=code_to_run,
-                            error_returned=e,
-                            START_CODE_TAG=START_CODE_TAG,
-                            END_CODE_TAG=END_CODE_TAG,
-                        ),
-                        question="",
-                        start_code_tag=START_CODE_TAG,
-                        end_code_tag=END_CODE_TAG,
-                    )
+                count = 0
+                valid_code = False
+                while count < TOTAL_TRIAL:
+                    try:
+                        exec(code_to_run, {"pd": pd, "df": df})
+                        valid_code = True
+                        break
+                    except Exception as e:
+                        count += 1
+                        code_to_run = _get_chatgpt_response(
+                            instruct=error_correction_message.format(
+                                today_date=date.today(),
+                                df_num_rows=df.shape[0],
+                                df_num_cols=df.shape[1],
+                                df_head=pd.concat([df.head(5), df[df["data_type"] == "object"][:5]], axis=0),
+                                all_metrics=all_metrics,
+                                image_id=image_id,
+                                object_id=object_id,
+                                data_type=data_type,
+                                question=magic_prompt,
+                                code=code_to_run,
+                                error_returned=e,
+                                START_CODE_TAG=START_CODE_TAG,
+                                END_CODE_TAG=END_CODE_TAG,
+                            ),
+                            question="",
+                            start_code_tag=START_CODE_TAG,
+                            end_code_tag=END_CODE_TAG,
+                            temperature=0.6,
+                        )
 
-            if valid_code:
-                st.write(f"Generated code for this prompt (tried {count+1} times):")
-                st.code(code_to_run, language="python", line_numbers=True)
+                if valid_code:
+                    st.write(f"Generated code for this prompt (tried {count+1} times):")
+                    st.code(code_to_run, language="python", line_numbers=True)
 
-                return_object = _capture_return_object(code_to_run, df)
+                    return_object = _capture_return_object(code_to_run, df)
 
-                if return_object is None:
-                    st.write("The generated code could not produce output")
+                    if return_object is None:
+                        st.write("The generated code could not produce output")
+                    else:
+                        st.write(return_object)
                 else:
-                    st.write(return_object)
+                    st.write("A code could not be generated for this prompt")
             else:
-                st.write("A code could not be generated for this prompt")
-        else:
-            st.write("please provide a prompt to see the result")
+                st.write("please provide a prompt to see the result")
+
+        with model_performance_tab:
+            folders = [item.name for item in list(get_state().project_paths.predictions.glob("*"))]
+            if "classification" in folders:
+                st.write("\u2713 Classification predictions exist")
+                classification_performance_builder = ClassificationTypeBuilder()
+                st.write(classification_performance_builder._model_predictions)
 
     return render
