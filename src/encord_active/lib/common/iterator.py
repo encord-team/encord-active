@@ -17,6 +17,7 @@ from tqdm.auto import tqdm
 
 from encord_active.lib.common.utils import download_image
 from encord_active.lib.project import Project, ProjectFileStructure
+from encord_active.lib.project.metadata import fetch_project_info
 
 
 class Iterator(Sized):
@@ -92,7 +93,20 @@ class DatasetIterator(Iterator):
                             except (FileNotFoundError, UnidentifiedImageError) as ex:
                                 logger.error(f"Failed to open Image at: {img_path.path}: {ex}")
                         else:
-                            image = download_image(data_unit["data_link"])
+                            try:
+                                image = download_image(data_unit["data_link"])
+                            except (ConnectionError, FileNotFoundError, UnidentifiedImageError) as ex:
+                                # Attempt to regenerate the image url from encord project
+                                project = fetch_project_info(self.cache_dir)
+                                data_links = project.get_label_row(
+                                    label_hash,
+                                    get_signed_url=True,
+                                )
+                                if len(data_links) == 0 or data_links[0].data_link is None:
+                                    logger.error(f"Failed to re-download image for label: {label_hash}")
+                                    image = None
+                                else:
+                                    image = download_image(data_links[0].data_link)
                         yield data_unit, image
                     except KeyError:
                         logger.error(
