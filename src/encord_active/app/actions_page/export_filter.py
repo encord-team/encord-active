@@ -24,8 +24,10 @@ from encord_active.lib.db.helpers.tags import all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.utils import load_metric_dataframe
-from encord_active.lib.project.metadata import ProjectNotFound
+from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.project.metadata import ProjectNotFound, fetch_project_meta
 
 
 @dataclass
@@ -300,16 +302,15 @@ def actions():
         export_button_col,
         subset_button_col,
         delete_button_col,
-        edit_button_col,
+        relabel_button_col,
         augment_button_col,
     ) = st.columns((3, 3, 3, 3, 2, 2, 2))
     file_prefix = get_state().project_paths.project_dir.name
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
     render_generate_coco(generate_coco_col, file_prefix, filtered_df)
-    render_unimplemented_buttons(
-        delete_button_col, edit_button_col, augment_button_col, message_placeholder, current_form.set
-    )
+    render_relabel_button(relabel_button_col, get_state().project_paths, filtered_df)
+    render_unimplemented_buttons(delete_button_col, augment_button_col, message_placeholder, current_form.set)
 
     if filtered_row_count.value != row_count:
         filtered_row_count.set(row_count)
@@ -475,7 +476,6 @@ def render_export_button(
 
 def render_unimplemented_buttons(
     delete_button_column: DeltaGenerator,
-    edit_button_column: DeltaGenerator,
     augment_button_column: DeltaGenerator,
     message_placeholder: DeltaGenerator,
     set_current_form: Callable,
@@ -483,11 +483,8 @@ def render_unimplemented_buttons(
     delete_btn = delete_button_column.button(
         "👀 Review", help="Assign the filtered data for review on the Encord platform"
     )
-    edit_btn = edit_button_column.button(
-        "🖋 Re-label", help="Assign the filtered data for relabelling on the Encord platform"
-    )
     augment_btn = augment_button_column.button("➕ Augment", help="Augment your dataset based on the filtered data")
-    if any([delete_btn, edit_btn, augment_btn]):
+    if any([delete_btn, augment_btn]):
         set_current_form(CurrentForm.NONE)
         message_placeholder.markdown(
             f"""
@@ -552,6 +549,61 @@ def render_generate_csv(
             data=csv_content,
             file_name=f"{file_prefix}-filtered-{datetime.now().strftime('%Y_%m_%d %H_%M_%S')}.csv",
             help="Ensure you have generated an updated COCO file before downloading",
+        )
+
+
+def render_relabel_button(
+    render_column: DeltaGenerator,
+    pfs: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
+):
+    project_meta = fetch_project_meta(pfs.project_dir)
+    label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+
+    # Check the conditions to be able to send the filtered data to labeling on Encord (remote project)
+    is_disabled = False
+    extra_help_text = ""
+    if not project_meta.get("has_remote", False):
+        # Shouldn't work with local projects
+        is_disabled = True
+        extra_help_text = (
+            " Relabeling is only supported on workflow projects and this project is local."
+            " Please, first export the data to a workflow project in the Encord platform."
+        )
+
+    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
+        # Relabeling is not supported on non-workflow projects
+        is_disabled = True
+        extra_help_text = (
+            " Relabeling is only supported on workflow projects."
+            " Please, first upgrade your project so it uses workflows."
+        )
+
+    relabel_placeholder = render_column.empty()
+    relabel_data = relabel_placeholder.button(
+        "🖋 Re-label",
+        help="Assign the filtered data for relabeling in the Encord platform." + extra_help_text,
+        disabled=is_disabled,
+    )
+    if relabel_data:
+        label = st.empty()
+        label.text("Sending the selected data to labeling.")
+        update_progress_bar, clear_progress_bar = render_progress_bar()
+        update_progress_bar(0)  # Show progress bar
+
+        # Get the label rows to send to relabel
+        unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in filtered_df["identifier"].to_list()))
+
+        encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
+        for index, label_row in enumerate(encord_project.list_label_rows_v2(label_hashes=unique_lr_hashes), start=1):
+            label_row.workflow_reopen()
+            update_progress_bar(index / len(unique_lr_hashes))
+
+        clear_progress_bar()
+        label.empty()
+        label.text(
+            f"Data successfully sent to labeling in Encord Annotate.\n"
+            f"A total of {len(unique_lr_hashes)} tasks were assigned to the first labeling stage."
         )
 
 

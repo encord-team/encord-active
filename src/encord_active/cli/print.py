@@ -28,9 +28,10 @@ def print_encord_projects(
     > encord-active print encord-projects --query "%validation%"
 
     """
-    from encord_active.lib.encord.utils import get_projects_json
+    from encord_active.lib.encord.utils import ProjectQuery, get_projects_json
 
-    json_projects = get_projects_json(app_config.get_or_query_ssh_key(), query)
+    project_query = None if query is None else ProjectQuery(title_like=query)
+    json_projects = get_projects_json(app_config.get_or_query_ssh_key(), project_query)
     if state.get("json_output"):
         Path("./encord-projects.json").write_text(json_projects, encoding="utf-8")
     else:

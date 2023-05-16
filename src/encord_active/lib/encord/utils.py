@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from json import dumps as json_dumps
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TypedDict, Union
 
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
@@ -18,6 +19,17 @@ from encord_active.lib.labels.object import BoxShapes, ObjectShape
 BBOX_KEYS = {"x", "y", "h", "w"}
 
 
+class ProjectQuery(TypedDict, total=False):
+    title_eq: str
+    title_like: str
+    desc_eq: str
+    desc_like: str
+    created_before: Union[str, datetime]
+    created_after: Union[str, datetime]
+    edited_before: Union[str, datetime]
+    edited_after: Union[str, datetime]
+
+
 def get_client(ssh_key_path: Path):
     return EncordUserClient.create_with_ssh_private_key(
         ssh_key_path.read_text(encoding="utf-8"),
@@ -25,13 +37,22 @@ def get_client(ssh_key_path: Path):
     )
 
 
-def get_encord_projects(ssh_key_path: Path, query: Optional[str] = None) -> List[Project]:
+def get_encord_project(ssh_key_path: Union[str, Path], project_hash: str):
+    if isinstance(ssh_key_path, str):
+        ssh_key_path = Path(ssh_key_path)
     client = get_client(ssh_key_path)
-    projects: List[Project] = list(map(lambda x: x["project"], client.get_projects(title_like=query)))
+    return client.get_project(project_hash)
+
+
+def get_encord_projects(ssh_key_path: Path, query: Optional[ProjectQuery] = None) -> List[Project]:
+    client = get_client(ssh_key_path)
+    if query is None:  # Get all projects
+        query = ProjectQuery()
+    projects: List[Project] = list(map(lambda x: x["project"], client.get_projects(**query)))
     return projects
 
 
-def get_projects_json(ssh_key_path: Path, query: Optional[str] = None) -> str:
+def get_projects_json(ssh_key_path: Path, query: Optional[ProjectQuery] = None) -> str:
     projects = get_encord_projects(ssh_key_path, query)
     return json_dumps({p.project_hash: p.title for p in projects}, indent=2)
 
