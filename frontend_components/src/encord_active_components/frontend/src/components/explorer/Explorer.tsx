@@ -36,7 +36,7 @@ import {
 import { Assistant } from "./Assistant";
 
 export type Props = {
-  authToken?: string | null;
+  authToken: string | null;
   projectName: string;
   items: string[];
   scope: Scope;
