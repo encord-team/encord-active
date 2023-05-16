@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from encord_active.lib.embeddings.models import ImageEmbedder
+from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
 
 
 class CLIPEmbedder(ImageEmbedder):
