@@ -89,7 +89,8 @@ def get_du_size(data_unit: dict, image: Optional[Image.Image] = None) -> Optiona
         return int(data_unit["height"]), int(data_unit["width"])
 
     if image is not None:
-        return image.size
+        width, height = image.size
+        return height, width
 
     return None
 
@@ -443,7 +444,7 @@ def download_image(url: str) -> Image.Image:
     return Image.open(r.content)
 
 
-def convert_image_to_cv2(image: Image.Image) -> np.ndarray:
+def convert_image_bgr(image: Image.Image) -> np.ndarray:
     rgb_image = image.convert("RGB")
     np_image = np.array(rgb_image)
     ocv_image = np_image[:, :, ::-1].copy()
