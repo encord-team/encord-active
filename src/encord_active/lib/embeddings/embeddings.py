@@ -55,7 +55,7 @@ def assemble_object_batch(data_unit: dict, image: Image.Image) -> List[Image.Ima
 
 @torch.inference_mode()
 def generate_image_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
 ) -> List[LabelEmbedding]:
     start = time.perf_counter()
     if feature_extractor is None:
@@ -114,7 +114,7 @@ def generate_image_embeddings(
 
 @torch.inference_mode()
 def generate_object_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
 ) -> List[LabelEmbedding]:
     start = time.perf_counter()
     if feature_extractor is None:
@@ -165,7 +165,7 @@ def generate_object_embeddings(
 
 @torch.inference_mode()
 def generate_classification_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
 ) -> List[LabelEmbedding]:
     image_collections = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
@@ -196,8 +196,8 @@ def generate_classification_embeddings(
             collection
             for collection in image_collections
             if collection["data_unit"] == data_unit["data_hash"]
-            and collection["label_row"] == iterator.label_hash
-            and collection["frame"] == iterator.frame
+               and collection["label_row"] == iterator.label_hash
+               and collection["frame"] == iterator.frame
         ]
 
         if not matching_image_collections:
@@ -226,8 +226,8 @@ def generate_classification_embeddings(
             if ontology_class_hash in ontology_class_hash_to_index.keys() and classification_answers:
                 for classification_answer in classification_answers[classification_hash]["classifications"]:
                     if (
-                        classification_answer["featureHash"]
-                        == ontology_class_hash_to_question_hash[ontology_class_hash]
+                            classification_answer["featureHash"]
+                            == ontology_class_hash_to_question_hash[ontology_class_hash]
                     ):
                         answers.append(
                             ClassificationAnswer(
@@ -283,7 +283,8 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
 
 
 def generate_embeddings(
-    iterator: Iterator, embedding_type: EmbeddingType, target: Path, feature_extractor: Optional[ImageEmbedder] = None
+        iterator: Iterator, embedding_type: EmbeddingType, target: Path,
+        feature_extractor: Optional[ImageEmbedder] = None
 ):
     if embedding_type == EmbeddingType.IMAGE:
         embeddings = generate_image_embeddings(iterator, feature_extractor=feature_extractor)
