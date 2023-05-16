@@ -7,7 +7,10 @@ from pydantic import BaseModel
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.writer import StatisticsObserver
-from encord_active.lib.metrics.types import (
+
+# TODO: delete AnnotationType import on major version bump 👇
+from encord_active.lib.metrics.types import (  # pylint: disable=unused-import
+    AnnotationType,
     AnnotationTypeUnion,
     DataType,
     EmbeddingType,
