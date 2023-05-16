@@ -3,6 +3,7 @@
 import json
 
 import pandas as pd
+from PIL import Image
 
 from encord_active.lib.common.iterator import DatasetIterator
 from encord_active.lib.metrics.acquisition_functions import BaseModelWrapper
@@ -13,7 +14,8 @@ def get_data(
     project_fs: ProjectFileStructure, model: BaseModelWrapper, data_hashes: list[tuple[str, str]], class_name: str
 ):
     image_paths, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
-    X = model.prepare_data(image_paths)
+    images = [Image.open(image_path) for image_path in image_paths]
+    X = model.prepare_data(images)
     return X, y
 
 
