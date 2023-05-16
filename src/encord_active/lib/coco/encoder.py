@@ -813,24 +813,3 @@ def df_to_nested_dict(df: pd.DataFrame) -> dict:
                 )
                 frame_dict[object_hash].setdefault("tags", []).extend(tags)
     return metrics
-
-
-def load_label_rows(df: pd.DataFrame, data_dir: Path) -> dict[str, dict]:
-    """
-    Given a dataframe with selected samples, load the label row jsons into a dictionary.
-
-    Args:
-        df: dataframe with selected samples
-
-    Returns:
-        dict: Dictionary of label rows
-    """
-    label_rows: Dict[str, dict] = {}
-    for id_tmp in tqdm(df.identifier, desc="Loading labels"):
-        label_hash = id_tmp.split("_")[0]
-        if label_hash not in label_rows.keys():
-            # Read label json and add to dict
-            label_json = data_dir.joinpath(label_hash, "label_row.json")
-            with open(label_json, "r", encoding="utf-8") as f:
-                label_rows[label_hash] = json.load(f)
-    return label_rows

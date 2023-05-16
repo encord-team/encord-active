@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, NamedTuple, Optional, Union
+from typing import Iterator, List, NamedTuple, Optional, Union, Dict, Any
 
 from prisma import models
 from prisma.types import (
@@ -90,43 +90,51 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
 class DataUnitStructure(NamedTuple):
     hash: str
-    path: Path
 
 
 class LabelRowStructure:
-    def __init__(self, path: Path, mappings: dict[str, str]):
-        self.path: Path = path
+    def __init__(self, mappings: dict[str, str], label_hash: str, project: "ProjectFileStructure"):
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
+        self._label_hash = label_hash
+        self._project = project
 
     def __hash__(self) -> int:
-        return hash(self.path.as_posix())
+        return hash(self._label_hash)
 
     @property
-    def label_row_file(self) -> Path:
-        return self.path / "label_row.json"
-
-    @property
-    def images_dir(self) -> Path:
-        return self.path / "images"
+    def label_row_json(self) -> Dict[str, Any]:
+        with PrismaConnection(self._project) as conn:
+            entry = conn.labelrow.find_unique(
+                where={}
+            )
+            return json.loads(entry.label_row_json)
 
     def iter_data_unit(
         self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
     ) -> Iterator[DataUnitStructure]:
-        if data_unit_hash:
-            glob_string = self._mappings.get(data_unit_hash, data_unit_hash)
-        else:
-            glob_string = "*"
-        if frame is not None:
-            glob_string += f"_{frame}"
-        glob_string += ".*"
-        for du_path in self.images_dir.glob(glob_string):
-            old_du_hash, *_ = du_path.stem.split("_")
-            new_du_hash = self._rev_mappings.get(old_du_hash, old_du_hash)
-            yield DataUnitStructure(new_du_hash, du_path)
-
-    def is_present(self):
-        return self.path.is_dir()
+        with PrismaConnection(self._project) as conn:
+            where = {"label_hash": {"equals": self._label_hash}}
+            data_unit_hash = self._mappings.get(data_unit_hash, data_unit_hash)
+            if data_unit_hash is None:
+                where["data_hash"] = {"equals": data_unit_hash}
+            all_rows = conn.labelrow.find_many(where=where)
+            where = {
+                "label_row": {
+                    "in": all_rows,
+                }
+            }
+            if frame is not None:
+                where["frame"] = {
+                    "equals": [frame]
+                }
+            all_data_units = conn.dataunit.find_many(
+                where=where
+            )
+            for data_unit in all_data_units:
+                du_hash = data_unit.data_hash
+                new_du_hash = self._rev_mappings.get(du_hash, du_hash)
+                yield DataUnitStructure(new_du_hash)
 
 
 class ProjectFileStructure(BaseProjectFileStructure):
@@ -186,8 +194,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return self.project_dir / "project_meta.yaml"
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
-        path = self.data / self._mappings.get(label_hash, label_hash)
-        return LabelRowStructure(path=path, mappings=self._mappings)
+        label_hash = self._mappings.get(label_hash, label_hash)
+        path = self.data / label_hash
+        return LabelRowStructure(path=path, mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(
         self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
@@ -203,14 +212,11 @@ class ProjectFileStructure(BaseProjectFileStructure):
             return conn.labelrow.find_many()
 
     def iter_labels(self) -> Iterator[LabelRowStructure]:
-        DATA_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"
-        pattern = re.compile(DATA_HASH_REGEX)
-        for label_hash in self.data.iterdir():
-            # Avoid unexpected folders in the data directory like `.DS_Store`
-            if pattern.match(label_hash.name) is None:
-                continue
+        label_rows = self.label_rows()
+        for label_row in label_rows:
+            label_hash = label_row.label_hash
             path = self.data / label_hash
-            yield LabelRowStructure(path=path, mappings=self._mappings)
+            yield LabelRowStructure(path=path, mappings=self._mappings, label_hash=label_hash, project=self)
 
     @property
     def mappings(self) -> Path:

@@ -282,11 +282,8 @@ class Project:
             self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
 
     def __populate_label_row_metadata_defaults(self, lr_dict: dict):
-        img_dir = self.file_structure.label_row_structure(lr_dict["label_hash"]).images_dir
-        image_pth = img_dir.as_posix() if img_dir.is_dir() else ""
-
         return {
-            "data_link": image_pth,
+            "data_link": "FIXME_THIS_SHOULD_BE_SET_TO_SOMETHING",
             "dataset_title": "",
             "is_shadow_data": False,
             "number_of_frames": 1,
@@ -297,10 +294,8 @@ class Project:
 def download_label_row(
     label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
 ) -> LabelRow:
-    lr_structure = project_file_structure.label_row_structure(label_hash)
-    lr_structure.path.mkdir(parents=True, exist_ok=True)
-    label_row = try_execute(project.get_label_row, 5, {"uid": label_hash})
-    lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
+    label_row = try_execute(partial(project.get_label_row, get_signed_url=True), 5, {"uid": label_hash})
+    label_row_json = json.dumps(label_row, indent=2)
     with PrismaConnection(project_file_structure) as conn:
         conn.labelrow.upsert(
             where={"data_hash": label_row.data_hash},
@@ -312,14 +307,15 @@ def download_label_row(
                     "data_type": label_row.data_type,
                     "created_at": label_row.created_at,
                     "last_edited_at": label_row.last_edited_at,
-                    "location": lr_structure.label_row_file.as_posix(),
+                    "label_row_json": label_row_json,
+                    "location": None,
                 },
                 "update": {
                     "label_hash": label_row.label_hash,
                     "data_title": label_row.data_title,
                     "created_at": label_row.created_at,  # don't update this field if it's set in unannotated data
                     "last_edited_at": label_row.last_edited_at,
-                    "location": lr_structure.label_row_file.as_posix(),
+                    "label_row_json": label_row_json,
                 },
             },
         )
@@ -332,9 +328,6 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
     lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
-        suffix = f".{du['data_type'].split('/')[1]}"
-        destination = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        try_execute(download_file, 5, {"url": du["data_link"], "destination": destination})
 
         # Skip data units of type video from being added to the db (they are added after the video processing stage)
         if label_row.data_type == DataType.VIDEO.value:
@@ -354,12 +347,10 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
                         "data_hash": du["data_hash"],
                         "data_title": du["data_title"],
                         "frame": int(du["data_sequence"]),
-                        "location": destination.resolve().as_posix(),
                         "lr_data_hash": label_row.data_hash,
                     },
                     "update": {
                         "data_title": du["data_title"],
-                        "location": destination.resolve().as_posix(),
                     },
                 },
             )
@@ -368,7 +359,6 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
 def download_label_row_and_data(
     label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
 ) -> Optional[LabelRow]:
-
     label_row = download_label_row(label_hash, project, project_file_structure)
     download_data(label_row, project_file_structure)
     return label_row
@@ -390,24 +380,19 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
     :return: Whether the label row had a video to split.
     """
     if label_row.data_type == "video":
-        lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
-        suffix = f".{du['data_type'].split('/')[1]}"
-        video_path = (lr_structure.images_dir / du["data_hash"]).with_suffix(suffix)
-        sliced_frames, _ = slice_video_into_frames(video_path)
+        num_frames = 4  # FIXME: load this from encord dataset!!!
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:
             with conn.batch_() as batcher:
-                sliced_frames[-1] = video_path  # To include a reference to the video location in the DataUnit table
-                for frame_num, frame_path in sliced_frames.items():
+                for frame_num in range(num_frames):
                     batcher.dataunit.create(
                         data={
                             "data_hash": du["data_hash"],
                             "data_title": du["data_title"],
                             "frame": frame_num,
-                            "location": frame_path.resolve().as_posix(),
                             "lr_data_hash": label_row.data_hash,
                         }
                     )

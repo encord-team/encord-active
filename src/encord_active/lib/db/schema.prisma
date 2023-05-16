@@ -34,7 +34,8 @@ model DataUnit {
   data_hash    String
   data_title   String
   frame        Int
-  location     String
+  location     String?
+  data_link    String?
   lr_data_hash String
   label_row    LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
 
@@ -49,6 +50,7 @@ model LabelRow {
   data_type      String
   created_at     String
   last_edited_at String
-  location       String
+  location       String?
   data_units     DataUnit[]
+  label_row_json String
 }
