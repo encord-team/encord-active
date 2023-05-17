@@ -1,4 +1,5 @@
 import json
+import webbrowser
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
@@ -51,6 +52,8 @@ class CurrentForm(str, Enum):
     NONE = "none"
     EXPORT = "export"
     CLONE = "clone"
+    RELABEL_CONFIRM = "relabel_confirm"
+    RELABEL_SUCCESS = "relabel_success"
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -309,7 +312,7 @@ def actions():
 
     render_generate_csv(generate_csv_col, file_prefix, filtered_df)
     render_generate_coco(generate_coco_col, file_prefix, filtered_df)
-    render_relabel_button(relabel_button_col, get_state().project_paths, filtered_df)
+    render_relabel_button(relabel_button_col, get_state().project_paths, filtered_df, current_form)
     render_unimplemented_buttons(delete_button_col, augment_button_col, message_placeholder, current_form.set)
 
     if filtered_row_count.value != row_count:
@@ -556,6 +559,7 @@ def render_relabel_button(
     render_column: DeltaGenerator,
     pfs: ProjectFileStructure,
     filtered_df: pd.DataFrame,
+    current_form: UseState[CurrentForm],
 ):
     project_meta = fetch_project_meta(pfs.project_dir)
     label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
@@ -580,19 +584,40 @@ def render_relabel_button(
         )
 
     relabel_placeholder = render_column.empty()
-    relabel_data = relabel_placeholder.button(
+    relabel_placeholder.button(
         "🖋 Re-label",
         help="Assign the filtered data for relabeling in the Encord platform." + extra_help_text,
         disabled=is_disabled,
+        on_click=lambda: current_form.set(CurrentForm.RELABEL_CONFIRM),
     )
-    if relabel_data:
+
+    if current_form.value not in [CurrentForm.RELABEL_CONFIRM, CurrentForm.RELABEL_SUCCESS]:
+        return
+
+    # Get the label rows to submit for labeling
+    all_identifiers = filtered_df["identifier"].to_list()
+    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
+
+    if current_form.value == CurrentForm.RELABEL_CONFIRM:
+        confirmation_form_placeholder = st.empty()  # Show the confirmation form
+        with confirmation_form_placeholder.form("relabel_confirmation_form"):
+            confirmation_label = st.empty()
+            confirmation_label.text(
+                # Next line should stay commented while 'all_identifiers' has a wrong amount of items
+                # f"You have selected {len(all_identifiers)} items to submit for labeling in Encord Annotate.\n"
+                f"A total of {len(unique_lr_hashes)} tasks are going to be assigned to the first labeling stage.\n"
+                f"Are you sure you want to proceed?"
+            )
+
+            if not st.form_submit_button("Confirm"):
+                return None
+        confirmation_form_placeholder.empty()  # Disappear the form after clicking the confirmation button
+
+        # Start the submission of the selected label rows for labeling
         label = st.empty()
         label.text("Sending the selected data to labeling.")
         update_progress_bar, clear_progress_bar = render_progress_bar()
         update_progress_bar(0)  # Show progress bar
-
-        # Get the label rows to send to relabel
-        unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in filtered_df["identifier"].to_list()))
 
         encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
         for index, label_row in enumerate(encord_project.list_label_rows_v2(label_hashes=unique_lr_hashes), start=1):
@@ -601,10 +626,19 @@ def render_relabel_button(
 
         clear_progress_bar()
         label.empty()
-        label.text(
-            f"Data successfully sent to labeling in Encord Annotate.\n"
-            f"A total of {len(unique_lr_hashes)} tasks were assigned to the first labeling stage."
-        )
+        current_form.set(CurrentForm.RELABEL_SUCCESS)
+
+    if current_form.value == CurrentForm.RELABEL_SUCCESS:
+        # Display the success message and a button that directs to the project in Encord Annotate
+        with st.form("relabel_successful_operation_form"):
+            successful_operation_label = st.empty()
+            successful_operation_label.text(
+                f"Data successfully submitted for labeling in Encord Annotate.\n"
+                f"A total of {len(unique_lr_hashes)} tasks have been assigned to the first labeling stage."
+            )
+            if st.form_submit_button("Go to the project"):
+                encord_project_url = f"https://app.encord.com/projects/view/{project_meta['project_hash']}/summary"
+                webbrowser.open_new_tab(encord_project_url)
 
 
 def render_progress_bar():
