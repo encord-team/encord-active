@@ -17,16 +17,13 @@ import { useQuery } from "@tanstack/react-query";
 import { splitId } from "./id";
 import {
   DEFAULT_BASE_URL,
-  fetchHasPremiumFeatures,
-  fetchProjectItemIds,
-  fetchProjectMetrics,
-  fetchSimilarItems,
+  getApi,
   IdValue,
   Item,
   Point,
-  ProjectContext,
+  ApiContext,
   Scope,
-  useProjectQueries,
+  useApi,
 } from "./api";
 import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
 import { Pagination, usePagination } from "./Pagination";
@@ -39,6 +36,7 @@ import {
 import { Assistant } from "./Assistant";
 
 export type Props = {
+  authToken: string | null;
   projectName: string;
   items: string[];
   scope: Scope;
@@ -46,6 +44,7 @@ export type Props = {
 };
 
 export const Explorer = ({
+  authToken,
   projectName,
   items,
   scope,
@@ -66,23 +65,25 @@ export const Explorer = ({
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
 
-  const { data: hasPremiumFeatures } = useQuery(["hasPremiumFeatures"], () =>
-    fetchHasPremiumFeatures(baseUrl)
+  const api = getApi(projectName, authToken, baseUrl);
+
+  const { data: hasPremiumFeatures } = useQuery(
+    ["hasPremiumFeatures"],
+    api.fetchHasPremiumFeatures
   );
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
-    () =>
-      fetchSimilarItems(baseUrl, projectName)(similarityItem!, selectedMetric!),
+    () => api.fetchSimilarItems(similarityItem!, selectedMetric!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
   const { data: sortedItems } = useQuery(
     ["item_ids", selectedMetric],
-    () => fetchProjectItemIds(baseUrl, projectName)(selectedMetric!),
+    () => api.fetchProjectItemIds(selectedMetric!),
     { enabled: !!selectedMetric }
   );
   const { data: metrics } = useQuery(["metrics"], () =>
-    fetchProjectMetrics(baseUrl, projectName)(scope)
+    api.fetchProjectMetrics(scope)
   );
 
   const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
@@ -115,9 +116,7 @@ export const Explorer = ({
   }, [itemSet, sortedItems]);
 
   return (
-    <ProjectContext.Provider
-      value={{ projectName, hasPremiumFeatures, baseUrl }}
-    >
+    <ApiContext.Provider value={api}>
       <div ref={ref} className="w-full">
         {previewedItem && (
           <ItemPreview
@@ -229,6 +228,7 @@ export const Explorer = ({
           </div>
           <Assistant
             scope={scope}
+            disabled={hasPremiumFeatures}
             setResults={(ids) => {
               const idValues = new Map(
                 sortedAndFiltered.map(({ id, value }) => [id, value])
@@ -274,7 +274,7 @@ export const Explorer = ({
           )}
         </div>
       </div>
-    </ProjectContext.Provider>
+    </ApiContext.Provider>
   );
 };
 
@@ -292,7 +292,7 @@ const Embeddings = ({
   onReset: () => void;
 }) => {
   const { isLoading, data: scatteredEmbeddings } =
-    useProjectQueries().fetch2DEmbeddings(selectedMetric);
+    useApi().fetch2DEmbeddings(selectedMetric);
 
   const filtered = useMemo(() => {
     const ids = new Set(idValues.map(({ id }) => id));
@@ -328,7 +328,7 @@ const SimilarityItem = ({
   itemId: string;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
+  const { data, isLoading } = useApi().fetchItem(itemId);
 
   if (isLoading || !data) return null;
 
@@ -357,8 +357,8 @@ const ItemPreview = ({
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useProjectQueries().fetchItem(id);
-  const { mutate } = useProjectQueries().itemTagsMutation;
+  const { data, isLoading } = useApi().fetchItem(id);
+  const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spin />;
 
@@ -429,7 +429,7 @@ const GalleryItem = ({
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
-  const { data, isLoading } = useProjectQueries().fetchItem(itemId);
+  const { data, isLoading } = useApi().fetchItem(itemId);
 
   if (isLoading || !data)
     return (

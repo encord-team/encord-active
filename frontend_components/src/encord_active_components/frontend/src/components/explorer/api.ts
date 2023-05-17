@@ -81,142 +81,144 @@ const searchResultSchema = z.object({
 });
 export type SeachResult = z.infer<typeof searchResultSchema>;
 
-export const fetchHasPremiumFeatures = async (baseUrl = DEFAULT_BASE_URL) =>
-  z.boolean().parse(await (await fetch(`${baseUrl}/premium_available`)).json());
-
-export const fetchProject2DEmbeddings =
-  (baseUrl: string, projectName: string) => async (selectedMetric: string) => {
-    const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
-    try {
-      const response = await (await fetch(url)).json();
-      return Item2DEmbeddingSchema.array().parse(response);
-    } catch {
-      return [];
-    }
-  };
-
-export const fetchProjectMetrics =
-  (baseUrl: string, projectName: string) => async (scope: Scope) => {
-    const queryParams = new URLSearchParams({
-      ...(scope ? { scope } : {}),
-    });
-    const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
-    const response = await (await fetch(url)).json();
-    return z.string().array().parse(response);
-  };
-
-export const fetchProjectItemIds =
-  (baseUrl: string, projectName: string) => async (sortByMetric: string) => {
-    const queryParams = new URLSearchParams({
-      sort_by_metric: sortByMetric,
-    });
-
-    const url = `${baseUrl}/projects/${projectName}/items_id_by_metric?${queryParams}`;
-    const result = await (await fetch(url)).json();
-    return IdValueSchema.array().parse(result);
-  };
-
-export const fetchProjectItem =
-  (baseUrl: string, projectName: string) => async (id: string) => {
-    const { url, ...item } = await (
-      await fetch(
-        `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(id)}`
-      )
-    ).json();
-    return ItemSchema.parse({ ...item, url: `${baseUrl}/${url}` }) as Item;
-  };
-
-export const fetchedTaggedItems = async (
-  baseUrl: string,
-  projectName: string
-) =>
-  z
-    .record(GroupedTagsSchema)
-    .transform((record) => new Map(Object.entries(record)))
-    .parse(
-      await (
-        await fetch(`${baseUrl}/projects/${projectName}/tagged_items`)
-      ).json()
-    );
-
-export const fetchSimilarItems =
-  (baseUrl: string, projectName: string) =>
-  async (id: string, selectedMetric: string, pageSize?: number) => {
-    const queryParams = new URLSearchParams({
-      current_metric: selectedMetric,
-      ...(pageSize ? { page_size: pageSize.toString() } : {}),
-    });
-
-    const url = `${baseUrl}/projects/${projectName}/similarities/${encodeURIComponent(
-      id
-    )}?${queryParams} `;
-    const response = await fetch(url).then((res) => res.json());
-    return z.string().array().parse(response);
-  };
-
-export const fetchProjectTags = async (
-  baseUrl: string,
-  projectName: string
-) => {
-  return GroupedTagsSchema.parse(
-    await (await fetch(`${baseUrl}/projects/${projectName}/tags`)).json()
-  );
-};
-
 export const defaultTags = { data: [], label: [] };
 
-export const updateItemTags =
-  (baseUrl: string, projectName: string) =>
-  async (itemTags: { id: string; groupedTags: GroupedTags }[]) => {
-    const url = `${baseUrl}/projects/${projectName}/item_tags`;
-    const data = itemTags.map(({ id, groupedTags }) => ({
-      id,
-      grouped_tags: groupedTags,
-    }));
+export const getApi = (
+  projectName: string,
+  authToken?: string | null,
+  baseUrl = DEFAULT_BASE_URL
+) => {
+  const updateOptions = (options: Parameters<typeof fetch>[1]) => {
+    if (!authToken) return options;
 
-    return fetch(url, {
-      method: "put",
+    return {
+      ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...options?.headers,
+        Authorization: `Bearer ${authToken}`,
       },
-      body: JSON.stringify(data),
-    });
+    };
   };
 
-export const searchInProject =
-  (baseUrl: string, projectName: string) =>
-  async (
-    { scope, query, type }: { scope: Scope; query: string; type: SearchType },
-    signal?: AbortSignal
-  ) => {
-    const queryParams = new URLSearchParams({ query, scope, type });
+  const fetcher: typeof fetch = (url, options) =>
+    fetch(url, updateOptions(options));
 
-    const response = await fetch(
-      `${baseUrl}/projects/${projectName}/search?${queryParams}`,
-      {
-        signal,
+  return {
+    fetchHasPremiumFeatures: async () =>
+      z
+        .boolean()
+        .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
+    fetchProject2DEmbeddings: async (selectedMetric: string) => {
+      const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
+      try {
+        const response = await (await fetcher(url)).json();
+        return Item2DEmbeddingSchema.array().parse(response);
+      } catch {
+        return [];
       }
-    );
+    },
+    fetchProjectMetrics: async (scope: Scope) => {
+      const queryParams = new URLSearchParams({
+        ...(scope ? { scope } : {}),
+      });
+      const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
+      const response = await (await fetcher(url)).json();
+      return z.string().array().parse(response);
+    },
+    fetchProjectItemIds: async (sortByMetric: string) => {
+      const queryParams = new URLSearchParams({
+        sort_by_metric: sortByMetric,
+      });
 
-    return searchResultSchema.parse(await response.json());
+      const url = `${baseUrl}/projects/${projectName}/items_id_by_metric?${queryParams}`;
+      const result = await (await fetcher(url)).json();
+      return IdValueSchema.array().parse(result);
+    },
+    fetchProjectItem: async (id: string) => {
+      const { url, ...item } = await (
+        await fetcher(
+          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(id)}`
+        )
+      ).json();
+      return ItemSchema.parse({ ...item, url: `${baseUrl}/${url}` }) as Item;
+    },
+    fetchedTaggedItems: async () =>
+      z
+        .record(GroupedTagsSchema)
+        .transform((record) => new Map(Object.entries(record)))
+        .parse(
+          await (
+            await fetcher(`${baseUrl}/projects/${projectName}/tagged_items`)
+          ).json()
+        ),
+    fetchSimilarItems: async (
+      id: string,
+      selectedMetric: string,
+      pageSize?: number
+    ) => {
+      const queryParams = new URLSearchParams({
+        current_metric: selectedMetric,
+        ...(pageSize ? { page_size: pageSize.toString() } : {}),
+      });
+
+      const url = `${baseUrl}/projects/${projectName}/similarities/${encodeURIComponent(
+        id
+      )}?${queryParams} `;
+      const response = await fetcher(url).then((res) => res.json());
+      return z.string().array().parse(response);
+    },
+    fetchProjectTags: async () =>
+      GroupedTagsSchema.parse(
+        await (await fetcher(`${baseUrl}/projects/${projectName}/tags`)).json()
+      ),
+    updateItemTags: async (
+      itemTags: { id: string; groupedTags: GroupedTags }[]
+    ) => {
+      const url = `${baseUrl}/projects/${projectName}/item_tags`;
+      const data = itemTags.map(({ id, groupedTags }) => ({
+        id,
+        grouped_tags: groupedTags,
+      }));
+
+      return fetcher(url, {
+        method: "put",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    },
+    searchInProject: async (
+      { scope, query, type }: { scope: Scope; query: string; type: SearchType },
+      signal?: AbortSignal
+    ) => {
+      const queryParams = new URLSearchParams({ query, scope, type });
+
+      const response = await fetcher(
+        `${baseUrl}/projects/${projectName}/search?${queryParams}`,
+        {
+          signal,
+        }
+      );
+
+      return searchResultSchema.parse(await response.json());
+    },
   };
+};
 
-export const useProjectQueries = () => {
-  const projectContext = useContext(ProjectContext);
+export const useApi = () => {
+  const api = useContext(ApiContext);
 
-  if (!projectContext)
-    throw new Error(
-      "useProjectQueries has to be used within <ProjectContext.Provider>"
-    );
+  if (!api)
+    throw new Error("useApi has to be used within <ProjectContext.Provider>");
 
   const queryClient = useQueryClient();
-  const { projectName, baseUrl } = projectContext;
 
   return {
     itemTagsMutation: useMutation(
       ["updateItemTags"],
-      (...args: Parameters<ReturnType<typeof updateItemTags>>) =>
-        updateItemTags(baseUrl, projectName)(...args),
+      (...args: Parameters<API["updateItemTags"]>) =>
+        api.updateItemTags(...args),
       {
         onMutate: async (itemTagsList) => {
           Promise.all(
@@ -237,7 +239,7 @@ export const useProjectQueries = () => {
           await queryClient.cancelQueries(["tagged_items"]);
           const previousTaggedItems = queryClient.getQueryData([
             "tagged_items",
-          ]) as Awaited<ReturnType<typeof fetchedTaggedItems>>;
+          ]) as Awaited<ReturnType<API["fetchedTaggedItems"]>>;
           const nextTaggedItems = new Map(previousTaggedItems);
           itemTagsList.forEach(({ id, groupedTags }) =>
             nextTaggedItems.set(id, groupedTags)
@@ -287,36 +289,27 @@ export const useProjectQueries = () => {
       }
     ),
     fetchProjectTags: () =>
-      useQuery(["tags"], () => fetchProjectTags(baseUrl, projectName), {
+      useQuery(["tags"], api.fetchProjectTags, {
         initialData: defaultTags,
       }),
     fetchTaggedItems: () =>
-      useQuery(
-        ["tagged_items"],
-        () => fetchedTaggedItems(baseUrl, projectName),
-        {
-          initialData: new Map<string, GroupedTags>(),
-        }
-      ),
-    fetchItem: (...args: Parameters<ReturnType<typeof fetchProjectItem>>) =>
-      useQuery(["item", ...args], () =>
-        fetchProjectItem(baseUrl, projectName)(...args)
-      ),
+      useQuery(["tagged_items"], api.fetchedTaggedItems, {
+        initialData: new Map<string, GroupedTags>(),
+      }),
+    fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
+      useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
     fetch2DEmbeddings: (
-      selectedMetric: Parameters<ReturnType<typeof fetchProject2DEmbeddings>>[0]
+      selectedMetric: Parameters<API["fetchProject2DEmbeddings"]>[0]
     ) =>
       useQuery(
         ["2d_embeddings"],
-        () => fetchProject2DEmbeddings(baseUrl, projectName)(selectedMetric),
+        () => api.fetchProject2DEmbeddings(selectedMetric),
         { enabled: !!selectedMetric }
       ),
-    search: (...args: Parameters<ReturnType<typeof searchInProject>>) =>
-      searchInProject(baseUrl, projectName)(...args),
+    search: (...args: Parameters<API["searchInProject"]>) =>
+      api.searchInProject(...args),
   };
 };
 
-export const ProjectContext = createContext<{
-  projectName: string;
-  baseUrl: string;
-  hasPremiumFeatures?: boolean;
-} | null>(null);
+export type API = ReturnType<typeof getApi>;
+export const ApiContext = createContext<API | null>(null);

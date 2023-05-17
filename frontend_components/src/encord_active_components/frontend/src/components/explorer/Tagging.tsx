@@ -5,7 +5,7 @@ import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
 import { classy } from "../../helpers/classy";
-import { defaultTags, GroupedTags, useProjectQueries } from "./api";
+import { defaultTags, GroupedTags, useApi } from "./api";
 import { Spin } from "./Spinner";
 
 const TAG_GROUPS = [
@@ -37,10 +37,8 @@ export const TaggingDropdown = ({
 );
 
 export const BulkTaggingForm = ({ items }: { items: string[] }) => {
-  const { isLoading, data: taggedItems } =
-    useProjectQueries().fetchTaggedItems();
-  const { mutate, isLoading: isMutating } =
-    useProjectQueries().itemTagsMutation;
+  const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
+  const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
 
   const itemSet = new Set(items);
   const { data: allDataTags, label: allLabelTags } = [...taggedItems]
@@ -119,7 +117,7 @@ export const TaggingForm = ({
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
-  const { data: allTags } = useProjectQueries().fetchProjectTags();
+  const { data: allTags } = useApi().fetchProjectTags();
 
   const [selectedTab, setTab] = useState<typeof TAG_GROUPS[number]>(
     TAG_GROUPS[0]

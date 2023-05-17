@@ -1,14 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useContext, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import {
-  ProjectContext,
-  Scope,
-  searchInProject,
-  searchTypeOptions,
-  useProjectQueries,
-} from "./api";
+import { API, Scope, searchTypeOptions, useApi } from "./api";
 import { Spin } from "./Spinner";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
@@ -16,19 +10,19 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 export const Assistant = ({
   scope,
   setResults,
+  disabled = false,
 }: {
   scope: Scope;
   setResults: (
-    args: Awaited<ReturnType<ReturnType<typeof searchInProject>>>["ids"]
+    args: Awaited<ReturnType<API["searchInProject"]>>["ids"]
   ) => void;
+  disabled?: boolean;
 }) => {
   const client = useQueryClient();
   const formRef = useRef<HTMLFormElement>(null);
   const [parent, _] = useAutoAnimate();
-  const project = useContext(ProjectContext);
-  const disabled = !project?.hasPremiumFeatures;
 
-  const search = useProjectQueries().search;
+  const search = useApi().search;
 
   const { refetch, isFetching, data } = useQuery(
     ["search"],
