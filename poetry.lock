@@ -1472,7 +1472,7 @@ setuptools = "*"
 
 [[package]]
 name = "nodejs-bin"
-version = "18.4.0a4"
+version = "16.15.1a4"
 description = "Node.js is an open-source, cross-platform, back-end JavaScript runtime environment that runs on the V8 engine and executes JavaScript code outside a web browser."
 category = "main"
 optional = false
@@ -3018,7 +3018,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "b66da6cf523078fcb1a65a8167ff8e69c408cb46665ac44d28517b08a35a428d"
+content-hash = "c0172566ba0e7ef7ec3e9f8250da510cab6772429acabb53e03e2ea893b60728"
 
 [metadata.files]
 aiofiles = [
@@ -4033,13 +4033,13 @@ nodeenv = [
     {file = "nodeenv-1.7.0.tar.gz", hash = "sha256:e0e7f7dfb85fc5394c6fe1e8fa98131a2473e04311a45afb6508f7cf1836fa2b"},
 ]
 nodejs-bin = [
-    {file = "nodejs_bin-18.4.0a4-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:16cb1abf7fe8c11c574e1e474d9f934a0df49a480290eae6e733d8bb09512e22"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:068ca987ed83ea1123775fafe5dc22d8f2ff920d7d31571e1bfe6fb1093833eb"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:06cfeaa4d26eec94d8edb9927525ce94eb96dadc81f7d1daed42d1a7d003a4c9"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:431ee3529f4fb226ddcfd4f14cb37e7df31238c42dfd051f4bf8f0c21029b133"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:21f1f77ddc8fe05353bb6d6ee8e5a62edb3a8dcdb2740a5f9307fd8d9eef6691"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-win32.whl", hash = "sha256:59671fdc563dabb8be8a0b6dae4169d780482b3c9e0fba3f9aa2b7ee8d2261ac"},
-    {file = "nodejs_bin-18.4.0a4-py3-none-win_amd64.whl", hash = "sha256:cbd509218b4b17f75ee7841f9c21d5cacc1626d3b823a652a6627dbad18228ec"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:842bed2e9d70b4f51a3a8bdfa95a1eb457c5a4d2698ff98afd871865e4b5e858"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:609a69949e14ada9f5f83d93687aac8f173e474f22b2e87b817058567e672994"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:7895b70f25ab39bb1165ad7f2b3cc14d51c7c98aa19edde9ffc41470c8fa445e"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8f7e64d8e276e77c2d9a1285472d736c0fa300fcc6932d0ba7f5f1482358e23b"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e6d3b949e96c0bc1598495fd913b150f79fec9521774f3aea4da721f5080e350"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-win32.whl", hash = "sha256:688681b713b552e30564a14ee9e1157d479e845cab66c232c573f784a9eacacd"},
+    {file = "nodejs_bin-16.15.1a4-py3-none-win_amd64.whl", hash = "sha256:77f56ff99d8055742cb6a0e5f49352280cc0007c3e656592bdde8031b30a795f"},
 ]
 notebook = [
     {file = "notebook-6.5.4-py3-none-any.whl", hash = "sha256:dd17e78aefe64c768737b32bf171c1c766666a21cc79a44d37a1700771cab56f"},
