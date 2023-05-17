@@ -205,7 +205,7 @@ def import_local_project(
         run_metrics_by_embedding_type,
     )
     from encord_active.lib.metrics.heuristic.img_features import AreaMetric
-    from encord_active.lib.metrics.metric import EmbeddingType
+    from encord_active.lib.metrics.types import EmbeddingType
     from encord_active.lib.project.local import (
         NoFilesFoundError,
         ProjectExistsError,

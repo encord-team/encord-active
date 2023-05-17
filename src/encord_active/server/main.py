@@ -122,7 +122,7 @@ def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[Metr
 @app.get("/projects/{project}/2d_embeddings/{current_metric}")
 def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
     embedding_type = get_metric_embedding_type(project, current_metric)
-    embeddings_df = get_2d_embedding_data(project.embeddings, embedding_type)
+    embeddings_df = get_2d_embedding_data(project, embedding_type)
 
     if embeddings_df is None:
         raise HTTPException(

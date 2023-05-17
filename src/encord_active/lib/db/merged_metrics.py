@@ -8,7 +8,7 @@ import pandas as pd
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.labels.classification import ClassificationType
-from encord_active.lib.metrics.metric import DataType, EmbeddingType
+from encord_active.lib.metrics.types import DataType, EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_metadata
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
