@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Re-labeling
 
-**Learn how to send your data to labeling in Encord Annotate**
+**Learn how to submit your data for labeling in Encord Annotate**
 
 When examining your project data, you might come across labels that appear incorrect or are missing altogether.
 With Encord Active, you have the ability to highlight such data and seamlessly transfer it to Encord Annotate, at the dedicated labeling stage for your project.
