@@ -16,8 +16,15 @@ from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.metrics.metric import Metric, SimpleMetric, StatsMetadata
-from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    EmbeddingType,
+    Metric,
+    MetricType,
+    SimpleMetric,
+    StatsMetadata,
+)
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
@@ -26,9 +33,7 @@ from encord_active.lib.project.metadata import fetch_project_info
 logger = logger.opt(colors=True)
 
 
-def get_metrics(
-    module: Optional[Union[str, list[str]]] = None, filter_func: Callable[[Type[Metric]], bool] = lambda x: True
-):
+def get_metrics(module: Optional[Union[str, list[str]]] = None, filter_func=lambda x: True):
     if module is None:
         module = ["geometric", "heuristic", "semantic"]
     elif isinstance(module, str):
@@ -78,6 +83,18 @@ def run_metrics_by_embedding_type(embedding_type: EmbeddingType, **kwargs):
     execute_metrics(metrics, **kwargs)
 
 
+def run_all_heuristic_metrics():
+    run_metrics(filter_func=lambda x: x.metadata.metric_type == MetricType.HEURISTIC)
+
+
+def run_all_image_metrics():
+    run_metrics(filter_func=lambda x: x.metadata.data_type == DataType.IMAGE)
+
+
+def run_all_polygon_metrics():
+    run_metrics(filter_func=lambda x: x.metadata.annotation_type in [AnnotationType.OBJECT.POLYGON, AnnotationType.ALL])
+
+
 def run_all_prediction_metrics(**kwargs):
     # Return all metrics that apply according to the prediction type.
     def filter_objects(m: Type[Metric]):
@@ -92,7 +109,7 @@ def run_all_prediction_metrics(**kwargs):
         else:
             return isinstance(at, ObjectShape)
 
-    def filter_classifications(m: Type[Metric]) -> bool:
+    def filter_classifications(m: Type[Metric]):
         at = m().metadata.annotation_type  # type: ignore
 
         if isinstance(at, list):
@@ -111,7 +128,7 @@ def run_all_prediction_metrics(**kwargs):
         raise ValueError(f"Undefined prediction type {kwargs['prediction_type']}")
 
 
-def run_metrics(filter_func: Callable[[Type[Metric]], bool] = lambda x: True, **kwargs):
+def run_metrics(filter_func: Callable[[Metric], bool] = lambda x: True, **kwargs):
     metrics = list(map(load_metric, get_metrics(filter_func=filter_func)))
     execute_metrics(metrics, **kwargs)
 

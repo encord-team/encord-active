@@ -10,7 +10,7 @@ from shapely.geometry import Polygon
 from encord_active.lib.db.helpers.tags import to_grouped_tags
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricScope,
     get_embedding_type,

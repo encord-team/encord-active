@@ -10,10 +10,9 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
-from encord_active.lib.embeddings.embeddings import get_embeddings
+from encord_active.lib.embeddings.cnn import get_cnn_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
-from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
+from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
@@ -88,7 +87,7 @@ This metric gives each image a score that shows each image's uniqueness.
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if self.metadata.embedding_type:
-            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
@@ -96,6 +95,7 @@ This metric gives each image a score that shows each image's uniqueness.
             return
 
         if len(self.collections) > 0:
+
             embeddings, db_index = self.convert_to_index()
             # For more information why we set the below threshold
             # see here: https://github.com/facebookresearch/faiss/wiki/Implementation-notes#matrix-multiplication-to-do-many-l2-distance-computations
@@ -112,10 +112,10 @@ This metric gives each image a score that shows each image's uniqueness.
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
 
-        for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
-            data_unit_info = self.scores.get(data_unit["data_hash"])
-            if data_unit_info is not None:
-                writer.write(
-                    score=float(data_unit_info.score),
-                    description=data_unit_info.description,
-                )
+        for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
+
+            data_unit_info = self.scores[data_unit["data_hash"]]
+            writer.write(
+                score=float(data_unit_info.score),
+                description=data_unit_info.description,
+            )

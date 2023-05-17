@@ -4,8 +4,12 @@ from sklearn import preprocessing
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+)
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)

@@ -13,7 +13,7 @@ from encord_active.lib.dataset.summary_utils import AnnotationStatistics
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics, initialize_merged_metrics
 from encord_active.lib.embeddings.utils import Embedding2DSchema
-from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData, MetricSchema
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
