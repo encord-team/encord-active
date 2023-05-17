@@ -51,7 +51,8 @@ Return the python code (do not import anything) and make sure to prefix the requ
 {START_CODE_TAG} and suffix the code with {END_CODE_TAG} to get the answer to the following question. 
 The code script between prefix {START_CODE_TAG} and suffix {END_CODE_TAG} should be directly evaluated with 
 python's builtin exec method. 
-Do not create a new dataframe, assume that it is already created. 
+Do not use try-except blocks.
+Do not create a new dataframe df, assume that it is already created. 
 The last line of the code should print the result:
 """
 
@@ -77,7 +78,8 @@ Return the python code (do not import anything) and make sure to prefix the requ
 {START_CODE_TAG} and suffix the code with {END_CODE_TAG} to get the answer to the question. 
 The code script between prefix {START_CODE_TAG} and suffix {END_CODE_TAG} should be directly evaluated with 
 python's builtin exec method. 
-Do not create a new dataframe, assume that it is already created. 
+Do not use try-except blocks.
+Do not create a new dataframe df, assume that it is already created. 
 The last line of the code should print the result:
 """
 
@@ -93,7 +95,8 @@ Return the python code (do not import anything) and make sure to prefix the requ
 {START_CODE_TAG} and suffix the code with {END_CODE_TAG} to get the answer to the following question. 
 The code script between prefix {START_CODE_TAG} and suffix {END_CODE_TAG} should be directly evaluated with 
 python's builtin exec method. 
-Do not create a new dataframe, assume that it is already created. 
+Do not use try-except blocks.
+Do not create a new dataframe df, assume that it is already created. 
 The last line of the code should print the result:
 """
 
@@ -119,7 +122,8 @@ Return the python code (do not import anything) and make sure to prefix the requ
 {START_CODE_TAG} and suffix the code with {END_CODE_TAG} to get the answer to the question. 
 The code script between prefix {START_CODE_TAG} and suffix {END_CODE_TAG} should be directly evaluated with 
 python's builtin exec method. 
-Do not create a new dataframe, assume that it is already created. 
+Do not use try-except blocks.
+Do not create a new dataframe df, assume that it is already created. 
 The last line of the code should print the result:
 """
 
@@ -153,7 +157,7 @@ def magic_commands():
         return result
 
     def _capture_return_object(code_to_run: str, df: pd.DataFrame) -> Any:
-        exec(code_to_run)
+        exec(code_to_run, {"pd": pd, "df": df})
         lines = code_to_run.strip().split("\n")
         last_line = lines[-1].strip()
         if last_line.startswith("print(") and last_line.endswith(")"):
@@ -165,6 +169,13 @@ def magic_commands():
             return eval(last_line)
         except Exception:  # pylint: disable=W0718
             return None
+
+    def _clean_labels_from_column_names(df: pd.DataFrame) -> pd.DataFrame:
+        original_columns = list(df.columns)
+        for column in original_columns:
+            df = df.rename(columns={column: column.replace(" (F)", "")})
+            df = df.rename(columns={column: column.replace(" (P)", "")})
+        return df
 
     def render():
         setup_page()
@@ -264,15 +275,13 @@ def magic_commands():
                         "is_true_positive": correct_prediction,
                     }
                 )
+                df = _clean_labels_from_column_names(df)
 
                 st.write("Top 5 rows")
                 st.dataframe(df.head(5))
                 magic_prompt = st.text_input("What do you want to get?", key="prompt_classification_performance")
 
                 if magic_prompt != "":
-
-                    # code_to_run = get_code
-
                     code_to_run = _get_chatgpt_response(
                         instruct=instruct_message_classification_performance.format(
                             today_date=date.today(),
