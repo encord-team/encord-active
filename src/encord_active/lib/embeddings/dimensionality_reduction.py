@@ -9,11 +9,11 @@ import umap
 from pandera.typing import DataFrame
 
 from encord_active.lib.embeddings.utils import (
+    EMBEDDING_REDUCED_TO_FILENAME,
     Embedding2DSchema,
     EmbeddingType,
     load_collections,
 )
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 warnings.filterwarnings("ignore", "n_neighbors is larger than the dataset size", category=UserWarning)
 MIN_SAMPLES = 4  # The number 4 is experimentally determined, less than this creates error for UMAP calculation
@@ -23,9 +23,8 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     """
     This function transforms high dimensional embedding data to 2D and saves it to a file
     """
-    pfs = ProjectFileStructure(project_dir)
 
-    collections = load_collections(embedding_type, pfs.embeddings)
+    collections = load_collections(embedding_type, project_dir / "embeddings")
     if not collections:
         return
 
@@ -63,14 +62,15 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
         embeddings_2d_collection["x"].append(embeddings_2d[counter, 0])
         embeddings_2d_collection["y"].append(embeddings_2d[counter, 1])
 
-    target_path = pfs.get_embeddings_file(embedding_type, reduced=True)
+    target_path = Path(project_dir / "embeddings" / EMBEDDING_REDUCED_TO_FILENAME[embedding_type])
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
 
 
 def get_2d_embedding_data(
-    project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType
+    embeddings_path: Path, embedding_type: EmbeddingType
 ) -> Optional[DataFrame[Embedding2DSchema]]:
-    embedding_file_path = project_file_structure.get_embeddings_file(embedding_type, reduced=True)
+
+    embedding_file_path = embeddings_path / EMBEDDING_REDUCED_TO_FILENAME[embedding_type]
 
     if not embedding_file_path.exists():
         return None

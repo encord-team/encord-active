@@ -21,7 +21,7 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
-from encord_active.lib.metrics.types import AnnotationType
+from encord_active.lib.metrics.metric import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
 from encord_active.lib.model_predictions.writer import (
     iterate_classification_attribute_options,

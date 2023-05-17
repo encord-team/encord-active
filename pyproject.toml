@@ -3,39 +3,31 @@ name = "encord-active"
 version = "v0.1.58"
 description = "Enable users to improve machine learning models in an active learning fashion via data, label, and model quality."
 authors = ["Cord Technologies Limited <hello@encord.com>"]
-classifiers = [
-  "Environment :: Console",
-  "Environment :: Web Environment",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Education",
-  "Intended Audience :: Information Technology",
-  "Intended Audience :: Science/Research",
-  "Operating System :: OS Independent",
-  "Topic :: Scientific/Engineering",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
-  "Topic :: Scientific/Engineering :: Information Analysis",
-  "Topic :: Software Development",
-  "Topic :: Software Development :: Quality Assurance",
+classifiers=[
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Quality Assurance"
 ]
 documentation = "https://docs.encord.com/active/docs"
 homepage = "https://encord.com/encord-active/"
-keywords = [
-  "encord",
-  "active",
-  "machine",
-  "learning",
-  "data",
-  "label",
-  "model",
-  "quality",
-  "test",
-]
+keywords = ["encord", "active", "machine", "learning", "data", "label", "model", "quality", "test"]
 readme = "README.md"
 repository = "https://github.com/encord-team/encord-active"
 
 include = ['.env']
 
-packages = [{ include = "encord_active", from = "src" }]
+packages = [
+    { include = "encord_active", from = "src" },
+]
 
 license = "Apache-2.0"
 
@@ -52,6 +44,8 @@ natsort = "^8.1.0"
 pandas = "^1.4.3"
 shapely = "^1.7.0"
 watchdog = "^2.1.9"
+torch = "^1.12.1"
+torchvision = "^0.13.1"
 faiss-cpu = "^1.7.2"
 matplotlib = "^3.5.3"
 scikit-learn = "^1.0.1"
@@ -69,28 +63,23 @@ rich = "^12.6.0"
 PyYAML = "^6.0"
 toml = "^0.10.2"
 pydantic = "^1.10.2"
-pycocotools = { version = "^2.0.6", optional = true }
+pycocotools = {version = "^2.0.6", optional = true}
 psutil = "^5.9.4"
 pandera = "^0.13.4"
-jupyterlab = { version = "^3.5.2", optional = true }
-ipywidgets = { version = "^8.0.4", optional = true }
+jupyterlab = {version = "^3.5.2", optional = true}
+ipywidgets = {version = "^8.0.4", optional = true}
 inquirerpy = "^0.3.4"
 statsmodels = "^0.13.5"
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
 encord-active-components = "^0.0.12"
-llvmlite = "^0.39.1"                                     # Pinning, as lower versions conflict with other libs
+llvmlite = "^0.39.1" # Pinning, as lower versions conflict with other libs
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.0"
-uvicorn = { extras = ["standard"], version = "^0.21.1" }
+uvicorn = {extras = ["standard"], version = "^0.21.1"}
 nodejs-bin = "^18.4.0a4"
 pyjwt = "^2.7.0"
-torch = "^2.0.0"
-clip = { git = "https://github.com/openai/CLIP.git" }
-torchvision = "^0.15.2"
-ftfy = "^6.1.1"
-regex = "^2023.5.5"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

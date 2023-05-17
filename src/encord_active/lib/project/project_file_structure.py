@@ -16,19 +16,6 @@ from prisma.types import (
 
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
-from encord_active.lib.metrics.types import EmbeddingType
-
-EMBEDDING_TYPE_TO_FILENAME = {
-    EmbeddingType.IMAGE: "cnn_images.pkl",
-    EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
-    EmbeddingType.OBJECT: "cnn_objects.pkl",
-}
-
-EMBEDDING_REDUCED_TO_FILENAME = {
-    EmbeddingType.IMAGE: "cnn_images_reduced.pkl",
-    EmbeddingType.CLASSIFICATION: "cnn_classifications_reduced.pkl",
-    EmbeddingType.OBJECT: "cnn_objects_reduced.pkl",
-}
 
 
 # To be deprecated when Encord Active version is >= 0.1.60.
@@ -152,10 +139,6 @@ class ProjectFileStructure(BaseProjectFileStructure):
     @property
     def embeddings(self) -> Path:
         return self.project_dir / "embeddings"
-
-    def get_embeddings_file(self, type_: EmbeddingType, reduced: bool = False) -> Path:
-        lookup = EMBEDDING_REDUCED_TO_FILENAME if reduced else EMBEDDING_TYPE_TO_FILENAME
-        return self.embeddings / lookup[type_]
 
     @property
     def predictions(self) -> Path:

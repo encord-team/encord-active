@@ -10,12 +10,12 @@ from torch import nn
 from torch.nn import LeakyReLU
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.embeddings import get_embeddings
-from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import (
+from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
+    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter
@@ -181,7 +181,7 @@ def get_batches_and_model(resnet_embeddings_df):
 def preliminaries(iterator):
     model_path = os.path.join(iterator.cache_dir, "models", f"{Path(__file__).stem}_classifier.pt")
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
-    resnet_embeddings_df = get_embeddings(iterator, embedding_type=EmbeddingType.OBJECT, force=False)
+    resnet_embeddings_df = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.OBJECT, force=False)
     batches, classifier, idx_to_counts, name_to_idx = get_batches_and_model(resnet_embeddings_df)
     if not os.path.isfile(model_path):
         train_model(classifier, model_path, batches, idx_to_counts, name_to_idx)

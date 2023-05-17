@@ -5,8 +5,13 @@ import numpy as np
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_du_size
-from encord_active.lib.metrics.metric import Metric, SimpleMetric
-from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
+from encord_active.lib.metrics.metric import (
+    AnnotationType,
+    DataType,
+    Metric,
+    MetricType,
+    SimpleMetric,
+)
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 
@@ -39,6 +44,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             saturation_filters=[50, 255],
             value_filters=[20, 255],
         ):
+
             super().__init__(
                 title=f"{color_name} Values".title(),
                 short_description=f"Ranks images by how {color_name.lower()} the average value of the image is.",

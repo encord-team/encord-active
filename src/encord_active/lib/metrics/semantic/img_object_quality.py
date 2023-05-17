@@ -10,16 +10,16 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
+from encord_active.lib.embeddings.cnn import get_cnn_embeddings
 from encord_active.lib.embeddings.dimensionality_reduction import (
     generate_2d_embedding_data,
 )
-from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
-from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import (
+from encord_active.lib.metrics.metric import (
     AnnotationType,
     DataType,
     EmbeddingType,
+    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.writer import CSVMetricWriter
@@ -117,7 +117,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             return
 
         if self.metadata.embedding_type:
-            collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"

@@ -14,7 +14,7 @@ from encord_active.lib.metrics.execute import (
     execute_metrics,
     get_metrics_by_embedding_type,
 )
-from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.metric import EmbeddingType
 from encord_active.lib.project.project import Project
 
 

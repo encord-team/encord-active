@@ -1,37 +1,71 @@
+import logging
+import os
 import pickle
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
+import torchvision.transforms as torch_transforms
 from encord.objects.common import PropertyType
 from encord.project_ontology.object_type import ObjectShape
-from loguru import logger
 from PIL import Image
+from torch import nn
+from torchvision.models import EfficientNet_V2_S_Weights, efficientnet_v2_s
+from torchvision.models.feature_extraction import create_feature_extractor
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
-from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
-from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
-from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
-from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.lib.embeddings.utils import (
+    EMBEDDING_TYPE_TO_FILENAME,
+    ClassificationAnswer,
+    LabelEmbedding,
+)
+from encord_active.lib.metrics.metric import EmbeddingType
+
+logger = logging.getLogger(__name__)
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def get_default_embedder() -> ImageEmbedder:
-    return CLIPEmbedder()
+def get_model_and_transforms() -> Tuple[nn.Module, nn.Module]:
+    weights = EfficientNet_V2_S_Weights.DEFAULT
+    model = efficientnet_v2_s(weights=weights).to(DEVICE)
+    embedding_extractor = create_feature_extractor(model, return_nodes={"avgpool": "my_avgpool"})
+    for p in embedding_extractor.parameters():
+        p.requires_grad = False
+    embedding_extractor.eval()
+    return embedding_extractor, weights.transforms()
 
 
-def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
+def adjust_image_channels(image: torch.Tensor) -> torch.Tensor:
+    if image.shape[0] == 4:
+        image = image[:3]
+    elif image.shape[0] < 3:
+        image = image.repeat(3, 1, 1)
+
+    return image
+
+
+def image_path_to_tensor(image_path: Path) -> torch.Tensor:
+    image = Image.open(image_path.as_posix())
+    transform = torch_transforms.ToTensor()
+    image = transform(image)
+
+    image = adjust_image_channels(image)
+
+    return image
+
+
+def assemble_object_batch(data_unit: dict, img_path: Path, transforms: Optional[nn.Module]):
+    if transforms is None:
+        transforms = torch.nn.Sequential()
+
     try:
-        image = np.asarray(Image.open(img_path).convert("RGB"))
-    except OSError:
-        logger.warning(f"Image with path {img_path} seems to be broken. Skipping.")
-        return []
-
-    img_h, img_w, *_ = image.shape
-    img_batch: List[Image.Image] = []
+        image = image_path_to_tensor(img_path)
+    except Exception:
+        return None
+    img_batch: List[torch.Tensor] = []
 
     for obj in data_unit["labels"].get("objects", []):
         if obj["shape"] in [
@@ -42,8 +76,8 @@ def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
             try:
                 out = get_bbox_from_encord_label_object(
                     obj,
-                    w=img_w,
-                    h=img_h,
+                    image.shape[2],
+                    image.shape[1],
                 )
 
                 if out is None:
@@ -51,55 +85,25 @@ def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
                 x, y, w, h = out
 
                 img_patch = image[:, y : y + h, x : x + w]
-                img_batch.append(Image.fromarray(img_patch))
+                img_batch.append(transforms(img_patch))
             except Exception as e:
                 logger.warning(f"Error with object {obj['objectHash']}: {e}")
                 continue
-    return img_batch
+    return torch.stack(img_batch).to(DEVICE) if len(img_batch) > 0 else None
 
 
 @torch.inference_mode()
-def generate_image_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
-) -> List[LabelEmbedding]:
+def generate_cnn_image_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
     start = time.perf_counter()
-    if feature_extractor is None:
-        feature_extractor = get_default_embedder()
-
-    raw_embeddings: list[np.ndarray] = []
-    batch = []
-    skip: set[int] = set()
-    for i, (data_unit, img_pth) in enumerate(iterator.iterate(desc="Embedding image data.")):
-        if img_pth is None:
-            skip.add(i)
-            continue
-        try:
-            batch.append(Image.open(img_pth).convert("RGB"))
-        except OSError:
-            logger.warning(f"Image with path {img_pth} seems to be broken. Skipping.")
-            skip.add(i)
-            continue
-
-        if len(batch) >= batch_size:
-            raw_embeddings.append(feature_extractor.embed_images(batch))
-            batch = []
-
-    if batch:
-        raw_embeddings.append(feature_extractor.embed_images(batch))
-
-    if len(raw_embeddings) > 1:
-        raw_np_embeddings = np.concatenate(raw_embeddings)
-    else:
-        raw_np_embeddings = raw_embeddings[0]
+    feature_extractor, transforms = get_model_and_transforms()
 
     collections: List[LabelEmbedding] = []
-    offset = 0
-    for i, (data_unit, img_pth) in enumerate(iterator.iterate(desc="Storing embeddings.")):
-        if i in skip:
-            offset += 1
+    for data_unit, img_pth in iterator.iterate(desc="Embedding image data."):
+        embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
+
+        if embedding is None:
             continue
 
-        embedding = raw_np_embeddings[i - offset]
         entry = LabelEmbedding(
             url=data_unit["data_link"],
             label_row=iterator.label_hash,
@@ -123,48 +127,45 @@ def generate_image_embeddings(
 
 
 @torch.inference_mode()
-def generate_object_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
-) -> List[LabelEmbedding]:
+def generate_cnn_object_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
     start = time.perf_counter()
-    if feature_extractor is None:
-        feature_extractor = get_default_embedder()
+    feature_extractor, transforms = get_model_and_transforms()
 
     collections: List[LabelEmbedding] = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding object data."):
         if img_pth is None:
             continue
 
-        batch = assemble_object_batch(data_unit, img_pth)
-        if not batch:
+        batches = assemble_object_batch(data_unit, img_pth, transforms=transforms)
+        if batches is None:
             continue
 
-        embeddings = feature_extractor.embed_images(batch)
-        for obj, emb in zip(data_unit["labels"].get("objects", []), embeddings):
-            if obj["shape"] not in [
+        embeddings = feature_extractor(batches)["my_avgpool"]
+        embeddings_torch = torch.flatten(embeddings, start_dim=1).cpu().detach().numpy()
+
+        for obj, emb in zip(data_unit["labels"].get("objects", []), embeddings_torch):
+            if obj["shape"] in [
                 ObjectShape.POLYGON.value,
                 ObjectShape.BOUNDING_BOX.value,
                 ObjectShape.ROTATABLE_BOUNDING_BOX.value,
             ]:
-                continue
+                last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
 
-            last_edited_by = obj["lastEditedBy"] if "lastEditedBy" in obj.keys() else obj["createdBy"]
+                entry = LabelEmbedding(
+                    url=data_unit["data_link"],
+                    label_row=iterator.label_hash,
+                    data_unit=data_unit["data_hash"],
+                    frame=iterator.frame,
+                    labelHash=obj["objectHash"],
+                    lastEditedBy=last_edited_by,
+                    featureHash=obj["featureHash"],
+                    name=obj["name"],
+                    dataset_title=iterator.dataset_title,
+                    embedding=emb,
+                    classification_answers=None,
+                )
 
-            entry = LabelEmbedding(
-                url=data_unit["data_link"],
-                label_row=iterator.label_hash,
-                data_unit=data_unit["data_hash"],
-                frame=iterator.frame,
-                labelHash=obj["objectHash"],
-                lastEditedBy=last_edited_by,
-                featureHash=obj["featureHash"],
-                name=obj["name"],
-                dataset_title=iterator.dataset_title,
-                embedding=emb,
-                classification_answers=None,
-            )
-
-            collections.append(entry)
+                collections.append(entry)
 
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
@@ -174,10 +175,8 @@ def generate_object_embeddings(
 
 
 @torch.inference_mode()
-def generate_classification_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
-) -> List[LabelEmbedding]:
-    image_collections = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+def generate_cnn_classification_embeddings(iterator: Iterator) -> List[LabelEmbedding]:
+    image_collections = get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
     ontology_class_hash_to_index: dict[str, dict] = {}
     ontology_class_hash_to_question_hash: dict[str, str] = {}
@@ -190,18 +189,14 @@ def generate_classification_embeddings(
             ontology_class_hash = class_label.feature_node_hash
             ontology_class_hash_to_index[ontology_class_hash] = {}
             ontology_class_hash_to_question_hash[ontology_class_hash] = class_question.feature_node_hash
-            for index, option in enumerate(class_question.options):  # type: ignore
+            for index, option in enumerate(class_question.options):
                 ontology_class_hash_to_index[ontology_class_hash][option.feature_node_hash] = index
 
     start = time.perf_counter()
-    if feature_extractor is None:
-        feature_extractor = get_default_embedder()
+    feature_extractor, transforms = get_model_and_transforms()
 
     collections = []
     for data_unit, img_pth in iterator.iterate(desc="Embedding classification data."):
-        if img_pth is None:
-            continue
-
         matching_image_collections = [
             collection
             for collection in image_collections
@@ -211,13 +206,7 @@ def generate_classification_embeddings(
         ]
 
         if not matching_image_collections:
-            try:
-                image = Image.open(img_pth).convert("RGB")
-            except OSError:
-                logger.warning(f"Image with path {img_pth} seems to be broken. Skipping.")
-                continue
-
-            embedding = feature_extractor.embed_image(image)
+            embedding = get_embdding_for_image(feature_extractor, transforms, img_pth)
         else:
             embedding = matching_image_collections[0]["embedding"]
 
@@ -276,43 +265,59 @@ def generate_classification_embeddings(
     return collections
 
 
-def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> List[LabelEmbedding]:
+def get_cnn_embeddings(
+    iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False
+) -> List[LabelEmbedding]:
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
-        raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
+        raise Exception(f"Undefined embedding type '{embedding_type}' for get_cnn_embeddings method")
 
-    pfs = ProjectFileStructure(iterator.cache_dir)
-    embedding_path = pfs.get_embeddings_file(embedding_type)
+    target_folder = os.path.join(iterator.cache_dir, "embeddings")
+    embedding_path = os.path.join(target_folder, f"{EMBEDDING_TYPE_TO_FILENAME[embedding_type]}")
 
     if force:
         logger.info("Regenerating CNN embeddings...")
-        embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+        cnn_embeddings = generate_cnn_embeddings(iterator, embedding_type, embedding_path)
     else:
         try:
             with open(embedding_path, "rb") as f:
-                embeddings = pickle.load(f)
+                cnn_embeddings = pickle.load(f)
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
-            embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
 
-    return embeddings
+            cnn_embeddings = generate_cnn_embeddings(iterator, embedding_type, embedding_path)
+
+    return cnn_embeddings
 
 
-def generate_embeddings(
-    iterator: Iterator, embedding_type: EmbeddingType, target: Path, feature_extractor: Optional[ImageEmbedder] = None
-):
+def generate_cnn_embeddings(iterator: Iterator, embedding_type: EmbeddingType, target: str):
     if embedding_type == EmbeddingType.IMAGE:
-        embeddings = generate_image_embeddings(iterator, feature_extractor=feature_extractor)
+        cnn_embeddings = generate_cnn_image_embeddings(iterator)
     elif embedding_type == EmbeddingType.OBJECT:
-        embeddings = generate_object_embeddings(iterator, feature_extractor=feature_extractor)
+        cnn_embeddings = generate_cnn_object_embeddings(iterator)
     elif embedding_type == EmbeddingType.CLASSIFICATION:
-        embeddings = generate_classification_embeddings(iterator, feature_extractor=feature_extractor)
+        cnn_embeddings = generate_cnn_classification_embeddings(iterator)
     else:
         raise ValueError(f"Unsupported embedding type {embedding_type}")
 
-    if embeddings:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(pickle.dumps(embeddings))
+    if cnn_embeddings:
+        target_path = Path(target)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(pickle.dumps(cnn_embeddings))
 
     logger.info("Done!")
 
-    return embeddings
+    return cnn_embeddings
+
+
+def get_embdding_for_image(feature_extractor, transforms, img_pth: Optional[Path] = None) -> Optional[np.ndarray]:
+    if img_pth is None:
+        return None
+
+    try:
+        image = image_path_to_tensor(img_pth)
+        transformed_image = transforms(image).unsqueeze(0)
+        embedding = feature_extractor(transformed_image.to(DEVICE))["my_avgpool"]
+        return torch.flatten(embedding).cpu().detach().numpy()
+    except:
+        logger.error(f"Falied generating embedding for file: {img_pth}")
+        return None
