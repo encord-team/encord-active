@@ -9,16 +9,16 @@ from encord.objects.common import PropertyType
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.cnn import get_cnn_embeddings
 from encord_active.lib.embeddings.dimensionality_reduction import (
     generate_2d_embedding_data,
 )
+from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
-from encord_active.lib.metrics.metric import (
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import (
     AnnotationType,
     DataType,
     EmbeddingType,
-    Metric,
     MetricType,
 )
 from encord_active.lib.metrics.utils import is_multiclass_ontology
@@ -181,7 +181,6 @@ class ImageLevelQualityTest(Metric):
         return collections_scores_all_questions
 
     def create_key_score_pairs(self, nearest_indexes: dict[str, np.ndarray]):
-
         nearest_labels_all_questions = self.transform_neighbors_to_labels_for_all_questions(nearest_indexes)
         collections_scores_all_questions = self.convert_nearest_labels_to_scores_for_all_questions(
             nearest_labels_all_questions
@@ -267,11 +266,11 @@ class ImageLevelQualityTest(Metric):
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")
 
         # TODO: move me somewhere else, this is here to ensure the generation of image embeddings
-        get_cnn_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+        get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
         generate_2d_embedding_data(EmbeddingType.IMAGE, iterator.cache_dir)
 
         if self.metadata.embedding_type:
-            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"

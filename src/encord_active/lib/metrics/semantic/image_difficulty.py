@@ -6,10 +6,11 @@ from loguru import logger
 from sklearn.cluster import KMeans
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.cnn import get_cnn_embeddings
+from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.labels.classification import ClassificationType
-from encord_active.lib.metrics.metric import DataType, EmbeddingType, Metric, MetricType
+from encord_active.lib.metrics.metric import Metric
+from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
@@ -90,7 +91,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if self.metadata.embedding_type:
-            self.collections = get_cnn_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
@@ -105,7 +106,9 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
             data_hash_to_score = self._get_difficulty_ranking(cluster_size)
 
-            for data_unit, img_pth in iterator.iterate(desc="Writing scores to a file"):
-                writer.write(score=data_hash_to_score[data_unit["data_hash"]])
+            for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+                score = data_hash_to_score.get(data_unit["data_hash"])
+                if score is not None:
+                    writer.write(score=score)
         else:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")

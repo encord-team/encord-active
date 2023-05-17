@@ -28,7 +28,7 @@ from encord_active.lib.charts.performance_by_metric import performance_rate_by_m
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import Embedding2DSchema
-from encord_active.lib.metrics.metric import EmbeddingType
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.classification_metrics import (
     match_predictions_and_labels,
@@ -253,7 +253,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
         if EmbeddingType.IMAGE not in get_state().reduced_embeddings:
             get_state().reduced_embeddings[EmbeddingType.IMAGE] = get_2d_embedding_data(
-                get_state().project_paths.embeddings, EmbeddingType.IMAGE
+                get_state().project_paths, EmbeddingType.IMAGE
             )
 
         metric_name = get_state().predictions.metric_datas_classification.selected_prediction
