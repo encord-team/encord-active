@@ -293,13 +293,12 @@ python-versions = ">=3.7"
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
-name = "clip"
+name = "clip-ea"
 version = "1.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "*"
-develop = false
 
 [package.dependencies]
 ftfy = "*"
@@ -310,12 +309,6 @@ tqdm = "*"
 
 [package.extras]
 dev = ["pytest"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openai/CLIP.git"
-reference = "HEAD"
-resolved_reference = "a9b1bf5920416aaeaec965c25dd9e8f98c864f16"
 
 [[package]]
 name = "colorama"
@@ -3025,7 +3018,7 @@ notebooks = ["jupyterlab", "ipywidgets"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "ede337f6b5df598e4a61e704dd37d2cdfd160571836a78c17dd400ffa90ba82f"
+content-hash = "b66da6cf523078fcb1a65a8167ff8e69c408cb46665ac44d28517b08a35a428d"
 
 [metadata.files]
 aiofiles = [
@@ -3327,7 +3320,10 @@ click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
 ]
-clip = []
+clip-ea = [
+    {file = "clip-ea-1.0.tar.gz", hash = "sha256:ac58cf9c790fb6fef5f6859484b39653272d4075f94cc51ae7c097dd8545c92d"},
+    {file = "clip_ea-1.0-py3-none-any.whl", hash = "sha256:a4b23026e4f5aa6481eeca2043e6d5d5fa4d265000ff4ca7b3a830eba0683adc"},
+]
 colorama = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},

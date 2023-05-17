@@ -87,7 +87,7 @@ uvicorn = { extras = ["standard"], version = "^0.21.1" }
 nodejs-bin = "^18.4.0a4"
 pyjwt = "^2.7.0"
 torch = "^2.0.0"
-clip = { git = "https://github.com/openai/CLIP.git" }
+clip-ea = "^1.0"
 torchvision = "^0.15.2"
 ftfy = "^6.1.1"
 regex = "^2023.5.5"
