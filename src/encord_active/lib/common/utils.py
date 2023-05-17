@@ -8,6 +8,7 @@ import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
+from io import BytesIO
 from itertools import product
 from pathlib import Path
 from typing import (
@@ -441,7 +442,7 @@ def download_image(url: str) -> Image.Image:
     if r.status_code != 200:
         raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
-    return Image.open(r.content)
+    return Image.open(BytesIO(r.content))
 
 
 def convert_image_bgr(image: Image.Image) -> np.ndarray:

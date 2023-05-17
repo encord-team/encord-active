@@ -271,15 +271,18 @@ class Project:
     def __load_label_rows(self):
         self.label_rows = {}
         self.image_paths = {}
-        for lr_hash in self.label_row_metas.keys():
-            lr_structure = self.file_structure.label_row_structure(lr_hash)
-            if not lr_structure.label_row_file.is_file() or not lr_structure.images_dir.is_dir():
-                logger.warning(
-                    f"Skipping label row <blue>`{lr_hash}`</blue> as its content wasn't found in the storage."
-                )
-                continue
-            self.label_rows[lr_hash] = LabelRow(json.loads(lr_structure.label_row_file.read_text(encoding="utf-8")))
-            self.image_paths[lr_hash] = dict((du_file.stem, du_file) for du_file in lr_structure.images_dir.iterdir())
+        with PrismaConnection(self.file_structure) as conn:
+            labels = conn.labelrow.find_many(
+                include={
+                    "data_units": True,
+                }
+            )
+            for label in labels:
+                self.label_rows[label.label_hash] = LabelRow(json.loads(label.label_row_json))
+                self.image_paths[label.label_hash] = {
+                    data_unit.data_title: data_unit.data_link
+                    for data_unit in label.data_units
+                }
 
     def __populate_label_row_metadata_defaults(self, lr_dict: dict):
         return {
@@ -325,7 +328,6 @@ def download_label_row(
 
 def download_data(label_row: LabelRow, project_file_structure: ProjectFileStructure):
     lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
-    lr_structure.images_dir.mkdir(parents=True, exist_ok=True)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
 

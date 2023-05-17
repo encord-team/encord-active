@@ -88,25 +88,7 @@ class DatasetIterator(Iterator):
                         )
                         image = None
                         if img_path is not None:
-                            try:
-                                image = Image.open(img_path.path)
-                            except (FileNotFoundError, UnidentifiedImageError) as ex:
-                                logger.error(f"Failed to open Image at: {img_path.path}: {ex}")
-                        else:
-                            try:
-                                image = download_image(data_unit["data_link"])
-                            except (ConnectionError, FileNotFoundError, UnidentifiedImageError) as ex:
-                                # Attempt to regenerate the image url from encord project
-                                project = fetch_project_info(self.cache_dir)
-                                data_links = project.get_label_row(
-                                    label_hash,
-                                    get_signed_url=True,
-                                )
-                                if len(data_links) == 0 or data_links[0].data_link is None:
-                                    logger.error(f"Failed to re-download image for label: {label_hash}")
-                                    image = None
-                                else:
-                                    image = download_image(data_links[0].data_link)
+                            image = download_image(img_path.signed_url)
                         yield data_unit, image
                     except KeyError:
                         logger.error(

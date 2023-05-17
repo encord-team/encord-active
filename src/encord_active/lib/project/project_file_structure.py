@@ -15,8 +15,10 @@ from prisma.types import (
 )
 
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.project.metadata import fetch_project_meta, ProjectMeta
 
 EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images.pkl",
@@ -78,7 +80,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
                         batcher.dataunit.create(
                             DataUnitCreateInput(
-                                data_hash=data_unit.hash,
+                                data_hash=data_unit.du_hash,
                                 data_title=du["data_title"],
                                 frame=frame,
                                 location=data_unit.path.as_posix(),
@@ -89,7 +91,9 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
 
 class DataUnitStructure(NamedTuple):
-    hash: str
+    label_hash: str
+    du_hash: str
+    signed_url: str
 
 
 class LabelRowStructure:
@@ -118,32 +122,53 @@ class LabelRowStructure:
             data_unit_hash = self._mappings.get(data_unit_hash, data_unit_hash)
             if data_unit_hash is None:
                 where["data_hash"] = {"equals": data_unit_hash}
-            all_rows = conn.labelrow.find_many(where=where)
-            where = {
-                "label_row": {
-                    "in": all_rows,
+            all_rows = conn.labelrow.find_many(
+                where=where,
+                include={
+                    "data_units": True if frame is None else {
+                        "where": {
+                            "frame": {
+                                "equals": frame,
+                            }
+                        }
+                    }
                 }
-            }
-            if frame is not None:
-                where["frame"] = {
-                    "equals": [frame]
-                }
-            all_data_units = conn.dataunit.find_many(
-                where=where
             )
-            for data_unit in all_data_units:
-                du_hash = data_unit.data_hash
-                new_du_hash = self._rev_mappings.get(du_hash, du_hash)
-                yield DataUnitStructure(new_du_hash)
+            encord_project_metadata = self._project.load_project_meta()
+            encord_project = get_encord_project(
+                encord_project_metadata["ssh_key_path"],
+                encord_project_metadata["project_hash"]
+            )
+            for label_row in all_rows:
+                data_links = encord_project.get_label_row(
+                    label_row.label_hash,
+                    get_signed_url=True,
+                )
+                for data_unit in label_row.data_units:
+                    du_hash = data_unit.data_hash
+                    new_du_hash = self._rev_mappings.get(du_hash, du_hash)
+                    signed_url = data_links["data_units"][du_hash]["data_link"]
+                    yield DataUnitStructure(label_row.label_hash, new_du_hash, signed_url)
 
 
 class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
+        self._cached_project_meta = None
 
     def cache_clear(self) -> None:
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
+        if self._cached_project_meta is not None:
+            self._cached_project_meta = fetch_project_meta(self.project_dir)
+
+    def load_project_meta(self) -> ProjectMeta:
+        if self._cached_project_meta is not None:
+            return self._cached_project_meta
+        else:
+            cache = fetch_project_meta(self.project_dir)
+            self._cached_project_meta = cache
+            return cache
 
     @property
     def data(self) -> Path:
@@ -195,8 +220,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
         label_hash = self._mappings.get(label_hash, label_hash)
-        path = self.data / label_hash
-        return LabelRowStructure(path=path, mappings=self._mappings, label_hash=label_hash, project=self)
+        return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(
         self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
@@ -215,8 +239,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         label_rows = self.label_rows()
         for label_row in label_rows:
             label_hash = label_row.label_hash
-            path = self.data / label_hash
-            yield LabelRowStructure(path=path, mappings=self._mappings, label_hash=label_hash, project=self)
+            yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     @property
     def mappings(self) -> Path:
