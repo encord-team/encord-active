@@ -624,8 +624,8 @@ def render_relabel_button(
     clear_progress_bar()
     label.empty()
     label.text(
-        f"Data successfully sent to labeling in Encord Annotate.\n"
-        f"A total of {len(unique_lr_hashes)} tasks were assigned to the first labeling stage."
+        f"Data successfully submitted for labeling in Encord Annotate.\n"
+        f"A total of {len(unique_lr_hashes)} tasks have been assigned to the first labeling stage."
     )
 
 
