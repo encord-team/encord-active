@@ -50,7 +50,7 @@ def assemble_object_batch(data_unit: dict, img_path: Path) -> List[Image.Image]:
                     continue
                 x, y, w, h = out
 
-                img_patch = image[:, y : y + h, x : x + w]
+                img_patch = image[y : y + h, x : x + w]
                 img_batch.append(Image.fromarray(img_patch))
             except Exception as e:
                 logger.warning(f"Error with object {obj['objectHash']}: {e}")
