@@ -26,6 +26,11 @@ class CodeSearchResponse(SearchResponse):
     snippet: str
 
 
+class CodeOnDataFrameSearchResponse(BaseModel):
+    code: Optional[str]
+    output: Optional[str]
+
+
 class EmbeddingQuery(BaseModel):
     text: Optional[str]
     image: Optional[str]
