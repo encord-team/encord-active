@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, root_validator
 
@@ -28,7 +28,7 @@ class CodeSearchResponse(SearchResponse):
 
 class CodeOnDataFrameSearchResponse(BaseModel):
     code: Optional[str]
-    output: Optional[str]
+    output: Any
 
 
 class EmbeddingQuery(BaseModel):
