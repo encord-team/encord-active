@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List, Optional, cast
 
 import altair as alt
+import pandas as pd
 import streamlit as st
 from loguru import logger
 from pandera.typing import DataFrame
@@ -44,6 +45,8 @@ from encord_active.lib.model_predictions.reader import (
     get_class_idx,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
+from encord_active.lib.premium.model import TextQuery
+from encord_active.lib.premium.querier import Querier
 
 
 class ClassificationTypeBuilder(PredictionTypeBuilder):
@@ -166,6 +169,31 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
 
+    def _render_magic_search_pane(self):
+        querier = Querier(get_state().project_paths)
+
+        if querier.premium_available:
+            disable_status = False
+        else:
+            disable_status = True
+        magic_prompt = st.text_input(
+            "🪄 What do you want to get?", disabled=disable_status, help="Only available for premium version"
+        )
+
+        if magic_prompt != "":
+            result = querier.search_with_code_on_dataframe(TextQuery(identifiers=[], text=magic_prompt))
+
+            if result is None:
+                st.write("Code could not be generated for this prompt.")
+                return
+
+            if result.code is not None:
+                st.code(result.code)
+                if result.output is not None:
+                    st.write(result.output)
+                else:
+                    st.write("An output could not obtained for this code")
+
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
@@ -203,6 +231,9 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         # PRECISION_RECALL BARS
         pr_graph = get_precision_recall_graph(precision, recall, class_names)
         col2.plotly_chart(pr_graph, use_container_width=True)
+
+        # Magic search on the dataframe
+        self._render_magic_search_pane()
 
     def render_performance_by_metric(self):
         self._render_performance_by_metric_description(
