@@ -159,7 +159,7 @@ def copy_filtered_data(
     filtered_label_rows: set[str],
     filtered_data_hashes: set[str],
     filtered_labels: set[tuple[str, str, str]],
-):
+) -> None:
     target_project_structure.data.mkdir(parents=True, exist_ok=True)
 
     filtered_hash_mappings = {}
@@ -175,8 +175,6 @@ def copy_filtered_data(
 
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
-        if not current_label_row_structure.is_present():
-            continue
         target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
         target_label_row_structure.images_dir.mkdir(parents=True, exist_ok=True)
         for data_unit in current_label_row_structure.iter_data_unit():

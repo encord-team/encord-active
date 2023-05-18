@@ -16,12 +16,7 @@ from encord.project import LabelRowMetadata
 from loguru import logger
 
 from encord_active.cli.config import app_config
-from encord_active.lib.common.utils import (
-    collect_async,
-    download_file,
-    slice_video_into_frames,
-    try_execute,
-)
+from encord_active.lib.common.utils import collect_async, try_execute
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
@@ -200,8 +195,12 @@ class Project:
         return self.label_row_metas
 
     def save_label_row(self, label_row: LabelRow):
-        lr_structure = self.file_structure.label_row_structure(label_row["label_hash"])
-        lr_structure.label_row_file.write_text(json.dumps(label_row, indent=2), encoding="utf-8")
+        new_lr_structure = json.dumps(label_row, indent=2)
+        with PrismaConnection(self.file_structure) as conn:
+            conn.labelrow.update(
+                data={"label_row_json": new_lr_structure},
+                where={"label_hash": label_row["label_hash"], "data_hash": label_row["dataset_hash"]},
+            )
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
         label_rows = self.__download_label_rows_and_data(encord_project, self.file_structure)
@@ -280,8 +279,7 @@ class Project:
             for label in labels:
                 self.label_rows[label.label_hash] = LabelRow(json.loads(label.label_row_json))
                 self.image_paths[label.label_hash] = {
-                    data_unit.data_title: data_unit.data_link
-                    for data_unit in label.data_units
+                    data_unit.data_title: data_unit.data_link for data_unit in label.data_units
                 }
 
     def __populate_label_row_metadata_defaults(self, lr_dict: dict):

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, NamedTuple, Optional, Union, Dict, Any
+from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Union
 
 from prisma import models
 from prisma.types import (
@@ -18,7 +17,7 @@ from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.project.metadata import fetch_project_meta, ProjectMeta
+from encord_active.lib.project.metadata import ProjectMeta, fetch_project_meta
 
 EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images.pkl",
@@ -46,13 +45,14 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
         with conn.batch_() as batcher:
             for label_row in pfs.iter_labels():
-                label_row_dict = json.loads(label_row.label_row_file.read_text(encoding="utf-8"))
+                label_row_dict = label_row.label_row_json
                 label_hash = label_row_dict["label_hash"]
                 lr_data_hash = label_row_meta[label_hash]["data_hash"]
                 data_type = label_row_dict["data_type"]
 
                 if fill_label_rows:
                     label_hash = label_row_dict["label_hash"]
+                    legacy_label_row_file = label_row.label_row_file_deprecated_for_migration().read_text("utf-8")
                     batcher.labelrow.create(
                         LabelRowCreateInput(
                             label_hash=label_hash,
@@ -61,19 +61,21 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             data_type=data_type,
                             created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
                             last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
-                            location=label_row.label_row_file.as_posix(),
+                            location=None,
+                            label_row_json=legacy_label_row_file,
                         )
                     )
 
                 if fill_data_units:
                     data_units = label_row_dict["data_units"]
                     for data_unit in label_row.iter_data_unit():
-                        du = data_units[data_unit.hash]
+                        legacy_du_path = Path("" + data_unit.path)  # FIXME
+                        du = data_units[data_unit.du_hash]
                         if data_type == "video":
-                            if "_" not in data_unit.path.stem:
+                            if "_" not in legacy_du_path.stem:
                                 frame_str = "-1"  # To include a reference to the video location in the DataUnit table
                             else:
-                                _, frame_str = data_unit.path.stem.rsplit("_", 1)
+                                _, frame_str = legacy_du_path.stem.rsplit("_", 1)
                         else:
                             frame_str = du.get("data_sequence", 0)
                         frame = int(frame_str)
@@ -83,8 +85,8 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                 data_hash=data_unit.du_hash,
                                 data_title=du["data_title"],
                                 frame=frame,
-                                location=data_unit.path.as_posix(),
                                 lr_data_hash=lr_data_hash,
+                                data_link=legacy_du_path.as_uri(),
                             )
                         )
             batcher.commit()
@@ -106,12 +108,13 @@ class LabelRowStructure:
     def __hash__(self) -> int:
         return hash(self._label_hash)
 
+    def label_row_file_deprecated_for_migration(self) -> Path:
+        return self._project.project_dir / "data" / self._label_hash
+
     @property
     def label_row_json(self) -> Dict[str, Any]:
         with PrismaConnection(self._project) as conn:
-            entry = conn.labelrow.find_unique(
-                where={}
-            )
+            entry = conn.labelrow.find_unique(where={})
             return json.loads(entry.label_row_json)
 
     def iter_data_unit(
@@ -119,25 +122,26 @@ class LabelRowStructure:
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project) as conn:
             where = {"label_hash": {"equals": self._label_hash}}
-            data_unit_hash = self._mappings.get(data_unit_hash, data_unit_hash)
-            if data_unit_hash is None:
-                where["data_hash"] = {"equals": data_unit_hash}
+            if data_unit_hash is not None:
+                du_hash = self._mappings.get(data_unit_hash, data_unit_hash)
+                where["data_hash"] = {"equals": du_hash}
             all_rows = conn.labelrow.find_many(
                 where=where,
                 include={
-                    "data_units": True if frame is None else {
+                    "data_units": True
+                    if frame is None
+                    else {
                         "where": {
                             "frame": {
                                 "equals": frame,
                             }
                         }
                     }
-                }
+                },
             )
             encord_project_metadata = self._project.load_project_meta()
             encord_project = get_encord_project(
-                encord_project_metadata["ssh_key_path"],
-                encord_project_metadata["project_hash"]
+                encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
             )
             for label_row in all_rows:
                 data_links = encord_project.get_label_row(
@@ -155,7 +159,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
-        self._cached_project_meta = None
+        self._cached_project_meta: "Optional[ProjectMeta]" = None
 
     def cache_clear(self) -> None:
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}

@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -27,7 +28,7 @@ from prisma.types import (
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.utils import DataHashMapping, try_execute
+from encord_active.lib.common.utils import DataHashMapping, download_file, try_execute
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
@@ -102,15 +103,18 @@ class EncordActions:
         new_lr_data_hash_to_original_mapping: DataHashMapping,
     ) -> Optional[DataHashMapping]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
-        label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
+        label_row = label_row_structure.label_row_json
 
         if label_row["data_type"] == DataType.IMAGE.value:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in an image (type)
-            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
-                image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-                new_lr_data_hash = dataset.upload_image(
-                    file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
-                )["data_hash"]
+            data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
+                with tempfile.NamedTemporaryFile() as tf:
+                    tf_path = Path(tf.name)
+                    download_file(data_unit.signed_url, tf_path)
+                    new_lr_data_hash = dataset.upload_image(
+                        file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
+                    )["data_hash"]
                 new_lr_data_hash_to_original_mapping.set(new_lr_data_hash, label_row["data_hash"])
                 # The data unit hash and label row data hash of an image (type) are the same
                 new_du_hash_to_original_mapping = DataHashMapping()
@@ -298,11 +302,9 @@ class EncordActions:
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
                 new_label_row["label_hash"], new_lr_data_hash
             )
-            original_label_row = json.loads(
-                self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
-                    encoding="utf-8",
-                )
-            )
+            original_label_row = self.project_file_structure.label_row_structure(
+                original_lr_du.label_row
+            ).label_row_json
             label_row = self.prepare_label_row(
                 original_label_row, new_label_row, new_lr_data_hash, original_lr_du.data_unit
             )

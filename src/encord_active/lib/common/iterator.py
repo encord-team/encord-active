@@ -1,4 +1,5 @@
 import json
+import tempfile
 from abc import abstractmethod
 from collections.abc import Sized
 from copy import deepcopy
@@ -12,12 +13,12 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from encord.exceptions import EncordException
 from encord.orm.label_log import LabelLog
 from loguru import logger
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from tqdm.auto import tqdm
 
-from encord_active.lib.common.utils import download_image
+from encord_active.lib.coco.encoder import extract_frames
+from encord_active.lib.common.utils import download_file, download_image
 from encord_active.lib.project import Project, ProjectFileStructure
-from encord_active.lib.project.metadata import fetch_project_info
 
 
 class Iterator(Sized):
@@ -82,13 +83,13 @@ class DatasetIterator(Iterator):
                     self.du_hash = data_unit["data_hash"]
                     self.frame = int(data_unit["data_sequence"])
                     try:
-                        img_path = next(
+                        img_metadata = next(
                             self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
                             None,
                         )
                         image = None
-                        if img_path is not None:
-                            image = download_image(img_path.signed_url)
+                        if img_metadata is not None:
+                            image = download_image(img_metadata.signed_url)
                         yield data_unit, image
                     except KeyError:
                         logger.error(
@@ -99,19 +100,31 @@ class DatasetIterator(Iterator):
             elif label_row.data_type == "video":
                 data_unit, *_ = label_row["data_units"].values()
                 self.du_hash = data_unit["data_hash"]
+                video_metadata = next(
+                    self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
+                    None,
+                )
+                if video_metadata is None:
+                    continue  # SKIP
 
-                fake_data_unit = deepcopy(data_unit)
-                for frame_sequence, frame_annotations in data_unit["labels"].items():
-                    self.frame = int(frame_sequence)
-                    fake_data_unit["labels"] = frame_annotations
+                # Create temporary folder containing the video
+                with tempfile.TemporaryDirectory() as working_dir:
+                    working_path = Path(working_dir)
+                    video_path = working_path / data_unit["dataset_title"]
+                    video_images_dir = working_path / "images"
+                    download_file(video_metadata.signed_url, video_path)
+                    extract_frames(video_path, video_images_dir, self.du_hash)
 
-                    image_path = None
-                    if self.project.image_paths:
-                        image_folder = self.project.file_structure.label_row_structure(self.label_hash).images_dir
-                        image_path = next(image_folder.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
-
-                    yield fake_data_unit, Image.open(image_path)
-                    pbar.update(1)
+                    fake_data_unit = deepcopy(data_unit)
+                    for frame_sequence, frame_annotations in data_unit["labels"].items():
+                        self.frame = int(frame_sequence)
+                        fake_data_unit["labels"] = frame_annotations
+                        image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
+                        if image_path:
+                            yield fake_data_unit, Image.open(image_path)
+                        else:
+                            yield fake_data_unit, None
+                        pbar.update(1)
             else:
                 logger.error(f"Label row '{label_hash}' with data type '{label_row.data_type}' is not recognized")
 

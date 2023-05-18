@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -11,7 +10,12 @@ from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
-from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
+from encord_active.lib.common.utils import (
+    convert_image_bgr,
+    download_image,
+    get_du_size,
+    rle_to_binary_mask,
+)
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema
@@ -158,9 +162,10 @@ def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: Proje
 
     img_du: Optional[DataUnitStructure] = key_to_data_unit(key, project_file_structure)
 
-    if img_du and img_du.path.is_file():
+    if img_du:
         try:
-            image = cv2.imread(img_du.path.as_posix())
+            raw_image = download_image(img_du.signed_url)
+            image = convert_image_bgr(raw_image)
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception:
             pass
@@ -170,7 +175,7 @@ def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: Proje
 
     _, du_hash, *_ = key.split("_")
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    lr = json.loads(label_row_structure.label_row_file.read_text())
+    lr = label_row_structure.label_row_json
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 
@@ -259,12 +264,12 @@ def get_geometries(
     _, du_hash, frame, *remainder = key.split("_")
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    label_row = json.loads(label_row_structure.label_row_file.read_text())
+    label_row = label_row_structure.label_row_json
     du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash), None)
     if not du_struct:
         return []
 
-    du = label_row["data_units"][du_struct.hash]
+    du = label_row["data_units"][du_struct.du_hash]
 
     geometries = []
     objects = (
