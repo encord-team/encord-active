@@ -122,19 +122,25 @@ class EncordActions:
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
-            image_paths = []
             sorted_data_units = sorted(
                 (du for du in label_row["data_units"].values() if du["data_hash"] in data_unit_hashes),
                 key=lambda data_unit: int(data_unit["data_sequence"]),
             )
-            for du in sorted_data_units:
-                data_unit_hash = du["data_hash"]
-                img_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-                image_paths.append(img_path.as_posix())
+            image_urls = [
+                data_unit.signed_url
+                for du in sorted_data_units
+                for data_unit in label_row_structure.iter_data_unit(data_unit_hash=du["data_hash"])
+            ]
 
-            if len(image_paths) > 0:
+            if len(image_urls) > 0:
                 # create_image_group() method doesn't allow to send data unit names, so their hashes are used instead
-                dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmp_path = Path(tmpdir)
+                    for idx, image_url in enumerate(image_urls):
+                        download_file(image_url, tmp_path / f"{idx}")
+
+                    image_paths = [str(tmp_path / f"{idx}") for idx, _ in enumerate(image_urls)]
+                    dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
                 # Since `create_image_group()` does not return info related to the uploaded images,
                 # we need to find the data hash of the image group in a hacky way
                 new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)
@@ -144,15 +150,20 @@ class EncordActions:
                 new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
                 new_du_hash_to_original_mapping = DataHashMapping()
                 for i, data_unit in enumerate(sorted_data_units):
-                    new_du_hash_to_original_mapping.set(new_data_row.images_data[i].image_hash, data_unit["data_hash"])
+                    new_du_hash_to_original_mapping.set(new_data_row.images_data[i].image_hash,
+                                                        str(data_unit["data_hash"]))
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in a video (type)
-            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
-                video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
-
-                dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
+            data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
+                with tempfile.NamedTemporaryFile() as tf:
+                    tf_path = Path(tf.name)
+                    download_file(data_unit.signed_url, tf_path)
+                    dataset.upload_video(
+                        file_path=str(tf_path), title=label_row["data_units"][data_unit_hash]["data_title"]
+                    )
                 # Since `upload_video()` does not return info related to the uploaded video,
                 # we need to find the data hash of the video in a hacky way
                 new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)

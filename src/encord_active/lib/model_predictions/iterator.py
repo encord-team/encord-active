@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.time import get_timestamp
-from encord_active.lib.common.utils import rle_to_binary_mask
+from encord_active.lib.common.utils import download_image, rle_to_binary_mask
 from encord_active.lib.db.predictions import FrameClassification
 from encord_active.lib.encord.utils import lower_snake_case
 from encord_active.lib.labels.classification import LabelClassification
@@ -81,15 +81,10 @@ class PredictionIterator(Iterator):
 
     def get_image(self, pred: Series) -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
-        for label_row in label_row_structure.iter_data_unit(data_unit_hash=pred["du_hash"]):
-        image_options = list(images_dir.glob(f"{du_hash}.*"))
-        if len(image_options) == 1:
-            return image_options[0]
-        elif len(image_options) > 1:
-            re_matches = [frame_file for frame_file in image_options if frame_file.stem == f"{du_hash}_{pred['frame']}"]
-            if re_matches:
-                return re_matches[0]
-        return None
+        data_unit = next(
+            label_row_structure.iter_data_unit(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
+        )
+        return download_image(data_unit)
 
     def get_encord_object(self, pred: Series, width: int, height: int, ontology_object: Object):
         if ontology_object.shape == Shape.BOUNDING_BOX:
