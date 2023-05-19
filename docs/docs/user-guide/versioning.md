@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Versioning
 
-**How to verison your data, labels, and models in Encord Active.**
+**How to version your data, labels, and models in Encord Active.**
 
 ## Why do you version your data?
 When you do experiments and test hypotheses, you typically want to jump back and forth between different versions of your data, labels, and models. For example, when you train a model on a specific subset of your data, you will typically find that there is an edge case for which your model performs poorly. Hence, you expand your dataset with more data to better cover the edge case and train a new model.
@@ -38,11 +38,11 @@ You also have the ability to discard any outstanding changes, i.e. everything af
 
 #### Viewing a previous version
 
-On the left sidebar, there is a dropdown which allows version selection. Selecting an old version will temporary save any outstanding changes until the latest version is selected again.
+On the left sidebar, there is a dropdown which allows version selection. Selecting an old version will temporarily save any outstanding changes until the latest version is selected again.
 
 :::warning
 
-While on a previous version the app will be in read-only mode. Any changes made will be dicarded.
+While on a previous version the app will be in read-only mode. Any changes made will be discarded.
 
 :::
 
