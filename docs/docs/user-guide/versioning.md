@@ -11,7 +11,7 @@ When you do experiments and test hypotheses, you typically want to jump back and
 
 In order to track your experiments and compare not only the model performance but also the underlying data shown to the model, you can use the project versioning feature of Encord Active.
 
-## What types of versioning is suppported?
+## What types of versioning are supported?
 
 The versioning is global for the project, so everything from what data and labels were available at a given point in time to what the model predictions were will be versioned and available.
 
