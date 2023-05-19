@@ -13,9 +13,10 @@ In order to track your experiments and compare not only the model performance bu
 
 ## What types of versioning are supported?
 
-The versioning is global for the project, so everything from what data and labels were available at a given point in time to what the model predictions were will be versioned and available.
+The versioning is global for the project, covering everything from the available data and labels at a specific moment to the corresponding model predictions.
+This ensures that all relevant information is versioned and accessible.
 
-Currently, versioning works like checkpoints, you can create a checkpoint and jump between them to view previous checkpoints.
+Currently, versioning operates through checkpoints, allowing you to create checkpoints and navigate between them to review previous states of the project.
 
 
 ## How do I version my data?
