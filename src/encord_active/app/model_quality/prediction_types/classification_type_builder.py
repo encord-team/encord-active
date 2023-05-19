@@ -47,6 +47,7 @@ from encord_active.lib.model_predictions.reader import (
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
+from encord_active.server.settings import Env, get_settings
 
 
 class ClassificationTypeBuilder(PredictionTypeBuilder):
@@ -172,12 +173,23 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
     def _render_magic_search_pane(self):
         querier = Querier(get_state().project_paths)
 
-        if os.getenv("ENV") == "prod" and querier.premium_available:
-            disable_status = False
-        else:
-            disable_status = True
+        is_disabled = not all([get_settings().ENV == Env.PROD, querier.premium_available])
+
+        prepared_prompt = st.selectbox(
+            "Some prompts to start with",
+            [
+                "What are the top three performing classes in terms of mean prediction",
+                "What classes' prediction is low when the Brightness is high",
+                "What are the lowest performing classes in terms of prediction when the area of the image is high",
+            ],
+            disabled=is_disabled,
+        )
+
         magic_prompt = st.text_input(
-            "🪄 What do you want to get?", disabled=disable_status, help="Only available for premium version"
+            "🪄 What do you want to get?",
+            value=prepared_prompt,
+            disabled=is_disabled,
+            help="Only available for premium version",
         )
 
         if magic_prompt != "":
