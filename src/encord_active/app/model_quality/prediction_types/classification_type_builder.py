@@ -2,7 +2,6 @@ from enum import Enum
 from typing import List, Optional, cast
 
 import altair as alt
-import pandas as pd
 import streamlit as st
 from loguru import logger
 from pandera.typing import DataFrame

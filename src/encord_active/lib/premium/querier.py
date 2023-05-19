@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Type, TypeVar, Union
+from typing import Optional, Type, TypeVar
 
 import requests
 from pydantic import BaseModel
