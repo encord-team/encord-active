@@ -124,7 +124,7 @@ class EncordActions:
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
             sorted_data_units = sorted(
                 (du for du in label_row["data_units"].values() if du["data_hash"] in data_unit_hashes),
-                key=lambda data_unit: int(data_unit["data_sequence"]),
+                key=lambda du_key: int(du_key["data_sequence"]),
             )
             image_urls = [
                 data_unit.signed_url
@@ -149,9 +149,9 @@ class EncordActions:
                 # Obtain the data unit hashes of the images contained in the image group
                 new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
                 new_du_hash_to_original_mapping = DataHashMapping()
-                for i, data_unit in enumerate(sorted_data_units):
-                    new_du_hash_to_original_mapping.set(new_data_row.images_data[i].image_hash,
-                                                        str(data_unit["data_hash"]))
+                for i, i_data_unit in enumerate(sorted_data_units):
+                    image_data = new_data_row.images_data[i]
+                    new_du_hash_to_original_mapping.set(image_data.image_hash, i_data_unit.du_hash)
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:

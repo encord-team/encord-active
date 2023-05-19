@@ -15,8 +15,7 @@ from prisma.types import (
     LabelRowCreateInput,
 )
 
-from encord_active.lib.coco.encoder import extract_frames
-from encord_active.lib.common.utils import download_file, download_image
+from encord_active.lib.common.utils import download_file, download_image, extract_frames
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
@@ -73,7 +72,12 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                 if fill_data_units:
                     data_units = label_row_dict["data_units"]
                     for data_unit in label_row.iter_data_unit():
-                        legacy_du_path = Path("" + data_unit.path)  # FIXME
+                        legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "data"
+                        if data_unit.frame is not None:
+                            legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_{data_unit.frame}.*"))
+                        else:
+                            legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
+
                         du = data_units[data_unit.du_hash]
                         if data_type == "video":
                             if "_" not in legacy_du_path.stem:
@@ -122,20 +126,13 @@ class LabelRowStructure:
     @property
     def label_row_json(self) -> Dict[str, Any]:
         with PrismaConnection(self._project) as conn:
-            entry = conn.labelrow.find_unique(where={
-                "label_hash": self._label_hash
-            })
+            entry = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
             return json.loads(entry.label_row_json)
 
     def set_label_row_json(self, label_row_json: Dict[str, Any]) -> None:
         with PrismaConnection(self._project) as conn:
             conn.labelrow.update(
-                where={
-                    "label_hash": self._label_hash
-                },
-                data={
-                    "label_row_json": json.dumps(label_row_json, ident=2)
-                }
+                where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, ident=2)}
             )
 
     def clone_label_row_json(self, source: "LabelRowStructure", label_row_json: str, local_path: Optional[str]) -> None:
@@ -146,7 +143,7 @@ class LabelRowStructure:
                 },
                 include={
                     "data_units": True,
-                }
+                },
             )
         with PrismaConnection(self._project) as conn:
             for row in rows:
@@ -158,11 +155,11 @@ class LabelRowStructure:
                     },
                     include={
                         "data_units": True,
-                    }
+                    },
                 )
 
     def iter_data_unit(
-            self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project) as conn:
             where = {"label_hash": {"equals": self._label_hash}}
@@ -187,20 +184,28 @@ class LabelRowStructure:
             encord_project = get_encord_project(
                 encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
             )
+            cached_signed_urls = self._project.cached_signed_urls
             for label_row in all_rows:
-                data_links = encord_project.get_label_row(
-                    label_row.label_hash,
-                    get_signed_url=True,
-                )
+                data_links = {}
+                if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units):
+                    data_links = encord_project.get_label_row(
+                        label_row.label_hash,
+                        get_signed_url=True,
+                    )
                 for data_unit in label_row.data_units:
                     du_hash = data_unit.data_hash
                     new_du_hash = self._rev_mappings.get(du_hash, du_hash)
-                    signed_url = data_links["data_units"][du_hash]["data_link"]
-                    data_type = data_links["data_units"][du_hash]["data_type"]
+                    if data_unit.data_hash in cached_signed_urls:
+                        signed_url = cached_signed_urls[data_unit.data_hash]
+                        data_type = "image"  # FIXME: this is wrong, store in prisma db
+                    else:
+                        signed_url = data_links["data_units"][du_hash]["data_link"]
+                        data_type = data_links["data_units"][du_hash]["data_type"]
+                        cached_signed_urls[data_unit.data_hash] = signed_url
                     yield DataUnitStructure(label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame)
 
     def iter_data_unit_with_image(
-            self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
     ) -> Iterator[Tuple[DataUnitStructure, Image.Image]]:
         # Temporary directory for all video decodes
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -232,6 +237,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
         self._cached_project_meta: "Optional[ProjectMeta]" = None
+        self.cached_signed_urls: Dict[str, str] = {}
 
     def cache_clear(self) -> None:
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
@@ -303,7 +309,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(
-            self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
+        self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
     ) -> List[models.DataUnit]:
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection(self) as conn:

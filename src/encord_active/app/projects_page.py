@@ -55,7 +55,10 @@ def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
     for data_unit in project_structure.data_units(include_label_row=True):
         du_hash = data_unit.data_hash
-        lr_hash = data_unit.label_row.label_hash
+        label_row = data_unit.label_row
+        if label_row is None:
+            continue
+        lr_hash = label_row.label_hash
         du_frame = data_unit.frame
 
         if lr_hash is None:  # avoid label rows without label hash while the id depends on them

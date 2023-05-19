@@ -4,6 +4,8 @@ import json
 import logging
 import os
 import shutil
+import subprocess
+import tempfile
 import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
@@ -12,6 +14,7 @@ from io import BytesIO
 from itertools import product
 from pathlib import Path
 from typing import (
+    IO,
     Any,
     Callable,
     Collection,
@@ -414,6 +417,17 @@ def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), 
     return results
 
 
+_DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
+
+
+def _download_cache(url: str) -> Optional[bytes]:
+    file = _DOWNLOAD_CACHE.get(url, None)
+    if file is None:
+        return None
+    file.seek(0)
+    return file.read()
+
+
 def download_file(
     url: str,
     destination: Path,
@@ -436,13 +450,36 @@ def download_file(
     return destination
 
 
-def download_image(url: str) -> Image.Image:
+def download_image(url: str, cache: bool = True) -> Image.Image:
+    cached_image = _DOWNLOAD_CACHE.get(url, None)
+    if cached_image is not None:
+        return Image.open(cached_image)
+
     r = requests.get(url)
 
     if r.status_code != 200:
         raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
+    if cache:
+        cached_file = tempfile.TemporaryFile()
+        cached_file.write(r.content)
+        cached_file.seek(0)
+        _DOWNLOAD_CACHE[url] = cached_file
+
     return Image.open(BytesIO(r.content))
+
+
+def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
+    logger.info(f"Extracting frames from video: {video_file_name}")
+
+    # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
+    img_dir.mkdir(parents=True, exist_ok=True)
+    command = f"ffmpeg -i {video_file_name} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner"
+    if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=True).returncode != 0:
+        raise RuntimeError(
+            "Splitting videos into multiple image files failed. Please ensure that you have FFMPEG "
+            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
+        )
 
 
 def convert_image_bgr(image: Image.Image) -> np.ndarray:

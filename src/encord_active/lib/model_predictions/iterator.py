@@ -77,14 +77,13 @@ class PredictionIterator(Iterator):
                 )
                 self.ontology_classifications[class_id] = classification_lookup[key]
 
-        self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Image.Image]]] = []
-
     def get_image(self, pred: Series) -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
         data_unit = next(
             label_row_structure.iter_data_unit(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
         )
-        return download_image(data_unit)
+        # FIXME: change to handle video nicer
+        return download_image(data_unit.signed_url)
 
     def get_encord_object(self, pred: Series, width: int, height: int, ontology_object: Object):
         if ontology_object.shape == Shape.BOUNDING_BOX:
@@ -159,11 +158,6 @@ class PredictionIterator(Iterator):
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
-        if self.row_cache:
-            for self.label_hash, self.du_hash, self.frame, du, image in self.row_cache:
-                yield du, image
-                pbar.update(1)
-            return
 
         for label_hash, lh_group in self.predictions.groupby("label_hash"):
             if label_hash not in self.label_rows:
@@ -202,7 +196,6 @@ class PredictionIterator(Iterator):
                 if image is None:
                     logger.error(f"Failed to open Image at frame: {self.du_hash}/{fr_preds.iloc[0]}")
                 yield du, image
-                self.row_cache.append((self.label_hash, self.du_hash, self.frame, du, image))
                 pbar.update(1)
 
     def __len__(self):

@@ -14,7 +14,6 @@ import copy
 import datetime
 import json
 import logging
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass
 from itertools import chain
@@ -35,6 +34,9 @@ from encord_active.lib.coco.datastructure import (
     SuperClass,
     to_attributes_field,
 )
+from encord_active.lib.common.utils import extract_frames
+from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.project import ProjectFileStructure
 
 logger = logging.getLogger(__name__)
 
@@ -718,19 +720,6 @@ def download_file(
     return destination
 
 
-def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str):
-    logger.info(f"Extracting frames from video: {video_file_name}")
-
-    # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
-    img_dir.mkdir(parents=True, exist_ok=True)
-    command = f"ffmpeg -i {video_file_name} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner"
-    if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=True).returncode != 0:
-        raise RuntimeError(
-            "Splitting videos into multiple image files failed. Please ensure that you have FFMPEG "
-            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
-        )
-
-
 def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path) -> dict:
     """
     Generate coco JSON file given dataframe.
@@ -741,8 +730,10 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
     Returns:
         dict: Dictionary object of COCO annotations
     """
-    # Load label rows and get metrics dict
-    label_rows = load_label_rows(df, project_dir / "data")
+    project_fs = ProjectFileStructure(project_dir)
+    with PrismaConnection(project_fs) as conn:
+        rows = conn.labelrow.find_many()
+    label_rows = {row.label_hash: row.label_row_json for row in rows}
     metrics = df_to_nested_dict(df)
 
     # Load ontology json to dict

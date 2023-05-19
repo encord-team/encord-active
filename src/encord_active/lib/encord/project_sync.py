@@ -2,9 +2,9 @@ import json
 import pickle
 import subprocess
 import uuid
-from urllib.parse import urlparse, unquote
 from pathlib import Path
 from typing import NamedTuple
+from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import yaml
