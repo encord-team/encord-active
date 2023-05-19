@@ -228,7 +228,7 @@ export const Explorer = ({
           </div>
           <Assistant
             scope={scope}
-            disabled={hasPremiumFeatures}
+            disabled={!hasPremiumFeatures}
             setResults={(ids) => {
               const idValues = new Map(
                 sortedAndFiltered.map(({ id, value }) => [id, value])
