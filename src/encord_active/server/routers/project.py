@@ -158,6 +158,7 @@ def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope
         raise HTTPException(status_code=422, detail="Invalid query")
 
     return {
-        "ids": [item.identifier for item in result.result_identifiers],
+        "results": result.result_identifiers,
         "snippet": snippet,
+        "ordered": result.is_ordered,
     }

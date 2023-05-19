@@ -76,8 +76,14 @@ export const searchTypeOptions = {
 type SearchType = keyof typeof searchTypeOptions;
 
 const searchResultSchema = z.object({
-  ids: z.string().array(),
+  results: z
+    .object({
+      identifier: z.string(),
+      value: z.number().nullish(),
+    })
+    .array(),
   snippet: z.string().nullish(),
+  ordered: z.boolean(),
 });
 export type SeachResult = z.infer<typeof searchResultSchema>;
 

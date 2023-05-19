@@ -229,12 +229,15 @@ export const Explorer = ({
           <Assistant
             scope={scope}
             disabled={!hasPremiumFeatures}
-            setResults={(ids) => {
+            setResults={(results) => {
               const idValues = new Map(
                 sortedAndFiltered.map(({ id, value }) => [id, value])
               );
               setSortedAndFiltered(
-                ids.map((id) => ({ id, value: idValues.get(id) || 0 }))
+                results.results.map((res) => ({
+                  id: res.identifier,
+                  value: idValues.get(res.identifier) || 0,
+                }))
               );
             }}
           />

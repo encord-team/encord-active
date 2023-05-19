@@ -13,9 +13,7 @@ export const Assistant = ({
   disabled = false,
 }: {
   scope: Scope;
-  setResults: (
-    args: Awaited<ReturnType<API["searchInProject"]>>["ids"]
-  ) => void;
+  setResults: (args: Awaited<ReturnType<API["searchInProject"]>>) => void;
   disabled?: boolean;
 }) => {
   const client = useQueryClient();
@@ -35,7 +33,7 @@ export const Assistant = ({
   );
 
   useEffect(() => {
-    data?.ids && setResults(data.ids);
+    data?.results && setResults(data);
   }, [data]);
 
   return (
