@@ -181,18 +181,22 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         )
 
         if magic_prompt != "":
-            result = querier.search_with_code_on_dataframe(TextQuery(identifiers=[], text=magic_prompt))
+            selected_ids = list(self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.identifier])
+            result = querier.search_with_code_on_dataframe(TextQuery(identifiers=selected_ids, text=magic_prompt))
 
             if result is None:
+                st.write("Server error")
+                return
+
+            if result.code is None:
                 st.write("Code could not be generated for this prompt.")
                 return
 
-            if result.code is not None:
-                st.code(result.code)
-                if result.output is not None:
-                    st.write(result.output)
-                else:
-                    st.write("An output could not obtained for this code")
+            st.code(result.code)
+            if result.output is not None:
+                st.write(result.output)
+            else:
+                st.write("An output could not obtained for this code")
 
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
