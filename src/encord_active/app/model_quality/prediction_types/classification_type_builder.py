@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from typing import List, Optional, cast
 
@@ -171,7 +172,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
     def _render_magic_search_pane(self):
         querier = Querier(get_state().project_paths)
 
-        if querier.premium_available:
+        if os.getenv("ENV") == "prod" and querier.premium_available:
             disable_status = False
         else:
             disable_status = True
