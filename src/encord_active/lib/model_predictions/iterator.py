@@ -15,7 +15,6 @@ from pandas import Series
 from PIL import Image
 from tqdm.auto import tqdm
 
-from encord_active.lib.common.data_utils import download_image
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.time import get_timestamp
 from encord_active.lib.common.utils import rle_to_binary_mask
