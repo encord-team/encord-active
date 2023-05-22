@@ -37,7 +37,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             color_name: str,
             hue_filters: Union[list, list[list]],
             saturation_filters=[50, 255],
-            value_filters=[20, 255],
+            value_filters=[40, 255],
         ):
             super().__init__(
                 title=f"{color_name} Values".title(),
