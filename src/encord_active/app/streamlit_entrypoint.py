@@ -1,3 +1,7 @@
+import torch
+
+torch_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 import argparse
 import shutil
 from copy import deepcopy
