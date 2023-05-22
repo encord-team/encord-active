@@ -1,5 +1,7 @@
 import uuid
+from dataclasses import asdict
 from datetime import datetime
+from enum import Enum
 from json import dumps as json_dumps
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Union
@@ -9,6 +11,7 @@ from encord.http.constants import RequestsSettings
 from encord.objects.classification import Classification
 from encord.objects.common import NestableOption, RadioAttribute
 from encord.objects.ontology_object import Object
+from encord.orm.label_row import LabelRowMetadata
 from encord.orm.project import Project
 from encord.project import ObjectShape
 
@@ -17,6 +20,17 @@ from encord_active.lib.db.predictions import Point
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
 
 BBOX_KEYS = {"x", "y", "h", "w"}
+
+
+def handle_enum_and_datetime(label_row_meta: LabelRowMetadata):
+    def convert_value(obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        return obj
+
+    return dict((k, convert_value(v)) for k, v in asdict(label_row_meta).items())
 
 
 class ProjectQuery(TypedDict, total=False):

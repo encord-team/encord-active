@@ -185,17 +185,20 @@ class LabelRowStructure:
                 },
             )
             encord_project_metadata = self._project.load_project_meta()
-            encord_project = get_encord_project(
-                encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
-            )
+            encord_project = None
+            if encord_project_metadata["has_remote"]:
+                encord_project = get_encord_project(
+                    encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
+                )
             cached_signed_urls = self._project.cached_signed_urls
             for label_row in all_rows:
                 data_links = {}
-                if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units):
-                    data_links = encord_project.get_label_row(
-                        label_row.label_hash,
-                        get_signed_url=True,
-                    )
+                if encord_project is not None:
+                    if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units):
+                        data_links = encord_project.get_label_row(
+                            label_row.label_hash,
+                            get_signed_url=True,
+                        )
                 for data_unit in label_row.data_units:
                     du_hash = data_unit.data_hash
                     new_du_hash = self._rev_mappings.get(du_hash, du_hash)
@@ -203,9 +206,14 @@ class LabelRowStructure:
                         signed_url = cached_signed_urls[data_unit.data_hash]
                         data_type = "image"  # FIXME: this is wrong, store in prisma db
                     else:
-                        signed_url = data_links["data_units"][du_hash]["data_link"]
-                        data_type = data_links["data_units"][du_hash]["data_type"]
-                        cached_signed_urls[data_unit.data_hash] = signed_url
+                        data_units = data_links.get("data_units", None)
+                        if data_units is not None:
+                            signed_url = data_links["data_units"][du_hash]["data_link"]
+                            data_type = data_links["data_units"][du_hash]["data_type"]
+                            cached_signed_urls[data_unit.data_hash] = signed_url
+                        else:
+                            signed_url = Path(data_unit.location).absolute().as_uri()
+                            data_type = "image"  # FIXME: store in prisma db
                     yield DataUnitStructure(label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame)
 
     def iter_data_unit_with_image(

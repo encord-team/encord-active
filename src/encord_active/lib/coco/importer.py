@@ -29,9 +29,8 @@ from encord_active.lib.encord.local_sdk import (
     LocalOntology,
     LocalProject,
     LocalUserClient,
-    handle_enum_and_datetime,
 )
-from encord_active.lib.encord.utils import make_object_dict
+from encord_active.lib.encord.utils import make_object_dict, handle_enum_and_datetime
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure

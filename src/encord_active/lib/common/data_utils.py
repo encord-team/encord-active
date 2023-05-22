@@ -8,6 +8,7 @@ from concurrent.futures import as_completed
 from io import BytesIO
 from pathlib import Path
 from typing import IO, Callable, Dict, Optional, Sequence, Tuple, TypeVar, Iterator
+from urllib.parse import unquote, urlparse
 
 import numpy as np
 import requests
@@ -73,6 +74,10 @@ def download_file(
 
 
 def download_image(url: str, cache: bool = True) -> Image.Image:
+    if url.startswith("file:"):
+        image_path = Path(unquote(urlparse(url).path))
+        return Image.open(image_path)
+
     cached_image = _DOWNLOAD_CACHE.get(url, None)
     if cached_image is not None:
         return Image.open(cached_image)
