@@ -1,28 +1,32 @@
-from typing import Set
+from typing import Set, Optional
 
-from torch import FloatTensor
-from abc import ABC, abstractmethod
+from torch import FloatTensor, IntTensor, BoolTensor
+from abc import ABCMeta, abstractmethod
 
-from encord_active.analysis.base import BaseAnalysis
-from encord_active.analysis.context import ImageEvalContext
-from encord_active.analysis.image import ImageContext
+from encord_active.analysis.base import BaseEvaluation
 
 
-class ImageEmbedding(BaseAnalysis, ABC):
-    def __init__(self, ident: str, dependencies: Set[str], long_name: str, short_desc: str, long_desc: str,
-                 allow_nearby_query: bool) -> None:
-        super().__init__(ident=ident, dependencies=dependencies)
-        self.long_name = long_name
-        self.short_desc = short_desc
-        self.long_desc = long_desc
-        self.allow_nearby_query = allow_nearby_query
+class PureImageEmbedding(BaseEvaluation, metaclass=ABCMeta):
+    """
+    Pure image based embedding, can optionally be calculated on a per-object basis as well as per-image by default.
+    """
+
+    def __init__(self, ident: str, dependencies: Set[str],
+                 allow_object_embedding: bool = True, allow_queries: bool = False):
+        super().__init__(ident, dependencies)
+        self.allow_object_embedding = allow_object_embedding
+        self.allow_queries = allow_queries
 
     @abstractmethod
-    def calc_embedding(self, context: ImageEvalContext, image: ImageContext) -> FloatTensor:
+    def evaluate_embedding(self, image: IntTensor, mask: Optional[BoolTensor]) -> FloatTensor:
         ...
 
 
-class ImageAndLabelEmbedding(ImageEmbedding, ABC):
-    @abstractmethod
-    def calc_object_embedding(self, context: ImageEvalContext, image: ImageContext) -> FloatTensor:
-        ...
+class NearestImageEmbeddingQuery(BaseEvaluation):
+    """
+    Pseudo embedding, returns the embedding for the nearest image embedding (in the same category).
+    Extra dependency tracking is automatically added whenever this is used.
+    """
+    def __init__(self, ident: str, source: str) -> None:
+        super().__init__(ident=ident, dependencies={source})
+        self.source = source

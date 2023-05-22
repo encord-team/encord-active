@@ -1,77 +1,110 @@
-from torch import std, mean
+from typing import Optional
 
-from encord_active.analysis.context import ImageEvalContext
-from encord_active.analysis.image import ImageContext
-from encord_active.analysis.metric import ImageMetric
+from torch import IntTensor, BoolTensor
+import torch
+import math
+from encord_active.analysis.metric import OneImageMetric, MetricDependencies, image_width, image_height
 
 
-class ContrastMetric(ImageMetric):
+class ContrastMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident='img-contrast',
-            dependencies=set(),
-            long_name='Image Contrast',
+            ident='contrast',
+            dependencies={'brightness', 'area'},
+            long_name='Contrast',
             short_desc='',
             long_desc='',
         )
 
-    def calculate(self, context: ImageEvalContext, image: ImageContext) -> float:
-        return std(image.as_tensor()).item() / 255
+    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+        if mask is None:
+            return torch.std(image).item() / 255
+        else:
+            # Masked standard deviation
+            mask_mean = float(deps['img-brightness'])
+            mask_count = float(deps['img-area'])
+            mask_mean_delta = torch.masked_fill(image.float() - mask_mean, ~mask, 0)
+            mask_mean_delta_sq = mask_mean_delta * mask_mean_delta
+            mask_mean_delta_sq_sum = torch.sum(mask_mean_delta_sq)
+            return math.sqrt(mask_mean_delta_sq_sum / mask_count)
 
 
-class BrightnessMetric(ImageMetric):
+class BrightnessMetric(OneImageMetric):
 
     def __init__(self) -> None:
         super().__init__(
-            ident='img-brightness',
-            dependencies=set(),
-            long_name='Image Brightness',
+            ident='brightness',
+            dependencies={'area'},
+            long_name='Brightness',
             short_desc='',
             long_desc='',
         )
 
-    def calculate(self, context: ImageEvalContext, image: ImageContext) -> float:
-        return mean(image.as_tensor()).item() / 255
+    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+        if mask is None:
+            return torch.mean(image).item() / 255
+        else:
+            # Masked mean
+            mask_count = float(deps['img-area'])
+            mask_total = torch.sum(torch.masked_fill(image.long(), ~mask, 0)).item()
+            return float(mask_total) / mask_count
 
 
-class SharpnessMetric(ImageMetric):
+class SharpnessMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident='img-sharpness',
+            ident='sharpness',
             dependencies=set(),
-            long_name='Image Sharpness',
+            long_name='Sharpness',
             short_desc='',
             long_desc='',
         )
 
-    def calculate(self, context: ImageEvalContext, image: ImageContext) -> float:
+    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
         # FIXME: Laplacian
         raise RuntimeError()
 
 
-class AspectRatioMetric(ImageMetric):
+class AspectRatioMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident='img-aspect-ratio',
+            ident='aspect-ratio',
             dependencies=set(),
-            long_name='Image Aspect Ratio',
+            long_name='Aspect Ratio',
             short_desc='',
             long_desc='',
+            apply_to_objects=False,
+            apply_to_classifications=False,
         )
 
-    def calculate(self, context: ImageEvalContext, image: ImageContext) -> float:
-        return float(image.img_width()) / float(image.img_height())
+    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+        if mask is None:
+            return float(image_width(image)) / float(image_height(image))
+        else:
+            shape0, shape1 = image.shape
+            range_0: IntTensor = torch.range(0, shape0).repeat(1, shape1)
+            range_1: IntTensor = torch.range(0, shape1).repeat(shape0, 1)
+            mask_0_max = torch.masked_fill(range_0, ~mask, 0)
+            mask_0_min = torch.masked_fill(range_0, ~mask, shape0)
+            mask_1_max = torch.masked_fill(range_1, ~mask, 0)
+            mask_1_min = torch.masked_fill(range_1, ~mask, shape1)
+            width = torch.max(mask_0_max).item() - torch.min(mask_0_min).item()
+            height = torch.max(mask_1_max).item() - torch.min(mask_1_min).item()
+            return float(width) / float(height)
 
 
-class AreaMetric(ImageMetric):
+class AreaMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
             ident='img-area',
             dependencies=set(),
-            long_name='Image Area',
-            short_desc='',
-            long_desc='',
+            long_name='Area',
+            short_desc='Area in pixels',
+            long_desc='Area in pixels',
         )
 
-    def calculate(self, context: ImageEvalContext, image: ImageContext) -> float:
-        return float(image.img_width()) * float(image.img_height())
+    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+        if mask is None:
+            return float(image_width(image)) * float(image_height(image))
+        else:
+            return float(torch.sum(mask.long()).item())
