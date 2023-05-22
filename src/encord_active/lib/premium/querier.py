@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from requests import ConnectionError
 
 from encord_active.lib.premium.model import (
+    CodeOnDataFrameSearchResponse,
     CodeSearchResponse,
     SearchResponse,
     TextQuery,
@@ -52,3 +53,6 @@ class Querier:
 
     def search_with_code(self, query: TextQuery) -> Optional[CodeSearchResponse]:
         return self._search_with("search/code", query, CodeSearchResponse)
+
+    def search_with_code_on_dataframe(self, query: TextQuery) -> Optional[CodeOnDataFrameSearchResponse]:
+        return self._search_with("search/code_on_dataframe", query, CodeOnDataFrameSearchResponse)

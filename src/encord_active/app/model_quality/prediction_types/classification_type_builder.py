@@ -44,6 +44,9 @@ from encord_active.lib.model_predictions.reader import (
     get_class_idx,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
+from encord_active.lib.premium.model import TextQuery
+from encord_active.lib.premium.querier import Querier
+from encord_active.server.settings import Env, get_settings
 
 
 class ClassificationTypeBuilder(PredictionTypeBuilder):
@@ -166,6 +169,46 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                     MetricType.PREDICTION, get_state().predictions.metric_datas_classification
                 )
 
+    def _render_magic_search_pane(self):
+        querier = Querier(get_state().project_paths)
+
+        is_disabled = not all([get_settings().ENV == Env.PROD, querier.premium_available])
+
+        prepared_prompt = st.selectbox(
+            "Some prompts to start with",
+            [
+                "What are the top three performing classes in terms of mean prediction",
+                "What classes' prediction is low when the Brightness is high",
+                "What are the lowest performing classes in terms of prediction when the area of the image is low",
+            ],
+            disabled=is_disabled,
+        )
+
+        magic_prompt = st.text_input(
+            "🪄 What do you want to get?",
+            value=prepared_prompt,
+            disabled=is_disabled,
+            help="Only available for premium version",
+        )
+
+        if magic_prompt != "":
+            selected_ids = list(self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.identifier])
+            result = querier.search_with_code_on_dataframe(TextQuery(identifiers=selected_ids, text=magic_prompt))
+
+            if result is None:
+                st.write("Server error")
+                return
+
+            if result.code is None:
+                st.write("Code could not be generated for this prompt.")
+                return
+
+            st.code(result.code)
+            if result.output is not None:
+                st.write(result.output)
+            else:
+                st.write("An output could not obtained for this code")
+
     def is_available(self) -> bool:
         return reader.check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
@@ -203,6 +246,9 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         # PRECISION_RECALL BARS
         pr_graph = get_precision_recall_graph(precision, recall, class_names)
         col2.plotly_chart(pr_graph, use_container_width=True)
+
+        # Magic search on the dataframe
+        self._render_magic_search_pane()
 
     def render_performance_by_metric(self):
         self._render_performance_by_metric_description(
