@@ -79,7 +79,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             return out
 
         def execute(self, image):
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
                     image,
