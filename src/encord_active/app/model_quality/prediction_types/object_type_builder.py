@@ -11,7 +11,7 @@ from pandera.typing import DataFrame
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.common.components.divider import divider
-from encord_active.app.common.components.interative_plots import render_plotly_events
+from encord_active.app.common.components.interactive_plots import render_plotly_events
 from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import MetricNames, State, get_state
 from encord_active.app.common.state_hooks import use_memo
