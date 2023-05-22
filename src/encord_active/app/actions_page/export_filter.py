@@ -70,7 +70,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         columns_to_filter = df.columns.to_list()
         if "url" in columns_to_filter:
             columns_to_filter.remove("url")
-        # Move some columns to the begining
+        # Move some columns to the beginning
         columns_to_filter.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
 
         to_filter_columns = st.multiselect(
@@ -82,6 +82,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
         filtered = df.copy()
         filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
+        filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
         for column in to_filter_columns:
             non_applicable = filtered[pd.isna(filtered[column])]
 
@@ -105,12 +106,36 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     else:
                         filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
+            elif column == "object_class":
+                # Enable filtering of images without objects (containing 'None' values in the 'object_class' column)
+                no_class_label = "No class"
+                options = filtered[column].unique().tolist()
+                if None in options:
+                    options[options.index(None)] = no_class_label
+
+                user_cat_input = right.multiselect(
+                    f"Values for object class",
+                    options=options,
+                    default=options,
+                    key=key,
+                )
+
+                # Include all frames that match the user input, excluding frames without annotations
+                filtered_user_input = filtered[filtered[column].isin(user_cat_input)]
+
+                # Include frames without annotations
+                if no_class_label in user_cat_input:
+                    filtered_labels_df = filtered[filtered["is_label_metric"]]
+                    # Select frames whose column 'object_class' is equal to None and don't have logged label metrics
+                    filtered_no_annotations = filtered[
+                        (~filtered.data_row_id.isin(filtered_labels_df["data_row_id"])) & (pd.isna(filtered[column]))
+                    ]
+                    filtered = pd.concat([filtered_user_input, filtered_no_annotations])
+                else:
+                    filtered = filtered_user_input
+
             # Treat columns with < 10 unique values as categorical
-            elif (
-                is_categorical_dtype(filtered[column])
-                or filtered[column].nunique() < 10
-                or column in ["object_class", "annotator"]
-            ):
+            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10 or column in ["annotator"]:
                 if filtered[column].isnull().sum() != filtered.shape[0]:
                     user_cat_input = right.multiselect(
                         f"Values for {column}",
