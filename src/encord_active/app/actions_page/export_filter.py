@@ -114,7 +114,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     options[options.index(None)] = no_class_label
 
                 user_cat_input = right.multiselect(
-                    f"Values for object class",
+                    "Values for object class",
                     options=options,
                     default=options,
                     key=key,
