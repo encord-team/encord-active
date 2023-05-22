@@ -179,7 +179,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             [
                 "What are the top three performing classes in terms of mean prediction",
                 "What classes' prediction is low when the Brightness is high",
-                "What are the lowest performing classes in terms of prediction when the area of the image is high",
+                "What are the lowest performing classes in terms of prediction when the area of the image is low",
             ],
             disabled=is_disabled,
         )
