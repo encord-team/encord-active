@@ -11,6 +11,7 @@ from pandera.typing import DataFrame
 import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.common.components.divider import divider
+from encord_active.app.common.components.interative_plots import render_plotly_events
 from encord_active.app.common.components.prediction_grid import prediction_grid
 from encord_active.app.common.state import MetricNames, State, get_state
 from encord_active.app.common.state_hooks import use_memo
@@ -24,6 +25,10 @@ from encord_active.lib.charts.performance_by_metric import performance_rate_by_m
 from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.common.colors import Color
+from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
+from encord_active.lib.embeddings.utils import Embedding2DSchema
+from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
     prediction_and_label_filtering,
@@ -392,11 +397,50 @@ matched to any predictions. The remaining objects are predictions, where colors 
         if color is None:
             st.warning("An error occurred while rendering the explorer page")
 
+        if EmbeddingType.OBJECT not in get_state().reduced_embeddings:
+            get_state().reduced_embeddings[EmbeddingType.OBJECT] = get_2d_embedding_data(
+                get_state().project_paths, EmbeddingType.OBJECT
+            )
+
         view_df = self._get_target_df(metric_name)
 
         if view_df is None:
             st.error(f"An error occurred during getting data according to the {metric_name} metric")
             return
+
+        # if get_state().reduced_embeddings[EmbeddingType.OBJECT] is None:
+        #     st.info("There is no 2D embedding file to display.")
+        # else:
+        #     current_reduced_embedding = get_state().reduced_embeddings[EmbeddingType.OBJECT]
+        #     current_reduced_embedding["data_row_id"] = (
+        #         current_reduced_embedding.identifier.str.split("_", n=2).str[0:2].str.join("_")
+        #     )
+        #
+        #     filtered_merged_metrics = get_state().filtering_state.merged_metrics
+        #     lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
+        #
+        #     reduced_embedding_filtered = current_reduced_embedding[current_reduced_embedding.data_row_id.isin(lr_du)]
+        #
+        #     predictions_matched = self._model_predictions[
+        #         [ClassificationPredictionMatchSchema.identifier, ClassificationPredictionMatchSchema.is_true_positive]
+        #     ]
+        #
+        #     reduced_embedding_filtered = reduced_embedding_filtered.merge(
+        #         predictions_matched, on=ClassificationPredictionMatchSchema.identifier
+        #     )
+        #
+        #     reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
+        #     reduced_embedding_filtered.rename(
+        #         columns={ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label}, inplace=True
+        #     )
+        #
+        #     reduced_embedding_filtered[Embedding2DSchema.label] = reduced_embedding_filtered[
+        #         Embedding2DSchema.label
+        #     ].apply(lambda x: "True prediction" if x == 1.0 else "False prediction")
+        #
+        #     selected_rows = render_plotly_events(reduced_embedding_filtered)
+        #     if selected_rows is not None:
+        #         view_df = view_df[view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")
