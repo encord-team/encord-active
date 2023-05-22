@@ -1,5 +1,5 @@
-from encord_active.analysis.metric import ImageMetric
+from encord_active.analysis.metric import OneImageMetric
 
 
-class ImageSingularity(ImageMetric):
+class ImageSingularity(OneImageMetric):
     pass
