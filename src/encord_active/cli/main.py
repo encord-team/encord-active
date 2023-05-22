@@ -449,7 +449,6 @@ def docs():
     webbrowser.open(ea_constants.DOCS_URL)
 
 
-@cli.command(name="join-slack", rich_help_panel="Resources")
 @cli.command(name="join-discord", rich_help_panel="Resources")
 def join_discord():
     """
