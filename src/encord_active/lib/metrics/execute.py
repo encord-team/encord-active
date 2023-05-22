@@ -5,9 +5,11 @@ from importlib import import_module
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
-# NOTE: this statement ensures faiss is imported before torch.
+import cv2
+
+# NOTE: this statement ensures pytorch is imported before faiss.
 # removing it will trigger segmentation faults in certain metrics
-import faiss  # pylint: disable=unused-import
+import torch  # pylint: disable=unused-import
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
