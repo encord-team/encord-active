@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import requests
@@ -700,6 +701,15 @@ class CocoEncoder:
     def download_image(self, url: str, path: Path):
         """Check if directory exists, create the directory if needed, download the file, store it into the path."""
         path.parent.mkdir(parents=True, exist_ok=True)
+        if url.startswith("file:"):
+            image_path = Path(unquote(urlparse(url).path))
+            path.symlink_to(image_path, target_is_directory=False)
+            return
+        elif url.startswith("/"):
+            image_path = Path(url)
+            path.symlink_to(image_path, target_is_directory=False)
+            return
+
         download_file(url, path)
 
     def get_image_id(self, data_hash: str, frame_num: int = 0) -> int:

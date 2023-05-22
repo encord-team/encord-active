@@ -139,7 +139,7 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
             "dataset_title": dataset_title,
             "data_title": meta.data_title,
             "data_hash": meta.data_hash,
-            "data_type": "image",
+            "data_type": meta.data_type,
             "data_units": data_units,
             "object_answers": {},
             "classification_answers": {},
@@ -373,7 +373,9 @@ class LocalProject:
 
         self._label_rows[label_hash] = label
 
-        label_row_json = json.dumps(label, indent=2)
+        raw_label = dict(label)
+        raw_label["data_type"] = raw_label["data_type"].split("/")[0]
+        label_row_json = json.dumps(raw_label, indent=2)
         default_timestamp = "0"
         with PrismaConnection(self._project_file_structure) as conn:
             conn.labelrow.upsert(
@@ -383,17 +385,15 @@ class LocalProject:
                         "label_hash": label.label_hash,
                         "data_hash": label.data_hash,
                         "data_title": label.data_title,
-                        "data_type": label.data_type,
+                        "data_type": label.data_type.split("/")[0],
                         "created_at": label.get("created_at", default_timestamp),
                         "last_edited_at": label.get("last_edited_at", default_timestamp),
                         "label_row_json": label_row_json,
-                        "location": "FIXME_ASSIGN_SOME_LOCATION",
                     },
                     "update": {
                         "label_hash": label.label_hash,
                         "data_title": label.data_title,
                         "last_edited_at": label.get("last_edited_at", default_timestamp),
-                        "location": "FIXME_ASSIGN_SOME_LOCATION",
                         "label_row_json": label_row_json,
                     },
                 },
@@ -411,7 +411,7 @@ class LocalProject:
                         "data_hash": du_hash,
                         "data_title": label.data_title,
                         "frame": 0,  # FIXME: only used as images currently, will break for image groups and videos
-                        "location": find_image_path(data_unit),
+                        "data_uri": Path(find_image_path(data_unit)).absolute().as_uri(),
                         "lr_data_hash": label.data_hash,
                     }
                 )

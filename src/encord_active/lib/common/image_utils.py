@@ -8,7 +8,7 @@ from pandas import Series
 from pandera.typing import DataFrame
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
-
+from PIL import Image
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.data_utils import convert_image_bgr, download_image
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
@@ -156,18 +156,22 @@ def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: Proje
     """
     key = __get_key(row)
 
-    img_du: Optional[DataUnitStructure] = key_to_data_unit(key, project_file_structure)
+    img_opt = key_to_data_unit(key, project_file_structure)
 
-    if img_du:
+    if img_opt:
+        img_du, image_link = img_opt
         try:
-            raw_image = download_image(img_du.signed_url)
+            if isinstance(image_link, str):
+                raw_image = download_image(img_du.signed_url)
+            else:
+                raw_image = image_link
             image = convert_image_bgr(raw_image)
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception:
             pass
 
     # Read not successful, so tell the user why
-    error_text = "Image not found" if not img_du else "File seems broken"
+    error_text = "Image not found" if not img_opt else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
@@ -296,17 +300,19 @@ def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStru
     return project_file_structure.label_row_structure(label_hash)
 
 
-def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure) -> Optional[DataUnitStructure]:
+def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure
+                     ) -> Optional[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
+    :param project_file_structure: project file structure
     :return: The associated image path if it exists or a path to a placeholder otherwise
     """
     label_hash, du_hash, frame, *_ = key.split("_")
     label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_du: Optional[DataUnitStructure] = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    frame_du = next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame)), None)
     if frame_du is not None:
         return frame_du
-    return next(label_row_structure.iter_data_unit(du_hash), None)  # So this is an img_group image
+    return next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash), None)

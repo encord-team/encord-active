@@ -80,12 +80,10 @@ class PredictionIterator(Iterator):
 
     def get_image(self, pred: Series) -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
-        print(f"DEBUGGING: get_image: {pred}")
-        data_unit = next(
-            label_row_structure.iter_data_unit(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
+        data_unit, image = next(
+            label_row_structure.iter_data_unit_with_image(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
         )
-        # FIXME: change to handle video nicer
-        return download_image(data_unit.signed_url)
+        return image
 
     def get_encord_object(self, pred: Series, width: int, height: int, ontology_object: Object):
         if ontology_object.shape == Shape.BOUNDING_BOX:

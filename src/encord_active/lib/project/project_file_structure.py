@@ -51,7 +51,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
             return
 
         with conn.batch_() as batcher:
-            for label_row in pfs.iter_labels():
+            for label_row in pfs.iter_labels(secret_disable_auto_fix=True):
                 label_row_dict = label_row.label_row_json
                 label_hash = label_row_dict["label_hash"]
                 lr_data_hash = label_row_meta[label_hash]["data_hash"]
@@ -68,7 +68,6 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             data_type=data_type,
                             created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
                             last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
-                            location=None,
                             label_row_json=legacy_label_row_file,
                         )
                     )
@@ -204,22 +203,24 @@ class LabelRowStructure:
                     new_du_hash = self._rev_mappings.get(du_hash, du_hash)
                     if data_unit.data_hash in cached_signed_urls:
                         signed_url = cached_signed_urls[data_unit.data_hash]
-                        data_type = "image"  # FIXME: this is wrong, store in prisma db
+                        data_type = label_row.data_type
                     else:
                         data_units = data_links.get("data_units", None)
                         if data_units is not None:
-                            signed_url = data_links["data_units"][du_hash]["data_link"]
-                            data_type = data_links["data_units"][du_hash]["data_type"]
+                            signed_url = data_units[du_hash]["data_link"]
                             cached_signed_urls[data_unit.data_hash] = signed_url
                         else:
-                            signed_url = Path(data_unit.location).absolute().as_uri()
-                            data_type = "image"  # FIXME: store in prisma db
+                            signed_url = data_unit.data_uri
+                            if signed_url is None:
+                                raise RuntimeError("Missing data_uri & not encord project")
+                        data_type = label_row.data_type
                     yield DataUnitStructure(label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame)
 
     def iter_data_unit_with_image(
         self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
     ) -> Iterator[Tuple[DataUnitStructure, Image.Image]]:
         # Temporary directory for all video decodes
+        label_row_json = self.label_row_json
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame):
@@ -229,19 +230,50 @@ class LabelRowStructure:
                 elif data_unit_struct.data_type == "video":
                     video_dir = tmp_path / data_unit_struct.du_hash
                     images_dir = video_dir / "frames"
+                    images_dir.mkdir(parents=True, exist_ok=True)
                     existing_image = next(
                         images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"), None
                     )
                     if existing_image is not None:
-                        return data_unit_struct, Image.open(existing_image)
+                        yield data_unit_struct, Image.open(existing_image)
                     else:
-                        video_file = video_dir / "video"
+                        video_file = video_dir / label_row_json["data_title"]
                         download_file(data_unit_struct.signed_url, video_file)
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
-                    return data_unit_struct, Image.open(downloaded_image)
+                    yield data_unit_struct, Image.open(downloaded_image)
                 else:
                     raise RuntimeError("Unsupported data type")
+
+    def iter_data_unit_with_image_or_signed_url(
+            self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+    ) -> Iterator[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
+        # Temporary directory for all video decodes
+        label_row_json = self.label_row_json
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame):
+                if data_unit_struct.data_type in {"img_group", "image"}:
+                    yield data_unit_struct, data_unit_struct.signed_url
+                elif data_unit_struct.data_type == "video":
+                    # Shared image loading logic
+                    video_dir = tmp_path / data_unit_struct.du_hash
+                    images_dir = video_dir / "frames"
+                    images_dir.mkdir(parents=True, exist_ok=True)
+                    existing_image = next(
+                        images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"), None
+                    )
+                    if existing_image is not None:
+                        yield data_unit_struct, Image.open(existing_image)
+                    else:
+                        video_file = video_dir / label_row_json["data_title"]
+                        download_file(data_unit_struct.signed_url, video_file)
+                        extract_frames(video_file, images_dir, data_unit_struct.du_hash)
+                    downloaded_image = next(
+                        images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
+                    yield data_unit_struct, Image.open(downloaded_image)
+                else:
+                    raise RuntimeError(f"Unsupported data type: {data_unit_struct.data_type}")
 
 
 class ProjectFileStructure(BaseProjectFileStructure):
@@ -328,13 +360,14 @@ class ProjectFileStructure(BaseProjectFileStructure):
             _fill_missing_tables(self)
             return conn.dataunit.find_many(where=where, include=to_include)
 
-    def label_rows(self) -> List[models.LabelRow]:
+    def label_rows(self, secret_disable_auto_fix: bool = False) -> List[models.LabelRow]:
         with PrismaConnection(self) as conn:
-            _fill_missing_tables(self)
+            if not secret_disable_auto_fix:
+                _fill_missing_tables(self)
             return conn.labelrow.find_many()
 
-    def iter_labels(self) -> Iterator[LabelRowStructure]:
-        label_rows = self.label_rows()
+    def iter_labels(self, secret_disable_auto_fix: bool = False) -> Iterator[LabelRowStructure]:
+        label_rows = self.label_rows(secret_disable_auto_fix=secret_disable_auto_fix)
         for label_row in label_rows:
             label_hash = label_row.label_hash
             if label_hash is None:

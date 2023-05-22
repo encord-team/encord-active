@@ -1,6 +1,6 @@
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict, Union
 
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
@@ -19,6 +19,7 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
+from PIL import Image
 
 
 class Metadata(TypedDict):
@@ -43,12 +44,13 @@ def get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neig
     return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
 
 
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[str]:
-    data_unit = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
-        label_row_structure.iter_data_unit(du_hash), None
+def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Union[str, Image.Image]]:
+    data_opt = next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash), None
     )
-    if data_unit:
-        return data_unit.signed_url
+    if data_opt:
+        _, img_or_signed_url = data_opt
+        return img_or_signed_url
     return None
 
 
@@ -140,7 +142,7 @@ def to_item(
 
     return {
         "id": identifier,
-        "url": url,
+        "url": url if isinstance(url, str) else None,  # FIXME: expose url for videos that works
         "dataTitle": data_title,
         "editUrl": editUrl,
         "metadata": metadata,

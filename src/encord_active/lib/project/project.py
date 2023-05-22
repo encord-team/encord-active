@@ -47,7 +47,6 @@ class Project:
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
         self.label_row_metas: Dict[str, LabelRowMetadata] = {}
         self.label_rows: Dict[str, LabelRow] = {}
-        self.image_paths: Dict[str, Dict[str, Path]] = {}
 
         ensure_prisma_db(self.file_structure.prisma_db)
 
@@ -269,7 +268,6 @@ class Project:
 
     def __load_label_rows(self):
         self.label_rows = {}
-        self.image_paths = {}
         with PrismaConnection(self.file_structure) as conn:
             labels = conn.labelrow.find_many(
                 include={
@@ -278,13 +276,10 @@ class Project:
             )
             for label in labels:
                 self.label_rows[label.label_hash] = LabelRow(json.loads(label.label_row_json))
-                self.image_paths[label.label_hash] = {
-                    data_unit.data_title: data_unit.data_link for data_unit in label.data_units
-                }
 
     def __populate_label_row_metadata_defaults(self, lr_dict: dict):
         return {
-            "data_link": "FIXME_THIS_SHOULD_BE_SET_TO_SOMETHING",
+            "data_link": "null",
             "dataset_title": "",
             "is_shadow_data": False,
             "number_of_frames": 1,
