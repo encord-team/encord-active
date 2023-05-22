@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional, Union
 
 import altair as alt
+import pandas as pd
 import streamlit as st
 from loguru import logger
 from pandera.typing import DataFrame
@@ -398,9 +399,9 @@ matched to any predictions. The remaining objects are predictions, where colors 
         if color is None:
             st.warning("An error occurred while rendering the explorer page")
 
-        if EmbeddingType.OBJECT not in get_state().reduced_embeddings:
-            get_state().reduced_embeddings[EmbeddingType.OBJECT] = get_2d_embedding_data(
-                get_state().project_paths, EmbeddingType.OBJECT
+        if EmbeddingType.IMAGE not in get_state().reduced_embeddings:
+            get_state().reduced_embeddings[EmbeddingType.IMAGE] = get_2d_embedding_data(
+                get_state().project_paths, EmbeddingType.IMAGE
             )
 
         view_df = self._get_target_df(metric_name)
@@ -409,42 +410,45 @@ matched to any predictions. The remaining objects are predictions, where colors 
             st.error(f"An error occurred during getting data according to the {metric_name} metric")
             return
 
-        if get_state().reduced_embeddings[EmbeddingType.OBJECT] is None:
+        if get_state().reduced_embeddings[EmbeddingType.IMAGE] is None:
             st.info("There is no 2D embedding file to display.")
         else:
-            if self._explorer_outcome_type == self.OutcomeType.FALSE_NEGATIVES:
-                current_reduced_embedding = get_state().reduced_embeddings[EmbeddingType.OBJECT]
-                current_reduced_embedding["data_row_id"] = (
-                    current_reduced_embedding.identifier.str.split("_", n=2).str[0:2].str.join("_")
-                )
+            current_reduced_embedding = get_state().reduced_embeddings[EmbeddingType.IMAGE]
+            current_reduced_embedding["data_row_id"] = (
+                current_reduced_embedding.identifier.str.split("_", n=3).str[0:3].str.join("_")
+            )
 
-                filtered_merged_metrics = get_state().filtering_state.merged_metrics
-                lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
+            filtered_merged_metrics = get_state().filtering_state.merged_metrics
+            lr_du = filtered_merged_metrics.index.str.split("_", n=3).str[0:3].str.join("_")
+            reduced_embedding_filtered = current_reduced_embedding[current_reduced_embedding.data_row_id.isin(lr_du)]
 
-                reduced_embedding_filtered = current_reduced_embedding[
-                    current_reduced_embedding.data_row_id.isin(lr_du)
-                ]
+            labels_matched = self._labels[[LabelMatchSchema.identifier, LabelMatchSchema.is_false_negative]]
+            labels_matched = labels_matched[labels_matched[LabelMatchSchema.is_false_negative] == True]
+            labels_matched["data_row_id"] = labels_matched.identifier.str.split("_", n=3).str[0:3].str.join("_")
+            labels_matched["score"] = 0
+            labels_matched.drop(LabelMatchSchema.is_false_negative, axis=1, inplace=True)
 
-                labels_matched = self._labels[[LabelMatchSchema.identifier, LabelMatchSchema.is_false_negative]]
+            predictions_matched = self._model_predictions[
+                [PredictionMatchSchema.identifier, PredictionMatchSchema.is_true_positive]
+            ]
+            predictions_matched["data_row_id"] = (
+                predictions_matched.identifier.str.split("_", n=3).str[0:3].str.join("_")
+            )
+            predictions_matched = predictions_matched.rename(columns={PredictionMatchSchema.is_true_positive: "score"})
 
-                reduced_embedding_filtered = reduced_embedding_filtered.merge(
-                    labels_matched, on=LabelMatchSchema.identifier
-                )
+            merged_score = pd.concat([labels_matched, predictions_matched], axis=0)
+            grouped_score = merged_score.groupby("data_row_id")["score"].mean().to_frame().reset_index()
 
-                reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
-                reduced_embedding_filtered.rename(
-                    columns={LabelMatchSchema.is_false_negative: Embedding2DSchema.label}, inplace=True
-                )
+            reduced_embedding_filtered = reduced_embedding_filtered.merge(grouped_score, on="data_row_id")
 
-                reduced_embedding_filtered[Embedding2DSchema.label] = reduced_embedding_filtered[
-                    Embedding2DSchema.label
-                ].apply(lambda x: "False Negative" if x == True else "True Negative")
+            reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
+            reduced_embedding_filtered.rename(columns={"score": Embedding2DSchema.label}, inplace=True)
 
-                selected_rows = render_plotly_events(reduced_embedding_filtered)
-                if selected_rows is not None:
-                    view_df = view_df[
-                        view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])
-                    ]
+            # CONTINUE FROM HERE
+
+            selected_rows = render_plotly_events(reduced_embedding_filtered)
+            if selected_rows is not None:
+                view_df = view_df[view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")

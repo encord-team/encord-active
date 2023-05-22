@@ -41,6 +41,7 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
             "False prediction": "#ff1a1a",
             "False Negative": "#ff1a1a",
         },
+        color_continuous_scale="RdBu",
         title="2D embedding plot",
         template="plotly",
     )
