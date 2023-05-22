@@ -37,7 +37,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             color_name: str,
             hue_filters: Union[list, list[list]],
             saturation_filters=[50, 255],
-            value_filters=[20, 255],
+            value_filters=[40, 255],
         ):
             super().__init__(
                 title=f"{color_name} Values".title(),
@@ -79,7 +79,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
             return out
 
         def execute(self, image):
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
             if self.color_name.lower() != "red":
                 mask = cv2.inRange(
                     image,
