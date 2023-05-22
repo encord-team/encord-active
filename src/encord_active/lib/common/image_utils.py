@@ -6,9 +6,10 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 from pandera.typing import DataFrame
+from PIL import Image
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
-from PIL import Image
+
 from encord_active.lib.common.colors import Color, hex_to_rgb
 from encord_active.lib.common.data_utils import convert_image_bgr, download_image
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
@@ -300,8 +301,9 @@ def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStru
     return project_file_structure.label_row_structure(label_hash)
 
 
-def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure
-                     ) -> Optional[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
+def key_to_data_unit(
+    key: str, project_file_structure: ProjectFileStructure
+) -> Optional[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row

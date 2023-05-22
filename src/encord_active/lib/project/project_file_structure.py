@@ -97,7 +97,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                 data_title=du["data_title"],
                                 frame=frame,
                                 lr_data_hash=lr_data_hash,
-                                data_link=legacy_du_path.as_uri(),
+                                data_uri=legacy_du_path.as_uri(),
                             )
                         )
             batcher.commit()
@@ -246,7 +246,7 @@ class LabelRowStructure:
                     raise RuntimeError("Unsupported data type")
 
     def iter_data_unit_with_image_or_signed_url(
-            self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
     ) -> Iterator[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
         # Temporary directory for all video decodes
         label_row_json = self.label_row_json
@@ -269,8 +269,7 @@ class LabelRowStructure:
                         video_file = video_dir / label_row_json["data_title"]
                         download_file(data_unit_struct.signed_url, video_file)
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
-                    downloaded_image = next(
-                        images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
+                    downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
                 else:
                     raise RuntimeError(f"Unsupported data type: {data_unit_struct.data_type}")

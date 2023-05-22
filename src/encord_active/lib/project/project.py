@@ -17,7 +17,12 @@ from encord.project import LabelRowMetadata
 from loguru import logger
 
 from encord_active.cli.config import app_config
-from encord_active.lib.common.data_utils import collect_async, count_frames, download_file, try_execute
+from encord_active.lib.common.data_utils import (
+    collect_async,
+    count_frames,
+    download_file,
+    try_execute,
+)
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.utils import get_client, handle_enum_and_datetime

@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 from io import BytesIO
 from pathlib import Path
-from typing import IO, Callable, Dict, Optional, Sequence, Tuple, TypeVar, Iterator
+from typing import IO, Callable, Dict, Iterator, Optional, Sequence, Tuple, TypeVar, Generator
 from urllib.parse import unquote, urlparse
 
 import numpy as np
@@ -106,7 +106,7 @@ def convert_image_bgr(image: Image.Image) -> np.ndarray:
 TType = TypeVar("TType")
 
 
-def iterate_in_batches(seq: Sequence[TType], size: int) -> Tuple[Iterator[Sequence[TType]], int]:
+def iterate_in_batches(seq: Sequence[TType], size: int) -> Generator[Sequence[TType], None, None]:
     return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
 

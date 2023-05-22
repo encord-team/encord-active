@@ -149,14 +149,19 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
     )
 
 
-
 class LocalDataset:
     """
     Mimics the `encord.dataset` but without interacting with the Encord platform.
     """
 
-    def __init__(self, title: str, dataset_hash: str, data_path: Path, use_symlinks: bool,
-                 project_file_structure: ProjectFileStructure):
+    def __init__(
+        self,
+        title: str,
+        dataset_hash: str,
+        data_path: Path,
+        use_symlinks: bool,
+        project_file_structure: ProjectFileStructure,
+    ):
         self.title: str = title
         self.dataset_hash: str = dataset_hash
         self.data_path: Path = data_path
@@ -290,8 +295,13 @@ class LocalProject:
     """
 
     def __init__(
-        self, data_path: Path, title: str, description: str, ontology: LocalOntology, datasets: List[LocalDataset],
-            project_file_structure: ProjectFileStructure,
+        self,
+        data_path: Path,
+        title: str,
+        description: str,
+        ontology: LocalOntology,
+        datasets: List[LocalDataset],
+        project_file_structure: ProjectFileStructure,
     ):
         self.data_path: Path = data_path
         self.title: str = title
@@ -436,8 +446,13 @@ class LocalUserClient:
 
     def create_dataset(self, title: str, use_symlinks: bool = False) -> LocalDataset:
         dataset_hash = str(uuid4())
-        dataset = LocalDataset(title, dataset_hash=dataset_hash, data_path=self.data_path, use_symlinks=use_symlinks,
-                               project_file_structure=self.project_fs)
+        dataset = LocalDataset(
+            title,
+            dataset_hash=dataset_hash,
+            data_path=self.data_path,
+            use_symlinks=use_symlinks,
+            project_file_structure=self.project_fs,
+        )
         self.datasets[dataset_hash] = dataset
         return dataset
 

@@ -13,9 +13,7 @@ from encord_active.lib.encord.local_sdk import (
     LocalUserClient,
     get_mimetype,
 )
-from encord_active.lib.encord.utils import (
-    handle_enum_and_datetime,
-)
+from encord_active.lib.encord.utils import handle_enum_and_datetime
 from encord_active.lib.labels.label_transformer import (
     LabelTransformer,
     LabelTransformerWrapper,

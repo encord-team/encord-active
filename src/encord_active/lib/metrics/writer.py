@@ -39,7 +39,7 @@ class CSVMetricWriter(CSVWriter):
         label_hash = self.iterator.label_hash if label_hash is None else label_hash
         du_hash = self.iterator.du_hash if du_hash is None else du_hash
         frame = self.iterator.frame if frame is None else frame
-        url = "null" # self.iterator.get_data_url() if url is None else url
+        url = "null"  # self.iterator.get_data_url() if url is None else url
 
         if labels is None:
             label_class = "" if label_class is None else label_class

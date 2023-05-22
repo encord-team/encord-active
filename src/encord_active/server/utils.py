@@ -2,6 +2,7 @@ from functools import lru_cache, partial
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Union
 
+from PIL import Image
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -19,7 +20,6 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
-from PIL import Image
 
 
 class Metadata(TypedDict):
