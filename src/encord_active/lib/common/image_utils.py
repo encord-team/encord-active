@@ -10,12 +10,8 @@ from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
-from encord_active.lib.common.utils import (
-    convert_image_bgr,
-    download_image,
-    get_du_size,
-    rle_to_binary_mask,
-)
+from encord_active.lib.common.data_utils import convert_image_bgr, download_image
+from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.model_predictions.reader import PredictionMatchSchema

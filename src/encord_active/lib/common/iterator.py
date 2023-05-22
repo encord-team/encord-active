@@ -16,8 +16,11 @@ from loguru import logger
 from PIL import Image
 from tqdm.auto import tqdm
 
-from encord_active.lib.coco.encoder import extract_frames
-from encord_active.lib.common.utils import download_file, download_image
+from encord_active.lib.common.data_utils import (
+    download_file,
+    download_image,
+    extract_frames,
+)
 from encord_active.lib.project import Project, ProjectFileStructure
 
 
@@ -110,7 +113,7 @@ class DatasetIterator(Iterator):
                 # Create temporary folder containing the video
                 with tempfile.TemporaryDirectory() as working_dir:
                     working_path = Path(working_dir)
-                    video_path = working_path / data_unit["dataset_title"]
+                    video_path = working_path / data_unit["data_title"]
                     video_images_dir = working_path / "images"
                     download_file(video_metadata.signed_url, video_path)
                     extract_frames(video_path, video_images_dir, self.du_hash)

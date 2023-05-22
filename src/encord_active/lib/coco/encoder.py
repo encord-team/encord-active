@@ -34,7 +34,7 @@ from encord_active.lib.coco.datastructure import (
     SuperClass,
     to_attributes_field,
 )
-from encord_active.lib.common.utils import extract_frames
+from encord_active.lib.common.data_utils import extract_frames
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
 
@@ -294,7 +294,7 @@ class CocoEncoder:
         destination_path = self._download_file_path.joinpath(Path("data"), Path(label_hash), Path("images"))
         download_condition = self._download_files and len(list(destination_path.glob("*.png"))) == 0
         if download_condition or self._force_download:
-            self.download_video_images(url, label_hash, data_hash)
+            self.download_video_images(url, destination_path, data_hash, video_title)
 
         images = []
         coco_url = data_unit["data_link"]
@@ -361,15 +361,15 @@ class CocoEncoder:
         video_file_path = Path("videos").joinpath(Path(data_hash), frame_file_name)
         return str(video_file_path)
 
-    def download_video_images(self, url: str, data_hash: str, destination_path: Path) -> None:
-        with tempfile.TemporaryDirectory(str(Path("."))) as temporary_directory:
-            video_location = Path(temporary_directory).joinpath(Path(data_hash))
-            download_file(
-                url,
-                video_location,
-            )
-
-            extract_frames(video_location, destination_path, data_hash)
+    def download_video_images(self, url: str, destination_path: Path, data_hash: str, video_title: str) -> None:
+        video_decode_path = destination_path / "video"
+        video_path = video_decode_path / video_title
+        video_decode_path.mkdir(parents=True, exist_ok=True)
+        download_file(
+            url,
+            video_path,
+        )
+        extract_frames(video_path, destination_path, data_hash)
 
     def get_annotations(self):
         annotations = []
@@ -709,7 +709,7 @@ class CocoEncoder:
 def download_file(
     url: str,
     destination: Path,
-):
+) -> None:
 
     r = requests.get(url, stream=True)
     with open(destination, "wb") as f:
@@ -717,7 +717,6 @@ def download_file(
             if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
                 f.flush()
-    return destination
 
 
 def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path) -> dict:
@@ -733,7 +732,7 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
     project_fs = ProjectFileStructure(project_dir)
     with PrismaConnection(project_fs) as conn:
         rows = conn.labelrow.find_many()
-    label_rows = {row.label_hash: row.label_row_json for row in rows}
+    label_rows = {row.label_hash: json.loads(row.label_row_json) for row in rows}
     metrics = df_to_nested_dict(df)
 
     # Load ontology json to dict
@@ -741,15 +740,16 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
         ontology_dict = json.load(f)
 
     # Generate COCO annotations file
-    encoder = CocoEncoder(
-        labels_list=list(label_rows.values()),
-        metrics=metrics,
-        ontology=OntologyStructure.from_dict(ontology_dict),
-    )
-    coco_json = encoder.encode(
-        download_files=True,
-        download_file_path=project_dir,
-    )
+    with tempfile.TemporaryDirectory() as working_dir:
+        encoder = CocoEncoder(
+            labels_list=list(label_rows.values()),
+            metrics=metrics,
+            ontology=OntologyStructure.from_dict(ontology_dict),
+        )
+        coco_json = encoder.encode(
+            download_files=True,
+            download_file_path=Path(working_dir),
+        )
 
     return coco_json
 

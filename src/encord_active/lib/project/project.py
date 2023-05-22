@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 import json
 import logging
+import tempfile
 from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
@@ -16,7 +17,7 @@ from encord.project import LabelRowMetadata
 from loguru import logger
 
 from encord_active.cli.config import app_config
-from encord_active.lib.common.utils import collect_async, try_execute
+from encord_active.lib.common.data_utils import collect_async, count_frames, download_file, try_execute
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import handle_enum_and_datetime
@@ -382,7 +383,10 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
     if label_row.data_type == "video":
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
-        num_frames = 4  # FIXME: load this from encord dataset!!!
+        with tempfile.TemporaryDirectory() as video_dir:
+            video_path = Path(video_dir) / du["data_title"]
+            download_file(du["data_link"], video_path)
+            num_frames = count_frames(video_path)
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:

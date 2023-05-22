@@ -15,7 +15,11 @@ from prisma.types import (
     LabelRowCreateInput,
 )
 
-from encord_active.lib.common.utils import download_file, download_image, extract_frames
+from encord_active.lib.common.data_utils import (
+    download_file,
+    download_image,
+    extract_frames,
+)
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.file_structure.base import BaseProjectFileStructure

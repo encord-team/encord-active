@@ -15,9 +15,10 @@ from pandas import Series
 from PIL import Image
 from tqdm.auto import tqdm
 
+from encord_active.lib.common.data_utils import download_image
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.time import get_timestamp
-from encord_active.lib.common.utils import download_image, rle_to_binary_mask
+from encord_active.lib.common.utils import rle_to_binary_mask
 from encord_active.lib.db.predictions import FrameClassification
 from encord_active.lib.encord.utils import lower_snake_case
 from encord_active.lib.labels.classification import LabelClassification
@@ -79,6 +80,7 @@ class PredictionIterator(Iterator):
 
     def get_image(self, pred: Series) -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
+        print(f"DEBUGGING: get_image: {pred}")
         data_unit = next(
             label_row_structure.iter_data_unit(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
         )

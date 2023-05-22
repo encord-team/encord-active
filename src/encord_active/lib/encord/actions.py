@@ -28,7 +28,8 @@ from prisma.types import (
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.utils import DataHashMapping, download_file, try_execute
+from encord_active.lib.common.data_utils import download_file, try_execute
+from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,

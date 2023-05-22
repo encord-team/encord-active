@@ -9,7 +9,7 @@ from urllib.parse import unquote, urlparse
 import pandas as pd
 import yaml
 
-from encord_active.lib.common.utils import iterate_in_batches
+from encord_active.lib.common.data_utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import (
