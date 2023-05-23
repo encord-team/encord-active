@@ -8,8 +8,8 @@ import torch
 import torchvision
 import tqdm
 from torch import nn
-from torchvision.io import read_image
 from torchvision.models.segmentation import DeepLabV3_MobileNet_V3_Large_Weights
+from torchvision.transforms import PILToTensor
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import Metric
@@ -80,7 +80,7 @@ def get_batches(iterator, batch_size=6):
     name_to_idx = {"background": 0}
     idx_to_counts = {0: 0}
     image_list, mask_list, key_list = [], [], []
-    for du, img_pth in iterator.iterate(desc="Loading data"):
+    for du, image in iterator.iterate(desc="Loading data"):
         img_mask = np.zeros((height, width), dtype=np.uint8)
 
         for obj in du["labels"].get("objects", []):
@@ -107,7 +107,8 @@ def get_batches(iterator, batch_size=6):
 
         idx_to_counts[0] += (img_mask == 0).sum()
 
-        img_tensor = read_image(img_pth.as_posix()) / 255
+        img_transform = PILToTensor()
+        img_tensor = img_transform(image) / 255
 
         if img_tensor.shape[0] == 4:
             img_tensor = img_tensor[:3]

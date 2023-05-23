@@ -5,14 +5,13 @@ from importlib import import_module
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
-import cv2
-
 # NOTE: this statement ensures faiss is imported before torch.
 # removing it will trigger segmentation faults in certain metrics
 import faiss  # pylint: disable=unused-import
 from loguru import logger
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
+from encord_active.lib.common.utils import convert_image_bgr
 from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
@@ -153,13 +152,13 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):
         csv_w.attach(stats)
-    for data_unit, img_pth in iterator.iterate():
-        if img_pth is None:
+    for data_unit, image in iterator.iterate():
+        if image is None:
             continue
         try:
-            image = cv2.imread(img_pth.as_posix())
+            cv_image = convert_image_bgr(image)
             for metric, csv_w in zip(metrics, csv_writers):
-                rank = metric.execute(image)
+                rank = metric.execute(cv_image)
                 csv_w.write(rank)
         except Exception as e:
             logging.critical(e, exc_info=True)

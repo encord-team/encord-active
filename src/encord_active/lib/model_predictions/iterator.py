@@ -12,6 +12,7 @@ import pytz
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from pandas import Series
+from PIL import Image, UnidentifiedImageError
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
@@ -161,7 +162,7 @@ class PredictionIterator(Iterator):
             manualAnnotation=False,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Path]], None, None]:
+    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         if self.row_cache:
             for self.label_hash, self.du_hash, self.frame, du, pth in self.row_cache:
@@ -203,7 +204,12 @@ class PredictionIterator(Iterator):
 
                 du["labels"] = {"objects": objects, "classifications": classifications}
                 pth = self.get_image_path(fr_preds.iloc[0])
-                yield du, pth
+                image = None
+                try:
+                    image = Image.open(pth)
+                except (FileNotFoundError, UnidentifiedImageError) as ex:
+                    logger.error(f"Failed to open Image at: {pth}: {ex}")
+                yield du, image
                 self.row_cache.append((self.label_hash, self.du_hash, self.frame, du, pth))
                 pbar.update(1)
 

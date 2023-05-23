@@ -29,6 +29,7 @@ import numpy as np
 import requests
 from encord.exceptions import EncordException, UnknownException
 from loguru import logger
+from PIL import Image
 from shapely.errors import ShapelyDeprecationWarning
 from shapely.geometry import Polygon
 from tqdm.auto import tqdm
@@ -83,17 +84,13 @@ def load_json(json_file: Path) -> Optional[dict]:
             return None
 
 
-def get_du_size(data_unit: dict, img_pth: Optional[Path] = None) -> Optional[Tuple[int, int]]:
+def get_du_size(data_unit: dict, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]]:
     if "width" in data_unit and "height" in data_unit:
         return int(data_unit["height"]), int(data_unit["width"])
 
-    image_corrupted = False
-    if img_pth is not None and img_pth.is_file():
-        try:
-            image = cv2.imread(img_pth.as_posix())
-            return image.shape[:2]
-        except Exception:
-            image_corrupted = True
+    if image is not None:
+        width, height = image.size
+        return height, width
 
     return None
 
@@ -419,8 +416,8 @@ def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), 
 def download_file(
     url: str,
     destination: Path,
-    byte_size=1024,
-):
+    byte_size: int = 1024,
+) -> Path:
     if destination.is_file():
         return destination
 
@@ -436,6 +433,22 @@ def download_file(
                 f.flush()
 
     return destination
+
+
+def download_image(url: str) -> Image.Image:
+    r = requests.get(url)
+
+    if r.status_code != 200:
+        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
+
+    return Image.open(r.content)
+
+
+def convert_image_bgr(image: Image.Image) -> np.ndarray:
+    rgb_image = image.convert("RGB")
+    np_image = np.array(rgb_image)
+    ocv_image = np_image[:, :, ::-1].copy()
+    return ocv_image
 
 
 def iterate_in_batches(seq: Sequence, size: int):

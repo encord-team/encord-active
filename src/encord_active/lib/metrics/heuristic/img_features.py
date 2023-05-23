@@ -213,8 +213,8 @@ Aspect ratio is computed as the ratio of image width to image height ($\frac{wid
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.metadata.title}"):
-            size = get_du_size(data_unit, img_pth)
+        for data_unit, image in iterator.iterate(desc=f"Computing {self.metadata.title}"):
+            size = get_du_size(data_unit, image)
             if not size:
                 continue
             img_h, img_w = size
@@ -238,8 +238,8 @@ Area is computed as the product of image width and image height ($width \times h
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for data_unit, img_pth in iterator.iterate(desc=f"Computing {self.metadata.title}"):
-            size = get_du_size(data_unit, img_pth)
+        for data_unit, image in iterator.iterate(desc=f"Computing {self.metadata.title}"):
+            size = get_du_size(data_unit, image)
             if not size:
                 continue
             image_area = size[0] * size[1]  # H * W
