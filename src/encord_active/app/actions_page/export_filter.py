@@ -112,6 +112,8 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 options = filtered[column].unique().tolist()
                 if None in options:
                     options[options.index(None)] = no_class_label
+                else:  # Ensure that the 'no_class' option is always displayed
+                    options.append(no_class_label)
 
                 user_cat_input = right.multiselect(
                     "Values for object class",
