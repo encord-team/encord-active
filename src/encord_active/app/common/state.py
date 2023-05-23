@@ -131,7 +131,7 @@ def refresh(
     nuke: bool = False,
 ):
     if nuke:
-        persisted = st.session_state.pop(StateKey.SCOPED_AND_PERSISTED)
+        persisted = st.session_state.pop(StateKey.SCOPED_AND_PERSISTED, {})
         st.session_state.clear()
         st.session_state[StateKey.SCOPED_AND_PERSISTED] = persisted
     else:

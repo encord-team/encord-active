@@ -90,11 +90,11 @@ def download(
     from InquirerPy import inquirer as i
 
     from encord_active.lib.project.sandbox_projects import (
-        PREBUILT_PROJECTS,
+        available_prebuilt_projects,
         fetch_prebuilt_project_size,
     )
 
-    if project_name is not None and project_name not in PREBUILT_PROJECTS:
+    if project_name is not None and project_name not in available_prebuilt_projects():
         rich.print("No such project in prebuilt projects.")
         raise typer.Abort()
 
@@ -102,7 +102,7 @@ def download(
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
         downloaded = {fetch_project_meta(project_path)["project_hash"] for project_path in find_child_projects(target)}
-        for project_name, data in PREBUILT_PROJECTS.items():
+        for project_name, data in available_prebuilt_projects().items():
             if data["hash"] in downloaded:
                 continue
             project_size = fetch_prebuilt_project_size(project_name)
@@ -449,7 +449,6 @@ def docs():
     webbrowser.open(ea_constants.DOCS_URL)
 
 
-@cli.command(name="join-slack", rich_help_panel="Resources")
 @cli.command(name="join-discord", rich_help_panel="Resources")
 def join_discord():
     """

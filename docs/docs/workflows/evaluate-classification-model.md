@@ -39,7 +39,7 @@ we look at their correlation, we see that as the Image-Level Annotation Quality 
 too. On the other hand, Red Values and Image Singularity have a negative correlation with the model performance.
 
 When we look at the confusion matrix, we find that most of the predictions are correct; Meanwhile, we can easily
-observe that a significant part of the _charmader_ images was predicted as _pikachu_, resulting in low recall for the
+observe that a significant part of the _charmander_ images was predicted as _pikachu_, resulting in low recall for the
 _charmander_ and low precision for the _pikachu_ classes. So there might be value in investigating these wrongly labeled
 charmander samples.
 

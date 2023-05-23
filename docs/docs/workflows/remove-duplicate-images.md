@@ -30,13 +30,13 @@ you can choose which one to keep and which to remove.
 Navigate to the _Data Quality_ > _Explorer_  tab and select the **Image Singularity** quality metric in the top left 
 dropdown to order your data. 
 
-![remove-duplicateimages-1](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-1.png)
+![remove-duplicate-images-1](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-1.png)
 
 In the dashboard, you can see the distribution of your data according to the image singularity scores.
 
 There are approximately 200 duplicate images in this example.
 
-![remove-duplicateimages-2](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-2.png)
+![remove-duplicate-images-2](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-2.png)
 
 Scroll down to see the duplicate images. If you click the **show similar images** button, you should see at least
 one image in the similar ones. If you have a project which is imported from [Encord Annotate](https://encord.com/), you can directly inspect the other image via
@@ -63,7 +63,7 @@ When you click **Submit**, all images will be tagged with the tag you chose.
 ![remove-duplicate-images-6](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-6.png)
 
 Now, move the right end of the slider to the value of zero so that we are only left with images that have a zero value.
-Then, remove the assigned tags for this range, as shown below. When you click the the **Submit** button, only the
+Then, remove the assigned tags for this range, as shown below. When you click the **Submit** button, only the
 images with non-zero values will be tagged, which is the subset that we want.
 
 ![remove-duplicate-images-7](../images/workflows/improve-your-data-and-labels/remove-duplicate-images/remove-duplicate-images-7.png)

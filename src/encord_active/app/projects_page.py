@@ -29,10 +29,11 @@ from encord_active.lib.model_predictions.writer import (
 from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.project.sandbox_projects import (
-    PREBUILT_PROJECTS,
+    available_prebuilt_projects,
     fetch_prebuilt_project,
     unpack_archive,
 )
+from encord_active.server.settings import get_settings
 
 
 def project_list(path: Path):
@@ -99,7 +100,7 @@ def get_projects(path: Path) -> GetProjectsResult:
     project_paths = {project["project_hash"]: path for path, project in project_metas.items()}
     projects = {}
 
-    for name, data in PREBUILT_PROJECTS.items():
+    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
         projects[data["hash"]] = Project(
             name=name,
             hash=data["hash"],

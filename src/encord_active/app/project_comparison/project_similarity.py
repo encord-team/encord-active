@@ -97,7 +97,6 @@ def render_2d_metric_similarity_container(
     project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
     project_values_2["project"] = project_name_2
 
-    # TODO change append to concat
     project_values = pd.concat([project_values_1, project_values_2], ignore_index=True)
 
     if isinstance(metric_name_1, str) and isinstance(metric_name_2, str):
