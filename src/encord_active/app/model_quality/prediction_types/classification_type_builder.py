@@ -27,7 +27,7 @@ from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DSchema
+from encord_active.lib.embeddings.utils import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.classification_metrics import (
@@ -347,6 +347,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             reduced_embedding_filtered[Embedding2DSchema.label] = reduced_embedding_filtered[
                 Embedding2DSchema.label
             ].apply(lambda x: "True prediction" if x == 1.0 else "False prediction")
+            reduced_embedding_filtered[Embedding2DScoreSchema.score] = None
 
             selected_rows = render_plotly_events(reduced_embedding_filtered)
             if selected_rows is not None:
