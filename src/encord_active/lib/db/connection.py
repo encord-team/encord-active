@@ -1,10 +1,8 @@
 import sqlite3
 
-from prisma import Prisma
-from prisma.types import DatasourceOverride
-
 from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
+import encord_active.lib.db  # pylint: disable=unused-import
 
 
 class DBConnection:
@@ -23,9 +21,11 @@ class PrismaConnection:
     def __init__(self, project_file_structure: BaseProjectFileStructure) -> None:
         if not project_file_structure.prisma_db.exists():
             ensure_prisma_db(project_file_structure.prisma_db)
+        from prisma.types import DatasourceOverride
         self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
 
     def __enter__(self):
+        from prisma import Prisma
         self.db = Prisma(datasource=self.datasource)
         self.db.connect()
         return self.db

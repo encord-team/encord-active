@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import json
 import tempfile
+import typing
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 from PIL import Image
-from prisma import models
-from prisma.types import (
-    DataUnitCreateInput,
-    DataUnitInclude,
-    DataUnitWhereInput,
-    LabelRowCreateInput,
-)
+
+if typing.TYPE_CHECKING:
+    import prisma
 
 from encord_active.lib.common.data_utils import (
     download_file,
@@ -41,6 +38,10 @@ EMBEDDING_REDUCED_TO_FILENAME = {
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def _fill_missing_tables(pfs: ProjectFileStructure):
+    from prisma.types import (
+        DataUnitCreateInput,
+        LabelRowCreateInput,
+    )
     # Adds the content missing from the data units and label rows tables when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
     label_row_meta = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
@@ -352,14 +353,17 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(
-        self, where: Optional[DataUnitWhereInput] = None, include_label_row: bool = False
-    ) -> List[models.DataUnit]:
+        self, where: Optional["prisma.types.DataUnitWhereInput"] = None, include_label_row: bool = False
+    ) -> List["prisma.models.DataUnit"]:
+        from prisma.types import (
+            DataUnitInclude,
+        )
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection(self) as conn:
             _fill_missing_tables(self)
             return conn.dataunit.find_many(where=where, include=to_include)
 
-    def label_rows(self, secret_disable_auto_fix: bool = False) -> List[models.LabelRow]:
+    def label_rows(self, secret_disable_auto_fix: bool = False) -> List["prisma.models.LabelRow"]:
         with PrismaConnection(self) as conn:
             if not secret_disable_auto_fix:
                 _fill_missing_tables(self)

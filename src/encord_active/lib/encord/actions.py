@@ -19,12 +19,6 @@ from encord.orm.project import (
     ReviewApprovalState,
 )
 from encord.utilities.label_utilities import construct_answer_dictionaries
-from prisma.types import (
-    DataUnitUpdateManyMutationInput,
-    DataUnitWhereInput,
-    LabelRowUpdateInput,
-    _LabelRowWhereUnique_data_hash_Input,
-)
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
@@ -505,6 +499,14 @@ class DatasetUniquenessError(Exception):
 
 
 def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creation_result: DatasetCreationResult):
+    # Lazy import to support prisma reload
+    from prisma.types import (
+        DataUnitUpdateManyMutationInput,
+        DataUnitWhereInput,
+        LabelRowUpdateInput,
+        _LabelRowWhereUnique_data_hash_Input,
+    )
+
     # Update the data hash changes in the DataUnit and LabelRow db tables
     with PrismaConnection(project_file_structure) as conn:
         with conn.batch_() as batcher:

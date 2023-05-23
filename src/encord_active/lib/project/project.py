@@ -309,7 +309,6 @@ def download_label_row(
                     "created_at": label_row.created_at,
                     "last_edited_at": label_row.last_edited_at,
                     "label_row_json": label_row_json,
-                    "location": None,
                 },
                 "update": {
                     "label_hash": label_row.label_hash,
