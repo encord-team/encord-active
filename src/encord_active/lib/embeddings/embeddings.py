@@ -15,6 +15,7 @@ from encord_active.lib.common.utils import get_bbox_from_encord_label_object
 from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
 from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
 from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
+from encord_active.lib.embeddings.writer import DBEmbeddingWriter
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -45,7 +46,7 @@ def assemble_object_batch(data_unit: dict, image: Image.Image) -> List[Image.Ima
                     continue
                 x, y, w, h = out
 
-                img_patch = image[y : y + h, x : x + w]
+                img_patch = image[y: y + h, x: x + w]
                 img_batch.append(Image.fromarray(img_patch))
             except Exception as e:
                 logger.warning(f"Error with object {obj['objectHash']}: {e}")
@@ -55,7 +56,7 @@ def assemble_object_batch(data_unit: dict, image: Image.Image) -> List[Image.Ima
 
 @torch.inference_mode()
 def generate_image_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None, batch_size=100
 ) -> List[LabelEmbedding]:
     start = time.perf_counter()
     if feature_extractor is None:
@@ -114,7 +115,7 @@ def generate_image_embeddings(
 
 @torch.inference_mode()
 def generate_object_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder] = None
 ) -> List[LabelEmbedding]:
     start = time.perf_counter()
     if feature_extractor is None:
@@ -165,7 +166,7 @@ def generate_object_embeddings(
 
 @torch.inference_mode()
 def generate_classification_embeddings(
-    iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
+        iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
 ) -> List[LabelEmbedding]:
     image_collections = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
@@ -196,8 +197,8 @@ def generate_classification_embeddings(
             collection
             for collection in image_collections
             if collection["data_unit"] == data_unit["data_hash"]
-            and collection["label_row"] == iterator.label_hash
-            and collection["frame"] == iterator.frame
+               and collection["label_row"] == iterator.label_hash
+               and collection["frame"] == iterator.frame
         ]
 
         if not matching_image_collections:
@@ -226,8 +227,8 @@ def generate_classification_embeddings(
             if ontology_class_hash in ontology_class_hash_to_index.keys() and classification_answers:
                 for classification_answer in classification_answers[classification_hash]["classifications"]:
                     if (
-                        classification_answer["featureHash"]
-                        == ontology_class_hash_to_question_hash[ontology_class_hash]
+                            classification_answer["featureHash"]
+                            == ontology_class_hash_to_question_hash[ontology_class_hash]
                     ):
                         answers.append(
                             ClassificationAnswer(
@@ -261,6 +262,42 @@ def generate_classification_embeddings(
     return collections
 
 
+def load_embeddings(iterator: Iterator, embedding_type: EmbeddingType) -> List[LabelEmbedding]:
+    LabelEmbedding(
+        url=data_unit["data_link"],
+        label_row=iterator.label_hash,
+        data_unit=data_unit["data_hash"],
+        frame=iterator.frame,
+        labelHash=obj["objectHash"],
+        # lastEditedBy=last_edited_by,
+        featureHash=obj["featureHash"],
+        name=obj["name"],
+        # dataset_title=iterator.dataset_title,
+        embedding=emb,
+        classification_answers=None,
+    )
+    writer.write(
+        value=list(embedding["embedding"]),
+        labels=[],
+        description=embedding["name"],
+        label_class=embedding["featureHash"],
+        label_hash=embedding["label_row"],
+        du_hash=embedding["data_unit"],
+        frame=embedding["frame"],
+        url=embedding["url"]
+    )
+    results = []
+    return [
+        {
+            "url": result["url"],
+            "label_row": result["identifier"]
+            "frame": result["frame"]
+
+        }
+        for result in results
+    ]
+
+
 def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> List[LabelEmbedding]:
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
@@ -270,20 +307,18 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
 
     if force:
         logger.info("Regenerating CNN embeddings...")
-        embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+        embeddings = generate_embeddings(iterator, embedding_type)
     else:
-        try:
-            with open(embedding_path, "rb") as f:
-                embeddings = pickle.load(f)
-        except FileNotFoundError:
+        embeddings = load_embeddings(iterator, embedding_type)
+        if len(embeddings) == 0:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
-            embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+            embeddings = generate_embeddings(iterator, embedding_type)
 
     return embeddings
 
 
 def generate_embeddings(
-    iterator: Iterator, embedding_type: EmbeddingType, target: Path, feature_extractor: Optional[ImageEmbedder] = None
+        iterator: Iterator, embedding_type: EmbeddingType, feature_extractor: Optional[ImageEmbedder] = None
 ):
     if embedding_type == EmbeddingType.IMAGE:
         embeddings = generate_image_embeddings(iterator, feature_extractor=feature_extractor)
@@ -295,8 +330,18 @@ def generate_embeddings(
         raise ValueError(f"Unsupported embedding type {embedding_type}")
 
     if embeddings:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(pickle.dumps(embeddings))
+        with DBEmbeddingWriter(iterator.project_file_structure, iterator, str(embedding_type)) as writer:
+            for embedding in embeddings:
+                writer.write(
+                    value=list(embedding["embedding"]),
+                    labels=[],
+                    description=embedding["name"],
+                    label_class=embedding["featureHash"],
+                    label_hash=embedding["label_row"],
+                    du_hash=embedding["data_unit"],
+                    frame=embedding["frame"],
+                    url=embedding["url"]
+                )
 
     logger.info("Done!")
 

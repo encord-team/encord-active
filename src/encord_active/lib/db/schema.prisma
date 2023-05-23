@@ -74,6 +74,7 @@ model MetricMetadata {
   stat_max_value    Float
   stat_mean_value   Float
   stat_num_rows     Int
+  location          String?
 }
 
 model MetricRow {

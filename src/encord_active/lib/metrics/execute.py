@@ -187,7 +187,8 @@ def _execute_simple_metrics(iterator: Iterator, metrics: list[SimpleMetric]):
             cv_image = convert_image_bgr(image)
             for metric, csv_w in zip(metrics, csv_writers):
                 rank = metric.execute(cv_image)
-                csv_w.write(rank)
+                with csv_w:
+                    csv_w.write(rank)
         except Exception as e:
             logging.critical(e, exc_info=True)
     for metric, stats in zip(metrics, stats_observers):

@@ -79,7 +79,7 @@ def add_metrics(
                     )
                     has_conflicts = True
             else:
-                # attach input metric to the project and recreate its metadata in metrics_meta.json
+                # attach input metric to the project and recreate its metadata in datbase
                 metrics_meta[title] = get_metric_metadata(found_metric_titles[title], module_path)
                 rich.print(f"Adding {title}")
         else:
@@ -87,7 +87,7 @@ def add_metrics(
             rich.print(f"[red]ERROR: No matching metric found for {title}.[/red]")
             has_conflicts = True
 
-    # update metric dependencies in metrics_meta.json
+    # update metric dependencies in database
     update_metrics_meta(project_file_structure, metrics_meta)
     if has_conflicts:
         rich.print("[yellow]Errors were found. Not all metrics were successfully added.[/yellow]")
@@ -139,7 +139,7 @@ def remove_metrics(
         else:
             rich.print(f"[yellow]WARNING: Skipping {title} as it is not attached to the project.[/yellow]")
 
-    # update metric dependencies in metrics_meta.json
+    # update metric dependencies in database
     update_metrics_meta(project_file_structure, metrics_meta)
 
 

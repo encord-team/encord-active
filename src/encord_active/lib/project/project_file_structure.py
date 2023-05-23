@@ -303,10 +303,6 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return self.project_dir / "local_data"
 
     @property
-    def metrics_meta(self) -> Path:
-        return self.project_dir / "metrics" / "metrics_meta.json"
-
-    @property
     def predictions(self) -> Path:
         return self.project_dir / "predictions"
 
