@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Union, Tuple, List
 
-from torch import IntTensor, BoolTensor
+from torch import ByteTensor, BoolTensor
 import torch
 import math
 from encord_active.analysis.metric import OneImageMetric, MetricDependencies, image_width, image_height
@@ -16,7 +16,7 @@ class ContrastMetric(OneImageMetric):
             long_desc='',
         )
 
-    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
         if mask is None:
             return torch.std(image).item() / 255
         else:
@@ -40,7 +40,7 @@ class BrightnessMetric(OneImageMetric):
             long_desc='',
         )
 
-    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
         if mask is None:
             return torch.mean(image).item() / 255
         else:
@@ -60,7 +60,7 @@ class SharpnessMetric(OneImageMetric):
             long_desc='',
         )
 
-    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
         # FIXME: Laplacian
         raise RuntimeError()
 
@@ -77,13 +77,13 @@ class AspectRatioMetric(OneImageMetric):
             apply_to_classifications=False,
         )
 
-    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
         if mask is None:
             return float(image_width(image)) / float(image_height(image))
         else:
             shape0, shape1 = image.shape
-            range_0: IntTensor = torch.range(0, shape0).repeat(1, shape1)
-            range_1: IntTensor = torch.range(0, shape1).repeat(shape0, 1)
+            range_0: ByteTensor = torch.range(0, shape0).repeat(1, shape1)
+            range_1: ByteTensor = torch.range(0, shape1).repeat(shape0, 1)
             mask_0_max = torch.masked_fill(range_0, ~mask, 0)
             mask_0_min = torch.masked_fill(range_0, ~mask, shape0)
             mask_1_max = torch.masked_fill(range_1, ~mask, 0)
@@ -103,8 +103,31 @@ class AreaMetric(OneImageMetric):
             long_desc='Area in pixels',
         )
 
-    def calculate(self, deps: MetricDependencies, image: IntTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
         if mask is None:
             return float(image_width(image)) * float(image_height(image))
         else:
             return float(torch.sum(mask.long()).item())
+
+
+HSVRange = Union[Tuple[int, int], List[Tuple[int, int]]]
+
+
+class HSVMetric(OneImageMetric):
+    def __init__(self,
+                 color_name: str,
+                 h_filter: HSVRange,
+                 s_filter: HSVRange = (50, 255),
+                 v_filter: HSVRange = (20, 255)) -> None:
+        super().__init__(
+            ident=color_name,
+            dependencies=set(),
+            long_name=f"{color_name} Values".title(),
+            short_desc=f"Ranks images by how {color_name.lower()} the average value of the image is.",
+            long_desc=f"Ranks images by how {color_name.lower()} the average value of the image is.",
+        )
+
+    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
+        # HSV Conversion TODO: implement this
+        # FIXME: make hsv conversion an ephemeral embedding
+        pass
