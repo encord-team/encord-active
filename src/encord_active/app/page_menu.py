@@ -26,7 +26,7 @@ PAGES = {
         "Performance By Metric": model_quality(ModelQualityPage.PERFORMANCE_BY_METRIC),
         "Explorer": model_quality(ModelQualityPage.EXPLORER),
     },
-    "Project Comparison": project_similarity(),
+    "Data Drift": project_similarity(),
 }
 
 DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
