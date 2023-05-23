@@ -54,7 +54,7 @@ To learn more about how to use the command line interface, see the [Command Line
 
 ## Docker
 
-We also provide a docker image which works exctly the same as the cli.
+We also provide a docker image which works exactly the same as the cli.
 
 ```shell
 docker run -it --rm -p 8501:8501 -p 8000:8000 -v ${PWD}:/data encord/encord-active <command>
@@ -64,7 +64,7 @@ This will mount your current working directory, so everything that happens insid
 
 #### SSH key
 
-If you intend to use Encord Active with an Encord Annotate project you'll need to mount a voulume with your SSH key as well.
+If you intend to use Encord Active with an Encord Annotate project you'll need to mount a volume with your SSH key as well.
 
 ```shell
 docker run -it --rm -p 8501:8501 -p 8000:8000 -v ${PWD}:/data -v ${HOME}/.ssh:/root/.ssh encord/encord-active

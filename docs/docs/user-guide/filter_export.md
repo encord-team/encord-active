@@ -25,7 +25,7 @@ Additionally, you can also clone the data and labels directly to the Encord labe
 2. Choose an ontology, dataset and project title
 3. Pres the _➕ Create_ button
 
-The data will be exported to Encord. You can follow the progress in the buttom of the page.
+The data will be exported to Encord. You can follow the progress in the bottom of the page.
 
 ![export_encord.png](../images/export_filter_encord.png)
 
