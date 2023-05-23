@@ -46,7 +46,7 @@ def render_plotly_events(
             "False prediction": "#ff1a1a",
             "False Negative": "#ff1a1a",
         },
-        color_continuous_scale=[(0, "red"), (1, "blue")],
+        color_continuous_scale=[(0, "red"), (1, "lime")],
         title="2D embedding plot",
         template="plotly",
     )
