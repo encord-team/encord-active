@@ -35,7 +35,12 @@ def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional
         x=Embedding2DSchema.x,
         y=Embedding2DSchema.y,
         color=Embedding2DSchema.label,
-        color_discrete_map={"True prediction": "#5658dd", "False prediction": "#ff1a1a"},
+        color_discrete_map={
+            "True prediction": "#5658dd",
+            "True Negative": "#5658dd",
+            "False prediction": "#ff1a1a",
+            "False Negative": "#ff1a1a",
+        },
         title="2D embedding plot",
         template="plotly",
     )

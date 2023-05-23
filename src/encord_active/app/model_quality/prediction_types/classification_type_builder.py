@@ -7,7 +7,7 @@ from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
-from encord_active.app.common.components.interative_plots import render_plotly_events
+from encord_active.app.common.components.interactive_plots import render_plotly_events
 from encord_active.app.common.components.prediction_grid import (
     prediction_grid_classifications,
 )
