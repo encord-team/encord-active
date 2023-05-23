@@ -27,7 +27,7 @@ from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.common.colors import Color
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DSchema
+from encord_active.lib.embeddings.utils import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.filters import (
@@ -437,18 +437,17 @@ matched to any predictions. The remaining objects are predictions, where colors 
             predictions_matched = predictions_matched.rename(columns={PredictionMatchSchema.is_true_positive: "score"})
 
             merged_score = pd.concat([labels_matched, predictions_matched], axis=0)
-            grouped_score = merged_score.groupby("data_row_id")["score"].mean().to_frame().reset_index()
+            grouped_score = (
+                merged_score.groupby("data_row_id")[Embedding2DScoreSchema.score].mean().to_frame().reset_index()
+            )
 
             reduced_embedding_filtered = reduced_embedding_filtered.merge(grouped_score, on="data_row_id")
 
-            reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
-            reduced_embedding_filtered.rename(columns={"score": Embedding2DSchema.label}, inplace=True)
-
-            # CONTINUE FROM HERE
-
             selected_rows = render_plotly_events(reduced_embedding_filtered)
             if selected_rows is not None:
-                view_df = view_df[view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
+                view_df["data_row_id"] = view_df[MetricSchema.identifier].str.split("_", n=3).str[0:3].str.join("_")
+                view_df = view_df[view_df["data_row_id"].isin(selected_rows["data_row_id"])]
+                view_df.drop("data_row_id", axis=1, inplace=True)
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")
