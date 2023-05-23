@@ -14,7 +14,7 @@ from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -86,7 +86,7 @@ This metric gives each image a score that shows each image's uniqueness.
                         )
                     break
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         if self.metadata.embedding_type:
             self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:

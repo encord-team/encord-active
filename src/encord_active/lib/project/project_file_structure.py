@@ -303,20 +303,8 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return self.project_dir / "local_data"
 
     @property
-    def metrics(self) -> Path:
-        return self.project_dir / "metrics"
-
-    @property
     def metrics_meta(self) -> Path:
-        return self.metrics / "metrics_meta.json"
-
-    @property
-    def embeddings(self) -> Path:
-        return self.project_dir / "embeddings"
-
-    def get_embeddings_file(self, type_: EmbeddingType, reduced: bool = False) -> Path:
-        lookup = EMBEDDING_REDUCED_TO_FILENAME if reduced else EMBEDDING_TYPE_TO_FILENAME
-        return self.embeddings / lookup[type_]
+        return self.project_dir / "metrics" / "metrics_meta.json"
 
     @property
     def predictions(self) -> Path:

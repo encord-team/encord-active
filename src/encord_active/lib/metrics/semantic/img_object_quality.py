@@ -22,7 +22,7 @@ from encord_active.lib.metrics.types import (
     EmbeddingType,
     MetricType,
 )
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -110,7 +110,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
     def get_identifier_from_collection_item(self, item):
         return f'{item["label_row"]}_{item["data_unit"]}_{item["frame"]:05d}_{item["labelHash"]}'
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         ontology_contains_objects = self.setup(iterator)
         if not ontology_contains_objects:
             logger.info("<yellow>[Skipping]</yellow> No objects in the project ontology.")

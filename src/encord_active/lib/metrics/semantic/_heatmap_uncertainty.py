@@ -15,7 +15,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.semantic._class_uncertainty import train_test_split
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -203,7 +203,7 @@ class EntropyHeatmapMetric(Metric):
             annotation_type=AnnotationType.ALL,
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         model_path = os.path.join(iterator.cache_dir, "models", f"{Path(__file__).stem}_model.pt")
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 

@@ -16,7 +16,7 @@ from encord_active.lib.metrics.types import (  # pylint: disable=unused-import
     EmbeddingType,
     MetricType,
 )
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 
 class StatsMetadata(BaseModel):
@@ -105,7 +105,7 @@ class Metric(ABC):
         )
 
     @abstractmethod
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         """
         This is where you should perform your data indexing.
 

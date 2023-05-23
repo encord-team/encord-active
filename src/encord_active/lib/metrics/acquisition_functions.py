@@ -14,7 +14,7 @@ from encord_active.lib.metrics.types import (
     EmbeddingType,
     MetricType,
 )
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 
 class BaseModelWrapper:
@@ -104,7 +104,7 @@ class AcquisitionFunction(Metric):
             title, short_description, long_description, metric_type, data_type, annotation_type, embedding_type
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             if image is None:
                 continue

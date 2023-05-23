@@ -52,3 +52,51 @@ model LabelRow {
   data_units     DataUnit[]
   label_row_json String
 }
+
+model MetricMetadataAnnotationType {
+  metric_metadata_id Int
+  metric_metadata MetricMetadata @relation(fields: [metric_metadata_id], references: [id])
+  annotation_type String
+  @@unique([metric_metadata_id, annotation_type])
+}
+
+model MetricMetadata {
+  id                Int        @id @default(autoincrement())
+  title             String     @unique
+  short_description String
+  long_description  String
+  metric_type       String
+  data_type         String
+  annotation_type   MetricMetadataAnnotationType[]
+  embedding_type    String?
+  doc_url           String
+  stat_min_value    Float
+  stat_max_value    Float
+  stat_mean_value   Float
+  stat_num_rows     Int
+}
+
+model MetricRow {
+  id Int @id @default(autoincrement())
+  metric_prefix       String
+  identifier          String
+  score               Float
+  description         String?
+  object_class        String?
+  annotator           String?
+  frame               Int
+  url                 String?
+  @@unique([metric_prefix, identifier, frame])
+}
+
+model EmbeddingRow {
+  id            Int @id @default(autoincrement())
+  metric_prefix String
+  identifier    String
+  embedding     Bytes // Pickle encoded float array
+  description   String?
+  object_class  String?
+  frame         Int
+  url           String?
+  @@unique([metric_prefix, identifier])
+}

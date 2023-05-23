@@ -2,6 +2,7 @@ import inspect
 import logging
 import os
 from importlib import import_module
+from math import isinf
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
@@ -13,13 +14,15 @@ from loguru import logger
 from encord_active.lib.common.data_utils import convert_image_bgr
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import Metric, SimpleMetric, StatsMetadata
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import get_embedding_type
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
+from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_info
 
 logger = logger.opt(colors=True)
@@ -119,21 +122,46 @@ def load_metric(module_classname_pair: Tuple[str, str]) -> Metric:
     return import_module(module_classname_pair[0]).__getattribute__(module_classname_pair[1])()
 
 
-def _write_meta_file(cache_dir: Path, metric: Union[Metric, SimpleMetric], stats: StatisticsObserver):
-    meta_file = (cache_dir / "metrics" / f"{metric.metadata.get_unique_name()}.meta.json").expanduser()
+def _write_meta_file(project_file_structure: ProjectFileStructure, metric: Union[Metric, SimpleMetric],
+                     stats: StatisticsObserver):
     metric.metadata.stats = StatsMetadata.from_stats_observer(stats)
+    with PrismaConnection(project_file_structure) as conn:
+        title = metric.metadata.title
+        data = dict(metric.metadata)
+        stats = data.pop("stats")
+        for k, v in dict(stats).items():
+            data[f"stat_{k}"] = float(v) if not isinf(float(v)) else 0.0
+        data["stat_num_rows"] = int(data["stat_num_rows"])
+        data["annotation_type"] = [] if data.get("annotation_type", None) is None else \
+            [{"annotation_type": value} for value in data["annotation_type"]]
+        data["annotation_type"] = {
+            "create": data["annotation_type"]
+        }
+        conn.metricmetadata.upsert(
+            where={
+                "title": title,
+            },
+            data={
+                "create": data,
+                "update": {
+                    k: v
+                    for k, v in data.items()
+                    if k != "annotation_type"
+                }
+            },
+            include={
+                "annotation_type": True,
+            }
+        )
 
-    with meta_file.open("w") as f:
-        f.write(metric.metadata.json())
 
-
-def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric]):
+def _execute_metrics(project_file_structure: ProjectFileStructure, iterator: Iterator, metrics: list[Metric]) -> None:
     for metric in metrics:
         logger.info(f"Running metric <blue>{metric.metadata.title}</blue>")
         unique_metric_name = metric.metadata.get_unique_name()
 
         stats = StatisticsObserver()
-        with CSVMetricWriter(cache_dir, iterator, prefix=unique_metric_name) as writer:
+        with DBMetricWriter(project_file_structure, iterator, prefix=unique_metric_name) as writer:
             writer.attach(stats)
 
             try:
@@ -141,14 +169,14 @@ def _execute_metrics(cache_dir: Path, iterator: Iterator, metrics: list[Metric])
             except Exception as e:
                 logging.critical(e, exc_info=True)
 
-        _write_meta_file(cache_dir, metric, stats)
+        _write_meta_file(project_file_structure, metric, stats)
 
 
-def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[SimpleMetric]):
+def _execute_simple_metrics(iterator: Iterator, metrics: list[SimpleMetric]):
     if len(metrics) == 0:
         return
     logger.info(f"Running metrics <blue>{', '.join(metric.metadata.title for metric in metrics)}</blue>")
-    csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
+    csv_writers = [DBMetricWriter(iterator.project_file_structure, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):
         csv_w.attach(stats)
@@ -163,7 +191,7 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
         except Exception as e:
             logging.critical(e, exc_info=True)
     for metric, stats in zip(metrics, stats_observers):
-        _write_meta_file(cache_dir, metric, stats)
+        _write_meta_file(iterator.project_file_structure, metric, stats)
 
 
 @logger.catch()
@@ -178,14 +206,14 @@ def execute_metrics(
     iterator = iterator_cls(data_dir, project=project, **kwargs)
 
     if "prediction_type" in kwargs:
-        cache_dir = data_dir / "predictions" / kwargs["prediction_type"].value
-    else:
-        cache_dir = data_dir
+        # cache_dir = data_dir / "predictions" / kwargs["prediction_type"].value
+        raise RuntimeError("Not yet supported properly in this PR, FIXME: ")
+    project_file_structure = iterator.project_file_structure
 
     simple_metrics = [m for m in selected_metrics if isinstance(m, SimpleMetric)]
     metrics = [m for m in selected_metrics if isinstance(m, Metric)]
 
     if metrics:
-        _execute_metrics(cache_dir, iterator, metrics)
+        _execute_metrics(project_file_structure, iterator, metrics)
     if simple_metrics:
-        _execute_simple_metrics(cache_dir, iterator, simple_metrics)
+        _execute_simple_metrics(iterator, simple_metrics)

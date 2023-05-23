@@ -1,20 +1,18 @@
-import csv
-from pathlib import Path
+import json
 from typing import Optional, Union
 
+from prisma import Base64
+
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.writer import CSVWriter
+from encord_active.lib.common.writer import DBWriter
 
 EMBEDDING_CSV_FIELDS = ["identifier", "embedding", "description", "object_class", "frame", "url"]
 
 
-class CSVEmbeddingWriter(CSVWriter):
-    def __init__(self, data_path: Path, iterator: Iterator, prefix: str):
-        filename = (data_path / "embeddings" / f"{prefix}.csv").expanduser()
-        super(CSVEmbeddingWriter, self).__init__(filename=filename, iterator=iterator)
-
-        self.writer = csv.DictWriter(self.csv_file, fieldnames=EMBEDDING_CSV_FIELDS)
-        self.writer.writeheader()
+class DBEmbeddingWriter(DBWriter):
+    def __init__(self, project_file_structure: "ProjectFileStructure", iterator: Iterator, prefix: str):
+        super().__init__(project_file_structure, iterator)
+        self.prefix = prefix
 
     def write(
         self,
@@ -24,7 +22,7 @@ class CSVEmbeddingWriter(CSVWriter):
         label_class: Optional[str] = None,
         label_hash: Optional[str] = None,
         du_hash: Optional[str] = None,
-        frame: Optional[int] = None,
+        frame: int = 0,
         url: Optional[str] = None,
     ):
         if not isinstance(value, (float, list)):
@@ -53,8 +51,34 @@ class CSVEmbeddingWriter(CSVWriter):
             "frame": frame,
             "url": url,
         }
+        identifier = self.get_identifier(labels, label_hash, du_hash, frame)
+        embedding_bytes = Base64.encode(json.dumps(value).encode("utf-8"))
+        if self._conn is not None:
+            self._conn.embeddingrow.upsert(
+                where={
+                    "metric_prefix_identifier": {
+                        "metric_prefix": self.prefix,
+                        "identifier": identifier,
+                    },
+                },
+                data={
+                    "create": {
+                        "metric_prefix": self.prefix,
+                        "identifier": identifier,
+                        "frame": frame,
+                        "embedding": embedding_bytes,
+                        "description": description,
+                        "object_class": label_class,
+                        "url": url,
+                    },
+                    "update": {
+                        "embedding": embedding_bytes,
+                        "description": description,
+                        "object_class": label_class,
+                        "url": url,
+                    }
+                }
+            )
+        else:
+            raise RuntimeError("Prisma connection is missing")
 
-        self.writer.writerow(row)
-        self.csv_file.flush()
-
-        super().write(value)

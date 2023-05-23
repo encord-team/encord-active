@@ -3,18 +3,16 @@ from pathlib import Path
 from typing import Optional, Union
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.writer import CSVWriter
+from encord_active.lib.common.writer import DBWriter
+from encord_active.lib.project import ProjectFileStructure
 
 SCORE_CSV_FIELDS = ["identifier", "score", "description", "object_class", "annotator", "frame", "url"]
 
 
-class CSVMetricWriter(CSVWriter):
-    def __init__(self, data_path: Path, iterator: Iterator, prefix: str):
-        filename = (data_path / "metrics" / f"{prefix}.csv").expanduser()
-        super(CSVMetricWriter, self).__init__(filename=filename, iterator=iterator)
-
-        self.writer = csv.DictWriter(self.csv_file, fieldnames=SCORE_CSV_FIELDS)
-        self.writer.writeheader()
+class DBMetricWriter(DBWriter):
+    def __init__(self, project_file_structure: ProjectFileStructure, iterator: Iterator, prefix: str):
+        super().__init__(project_file_structure=project_file_structure, iterator=iterator)
+        self.prefix = prefix
 
     def write(
         self,
@@ -64,7 +62,34 @@ class CSVMetricWriter(CSVWriter):
             "annotator": annotator,
         }
 
-        self.writer.writerow(row)
-        self.csv_file.flush()
-
-        super().write(score)
+        if self._conn is not None:
+            self._conn.metricrow.upsert(
+                where={
+                    "metric_prefix_identifier_frame": {
+                        "identifier": key,
+                        "metric_prefix": self.prefix,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "create": {
+                        "identifier": key,
+                        "metric_prefix": self.prefix,
+                        "frame": frame,
+                        "score": score,
+                        "description": description,
+                        "object_class": label_class,
+                        "url": url,
+                        "annotator": annotator,
+                    },
+                    "update": {
+                        "score": score,
+                        "description": description,
+                        "object_class": label_class,
+                        "url": url,
+                        "annotator": annotator,
+                    }
+                }
+            )
+        else:
+            raise RuntimeError("Prisma DB Connection closed")

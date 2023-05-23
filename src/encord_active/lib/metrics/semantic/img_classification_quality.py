@@ -22,7 +22,7 @@ from encord_active.lib.metrics.types import (
     MetricType,
 )
 from encord_active.lib.metrics.utils import is_multiclass_ontology
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -260,7 +260,7 @@ class ImageLevelQualityTest(Metric):
 
         return found_any
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         project_has_classifications = self.setup(iterator)
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")

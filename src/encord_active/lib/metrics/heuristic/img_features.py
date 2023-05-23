@@ -7,7 +7,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_du_size
 from encord_active.lib.metrics.metric import Metric, SimpleMetric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 
 class ContrastMetric(SimpleMetric):
@@ -212,7 +212,7 @@ Aspect ratio is computed as the ratio of image width to image height ($\frac{wid
             annotation_type=AnnotationType.NONE,
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         for data_unit, image in iterator.iterate(desc=f"Computing {self.metadata.title}"):
             size = get_du_size(data_unit, image)
             if not size:
@@ -237,7 +237,7 @@ Area is computed as the product of image width and image height ($width \times h
             annotation_type=AnnotationType.NONE,
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         for data_unit, image in iterator.iterate(desc=f"Computing {self.metadata.title}"):
             size = get_du_size(data_unit, image)
             if not size:

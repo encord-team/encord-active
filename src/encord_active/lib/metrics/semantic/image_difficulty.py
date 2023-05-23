@@ -11,7 +11,7 @@ from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -89,7 +89,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
         return data_hash_to_score
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         if self.metadata.embedding_type:
             self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:

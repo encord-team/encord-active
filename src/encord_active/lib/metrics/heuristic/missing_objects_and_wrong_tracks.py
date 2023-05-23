@@ -11,7 +11,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_iou, get_polygon
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -87,7 +87,7 @@ hash, they will be flagged as a potentially broken track.
         )
         self.threshold = threshold
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
         found_valid = False

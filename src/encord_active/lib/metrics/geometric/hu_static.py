@@ -6,11 +6,11 @@ from sklearn.decomposition import PCA
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_object_coordinates, patch_sklearn_linalg
-from encord_active.lib.embeddings.hu_moments import get_hu_embeddings
-from encord_active.lib.embeddings.writer import CSVEmbeddingWriter
+from encord_active.lib.embeddings.hu_moments import get_hu_embeddings, get_hu_embeddings_lookup
+from encord_active.lib.embeddings.writer import DBEmbeddingWriter
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -43,9 +43,9 @@ class HuMomentsStatic(Metric):
         )
 
     @patch_sklearn_linalg
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
-        hu_moments_df = get_hu_embeddings(iterator, force=True)
+        hu_moments_lookup = get_hu_embeddings_lookup(iterator, force=True)
 
         moments_list: List[np.ndarray] = []
         obj_list: List[dict] = []
@@ -61,7 +61,7 @@ class HuMomentsStatic(Metric):
                     continue
 
                 key = writer.get_identifier(obj)
-                moments = np.array(eval(hu_moments_df.loc[hu_moments_df["identifier"] == key, "embedding"].values[0]))
+                moments = np.array(hu_moments_lookup[key])
 
                 obj_list.append(obj)
                 obj_hashes.append(obj["objectHash"])
@@ -90,7 +90,7 @@ class HuMomentsStatic(Metric):
                 writer.write(float(distance_vector[index]), obj, label_class=cls_list[index])
 
         pca_coordinates = PCA(n_components=2).fit_transform(X)
-        with CSVEmbeddingWriter(iterator.cache_dir, iterator, prefix="hu_2d-embedding") as coords_writer:
+        with DBEmbeddingWriter(iterator.project_file_structure, iterator, prefix="hu_2d-embedding") as coords_writer:
             for data_unit, _ in iterator.iterate(desc="writing scores"):
                 if "objects" not in data_unit["labels"]:
                     continue

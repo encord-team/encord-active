@@ -265,7 +265,7 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
 
-    pfs = ProjectFileStructure(iterator.cache_dir)
+    pfs = iterator.project_file_structure
     embedding_path = pfs.get_embeddings_file(embedding_type)
 
     if force:

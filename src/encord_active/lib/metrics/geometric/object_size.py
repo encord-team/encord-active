@@ -10,7 +10,7 @@ from encord_active.lib.common.utils import (
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -41,7 +41,7 @@ class RelativeObjectAreaMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
@@ -75,7 +75,7 @@ class OccupiedTotalAreaMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         if not iterator.project.ontology.objects:
             return
 
@@ -119,7 +119,7 @@ class AbsoluteObjectAreaMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
@@ -160,7 +160,7 @@ class ObjectAspectRatioMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 

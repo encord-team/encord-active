@@ -1,12 +1,19 @@
 import math
+import typing
 from abc import ABC, abstractmethod
 from itertools import chain
-from pathlib import Path
 from typing import List, Optional, Union
+from typing_extensions import Self
 
 import numpy as np
 
+from encord_active.lib.project import ProjectFileStructure
+
+if typing.TYPE_CHECKING:
+    import prisma
+
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.db.connection import PrismaConnection
 
 
 class MetricObserver(ABC):
@@ -65,22 +72,22 @@ class Writer(ABC):
             observer.on_value_insert(value)
 
 
-class CSVWriter(Writer):
-    def __init__(self, filename: Path, iterator: Iterator):
-        super(CSVWriter, self).__init__()
-
+class DBWriter(Writer):
+    def __init__(self, project_file_structure: "ProjectFileStructure", iterator: Iterator) -> None:
+        super().__init__()
+        self.project_file_structure = project_file_structure
         self.iterator = iterator
+        self._prisma_db_conn: Optional[PrismaConnection] = None
+        self._conn: Optional["prisma.Prisma"]
 
-        self.filename = filename
-        self.filename.parent.mkdir(parents=True, exist_ok=True)
-        self.csv_file = self.filename.open("w", newline="", encoding="utf-8")
-
-    def __enter__(self):
+    def __enter__(self) -> Self:
+        self._prisma_db_conn = PrismaConnection(self.project_file_structure)
+        self._conn = self._prisma_db_conn.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.csv_file.close()  # Notify observers
-        super(CSVWriter, self).__exit__(exc_type, exc_val, exc_tb)
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._conn = None
+        self._prisma_db_conn.__exit__(exc_type, exc_val, exc_tb)
 
     def get_identifier(
         self,

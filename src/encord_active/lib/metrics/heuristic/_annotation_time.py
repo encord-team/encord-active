@@ -3,7 +3,7 @@ from loguru import logger
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -21,7 +21,7 @@ If no logs are available for a particular object, it will get score 0.""",
             annotation_type=AnnotationType.ALL,
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         found_any = False
 
         for data_unit, _ in iterator.iterate(desc="Computing annotation times"):

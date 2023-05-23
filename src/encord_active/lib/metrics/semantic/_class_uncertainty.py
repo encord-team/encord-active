@@ -18,7 +18,7 @@ from encord_active.lib.metrics.types import (
     EmbeddingType,
     MetricType,
 )
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -205,7 +205,7 @@ network and Monte-Carlo Dropout to estimate the uncertainty of the label.""",
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)
         with classifier.mc_eval() and torch.inference_mode():
             pbar = tqdm.tqdm(total=len(resnet_embeddings_df), desc="Predicting uncertainty")
@@ -239,7 +239,7 @@ class ConfidenceScoreMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         batches, classifier, name_to_idx, resnet_embeddings_df = preliminaries(iterator)
 
         with classifier.mc_eval() and torch.inference_mode():

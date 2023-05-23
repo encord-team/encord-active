@@ -3,7 +3,7 @@ import numpy as np
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 
 class RandomImageMetric(Metric):
@@ -18,7 +18,7 @@ class RandomImageMetric(Metric):
             annotation_type=[],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
         for _ in iterator.iterate(desc="Assigning random values to images"):
@@ -41,7 +41,7 @@ class RandomeObjectMetric(Metric):
             ],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
         for data_unit, _ in iterator.iterate(desc="Assigning random values to objects"):

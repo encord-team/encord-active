@@ -4,10 +4,10 @@ import numpy as np
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.hu_moments import get_hu_embeddings
+from encord_active.lib.embeddings.hu_moments import get_hu_embeddings, get_hu_embeddings_lookup
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import DBMetricWriter
 
 logger = logger.opt(colors=True)
 
@@ -55,13 +55,13 @@ the lower its score will be.""",
             annotation_type=[AnnotationType.OBJECT.POLYGON],
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+    def execute(self, iterator: Iterator, writer: DBMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
         moment_store = MomentStore()
-        hu_moments_df = get_hu_embeddings(iterator)
-        hu_moments_identifiers = set(hu_moments_df["identifier"])
+        hu_moments_lookup = get_hu_embeddings_lookup(iterator)
+        hu_moments_identifiers = set(hu_moments_lookup.keys())
 
         for data_unit, _ in iterator.iterate(desc="Computing moment similarity"):
             for obj in data_unit["labels"].get("objects", []):
@@ -72,7 +72,7 @@ the lower its score will be.""",
                 if key not in hu_moments_identifiers:  # check if identifier was discarded by get_hu_embeddings
                     continue
 
-                moments = np.array(eval(hu_moments_df.loc[hu_moments_df["identifier"] == key, "embedding"].values[0]))
+                moments = moments = np.array(hu_moments_lookup[key])
                 score = moment_store.score(obj["objectHash"], moments)
                 writer.write(score, obj)
                 found_any = True

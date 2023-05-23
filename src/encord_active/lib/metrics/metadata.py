@@ -1,5 +1,6 @@
 import json
 
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.project import ProjectFileStructure
 
