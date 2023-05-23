@@ -180,7 +180,8 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
                 filtered = pd.concat([filtered, filtered_objects_df])
 
-    return filtered.drop("data_row_id", axis=1)
+    filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
+    return filtered
 
 
 class InputItem(NamedTuple):
