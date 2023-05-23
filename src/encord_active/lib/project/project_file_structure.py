@@ -38,10 +38,8 @@ EMBEDDING_REDUCED_TO_FILENAME = {
 
 # To be deprecated when Encord Active version is >= 0.1.60.
 def _fill_missing_tables(pfs: ProjectFileStructure):
-    from prisma.types import (
-        DataUnitCreateInput,
-        LabelRowCreateInput,
-    )
+    from prisma.types import DataUnitCreateInput, LabelRowCreateInput
+
     # Adds the content missing from the data units and label rows tables when projects with
     # older versions of Encord Active are handled with versions greater than 0.1.52.
     label_row_meta = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
@@ -355,9 +353,8 @@ class ProjectFileStructure(BaseProjectFileStructure):
     def data_units(
         self, where: Optional["prisma.types.DataUnitWhereInput"] = None, include_label_row: bool = False
     ) -> List["prisma.models.DataUnit"]:
-        from prisma.types import (
-            DataUnitInclude,
-        )
+        from prisma.types import DataUnitInclude
+
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection(self) as conn:
             _fill_missing_tables(self)

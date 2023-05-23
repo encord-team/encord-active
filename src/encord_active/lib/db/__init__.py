@@ -1,11 +1,13 @@
-from encord_active.lib.db.prisma_init import generate_prisma_client, did_schema_change
+from encord_active.lib.db.prisma_init import did_schema_change, generate_prisma_client
 
 
 def _regen():
     import importlib
     import logging
+
     logger = logging.getLogger("Prisma")
     import sys
+
     try:
         import prisma
         import prisma.client
@@ -19,6 +21,7 @@ def _regen():
     except (RuntimeError, ImportError):
         generate_prisma_client()
         importlib.reload(prisma)  # pylint: disable=used-before-assignment
+
 
 # Regenerate prisma DB
 _regen()
