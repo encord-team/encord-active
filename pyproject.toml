@@ -85,6 +85,7 @@ uvicorn = { extras = ["standard"], version = "^0.21.1" }
 nodejs-bin = "^16.15.1a4"
 pyjwt = "^2.7.0"
 torch = "^2.0.0"
+kornia = "^0.6.12"
 clip-ea = "^1.0"
 torchvision = "^0.15.2"
 ftfy = "^6.1.1"
