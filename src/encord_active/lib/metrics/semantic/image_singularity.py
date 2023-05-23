@@ -11,6 +11,7 @@ from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
 from encord_active.lib.embeddings.embeddings import get_embeddings
+from encord_active.lib.embeddings.faiss_index import FaissIndex
 from encord_active.lib.embeddings.utils import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
@@ -47,16 +48,12 @@ This metric gives each image a score that shows each image's uniqueness.
         self.scores: dict[str, DataUnitInfo] = {}
         self.near_duplicate_threshold = near_duplicate_threshold
 
-    def convert_to_index(self):
+    def convert_to_index(self) -> FaissIndex:
         embeddings_list: List[np.ndarray] = [x["embedding"] for x in self.collections]
 
         embeddings = np.array(embeddings_list).astype(np.float32)
-        embeddings_normalized = sk_normalize(embeddings, axis=1, norm="l2")
-
-        db_index = faiss.index_factory(embeddings_normalized.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
-
-        db_index.add(embeddings_normalized)  # pylint: disable=no-value-for-parameter
-        return embeddings_normalized, db_index
+        faiss_idx = FaissIndex(embeddings)
+        return faiss_idx
 
     def scale_cos_score_to_0_1(self, score: float) -> float:
         return (score + 1) / 2
@@ -96,15 +93,13 @@ This metric gives each image a score that shows each image's uniqueness.
             return
 
         if len(self.collections) > 0:
-            embeddings, db_index = self.convert_to_index()
+            faiss_index = self.convert_to_index()
             # For more information why we set the below threshold
             # see here: https://github.com/facebookresearch/faiss/wiki/Implementation-notes#matrix-multiplication-to-do-many-l2-distance-computations
             # If the 2nd approach is used, identical images have distance more than zero
             # which affects this metric because we want identical images to have a zero value
-            faiss.cvar.distance_compute_blas_threshold = embeddings.shape[0] + 1
-            nearest_distances, nearest_items = db_index.search(
-                embeddings, embeddings.shape[0]
-            )  # pylint: disable=no-value-for-parameter
+            faiss.cvar.distance_compute_blas_threshold = faiss_index.embeddings.shape[0] + 1
+            nearest_distances, nearest_items = faiss_index.query(faiss_index.embeddings)
             nearest_items = fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items)
 
             self.score_images(iterator.project.project_hash, nearest_distances, nearest_items)
