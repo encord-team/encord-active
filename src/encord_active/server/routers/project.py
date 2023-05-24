@@ -66,8 +66,8 @@ def read_item(project: ProjectFileStructureDep, id: str):
         row = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")[0]
 
         # Include data tags from the relevant frame when the inspected item is a label
-        if len(row["identifier"].split("_")) > 3:
-            data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] != data_row_id:
             data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
             selected_tags = row.setdefault("tags", [])
             selected_tags.extend(data_row.get("tags", []))
@@ -87,18 +87,17 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
             data_tags, label_tags = from_grouped_tags(item.grouped_tags)
             data_row_id = "_".join(item.id.split("_", maxsplit=3)[:3])
 
-            # Add data tags to the relevant frame
-            if item.id == data_row_id:  # Override the frame's data tags when the updated item is such frame
+            if item.id == data_row_id:
+                # When a frame is tagged then override its data tags
                 MergedMetrics(conn).update_tags(item.id, data_tags)
-            else:  # Add the new data tags to the frame when the updated item is one of its labels
+            else:
+                # When a label is tagged apply the label tags to it and the data tags to its corresponding frame
+                MergedMetrics(conn).update_tags(item.id, label_tags)
+
                 data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
                 original_data_tags: list[Tag] = data_row.get("tags", [])
-                new_data_tags = list({*data_tags, *original_data_tags})
+                new_data_tags = list({*data_tags, *original_data_tags})  # Remove any duplicated data tag
                 MergedMetrics(conn).update_tags(data_row_id, new_data_tags)
-
-            # Add label tags only when the updated item is a label
-            if item.id != data_row_id:
-                MergedMetrics(conn).update_tags(item.id, label_tags)
 
 
 @router.get("/{project}/similarities/{id}")
