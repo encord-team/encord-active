@@ -353,3 +353,4 @@ Sessionx.vim
 imports.prof
 ci-tests
 examples/micro-model-predictions/segmentation/config.ini
+examples/micro-model-predictions/detection/generate_bbox_predictions/config.ini
