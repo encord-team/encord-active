@@ -26,16 +26,29 @@ ontology_names = [obj["name"] for obj in ontology.get("objects")]
 ontology_name_to_featurehash = {obj["name"]: obj["featureNodeHash"] for obj in ontology.get("objects")}
 
 predictions_to_store = []
-for data_unit, _ in tqdm(iterator.iterate()):
 
-    img_path = next(ea_project_fs.label_row_structure(iterator.label_hash).iter_data_unit(data_unit["data_hash"]))
+batch_size = 10
+counter = 0
+file_paths = []
 
-    inference_result = project.model_inference(
-        params["ENCORD_MODEL_ITERATION_HASH"],
-        file_paths=[img_path.path.as_posix()],
-        conf_thresh=float(params["CONFIDENCE_THRESHOLD"]),
-        iou_thresh=float(params["IOU_THRESHOLD"]),
-    )
+pbar = tqdm(total=iterator.length, desc="Running inference")
+for idx, (data_unit, _) in enumerate(iterator.iterate()):
+
+    if (counter + 1) % batch_size == 0 or idx + 1 == iterator.length:
+        inference_result = project.model_inference(
+            params["ENCORD_MODEL_ITERATION_HASH"],
+            file_paths=file_paths,
+            conf_thresh=float(params["CONFIDENCE_THRESHOLD"]),
+            iou_thresh=float(params["IOU_THRESHOLD"]),
+        )
+    else:
+        file_paths.append(
+            next(
+                ea_project_fs.label_row_structure(iterator.label_hash).iter_data_unit(data_unit["data_hash"])
+            ).path.as_posix()
+        )
+
+    pbar.update(1)
 
     # for obj in inference_result[0]["predictions"]["0"]["objects"]:
     #
@@ -54,5 +67,5 @@ for data_unit, _ in tqdm(iterator.iterate()):
     #     )
     #     predictions_to_store.append(prediction)
 
-# with open((ea_project_fs.project_dir / "predictions_sam.pkl"), "wb") as f:
-#     pickle.dump(predictions_to_store, f)
+with open((ea_project_fs.project_dir / "predictions_sam.pkl"), "wb") as f:
+    pickle.dump(predictions_to_store, f)

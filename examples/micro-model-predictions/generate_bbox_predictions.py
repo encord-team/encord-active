@@ -3,12 +3,16 @@ import json
 import pickle
 from pathlib import Path
 
-import numpy as np
 from encord import EncordUserClient, Project
 from tqdm import tqdm
 
 from encord_active.lib.common.iterator import DatasetIterator
-from encord_active.lib.db.predictions import Format, ObjectDetection, Prediction
+from encord_active.lib.db.predictions import (
+    BoundingBox,
+    Format,
+    ObjectDetection,
+    Prediction,
+)
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 config = configparser.ConfigParser()
@@ -37,22 +41,18 @@ for data_unit, _ in tqdm(iterator.iterate()):
         iou_thresh=float(params["IOU_THRESHOLD"]),
     )
 
-    # for obj in inference_result[0]["predictions"]["0"]["objects"]:
-    #
-    #     polygon_points = [[key, [value["x"], value["y"]]] for key, value in obj["polygon"].items()]
-    #     polygon_points_sorted = sorted(polygon_points, key=lambda x: int(x[0]))
-    #     polygon = np.array([item[1] for item in polygon_points_sorted])
-    #
-    #     prediction = Prediction(
-    #         data_hash=data_unit["data_hash"],
-    #         confidence=obj["confidence"],
-    #         object=ObjectDetection(
-    #             format=Format.POLYGON,
-    #             data=polygon,
-    #             feature_hash=obj["featureHash"],
-    #         ),
-    #     )
-    #     predictions_to_store.append(prediction)
+    for object in inference_result[0]["predictions"]["0"]["objects"]:
 
-# with open((ea_project_fs.project_dir / "predictions_sam.pkl"), "wb") as f:
-#     pickle.dump(predictions_to_store, f)
+        prediction = Prediction(
+            data_hash=data_unit["data_hash"],
+            confidence=object["confidence"],
+            object=ObjectDetection(
+                format=Format.BOUNDING_BOX,
+                data=BoundingBox(x=0, y=0, w=0, h=0),
+                feature_hash=object["featureHash"],
+            ),
+        )
+        predictions_to_store.append(prediction)
+
+with open((ea_project_fs.project_dir / "predictions_sam.pkl"), "wb") as f:
+    pickle.dump(predictions_to_store, f)
