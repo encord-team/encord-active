@@ -100,17 +100,12 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
             data_tags, label_tags = from_grouped_tags(item.grouped_tags)
             data_row_id = "_".join(item.id.split("_", maxsplit=3)[:3])
 
-            if item.id == data_row_id:
-                # When a frame is tagged then override its data tags
-                MergedMetrics(conn).update_tags(item.id, data_tags)
-            else:
-                # When a label is tagged apply the label tags to it and the data tags to its corresponding frame
-                MergedMetrics(conn).update_tags(item.id, label_tags)
+            # Update the data tags associated with the frame (or the one that contains the labels)
+            MergedMetrics(conn).update_tags(data_row_id, data_tags)
 
-                data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
-                original_data_tags: list[Tag] = data_row.get("tags", [])
-                new_data_tags = list({*data_tags, *original_data_tags})  # Remove any duplicated data tag
-                MergedMetrics(conn).update_tags(data_row_id, new_data_tags)
+            # Update the label tags associated with the labels (if they exist)
+            if item.id != data_row_id:
+                MergedMetrics(conn).update_tags(item.id, label_tags)
 
 
 @router.get("/{project}/similarities/{id}")
