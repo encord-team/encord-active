@@ -64,6 +64,13 @@ def read_item(project: ProjectFileStructureDep, id: str):
     with DBConnection(project) as conn:
         row = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")[0]
 
+        # Include data tags from the relevant frame when the inspected item is a label
+        if len(row["identifier"].split("_")) > 3:
+            data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+            data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
+            selected_tags = row.setdefault("tags", [])
+            selected_tags.extend(data_row.get("tags", []))
+
     return to_item(row, project, lr_hash, du_hash, frame)
 
 
