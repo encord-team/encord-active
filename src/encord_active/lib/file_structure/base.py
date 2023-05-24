@@ -22,22 +22,12 @@ class BaseProjectFileStructure:
 
     @property
     @abstractmethod
-    def data(self) -> Path:
-        pass
-
-    @property
-    @abstractmethod
     def metrics(self) -> Path:
         pass
 
     @property
     @abstractmethod
     def metrics_meta(self) -> Path:
-        pass
-
-    @property
-    @abstractmethod
-    def embeddings(self) -> Path:
         pass
 
     @property

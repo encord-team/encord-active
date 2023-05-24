@@ -1,3 +1,4 @@
+import json
 import pickle
 import time
 from pathlib import Path
@@ -9,9 +10,11 @@ from encord.objects.common import PropertyType
 from encord.project_ontology.object_type import ObjectShape
 from loguru import logger
 from PIL import Image
+from prisma import Base64
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
 from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
 from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
@@ -263,36 +266,23 @@ def generate_classification_embeddings(
 
 
 def load_embeddings(iterator: Iterator, embedding_type: EmbeddingType) -> List[LabelEmbedding]:
-    LabelEmbedding(
-        url=data_unit["data_link"],
-        label_row=iterator.label_hash,
-        data_unit=data_unit["data_hash"],
-        frame=iterator.frame,
-        labelHash=obj["objectHash"],
-        # lastEditedBy=last_edited_by,
-        featureHash=obj["featureHash"],
-        name=obj["name"],
-        # dataset_title=iterator.dataset_title,
-        embedding=emb,
-        classification_answers=None,
-    )
-    writer.write(
-        value=list(embedding["embedding"]),
-        labels=[],
-        description=embedding["name"],
-        label_class=embedding["featureHash"],
-        label_hash=embedding["label_row"],
-        du_hash=embedding["data_unit"],
-        frame=embedding["frame"],
-        url=embedding["url"]
-    )
-    results = []
+    with PrismaConnection(iterator.project_file_structure) as conn:
+        results = conn.embeddingrow.find_many(where={
+            'metric_prefix': str(embedding_type),
+        })
     return [
         {
-            "url": result["url"],
-            "label_row": result["identifier"]
-            "frame": result["frame"]
-
+            "label_row": result.identifier.split("_")[0],
+            "data_unit": result.identifier.split("_")[1],
+            "frame": result.frame,
+            "url": result.url,
+            "labelHash": None,
+            "lastEditedBy": None,
+            "featureHash": result.object_class,
+            "name": result.description,
+            "dataset_title": iterator.dataset_title,
+            "embedding": np.array(json.loads(Base64.decode(result.embedding)), dtype=np.float32),
+            "classification_answers": None
         }
         for result in results
     ]
@@ -302,16 +292,13 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
     if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
 
-    pfs = iterator.project_file_structure
-    embedding_path = pfs.get_embeddings_file(embedding_type)
-
     if force:
         logger.info("Regenerating CNN embeddings...")
         embeddings = generate_embeddings(iterator, embedding_type)
     else:
         embeddings = load_embeddings(iterator, embedding_type)
         if len(embeddings) == 0:
-            logger.info(f"{embedding_path} not found. Generating embeddings...")
+            logger.info(f"{embedding_type} not found. Generating embeddings...")
             embeddings = generate_embeddings(iterator, embedding_type)
 
     return embeddings

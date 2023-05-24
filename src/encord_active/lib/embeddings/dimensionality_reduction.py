@@ -11,7 +11,6 @@ from pandera.typing import DataFrame
 from encord_active.lib.embeddings.utils import (
     Embedding2DSchema,
     EmbeddingType,
-    load_collections,
 )
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -25,7 +24,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     """
     pfs = ProjectFileStructure(project_dir)
 
-    collections = load_collections(embedding_type, pfs.embeddings)
+    collections = load_collections(embedding_type, pfs)
     if not collections:
         return
 
@@ -63,6 +62,7 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
         embeddings_2d_collection["x"].append(embeddings_2d[counter, 0])
         embeddings_2d_collection["y"].append(embeddings_2d[counter, 1])
 
+    save_embeddings
     target_path = pfs.get_embeddings_file(embedding_type, reduced=True)
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
 

@@ -52,7 +52,9 @@ class DBEmbeddingWriter(DBWriter):
             "url": url,
         }
         identifier = self.get_identifier(labels, label_hash, du_hash, frame)
-        embedding_bytes = Base64.encode(json.dumps(value).encode("utf-8"))
+        values = [value] if isinstance(value, float) else value
+        values = [float(value) for value in values]
+        embedding_bytes = Base64.encode(json.dumps(values).encode("utf-8"))
         if self._conn is not None:
             self._conn.embeddingrow.upsert(
                 where={

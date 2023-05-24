@@ -102,21 +102,6 @@ class Embedding2DSchema(IdentifierSchema, PointSchema2D):
     label: Series[str]
 
 
-def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:
-    embedding_path = embeddings_dir / EMBEDDING_TYPE_TO_FILENAME[embedding_type]
-    collections = []
-    if os.path.isfile(embedding_path):
-        with open(embedding_path, "rb") as f:
-            collections = pickle.load(f)
-    return collections
-
-
-def save_collections(embedding_type: EmbeddingType, embeddings_dir: Path, collection: list[LabelEmbedding]):
-    embedding_path = embeddings_dir / EMBEDDING_TYPE_TO_FILENAME[embedding_type]
-    with open(embedding_path, "wb") as f:
-        pickle.dump(collection, f)
-
-
 def build_keys_having_similarities(collections: List[LabelEmbedding], has_annotation: bool):
     return {get_key_from_index(collection, has_annotation): i for i, collection in enumerate(collections)}
 
