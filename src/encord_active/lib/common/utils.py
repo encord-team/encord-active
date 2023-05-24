@@ -262,9 +262,9 @@ def fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items: np.ndarray) 
     neighbors can be [5,6,1,9,3] if 5 and 6 is duplicate, it should be [6,5,1,9,3]. This function ensures that
     the first item is the queried index.
 
-    Operates inplace
+    Operates inplace.
 
-    :param nearest_items: nearest metrics obtained from search method of faiss index
+    :param nearest_items: [n, 30] array of ordered indices (along rows) for nearest neighbors
     :return: fixed nearest metrics
     """
     for i, row in enumerate(nearest_items):
@@ -282,7 +282,7 @@ def fix_duplicate_image_orders_in_knn_graph_single_row(row_no: int, nearest_item
     neighbors can be [5,6,1,9,3] if 5 and 6 is duplicate, it should be [6,5,1,9,3]. This function ensures that
     the first item is the queried index.
 
-    :param nearest_items: nearest metrics obtained from search method of faiss index
+    :param nearest_items: array of ordered indices for nearest neighbors
     :return: fixed nearest metrics
     """
     if nearest_items[0, 0] == row_no:
