@@ -19,8 +19,7 @@ class DBConnection:
 
 class PrismaConnection:
     def __init__(self, project_file_structure: BaseProjectFileStructure) -> None:
-        if not project_file_structure.prisma_db.exists():
-            ensure_prisma_db(project_file_structure.prisma_db)
+        ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride
 
         self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
