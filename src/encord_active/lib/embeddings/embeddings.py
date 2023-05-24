@@ -201,7 +201,11 @@ def generate_classification_embeddings(
         ]
 
         if not matching_image_label_embeddings:
-            image = image.convert("RGB")
+            try:
+                image = image.convert("RGB")
+            except OSError:
+                continue
+
             embedding = feature_extractor.embed_image(image)
         else:
             embedding = matching_image_label_embeddings[0]["embedding"]
