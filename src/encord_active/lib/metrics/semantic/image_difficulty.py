@@ -36,7 +36,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
             embedding_type=EmbeddingType.IMAGE,
         )
 
-        self.collections: List[LabelEmbedding] = []
+        self.label_embeddings: List[LabelEmbedding] = []
 
     def _get_cluster_size(self, iterator: Iterator) -> int:
         default_k_size = 10
@@ -58,8 +58,8 @@ merged by keeping the samples of classes the same for the first _N_ samples.
             return default_k_size
 
     def _get_difficulty_ranking(self, cluster_size: int) -> Dict[str, int]:
-        id_to_data_hash: Dict[int, str] = {i: item["data_unit"] for i, item in enumerate(self.collections)}
-        embeddings = np.array([item["embedding"] for item in self.collections]).astype(np.float32)
+        id_to_data_hash: Dict[int, str] = {i: emb["data_unit"] for i, emb in enumerate(self.label_embeddings)}
+        embeddings = np.array([emb["embedding"] for emb in self.label_embeddings]).astype(np.float32)
         kmeans: KMeans = KMeans(n_clusters=cluster_size, n_init="auto").fit(embeddings)  # type: ignore
 
         cluster_ids_all = []
@@ -91,24 +91,25 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         if self.metadata.embedding_type:
-            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.label_embeddings = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
             )
             return
 
-        if len(self.collections) > 0:
-            cluster_size = self._get_cluster_size(iterator)
-            if len(self.collections) < cluster_size:
-                logger.info("<yellow>[Skipping]</yellow> There are very few samples compared to the number of classes.")
-                return
-
-            data_hash_to_score = self._get_difficulty_ranking(cluster_size)
-
-            for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
-                score = data_hash_to_score.get(data_unit["data_hash"])
-                if score is not None:
-                    writer.write(score=score)
-        else:
+        if len(self.label_embeddings) == 0:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
+            return
+
+        cluster_size = self._get_cluster_size(iterator)
+        if len(self.label_embeddings) < cluster_size:
+            logger.info("<yellow>[Skipping]</yellow> There are very few samples compared to the number of classes.")
+            return
+
+        data_hash_to_score = self._get_difficulty_ranking(cluster_size)
+
+        for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+            score = data_hash_to_score.get(data_unit["data_hash"])
+            if score is not None:
+                writer.write(score=score)
