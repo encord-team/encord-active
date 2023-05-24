@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
+    Tag,
     all_tags,
     from_grouped_tags,
     to_grouped_tags,
@@ -83,7 +84,21 @@ class ItemTags(BaseModel):
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with DBConnection(project) as conn:
         for item in payload:
-            MergedMetrics(conn).update_tags(item.id, from_grouped_tags(item.grouped_tags))
+            data_tags, label_tags = from_grouped_tags(item.grouped_tags)
+            data_row_id = "_".join(item.id.split("_", maxsplit=3)[:3])
+
+            # Add data tags to the relevant frame
+            if item.id == data_row_id:  # Override the frame's data tags when the updated item is such frame
+                MergedMetrics(conn).update_tags(item.id, data_tags)
+            else:  # Add the new data tags to the frame when the updated item is one of its labels
+                data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
+                original_data_tags: list[Tag] = data_row.get("tags", [])
+                new_data_tags = list({*data_tags, *original_data_tags})
+                MergedMetrics(conn).update_tags(data_row_id, new_data_tags)
+
+            # Add label tags only when the updated item is a label
+            if item.id != data_row_id:
+                MergedMetrics(conn).update_tags(item.id, label_tags)
 
 
 @router.get("/{project}/similarities/{id}")
