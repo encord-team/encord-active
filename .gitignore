@@ -352,3 +352,4 @@ Sessionx.vim
 
 imports.prof
 ci-tests
+examples/micro-model-predictions/segmentation/config.ini
