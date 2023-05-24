@@ -56,6 +56,19 @@ def tagged_items(project: ProjectFileStructureDep):
     with DBConnection(project) as conn:
         df = MergedMetrics(conn).all(columns=["tags"]).reset_index()
     records = df[df["tags"].str.len() > 0].to_dict("records")
+
+    # Assign the respective frame's data tags to the rows representing the labels
+    data_row_id_to_data_tags: dict[str, List[Tag]] = dict()
+    for row in records:
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] == data_row_id:  # The row contains the info related to a frame
+            data_row_id_to_data_tags[data_row_id] = row.get("tags", [])
+    for row in records:
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] != data_row_id:  # The row contains the info related to some labels
+            selected_tags = row.setdefault("tags", [])
+            selected_tags.extend(data_row_id_to_data_tags.get(data_row_id, []))
+
     return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
 
 
