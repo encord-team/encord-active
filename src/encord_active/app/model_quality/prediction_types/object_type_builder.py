@@ -27,7 +27,7 @@ from encord_active.lib.charts.precision_recall import create_pr_chart_plotly
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.common.colors import Color
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DScoreSchema
+from encord_active.lib.embeddings.types import Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.filters import (
@@ -92,7 +92,12 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
             st.error("Couldn't match ground truths")
             return False
 
-        (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
+        (
+            predictions_filtered,
+            labels_filtered,
+            metrics,
+            precisions,
+        ) = compute_mAP_and_mAR(
             model_predictions,
             labels,
             matched_gt,

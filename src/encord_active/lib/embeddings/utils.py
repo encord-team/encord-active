@@ -3,13 +3,10 @@ import pickle
 from typing import Dict, List, Optional
 
 import numpy as np
-import pandera as pa
-from pandera.typing import Series
 
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.metrics.utils import IdentifierSchema
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
@@ -53,25 +50,6 @@ class SimilaritiesFinder:
             key = get_embedding_identifier(neighbor_label_embedding, has_annotation=self.has_annotations)
             name = answers.get("answer_name") or neighbor_label_embedding.get("name", "No label")
             self.similarities[identifier].append({"key": key, "name": name})
-
-
-class PointSchema2D(pa.SchemaModel):
-    x: Series[float] = pa.Field(coerce=True)
-    y: Series[float] = pa.Field(coerce=True)
-
-
-class PointSelectionSchema(PointSchema2D):
-    curveNumber: Series[float] = pa.Field(coerce=True)
-    pointNumber: Series[float] = pa.Field(coerce=True)
-    pointIndex: Series[float] = pa.Field(coerce=True)
-
-
-class Embedding2DSchema(IdentifierSchema, PointSchema2D):
-    label: Series[str]
-
-
-class Embedding2DScoreSchema(Embedding2DSchema):
-    score: Series[float]
 
 
 def load_label_embeddings(

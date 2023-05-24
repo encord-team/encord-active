@@ -12,6 +12,9 @@ from PIL import Image
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
+from encord_active.lib.embeddings.dimensionality_reduction import (
+    generate_2d_embedding_data,
+)
 from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
 from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
 from encord_active.lib.embeddings.types import ClassificationAnswer, LabelEmbedding
@@ -275,6 +278,7 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
     if force:
         logger.info("Regenerating CNN embeddings...")
         embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+        generate_2d_embedding_data(embedding_type, pfs)
     else:
         try:
             with open(embedding_path, "rb") as f:
@@ -282,6 +286,7 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
             embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
+            generate_2d_embedding_data(embedding_type, pfs)
 
     return embeddings
 
