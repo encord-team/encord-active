@@ -21,7 +21,7 @@ from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.constants import DISCORD_URL, ENCORD_EMAIL
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.helpers.tags import all_tags
+from encord_active.lib.db.helpers.tags import Tag, all_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.encord.actions import DatasetUniquenessError, EncordActions
@@ -91,13 +91,24 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             key = f"filter-select-{column.replace(' ', '_').lower()}"
 
             if column == "tags":
+                # Enable filtering of frames without tags (containing '[]' values in the 'tags' column)
+                no_data_tag_label = "No data"
+                options = all_tags(get_state().project_paths) + [Tag(no_data_tag_label, TagScope.DATA)]
                 tag_filters = right.multiselect(
                     "Choose tags to filter",
-                    options=all_tags(get_state().project_paths),
+                    options=options,
                     format_func=lambda x: x.name,
                     key=key,
                 )
                 for tag in tag_filters:
+                    # Include frames without annotations if the 'no_tag' meta-tag was selected
+                    if tag.name == no_data_tag_label:
+                        data_rows = filtered[~filtered.is_label_metric]
+                        filtered_rows = [len(x) == 0 for x in data_rows["tags"]]
+                        filtered_items = data_rows.loc[filtered_rows]
+                        filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
+                        continue
+
                     filtered_rows = [tag in x for x in filtered["tags"]]
                     filtered_items = filtered.loc[filtered_rows]
                     if tag.scope == TagScope.LABEL:
@@ -107,7 +118,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
 
             elif column == "object_class":
-                # Enable filtering of images without objects (containing 'None' values in the 'object_class' column)
+                # Enable filtering of frames without objects (containing 'None' values in the 'object_class' column)
                 no_class_label = "No class"
                 options = filtered[column].unique().tolist()
                 if None in options:
@@ -180,7 +191,8 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
                 filtered = pd.concat([filtered, filtered_objects_df])
 
-    return filtered.drop("data_row_id", axis=1)
+    filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
+    return filtered
 
 
 class InputItem(NamedTuple):
