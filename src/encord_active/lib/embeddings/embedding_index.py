@@ -10,7 +10,7 @@ from pynndescent import NNDescent
 
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.embeddings.embeddings import get_embeddings
-from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 

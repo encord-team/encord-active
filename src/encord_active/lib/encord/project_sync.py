@@ -11,10 +11,10 @@ import yaml
 from encord_active.lib.common.utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.embeddings.utils import (
-    LabelEmbedding,
-    load_collections,
-    save_collections,
+    load_label_embeddings,
+    save_label_embeddings,
 )
 from encord_active.lib.metrics.metric import MetricMetadata
 from encord_active.lib.metrics.types import EmbeddingType
@@ -38,9 +38,9 @@ def update_embedding_identifiers(
         embedding["url"] = embedding["url"].replace(old_du, new_du).replace(old_lr, new_lr)
         return embedding
 
-    collection = load_collections(embedding_type, project_file_structure.embeddings)
-    updated_collection = [_update_identifiers(up, renaming_map) for up in collection]
-    save_collections(embedding_type, project_file_structure.embeddings, updated_collection)
+    label_embeddings = load_label_embeddings(embedding_type, project_file_structure)
+    updated_label_embeddings = [_update_identifiers(up, renaming_map) for up in label_embeddings]
+    save_label_embeddings(embedding_type, project_file_structure, updated_label_embeddings)
 
 
 def update_2d_embedding_identifiers(
@@ -126,11 +126,13 @@ def create_filtered_embeddings(
         filtered_csv_df = csv_df[csv_df.index.isin(filtered_df.identifier)]
         filtered_csv_df.to_csv(target_project_structure.embeddings / csv_embedding_file.name)
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
-        collection = load_collections(embedding_type, curr_project_structure.embeddings)
-        collection = [
-            c for c in collection if c["label_row"] in filtered_label_rows and c["data_unit"] in filtered_data_hashes
+        label_embeddings = load_label_embeddings(embedding_type, curr_project_structure)
+        label_embeddings = [
+            le
+            for le in label_embeddings
+            if le["label_row"] in filtered_label_rows and le["data_unit"] in filtered_data_hashes
         ]
-        save_collections(embedding_type, target_project_structure.embeddings, collection)
+        save_label_embeddings(embedding_type, target_project_structure, label_embeddings)
 
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.CLASSIFICATION, EmbeddingType.OBJECT]:
         curr_embedding_file = curr_project_structure.get_embeddings_file(embedding_type)

@@ -14,7 +14,7 @@ from encord_active.lib.embeddings.dimensionality_reduction import (
     generate_2d_embedding_data,
 )
 from encord_active.lib.embeddings.embeddings import get_embeddings
-from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import (
     AnnotationType,

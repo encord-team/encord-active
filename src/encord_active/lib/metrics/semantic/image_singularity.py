@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 from loguru import logger
@@ -9,7 +8,7 @@ from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex, IPSearchResult
-from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter

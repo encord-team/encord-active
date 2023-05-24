@@ -14,7 +14,7 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import get_bbox_from_encord_label_object
 from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
 from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
-from encord_active.lib.embeddings.utils import ClassificationAnswer, LabelEmbedding
+from encord_active.lib.embeddings.types import ClassificationAnswer, LabelEmbedding
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -82,7 +82,7 @@ def generate_image_embeddings(
     else:
         raw_np_embeddings = raw_embeddings[0]
 
-    collections: List[LabelEmbedding] = []
+    label_embeddings: List[LabelEmbedding] = []
     offset = 0
     for i, (data_unit, _) in enumerate(iterator.iterate(desc="Storing embeddings.")):
         if i in skip:
@@ -103,13 +103,13 @@ def generate_image_embeddings(
             embedding=embedding,
             classification_answers=None,
         )
-        collections.append(entry)
+        label_embeddings.append(entry)
 
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
-    return collections
+    return label_embeddings
 
 
 @torch.inference_mode()
@@ -120,7 +120,7 @@ def generate_object_embeddings(
     if feature_extractor is None:
         feature_extractor = get_default_embedder()
 
-    collections: List[LabelEmbedding] = []
+    label_embeddings: List[LabelEmbedding] = []
     for data_unit, image in iterator.iterate(desc="Embedding object data."):
         if image is None:
             continue
@@ -154,20 +154,20 @@ def generate_object_embeddings(
                 classification_answers=None,
             )
 
-            collections.append(entry)
+            label_embeddings.append(entry)
 
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
-    return collections
+    return label_embeddings
 
 
 @torch.inference_mode()
 def generate_classification_embeddings(
     iterator: Iterator, feature_extractor: Optional[ImageEmbedder]
 ) -> List[LabelEmbedding]:
-    image_collections = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
+    image_label_embeddings = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
     ontology_class_hash_to_index: dict[str, dict] = {}
     ontology_class_hash_to_question_hash: dict[str, str] = {}
@@ -187,24 +187,24 @@ def generate_classification_embeddings(
     if feature_extractor is None:
         feature_extractor = get_default_embedder()
 
-    collections = []
+    clf_label_embeddings = []
     for data_unit, image in iterator.iterate(desc="Embedding classification data."):
         if image is None:
             continue
 
-        matching_image_collections = [
-            collection
-            for collection in image_collections
-            if collection["data_unit"] == data_unit["data_hash"]
-            and collection["label_row"] == iterator.label_hash
-            and collection["frame"] == iterator.frame
+        matching_image_label_embeddings = [
+            img_lab_emb
+            for img_lab_emb in image_label_embeddings
+            if img_lab_emb["data_unit"] == data_unit["data_hash"]
+            and img_lab_emb["label_row"] == iterator.label_hash
+            and img_lab_emb["frame"] == iterator.frame
         ]
 
-        if not matching_image_collections:
+        if not matching_image_label_embeddings:
             image = image.convert("RGB")
             embedding = feature_extractor.embed_image(image)
         else:
-            embedding = matching_image_collections[0]["embedding"]
+            embedding = matching_image_label_embeddings[0]["embedding"]
 
         if embedding is None:
             continue
@@ -252,13 +252,13 @@ def generate_classification_embeddings(
                 embedding=embedding,
                 classification_answers=identified_answers,
             )
-            collections.append(entry)
+            clf_label_embeddings.append(entry)
 
     logger.info(
         f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
-    return collections
+    return clf_label_embeddings
 
 
 def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> List[LabelEmbedding]:
