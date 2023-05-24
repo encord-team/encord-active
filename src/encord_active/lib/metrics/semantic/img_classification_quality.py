@@ -2,16 +2,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, TypedDict
 
-import faiss
 import numpy as np
 import torch
 from encord.objects.common import PropertyType
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.embeddings.dimensionality_reduction import (
-    generate_2d_embedding_data,
-)
+from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
@@ -63,7 +60,7 @@ class ImageLevelQualityTest(Metric):
             annotation_type=[AnnotationType.CLASSIFICATION.RADIO],
             embedding_type=EmbeddingType.CLASSIFICATION,
         )
-        self.collections: list[LabelEmbedding] = []
+        self.label_embeddings: list[LabelEmbedding] = []
         self.featureNodeHash_to_index: dict[str, dict] = {}
         self.featureNodeHash_to_name: dict[str, dict] = {}
         self.featureNodeHash_to_question_name: dict[str, str] = {}
@@ -102,33 +99,32 @@ class ImageLevelQualityTest(Metric):
                     images were annotated as `{info['target_answer']}`."
 
     def convert_to_indexes(self):
-        embedding_databases, indexes = {}, {}
-        question_hashes = {c["featureHash"] for c in self.collections}
+        question_specific_embeddings, question_specific_indexes = {}, {}
+        question_hashes = {c["featureHash"] for c in self.label_embeddings}
 
         for question_hash in question_hashes:
-            selected_collections = list(filter(lambda c: c["featureHash"] == question_hash, self.collections))
+            selected_collections = list(filter(lambda c: c["featureHash"] == question_hash, self.label_embeddings))
 
             if len(selected_collections) > self.num_nearest_neighbors:
-                embedding_database = np.stack(list(map(lambda x: x["embedding"], selected_collections)))
+                question_embeddings = np.stack(list(map(lambda x: x["embedding"], selected_collections)))
 
-                index = faiss.IndexFlatL2(embedding_database.shape[1])
-                index.add(embedding_database)  # pylint: disable=no-value-for-parameter
+                index = EmbeddingIndex(question_embeddings)
+                index.prepare()
 
-                embedding_databases[question_hash] = embedding_database
-                indexes[question_hash] = index
+                question_specific_embeddings[question_hash] = question_embeddings
+                question_specific_indexes[question_hash] = index
 
-        return embedding_databases, indexes
+        return question_specific_embeddings, question_specific_indexes
 
     def get_nearest_indexes(self):
-        # from collections build faiss index
-        embedding_databases, indexes = self.convert_to_indexes()
+        question_specific_embeddings, question_specific_index = self.convert_to_indexes()
 
         nearest_metrics = {}
-        for question_hash in indexes:
-            nearest_distance, nearest_index = indexes[question_hash].search(  # pylint: disable=no-value-for-parameter
-                embedding_databases[question_hash], self.num_nearest_neighbors
+        for question_hash, question_index in question_specific_index.items():
+            ip_search_result = question_index.query(  # pylint: disable=no-value-for-parameter
+                question_specific_embeddings[question_hash], k=self.num_nearest_neighbors
             )
-            nearest_metrics[question_hash] = nearest_index
+            nearest_metrics[question_hash] = ip_search_result.indices
 
         return nearest_metrics
 
@@ -138,7 +134,7 @@ class ImageLevelQualityTest(Metric):
         for question in nearest_indexes:
             noisy_labels_list = []
             for i in range(nearest_indexes[question].shape[0]):
-                answers = self.collections[i]["classification_answers"]
+                answers = self.label_embeddings[i]["classification_answers"]
 
                 if not answers:
                     gt_label = "Unclassified"
@@ -187,7 +183,7 @@ class ImageLevelQualityTest(Metric):
         )
 
         key_score_pairs: Dict[str, Dict[str, ClassificationInfo]] = {}
-        for i, collection in enumerate(self.collections):
+        for i, collection in enumerate(self.label_embeddings):
             label_hash = collection["label_row"]
             du_hash = collection["data_unit"]
             frame_idx = int(collection["frame"])
@@ -265,48 +261,43 @@ class ImageLevelQualityTest(Metric):
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")
 
-        # TODO: move me somewhere else, this is here to ensure the generation of image embeddings
-        get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
-        generate_2d_embedding_data(EmbeddingType.IMAGE, iterator.cache_dir)
-
         if self.metadata.embedding_type:
-            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            self.label_embeddings = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
             )
             return
 
-        if len(self.collections) > 0:
-            generate_2d_embedding_data(EmbeddingType.CLASSIFICATION, iterator.cache_dir)
-            nearest_indexes = self.get_nearest_indexes()
-            self.fix_nearest_indexes(nearest_indexes)
-            key_score_pairs = self.create_key_score_pairs(nearest_indexes)
-            for data_unit, _ in iterator.iterate(desc="Storing index"):
-                key = iterator.get_identifier()
-                is_multiclass = is_multiclass_ontology(iterator.project.ontology)
+        if len(self.label_embeddings) == 0:
+            logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
 
-                if key in key_score_pairs:
-                    for classification in data_unit["labels"].get("classifications", []):
-                        question_featureHash = classification["featureHash"]
-                        if question_featureHash not in self.featureNodeHash_to_question_name:
-                            continue
+        nearest_indexes = self.get_nearest_indexes()
+        self.fix_nearest_indexes(nearest_indexes)
+        key_score_pairs = self.create_key_score_pairs(nearest_indexes)
+        for data_unit, _ in iterator.iterate(desc="Storing index"):
+            key = iterator.get_identifier()
+            is_multiclass = is_multiclass_ontology(iterator.project.ontology)
+
+            if key in key_score_pairs:
+                for classification in data_unit["labels"].get("classifications", []):
+                    question_featureHash = classification["featureHash"]
+                    if question_featureHash not in self.featureNodeHash_to_question_name:
+                        continue
+
+                    if question_featureHash in key_score_pairs[key]:
+                        classification_hash = classification["classificationHash"]
+                        classification_info = key_score_pairs[key][question_featureHash]
+
+                        label_class = f"{classification_info['answer']}"
+                        if is_multiclass:
+                            label_class = f"{classification_info['question']}:{label_class}"
 
                         if question_featureHash in key_score_pairs[key]:
-                            classification_hash = classification["classificationHash"]
-                            classification_info = key_score_pairs[key][question_featureHash]
-
-                            label_class = f"{classification_info['answer']}"
-                            if is_multiclass:
-                                label_class = f"{classification_info['question']}:{label_class}"
-
-                            if question_featureHash in key_score_pairs[key]:
-                                writer.write(
-                                    key_score_pairs[key][question_featureHash]["score"],
-                                    key=f"{key}_{classification_hash}",
-                                    description=classification_info["description"],
-                                    label_class=label_class,
-                                    labels=classification,
-                                )
-        else:
-            logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
+                            writer.write(
+                                key_score_pairs[key][question_featureHash]["score"],
+                                key=f"{key}_{classification_hash}",
+                                description=classification_info["description"],
+                                label_class=label_class,
+                                labels=classification,
+                            )
