@@ -25,11 +25,11 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     """
     pfs = ProjectFileStructure(project_dir)
 
-    collections = load_label_embeddings(embedding_type, pfs)
-    if not collections:
+    label_embeddings = load_label_embeddings(embedding_type, pfs)
+    if not label_embeddings:
         return
 
-    embeddings = np.array([collection["embedding"] for collection in collections])
+    embeddings = np.array([emb["embedding"] for emb in label_embeddings])
     if embeddings.shape[0] < MIN_SAMPLES:
         return
 
@@ -37,31 +37,29 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection: dict[str, list] = {"identifier": [], "x": [], "y": [], "label": []}
-    for counter, collection in enumerate(collections):
+    for label_embedding, emb_2d in zip(label_embeddings, embeddings_2d):
+        identifier_no_label = (
+            f'{label_embedding["label_row"]}_{label_embedding["data_unit"]}_{int(label_embedding["frame"]):05d}'
+        )
         if embedding_type == EmbeddingType.IMAGE:
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}'
-            )
+            embeddings_2d_collection["identifier"].append(identifier_no_label)
             embeddings_2d_collection["label"].append("No label")
         elif embedding_type == EmbeddingType.OBJECT:
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
-            )
-            embeddings_2d_collection["label"].append(collection["name"])
+            embeddings_2d_collection["identifier"].append(f'{identifier_no_label}_{label_embedding["labelHash"]}')
+            embeddings_2d_collection["label"].append(label_embedding["name"])
         elif embedding_type == EmbeddingType.CLASSIFICATION:
             # Due to the following line, currently there is only one classification answer
             # https://github.com/encord-team/encord-active/blob/2e09cedf1c07eb89c91cad928113b1b51fc8dc7f/src/encord_active/lib/embeddings/cnn.py#L238
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{int(collection["frame"]):05d}_{collection["labelHash"]}'
-            )
+            embeddings_2d_collection["identifier"].append(f'{identifier_no_label}_{label_embedding["labelHash"]}')
             embeddings_2d_collection["label"].append(
-                collection["classification_answers"]["answer_name"]
-                if collection["classification_answers"] is not None
+                label_embedding["classification_answers"]["answer_name"]
+                if label_embedding["classification_answers"] is not None
                 else "No label"
             )
 
-        embeddings_2d_collection["x"].append(embeddings_2d[counter, 0])
-        embeddings_2d_collection["y"].append(embeddings_2d[counter, 1])
+        x, y = emb_2d
+        embeddings_2d_collection["x"].append(x)
+        embeddings_2d_collection["y"].append(y)
 
     target_path = pfs.get_embeddings_file(embedding_type, reduced=True)
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
