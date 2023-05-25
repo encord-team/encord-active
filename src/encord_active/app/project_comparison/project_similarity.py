@@ -27,9 +27,9 @@ METRICS_TO_EXCLUDE = [
 ]
 
 
-def calculate_metric_similarity(array_1: np.ndarray, array_2: np.ndarray) -> float:
+def calculate_metric_disimilarity(array_1: np.ndarray, array_2: np.ndarray) -> float:
     ks_score, _ = ks_2samp(array_1, array_2)
-    return 1 - ks_score
+    return ks_score
 
 
 def render_2d_metric_similarity_container(
@@ -129,7 +129,7 @@ def project_similarity():
 
         all_metrics = sorted([metric for metric in fetch_metrics_meta(get_state().project_paths)])
 
-        metric_similarities = {"metric": [], "similarity_score": []}
+        metric_similarities = {"metric": [], "dissimilarity_score": []}
         for metric in all_metrics:
             if metric in METRICS_TO_EXCLUDE:
                 continue
@@ -145,7 +145,7 @@ def project_similarity():
             values_2 = merged_metrics_2[metric].dropna()
 
             metric_similarities["metric"].append(metric)
-            metric_similarities["similarity_score"].append(calculate_metric_similarity(values_1, values_2))
+            metric_similarities["dissimilarity_score"].append(calculate_metric_disimilarity(values_1, values_2))
 
         metric_similarities_df = pd.DataFrame(metric_similarities).pipe(ProjectSimilaritySchema)
 
@@ -153,7 +153,7 @@ def project_similarity():
 
         figure = plot_project_similarity_metric_wise(metric_similarities_df)
         metric_wise_similarity_col.metric(
-            "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.similarity_score].mean():.2f}"
+            "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.dissimilarity_score].mean():.2f}"
         )
         metric_wise_similarity_col.plotly_chart(figure, use_container_width=True)
 

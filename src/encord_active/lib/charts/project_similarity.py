@@ -9,21 +9,21 @@ from encord_active.lib.common.colors import Color
 
 class ProjectSimilaritySchema(pa.SchemaModel):
     metric: Series[str] = pa.Field()
-    similarity_score: Series[float] = pa.Field(coerce=True)
+    dissimilarity_score: Series[float] = pa.Field(coerce=True)
 
 
 def plot_project_similarity_metric_wise(metric_wise_similarity: DataFrame[ProjectSimilaritySchema]) -> go.Figure:
-    metric_wise_similarity.sort_values(by=ProjectSimilaritySchema.similarity_score, inplace=True)
+    metric_wise_similarity.sort_values(by=ProjectSimilaritySchema.dissimilarity_score, inplace=True)
 
     fig = px.bar(
         metric_wise_similarity,
-        x=ProjectSimilaritySchema.similarity_score,
+        x=ProjectSimilaritySchema.dissimilarity_score,
         y=ProjectSimilaritySchema.metric,
         orientation="h",
     )
     fig.update_layout(
-        title="Metric-wise similarity score",
-        xaxis_title="Similarity score",
+        title="Metric-wise dissimilarity",
+        xaxis_title="Dissimilarity",
         yaxis_title="Metric",
     )
 
