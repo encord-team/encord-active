@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
+    Tag,
     all_tags,
     from_grouped_tags,
     to_grouped_tags,
@@ -55,6 +56,19 @@ def tagged_items(project: ProjectFileStructureDep):
     with DBConnection(project) as conn:
         df = MergedMetrics(conn).all(columns=["tags"]).reset_index()
     records = df[df["tags"].str.len() > 0].to_dict("records")
+
+    # Assign the respective frame's data tags to the rows representing the labels
+    data_row_id_to_data_tags: dict[str, List[Tag]] = dict()
+    for row in records:
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] == data_row_id:  # The row contains the info related to a frame
+            data_row_id_to_data_tags[data_row_id] = row.get("tags", [])
+    for row in records:
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] != data_row_id:  # The row contains the info related to some labels
+            selected_tags = row.setdefault("tags", [])
+            selected_tags.extend(data_row_id_to_data_tags.get(data_row_id, []))
+
     return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
 
 
@@ -63,6 +77,13 @@ def read_item(project: ProjectFileStructureDep, id: str):
     lr_hash, du_hash, frame, *_ = id.split("_")
     with DBConnection(project) as conn:
         row = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")[0]
+
+        # Include data tags from the relevant frame when the inspected item is a label
+        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
+        if row["identifier"] != data_row_id:
+            data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
+            selected_tags = row.setdefault("tags", [])
+            selected_tags.extend(data_row.get("tags", []))
 
     return to_item(row, project, lr_hash, du_hash, frame)
 
@@ -76,7 +97,15 @@ class ItemTags(BaseModel):
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with DBConnection(project) as conn:
         for item in payload:
-            MergedMetrics(conn).update_tags(item.id, from_grouped_tags(item.grouped_tags))
+            data_tags, label_tags = from_grouped_tags(item.grouped_tags)
+            data_row_id = "_".join(item.id.split("_", maxsplit=3)[:3])
+
+            # Update the data tags associated with the frame (or the one that contains the labels)
+            MergedMetrics(conn).update_tags(data_row_id, data_tags)
+
+            # Update the label tags associated with the labels (if they exist)
+            if item.id != data_row_id:
+                MergedMetrics(conn).update_tags(item.id, label_tags)
 
 
 @router.get("/{project}/similarities/{id}")
