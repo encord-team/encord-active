@@ -1,5 +1,6 @@
 import os
 import pickle
+from functools import partial
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -18,38 +19,42 @@ class SimilaritiesFinder:
         num_of_neighbors: Optional[int] = None,
     ):
         self.embedding_type = embedding_type
-        self.index, self.label_embeddings = EmbeddingIndex.from_project(project_file_structure, embedding_type)
         self.num_of_neighbors = num_of_neighbors
-        self.identifier_to_index = build_identifier_to_idx_map(self.label_embeddings, self.has_annotations)
-        self.similarities: Dict[str, List[Dict]] = {}
+        self.similarities: Dict[str, List[str]] = {}
+
+        self.index = self.label_embeddings = self.identifier_to_index = None
+        if EmbeddingIndex.index_available(project_file_structure, embedding_type):
+            self.index, self.label_embeddings = EmbeddingIndex.from_project(project_file_structure, embedding_type)
+            self.identifier_to_index = build_identifier_to_idx_map(self.label_embeddings, self.has_annotations)
+
+    @property
+    def index_available(self) -> bool:
+        return self.index is not None
 
     @property
     def has_annotations(self):
         return self.embedding_type in [EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]
 
-    def get_similarities(self, identifier: str):
+    def get_similarities(self, identifier: str) -> list[str]:
+        if not self.index_available:
+            return []
+
         if identifier not in self.similarities.keys():
             self._add_similarities(identifier)
 
         return self.similarities[identifier]
 
     def _add_similarities(self, identifier: str):
+        if self.index is None or self.label_embeddings is None or self.identifier_to_index is None:
+            return
+
         embedding_idx = self.identifier_to_index[identifier]
         embedding = np.array([self.label_embeddings[embedding_idx]["embedding"]]).astype(np.float32)
         ip_search_result = self.index.query(embedding, k=self.num_of_neighbors)
-
-        self.similarities[identifier] = []
-
-        for nearest_index in ip_search_result.indices[0, 1:]:
-            neighbor_label_embedding = self.label_embeddings[int(nearest_index)]
-
-            answers = neighbor_label_embedding.get("classification_answers") or {}
-            if self.embedding_type == EmbeddingType.CLASSIFICATION and not answers:
-                raise Exception("Missing classification answers")
-
-            key = get_embedding_identifier(neighbor_label_embedding, has_annotation=self.has_annotations)
-            name = answers.get("answer_name") or neighbor_label_embedding.get("name", "No label")
-            self.similarities[identifier].append({"key": key, "name": name})
+        _get_embedding = partial(get_embedding_identifier, has_annotation=self.has_annotations)
+        self.similarities[identifier] = list(
+            map(lambda idx: _get_embedding(self.label_embeddings[int(idx)]), ip_search_result.indices[0, 1:])  # type: ignore
+        )
 
 
 def load_label_embeddings(

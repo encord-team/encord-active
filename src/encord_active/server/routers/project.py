@@ -108,13 +108,18 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                 MergedMetrics(conn).update_tags(item.id, label_tags)
 
 
+@router.get("/{project}/has_similarity_search")
+def get_has_similarity_search(project: ProjectFileStructureDep, current_metric: str):
+    embedding_type = get_metric_embedding_type(project, current_metric)
+    finder = get_similarity_finder(embedding_type, project)
+    return finder.index_available
+
+
 @router.get("/{project}/similarities/{id}")
 def get_similar_items(project: ProjectFileStructureDep, id: str, current_metric: str, page_size: Optional[int] = None):
     embedding_type = get_metric_embedding_type(project, current_metric)
     finder = get_similarity_finder(embedding_type, project, page_size)
-    nearest_images = finder.get_similarities(id)
-
-    return [item["key"] for item in nearest_images]
+    return finder.get_similarities(id)
 
 
 @router.get("/{project}/metrics")

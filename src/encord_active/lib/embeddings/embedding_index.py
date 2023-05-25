@@ -43,6 +43,15 @@ def _get_embedding_index_file(embedding_file: Path, metric: str) -> Path:
 
 class EmbeddingIndex:
     @classmethod
+    def index_available(
+        cls, project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, metric: str = "cosine"
+    ):
+        embedding_file = project_file_structure.get_embeddings_file(embedding_type)
+        idx_file = _get_embedding_index_file(embedding_file, metric)
+        print(idx_file, idx_file.is_file())
+        return idx_file.is_file()
+
+    @classmethod
     def from_project(
         cls,
         project_file_structure: ProjectFileStructure,
@@ -107,6 +116,8 @@ class EmbeddingIndex:
         """
         if k is None:
             k = self.n
+        else:
+            k = min(self.n, k)
 
         _query_embeddings = query_embeddings
         if _query_embeddings.ndim == 1:

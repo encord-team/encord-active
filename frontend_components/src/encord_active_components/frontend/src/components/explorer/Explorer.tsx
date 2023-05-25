@@ -71,6 +71,11 @@ export const Explorer = ({
     ["hasPremiumFeatures"],
     api.fetchHasPremiumFeatures
   );
+  const { data: hasSimilaritySearch } = useQuery(
+    ["hasSimilaritySearch"],
+    () => api.fetchHasSimilaritySearch(selectedMetric!),
+    { enabled: !!selectedMetric }
+  );
 
   const { data: similarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
@@ -121,6 +126,7 @@ export const Explorer = ({
         {previewedItem && (
           <ItemPreview
             id={previewedItem}
+            similaritySearchDisabled={!hasSimilaritySearch}
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
@@ -253,6 +259,7 @@ export const Explorer = ({
                     key={id}
                     itemId={id}
                     onExpand={() => setPreviewedItem(id)}
+                    similaritySearchDisabled={!hasSimilaritySearch}
                     onShowSimilar={() => showSimilarItems(id)}
                     selected={selectedItems.has(id)}
                   />
@@ -350,10 +357,12 @@ const SimilarityItem = ({
 
 const ItemPreview = ({
   id,
+  similaritySearchDisabled,
   onClose,
   onShowSimilar,
 }: {
   id: string;
+  similaritySearchDisabled: boolean;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
@@ -368,7 +377,11 @@ const ItemPreview = ({
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
         <div className="flex gap-3">
-          <button className="btn btn-ghost gap-2" onClick={onShowSimilar}>
+          <button
+            className="btn btn-ghost gap-2"
+            disabled={similaritySearchDisabled}
+            onClick={onShowSimilar}
+          >
             <MdImageSearch className="text-base" />
             Similar
           </button>
@@ -420,12 +433,14 @@ const GalleryItem = ({
   itemId,
   selected,
   selectedMetric,
+  similaritySearchDisabled,
   onExpand,
   onShowSimilar,
 }: {
   itemId: string;
   selected: boolean;
   selectedMetric?: string;
+  similaritySeachDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
@@ -493,6 +508,7 @@ const GalleryItem = ({
             <button
               className="btn btn-ghost gap-2 tooltip tooltip-right"
               data-tip="Similar items"
+              disabled={similaritySearchDisabled}
               onClick={onShowSimilar}
             >
               <MdImageSearch className="text-base" />
