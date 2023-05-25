@@ -1,6 +1,7 @@
 from functools import lru_cache, partial
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict, Union
+from urllib.parse import quote, unquote, urlparse
 
 from PIL import Image
 from shapely.affinity import rotate
@@ -20,6 +21,7 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
+from encord_active.server.settings import get_settings
 
 
 class Metadata(TypedDict):
@@ -49,8 +51,23 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
     if data_opt:
         timestamp = None
         if data_opt.data_type == "video":
-            timestamp = float(int(frame)) / 30  # FIXME: use actual frames per second
-        return data_opt.signed_url, timestamp
+            timestamp = float(int(frame)) / data_opt.frames_per_second
+        signed_url = data_opt.signed_url
+        if signed_url.startswith("file://"):
+            image_path = Path(unquote(urlparse(signed_url).path)).absolute()
+            settings = get_settings()
+            root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
+            try:
+                relative_path = image_path.relative_to(root_path)
+                signed_url = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+            except ValueError as ex:
+                # Use hacky fallback
+                approx_relative_path = image_path.as_posix().removeprefix(root_path.as_posix())
+                if approx_relative_path.startswith("/"):
+                    approx_relative_path = approx_relative_path[1:]
+                signed_url = quote(f"{settings.API_URL}/ea-static/{approx_relative_path}")
+
+        return signed_url, timestamp
     return None
 
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 from PIL import Image
+from tqdm import tqdm
 
 if typing.TYPE_CHECKING:
     import prisma
@@ -15,7 +16,7 @@ if typing.TYPE_CHECKING:
 from encord_active.lib.common.data_utils import (
     download_file,
     download_image,
-    extract_frames,
+    extract_frames, get_frames_per_second,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
@@ -46,12 +47,20 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
     with PrismaConnection(pfs) as conn:
         fill_label_rows = conn.labelrow.count() == 0
         fill_data_units = conn.dataunit.count() == 0
-        old_style_data = conn.labelrow.find_first(where={"label_row_json": "missing"}) is not None
+        old_style_data = conn.labelrow.find_first(where={"label_row_json": "missing"}) is not None or fill_label_rows
         if not (fill_label_rows or fill_data_units or old_style_data):
             return
-
+        migration_counter = tqdm(
+            None,
+            desc=f"Migrating Database: {pfs.project_dir}",
+        )
         with conn.batch_() as batcher:
-            for label_row in pfs.iter_labels(secret_disable_auto_fix=True):
+            migration_counter.update(1)
+            for label_row in pfs.iter_labels(secret_disable_auto_fix=True, secret_fallback_iter_files=True):
+                migration_counter.display(
+                    f"Migrating label_row: {label_row.label_hash}: (fill={fill_label_rows}, update={old_style_data},"
+                    f" add_data={fill_data_units})"
+                )
                 try:
                     label_row_dict = label_row.label_row_json
                 except json.JSONDecodeError:
@@ -86,7 +95,36 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
                 if fill_data_units or old_style_data:
                     data_units = label_row_dict["data_units"]
-                    for data_unit in label_row.iter_data_unit():
+                    db_data_unit = list(label_row.iter_data_unit(secret_disable_auto_fix=True))
+                    if len(db_data_unit) == 0:
+                        # For migrating fully empty db condition
+                        db_data_unit = [
+                            DataUnitStructure(
+                                label_hash=label_hash,
+                                du_hash=du["data_hash"],
+                                frame=frame,
+                                data_type=data_type,
+                                # Not queried and hence can be left empty
+                                signed_url="null",
+                                data_hash_raw="null",
+                                width=-1,
+                                height=-1,
+                                frames_per_second=-1,
+                            )
+                            for du in data_units.values()
+                            for frame in (
+                                [None] if du["data_type"] != "video"
+                                else list(range(0, len(
+                                    list(legacy_lr_path.glob(f"{du['data_hash']}_*"))
+                                )))
+                            )
+                        ]
+
+                    for data_unit in db_data_unit:
+                        migration_counter.update(1)
+                        migration_counter.display(
+                            f"Migrating data_hash: {label_row.label_hash} / {data_unit.du_hash} / {data_unit.frame}"
+                        )
                         legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "images"
                         if data_unit.frame is not None and data_unit.frame != -1:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_{data_unit.frame}.*"))
@@ -94,14 +132,25 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
 
                         du = data_units[data_unit.du_hash]
+                        frames_per_second = 0
                         if data_type == "video":
                             if "_" not in legacy_du_path.stem:
                                 frame_str = "-1"  # To include a reference to the video location in the DataUnit table
                             else:
                                 _, frame_str = legacy_du_path.stem.rsplit("_", 1)
+                            # Lookup frames per second
+                            legacy_du_video_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
+                            frames_per_second = get_frames_per_second(legacy_du_video_path)
                         else:
                             frame_str = du.get("data_sequence", 0)
                         frame = int(frame_str)
+
+                        if frame != -1 or data_type != "video":
+                            image = Image.open(legacy_du_path)
+                        else:
+                            print(legacy_lr_path / f"{data_unit.du_hash}_")
+                            legacy_du_any_frame_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_*"))
+                            image = Image.open(legacy_du_any_frame_path)
 
                         if fill_data_units:
                             batcher.dataunit.create(
@@ -110,13 +159,19 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                     data_title=du["data_title"],
                                     frame=frame,
                                     lr_data_hash=lr_data_hash,
-                                    data_uri=legacy_du_path.as_uri(),
+                                    data_uri=legacy_du_path.absolute().as_uri(),
+                                    width=image.width,
+                                    height=image.height,
+                                    fps=frames_per_second,
                                 )
                             )
                         else:
                             batcher.dataunit.update(
                                 data={
-                                    "data_uri": legacy_du_path.as_uri(),
+                                    "data_uri": legacy_du_path.absolute().as_uri(),
+                                    "width": image.width,
+                                    "height": image.height,
+                                    "fps": frames_per_second
                                 },
                                 where={
                                     "data_hash_frame": {
@@ -135,9 +190,13 @@ class DataUnitStructure(NamedTuple):
     # If type is 'video' this is the video link not the image link
     signed_url: str
     # Video frame or sequence index
-    frame: int
+    frame: Optional[int]
     # Raw data_hash
     data_hash_raw: str
+    # Data unit metadata
+    width: int
+    height: int
+    frames_per_second: float
 
 
 class LabelRowStructure:
@@ -157,7 +216,14 @@ class LabelRowStructure:
     def label_row_json(self) -> Dict[str, Any]:
         with PrismaConnection(self._project) as conn:
             entry = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
-            return json.loads(entry.label_row_json)
+            label_row_json = 'missing'
+            if entry is not None:
+                label_row_json = entry.label_row_json
+            return json.loads(label_row_json)
+
+    @property
+    def label_hash(self) -> str:
+        return self._label_hash
 
     def set_label_row_json(self, label_row_json: Dict[str, Any]) -> None:
         with PrismaConnection(self._project) as conn:
@@ -189,9 +255,14 @@ class LabelRowStructure:
                 )
 
     def iter_data_unit(
-        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self,
+        data_unit_hash: Optional[str] = None,
+        frame: Optional[int] = None,
+        secret_disable_auto_fix: bool = False
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project) as conn:
+            if not secret_disable_auto_fix:
+                _fill_missing_tables(self._project)
             where = {"label_hash": {"equals": self._label_hash}}
             if data_unit_hash is not None:
                 du_hash = self._mappings.get(data_unit_hash, data_unit_hash)
@@ -242,7 +313,8 @@ class LabelRowStructure:
                                 raise RuntimeError("Missing data_uri & not encord project")
                         data_type = label_row.data_type
                     yield DataUnitStructure(
-                        label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame, data_unit.data_hash
+                        label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame, data_unit.data_hash,
+                        data_unit.width, data_unit.height, data_unit.fps,
                     )
 
     def iter_data_unit_with_image(
@@ -396,13 +468,22 @@ class ProjectFileStructure(BaseProjectFileStructure):
                 _fill_missing_tables(self)
             return conn.labelrow.find_many()
 
-    def iter_labels(self, secret_disable_auto_fix: bool = False) -> Iterator[LabelRowStructure]:
+    def iter_labels(
+            self,
+            secret_disable_auto_fix: bool = False,
+            secret_fallback_iter_files: bool = False,
+    ) -> Iterator[LabelRowStructure]:
         label_rows = self.label_rows(secret_disable_auto_fix=secret_disable_auto_fix)
-        for label_row in label_rows:
-            label_hash = label_row.label_hash
-            if label_hash is None:
-                continue
-            yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
+        if len(label_rows) == 0 and secret_fallback_iter_files:
+            for label_row in self.data_legacy_folder.iterdir():
+                label_hash = label_row.name
+                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
+        else:
+            for label_row in label_rows:
+                label_hash = label_row.label_hash
+                if label_hash is None:
+                    continue
+                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     @property
     def mappings(self) -> Path:

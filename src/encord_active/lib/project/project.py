@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
 
 import yaml
+from PIL import Image
 from encord import Project as EncordProject
 from encord.constants.enums import DataType
 from encord.objects.ontology_structure import OntologyStructure
@@ -21,7 +22,7 @@ from encord_active.lib.common.data_utils import (
     collect_async,
     count_frames,
     download_file,
-    try_execute,
+    try_execute, get_frames_per_second, extract_frames, download_image,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
@@ -332,6 +333,8 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         if label_row.data_type == DataType.VIDEO.value:
             return
 
+        image = download_image(du["data_link"])
+
         # Add non-video type of data to the db
         with PrismaConnection(project_file_structure) as conn:
             conn.dataunit.upsert(
@@ -347,6 +350,9 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
                         "data_title": du["data_title"],
                         "frame": int(du["data_sequence"]),
                         "lr_data_hash": label_row.data_hash,
+                        "fps": 0,
+                        "width": image.width,
+                        "height": image.height,
                     },
                     "update": {
                         "data_title": du["data_title"],
@@ -385,6 +391,12 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
             video_path = Path(video_dir) / du["data_title"]
             download_file(du["data_link"], video_path)
             num_frames = count_frames(video_path)
+            frames_per_second = get_frames_per_second(video_path)
+            video_images = Path(video_dir) / "images"
+            video_images.mkdir(parents=True, exist_ok=True)
+            extract_frames(video_path, video_images, data_hash)
+            image_path = next(video_images.iterdir())
+            image = Image.open(image_path)
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:
@@ -396,6 +408,9 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                             "data_title": du["data_title"],
                             "frame": frame_num,
                             "lr_data_hash": label_row.data_hash,
+                            "width": image.width,
+                            "height": image.height,
+                            "fps": frames_per_second,
                         }
                     )
                 batcher.commit()

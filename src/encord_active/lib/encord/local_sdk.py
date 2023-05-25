@@ -415,14 +415,20 @@ class LocalProject:
                 image_path = next(path.glob(f"{data_unit['data_hash']}.*"))
                 return str(image_path)
 
+
             for du_hash, data_unit in label.data_units.items():
+                image_path = Path(find_image_path(data_unit)).absolute()
+                image = Image.open(image_path)
                 conn.dataunit.create(
                     data={
                         "data_hash": du_hash,
                         "data_title": label.data_title,
                         "frame": 0,  # FIXME: only used as images currently, will break for image groups and videos
-                        "data_uri": Path(find_image_path(data_unit)).absolute().as_uri(),
+                        "data_uri": image_path.absolute().as_uri(),
                         "lr_data_hash": label.data_hash,
+                        "width": image.width,
+                        "height": image.height,
+                        "fps": 0,  # FIXME: only used as images currently, videos not supported for local_sdk
                     }
                 )
 

@@ -54,6 +54,18 @@ def count_frames(video_file_name: Path) -> int:
     return int(output_str)
 
 
+def get_frames_per_second(video_file_name: Path) -> float:
+    command = f"ffmpeg -i {video_file_name} 2>&1 | sed -n \"s/.*, \\(.*\\) fp.*/\\1/p\""
+    output = subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False)
+    if output.returncode != 0:
+        raise RuntimeError(
+            "Counting the frame rate in a video has failed. Please ensure that you have FFMPEG "
+            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
+        )
+    output_str = output.stdout.decode("utf-8")
+    return float(output_str)
+
+
 _DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
 _NAMED_DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
 
@@ -67,9 +79,9 @@ def _download_cache(url: str) -> Optional[bytes]:
 
 
 def download_file(
-    url: str,
-    destination: Path,
-    byte_size: int = 1024,
+        url: str,
+        destination: Path,
+        byte_size: int = 1024,
 ) -> Path:
     if destination.is_file():
         return destination
@@ -130,7 +142,7 @@ TType = TypeVar("TType")
 
 
 def iterate_in_batches(seq: Sequence[TType], size: int) -> Generator[Sequence[TType], None, None]:
-    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos: pos + size] for pos in range(0, len(seq), size))
 
 
 def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):

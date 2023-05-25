@@ -37,7 +37,9 @@ model DataUnit {
   data_uri     String?
   lr_data_hash String
   label_row    LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
-
+  width        Int      @default(-1)
+  height       Int      @default(-1)
+  fps          Float    @default(-1)
   @@unique([data_hash, frame])
 }
 
