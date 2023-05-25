@@ -440,7 +440,7 @@ const GalleryItem = ({
   itemId: string;
   selected: boolean;
   selectedMetric?: string;
-  similaritySeachDisabled: boolean;
+  similaritySearchDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
