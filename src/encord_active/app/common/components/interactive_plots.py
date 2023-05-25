@@ -9,6 +9,7 @@ from streamlit_plotly_events import plotly_events
 from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.embeddings.utils import (
     Embedding2DSchema,
+    Embedding2DScoreSchema,
     PointSchema2D,
     PointSelectionSchema,
 )
@@ -26,21 +27,26 @@ def get_selected_rows(
     return DataFrame[Embedding2DSchema](selected_rows)
 
 
-def render_plotly_events(embedding_2d: DataFrame[Embedding2DSchema]) -> Optional[DataFrame[Embedding2DSchema]]:
+def render_plotly_events(
+    embedding_2d: DataFrame[Embedding2DScoreSchema],
+) -> Optional[DataFrame[Embedding2DScoreSchema]]:
     should_select = UseState(True)
     selection = UseState[Optional[List[dict]]](None)
+
+    score_not_available = embedding_2d[Embedding2DScoreSchema.score].isna().any()
 
     fig = px.scatter(
         embedding_2d,
         x=Embedding2DSchema.x,
         y=Embedding2DSchema.y,
-        color=Embedding2DSchema.label,
+        color=Embedding2DScoreSchema.label if score_not_available else Embedding2DScoreSchema.score,
         color_discrete_map={
             "True prediction": "#5658dd",
             "True Negative": "#5658dd",
             "False prediction": "#ff1a1a",
             "False Negative": "#ff1a1a",
         },
+        color_continuous_scale=[(0, "red"), (1, "lime")],
         title="2D embedding plot",
         template="plotly",
     )

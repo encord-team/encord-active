@@ -102,6 +102,10 @@ class Embedding2DSchema(IdentifierSchema, PointSchema2D):
     label: Series[str]
 
 
+class Embedding2DScoreSchema(Embedding2DSchema):
+    score: Series[float]
+
+
 def load_collections(embedding_type: EmbeddingType, embeddings_dir: Path) -> list[LabelEmbedding]:
     embedding_path = embeddings_dir / EMBEDDING_TYPE_TO_FILENAME[embedding_type]
     collections = []
