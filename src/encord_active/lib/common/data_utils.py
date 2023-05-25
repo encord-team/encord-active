@@ -16,8 +16,22 @@ from encord.exceptions import EncordException, UnknownException
 from PIL import Image
 from tqdm import tqdm
 
+_EXTRACT_FRAMES_CACHE: Dict[str, tempfile.TemporaryDirectory] = {}
+
 
 def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
+    if data_hash not in _EXTRACT_FRAMES_CACHE:
+        tempdir = tempfile.TemporaryDirectory()
+        _extract_frames(video_file_name, Path(tempdir.name), data_hash)
+        _EXTRACT_FRAMES_CACHE[data_hash] = tempdir
+    # Symlink everything in the temporary directory, do not do duplicate work
+    tempdir = _EXTRACT_FRAMES_CACHE[data_hash]
+    img_dir.mkdir(parents=True, exist_ok=True)
+    for frame in Path(tempdir.name).iterdir():
+        (img_dir / frame.name).symlink_to(frame, target_is_directory=False)
+
+
+def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
     # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
     img_dir.mkdir(parents=True, exist_ok=True)
     command = f"ffmpeg -i {video_file_name} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner"
@@ -41,6 +55,7 @@ def count_frames(video_file_name: Path) -> int:
 
 
 _DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
+_NAMED_DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
 
 
 def _download_cache(url: str) -> Optional[bytes]:
@@ -59,17 +74,25 @@ def download_file(
     if destination.is_file():
         return destination
 
+    cached_download = _NAMED_DOWNLOAD_CACHE.get(url, None)
+    if cached_download is not None:
+        destination.symlink_to(Path(cached_download.name))
+        return destination
+
+    cache_tempfile = tempfile.NamedTemporaryFile()
+
     r = requests.get(url, stream=True)
 
     if r.status_code != 200:
         raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
-    with destination.open("wb") as f:
-        for chunk in r.iter_content(chunk_size=byte_size):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)
-                f.flush()
+    for chunk in r.iter_content(chunk_size=byte_size):
+        if chunk:  # filter out keep-alive new chunks
+            cache_tempfile.write(chunk)
+    cache_tempfile.flush()
 
+    destination.symlink_to(Path(cache_tempfile.name))
+    _NAMED_DOWNLOAD_CACHE[url] = cache_tempfile
     return destination
 
 

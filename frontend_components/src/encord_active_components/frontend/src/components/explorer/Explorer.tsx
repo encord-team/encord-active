@@ -529,12 +529,14 @@ const ImageWithPolygons = ({
   ...rest
 }: { item: Item } & JSX.IntrinsicElements["figure"]) => {
   const image = useRef<HTMLImageElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const media = item.video_timestamp != null ? video : image;
   const [polygons, setPolygons] = useState<
     { points: Point[]; color: string; shape: string }[]
   >([]);
 
   useEffect(() => {
-    const { current } = image;
+    const { current } = media;
     if (!current || !current.clientWidth || !current.clientHeight) return;
 
     const { objectHash } = splitId(item.id);
@@ -552,15 +554,36 @@ const ImageWithPolygons = ({
         shape,
       }))
     );
-  }, [image.current?.clientWidth, image.current?.clientHeight, item.id]);
-
+  }, [media.current?.clientWidth, media.current?.clientHeight, item.id]);
+  console.log('item', item)
+  console.log('check', item.video_timestamp !== null && item.video_timestamp !== undefined)
   return (
     <figure {...rest} className={classy("relative", className)}>
-      <img
-        ref={image}
-        className="object-contain rounded transition-opacity"
-        src={item.url}
-      />
+      {
+        item.video_timestamp != null ? (
+          <video
+              ref={video}
+              className="object-contain rounded transition-opacity"
+              src={item.url}
+              muted
+              controls={false}
+              onCanPlay={() => {
+                const videoRef = video.current;
+                if (videoRef != null) {
+                  videoRef.currentTime = item.video_timestamp || 0;
+                  videoRef.pause()
+                }
+              }}
+          />
+        ) : (
+          <img
+            ref={image}
+            className="object-contain rounded transition-opacity"
+            alt=""
+            src={item.url}
+          />
+        )
+      }
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(({ points, color, shape }, index) =>

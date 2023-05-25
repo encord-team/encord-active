@@ -113,7 +113,7 @@ class DatasetIterator(Iterator):
                 # Create temporary folder containing the video
                 with tempfile.TemporaryDirectory() as working_dir:
                     working_path = Path(working_dir)
-                    video_path = working_path / data_unit["data_title"]
+                    video_path = working_path / str(data_unit["data_title"])
                     video_images_dir = working_path / "images"
                     download_file(video_metadata.signed_url, video_path)
                     extract_frames(video_path, video_images_dir, self.du_hash)

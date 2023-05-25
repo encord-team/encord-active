@@ -42,6 +42,7 @@ export const GroupedTagsSchema = z.object({
 export const ItemSchema = z.object({
   id: z.string(),
   url: z.string(),
+  video_timestamp: z.number().nullish(),
   dataTitle: z.string().nullish(),
   editUrl: z.string(),
   metadata: z.object({
@@ -140,7 +141,7 @@ export const getApi = (
           `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(id)}`
         )
       ).json();
-      return ItemSchema.parse({ ...item, url: `${baseUrl}/${url}` }) as Item;
+      return ItemSchema.parse({ ...item, url }) as Item;
     },
     fetchedTaggedItems: async () =>
       z

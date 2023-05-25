@@ -46,19 +46,23 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
     with PrismaConnection(pfs) as conn:
         fill_label_rows = conn.labelrow.count() == 0
         fill_data_units = conn.dataunit.count() == 0
-        if not (fill_label_rows or fill_data_units):
+        old_style_data = conn.labelrow.find_first(where={"label_row_json": "missing"}) is not None
+        if not (fill_label_rows or fill_data_units or old_style_data):
             return
 
         with conn.batch_() as batcher:
             for label_row in pfs.iter_labels(secret_disable_auto_fix=True):
-                label_row_dict = label_row.label_row_json
+                try:
+                    label_row_dict = label_row.label_row_json
+                except json.JSONDecodeError:
+                    legacy_label_row_file = label_row.label_row_file_deprecated_for_migration().read_text("utf-8")
+                    label_row_dict = json.loads(legacy_label_row_file)
+
                 label_hash = label_row_dict["label_hash"]
                 lr_data_hash = label_row_meta[label_hash]["data_hash"]
                 data_type = label_row_dict["data_type"]
 
                 if fill_label_rows:
-                    label_hash = label_row_dict["label_hash"]
-                    legacy_label_row_file = label_row.label_row_file_deprecated_for_migration().read_text("utf-8")
                     batcher.labelrow.create(
                         LabelRowCreateInput(
                             label_hash=label_hash,
@@ -67,15 +71,24 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             data_type=data_type,
                             created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
                             last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
-                            label_row_json=legacy_label_row_file,
+                            label_row_json=json.dumps(label_row_dict, indent=2),
                         )
                     )
+                elif old_style_data:
+                    batcher.labelrow.update(
+                        data={
+                            "label_row_json": json.dumps(label_row_dict, indent=2),
+                        },
+                        where={
+                            "label_hash": label_hash,
+                        },
+                    )
 
-                if fill_data_units:
+                if fill_data_units or old_style_data:
                     data_units = label_row_dict["data_units"]
                     for data_unit in label_row.iter_data_unit():
-                        legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "data"
-                        if data_unit.frame is not None:
+                        legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "images"
+                        if data_unit.frame is not None and data_unit.frame != -1:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_{data_unit.frame}.*"))
                         else:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
@@ -90,15 +103,28 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             frame_str = du.get("data_sequence", 0)
                         frame = int(frame_str)
 
-                        batcher.dataunit.create(
-                            DataUnitCreateInput(
-                                data_hash=data_unit.du_hash,
-                                data_title=du["data_title"],
-                                frame=frame,
-                                lr_data_hash=lr_data_hash,
-                                data_uri=legacy_du_path.as_uri(),
+                        if fill_data_units:
+                            batcher.dataunit.create(
+                                DataUnitCreateInput(
+                                    data_hash=data_unit.du_hash,
+                                    data_title=du["data_title"],
+                                    frame=frame,
+                                    lr_data_hash=lr_data_hash,
+                                    data_uri=legacy_du_path.as_uri(),
+                                )
                             )
-                        )
+                        else:
+                            batcher.dataunit.update(
+                                data={
+                                    "data_uri": legacy_du_path.as_uri(),
+                                },
+                                where={
+                                    "data_hash_frame": {
+                                        "data_hash": data_unit.du_hash,
+                                        "frame": frame,
+                                    },
+                                },
+                            )
             batcher.commit()
 
 
@@ -110,6 +136,8 @@ class DataUnitStructure(NamedTuple):
     signed_url: str
     # Video frame or sequence index
     frame: int
+    # Raw data_hash
+    data_hash_raw: str
 
 
 class LabelRowStructure:
@@ -123,7 +151,7 @@ class LabelRowStructure:
         return hash(self._label_hash)
 
     def label_row_file_deprecated_for_migration(self) -> Path:
-        return self._project.project_dir / "data" / self._label_hash
+        return self._project.project_dir / "data" / self._label_hash / "label_row.json"
 
     @property
     def label_row_json(self) -> Dict[str, Any]:
@@ -213,7 +241,9 @@ class LabelRowStructure:
                             if signed_url is None:
                                 raise RuntimeError("Missing data_uri & not encord project")
                         data_type = label_row.data_type
-                    yield DataUnitStructure(label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame)
+                    yield DataUnitStructure(
+                        label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame, data_unit.data_hash
+                    )
 
     def iter_data_unit_with_image(
         self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None

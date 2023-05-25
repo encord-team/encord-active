@@ -39,6 +39,9 @@ def get_all_image_sizes(project_file_structure: ProjectFileStructure) -> np.ndar
             for data_unit in label_row_meta["data_units"].values():
                 image_sizes.append([data_unit["width"], data_unit["height"]])
 
+    # HACK - return some result for video only datasets
+    if len(image_sizes) == 0:
+        image_sizes.append([-1, -1])
     return np.array(image_sizes)
 
 

@@ -1,6 +1,6 @@
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
 
 from PIL import Image
 from shapely.affinity import rotate
@@ -44,13 +44,13 @@ def get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neig
     return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
 
 
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Union[str, Image.Image]]:
-    data_opt = next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame)), None) or next(
-        label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash), None
-    )
+def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
+    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
     if data_opt:
-        _, img_or_signed_url = data_opt
-        return img_or_signed_url
+        timestamp = None
+        if data_opt.data_type == "video":
+            timestamp = float(int(frame)) / 30  # FIXME: use actual frames per second
+        return data_opt.signed_url, timestamp
     return None
 
 
@@ -102,7 +102,7 @@ def to_item(
     du_hash: str,
     frame: str,
 ) -> dict:
-    editUrl = row.pop("url")
+    edit_url = row.pop("url", None)
     tags = row.pop("tags")
     identifier = row.pop("identifier")
     metadata = Metadata(
@@ -142,9 +142,10 @@ def to_item(
 
     return {
         "id": identifier,
-        "url": url if isinstance(url, str) else None,  # FIXME: expose url for videos that works
+        "url": url[0] if url is not None else None,
+        "video_timestamp": url[1] if url is not None else None,
         "dataTitle": data_title,
-        "editUrl": editUrl,
+        "editUrl": edit_url,
         "metadata": metadata,
         "tags": to_grouped_tags(tags),
         "labels": labels,
