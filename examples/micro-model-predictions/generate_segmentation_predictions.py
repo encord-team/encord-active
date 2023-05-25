@@ -22,37 +22,59 @@ ea_project_fs: ProjectFileStructure = ProjectFileStructure(params["ENCORD_ACTIVE
 iterator = DatasetIterator(ea_project_fs.project_dir)
 
 ontology = json.loads(ea_project_fs.ontology.read_text(encoding="utf-8"))
-ontology_names = [obj["name"] for obj in ontology.get("objects")]
-ontology_name_to_featurehash = {obj["name"]: obj["featureNodeHash"] for obj in ontology.get("objects")}
+ontology_featureHashes = [obj["featureNodeHash"] for obj in ontology.get("objects")]
 
 predictions_to_store = []
-for data_unit, _ in tqdm(iterator.iterate()):
+file_paths = []
+data_units = []
 
-    img_path = next(ea_project_fs.label_row_structure(iterator.label_hash).iter_data_unit(data_unit["data_hash"]))
+pbar = tqdm(total=iterator.length, desc="Running inference", leave=False)
+for counter, (data_unit, _) in enumerate(iterator.iterate()):
 
-    inference_result = project.model_inference(
-        params["ENCORD_MODEL_ITERATION_HASH"],
-        file_paths=[img_path.path.as_posix()],
-        conf_thresh=float(params["CONFIDENCE_THRESHOLD"]),
-        iou_thresh=float(params["IOU_THRESHOLD"]),
+    file_paths.append(
+        next(
+            ea_project_fs.label_row_structure(iterator.label_hash).iter_data_unit(data_unit["data_hash"])
+        ).path.as_posix()
     )
+    data_units.append(data_unit)
 
-    # for obj in inference_result[0]["predictions"]["0"]["objects"]:
-    #
-    #     polygon_points = [[key, [value["x"], value["y"]]] for key, value in obj["polygon"].items()]
-    #     polygon_points_sorted = sorted(polygon_points, key=lambda x: int(x[0]))
-    #     polygon = np.array([item[1] for item in polygon_points_sorted])
-    #
-    #     prediction = Prediction(
-    #         data_hash=data_unit["data_hash"],
-    #         confidence=obj["confidence"],
-    #         object=ObjectDetection(
-    #             format=Format.POLYGON,
-    #             data=polygon,
-    #             feature_hash=obj["featureHash"],
-    #         ),
-    #     )
-    #     predictions_to_store.append(prediction)
+    if (counter + 1) % int(params["BATCH_SIZE"]) == 0 or counter + 1 == iterator.length:
+        inference_results = project.model_inference(
+            params["ENCORD_MODEL_ITERATION_HASH"],
+            file_paths=file_paths,
+            conf_thresh=float(params["CONFIDENCE_THRESHOLD"]),
+            iou_thresh=float(params["IOU_THRESHOLD"]),
+        )
 
-# with open((ea_project_fs.project_dir / "predictions_sam.pkl"), "wb") as f:
-#     pickle.dump(predictions_to_store, f)
+        for inference_result, du in zip(inference_results, data_units):
+            for obj in inference_result["predictions"]["0"]["objects"]:
+
+                if obj["featureHash"] not in ontology_featureHashes:
+                    print(
+                        f"'{obj['name']}' with featureHash '{obj['featureHash']}' is not available in the ontology of"
+                        f" the Encord Active project."
+                    )
+                    continue
+
+                polygon_points = [[key, [value["x"], value["y"]]] for key, value in obj["polygon"].items()]
+                polygon_points_sorted = sorted(polygon_points, key=lambda x: int(x[0]))
+                polygon = np.array([item[1] for item in polygon_points_sorted])
+
+                prediction = Prediction(
+                    data_hash=du["data_hash"],
+                    confidence=obj["confidence"],
+                    object=ObjectDetection(
+                        format=Format.POLYGON,
+                        data=polygon,
+                        feature_hash=obj["featureHash"],
+                    ),
+                )
+                predictions_to_store.append(prediction)
+
+        file_paths = []
+        data_units = []
+
+    pbar.update(1)
+
+with open((ea_project_fs.project_dir / f"predictions_{params['ENCORD_MODEL_ITERATION_HASH'][:8]}.pkl"), "wb") as f:
+    pickle.dump(predictions_to_store, f)
