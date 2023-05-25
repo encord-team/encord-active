@@ -43,7 +43,6 @@ def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str):
 def get_similarity_finder(
     embedding_type: EmbeddingType, project: ProjectFileStructureDep, num_of_neighbors: Optional[int] = None
 ):
-    print("instantiating finder")
     return SimilaritiesFinder(embedding_type, project, num_of_neighbors)
 
 

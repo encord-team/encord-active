@@ -47,9 +47,7 @@ class EmbeddingIndex:
         cls, project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, metric: str = "cosine"
     ):
         embedding_file = project_file_structure.get_embeddings_file(embedding_type)
-        idx_file = _get_embedding_index_file(embedding_file, metric)
-        print(idx_file, idx_file.is_file())
-        return idx_file.is_file()
+        return _get_embedding_index_file(embedding_file, metric).is_file()
 
     @classmethod
     def from_project(
