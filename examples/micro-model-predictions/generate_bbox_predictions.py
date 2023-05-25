@@ -3,7 +3,6 @@ import json
 import pickle
 from pathlib import Path
 
-import numpy as np
 from encord import EncordUserClient, Project
 from tqdm import tqdm
 
@@ -53,6 +52,7 @@ for counter, (data_unit, _) in enumerate(iterator.iterate()):
 
         for inference_result, du in zip(inference_results, data_units):
             for obj in inference_result["predictions"]["0"]["objects"]:
+
                 if obj["featureHash"] not in ontology_featureHashes:
                     print(
                         f"'{obj['name']}' with featureHash '{obj['featureHash']}' is not available in the ontology of"
@@ -65,7 +65,12 @@ for counter, (data_unit, _) in enumerate(iterator.iterate()):
                     confidence=obj["confidence"],
                     object=ObjectDetection(
                         format=Format.BOUNDING_BOX,
-                        data=BoundingBox(x=0, y=0, w=0, z=0),
+                        data=BoundingBox(
+                            x=obj["bounding_box"]["x"],
+                            y=obj["bounding_box"]["y"],
+                            w=obj["bounding_box"]["w"],
+                            h=obj["bounding_box"]["h"],
+                        ),
                         feature_hash=obj["featureHash"],
                     ),
                 )
