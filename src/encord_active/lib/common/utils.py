@@ -256,7 +256,7 @@ def get_bbox_from_encord_label_object(obj: dict, w: int, h: int) -> Optional[tup
         return None
 
 
-def fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items: np.ndarray) -> np.ndarray:
+def fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items: np.ndarray):
     """
     Duplicate images create problem in nearest neighbor order, for example for index 6 its closest
     neighbors can be [5,6,1,9,3] if 5 and 6 is duplicate, it should be [6,5,1,9,3]. This function ensures that

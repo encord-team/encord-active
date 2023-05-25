@@ -1,5 +1,4 @@
 from collections import Counter
-from typing import List
 
 import numpy as np
 from loguru import logger
@@ -10,7 +9,6 @@ from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
-from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import (
