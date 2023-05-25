@@ -68,7 +68,9 @@ class ObjectEmbeddingSimilarityTest(Metric):
 
     def convert_to_np(self, label_embeddings):
         embeddings = np.stack([l["embedding"] for l in label_embeddings])
-        noisy_labels = np.stack([self.object_name_to_index[l["name"]] for l in label_embeddings]).astype(np.int32)
+        noisy_labels = np.array([self.featureNodeHash_to_index[l["featureHash"]] for l in label_embeddings]).astype(
+            np.int32
+        )
         return embeddings, noisy_labels
 
     def get_description_info(self, nearest_labels: np.ndarray, noisy_label: int):
