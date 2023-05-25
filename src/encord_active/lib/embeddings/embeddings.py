@@ -278,7 +278,7 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
     if force:
         logger.info("Regenerating CNN embeddings...")
         embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
-        generate_2d_embedding_data(embedding_type, pfs)
+        generate_2d_embedding_data(embedding_type, pfs, embeddings)
     else:
         try:
             with open(embedding_path, "rb") as f:
@@ -286,7 +286,7 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
         except FileNotFoundError:
             logger.info(f"{embedding_path} not found. Generating embeddings...")
             embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
-            generate_2d_embedding_data(embedding_type, pfs)
+            generate_2d_embedding_data(embedding_type, pfs, embeddings)
 
     return embeddings
 
