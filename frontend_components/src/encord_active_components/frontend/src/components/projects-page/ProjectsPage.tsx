@@ -10,6 +10,8 @@ import { Streamlit } from "streamlit-component-lib";
 import { classy } from "../../helpers/classy";
 import { fork } from "radash";
 
+type Env = "prod" | "local";
+
 export type Project = {
   name: string;
   hash: string;
@@ -36,8 +38,8 @@ type Output = [
 
 const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
 
-export type Props = { projects: Project[] };
-export const ProjectsPage = ({ projects = [] }: Props) => {
+export type Props = { projects: Project[]; env: Env };
+export const ProjectsPage = ({ projects = [], env }: Props) => {
   const [sandboxProjects, userProjects] = fork(
     projects,
     ({ sandbox }) => !!sandbox
@@ -45,25 +47,29 @@ export const ProjectsPage = ({ projects = [] }: Props) => {
 
   return (
     <div className="h-max p-5 flex flex-col gap-5">
-      <h1 className="font-medium text-3xl">Let’s get started!</h1>
+      {env !== "prod" && (
+        <>
+          <h1 className="font-medium text-3xl">Let’s get started!</h1>
+          <div className="flex flex-row gap-5 flex-wrap">
+            <NewProjectButton
+              title="Import from Encord Annotate"
+              description="Bring in existing Encord project"
+              iconUrl={encordImportUrl}
+            />
+            <NewProjectButton
+              title="Import a COCO project"
+              description="Bring in your COCO projects"
+              iconUrl={importUrl}
+            />
+            <NewProjectButton
+              title="Initialize from directory"
+              description="Upload all images within a folder"
+              iconUrl={importUrl}
+            />
+          </div>
+        </>
+      )}
       <h2 className="font-light text-xl text-neutral-700">Your projects</h2>
-      <div className="flex flex-row gap-5 flex-wrap">
-        <NewProjectButton
-          title="Import from Encord Annotate"
-          description="Bring in existing Encord project"
-          iconUrl={encordImportUrl}
-        />
-        <NewProjectButton
-          title="Import a COCO project"
-          description="Bring in your COCO projects"
-          iconUrl={importUrl}
-        />
-        <NewProjectButton
-          title="Initialize from directory"
-          description="Upload all images within a folder"
-          iconUrl={importUrl}
-        />
-      </div>
       <div className="flex flex-wrap gap-5">
         {userProjects.length ? (
           userProjects.map((project) => (
@@ -77,27 +83,27 @@ export const ProjectsPage = ({ projects = [] }: Props) => {
           <ProjectNotFoundCard />
         )}
       </div>
-      <h2 className="font-light text-xl text-neutral-700">
-        View a sandbox project
-      </h2>
-      <div className="flex flex-wrap gap-5">
-        {sandboxProjects.length ? (
-          sandboxProjects
-            .sort((a, b) => -!!a.path - -!!b.path)
-            .map((project) => (
-              <ProjectCard
-                key={project.hash}
-                project={project}
-                showDownloadedBadge={true}
-                onClick={() =>
-                  pushOutput(["SELECT_SANDBOX_PROJECT", project.hash])
-                }
-              />
-            ))
-        ) : (
-          <ProjectNotFoundCard />
-        )}
-      </div>
+      {env !== "prod" && sandboxProjects.length && (
+        <>
+          <h2 className="font-light text-xl text-neutral-700">
+            View a sandbox project
+          </h2>
+          <div className="flex flex-wrap gap-5">
+            {sandboxProjects
+              .sort((a, b) => -!!a.path - -!!b.path)
+              .map((project) => (
+                <ProjectCard
+                  key={project.hash}
+                  project={project}
+                  showDownloadedBadge={true}
+                  onClick={() =>
+                    pushOutput(["SELECT_SANDBOX_PROJECT", project.hash])
+                  }
+                />
+              ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

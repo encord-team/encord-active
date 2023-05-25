@@ -156,7 +156,7 @@ def render_projects_page(
     download_path: Path,
 ):
     output_state = UseState[Optional[Tuple[OutputAction, str]]](None)
-    output = projects_page(projects=list(projects.values()))
+    output = projects_page(projects=list(projects.values()), env=get_settings().ENV.value)
 
     if output and output != output_state.value:
         output_state.set(output)
