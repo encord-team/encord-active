@@ -77,8 +77,8 @@ inquirerpy = "^0.3.4"
 statsmodels = "^0.13.5"
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
-llvmlite = "^0.39.1"                                     # Pinning, as lower versions conflict with other libs
-encord-active-components = "^0.0.14"                     # TODO publish new version and update 
+llvmlite = "^0.39.1"                                                          # Pinning, as lower versions conflict with other libs
+encord-active-components = { path = "./frontend_components", develop = true } # TODO publish new version and update 
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.0"
