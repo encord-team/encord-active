@@ -16,7 +16,8 @@ if typing.TYPE_CHECKING:
 from encord_active.lib.common.data_utils import (
     download_file,
     download_image,
-    extract_frames, get_frames_per_second,
+    extract_frames,
+    get_frames_per_second,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
@@ -95,9 +96,11 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
 
                 if fill_data_units or old_style_data:
                     data_units = label_row_dict["data_units"]
+                    legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "images"
                     db_data_unit = list(label_row.iter_data_unit(secret_disable_auto_fix=True))
                     if len(db_data_unit) == 0:
                         # For migrating fully empty db condition
+                        type_hack_optional_int_none: Optional[int] = None
                         db_data_unit = [
                             DataUnitStructure(
                                 label_hash=label_hash,
@@ -113,10 +116,9 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             )
                             for du in data_units.values()
                             for frame in (
-                                [None] if du["data_type"] != "video"
-                                else list(range(0, len(
-                                    list(legacy_lr_path.glob(f"{du['data_hash']}_*"))
-                                )))
+                                [type_hack_optional_int_none]
+                                if du["data_type"] != "video"
+                                else [i for i, pth in enumerate(legacy_lr_path.glob(f"{du['data_hash']}_*"))]
                             )
                         ]
 
@@ -125,14 +127,13 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                         migration_counter.display(
                             f"Migrating data_hash: {label_row.label_hash} / {data_unit.du_hash} / {data_unit.frame}"
                         )
-                        legacy_lr_path = label_row.label_row_file_deprecated_for_migration().parent / "images"
                         if data_unit.frame is not None and data_unit.frame != -1:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_{data_unit.frame}.*"))
                         else:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
 
                         du = data_units[data_unit.du_hash]
-                        frames_per_second = 0
+                        frames_per_second = 0.0
                         if data_type == "video":
                             if "_" not in legacy_du_path.stem:
                                 frame_str = "-1"  # To include a reference to the video location in the DataUnit table
@@ -171,7 +172,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                     "data_uri": legacy_du_path.absolute().as_uri(),
                                     "width": image.width,
                                     "height": image.height,
-                                    "fps": frames_per_second
+                                    "fps": frames_per_second,
                                 },
                                 where={
                                     "data_hash_frame": {
@@ -216,7 +217,7 @@ class LabelRowStructure:
     def label_row_json(self) -> Dict[str, Any]:
         with PrismaConnection(self._project) as conn:
             entry = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
-            label_row_json = 'missing'
+            label_row_json = "missing"
             if entry is not None:
                 label_row_json = entry.label_row_json
             return json.loads(label_row_json)
@@ -255,10 +256,7 @@ class LabelRowStructure:
                 )
 
     def iter_data_unit(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        secret_disable_auto_fix: bool = False
+        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None, secret_disable_auto_fix: bool = False
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project) as conn:
             if not secret_disable_auto_fix:
@@ -313,8 +311,15 @@ class LabelRowStructure:
                                 raise RuntimeError("Missing data_uri & not encord project")
                         data_type = label_row.data_type
                     yield DataUnitStructure(
-                        label_row.label_hash, new_du_hash, data_type, signed_url, data_unit.frame, data_unit.data_hash,
-                        data_unit.width, data_unit.height, data_unit.fps,
+                        label_row.label_hash,
+                        new_du_hash,
+                        data_type,
+                        signed_url,
+                        data_unit.frame,
+                        data_unit.data_hash,
+                        data_unit.width,
+                        data_unit.height,
+                        data_unit.fps,
                     )
 
     def iter_data_unit_with_image(
@@ -469,21 +474,21 @@ class ProjectFileStructure(BaseProjectFileStructure):
             return conn.labelrow.find_many()
 
     def iter_labels(
-            self,
-            secret_disable_auto_fix: bool = False,
-            secret_fallback_iter_files: bool = False,
+        self,
+        secret_disable_auto_fix: bool = False,
+        secret_fallback_iter_files: bool = False,
     ) -> Iterator[LabelRowStructure]:
         label_rows = self.label_rows(secret_disable_auto_fix=secret_disable_auto_fix)
         if len(label_rows) == 0 and secret_fallback_iter_files:
-            for label_row in self.data_legacy_folder.iterdir():
-                label_hash = label_row.name
+            for label_row_legacy in self.data_legacy_folder.iterdir():
+                label_hash = label_row_legacy.name
                 yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
         else:
             for label_row in label_rows:
-                label_hash = label_row.label_hash
-                if label_hash is None:
+                label_hash_opt = label_row.label_hash
+                if label_hash_opt is None:
                     continue
-                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
+                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash_opt, project=self)
 
     @property
     def mappings(self) -> Path:

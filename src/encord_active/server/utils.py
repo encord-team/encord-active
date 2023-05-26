@@ -1,9 +1,8 @@
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TypedDict, Union
+from typing import Dict, List, Optional, Tuple, TypedDict
 from urllib.parse import quote, unquote, urlparse
 
-from PIL import Image
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 

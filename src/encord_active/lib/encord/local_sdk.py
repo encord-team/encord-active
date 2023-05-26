@@ -415,7 +415,6 @@ class LocalProject:
                 image_path = next(path.glob(f"{data_unit['data_hash']}.*"))
                 return str(image_path)
 
-
             for du_hash, data_unit in label.data_units.items():
                 image_path = Path(find_image_path(data_unit)).absolute()
                 image = Image.open(image_path)

@@ -9,20 +9,23 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
 
 import yaml
-from PIL import Image
 from encord import Project as EncordProject
 from encord.constants.enums import DataType
 from encord.objects.ontology_structure import OntologyStructure
 from encord.orm.label_row import LabelRow
 from encord.project import LabelRowMetadata
 from loguru import logger
+from PIL import Image
 
 from encord_active.cli.config import app_config
 from encord_active.lib.common.data_utils import (
     collect_async,
     count_frames,
     download_file,
-    try_execute, get_frames_per_second, extract_frames, download_image,
+    download_image,
+    extract_frames,
+    get_frames_per_second,
+    try_execute,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
