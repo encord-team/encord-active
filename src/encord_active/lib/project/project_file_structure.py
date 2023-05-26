@@ -160,7 +160,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                     data_title=du["data_title"],
                                     frame=frame,
                                     lr_data_hash=lr_data_hash,
-                                    data_uri=legacy_du_path.absolute().as_uri(),
+                                    data_uri=legacy_du_video_path.absolute().as_uri(),
                                     width=image.width,
                                     height=image.height,
                                     fps=frames_per_second,
@@ -169,7 +169,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                         else:
                             batcher.dataunit.update(
                                 data={
-                                    "data_uri": legacy_du_path.absolute().as_uri(),
+                                    "data_uri": legacy_du_video_path.absolute().as_uri(),
                                     "width": image.width,
                                     "height": image.height,
                                     "fps": frames_per_second,
@@ -281,7 +281,7 @@ class LabelRowStructure:
             )
             encord_project_metadata = self._project.load_project_meta()
             encord_project = None
-            if encord_project_metadata["has_remote"]:
+            if encord_project_metadata.get("has_remote", False):
                 encord_project = get_encord_project(
                     encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
                 )
@@ -482,6 +482,8 @@ class ProjectFileStructure(BaseProjectFileStructure):
         if len(label_rows) == 0 and secret_fallback_iter_files:
             for label_row_legacy in self.data_legacy_folder.iterdir():
                 label_hash = label_row_legacy.name
+                if label_hash.startswith("."):
+                    continue
                 yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
         else:
             for label_row in label_rows:
