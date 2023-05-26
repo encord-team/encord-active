@@ -50,10 +50,10 @@ class SimilaritiesFinder:
 
         embedding_idx = self.identifier_to_index[identifier]
         embedding = np.array([self.label_embeddings[embedding_idx]["embedding"]]).astype(np.float32)
-        ip_search_result = self.index.query(embedding, k=self.num_of_neighbors)
+        search_result = self.index.query(embedding, k=self.num_of_neighbors)
         _get_embedding = partial(get_embedding_identifier, has_annotation=self.has_annotations)
         self.similarities[identifier] = list(
-            map(lambda idx: _get_embedding(self.label_embeddings[int(idx)]), ip_search_result.indices[0, 1:])  # type: ignore
+            map(lambda idx: _get_embedding(self.label_embeddings[int(idx)]), search_result.indices[0, 1:])  # type: ignore
         )
 
 

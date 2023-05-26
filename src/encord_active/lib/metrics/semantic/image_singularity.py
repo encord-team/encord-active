@@ -7,7 +7,10 @@ from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
-from encord_active.lib.embeddings.embedding_index import EmbeddingIndex, IPSearchResult
+from encord_active.lib.embeddings.embedding_index import (
+    EmbeddingIndex,
+    EmbeddingSearchResult,
+)
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
@@ -44,7 +47,7 @@ This metric gives each image a score that shows each image's uniqueness.
         self.near_duplicate_threshold = near_duplicate_threshold
 
     def score_images(
-        self, embedding_info: list[LabelEmbedding], search_result: IPSearchResult, project_hash: str
+        self, embedding_info: list[LabelEmbedding], search_result: EmbeddingSearchResult, project_hash: str
     ) -> dict[str, DataUnitInfo]:
         scores: dict[str, DataUnitInfo] = {}
         previous_duplicates: dict[int, int] = {}
@@ -85,9 +88,9 @@ This metric gives each image a score that shows each image's uniqueness.
             return
 
         embeddings = np.stack([e["embedding"] for e in embedding_info])
-        ip_query_res = embedding_index.query(embeddings, k=30)
-        fix_duplicate_image_orders_in_knn_graph_all_rows(ip_query_res.indices)
-        scores = self.score_images(embedding_info, ip_query_res, iterator.project.project_hash)
+        query_res = embedding_index.query(embeddings, k=30)
+        fix_duplicate_image_orders_in_knn_graph_all_rows(query_res.indices)
+        scores = self.score_images(embedding_info, query_res, iterator.project.project_hash)
 
         for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
             data_unit_info = scores.get(data_unit["data_hash"])

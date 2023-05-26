@@ -121,10 +121,10 @@ class ImageLevelQualityTest(Metric):
 
         nearest_metrics = {}
         for question_hash, question_index in question_specific_index.items():
-            ip_search_result = question_index.query(  # pylint: disable=no-value-for-parameter
+            query_result = question_index.query(  # pylint: disable=no-value-for-parameter
                 question_specific_embeddings[question_hash], k=self.num_nearest_neighbors
             )
-            nearest_metrics[question_hash] = ip_search_result.indices
+            nearest_metrics[question_hash] = query_result.indices
 
         return nearest_metrics
 

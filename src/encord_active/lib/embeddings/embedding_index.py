@@ -17,24 +17,24 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 MAX_BATCH_SIZE = int(os.getenv("EA_NN_SEARCH_MAX_QUERY_SIZE", 20_000))
 
 
-class IPSearchResult(NamedTuple):
+class EmbeddingSearchResult(NamedTuple):
     indices: np.ndarray
     # [m, k] array
     similarities: np.ndarray
     # [m, k] array
 
 
-def _query_in_batches(index: NNDescent, embeddings: np.ndarray, k: int, batch_size=1000) -> IPSearchResult:
+def _query_in_batches(index: NNDescent, embeddings: np.ndarray, k: int, batch_size=1000) -> EmbeddingSearchResult:
     n = embeddings.shape[0]
     if n <= batch_size:
-        return IPSearchResult(*index.query(embeddings, k=k))  # pylint: disable=no-value-for-parameter
+        return EmbeddingSearchResult(*index.query(embeddings, k=k))
 
     dists, idxs = [], []
     for idx in range(0, n, batch_size):
-        d, i = index.query(embeddings[idx : idx + batch_size], k=k)  # pylint: disable=no-value-for-parameter
+        d, i = index.query(embeddings[idx : idx + batch_size], k=k)
         dists.append(d)
         idxs.append(i)
-    return IPSearchResult(np.concatenate(dists, axis=0), np.concatenate(idxs, axis=0))
+    return EmbeddingSearchResult(np.concatenate(dists, axis=0), np.concatenate(idxs, axis=0))
 
 
 def _get_embedding_index_file(embedding_file: Path, metric: str) -> Path:
@@ -124,4 +124,4 @@ class EmbeddingIndex:
         if _query_embeddings.shape[0] > MAX_BATCH_SIZE:
             return _query_in_batches(self.index, _query_embeddings, k=k)
 
-        return IPSearchResult(*self.index.query(_query_embeddings, k=k))
+        return EmbeddingSearchResult(*self.index.query(_query_embeddings, k=k))
