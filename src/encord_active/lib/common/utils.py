@@ -216,7 +216,6 @@ def slice_video_into_frames(
                 frame_num = frame.index
 
                 if wanted_frames is None or frame_num in wanted_frames:
-
                     if not frame.is_corrupt:
                         frame_name = f"{video_name}_{frame_num}.png"
 
@@ -453,22 +452,6 @@ def convert_image_bgr(image: Image.Image) -> np.ndarray:
 
 def iterate_in_batches(seq: Sequence, size: int):
     return (seq[pos : pos + size] for pos in range(0, len(seq), size))
-
-
-def patch_sklearn_linalg(func):
-    # Patching sklearn to use numpy's linalg as scipy's one causes segfaults
-    def wrap(*args, **kwargs):
-        import sklearn.decomposition._pca as module_to_patch1
-        import sklearn.utils.extmath as module_to_patch2
-
-        original_lin_alg1, original_lin_alg2 = module_to_patch1.linalg, module_to_patch2.linalg
-        module_to_patch1.linalg, module_to_patch2.linalg = np.linalg, np.linalg
-
-        func(*args, **kwargs)
-
-        module_to_patch1.linalg, module_to_patch2.linalg = original_lin_alg1, original_lin_alg2
-
-    return wrap
 
 
 def try_execute(func: Callable, num_tries: int, kwargs=None):
