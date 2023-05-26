@@ -21,16 +21,25 @@ class PrismaConnection:
     def __init__(self, project_file_structure: BaseProjectFileStructure) -> None:
         ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride
-
+        self.pfs = project_file_structure
         self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
 
     def __enter__(self):
         from prisma import Prisma
+        if self.pfs.prisma_db_conn_cache is not None:
+            self.pfs.prisma_db_conn_cache_counter += 1
+            return self.pfs.prisma_db_conn_cache
 
-        self.db = Prisma(datasource=self.datasource)
-        self.db.connect()
-        return self.db
+        db = Prisma(datasource=self.datasource)
+        db.connect()
+        self.pfs.prisma_db_conn_cache = db
+        self.pfs.prisma_db_conn_cache_counter = 1
+        return db
 
     def __exit__(self, type, value, traceback):
-        if self.db.is_connected():
-            self.db.disconnect()
+        self.pfs.prisma_db_conn_cache_counter -= 1
+        if self.pfs.prisma_db_conn_cache_counter == 0:
+            db = self.pfs.prisma_db_conn_cache
+            self.pfs.prisma_db_conn_cache = None
+            if db.is_connected():
+                db.disconnect()

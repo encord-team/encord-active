@@ -12,17 +12,14 @@ class BaseProjectFileStructure:
         if isinstance(project_dir, str):
             project_dir = Path(project_dir)
         self.project_dir: Path = project_dir.expanduser().resolve()
+        self.prisma_db_conn_cache: "Optional[prisma.Prisma]" = None
+        self.prisma_db_conn_cache_counter: int = 0
 
     @abstractmethod
     def cache_clear(self) -> None:
         """
         Clear any cached data and fetch the latest changes.
         """
-        pass
-
-    @property
-    @abstractmethod
-    def data(self) -> Path:
         pass
 
     @property

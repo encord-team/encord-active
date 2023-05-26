@@ -91,6 +91,8 @@ def download_file(
         destination.symlink_to(Path(cached_download.name))
         return destination
 
+    print("DOWNLOAD FILE REAL")
+
     cache_tempfile = tempfile.NamedTemporaryFile()
 
     r = requests.get(url, stream=True)
@@ -117,6 +119,7 @@ def download_image(url: str, cache: bool = True) -> Image.Image:
     if cached_image is not None:
         return Image.open(cached_image)
 
+    print("DOWNLOAD IMAGE REAL")
     r = requests.get(url)
 
     if r.status_code != 200:
