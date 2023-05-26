@@ -171,7 +171,6 @@ export const getApi = (
       const queryParams = new URLSearchParams({
         current_metric: selectedMetric,
       });
-      console.log("fetching availability");
       const url = `${baseUrl}/projects/${projectName}/has_similarity_search?${queryParams} `;
       const response = await fetcher(url).then((res) => res.json());
       return z.boolean().parse(response);
