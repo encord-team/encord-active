@@ -127,7 +127,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                         migration_counter.display(
                             f"Migrating data_hash: {label_row.label_hash} / {data_unit.du_hash} / {data_unit.frame}"
                         )
-                        if data_unit.frame is not None and data_unit.frame != -1:
+                        if data_unit.frame is not None and data_unit.frame != -1 and data_type == "video":
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_{data_unit.frame}.*"))
                         else:
                             legacy_du_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
@@ -145,7 +145,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             data_uri_path = legacy_du_video_path
                         else:
                             frame_str = du.get("data_sequence", 0)
-                            data_uri_path = legacy_lr_path
+                            data_uri_path = legacy_du_path
                         frame = int(frame_str)
 
                         if frame != -1 or data_type != "video":

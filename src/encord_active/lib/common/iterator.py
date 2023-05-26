@@ -148,8 +148,10 @@ class DatasetIterator(Iterator):
         return key
 
     def get_data_url(self) -> str:
+        label_row_meta = self.project.label_row_metas.get(self.label_hash, None)
+        data_hash_meta = label_row_meta.data_hash if label_row_meta is not None else self.du_hash
         base_url = "https://app.encord.com/label_editor/"
-        data_url = f"{base_url}{self.project.label_row_metas[self.label_hash].data_hash}&{self.project.project_hash}"
+        data_url = f"{base_url}{data_hash_meta}&{self.project.project_hash}"
         if isinstance(self.frame, int):
             data_url += f"/{self.frame}"
         return data_url

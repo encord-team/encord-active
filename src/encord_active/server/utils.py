@@ -64,7 +64,7 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
                 approx_relative_path = image_path.as_posix().removeprefix(root_path.as_posix())
                 if approx_relative_path.startswith("/"):
                     approx_relative_path = approx_relative_path[1:]
-                signed_url = quote(f"{settings.API_URL}/ea-static/{approx_relative_path}")
+                signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
 
         return signed_url, timestamp
     return None
