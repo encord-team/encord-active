@@ -8,6 +8,7 @@ from streamlit.web import cli as stcli
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
+from encord_active.lib.db.data.run_data_migrations import run_data_migrations
 from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
 from encord_active.lib.db.prisma_init import (
     did_schema_change,
@@ -28,6 +29,7 @@ def ensure_safe_project(path: Path):
         project_file_structure = ProjectFileStructure(path)
         ensure_initialised_merged_metrics(project_file_structure)
         ensure_prisma_db(project_file_structure.prisma_db)
+        run_data_migrations(project_file_structure)
 
 
 def is_port_in_use(port: int) -> bool:
