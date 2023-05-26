@@ -383,15 +383,12 @@ class LabelRowStructure:
                     raise RuntimeError(f"Unsupported data type: {data_unit_struct.data_type}")
 
 
-_GLOBAL_SIGNED_URL_CACHE = {}
-
-
 class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
         self._cached_project_meta: "Optional[ProjectMeta]" = None
-        self.cached_signed_urls: Dict[str, str] = _GLOBAL_SIGNED_URL_CACHE
+        self.cached_signed_urls: Dict[str, str] = {}
 
     def cache_clear(self) -> None:
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}

@@ -296,13 +296,9 @@ class Project:
         }
 
 
-_DOWNLOAD_LABEL_ROW_CACHE = {}
-
 def download_label_row(
     label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
 ) -> LabelRow:
-    if label_hash in _DOWNLOAD_LABEL_ROW_CACHE:
-        return _DOWNLOAD_LABEL_ROW_CACHE[label_hash]
     label_row = try_execute(partial(project.get_label_row, get_signed_url=True), 5, {"uid": label_hash})
     label_row_json = json.dumps(label_row, indent=2)
     with PrismaConnection(project_file_structure) as conn:
@@ -327,8 +323,6 @@ def download_label_row(
                 },
             },
         )
-
-    _DOWNLOAD_LABEL_ROW_CACHE[label_hash] = label_row
     return label_row
 
 
