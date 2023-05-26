@@ -200,7 +200,6 @@ def slice_video_into_frames(
                 frame_num = frame.index
 
                 if wanted_frames is None or frame_num in wanted_frames:
-
                     if not frame.is_corrupt:
                         frame_name = f"{video_name}_{frame_num}.png"
 
@@ -367,19 +366,3 @@ def mask_to_polygon(mask: np.ndarray) -> Tuple[Optional[List[Any]], CocoBbox]:
             return contour.squeeze(1).tolist(), (x, y, w, h)
 
     return None, (x, y, w, h)
-
-
-def patch_sklearn_linalg(func):
-    # Patching sklearn to use numpy's linalg as scipy's one causes segfaults
-    def wrap(*args, **kwargs):
-        import sklearn.decomposition._pca as module_to_patch1
-        import sklearn.utils.extmath as module_to_patch2
-
-        original_lin_alg1, original_lin_alg2 = module_to_patch1.linalg, module_to_patch2.linalg
-        module_to_patch1.linalg, module_to_patch2.linalg = np.linalg, np.linalg
-
-        func(*args, **kwargs)
-
-        module_to_patch1.linalg, module_to_patch2.linalg = original_lin_alg1, original_lin_alg2
-
-    return wrap

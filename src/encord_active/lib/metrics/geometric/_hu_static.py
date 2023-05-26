@@ -5,7 +5,7 @@ from loguru import logger
 from sklearn.decomposition import PCA
 
 from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.common.utils import get_object_coordinates, patch_sklearn_linalg
+from encord_active.lib.common.utils import get_object_coordinates
 from encord_active.lib.embeddings.hu_moments import get_hu_embeddings
 from encord_active.lib.embeddings.writer import CSVEmbeddingWriter
 from encord_active.lib.metrics.metric import Metric
@@ -42,7 +42,6 @@ class HuMomentsStatic(Metric):
             annotation_type=[AnnotationType.OBJECT.POLYGON],
         )
 
-    @patch_sklearn_linalg
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         hu_moments_df = get_hu_embeddings(iterator, force=True)
