@@ -53,6 +53,10 @@ for counter, (data_unit, _) in enumerate(iterator.iterate()):
         for inference_result, du in zip(inference_results, data_units):
             for obj in inference_result["predictions"]["0"]["objects"]:
 
+                if obj["shape"] != "bounding_box":
+                    print(f"prediction is not in `bbox` type (it is in {obj['shape']} type), skipping...")
+                    continue
+
                 if obj["featureHash"] not in ontology_featureHashes:
                     print(
                         f"'{obj['name']}' with featureHash '{obj['featureHash']}' is not available in the ontology of"
