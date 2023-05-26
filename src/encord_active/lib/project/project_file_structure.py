@@ -142,8 +142,10 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                             # Lookup frames per second
                             legacy_du_video_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}.*"))
                             frames_per_second = get_frames_per_second(legacy_du_video_path)
+                            data_uri_path = legacy_du_video_path
                         else:
                             frame_str = du.get("data_sequence", 0)
+                            data_uri_path = legacy_lr_path
                         frame = int(frame_str)
 
                         if frame != -1 or data_type != "video":
@@ -160,7 +162,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                                     data_title=du["data_title"],
                                     frame=frame,
                                     lr_data_hash=lr_data_hash,
-                                    data_uri=legacy_du_video_path.absolute().as_uri(),
+                                    data_uri=data_uri_path.absolute().as_uri(),
                                     width=image.width,
                                     height=image.height,
                                     fps=frames_per_second,
@@ -169,7 +171,7 @@ def _fill_missing_tables(pfs: ProjectFileStructure):
                         else:
                             batcher.dataunit.update(
                                 data={
-                                    "data_uri": legacy_du_video_path.absolute().as_uri(),
+                                    "data_uri": data_uri_path.absolute().as_uri(),
                                     "width": image.width,
                                     "height": image.height,
                                     "fps": frames_per_second,
