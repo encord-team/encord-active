@@ -118,7 +118,7 @@ def get_has_similarity_search(project: ProjectFileStructureDep, current_metric: 
 @router.get("/{project}/similarities/{id}")
 def get_similar_items(project: ProjectFileStructureDep, id: str, current_metric: str, page_size: Optional[int] = None):
     embedding_type = get_metric_embedding_type(project, current_metric)
-    finder = get_similarity_finder(embedding_type, project, page_size)
+    finder = get_similarity_finder(embedding_type, project)
     return finder.get_similarities(id)
 
 
