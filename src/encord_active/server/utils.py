@@ -40,10 +40,8 @@ def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str):
 
 
 @lru_cache
-def get_similarity_finder(
-    embedding_type: EmbeddingType, project: ProjectFileStructureDep, num_of_neighbors: Optional[int] = None
-):
-    return SimilaritiesFinder(embedding_type, project, num_of_neighbors)
+def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
+    return SimilaritiesFinder(embedding_type, project)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
