@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import pandas as pd
+import prisma
 from pandas import Series
 from pandera.typing import DataFrame
 from PIL import Image
@@ -133,8 +134,9 @@ def show_image_and_draw_polygons(
     project_file_structure: ProjectFileStructure,
     draw_configurations: Optional[ObjectDrawingConfigurations] = None,
     skip_object_hash: bool = False,
+    cache_db: Optional[prisma.Prisma] = None,
 ) -> np.ndarray:
-    image = load_or_fill_image(row, project_file_structure)
+    image = load_or_fill_image(row, project_file_structure, cache_db=cache_db)
 
     if draw_configurations is None:
         draw_configurations = ObjectDrawingConfigurations()
@@ -142,22 +144,32 @@ def show_image_and_draw_polygons(
     if draw_configurations.draw_objects:
         img_h, img_w = image.shape[:2]
         for color, geometry in get_geometries(
-            row, img_h, img_w, project_file_structure, skip_object_hash=skip_object_hash
+            row,
+            img_h,
+            img_w,
+            project_file_structure,
+            skip_object_hash=skip_object_hash,
+            cache_db=cache_db,
         ):
             image = draw_object_with_background_color(image, geometry, color, draw_configurations)
     return image
 
 
-def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: ProjectFileStructure) -> np.ndarray:
+def load_or_fill_image(
+    row: Union[pd.Series, str],
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
+) -> np.ndarray:
     """
     Tries to read the inferred image path. If not possible, generates a white image
     and indicates what the error seemed to be embedded in the image.
     :param row: A csv row from either a metric, a prediction, or a label csv file.
+    :param cache_db: Optimization for db access
     :return: Numpy / cv2 image.
     """
     key = __get_key(row)
 
-    img_opt = key_to_data_unit(key, project_file_structure)
+    img_opt = key_to_data_unit(key, project_file_structure, cache_db=cache_db)
 
     if img_opt:
         img_du, image_link = img_opt
@@ -253,6 +265,7 @@ def get_geometries(
     img_w: int,
     project_file_structure: ProjectFileStructure,
     skip_object_hash: bool = False,
+    cache_db: Optional[prisma.Prisma] = None,
 ) -> List[Tuple[str, np.ndarray]]:
     """
     Loads cached label row and computes geometries from the label row.
@@ -265,7 +278,7 @@ def get_geometries(
     _, du_hash, frame, *remainder = key.split("_")
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    label_row = label_row_structure.label_row_json
+    label_row = label_row_structure.get_label_row_json(cache_db=cache_db)
     du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash), None)
     if not du_struct:
         return []
@@ -302,19 +315,24 @@ def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStru
 
 
 def key_to_data_unit(
-    key: str, project_file_structure: ProjectFileStructure
+    key: str,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
 ) -> Optional[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
     :param project_file_structure: project file structure
+    :param cache_db: Optimization for db access
     :return: The associated image path if it exists or a path to a placeholder otherwise
     """
     label_hash, du_hash, frame, *_ = key.split("_")
     label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_du = next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame)), None)
+    frame_du = next(
+        label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame), cache_db=cache_db), None
+    )
     if frame_du is not None:
         return frame_du
-    return next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash), None)
+    return next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, cache_db=cache_db), None)

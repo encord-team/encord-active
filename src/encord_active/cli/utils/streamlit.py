@@ -19,10 +19,11 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 from encord_active.lib.versioning.git import GitVersioner
 
 
-def ensure_safe_project(path: Path):
-    paths = [path] if is_project(path) else find_child_projects(path)
+def ensure_safe_project(root_path: Path):
+    paths = [root_path] if is_project(root_path) else find_child_projects(root_path)
 
     for path in paths:
+        rich.print(f"[yellow]Migrating project at path: {path}...")
         versioner = GitVersioner(path)
         if versioner.available:
             versioner.jump_to("latest")

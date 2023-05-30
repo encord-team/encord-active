@@ -1,3 +1,7 @@
+from typing import Callable, Union
+
+import numpy as np
+from pandas import Series
 from streamlit.delta_generator import DeltaGenerator
 
 from encord_active.app.common.state import get_state
@@ -6,6 +10,7 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
 )
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.project import ProjectFileStructure
 
 
 def show_similarities(identifier: str, expander: DeltaGenerator, embedding_information: SimilaritiesFinder):
@@ -19,7 +24,7 @@ def show_similarities(identifier: str, expander: DeltaGenerator, embedding_infor
         if column_id == 0:
             st_columns = expander.columns(division)
 
-        load_image = load_or_fill_image
+        load_image: Callable[[Union[Series, str], ProjectFileStructure], np.ndarray] = load_or_fill_image
         if embedding_information.has_annotations:
             load_image = show_image_and_draw_polygons
 

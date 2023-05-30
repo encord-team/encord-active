@@ -1,4 +1,9 @@
 import sqlite3
+import typing
+from typing import Optional
+
+if typing.TYPE_CHECKING:
+    import prisma
 
 import encord_active.lib.db  # pylint: disable=unused-import
 from encord_active.lib.db.prisma_init import ensure_prisma_db
@@ -18,19 +23,27 @@ class DBConnection:
 
 
 class PrismaConnection:
-    def __init__(self, project_file_structure: BaseProjectFileStructure) -> None:
+    def __init__(
+        self, project_file_structure: BaseProjectFileStructure, cache_db: Optional["prisma.Prisma"] = None
+    ) -> None:
         ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride
 
+        self.cache_db = cache_db
+        self.db: "Optional[prisma.Prisma]" = None
         self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
 
-    def __enter__(self):
+    def __enter__(self) -> "prisma.Prisma":
         from prisma import Prisma
+
+        if self.cache_db is not None:
+            return self.cache_db
 
         self.db = Prisma(datasource=self.datasource)
         self.db.connect()
         return self.db
 
     def __exit__(self, type, value, traceback):
-        if self.db.is_connected():
+        if self.db is not None and self.db.is_connected():
             self.db.disconnect()
+            self.db = None

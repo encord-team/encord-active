@@ -19,16 +19,19 @@ from tqdm import tqdm
 _EXTRACT_FRAMES_CACHE: Dict[str, tempfile.TemporaryDirectory] = {}
 
 
-def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
+def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
     if data_hash not in _EXTRACT_FRAMES_CACHE:
         tempdir = tempfile.TemporaryDirectory()
         _extract_frames(video_file_name, Path(tempdir.name), data_hash)
         _EXTRACT_FRAMES_CACHE[data_hash] = tempdir
     # Symlink everything in the temporary directory, do not do duplicate work
     tempdir = _EXTRACT_FRAMES_CACHE[data_hash]
-    img_dir.mkdir(parents=True, exist_ok=True)
-    for frame in Path(tempdir.name).iterdir():
-        (img_dir / frame.name).symlink_to(frame, target_is_directory=False)
+    if symlink_folder:
+        img_dir.symlink_to(Path(tempdir.name), target_is_directory=True)
+    else:
+        img_dir.mkdir(parents=True, exist_ok=True)
+        for frame in Path(tempdir.name).iterdir():
+            (img_dir / frame.name).symlink_to(frame, target_is_directory=False)
 
 
 def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:

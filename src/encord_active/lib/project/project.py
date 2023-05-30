@@ -50,7 +50,12 @@ class Project:
             self.project_meta = fetch_project_meta(self.file_structure.project_dir)
         except ProjectNotFound:
             self.project_meta = ProjectMeta(
-                project_description="", project_hash="", project_title="", ssh_key_path="", has_remote=False
+                project_description="",
+                project_hash="",
+                project_title="",
+                ssh_key_path="",
+                has_remote=False,
+                data_version=0,
             )
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
@@ -207,7 +212,7 @@ class Project:
         with PrismaConnection(self.file_structure) as conn:
             conn.labelrow.update(
                 data={"label_row_json": new_lr_structure},
-                where={"label_hash": label_row["label_hash"], "data_hash": label_row["dataset_hash"]},
+                where={"label_hash": label_row["label_hash"], "data_hash": label_row["dataset_hash"]},  # type: ignore
             )
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):
@@ -395,7 +400,6 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
             num_frames = count_frames(video_path)
             frames_per_second = get_frames_per_second(video_path)
             video_images = Path(video_dir) / "images"
-            video_images.mkdir(parents=True, exist_ok=True)
             extract_frames(video_path, video_images, data_hash)
             image_path = next(video_images.iterdir())
             image = Image.open(image_path)

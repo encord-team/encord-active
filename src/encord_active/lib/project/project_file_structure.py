@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import functools
 import json
 import tempfile
 import typing
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
+import encord
 from PIL import Image
 
 if typing.TYPE_CHECKING:
@@ -51,6 +53,11 @@ class DataUnitStructure(NamedTuple):
     frames_per_second: float
 
 
+@functools.lru_cache(maxsize=10)
+def get_encord_project_cached(ssh_key_path: str, project_hash: str) -> encord.Project:
+    return get_encord_project(ssh_key_path=ssh_key_path, project_hash=project_hash)
+
+
 class LabelRowStructure:
     def __init__(self, mappings: dict[str, str], label_hash: str, project: "ProjectFileStructure"):
         self._mappings: dict[str, str] = mappings
@@ -64,14 +71,17 @@ class LabelRowStructure:
     def label_row_file_deprecated_for_migration(self) -> Path:
         return self._project.project_dir / "data" / self._label_hash / "label_row.json"
 
-    @property
-    def label_row_json(self) -> Dict[str, Any]:
-        with PrismaConnection(self._project) as conn:
+    def get_label_row_json(self, cache_db: Optional[prisma.Prisma] = None) -> Dict[str, Any]:
+        with PrismaConnection(self._project, cache_db=cache_db) as conn:
             entry = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
             label_row_json = "missing"
             if entry is not None:
                 label_row_json = entry.label_row_json
             return json.loads(label_row_json)
+
+    @property
+    def label_row_json(self) -> Dict[str, Any]:
+        return self.get_label_row_json()
 
     @property
     def label_hash(self) -> str:
@@ -97,7 +107,7 @@ class LabelRowStructure:
             for row in rows:
                 conn.labelrow.create(
                     {
-                        **row,
+                        **row,  # type: ignore
                         "label_row_json": label_row_json,
                         "local_path": local_path,
                     },
@@ -107,10 +117,13 @@ class LabelRowStructure:
                 )
 
     def iter_data_unit(
-        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self,
+        data_unit_hash: Optional[str] = None,
+        frame: Optional[int] = None,
+        cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[DataUnitStructure]:
-        with PrismaConnection(self._project) as conn:
-            where = {"label_hash": {"equals": self._label_hash}}
+        with PrismaConnection(self._project, cache_db=cache_db) as conn:
+            where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
             if data_unit_hash is not None:
                 du_hash = self._mappings.get(data_unit_hash, data_unit_hash)
                 where["data_hash"] = {"equals": du_hash}
@@ -131,19 +144,19 @@ class LabelRowStructure:
             encord_project_metadata = self._project.load_project_meta()
             encord_project = None
             if encord_project_metadata.get("has_remote", False):
-                encord_project = get_encord_project(
+                encord_project = get_encord_project_cached(
                     encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
                 )
             cached_signed_urls = self._project.cached_signed_urls
             for label_row in all_rows:
                 data_links = {}
                 if encord_project is not None:
-                    if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units):
+                    if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units or []):
                         data_links = encord_project.get_label_row(
                             label_row.label_hash,
                             get_signed_url=True,
                         )
-                for data_unit in label_row.data_units:
+                for data_unit in label_row.data_units or []:
                     du_hash = data_unit.data_hash
                     new_du_hash = self._rev_mappings.get(du_hash, du_hash)
                     if data_unit.data_hash in cached_signed_urls:
@@ -155,12 +168,16 @@ class LabelRowStructure:
                             signed_url = data_units[du_hash]["data_link"]
                             cached_signed_urls[data_unit.data_hash] = signed_url
                         else:
-                            signed_url = data_unit.data_uri
-                            if signed_url is None:
+                            data_uri = data_unit.data_uri
+                            if data_uri is None:
                                 raise RuntimeError("Missing data_uri & not encord project")
+                            signed_url = data_uri
                         data_type = label_row.data_type
+                    label_hash = label_row.label_hash
+                    if label_hash is None:
+                        raise RuntimeError("Missing label_hash in prisma")
                     yield DataUnitStructure(
-                        label_row.label_hash,
+                        label_hash,
                         new_du_hash,
                         data_type,
                         signed_url,
@@ -172,20 +189,23 @@ class LabelRowStructure:
                     )
 
     def iter_data_unit_with_image(
-        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self,
+        data_unit_hash: Optional[str] = None,
+        frame: Optional[int] = None,
+        cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Image.Image]]:
         # Temporary directory for all video decodes
-        label_row_json = self.label_row_json
+        label_row_json = self.get_label_row_json(cache_db=cache_db)
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame):
+            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame, cache_db=cache_db):
                 if data_unit_struct.data_type in {"img_group", "image"}:
                     image = download_image(data_unit_struct.signed_url)
                     yield data_unit_struct, image
                 elif data_unit_struct.data_type == "video":
                     video_dir = tmp_path / data_unit_struct.du_hash
+                    video_dir.mkdir(parents=True, exist_ok=True)
                     images_dir = video_dir / "frames"
-                    images_dir.mkdir(parents=True, exist_ok=True)
                     existing_image = next(
                         images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"), None
                     )
@@ -201,20 +221,23 @@ class LabelRowStructure:
                     raise RuntimeError("Unsupported data type")
 
     def iter_data_unit_with_image_or_signed_url(
-        self, data_unit_hash: Optional[str] = None, frame: Optional[int] = None
+        self,
+        data_unit_hash: Optional[str] = None,
+        frame: Optional[int] = None,
+        cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
         # Temporary directory for all video decodes
-        label_row_json = self.label_row_json
+        label_row_json = self.get_label_row_json(cache_db=cache_db)
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame):
+            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame, cache_db=cache_db):
                 if data_unit_struct.data_type in {"img_group", "image"}:
                     yield data_unit_struct, data_unit_struct.signed_url
                 elif data_unit_struct.data_type == "video":
                     # Shared image loading logic
                     video_dir = tmp_path / data_unit_struct.du_hash
+                    video_dir.mkdir(parents=True, exist_ok=True)
                     images_dir = video_dir / "frames"
-                    images_dir.mkdir(parents=True, exist_ok=True)
                     existing_image = next(
                         images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"), None
                     )
@@ -230,12 +253,16 @@ class LabelRowStructure:
                     raise RuntimeError(f"Unsupported data type: {data_unit_struct.data_type}")
 
 
+# Needed for efficient visualisation, otherwise each session gets a different cache state
+GLOBAL_CACHED_SIGNED_URLS: Dict[str, str] = {}
+
+
 class ProjectFileStructure(BaseProjectFileStructure):
     def __init__(self, project_dir: Union[str, Path]):
         super().__init__(project_dir)
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}
         self._cached_project_meta: "Optional[ProjectMeta]" = None
-        self.cached_signed_urls: Dict[str, str] = {}
+        self.cached_signed_urls: Dict[str, str] = GLOBAL_CACHED_SIGNED_URLS
 
     def cache_clear(self) -> None:
         self._mappings = json.loads(self.mappings.read_text()) if self.mappings.exists() else {}

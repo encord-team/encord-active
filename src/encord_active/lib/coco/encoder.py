@@ -370,7 +370,8 @@ class CocoEncoder:
             url,
             video_path,
         )
-        extract_frames(video_path, destination_path, data_hash)
+        # Incorrect destination path for folder sym-link logic.
+        extract_frames(video_path, destination_path, data_hash, symlink_folder=False)
 
     def get_annotations(self):
         annotations = []

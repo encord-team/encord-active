@@ -21,6 +21,7 @@ from encord_active.lib.common.data_utils import (
     download_image,
     extract_frames,
 )
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import Project, ProjectFileStructure
 
 
@@ -75,61 +76,66 @@ class DatasetIterator(Iterator):
         )
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
-        pbar = tqdm(total=self.length, desc=desc, leave=False)
-        for label_hash, label_row in self.label_rows.items():
-            self.dataset_title = label_row["dataset_title"]
-            self.label_hash = label_hash
-            if label_row.data_type in {"img_group", "image"}:
-                self.num_frames = len(label_row.data_units)
-                data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
-                for data_unit in data_units:
-                    self.du_hash = data_unit["data_hash"]
-                    self.frame = int(data_unit["data_sequence"])
-                    try:
-                        img_metadata = next(
-                            self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
-                            None,
-                        )
-                        image = None
-                        if img_metadata is not None:
-                            image = download_image(img_metadata.signed_url)
-                        yield data_unit, image
-                    except KeyError:
-                        logger.error(
-                            f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
-                        )
-                        continue
-                    pbar.update(1)
-            elif label_row.data_type == "video":
-                data_unit, *_ = label_row["data_units"].values()
-                self.du_hash = data_unit["data_hash"]
-                video_metadata = next(
-                    self.project_file_structure.label_row_structure(label_hash).iter_data_unit(self.du_hash),
-                    None,
-                )
-                if video_metadata is None:
-                    continue  # SKIP
-
-                # Create temporary folder containing the video
-                with tempfile.TemporaryDirectory() as working_dir:
-                    working_path = Path(working_dir)
-                    video_path = working_path / str(data_unit["data_title"])
-                    video_images_dir = working_path / "images"
-                    download_file(video_metadata.signed_url, video_path)
-                    extract_frames(video_path, video_images_dir, self.du_hash)
-
-                    fake_data_unit = deepcopy(data_unit)
-                    for frame_sequence, frame_annotations in data_unit["labels"].items():
-                        self.frame = int(frame_sequence)
-                        fake_data_unit["labels"] = frame_annotations
-                        image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
-                        if image_path:
-                            yield fake_data_unit, Image.open(image_path)
-                        else:
-                            yield fake_data_unit, None
+        with PrismaConnection(self.project_file_structure) as cache_db:
+            pbar = tqdm(total=self.length, desc=desc, leave=False)
+            for label_hash, label_row in self.label_rows.items():
+                self.dataset_title = label_row["dataset_title"]
+                self.label_hash = label_hash
+                if label_row.data_type in {"img_group", "image"}:
+                    self.num_frames = len(label_row.data_units)
+                    data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
+                    for data_unit in data_units:
+                        self.du_hash = data_unit["data_hash"]
+                        self.frame = int(data_unit["data_sequence"])
+                        try:
+                            img_metadata = next(
+                                self.project_file_structure.label_row_structure(label_hash).iter_data_unit(
+                                    self.du_hash, cache_db=cache_db
+                                ),
+                                None,
+                            )
+                            image = None
+                            if img_metadata is not None:
+                                image = download_image(img_metadata.signed_url)
+                            yield data_unit, image
+                        except KeyError:
+                            logger.error(
+                                f"There was an issue finding the path for label row: `{label_hash}` and data unit: `{self.du_hash}`"
+                            )
+                            continue
                         pbar.update(1)
-            else:
-                logger.error(f"Label row '{label_hash}' with data type '{label_row.data_type}' is not recognized")
+                elif label_row.data_type == "video":
+                    data_unit, *_ = label_row["data_units"].values()
+                    self.du_hash = data_unit["data_hash"]
+                    video_metadata = next(
+                        self.project_file_structure.label_row_structure(label_hash).iter_data_unit(
+                            self.du_hash, cache_db=cache_db
+                        ),
+                        None,
+                    )
+                    if video_metadata is None:
+                        continue  # SKIP
+
+                    # Create temporary folder containing the video
+                    with tempfile.TemporaryDirectory() as working_dir:
+                        working_path = Path(working_dir)
+                        video_path = working_path / str(data_unit["data_title"])
+                        video_images_dir = working_path / "images"
+                        download_file(video_metadata.signed_url, video_path)
+                        extract_frames(video_path, video_images_dir, self.du_hash)
+
+                        fake_data_unit = deepcopy(data_unit)
+                        for frame_sequence, frame_annotations in data_unit["labels"].items():
+                            self.frame = int(frame_sequence)
+                            fake_data_unit["labels"] = frame_annotations
+                            image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
+                            if image_path:
+                                yield fake_data_unit, Image.open(image_path)
+                            else:
+                                yield fake_data_unit, None
+                            pbar.update(1)
+                else:
+                    logger.error(f"Label row '{label_hash}' with data type '{label_row.data_type}' is not recognized")
 
     def __len__(self):
         return self.length

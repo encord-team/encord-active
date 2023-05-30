@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
+import prisma
 import streamlit as st
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
@@ -31,6 +32,7 @@ from encord_active.lib.dataset.summary_utils import (
     get_median_value_of_2d_array,
     get_metric_summary,
 )
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.metrics.utils import MetricData, MetricScope
 
 _COLUMNS = MetricWithDistanceSchema
@@ -317,18 +319,27 @@ def render_metric_summary(
     selected_df: DataFrame[MetricWithDistanceSchema] = df[df[_COLUMNS.dist_to_iqr] <= value][:page_size]
 
     cols: List = []
-    for i, (_, row) in enumerate(selected_df.iterrows()):
-        if not cols:
-            if i:
-                divider()
-            cols = list(st.columns(n_cols))
+    with PrismaConnection(get_state().project_paths) as cache_conn:
+        for i, (_, row) in enumerate(selected_df.iterrows()):
+            if not cols:
+                if i:
+                    divider()
+                cols = list(st.columns(n_cols))
 
-        with cols.pop(0):
-            render_summary_item(row, metric.name, iqr_outliers, metric_scope)
+            with cols.pop(0):
+                render_summary_item(row, metric.name, iqr_outliers, metric_scope, cache_conn)
 
 
-def render_summary_item(row, metric_name: str, iqr_outliers: IqrOutliers, metric_scope: MetricScope):
-    image = show_image_and_draw_polygons(row, get_state().project_paths, get_state().object_drawing_configurations)
+def render_summary_item(
+    row,
+    metric_name: str,
+    iqr_outliers: IqrOutliers,
+    metric_scope: MetricScope,
+    cache_db: Optional[prisma.Prisma] = None,
+):
+    image = show_image_and_draw_polygons(
+        row, get_state().project_paths, get_state().object_drawing_configurations, cache_db=cache_db
+    )
     st.image(image)
 
     multiselect_tag(row, f"{metric_name}_summary")
