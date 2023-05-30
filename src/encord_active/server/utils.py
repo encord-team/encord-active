@@ -160,7 +160,7 @@ def to_item(
     return {
         "id": identifier,
         "url": url[0] if url is not None else None,
-        "video_timestamp": url[1] if url is not None else None,
+        "videoTimestamp": url[1] if url is not None else None,
         "dataTitle": data_title,
         "editUrl": edit_url,
         "metadata": metadata,

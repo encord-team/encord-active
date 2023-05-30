@@ -546,7 +546,7 @@ const ImageWithPolygons = ({
 }: { item: Item } & JSX.IntrinsicElements["figure"]) => {
   const image = useRef<HTMLImageElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const media = item.video_timestamp != null ? video : image;
+  const media = item.videoTimestamp != null ? video : image;
   const [polygons, setPolygons] = useState<
     { points: Point[]; color: string; shape: string }[]
   >([]);
@@ -571,12 +571,10 @@ const ImageWithPolygons = ({
       }))
     );
   }, [media.current?.clientWidth, media.current?.clientHeight, item.id]);
-  console.log('item', item)
-  console.log('check', item.video_timestamp !== null && item.video_timestamp !== undefined)
   return (
     <figure {...rest} className={classy("relative", className)}>
       {
-        item.video_timestamp != null ? (
+        item.videoTimestamp != null ? (
           <video
               ref={video}
               className="object-contain rounded transition-opacity"
@@ -586,7 +584,7 @@ const ImageWithPolygons = ({
               onCanPlay={() => {
                 const videoRef = video.current;
                 if (videoRef != null) {
-                  videoRef.currentTime = item.video_timestamp || 0;
+                  videoRef.currentTime = item.videoTimestamp || 0;
                   videoRef.pause()
                 }
               }}
