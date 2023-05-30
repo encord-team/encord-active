@@ -1,6 +1,5 @@
 import json
 from functools import lru_cache, partial
-from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 from urllib import parse
 
@@ -20,6 +19,7 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
+from encord_active.server.dependencies import ProjectFileStructureDep
 
 
 class Metadata(TypedDict):
@@ -40,8 +40,8 @@ def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str):
 
 
 @lru_cache
-def get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neighbors: int = 8):
-    return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
+def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
+    return SimilaritiesFinder(embedding_type, project)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):

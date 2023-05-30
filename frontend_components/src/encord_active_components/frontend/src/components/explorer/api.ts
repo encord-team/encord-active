@@ -167,6 +167,14 @@ export const getApi = (
       const response = await fetcher(url).then((res) => res.json());
       return z.string().array().parse(response);
     },
+    fetchHasSimilaritySearch: async (selectedMetric: string) => {
+      const queryParams = new URLSearchParams({
+        current_metric: selectedMetric,
+      });
+      const url = `${baseUrl}/projects/${projectName}/has_similarity_search?${queryParams} `;
+      const response = await fetcher(url).then((res) => res.json());
+      return z.boolean().parse(response);
+    },
     fetchProjectTags: async () =>
       GroupedTagsSchema.parse(
         await (await fetcher(`${baseUrl}/projects/${projectName}/tags`)).json()

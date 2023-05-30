@@ -1,6 +1,5 @@
 import pickle
 import warnings
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -8,28 +7,24 @@ import pandas as pd
 import umap
 from pandera.typing import DataFrame
 
-from encord_active.lib.embeddings.utils import (
-    Embedding2DSchema,
-    EmbeddingType,
-    load_collections,
-)
+from encord_active.lib.embeddings.types import Embedding2DSchema, LabelEmbedding
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 warnings.filterwarnings("ignore", "n_neighbors is larger than the dataset size", category=UserWarning)
 MIN_SAMPLES = 4  # The number 4 is experimentally determined, less than this creates error for UMAP calculation
 
 
-def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path):
+def generate_2d_embedding_data(
+    embedding_type: EmbeddingType, project_file_structure: ProjectFileStructure, label_embeddings: list[LabelEmbedding]
+):
     """
     This function transforms high dimensional embedding data to 2D and saves it to a file
     """
-    pfs = ProjectFileStructure(project_dir)
-
-    collections = load_collections(embedding_type, pfs.embeddings)
-    if not collections:
+    if not label_embeddings:
         return
 
-    embeddings = np.array([collection["embedding"] for collection in collections])
+    embeddings = np.array([emb["embedding"] for emb in label_embeddings])
     if embeddings.shape[0] < MIN_SAMPLES:
         return
 
@@ -37,33 +32,31 @@ def generate_2d_embedding_data(embedding_type: EmbeddingType, project_dir: Path)
     embeddings_2d = reducer.fit_transform(embeddings)
 
     embeddings_2d_collection: dict[str, list] = {"identifier": [], "x": [], "y": [], "label": []}
-    for counter, collection in enumerate(collections):
+    for label_embedding, emb_2d in zip(label_embeddings, embeddings_2d):
+        identifier_no_label = (
+            f'{label_embedding["label_row"]}_{label_embedding["data_unit"]}_{int(label_embedding["frame"]):05d}'
+        )
         if embedding_type == EmbeddingType.IMAGE:
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}'
-            )
+            embeddings_2d_collection["identifier"].append(identifier_no_label)
             embeddings_2d_collection["label"].append("No label")
         elif embedding_type == EmbeddingType.OBJECT:
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{collection["frame"]:05d}_{collection["labelHash"]}'
-            )
-            embeddings_2d_collection["label"].append(collection["name"])
+            embeddings_2d_collection["identifier"].append(f'{identifier_no_label}_{label_embedding["labelHash"]}')
+            embeddings_2d_collection["label"].append(label_embedding["name"])
         elif embedding_type == EmbeddingType.CLASSIFICATION:
             # Due to the following line, currently there is only one classification answer
             # https://github.com/encord-team/encord-active/blob/2e09cedf1c07eb89c91cad928113b1b51fc8dc7f/src/encord_active/lib/embeddings/cnn.py#L238
-            embeddings_2d_collection["identifier"].append(
-                f'{collection["label_row"]}_{collection["data_unit"]}_{int(collection["frame"]):05d}_{collection["labelHash"]}'
-            )
+            embeddings_2d_collection["identifier"].append(f'{identifier_no_label}_{label_embedding["labelHash"]}')
             embeddings_2d_collection["label"].append(
-                collection["classification_answers"]["answer_name"]
-                if collection["classification_answers"] is not None
+                label_embedding["classification_answers"]["answer_name"]
+                if label_embedding["classification_answers"] is not None
                 else "No label"
             )
 
-        embeddings_2d_collection["x"].append(embeddings_2d[counter, 0])
-        embeddings_2d_collection["y"].append(embeddings_2d[counter, 1])
+        x, y = emb_2d
+        embeddings_2d_collection["x"].append(x)
+        embeddings_2d_collection["y"].append(y)
 
-    target_path = pfs.get_embeddings_file(embedding_type, reduced=True)
+    target_path = project_file_structure.get_embeddings_file(embedding_type, reduced=True)
     target_path.write_bytes(pickle.dumps(embeddings_2d_collection))
 
 

@@ -1,20 +1,21 @@
 from dataclasses import dataclass
-from typing import List
 
-import faiss
 import numpy as np
 from loguru import logger
-from sklearn.preprocessing import normalize as sk_normalize
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     fix_duplicate_image_orders_in_knn_graph_all_rows,
 )
-from encord_active.lib.embeddings.embeddings import get_embeddings
-from encord_active.lib.embeddings.utils import LabelEmbedding
+from encord_active.lib.embeddings.embedding_index import (
+    EmbeddingIndex,
+    EmbeddingSearchResult,
+)
+from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import DataType, EmbeddingType, MetricType
 from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
 
@@ -26,7 +27,7 @@ class DataUnitInfo:
 
 
 class ImageSingularity(Metric):
-    def __init__(self, near_duplicate_threshold=0.97):
+    def __init__(self, near_duplicate_threshold=0.03):
         super(ImageSingularity, self).__init__(
             title="Image Singularity",
             short_description="Finds duplicate and near-duplicate images",
@@ -43,77 +44,56 @@ This metric gives each image a score that shows each image's uniqueness.
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.IMAGE,
         )
-        self.collections: List[LabelEmbedding] = []
-        self.scores: dict[str, DataUnitInfo] = {}
         self.near_duplicate_threshold = near_duplicate_threshold
 
-    def convert_to_index(self):
-        embeddings_list: List[np.ndarray] = [x["embedding"] for x in self.collections]
-
-        embeddings = np.array(embeddings_list).astype(np.float32)
-        embeddings_normalized = sk_normalize(embeddings, axis=1, norm="l2")
-
-        db_index = faiss.index_factory(embeddings_normalized.shape[1], "Flat", faiss.METRIC_INNER_PRODUCT)
-
-        db_index.add(embeddings_normalized)  # pylint: disable=no-value-for-parameter
-        return embeddings_normalized, db_index
-
-    def scale_cos_score_to_0_1(self, score: float) -> float:
-        return (score + 1) / 2
-
-    def score_images(self, project_hash: str, nearest_distances: np.ndarray, nearest_items: np.ndarray):
+    def score_images(
+        self, embedding_info: list[LabelEmbedding], search_result: EmbeddingSearchResult, project_hash: str
+    ) -> dict[str, DataUnitInfo]:
+        scores: dict[str, DataUnitInfo] = {}
         previous_duplicates: dict[int, int] = {}
 
-        for i in range(nearest_items.shape[0]):
-            if nearest_items[i, 0] in previous_duplicates:
-                original_item = self.collections[previous_duplicates[nearest_items[i, 0]]]
-                self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
+        for item_idx, (neighbors, distances) in enumerate(zip(*search_result)):
+            data_hash = embedding_info[item_idx]["data_unit"]
+            if item_idx in previous_duplicates:
+                original_item = embedding_info[previous_duplicates[item_idx]]
+                scores[data_hash] = DataUnitInfo(
                     0.0,
                     f"Duplicate image. To see the original check [here](https://app.encord.com/label_editor/{original_item['data_unit']}&{project_hash}/{original_item['frame']}).",
                 )
                 continue
-            for j in range(1, nearest_items.shape[1]):
-                if abs(1.0 - nearest_distances[i, j]) < 1e-5:
-                    previous_duplicates[nearest_items[i, j]] = nearest_items[i, 0]
+
+            for neighbor_idx, neighbor_dist in zip(neighbors, distances):
+                if neighbor_dist < 1e-5:
+                    previous_duplicates[neighbor_idx] = item_idx
                 else:
-                    if self.scale_cos_score_to_0_1(nearest_distances[i, j]) >= self.near_duplicate_threshold:
-                        self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            1 - self.scale_cos_score_to_0_1(nearest_distances[i, j]), "Near duplicate image"
-                        )
+                    if neighbor_dist <= self.near_duplicate_threshold:
+                        scores[data_hash] = DataUnitInfo(neighbor_dist, "Near duplicate image")
                     else:
-                        self.scores[self.collections[nearest_items[i, 0]]["data_unit"]] = DataUnitInfo(
-                            1 - self.scale_cos_score_to_0_1(nearest_distances[i, j]), ""
-                        )
+                        scores[data_hash] = DataUnitInfo(neighbor_dist, "")
                     break
+        return scores
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        if self.metadata.embedding_type:
-            self.collections = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
-        else:
+        if not self.metadata.embedding_type:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
             )
             return
 
-        if len(self.collections) > 0:
-            embeddings, db_index = self.convert_to_index()
-            # For more information why we set the below threshold
-            # see here: https://github.com/facebookresearch/faiss/wiki/Implementation-notes#matrix-multiplication-to-do-many-l2-distance-computations
-            # If the 2nd approach is used, identical images have distance more than zero
-            # which affects this metric because we want identical images to have a zero value
-            faiss.cvar.distance_compute_blas_threshold = embeddings.shape[0] + 1
-            nearest_distances, nearest_items = db_index.search(
-                embeddings, embeddings.shape[0]
-            )  # pylint: disable=no-value-for-parameter
-            nearest_items = fix_duplicate_image_orders_in_knn_graph_all_rows(nearest_items)
+        pfs = ProjectFileStructure(iterator.cache_dir)
+        embedding_index, embedding_info = EmbeddingIndex.from_project(pfs, self.metadata.embedding_type)
 
-            self.score_images(iterator.project.project_hash, nearest_distances, nearest_items)
-
-        else:
+        if len(embedding_info) == 0:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
+            return
+
+        embeddings = np.stack([e["embedding"] for e in embedding_info])
+        query_res = embedding_index.query(embeddings, k=30)
+        fix_duplicate_image_orders_in_knn_graph_all_rows(query_res.indices)
+        scores = self.score_images(embedding_info, query_res, iterator.project.project_hash)
 
         for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
-            data_unit_info = self.scores.get(data_unit["data_hash"])
+            data_unit_info = scores.get(data_unit["data_hash"])
             if data_unit_info is not None:
                 writer.write(
                     score=float(data_unit_info.score),
