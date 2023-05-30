@@ -5,11 +5,13 @@ from typing import Dict, List, Optional, Set
 import click
 import rich
 import typer
+from dotenv import load_dotenv
 from rich.markup import escape
 from rich.panel import Panel
 from typer.core import TyperGroup
 
-import encord_active.app.conf  # pylint: disable=unused-import
+load_dotenv()
+
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
 import encord_active.lib.db  # pylint: disable=unused-import
 from encord_active.app.app_config import APP_NAME

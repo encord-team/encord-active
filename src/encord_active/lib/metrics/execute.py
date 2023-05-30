@@ -5,9 +5,6 @@ from importlib import import_module
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
-# NOTE: this statement ensures faiss is imported before torch.
-# removing it will trigger segmentation faults in certain metrics
-import faiss  # pylint: disable=unused-import
 from loguru import logger
 
 from encord_active.lib.common.data_utils import convert_image_bgr

@@ -7,7 +7,7 @@ from pandera.typing import DataFrame
 from streamlit_plotly_events import plotly_events
 
 from encord_active.app.common.state_hooks import UseState
-from encord_active.lib.embeddings.utils import (
+from encord_active.lib.embeddings.types import (
     Embedding2DSchema,
     Embedding2DScoreSchema,
     PointSchema2D,

@@ -371,3 +371,9 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
     def __repr__(self) -> str:
         return f"ProjectFileStructure({self.project_dir})"
+
+    def __hash__(self):
+        return hash(self.project_dir)
+
+    def __eq__(self, other):
+        return isinstance(other, BaseProjectFileStructure) and other.project_dir == self.project_dir

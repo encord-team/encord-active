@@ -27,7 +27,7 @@ from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.utils import Embedding2DSchema, Embedding2DScoreSchema
+from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.classification_metrics import (

@@ -20,6 +20,7 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
+from encord_active.server.dependencies import ProjectFileStructureDep
 from encord_active.server.settings import get_settings
 
 
@@ -41,8 +42,8 @@ def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str) -
 
 
 @lru_cache
-def get_similarity_finder(embedding_type: EmbeddingType, path: Path, num_of_neighbors: int = 8) -> SimilaritiesFinder:
-    return SimilaritiesFinder(embedding_type, path, num_of_neighbors)
+def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
+    return SimilaritiesFinder(embedding_type, project)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
