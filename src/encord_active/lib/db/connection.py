@@ -22,6 +22,9 @@ class DBConnection:
         self.conn.__exit__(type, value, traceback)
 
 
+_PRISMA_DB_GLOBAL_CACHE: typing.Dict[str, "prisma.Prisma"] = {}
+
+
 class PrismaConnection:
     def __init__(
         self, project_file_structure: BaseProjectFileStructure, cache_db: Optional["prisma.Prisma"] = None
@@ -31,7 +34,7 @@ class PrismaConnection:
 
         self.cache_db = cache_db
         self.db: "Optional[prisma.Prisma]" = None
-        self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db}")
+        self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db.absolute()}")
 
     def __enter__(self) -> "prisma.Prisma":
         from prisma import Prisma
@@ -39,9 +42,14 @@ class PrismaConnection:
         if self.cache_db is not None:
             return self.cache_db
 
-        self.db = Prisma(datasource=self.datasource)
-        self.db.connect()
-        return self.db
+        cache_key = self.datasource["url"]
+        if cache_key in _PRISMA_DB_GLOBAL_CACHE:
+            return _PRISMA_DB_GLOBAL_CACHE[cache_key]
+
+        db = Prisma(datasource=self.datasource)
+        db.connect()
+        _PRISMA_DB_GLOBAL_CACHE[cache_key] = db  # Never disconnect, global prisma connection
+        return db
 
     def __exit__(self, type, value, traceback):
         if self.db is not None and self.db.is_connected():
