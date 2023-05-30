@@ -23,7 +23,7 @@ def up(pfs: ProjectFileStructure):
     with PrismaConnection(pfs) as conn:
         fill_label_rows = conn.labelrow.count() == 0
         fill_data_units = conn.dataunit.count() == 0
-        old_style_data = conn.labelrow.find_first(where={"label_row_json": "missing"}) is not None or fill_label_rows
+        old_style_data = conn.labelrow.find_first(where={"label_row_json": None}) is not None or fill_label_rows
         if not (fill_label_rows or fill_data_units or old_style_data):
             return
         migration_counter = tqdm(
@@ -39,7 +39,7 @@ def up(pfs: ProjectFileStructure):
                 )
                 try:
                     label_row_dict = label_row.label_row_json
-                except json.JSONDecodeError:
+                except ValueError:
                     legacy_label_row_file = label_row.label_row_file_deprecated_for_migration().read_text("utf-8")
                     label_row_dict = json.loads(legacy_label_row_file)
 

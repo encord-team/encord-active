@@ -52,5 +52,5 @@ model LabelRow {
   created_at     String
   last_edited_at String
   data_units     DataUnit[]
-  label_row_json String     @default("missing")
+  label_row_json String?
 }

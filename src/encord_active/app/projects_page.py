@@ -4,6 +4,8 @@ from typing import Callable, Dict, NamedTuple, Optional, Tuple
 
 import streamlit as st
 from encord.ontology import OntologyStructure
+
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active_components.components.projects_page import (
     OutputAction,
     Project,
@@ -144,6 +146,7 @@ def handle_download_sandbox_project(project_name: str, path: Path):
         clear()
         label.text(f"Unpacking {project_name}")
         unpack_archive(archive_path, project_dir)
+        ensure_safe_project(project_dir)
 
     label.empty()
 

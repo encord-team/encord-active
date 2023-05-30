@@ -74,9 +74,11 @@ class LabelRowStructure:
     def get_label_row_json(self, cache_db: Optional[prisma.Prisma] = None) -> Dict[str, Any]:
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             entry = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
-            label_row_json = "missing"
+            label_row_json = None
             if entry is not None:
                 label_row_json = entry.label_row_json
+            if label_row_json is None:
+                raise ValueError("label_row_json does not exist")
             return json.loads(label_row_json)
 
     @property

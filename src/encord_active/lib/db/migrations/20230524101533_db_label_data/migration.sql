@@ -15,7 +15,7 @@ CREATE TABLE "new_LabelRow" (
     "data_type" TEXT NOT NULL,
     "created_at" TEXT NOT NULL,
     "last_edited_at" TEXT NOT NULL,
-    "label_row_json" TEXT NOT NULL DEFAULT 'missing'
+    "label_row_json" TEXT
 );
 INSERT INTO "new_LabelRow" ("created_at", "data_hash", "data_title", "data_type", "id", "label_hash", "last_edited_at") SELECT "created_at", "data_hash", "data_title", "data_type", "id", "label_hash", "last_edited_at" FROM "LabelRow";
 DROP TABLE "LabelRow";
