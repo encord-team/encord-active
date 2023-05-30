@@ -743,7 +743,7 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
     project_fs = ProjectFileStructure(project_dir)
     with PrismaConnection(project_fs) as conn:
         rows = conn.labelrow.find_many()
-    label_rows = {row.label_hash: json.loads(row.label_row_json) for row in rows}
+    label_rows = {row.label_hash: json.loads(row.label_row_json or "") for row in rows}
     metrics = df_to_nested_dict(df)
 
     # Load ontology json to dict

@@ -6,12 +6,11 @@ from typing import Callable, Optional, TypedDict
 import requests
 import rich
 import typer
-
-from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active_components.components.projects_page import ProjectStats
 from rich.markup import escape
 from tqdm.auto import tqdm
 
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.server.settings import AvailableSandboxProjects
 
 

@@ -4,8 +4,6 @@ from typing import Callable, Dict, NamedTuple, Optional, Tuple
 
 import streamlit as st
 from encord.ontology import OntologyStructure
-
-from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active_components.components.projects_page import (
     OutputAction,
     Project,
@@ -22,6 +20,7 @@ from encord_active.cli.utils.decorators import (
     is_project,
     try_find_parent_project,
 )
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.metrics.types import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
