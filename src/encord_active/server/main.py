@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH), name="static")
+app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH, follow_symlink=True), name="static")
 
 
 @app.get("/premium_available")
