@@ -212,7 +212,7 @@ class Project:
         with PrismaConnection(self.file_structure) as conn:
             conn.labelrow.update(
                 data={"label_row_json": new_lr_structure},
-                where={"label_hash": label_row["label_hash"], "data_hash": label_row["dataset_hash"]},  # type: ignore
+                where={"label_hash": label_row["label_hash"]},
             )
 
     def __download_and_save_label_rows(self, encord_project: EncordProject):

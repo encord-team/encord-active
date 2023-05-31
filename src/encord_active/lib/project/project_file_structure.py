@@ -126,20 +126,17 @@ class LabelRowStructure:
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
+            du_where: "prisma.types.DataUnitWhereInput" = {}
             if data_unit_hash is not None:
                 du_hash = self._mappings.get(data_unit_hash, data_unit_hash)
-                where["data_hash"] = {"equals": du_hash}
+                du_where["data_hash"] = du_hash
+            if frame is not None:
+                du_where["frame"] = frame
             all_rows = conn.labelrow.find_many(
                 where=where,
                 include={
-                    "data_units": True
-                    if frame is None
-                    else {
-                        "where": {
-                            "frame": {
-                                "equals": frame,
-                            }
-                        }
+                    "data_units": {
+                        "where": du_where,
                     }
                 },
             )
@@ -249,6 +246,7 @@ class LabelRowStructure:
                         video_file = video_dir / label_row_json["data_title"]
                         download_file(data_unit_struct.signed_url, video_file)
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
+                    print(f"DEBUGGING: {data_unit_struct.du_hash}_{data_unit_struct.frame}.*")
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
                 else:

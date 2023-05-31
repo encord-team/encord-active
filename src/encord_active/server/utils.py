@@ -47,7 +47,9 @@ def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStr
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
-    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit(du_hash, None), None
+    )
     if data_opt:
         timestamp = None
         if data_opt.data_type == "video":
