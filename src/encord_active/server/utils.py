@@ -83,7 +83,7 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
     return None
 
 
-def _transform_object(object_: dict, img_w: int, img_h: int) -> Optional[dict]:
+def _transform_object(object_: dict, img_w: int, img_h: int, points_array: bool = False) -> Optional[dict]:
     shape = object_["shape"]
     points = None
 
@@ -118,6 +118,9 @@ def _transform_object(object_: dict, img_w: int, img_h: int) -> Optional[dict]:
 
         if not points:
             raise Exception
+
+        if points_array:
+            points = list(points.values())
 
         return {**object_, "shape": shape, "points": points}
     except:
@@ -184,4 +187,49 @@ def to_item(
         "metadata": metadata,
         "tags": to_grouped_tags(tags),
         "labels": labels,
+    }
+
+
+def to_preview_item(
+    project_file_structure: ProjectFileStructure,
+    du_hash: str,
+    frame: int,
+    object_hash: Optional[str] = None,
+) -> dict:
+    data_units = project_file_structure.data_units(where={
+        "data_hash": du_hash,
+        "frame": frame,
+    }, include_label_row=True)
+
+    data_unit = data_units[0]
+    lr_hash = data_unit.label_row.label_hash
+
+    label_row_structure = project_file_structure.label_row_structure(lr_hash)
+    url = _get_url(label_row_structure, du_hash, str(frame))
+
+    label_row = label_row_structure.label_row_json
+    du = label_row["data_units"][du_hash]
+    img_w, img_h = du["width"], du["height"]
+    data_title = du.get("data_title", label_row.get("data_title"))
+
+    labels: Dict[str, List[Dict]] = {"objects": [], "classifications": []}
+    if label_row["data_type"] in {"video", "dicom"}:
+        labels = du.get("labels", {}).get(str(int(frame)), labels)
+    else:
+        labels = du.get("labels", labels)
+
+    objects = list(
+        filter(None, map(partial(_transform_object, img_w=img_w, img_h=img_h, points_array=True), labels.get("objects", [])))
+    )
+    if object_hash is not None:
+        objects = [
+            obj.get("object_hash", "") == object_hash
+            for obj in objects
+        ]
+
+    return {
+        "url": url[0] if url is not None else None,
+        "videoTimestamp": url[1] if url is not None else None,
+        "dataTitle": data_title,
+        "objects": objects,
     }
