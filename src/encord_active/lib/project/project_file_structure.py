@@ -246,7 +246,6 @@ class LabelRowStructure:
                         video_file = video_dir / label_row_json["data_title"]
                         download_file(data_unit_struct.signed_url, video_file)
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
-                    print(f"DEBUGGING: {data_unit_struct.du_hash}_{data_unit_struct.frame}.*")
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
                 else:
