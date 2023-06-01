@@ -1,5 +1,6 @@
 from typing import Dict, List
 
+import numpy as np
 from tqdm.auto import tqdm
 
 from encord_active.lib.coco.datastructure import (
@@ -107,11 +108,13 @@ def parse_annotations(annotations: List[Dict]) -> Dict[int, List[CocoAnnotation]
 def parse_results(results: List[Dict]):
     coco_results: List[CocoResult] = []
     for result in tqdm(results, desc="Parsing results"):
-        segmentations = result["segmentation"]
+        segmentations = result.get("segmentation")
         bbox = result.get("bbox")
 
-        if isinstance(segmentations, list) and not isinstance(segmentations[0], list):
-            segmentations = [segmentations]
+        if isinstance(segmentations, list):
+            if not isinstance(segmentations[0], list):
+                segmentations = [segmentations]
+            segmentations = [np.array(s).reshape(-1, 2).tolist() for s in segmentations]
         elif isinstance(segmentations, dict):
             h, w = segmentations["size"]
             mask = annToMask(result, h=h, w=w)
