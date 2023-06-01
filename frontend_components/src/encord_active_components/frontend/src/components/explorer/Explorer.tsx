@@ -544,16 +544,19 @@ const ImageWithPolygons = ({
   className,
   ...rest
 }: { item: Item } & JSX.IntrinsicElements["figure"]) => {
-  const image = useRef<HTMLImageElement>(null);
+  const {ref: image, width: imageWidth, height: imageHeight } = useResizeObserver<HTMLImageElement>();
   const video = useRef<HTMLVideoElement>(null);
-  const media = item.videoTimestamp != null ? video : image;
+  const {width: videoWidth, height: videoHeight } = useResizeObserver<HTMLVideoElement>({
+    ref: video
+  });
+  const width = item.videoTimestamp != null ? videoWidth : imageWidth;
+  const height = item.videoTimestamp != null ? videoHeight : imageHeight;
   const [polygons, setPolygons] = useState<
     { points: Point[]; color: string; shape: string }[]
   >([]);
 
   useEffect(() => {
-    const { current } = media;
-    if (!current || !current.clientWidth || !current.clientHeight) return;
+    if (width == null || height == null) return;
 
     const { objectHash } = splitId(item.id);
     const objects = objectHash
@@ -564,13 +567,13 @@ const ImageWithPolygons = ({
       objects.map(({ points, color, shape }) => ({
         color,
         points: Object.values(points).map(({ x, y }) => ({
-          x: x * current.clientWidth,
-          y: y * current.clientHeight,
+          x: x * width,
+          y: y * height,
         })),
         shape,
       }))
     );
-  }, [media.current?.clientWidth, media.current?.clientHeight, item.id]);
+  }, [width, height, item.id]);
   return (
     <figure {...rest} className={classy("relative", className)}>
       {
@@ -581,11 +584,10 @@ const ImageWithPolygons = ({
               src={item.url}
               muted
               controls={false}
-              onCanPlay={() => {
+              onLoadedMetadata={() => {
                 const videoRef = video.current;
                 if (videoRef != null) {
                   videoRef.currentTime = item.videoTimestamp || 0;
-                  videoRef.pause()
                 }
               }}
           />

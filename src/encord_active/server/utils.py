@@ -53,7 +53,7 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
     if data_opt:
         timestamp = None
         if data_opt.data_type == "video":
-            timestamp = float(int(frame)) / data_opt.frames_per_second
+            timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
         if signed_url.startswith("file://"):
             image_path = Path(unquote(urlparse(signed_url).path)).absolute()
