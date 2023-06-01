@@ -119,7 +119,7 @@ def parse_results(results: List[Dict]):
             h, w = segmentations["size"]
             mask = annToMask(result, h=h, w=w)
             poly, inferred_bbox = mask_to_polygon(mask)
-            if poly is None or (bbox is not None and inferred_bbox != bbox):
+            if poly is None or (bbox is not None and inferred_bbox != tuple(map(int, bbox))):
                 print(f"Annotation '{result['id']}', contains an invalid polygon. Skipping ...")
                 continue
             bbox = inferred_bbox
