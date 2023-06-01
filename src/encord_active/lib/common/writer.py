@@ -98,6 +98,6 @@ class CSVWriter(Writer):
         if labels is not None:
             if isinstance(labels, dict):
                 labels = [labels]
-            hashes = [lbl["objectHash"] if "objectHash" in lbl else lbl["featureHash"] for lbl in labels]
+            hashes = [lbl["objectHash"] if "objectHash" in lbl else lbl["classificationHash"] for lbl in labels]
             return "_".join(chain([identifier], hashes))
         return identifier
