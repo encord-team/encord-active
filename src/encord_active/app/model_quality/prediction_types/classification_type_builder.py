@@ -191,7 +191,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             help="Only available for premium version",
         )
 
-        if magic_prompt != "":
+        if magic_prompt != "" and not is_disabled:
             selected_ids = list(self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.identifier])
             result = querier.search_with_code_on_dataframe(TextQuery(identifiers=selected_ids, text=magic_prompt))
 
