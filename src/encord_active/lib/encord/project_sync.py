@@ -143,8 +143,10 @@ def create_filtered_embeddings(
         embeddings = pickle.loads(curr_embedding_file.read_bytes())
         embeddings_df = pd.DataFrame.from_dict(embeddings)
         if embedding_type == EmbeddingType.IMAGE:
-            label_hashes = filtered_df.identifier.str.split("_").str[0]
-            embeddings_df = embeddings_df[embeddings_df["label_row"].isin(label_hashes)]
+            label_row_du_hashes = filtered_df.identifier.str.slice(stop=73)
+            embeddings_df = embeddings_df[
+                embeddings_df[["label_row", "data_unit"]].agg("_".join, axis=1).isin(label_row_du_hashes)
+            ]
         else:
             label_hashes = filtered_df.identifier.str.split("_").str.get(3).dropna()
             embeddings_df = embeddings_df[embeddings_df["labelHash"].isin(label_hashes)]
