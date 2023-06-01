@@ -296,7 +296,6 @@ class ImageLevelQualityTest(Metric):
                         if question_featureHash in key_score_pairs[key]:
                             writer.write(
                                 key_score_pairs[key][question_featureHash]["score"],
-                                key=f"{key}_{classification_hash}",
                                 description=classification_info["description"],
                                 label_class=label_class,
                                 labels=classification,
