@@ -286,7 +286,6 @@ class ImageLevelQualityTest(Metric):
                         continue
 
                     if question_featureHash in key_score_pairs[key]:
-                        classification_hash = classification["classificationHash"]
                         classification_info = key_score_pairs[key][question_featureHash]
 
                         label_class = f"{classification_info['answer']}"
