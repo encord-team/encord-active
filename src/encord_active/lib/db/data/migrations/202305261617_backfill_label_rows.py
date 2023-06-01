@@ -126,7 +126,6 @@ def up(pfs: ProjectFileStructure):
                         if frame != -1 or data_type != "video":
                             image = Image.open(legacy_du_path)
                         else:
-                            print(legacy_lr_path / f"{data_unit.du_hash}_")
                             legacy_du_any_frame_path = next(legacy_lr_path.glob(f"{data_unit.du_hash}_*"))
                             image = Image.open(legacy_du_any_frame_path)
 
