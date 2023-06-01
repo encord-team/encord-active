@@ -99,10 +99,7 @@ def print_data_mapping(
     project_file_structure = ProjectFileStructure(target)
 
     for label_row_structure in project_file_structure.iter_labels():
-        if not label_row_structure.is_present() and not label_row_structure.label_row_file.is_file():
-            continue
-
-        label_row = json.loads(label_row_structure.label_row_file.read_text())
+        label_row = label_row_structure.label_row_json
         mapping = {
             **mapping,
             **{data_hash: value["data_title"] for data_hash, value in label_row["data_units"].items()},

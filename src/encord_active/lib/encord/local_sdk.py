@@ -19,9 +19,8 @@ import os
 import random
 import shutil
 import string
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Union
 from uuid import uuid4
@@ -35,6 +34,9 @@ from encord.orm.dataset import DataType
 from encord.orm.label_row import LabelRow, LabelRowMetadata
 from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
+
+from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.project import ProjectFileStructure
 
 
 class FileTypeNotSupportedError(EncordFiletypeNotSupportedError):
@@ -137,7 +139,7 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
             "dataset_title": dataset_title,
             "data_title": meta.data_title,
             "data_hash": meta.data_hash,
-            "data_type": "image",
+            "data_type": meta.data_type,
             "data_units": data_units,
             "object_answers": {},
             "classification_answers": {},
@@ -147,29 +149,26 @@ def get_empty_label_row(meta: LabelRowMetadata, dr: LocalDataRow, dataset_title:
     )
 
 
-def handle_enum_and_datetime(label_row_meta: LabelRowMetadata):
-    def convert_value(obj):
-        if isinstance(obj, Enum):
-            return obj.value
-        elif isinstance(obj, datetime):
-            return obj.isoformat()
-        return obj
-
-    return dict((k, convert_value(v)) for k, v in asdict(label_row_meta).items())
-
-
 class LocalDataset:
     """
     Mimics the `encord.dataset` but without interacting with the Encord platform.
     """
 
-    def __init__(self, title: str, dataset_hash: str, data_path: Path, use_symlinks: bool):
+    def __init__(
+        self,
+        title: str,
+        dataset_hash: str,
+        data_path: Path,
+        use_symlinks: bool,
+        project_file_structure: ProjectFileStructure,
+    ):
         self.title: str = title
         self.dataset_hash: str = dataset_hash
         self.data_path: Path = data_path
         self.use_symlinks: bool = use_symlinks
 
         self._data_rows: Dict[str, LocalDataRow] = {}
+        self._project_fs = project_file_structure
 
     @property
     def data_rows(self) -> List[LocalDataRow]:
@@ -296,7 +295,13 @@ class LocalProject:
     """
 
     def __init__(
-        self, data_path: Path, title: str, description: str, ontology: LocalOntology, datasets: List[LocalDataset]
+        self,
+        data_path: Path,
+        title: str,
+        description: str,
+        ontology: LocalOntology,
+        datasets: List[LocalDataset],
+        project_file_structure: ProjectFileStructure,
     ):
         self.data_path: Path = data_path
         self.title: str = title
@@ -308,6 +313,8 @@ class LocalProject:
         self._label_row_meta: Dict[str, LabelRowMetadata] = {}
         self._label_rows: Dict[str, LabelRow] = {}
         self._dh_to_lh: Dict[str, str] = {}
+
+        self._project_file_structure = project_file_structure
 
         self._populate_label_row_meta()
 
@@ -376,9 +383,53 @@ class LocalProject:
 
         self._label_rows[label_hash] = label
 
-        label_row_path = self.data_path / uid / "label_row.json"
-        with label_row_path.open("w") as f:
-            json.dump(label, f, indent=2)
+        raw_label = dict(label)
+        raw_label["data_type"] = raw_label["data_type"].split("/")[0]
+        label_row_json = json.dumps(raw_label, indent=2)
+        default_timestamp = "0"
+        with PrismaConnection(self._project_file_structure) as conn:
+            conn.labelrow.upsert(
+                where={"data_hash": label.data_hash},
+                data={
+                    "create": {
+                        "label_hash": label.label_hash,
+                        "data_hash": label.data_hash,
+                        "data_title": label.data_title,
+                        "data_type": label.data_type.split("/")[0],
+                        "created_at": label.get("created_at", default_timestamp),
+                        "last_edited_at": label.get("last_edited_at", default_timestamp),
+                        "label_row_json": label_row_json,
+                    },
+                    "update": {
+                        "label_hash": label.label_hash,
+                        "data_title": label.data_title,
+                        "last_edited_at": label.get("last_edited_at", default_timestamp),
+                        "label_row_json": label_row_json,
+                    },
+                },
+            )
+
+            def find_image_path(data_unit) -> str:
+                path = self.data_path / label_hash / "images"
+
+                image_path = next(path.glob(f"{data_unit['data_hash']}.*"))
+                return str(image_path)
+
+            for du_hash, data_unit in label.data_units.items():
+                image_path = Path(find_image_path(data_unit)).absolute()
+                image = Image.open(image_path)
+                conn.dataunit.create(
+                    data={
+                        "data_hash": du_hash,
+                        "data_title": label.data_title,
+                        "frame": 0,  # FIXME: only used as images currently, will break for image groups and videos
+                        "data_uri": image_path.absolute().as_uri(),
+                        "lr_data_hash": label.data_hash,
+                        "width": image.width,
+                        "height": image.height,
+                        "fps": 0,  # FIXME: only used as images currently, videos not supported for local_sdk
+                    }
+                )
 
 
 class LocalUserClient:
@@ -396,10 +447,17 @@ class LocalUserClient:
         self.datasets: Dict[str, LocalDataset] = {}
         self.ontologies: Dict[str, LocalOntology] = {}
         self.projects: Dict[str, LocalProject] = {}
+        self.project_fs = ProjectFileStructure(project_path)
 
     def create_dataset(self, title: str, use_symlinks: bool = False) -> LocalDataset:
         dataset_hash = str(uuid4())
-        dataset = LocalDataset(title, dataset_hash=dataset_hash, data_path=self.data_path, use_symlinks=use_symlinks)
+        dataset = LocalDataset(
+            title,
+            dataset_hash=dataset_hash,
+            data_path=self.data_path,
+            use_symlinks=use_symlinks,
+            project_file_structure=self.project_fs,
+        )
         self.datasets[dataset_hash] = dataset
         return dataset
 
@@ -427,6 +485,7 @@ class LocalUserClient:
             description=description,
             ontology=ontology,
             datasets=datasets,
+            project_file_structure=self.project_fs,
         )
         self.projects[project.project_hash] = project
         return project

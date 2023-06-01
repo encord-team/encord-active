@@ -1,9 +1,10 @@
+import typing
 from abc import abstractmethod
 from pathlib import Path
 from typing import List, Optional, Union
 
-from prisma import models
-from prisma.types import DataUnitWhereInput
+if typing.TYPE_CHECKING:
+    import prisma
 
 
 class BaseProjectFileStructure:
@@ -17,11 +18,6 @@ class BaseProjectFileStructure:
         """
         Clear any cached data and fetch the latest changes.
         """
-        pass
-
-    @property
-    @abstractmethod
-    def data(self) -> Path:
         pass
 
     @property
@@ -76,10 +72,10 @@ class BaseProjectFileStructure:
 
     @abstractmethod
     def data_units(
-        self, where: Optional[List[DataUnitWhereInput]] = None, include_label_row: bool = False
-    ) -> List[models.DataUnit]:
+        self, where: Optional[List["prisma.types.DataUnitWhereInput"]] = None, include_label_row: bool = False
+    ) -> List["prisma.models.DataUnit"]:
         pass
 
     @abstractmethod
-    def label_rows(self) -> List[models.LabelRow]:
+    def label_rows(self) -> List["prisma.models.LabelRow"]:
         pass

@@ -12,7 +12,7 @@ import pytz
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from pandas import Series
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from tqdm.auto import tqdm
 
 from encord_active.lib.common.iterator import Iterator
@@ -77,19 +77,12 @@ class PredictionIterator(Iterator):
                 )
                 self.ontology_classifications[class_id] = classification_lookup[key]
 
-        self.row_cache: List[Tuple[str, str, int, Dict[Any, Any], Optional[Path]]] = []
-
-    def get_image_path(self, pred: Series) -> Optional[Path]:
-        images_dir = self.project.file_structure.label_row_structure(pred["label_hash"]).images_dir
-        du_hash = pred["du_hash"]
-        image_options = list(images_dir.glob(f"{du_hash}.*"))
-        if len(image_options) == 1:
-            return image_options[0]
-        elif len(image_options) > 1:
-            re_matches = [frame_file for frame_file in image_options if frame_file.stem == f"{du_hash}_{pred['frame']}"]
-            if re_matches:
-                return re_matches[0]
-        return None
+    def get_image(self, pred: Series) -> Optional[Image.Image]:
+        label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
+        data_unit, image = next(
+            label_row_structure.iter_data_unit_with_image(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
+        )
+        return image
 
     def get_encord_object(self, pred: Series, width: int, height: int, ontology_object: Object):
         if ontology_object.shape == Shape.BOUNDING_BOX:
@@ -164,11 +157,6 @@ class PredictionIterator(Iterator):
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
-        if self.row_cache:
-            for self.label_hash, self.du_hash, self.frame, du, pth in self.row_cache:
-                yield du, pth
-                pbar.update(1)
-            return
 
         for label_hash, lh_group in self.predictions.groupby("label_hash"):
             if label_hash not in self.label_rows:
@@ -203,14 +191,10 @@ class PredictionIterator(Iterator):
                         logger.error("The prediction is not in the ontology objects or classifications")
 
                 du["labels"] = {"objects": objects, "classifications": classifications}
-                pth = self.get_image_path(fr_preds.iloc[0])
-                image = None
-                try:
-                    image = Image.open(pth)
-                except (FileNotFoundError, UnidentifiedImageError) as ex:
-                    logger.error(f"Failed to open Image at: {pth}: {ex}")
+                image = self.get_image(fr_preds.iloc[0])
+                if image is None:
+                    logger.error(f"Failed to open Image at frame: {self.du_hash}/{fr_preds.iloc[0]}")
                 yield du, image
-                self.row_cache.append((self.label_hash, self.du_hash, self.frame, du, pth))
                 pbar.update(1)
 
     def __len__(self):

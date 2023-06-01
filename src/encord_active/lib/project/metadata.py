@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 import yaml
 from encord import Project
@@ -12,7 +12,8 @@ class ProjectMeta(TypedDict):
     project_hash: str
     project_title: str
     ssh_key_path: str
-    has_remote: bool
+    has_remote: Optional[bool]
+    data_version: int
 
 
 class ProjectNotFound(Exception):

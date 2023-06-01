@@ -4,11 +4,12 @@ import subprocess
 import uuid
 from pathlib import Path
 from typing import NamedTuple
+from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import yaml
 
-from encord_active.lib.common.utils import iterate_in_batches
+from encord_active.lib.common.data_utils import iterate_in_batches
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.types import LabelEmbedding
@@ -161,10 +162,7 @@ def copy_filtered_data(
     filtered_label_rows: set[str],
     filtered_data_hashes: set[str],
     filtered_labels: set[tuple[str, str, str]],
-):
-    target_project_structure.data.mkdir(parents=True, exist_ok=True)
-
-    filtered_hash_mappings = {}
+) -> None:
     if curr_project_structure.mappings.is_file():
         hash_mappings = json.loads(curr_project_structure.mappings.read_text())
         filtered_hash_mappings = {
@@ -175,20 +173,21 @@ def copy_filtered_data(
             target_project_structure.project_dir
         )  # Recreate object to reload mappings
 
+    local_data_mapping = {}
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
-        if not current_label_row_structure.is_present():
-            continue
         target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
-        target_label_row_structure.images_dir.mkdir(parents=True, exist_ok=True)
         for data_unit in current_label_row_structure.iter_data_unit():
-            if (
-                data_unit.hash in filtered_data_hashes
-                and not (target_label_row_structure.images_dir / data_unit.path.name).exists()
-            ):
-                (target_label_row_structure.images_dir / data_unit.path.name).symlink_to(data_unit.path)
+            if data_unit.du_hash in filtered_data_hashes:
+                if data_unit.signed_url.startswith("file:"):
+                    old_data = Path(unquote(urlparse(data_unit.signed_url).path))
+                    if not target_project_structure.local_data_store.exists():
+                        target_project_structure.local_data_store.mkdir(parents=True, exist_ok=True)
+                        new_file = target_project_structure.local_data_store / old_data.name
+                        local_data_mapping[data_unit.signed_url] = new_file.as_uri()
+                        new_file.symlink_to(old_data, target_is_directory=False)
 
-        label_row = json.loads(current_label_row_structure.label_row_file.read_text())
+        label_row = current_label_row_structure.label_row_json
         label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
 
         for data_unit_hash, v in label_row["data_units"].items():
@@ -217,7 +216,7 @@ def copy_filtered_data(
         label_row["classification_answers"] = {
             k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
         }
-        target_label_row_structure.label_row_file.write_text(json.dumps(label_row))
+        target_label_row_structure.set_label_row_json(label_row)
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):

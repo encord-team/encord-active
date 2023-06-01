@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -18,16 +19,11 @@ from encord.orm.project import (
     ReviewApprovalState,
 )
 from encord.utilities.label_utilities import construct_answer_dictionaries
-from prisma.types import (
-    DataUnitUpdateManyMutationInput,
-    DataUnitWhereInput,
-    LabelRowUpdateInput,
-    _LabelRowWhereUnique_data_hash_Input,
-)
 from tqdm import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.utils import DataHashMapping, try_execute
+from encord_active.lib.common.data_utils import download_file, try_execute
+from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.project_sync import (
     LabelRowDataUnit,
@@ -102,15 +98,18 @@ class EncordActions:
         new_lr_data_hash_to_original_mapping: DataHashMapping,
     ) -> Optional[DataHashMapping]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
-        label_row = json.loads(label_row_structure.label_row_file.expanduser().read_text())
+        label_row = label_row_structure.label_row_json
 
         if label_row["data_type"] == DataType.IMAGE.value:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in an image (type)
-            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
-                image_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-                new_lr_data_hash = dataset.upload_image(
-                    file_path=image_path, title=label_row["data_units"][data_unit_hash]["data_title"]
-                )["data_hash"]
+            data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
+                with tempfile.NamedTemporaryFile() as tf:
+                    tf_path = Path(tf.name)
+                    download_file(data_unit.signed_url, tf_path)
+                    new_lr_data_hash = dataset.upload_image(
+                        file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
+                    )["data_hash"]
                 new_lr_data_hash_to_original_mapping.set(new_lr_data_hash, label_row["data_hash"])
                 # The data unit hash and label row data hash of an image (type) are the same
                 new_du_hash_to_original_mapping = DataHashMapping()
@@ -118,19 +117,25 @@ class EncordActions:
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
-            image_paths = []
             sorted_data_units = sorted(
                 (du for du in label_row["data_units"].values() if du["data_hash"] in data_unit_hashes),
-                key=lambda data_unit: int(data_unit["data_sequence"]),
+                key=lambda du_key: int(du_key["data_sequence"]),
             )
-            for du in sorted_data_units:
-                data_unit_hash = du["data_hash"]
-                img_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0]
-                image_paths.append(img_path.as_posix())
+            image_urls = [
+                data_unit.signed_url
+                for du in sorted_data_units
+                for data_unit in label_row_structure.iter_data_unit(data_unit_hash=du["data_hash"])
+            ]
 
-            if len(image_paths) > 0:
+            if len(image_urls) > 0:
                 # create_image_group() method doesn't allow to send data unit names, so their hashes are used instead
-                dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmp_path = Path(tmpdir)
+                    for idx, image_url in enumerate(image_urls):
+                        download_file(image_url, tmp_path / f"{idx}")
+
+                    image_paths = [str(tmp_path / f"{idx}") for idx, _ in enumerate(image_urls)]
+                    dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
                 # Since `create_image_group()` does not return info related to the uploaded images,
                 # we need to find the data hash of the image group in a hacky way
                 new_data_row: DataRow = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)
@@ -139,16 +144,21 @@ class EncordActions:
                 # Obtain the data unit hashes of the images contained in the image group
                 new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
                 new_du_hash_to_original_mapping = DataHashMapping()
-                for i, data_unit in enumerate(sorted_data_units):
-                    new_du_hash_to_original_mapping.set(new_data_row.images_data[i].image_hash, data_unit["data_hash"])
+                for i, i_data_unit in enumerate(sorted_data_units):
+                    image_data = new_data_row.images_data[i]
+                    new_du_hash_to_original_mapping.set(image_data.image_hash, i_data_unit.du_hash)
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in a video (type)
-            if data_unit_hash is not None and data_unit_hash in data_unit_hashes:
-                video_path = list(label_row_structure.images_dir.glob(f"{data_unit_hash}.*"))[0].as_posix()
-
-                dataset.upload_video(file_path=video_path, title=label_row["data_units"][data_unit_hash]["data_title"])
+            data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
+            if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
+                with tempfile.NamedTemporaryFile() as tf:
+                    tf_path = Path(tf.name)
+                    download_file(data_unit.signed_url, tf_path)
+                    dataset.upload_video(
+                        file_path=str(tf_path), title=label_row["data_units"][data_unit_hash]["data_title"]
+                    )
                 # Since `upload_video()` does not return info related to the uploaded video,
                 # we need to find the data hash of the video in a hacky way
                 new_data_row = _find_new_data_row(dataset, new_lr_data_hash_to_original_mapping)
@@ -298,11 +308,9 @@ class EncordActions:
             dataset_creation_result.lr_du_mapping[original_lr_du] = LabelRowDataUnit(
                 new_label_row["label_hash"], new_lr_data_hash
             )
-            original_label_row = json.loads(
-                self.project_file_structure.label_row_structure(original_lr_du.label_row).label_row_file.read_text(
-                    encoding="utf-8",
-                )
-            )
+            original_label_row = self.project_file_structure.label_row_structure(
+                original_lr_du.label_row
+            ).label_row_json
             label_row = self.prepare_label_row(
                 original_label_row, new_label_row, new_lr_data_hash, original_lr_du.data_unit
             )
@@ -491,6 +499,14 @@ class DatasetUniquenessError(Exception):
 
 
 def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creation_result: DatasetCreationResult):
+    # Lazy import to support prisma reload
+    from prisma.types import (
+        DataUnitUpdateManyMutationInput,
+        DataUnitWhereInput,
+        LabelRowUpdateInput,
+        _LabelRowWhereUnique_data_hash_Input,
+    )
+
     # Update the data hash changes in the DataUnit and LabelRow db tables
     with PrismaConnection(project_file_structure) as conn:
         with conn.batch_() as batcher:

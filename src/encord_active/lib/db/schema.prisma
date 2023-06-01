@@ -34,10 +34,12 @@ model DataUnit {
   data_hash    String
   data_title   String
   frame        Int
-  location     String
+  data_uri     String?
   lr_data_hash String
   label_row    LabelRow @relation(fields: [lr_data_hash], references: [data_hash])
-
+  width        Int      @default(-1)
+  height       Int      @default(-1)
+  fps          Float    @default(-1)
   @@unique([data_hash, frame])
 }
 
@@ -49,6 +51,6 @@ model LabelRow {
   data_type      String
   created_at     String
   last_edited_at String
-  location       String
   data_units     DataUnit[]
+  label_row_json String?
 }

@@ -33,13 +33,15 @@ _COLUMNS = MetricWithDistanceSchema
 def get_all_image_sizes(project_file_structure: ProjectFileStructure) -> np.ndarray:
     image_sizes = []
     for label_row_structure in project_file_structure.iter_labels():
-        if label_row_structure.is_present():
-            label_row_meta = json.loads(label_row_structure.label_row_file.read_text(encoding="utf-8"))
-            # TODO Handle videos as well, breaks on datasets containing only videos
-            if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
-                for data_unit in label_row_meta["data_units"].values():
-                    image_sizes.append([data_unit["width"], data_unit["height"]])
+        label_row_meta = label_row_structure.label_row_json
+        # TODO Handle videos as well, breaks on datasets containing only videos
+        if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
+            for data_unit in label_row_meta["data_units"].values():
+                image_sizes.append([data_unit["width"], data_unit["height"]])
 
+    # HACK - return some result for video only datasets
+    if len(image_sizes) == 0:
+        image_sizes.append([-1, -1])
     return np.array(image_sizes)
 
 
@@ -79,44 +81,43 @@ def get_all_annotation_numbers(project_file_structure: ProjectFileStructure) -> 
                 labels.classifications[classification_item.attributes[0].name][option.label] = 0
 
     for label_row_structure in project_file_structure.iter_labels():
-        if label_row_structure.label_row_file.exists():
-            label_row_meta = json.loads(label_row_structure.label_row_file.read_text(encoding="utf-8"))
-            if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
-                for data_unit in label_row_meta["data_units"].values():
+        label_row_meta = label_row_structure.label_row_json
+        if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
+            for data_unit in label_row_meta["data_units"].values():
 
-                    object_label_counter += len(data_unit["labels"].get("objects", []))
-                    classification_label_counter += len(data_unit["labels"].get("classifications", []))
+                object_label_counter += len(data_unit["labels"].get("objects", []))
+                classification_label_counter += len(data_unit["labels"].get("classifications", []))
 
-                    for object_ in data_unit["labels"].get("objects", []):
-                        if object_["name"] not in labels.objects:
-                            print(f'Object name "{object_["name"]}" is not exist in project ontology')
-                        labels.objects[object_["name"]] += 1
+                for object_ in data_unit["labels"].get("objects", []):
+                    if object_["name"] not in labels.objects:
+                        print(f'Object name "{object_["name"]}" is not exist in project ontology')
+                    labels.objects[object_["name"]] += 1
 
-                    for classification in data_unit["labels"].get("classifications", []):
-                        classificationHash = classification["classificationHash"]
-                        if classificationHash not in label_row_meta["classification_answers"]:
-                            logging.warning(
-                                "Couldn't find the classification answer. Something is probably wrong with the label row"
+                for classification in data_unit["labels"].get("classifications", []):
+                    classificationHash = classification["classificationHash"]
+                    if classificationHash not in label_row_meta["classification_answers"]:
+                        logging.warning(
+                            "Couldn't find the classification answer. Something is probably wrong with the label row"
+                        )
+                        continue
+
+                    classification_answer_item = label_row_meta["classification_answers"][classificationHash][
+                        "classifications"
+                    ][0]
+                    classification_question_name = classification_answer_item["name"]
+                    if classification_question_name in labels.classifications:
+
+                        if isinstance(classification_answer_item["answers"], list):
+                            for answer_item in classification_answer_item["answers"]:
+                                if answer_item["name"] in labels.classifications[classification_question_name]:
+                                    labels.classifications[classification_question_name][answer_item["name"]] += 1
+                        elif isinstance(classification_answer_item["answers"], str):
+                            labels.classifications[classification_question_name].setdefault(
+                                classification_answer_item["answers"], 0
                             )
-                            continue
-
-                        classification_answer_item = label_row_meta["classification_answers"][classificationHash][
-                            "classifications"
-                        ][0]
-                        classification_question_name = classification_answer_item["name"]
-                        if classification_question_name in labels.classifications:
-
-                            if isinstance(classification_answer_item["answers"], list):
-                                for answer_item in classification_answer_item["answers"]:
-                                    if answer_item["name"] in labels.classifications[classification_question_name]:
-                                        labels.classifications[classification_question_name][answer_item["name"]] += 1
-                            elif isinstance(classification_answer_item["answers"], str):
-                                labels.classifications[classification_question_name].setdefault(
-                                    classification_answer_item["answers"], 0
-                                )
-                                labels.classifications[classification_question_name][
-                                    classification_answer_item["answers"]
-                                ] += 1
+                            labels.classifications[classification_question_name][
+                                classification_answer_item["answers"]
+                            ] += 1
 
     labels.total_object_labels = object_label_counter
     labels.total_classification_labels = classification_label_counter

@@ -20,6 +20,7 @@ from encord_active.cli.utils.decorators import (
     is_project,
     try_find_parent_project,
 )
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.metrics.types import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
@@ -55,17 +56,18 @@ def image_url(image: AtomicImage, project_hash: str):
 def get_first_image_with_polygons(project_path: Path):
     project_structure = ProjectFileStructure(project_path)
     for data_unit in project_structure.data_units(include_label_row=True):
-        if not Path(data_unit.location).is_file() or data_unit.label_row is None:
-            continue
         du_hash = data_unit.data_hash
-        lr_hash = data_unit.label_row.label_hash
+        label_row = data_unit.label_row
+        if label_row is None:
+            continue
+        lr_hash = label_row.label_hash
         du_frame = data_unit.frame
 
         if lr_hash is None:  # avoid label rows without label hash while the id depends on them
             continue
 
-        id = f"{lr_hash}_{du_hash}_{du_frame:05d}"
-        return show_image_and_draw_polygons(id, project_structure)
+        ident = f"{lr_hash}_{du_hash}_{du_frame:05d}"
+        return show_image_and_draw_polygons(ident, project_structure)
 
 
 # TODO: there must be a better way to get these numbers. would be much easier
@@ -143,6 +145,7 @@ def handle_download_sandbox_project(project_name: str, path: Path):
         clear()
         label.text(f"Unpacking {project_name}")
         unpack_archive(archive_path, project_dir)
+        ensure_safe_project(project_dir)
 
     label.empty()
 

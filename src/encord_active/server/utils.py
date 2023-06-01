@@ -1,7 +1,7 @@
-import json
 from functools import lru_cache, partial
-from typing import Dict, List, Optional, TypedDict
-from urllib import parse
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, TypedDict
+from urllib.parse import quote, unquote, urlparse
 
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
@@ -11,6 +11,7 @@ from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
+    MetricData,
     MetricScope,
     get_embedding_type,
     load_available_metrics,
@@ -20,6 +21,7 @@ from encord_active.lib.project.project_file_structure import (
     ProjectFileStructure,
 )
 from encord_active.server.dependencies import ProjectFileStructureDep
+from encord_active.server.settings import get_settings
 
 
 class Metadata(TypedDict):
@@ -29,11 +31,11 @@ class Metadata(TypedDict):
 
 
 @lru_cache
-def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None):
+def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None) -> List[MetricData]:
     return load_available_metrics(project.metrics, scope)
 
 
-def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str):
+def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str) -> EmbeddingType:
     metrics = load_project_metrics(project)
     metric_data = [metric for metric in metrics if metric.name.lower() == metric_name.lower()][0]
     return get_embedding_type(metric_data.meta.annotation_type)
@@ -44,15 +46,34 @@ def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStr
     return SimilaritiesFinder(embedding_type, project)
 
 
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str):
-    data_unit = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
-        label_row_structure.iter_data_unit(du_hash), None
+def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
+    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit(du_hash, None), None
     )
-    if data_unit:
-        return f"ea-static/{parse.quote(data_unit.path.relative_to(label_row_structure.path.parents[2]).as_posix())}"
+    if data_opt:
+        timestamp = None
+        if data_opt.data_type == "video":
+            timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
+        signed_url = data_opt.signed_url
+        if signed_url.startswith("file://"):
+            image_path = Path(unquote(urlparse(signed_url).path)).absolute()
+            settings = get_settings()
+            root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
+            try:
+                relative_path = image_path.relative_to(root_path)
+                signed_url = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+            except ValueError as ex:
+                # Use hacky fallback
+                approx_relative_path = image_path.as_posix().removeprefix(root_path.as_posix())
+                if approx_relative_path.startswith("/"):
+                    approx_relative_path = approx_relative_path[1:]
+                signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
+
+        return signed_url, timestamp
+    return None
 
 
-def _transform_object(object_: dict, img_w: int, img_h: int):
+def _transform_object(object_: dict, img_w: int, img_h: int) -> Optional[dict]:
     shape = object_["shape"]
     points = None
 
@@ -99,8 +120,8 @@ def to_item(
     lr_hash: str,
     du_hash: str,
     frame: str,
-):
-    editUrl = row.pop("url")
+) -> dict:
+    edit_url = row.pop("url", None)
     tags = row.pop("tags")
     identifier = row.pop("identifier")
     metadata = Metadata(
@@ -112,7 +133,7 @@ def to_item(
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
     url = _get_url(label_row_structure, du_hash, frame)
 
-    label_row = json.loads(label_row_structure.label_row_file.read_text())
+    label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]
     img_w, img_h = du["width"], du["height"]
     data_title = du.get("data_title", label_row.get("data_title"))
@@ -140,9 +161,10 @@ def to_item(
 
     return {
         "id": identifier,
-        "url": url,
+        "url": url[0] if url is not None else None,
+        "videoTimestamp": url[1] if url is not None else None,
         "dataTitle": data_title,
-        "editUrl": editUrl,
+        "editUrl": edit_url,
         "metadata": metadata,
         "tags": to_grouped_tags(tags),
         "labels": labels,

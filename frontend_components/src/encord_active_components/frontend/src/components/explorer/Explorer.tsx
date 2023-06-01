@@ -544,14 +544,19 @@ const ImageWithPolygons = ({
   className,
   ...rest
 }: { item: Item } & JSX.IntrinsicElements["figure"]) => {
-  const image = useRef<HTMLImageElement>(null);
+  const {ref: image, width: imageWidth, height: imageHeight } = useResizeObserver<HTMLImageElement>();
+  const video = useRef<HTMLVideoElement>(null);
+  const {width: videoWidth, height: videoHeight } = useResizeObserver<HTMLVideoElement>({
+    ref: video
+  });
+  const width = item.videoTimestamp != null ? videoWidth : imageWidth;
+  const height = item.videoTimestamp != null ? videoHeight : imageHeight;
   const [polygons, setPolygons] = useState<
     { points: Point[]; color: string; shape: string }[]
   >([]);
 
   useEffect(() => {
-    const { current } = image;
-    if (!current || !current.clientWidth || !current.clientHeight) return;
+    if (width == null || height == null) return;
 
     const { objectHash } = splitId(item.id);
     const objects = objectHash
@@ -562,21 +567,39 @@ const ImageWithPolygons = ({
       objects.map(({ points, color, shape }) => ({
         color,
         points: Object.values(points).map(({ x, y }) => ({
-          x: x * current.clientWidth,
-          y: y * current.clientHeight,
+          x: x * width,
+          y: y * height,
         })),
         shape,
       }))
     );
-  }, [image.current?.clientWidth, image.current?.clientHeight, item.id]);
-
+  }, [width, height, item.id]);
   return (
     <figure {...rest} className={classy("relative", className)}>
-      <img
-        ref={image}
-        className="object-contain rounded transition-opacity"
-        src={item.url}
-      />
+      {
+        item.videoTimestamp != null ? (
+          <video
+              ref={video}
+              className="object-contain rounded transition-opacity"
+              src={item.url}
+              muted
+              controls={false}
+              onLoadedMetadata={() => {
+                const videoRef = video.current;
+                if (videoRef != null) {
+                  videoRef.currentTime = item.videoTimestamp || 0;
+                }
+              }}
+          />
+        ) : (
+          <img
+            ref={image}
+            className="object-contain rounded transition-opacity"
+            alt=""
+            src={item.url}
+          />
+        )
+      }
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(({ points, color, shape }, index) =>

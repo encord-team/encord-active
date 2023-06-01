@@ -1,16 +1,18 @@
-import json
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import pandas as pd
+import prisma
 from pandas import Series
 from pandera.typing import DataFrame
+from PIL import Image
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
 from encord_active.lib.common.colors import Color, hex_to_rgb
+from encord_active.lib.common.data_utils import convert_image_bgr, download_image
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
@@ -132,8 +134,9 @@ def show_image_and_draw_polygons(
     project_file_structure: ProjectFileStructure,
     draw_configurations: Optional[ObjectDrawingConfigurations] = None,
     skip_object_hash: bool = False,
+    cache_db: Optional[prisma.Prisma] = None,
 ) -> np.ndarray:
-    image = load_or_fill_image(row, project_file_structure)
+    image = load_or_fill_image(row, project_file_structure, cache_db=cache_db)
 
     if draw_configurations is None:
         draw_configurations = ObjectDrawingConfigurations()
@@ -141,36 +144,51 @@ def show_image_and_draw_polygons(
     if draw_configurations.draw_objects:
         img_h, img_w = image.shape[:2]
         for color, geometry in get_geometries(
-            row, img_h, img_w, project_file_structure, skip_object_hash=skip_object_hash
+            row,
+            img_h,
+            img_w,
+            project_file_structure,
+            skip_object_hash=skip_object_hash,
+            cache_db=cache_db,
         ):
             image = draw_object_with_background_color(image, geometry, color, draw_configurations)
     return image
 
 
-def load_or_fill_image(row: Union[pd.Series, str], project_file_structure: ProjectFileStructure) -> np.ndarray:
+def load_or_fill_image(
+    row: Union[pd.Series, str],
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
+) -> np.ndarray:
     """
     Tries to read the inferred image path. If not possible, generates a white image
     and indicates what the error seemed to be embedded in the image.
     :param row: A csv row from either a metric, a prediction, or a label csv file.
+    :param cache_db: Optimization for db access
     :return: Numpy / cv2 image.
     """
     key = __get_key(row)
 
-    img_du: Optional[DataUnitStructure] = key_to_data_unit(key, project_file_structure)
+    img_opt = key_to_data_unit(key, project_file_structure, cache_db=cache_db)
 
-    if img_du and img_du.path.is_file():
+    if img_opt:
+        img_du, image_link = img_opt
         try:
-            image = cv2.imread(img_du.path.as_posix())
+            if isinstance(image_link, str):
+                raw_image = download_image(img_du.signed_url)
+            else:
+                raw_image = image_link
+            image = convert_image_bgr(raw_image)
             return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception:
             pass
 
     # Read not successful, so tell the user why
-    error_text = "Image not found" if not img_du else "File seems broken"
+    error_text = "Image not found" if not img_opt else "File seems broken"
 
     _, du_hash, *_ = key.split("_")
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    lr = json.loads(label_row_structure.label_row_file.read_text())
+    lr = label_row_structure.label_row_json
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 
@@ -247,6 +265,7 @@ def get_geometries(
     img_w: int,
     project_file_structure: ProjectFileStructure,
     skip_object_hash: bool = False,
+    cache_db: Optional[prisma.Prisma] = None,
 ) -> List[Tuple[str, np.ndarray]]:
     """
     Loads cached label row and computes geometries from the label row.
@@ -259,12 +278,12 @@ def get_geometries(
     _, du_hash, frame, *remainder = key.split("_")
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    label_row = json.loads(label_row_structure.label_row_file.read_text())
+    label_row = label_row_structure.get_label_row_json(cache_db=cache_db)
     du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash), None)
     if not du_struct:
         return []
 
-    du = label_row["data_units"][du_struct.hash]
+    du = label_row["data_units"][du_struct.du_hash]
 
     geometries = []
     objects = (
@@ -295,17 +314,25 @@ def key_to_label_row_structure(key: str, project_file_structure: ProjectFileStru
     return project_file_structure.label_row_structure(label_hash)
 
 
-def key_to_data_unit(key: str, project_file_structure: ProjectFileStructure) -> Optional[DataUnitStructure]:
+def key_to_data_unit(
+    key: str,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
+) -> Optional[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
     """
     Infer image path from the identifier stored in the csv files.
     :param key: the row["identifier"] from a csv row
+    :param project_file_structure: project file structure
+    :param cache_db: Optimization for db access
     :return: The associated image path if it exists or a path to a placeholder otherwise
     """
     label_hash, du_hash, frame, *_ = key.split("_")
     label_row_structure = project_file_structure.label_row_structure(label_hash)
 
     # check if it is a video frame
-    frame_du: Optional[DataUnitStructure] = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None)
+    frame_du = next(
+        label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, int(frame), cache_db=cache_db), None
+    )
     if frame_du is not None:
         return frame_du
-    return next(label_row_structure.iter_data_unit(du_hash), None)  # So this is an img_group image
+    return next(label_row_structure.iter_data_unit_with_image_or_signed_url(du_hash, cache_db=cache_db), None)

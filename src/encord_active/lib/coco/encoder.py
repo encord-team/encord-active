@@ -14,12 +14,12 @@ import copy
 import datetime
 import json
 import logging
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass
 from itertools import chain
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import requests
@@ -35,6 +35,9 @@ from encord_active.lib.coco.datastructure import (
     SuperClass,
     to_attributes_field,
 )
+from encord_active.lib.common.data_utils import extract_frames
+from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.project import ProjectFileStructure
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +295,7 @@ class CocoEncoder:
         destination_path = self._download_file_path.joinpath(Path("data"), Path(label_hash), Path("images"))
         download_condition = self._download_files and len(list(destination_path.glob("*.png"))) == 0
         if download_condition or self._force_download:
-            self.download_video_images(url, label_hash, data_hash)
+            self.download_video_images(url, destination_path, data_hash, video_title)
 
         images = []
         coco_url = data_unit["data_link"]
@@ -359,15 +362,16 @@ class CocoEncoder:
         video_file_path = Path("videos").joinpath(Path(data_hash), frame_file_name)
         return str(video_file_path)
 
-    def download_video_images(self, url: str, data_hash: str, destination_path: Path) -> None:
-        with tempfile.TemporaryDirectory(str(Path("."))) as temporary_directory:
-            video_location = Path(temporary_directory).joinpath(Path(data_hash))
-            download_file(
-                url,
-                video_location,
-            )
-
-            extract_frames(video_location, destination_path, data_hash)
+    def download_video_images(self, url: str, destination_path: Path, data_hash: str, video_title: str) -> None:
+        video_decode_path = destination_path / "video"
+        video_path = video_decode_path / video_title
+        video_decode_path.mkdir(parents=True, exist_ok=True)
+        download_file(
+            url,
+            video_path,
+        )
+        # Incorrect destination path for folder sym-link logic.
+        extract_frames(video_path, destination_path, data_hash, symlink_folder=False)
 
     def get_annotations(self):
         annotations = []
@@ -698,6 +702,15 @@ class CocoEncoder:
     def download_image(self, url: str, path: Path):
         """Check if directory exists, create the directory if needed, download the file, store it into the path."""
         path.parent.mkdir(parents=True, exist_ok=True)
+        if url.startswith("file:"):
+            image_path = Path(unquote(urlparse(url).path))
+            path.symlink_to(image_path, target_is_directory=False)
+            return
+        elif url.startswith("/"):
+            image_path = Path(url)
+            path.symlink_to(image_path, target_is_directory=False)
+            return
+
         download_file(url, path)
 
     def get_image_id(self, data_hash: str, frame_num: int = 0) -> int:
@@ -707,7 +720,7 @@ class CocoEncoder:
 def download_file(
     url: str,
     destination: Path,
-):
+) -> None:
 
     r = requests.get(url, stream=True)
     with open(destination, "wb") as f:
@@ -715,20 +728,6 @@ def download_file(
             if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
                 f.flush()
-    return destination
-
-
-def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str):
-    logger.info(f"Extracting frames from video: {video_file_name}")
-
-    # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
-    img_dir.mkdir(parents=True, exist_ok=True)
-    command = f"ffmpeg -i {video_file_name} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner"
-    if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=True).returncode != 0:
-        raise RuntimeError(
-            "Splitting videos into multiple image files failed. Please ensure that you have FFMPEG "
-            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
-        )
 
 
 def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path) -> dict:
@@ -741,8 +740,10 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
     Returns:
         dict: Dictionary object of COCO annotations
     """
-    # Load label rows and get metrics dict
-    label_rows = load_label_rows(df, project_dir / "data")
+    project_fs = ProjectFileStructure(project_dir)
+    with PrismaConnection(project_fs) as conn:
+        rows = conn.labelrow.find_many()
+    label_rows = {row.label_hash: json.loads(row.label_row_json or "") for row in rows}
     metrics = df_to_nested_dict(df)
 
     # Load ontology json to dict
@@ -750,15 +751,16 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
         ontology_dict = json.load(f)
 
     # Generate COCO annotations file
-    encoder = CocoEncoder(
-        labels_list=list(label_rows.values()),
-        metrics=metrics,
-        ontology=OntologyStructure.from_dict(ontology_dict),
-    )
-    coco_json = encoder.encode(
-        download_files=True,
-        download_file_path=project_dir,
-    )
+    with tempfile.TemporaryDirectory() as working_dir:
+        encoder = CocoEncoder(
+            labels_list=list(label_rows.values()),
+            metrics=metrics,
+            ontology=OntologyStructure.from_dict(ontology_dict),
+        )
+        coco_json = encoder.encode(
+            download_files=True,
+            download_file_path=Path(working_dir),
+        )
 
     return coco_json
 
@@ -813,24 +815,3 @@ def df_to_nested_dict(df: pd.DataFrame) -> dict:
                 )
                 frame_dict[object_hash].setdefault("tags", []).extend(tags)
     return metrics
-
-
-def load_label_rows(df: pd.DataFrame, data_dir: Path) -> dict[str, dict]:
-    """
-    Given a dataframe with selected samples, load the label row jsons into a dictionary.
-
-    Args:
-        df: dataframe with selected samples
-
-    Returns:
-        dict: Dictionary of label rows
-    """
-    label_rows: Dict[str, dict] = {}
-    for id_tmp in tqdm(df.identifier, desc="Loading labels"):
-        label_hash = id_tmp.split("_")[0]
-        if label_hash not in label_rows.keys():
-            # Read label json and add to dict
-            label_json = data_dir.joinpath(label_hash, "label_row.json")
-            with open(label_json, "r", encoding="utf-8") as f:
-                label_rows[label_hash] = json.load(f)
-    return label_rows

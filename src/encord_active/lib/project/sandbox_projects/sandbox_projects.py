@@ -10,6 +10,7 @@ from encord_active_components.components.projects_page import ProjectStats
 from rich.markup import escape
 from tqdm.auto import tqdm
 
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.server.settings import AvailableSandboxProjects
 
 
@@ -175,7 +176,9 @@ def fetch_prebuilt_project(
     if not unpack:
         return output_file_path
 
-    return unpack_archive(output_file_path, out_dir)
+    unpacked_archive_path = unpack_archive(output_file_path, out_dir)
+    ensure_safe_project(unpacked_archive_path)
+    return unpacked_archive_path
 
 
 def unpack_archive(archive_path: Path, target_path: Path, delete=True):

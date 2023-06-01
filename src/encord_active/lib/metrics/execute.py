@@ -7,8 +7,8 @@ from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
 
 from loguru import logger
 
+from encord_active.lib.common.data_utils import convert_image_bgr
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
-from encord_active.lib.common.utils import convert_image_bgr
 from encord_active.lib.common.writer import StatisticsObserver
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
