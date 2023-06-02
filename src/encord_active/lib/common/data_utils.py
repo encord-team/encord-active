@@ -89,6 +89,11 @@ def download_file(
     if destination.is_file():
         return destination
 
+    if url.startswith("file:"):
+        in_path = Path(unquote(urlparse(url).path))
+        destination.symlink_to(in_path)
+        return destination
+
     cached_download = _NAMED_DOWNLOAD_CACHE.get(url, None)
     if cached_download is not None:
         destination.symlink_to(Path(cached_download.name))
