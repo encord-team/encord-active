@@ -78,7 +78,9 @@ class LabelRowStructure:
             if entry is not None:
                 label_row_json = entry.label_row_json
             if label_row_json is None:
-                raise ValueError("label_row_json does not exist")
+                raise ValueError(
+                    f"label_row_json does not exist (label_hash={self._label_hash}, row={entry is not None})"
+                )
             return json.loads(label_row_json)
 
     @property
@@ -128,7 +130,7 @@ class LabelRowStructure:
             where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
             du_where: "prisma.types.DataUnitWhereInput" = {}
             if data_unit_hash is not None:
-                du_hash = self._mappings.get(data_unit_hash, data_unit_hash)
+                du_hash = data_unit_hash # FIXME: , data_unit_hash)
                 du_where["data_hash"] = du_hash
             if frame is not None:
                 du_where["frame"] = frame
@@ -329,7 +331,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return self.project_dir / "project_meta.yaml"
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
-        label_hash = self._mappings.get(label_hash, label_hash)
+        # FIXME - where is this needed?: label_hash = self._mappings.get(label_hash, label_hash)
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(

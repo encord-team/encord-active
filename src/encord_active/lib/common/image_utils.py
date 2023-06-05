@@ -188,7 +188,7 @@ def load_or_fill_image(
 
     _, du_hash, *_ = key.split("_")
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    lr = label_row_structure.label_row_json
+    lr = label_row_structure.get_label_row_json(cache_db=cache_db)
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 

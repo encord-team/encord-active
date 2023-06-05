@@ -75,6 +75,7 @@ class EncordActions:
             raise FileNotFoundError(f"No SSH file in location: {ssh_key_path}")
 
         self.user_client = get_client(ssh_key_path.expanduser())
+        self.ssh_key_path = ssh_key_path
 
     @property
     def original_project(self):
@@ -323,6 +324,7 @@ class EncordActions:
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
         self.project_meta["has_remote"] = True
+        self.project_meta["ssh_key_path"] = self.ssh_key_path.absolute().as_posix()
         self.project_meta["project_title"] = project_title
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
 
