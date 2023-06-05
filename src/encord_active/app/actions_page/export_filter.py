@@ -212,7 +212,7 @@ def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool, pro
     return InputItem(
         col.text_input(
             f"{item} title",
-            value=f"{'Subset: ' if subset else ''}{project_name} ({num_rows})",
+            value=f"{'Subset ' if subset else ''}{project_name} ({num_rows})",
         ),
         col.text_area(f"{item} description"),
     )
