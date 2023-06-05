@@ -171,13 +171,12 @@ def run_metrics(
         choices = list(map(lambda m: Choice(m, name=m.metadata.title), metrics))
         Options = TypedDict("Options", {"message": str, "choices": list[Choice], "vi_mode": bool})
         options: Options = {
-            "message": "What metrics would you like to run?",
+            "message": "What metrics would you like to run?\n> Press [TAB] or [SPACE] to select more than one.",
             "choices": choices,
             "vi_mode": True,
         }
 
         if fuzzy:
-            options["message"] += " [blue](press [TAB] or [SPACE] to select more than one)[/blue]"
             selected_metrics = i.fuzzy(**options, multiselect=True).execute()
         else:
             selected_metrics = i.checkbox(**options).execute()
