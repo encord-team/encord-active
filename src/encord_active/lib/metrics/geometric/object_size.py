@@ -34,7 +34,7 @@ def get_area(obj: dict) -> float:
                 area = tidy_polygon.area
             elif isinstance(tidy_polygon, MultiPolygon):
                 area = 0.0
-                for polygon_item in polygon.buffer(0):
+                for polygon_item in list(polygon.buffer(0)):
                     area += polygon_item.area
             else:
                 area = 0.0
