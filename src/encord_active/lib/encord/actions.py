@@ -505,8 +505,9 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
     from prisma.types import (
         DataUnitUpdateManyMutationInput,
         DataUnitWhereInput,
+        LabelRowWhereUniqueInput,
         LabelRowUpdateInput,
-        _LabelRowWhereUnique_data_hash_Input,
+        LabelRowInclude,
     )
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
@@ -519,8 +520,9 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
                 )
             for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
                 batcher.labelrow.update(
-                    where=_LabelRowWhereUnique_data_hash_Input(data_hash=lr_data_hash),
+                    where=LabelRowWhereUniqueInput(data_hash=lr_data_hash),
                     data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
+                    include=LabelRowInclude(data_units=True),
                 )
             batcher.commit()
     Project(project_file_structure.project_dir).refresh()
