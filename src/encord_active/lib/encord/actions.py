@@ -523,7 +523,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
                 )
             for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
                 batcher.labelrow.update(
-                    where=LabelRowWhereUniqueInput(data_hash=lr_data_hash),
+                    where={'data_hash': lr_data_hash},
                     data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
                     include=LabelRowInclude(data_units=True),
                 )
