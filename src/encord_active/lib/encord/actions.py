@@ -514,18 +514,16 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
     )
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
-    with PrismaConnection(project_file_structure) as conn:
-        with conn.batch_() as batcher:
-            for new_du_hash, du_hash in dataset_creation_result.new_du_hash_to_original_mapping.items():
-                batcher.dataunit.update_many(
-                    where=DataUnitWhereInput(data_hash=du_hash),
-                    data=DataUnitUpdateManyMutationInput(data_hash=new_du_hash),
-                )
-            for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
-                batcher.labelrow.update(
-                    where={"data_hash": lr_data_hash},
-                    data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
-                    # FIXME: include=LabelRowInclude(data_units=True),
-                )
-            batcher.commit()
+    with PrismaConnection(project_file_structure, unsafe_force=True) as conn:
+        for new_du_hash, du_hash in dataset_creation_result.new_du_hash_to_original_mapping.items():
+            conn.dataunit.update_many(
+                where=DataUnitWhereInput(data_hash=du_hash),
+                data=DataUnitUpdateManyMutationInput(data_hash=new_du_hash),
+            )
+        for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
+            conn.labelrow.update(
+                where={"data_hash": lr_data_hash},
+                data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
+                # FIXME: include=LabelRowInclude(data_units=True),
+            )
     Project(project_file_structure.project_dir).refresh()

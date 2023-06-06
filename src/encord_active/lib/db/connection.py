@@ -27,13 +27,17 @@ _PRISMA_DB_GLOBAL_CACHE: typing.Dict[str, "prisma.Prisma"] = {}
 
 class PrismaConnection:
     def __init__(
-        self, project_file_structure: BaseProjectFileStructure, cache_db: Optional["prisma.Prisma"] = None
+        self,
+        project_file_structure: BaseProjectFileStructure,
+        cache_db: Optional["prisma.Prisma"] = None,
+        unsafe_force: bool = False,
     ) -> None:
         ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride
 
         self.cache_db = cache_db
         self.db: "Optional[prisma.Prisma]" = None
+        self.unsafe_force = unsafe_force
         self.datasource = DatasourceOverride(url=f"file:{project_file_structure.prisma_db.absolute()}")
 
     def __enter__(self) -> "prisma.Prisma":
@@ -44,7 +48,12 @@ class PrismaConnection:
 
         cache_key = self.datasource["url"]
         if cache_key in _PRISMA_DB_GLOBAL_CACHE:
-            return _PRISMA_DB_GLOBAL_CACHE[cache_key]
+            if self.unsafe_force:
+                db = _PRISMA_DB_GLOBAL_CACHE[cache_key]
+                if db.is_connected():
+                    db.disconnect()
+            else:
+                return _PRISMA_DB_GLOBAL_CACHE[cache_key]
 
         db = Prisma(datasource=self.datasource)
         db.connect()
