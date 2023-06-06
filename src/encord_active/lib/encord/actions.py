@@ -326,15 +326,18 @@ class EncordActions:
 
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
+
+        old_project_hash = self.project_meta["project_hash"]
         self.project_meta["has_remote"] = True
         self.project_meta["ssh_key_path"] = self.ssh_key_path.absolute().as_posix()
         self.project_meta["project_title"] = project_title
+        self.project_meta["project_hash"] = new_project.project_hash
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
 
         replace_uids(
             self.project_file_structure,
             dataset_creation_result.lr_du_mapping,
-            self.project_meta["project_hash"],
+            old_project_hash,
             new_project.project_hash,
             dataset_creation_result.hash,
         )
@@ -508,9 +511,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
     from prisma.types import (
         DataUnitUpdateManyMutationInput,
         DataUnitWhereInput,
-        LabelRowWhereUniqueInput,
         LabelRowUpdateInput,
-        LabelRowInclude,
     )
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
@@ -525,7 +526,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
                 batcher.labelrow.update(
                     where={'data_hash': lr_data_hash},
                     data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
-                    include=LabelRowInclude(data_units=True),
+                    # FIXME: include=LabelRowInclude(data_units=True),
                 )
             batcher.commit()
     Project(project_file_structure.project_dir).refresh()
