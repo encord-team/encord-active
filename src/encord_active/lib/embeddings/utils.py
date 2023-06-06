@@ -34,7 +34,7 @@ class SimilaritiesFinder:
         return self.embedding_type in [EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]
 
     def get_similarities(self, identifier: str, num_neighbors: Optional[int] = None) -> list[str]:
-        if not self.index_available:
+        if not self.index_available or identifier not in self.identifier_to_index:
             return []
 
         if identifier not in self.similarities.keys():
