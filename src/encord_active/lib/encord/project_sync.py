@@ -249,7 +249,8 @@ def copy_filtered_data(
                                 "data_title": data_unit.data_title,
                                 "frame": data_unit.frame,
                                 "data_uri": local_data_mapping.get(data_unit.data_uri, data_unit.data_uri)
-                                            if data_unit.data_uri is not None else None,
+                                if data_unit.data_uri is not None
+                                else None,
                                 "width": data_unit.width,
                                 "height": data_unit.height,
                                 "fps": data_unit.fps,
