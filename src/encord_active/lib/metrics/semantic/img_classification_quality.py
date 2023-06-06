@@ -9,7 +9,6 @@ from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
-from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import (
