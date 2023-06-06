@@ -514,7 +514,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
     )
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
-    with PrismaConnection(project_file_structure, unsafe_force=True) as conn:
+    with PrismaConnection(project_file_structure) as conn:
         for new_du_hash, du_hash in dataset_creation_result.new_du_hash_to_original_mapping.items():
             conn.dataunit.update_many(
                 where=DataUnitWhereInput(data_hash=du_hash),

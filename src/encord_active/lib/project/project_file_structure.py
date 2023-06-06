@@ -95,8 +95,8 @@ class LabelRowStructure:
     def label_hash(self) -> str:
         return self._label_hash
 
-    def set_label_row_json(self, label_row_json: Dict[str, Any]) -> None:
-        with PrismaConnection(self._project) as conn:
+    def set_label_row_json(self, label_row_json: Dict[str, Any], cache_db: Optional[prisma.Prisma] = None) -> None:
+        with PrismaConnection(self._project, cache_db=cache_db) as conn:
             conn.labelrow.update(
                 where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, indent=2)}
             )
@@ -339,22 +339,25 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
 
     def data_units(
-        self, where: Optional["prisma.types.DataUnitWhereInput"] = None, include_label_row: bool = False
+        self,
+        where: Optional["prisma.types.DataUnitWhereInput"] = None,
+        include_label_row: bool = False,
+        cache_db: Optional[prisma.Prisma] = None
     ) -> List["prisma.models.DataUnit"]:
         from prisma.types import DataUnitInclude
 
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
-        with PrismaConnection(self) as conn:
+        with PrismaConnection(self, cache_db=cache_db) as conn:
             return conn.dataunit.find_many(where=where, include=to_include)
 
-    def label_rows(self) -> List["prisma.models.LabelRow"]:
-        with PrismaConnection(self) as conn:
+    def label_rows(self, cache_db: Optional[prisma.Prisma] = None) -> List["prisma.models.LabelRow"]:
+        with PrismaConnection(self, cache_db=cache_db) as conn:
             return conn.labelrow.find_many()
 
     def iter_labels(
-        self,
+        self, cache_db: Optional[prisma.Prisma] = None
     ) -> Iterator[LabelRowStructure]:
-        label_rows = self.label_rows()
+        label_rows = self.label_rows(cache_db=cache_db)
         if len(label_rows) == 0:
             for label_row_legacy in self.data_legacy_folder.iterdir():
                 label_hash = label_row_legacy.name

@@ -279,7 +279,7 @@ def get_geometries(
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
     label_row = label_row_structure.get_label_row_json(cache_db=cache_db)
-    du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash), None)
+    du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash, cache_db=cache_db), None)
     if not du_struct:
         return []
 
