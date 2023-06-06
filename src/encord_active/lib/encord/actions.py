@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -105,8 +104,8 @@ class EncordActions:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in an image (type)
             data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
-                with tempfile.NamedTemporaryFile() as tf:
-                    tf_path = Path(tf.name)
+                with tempfile.TemporaryDirectory() as td:
+                    tf_path = Path(td) / data_unit_hash
                     download_file(data_unit.signed_url, tf_path)
                     new_lr_data_hash = dataset.upload_image(
                         file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
@@ -154,8 +153,8 @@ class EncordActions:
             data_unit_hash = next(iter(label_row["data_units"]), None)  # There is only one data unit in a video (type)
             data_unit = next(label_row_structure.iter_data_unit(data_unit_hash=data_unit_hash), None)
             if data_unit_hash is not None and data_unit_hash in data_unit_hashes and data_unit is not None:
-                with tempfile.NamedTemporaryFile() as tf:
-                    tf_path = Path(tf.name)
+                with tempfile.TemporaryDirectory() as td:
+                    tf_path = Path(td) / data_unit_hash
                     download_file(data_unit.signed_url, tf_path)
                     dataset.upload_video(
                         file_path=str(tf_path), title=label_row["data_units"][data_unit_hash]["data_title"]
@@ -410,7 +409,7 @@ class EncordActions:
                 )
 
         except Exception as e:
-            os.removedirs(target_project_dir.as_posix())
+            shutil.rmtree(target_project_dir.as_posix())
             raise e
         return target_project_structure.project_dir
 

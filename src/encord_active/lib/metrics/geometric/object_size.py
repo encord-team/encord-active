@@ -1,10 +1,12 @@
 from loguru import logger
+from shapely.geometry import MultiPolygon, Polygon
 from shapely.ops import unary_union
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.utils import (
     get_bbox_from_encord_label_object,
     get_du_size,
+    get_object_coordinates,
     get_polygon,
 )
 from encord_active.lib.labels.object import BoxShapes, ObjectShape
@@ -17,8 +19,26 @@ logger = logger.opt(colors=True)
 
 def get_area(obj: dict) -> float:
     if obj["shape"] in {*BoxShapes, ObjectShape.POLYGON}:
-        polygon = get_polygon(obj)
-        area = 0.0 if polygon is None else polygon.area
+
+        points = get_object_coordinates(obj)
+        if points is None or len(points) < 3:
+            logger.debug("Less than 3 points")
+            return 0.0
+
+        polygon = Polygon(points)
+        if polygon.is_simple:
+            area = polygon.area
+        else:
+            tidy_polygon = polygon.buffer(0)
+            if isinstance(tidy_polygon, Polygon):
+                area = tidy_polygon.area
+            elif isinstance(tidy_polygon, MultiPolygon):
+                area = 0.0
+                for polygon_item in list(polygon.buffer(0)):
+                    area += polygon_item.area
+            else:
+                area = 0.0
+                logger.warning(f"Unknown geometry type: {type(tidy_polygon)}")
     else:
         logger.warning(f"Unknown shape {obj['shape']} in get_area function")
         area = 0.0
