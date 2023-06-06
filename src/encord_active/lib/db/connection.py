@@ -22,7 +22,7 @@ class DBConnection:
         self.conn.__exit__(type, value, traceback)
 
 
-_PRISMA_DB_GLOBAL_CACHE: typing.Dict[str, "prisma.Prisma"] = {}
+# FIXME: _PRISMA_DB_GLOBAL_CACHE: typing.Dict[str, "prisma.Prisma"] = {}
 
 
 class PrismaConnection:
@@ -46,19 +46,19 @@ class PrismaConnection:
         if self.cache_db is not None:
             return self.cache_db
 
-        cache_key = self.datasource["url"]
-        if cache_key in _PRISMA_DB_GLOBAL_CACHE:
-            if self.unsafe_force:
-                db = _PRISMA_DB_GLOBAL_CACHE[cache_key]
-                if db.is_connected():
-                    db.disconnect()
-            else:
-                return _PRISMA_DB_GLOBAL_CACHE[cache_key]
+        # cache_key = self.datasource["url"]
+        # if cache_key in _PRISMA_DB_GLOBAL_CACHE:
+        #    if self.unsafe_force:
+        #        db = _PRISMA_DB_GLOBAL_CACHE[cache_key]
+        #        if db.is_connected():
+        #            db.disconnect()
+        #    else:
+        #        return _PRISMA_DB_GLOBAL_CACHE[cache_key]
 
-        db = Prisma(datasource=self.datasource)
-        db.connect()
-        _PRISMA_DB_GLOBAL_CACHE[cache_key] = db  # Never disconnect, global prisma connection
-        return db
+        self.db = Prisma(datasource=self.datasource)
+        self.db.connect()
+        # _PRISMA_DB_GLOBAL_CACHE[cache_key] = db  # Never disconnect, global prisma connection
+        return self.db
 
     def __exit__(self, type, value, traceback):
         if self.db is not None and self.db.is_connected():
