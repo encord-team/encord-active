@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -408,7 +407,7 @@ class EncordActions:
                 )
 
         except Exception as e:
-            os.removedirs(target_project_dir.as_posix())
+            shutil.rmtree(target_project_dir.as_posix())
             raise e
         return target_project_structure.project_dir
 
