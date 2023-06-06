@@ -153,7 +153,7 @@ def project_similarity():
 
         figure = plot_project_similarity_metric_wise(metric_similarities_df)
         metric_wise_similarity_col.metric(
-            "Average Similarity", f"{metric_similarities_df[ProjectSimilaritySchema.dissimilarity_score].mean():.2f}"
+            "Average dissimilarity", f"{metric_similarities_df[ProjectSimilaritySchema.dissimilarity_score].mean():.2f}"
         )
         metric_wise_similarity_col.plotly_chart(figure, use_container_width=True)
 
