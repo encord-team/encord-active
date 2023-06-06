@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from functools import wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -78,14 +77,12 @@ class GitVersioner:
         return self.repo.is_dirty() or bool(self.repo.untracked_files)
 
     def _set_is_versioning_available(self):
-        self._available = "t" in os.getenv("ENCORD_ACTIVE_VERSIONING_ENABLED", "true").lower()
-
-        if self._available:
-            try:
-                with TemporaryDirectory() as d:
-                    Repo.init(Path(d))
-            except OSError:
-                self._available = False
+        self._available = True
+        try:
+            with TemporaryDirectory() as d:
+                Repo.init(Path(d))
+        except OSError:
+            self._available = False
 
     @property
     def available(self):

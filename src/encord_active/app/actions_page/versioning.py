@@ -5,6 +5,7 @@ import streamlit as st
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
 from encord_active.lib.versioning.git import GitVersioner, Version
+from encord_active.server.settings import Env, get_settings
 
 CURRENT_VERSION_KEY = "current_version"
 
@@ -63,9 +64,12 @@ def version_form():
     _, container, _ = st.columns([1, 2, 1])
     versioner, _ = cached_versioner(get_state().project_paths.project_dir)
 
-    if not versioner.available:
+    env = get_settings().ENV
+    if env == Env.PROD:
         st.info("Versioning not available on hosted version")
-        return
+    else:
+        st.info("Versioning is a premium feature available only on the hosted version")
+    return
 
     version_state = UseState(versioner.versions[0], CURRENT_VERSION_KEY)
     show_success_message = UseState(False)
