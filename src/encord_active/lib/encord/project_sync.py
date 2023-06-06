@@ -233,49 +233,38 @@ def copy_filtered_data(
     with PrismaConnection(curr_project_structure) as conn:
         all_label_rows = conn.labelrow.find_many(
             where={
-                'label_hash': {
-                    'in': list(filtered_label_rows)
-                },
+                "label_hash": {"in": list(filtered_label_rows)},
             },
-            include={
-                'data_units': {
-                    'where': {
-                        'data_hash': {
-                            'in': list(filtered_data_hashes)
-                        }
-                    }
-                }
-            }
+            include={"data_units": {"where": {"data_hash": {"in": list(filtered_data_hashes)}}}},
         )
     with PrismaConnection(target_project_structure) as conn:
-        for label_row in all_label_rows:
+        for label_row_db in all_label_rows:
             conn.labelrow.create(
                 data={
-                    'label_hash': label_row.label_hash,
-                    'data_units': {
-                        'create': [
+                    "label_hash": label_row_db.label_hash,
+                    "data_units": {
+                        "create": [
                             {
-                                'data_hash': data_unit.data_hash,
-                                'data_title': data_unit.data_title,
-                                'frame': data_unit.frame,
-                                'data_uri': local_data_mapping.get(
-                                    data_unit.data_uri, data_unit.data_uri
-                                ),
-                                'width': data_unit.width,
-                                'height': data_unit.height,
-                                'fps': data_unit.fps,
+                                "data_hash": data_unit.data_hash,
+                                "data_title": data_unit.data_title,
+                                "frame": data_unit.frame,
+                                "data_uri": local_data_mapping.get(data_unit.data_uri, data_unit.data_uri)
+                                            if data_unit.data_uri is not None else None,
+                                "width": data_unit.width,
+                                "height": data_unit.height,
+                                "fps": data_unit.fps,
                             }
-                            for data_unit in (label_row.data_units or [])
+                            for data_unit in (label_row_db.data_units or [])
                         ]
                     },
-                    'label_row_json': json.dumps(label_row_mapping[label_row.label_hash], indent=2),
-                    'data_hash': label_row.data_hash,
-                    'data_title': label_row.data_title,
-                    'data_type': label_row.data_type,
-                    'created_at': label_row.created_at,
-                    'last_edited_at': label_row.last_edited_at,
+                    "label_row_json": json.dumps(label_row_mapping[label_row_db.label_hash or ""], indent=2),
+                    "data_hash": label_row_db.data_hash,
+                    "data_title": label_row_db.data_title,
+                    "data_type": label_row_db.data_type,
+                    "created_at": label_row_db.created_at,
+                    "last_edited_at": label_row_db.last_edited_at,
                 },
-                include={'data_units': True}
+                include={"data_units": True},
             )
 
 

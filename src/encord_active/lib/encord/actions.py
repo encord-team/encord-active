@@ -112,8 +112,7 @@ class EncordActions:
                         file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
                     )["data_hash"]
                 new_lr_data_hash_to_original_mapping.set(
-                    new_lr_data_hash,
-                    label_row.get("data_hash", label_row_entry.data_hash)
+                    new_lr_data_hash, label_row.get("data_hash", label_row_entry.data_hash)
                 )
                 # The data unit hash and label row data hash of an image (type) are the same
                 new_du_hash_to_original_mapping = DataHashMapping()
@@ -524,7 +523,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
                 )
             for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
                 batcher.labelrow.update(
-                    where={'data_hash': lr_data_hash},
+                    where={"data_hash": lr_data_hash},
                     data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
                     # FIXME: include=LabelRowInclude(data_units=True),
                 )

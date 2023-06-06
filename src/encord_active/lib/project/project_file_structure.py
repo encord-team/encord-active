@@ -73,7 +73,10 @@ class LabelRowStructure:
 
     def get_label_row_from_db(self, cache_db: Optional[prisma.Prisma] = None) -> "prisma.models.LabelRow":
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
-            return conn.labelrow.find_unique(where={"label_hash": self._label_hash})
+            res = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
+            if res is None:
+                raise ValueError(f"label_row missing in prisma db(label_hash={self._label_hash})")
+            return res
 
     def get_label_row_json(self, cache_db: Optional[prisma.Prisma] = None) -> Dict[str, Any]:
         entry = self.get_label_row_from_db(cache_db=cache_db)
@@ -81,9 +84,7 @@ class LabelRowStructure:
         if entry is not None:
             label_row_json = entry.label_row_json
         if label_row_json is None:
-            raise ValueError(
-                f"label_row_json does not exist (label_hash={self._label_hash}, row={entry is not None})"
-            )
+            raise ValueError(f"label_row_json does not exist (label_hash={self._label_hash}, row={entry is not None})")
         return json.loads(label_row_json)
 
     @property
@@ -133,7 +134,7 @@ class LabelRowStructure:
             where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
             du_where: "prisma.types.DataUnitWhereInput" = {}
             if data_unit_hash is not None:
-                du_hash = data_unit_hash # FIXME: , data_unit_hash)
+                du_hash = data_unit_hash  # FIXME: , data_unit_hash)
                 du_where["data_hash"] = du_hash
             if frame is not None:
                 du_where["frame"] = frame
