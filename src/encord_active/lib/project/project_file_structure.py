@@ -92,7 +92,7 @@ class LabelRowStructure:
     def set_label_row_json(self, label_row_json: Dict[str, Any]) -> None:
         with PrismaConnection(self._project) as conn:
             conn.labelrow.update(
-                where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, ident=2)}
+                where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, indent=2)}
             )
 
     def clone_label_row_json(self, source: "LabelRowStructure", label_row_json: str, local_path: Optional[str]) -> None:

@@ -141,18 +141,19 @@ def create_filtered_embeddings(
         if not curr_embedding_file.exists():
             continue
         embeddings = pickle.loads(curr_embedding_file.read_bytes())
-        embeddings_df = pd.DataFrame.from_dict(embeddings)
-        if embedding_type == EmbeddingType.IMAGE:
-            label_row_du_hashes = filtered_df.identifier.str.slice(stop=73)
-            embeddings_df = embeddings_df[
-                embeddings_df[["label_row", "data_unit"]].agg("_".join, axis=1).isin(label_row_du_hashes)
-            ]
-        else:
-            label_hashes = filtered_df.identifier.str.split("_").str.get(3).dropna()
-            embeddings_df = embeddings_df[embeddings_df["labelHash"].isin(label_hashes)]
-        filtered_embeddings = embeddings_df.to_dict(orient="records")
-        target_project_structure.get_embeddings_file(embedding_type).write_bytes(pickle.dumps(filtered_embeddings))
-        EmbeddingIndex.from_project(target_project_structure, embedding_type)
+        if embeddings:
+            embeddings_df = pd.DataFrame.from_dict(embeddings)
+            if embedding_type == EmbeddingType.IMAGE:
+                label_row_du_hashes = filtered_df.identifier.str.slice(stop=73)
+                embeddings_df = embeddings_df[
+                    embeddings_df[["label_row", "data_unit"]].agg("_".join, axis=1).isin(label_row_du_hashes)
+                ]
+            else:
+                label_hashes = filtered_df.identifier.str.split("_").str.get(3).dropna()
+                embeddings_df = embeddings_df[embeddings_df["labelHash"].isin(label_hashes)]
+            filtered_embeddings = embeddings_df.to_dict(orient="records")
+            target_project_structure.get_embeddings_file(embedding_type).write_bytes(pickle.dumps(filtered_embeddings))
+            EmbeddingIndex.from_project(target_project_structure, embedding_type)
 
 
 def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, objects):
