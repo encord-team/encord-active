@@ -184,9 +184,9 @@ def copy_filtered_data(
         )  # Recreate object to reload mappings
 
     local_data_mapping = {}
+    label_row_mapping = {}
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
-        target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
         for data_unit in current_label_row_structure.iter_data_unit():
             if data_unit.du_hash in filtered_data_hashes:
                 if data_unit.signed_url.startswith("file:"):
@@ -221,54 +221,6 @@ def copy_filtered_data(
                     filtered_labels, label_row_hash, data_unit_hash, v["labels"][label_no]["classifications"]
                 )
 
-        with PrismaConnection(curr_project_structure) as conn:
-            all_label_rows = conn.labelrow.find_many(
-                where={
-                    'label_hash': {
-                        'in': list(filtered_label_rows)
-                    },
-                },
-                include={
-                    'data_units': {
-                        'where': {
-                            'data_hash': {
-                                'in': list(filtered_data_hashes)
-                            }
-                        }
-                    }
-                }
-            )
-        with PrismaConnection(target_project_structure) as conn:
-            for label_row in all_label_rows:
-                conn.labelrow.create(
-                    data={
-                        'label_hash': label_row.label_hash,
-                        'data_units': {
-                            'create': [
-                                {
-                                    'data_hash': data_unit.data_hash,
-                                    'data_title': data_unit.data_title,
-                                    'frame': data_unit.frame,
-                                    'data_uri': local_data_mapping.get(
-                                        data_unit.data_uri, data_unit.data_uri
-                                     ),
-                                    'width': data_unit.width,
-                                    'height': data_unit.height,
-                                    'fps': data_unit.fps,
-                                }
-                                for data_unit in (label_row.data_units or [])
-                            ]
-                        },
-                        'label_row_json': label_row.label_row_json,
-                        'data_hash': label_row.data_hash,
-                        'data_title': label_row.data_title,
-                        'data_type': label_row.data_type,
-                        'created_at': label_row.created_at,
-                        'last_edited_at': label_row.last_edited_at,
-                    },
-                    include={'data_units': True}
-                )
-
         filtered_label_hashes = {f[2] for f in filtered_labels}
         label_row["object_answers"] = {
             k: v for k, v in label_row["object_answers"].items() if k in filtered_label_hashes
@@ -276,7 +228,55 @@ def copy_filtered_data(
         label_row["classification_answers"] = {
             k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
         }
-        target_label_row_structure.set_label_row_json(label_row)
+        label_row_mapping[label_row_hash] = label_row
+
+    with PrismaConnection(curr_project_structure) as conn:
+        all_label_rows = conn.labelrow.find_many(
+            where={
+                'label_hash': {
+                    'in': list(filtered_label_rows)
+                },
+            },
+            include={
+                'data_units': {
+                    'where': {
+                        'data_hash': {
+                            'in': list(filtered_data_hashes)
+                        }
+                    }
+                }
+            }
+        )
+    with PrismaConnection(target_project_structure) as conn:
+        for label_row in all_label_rows:
+            conn.labelrow.create(
+                data={
+                    'label_hash': label_row.label_hash,
+                    'data_units': {
+                        'create': [
+                            {
+                                'data_hash': data_unit.data_hash,
+                                'data_title': data_unit.data_title,
+                                'frame': data_unit.frame,
+                                'data_uri': local_data_mapping.get(
+                                    data_unit.data_uri, data_unit.data_uri
+                                ),
+                                'width': data_unit.width,
+                                'height': data_unit.height,
+                                'fps': data_unit.fps,
+                            }
+                            for data_unit in (label_row.data_units or [])
+                        ]
+                    },
+                    'label_row_json': json.dumps(label_row_mapping[label_row.label_hash], indent=2),
+                    'data_hash': label_row.data_hash,
+                    'data_title': label_row.data_title,
+                    'data_type': label_row.data_type,
+                    'created_at': label_row.created_at,
+                    'last_edited_at': label_row.last_edited_at,
+                },
+                include={'data_units': True}
+            )
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):

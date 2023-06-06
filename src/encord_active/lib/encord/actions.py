@@ -98,6 +98,7 @@ class EncordActions:
         new_lr_data_hash_to_original_mapping: DataHashMapping,
     ) -> Optional[DataHashMapping]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
+        label_row_entry = label_row_structure.get_label_row_from_db()
         label_row = label_row_structure.label_row_json
 
         if label_row["data_type"] == DataType.IMAGE.value:
@@ -110,7 +111,10 @@ class EncordActions:
                     new_lr_data_hash = dataset.upload_image(
                         file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
                     )["data_hash"]
-                new_lr_data_hash_to_original_mapping.set(new_lr_data_hash, label_row["data_hash"])
+                new_lr_data_hash_to_original_mapping.set(
+                    new_lr_data_hash,
+                    label_row.get("data_hash", label_row_entry.data_hash)
+                )
                 # The data unit hash and label row data hash of an image (type) are the same
                 new_du_hash_to_original_mapping = DataHashMapping()
                 new_du_hash_to_original_mapping.set(new_lr_data_hash, data_unit_hash)
