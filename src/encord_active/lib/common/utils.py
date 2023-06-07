@@ -123,7 +123,7 @@ def get_object_coordinates(o: dict) -> Optional[list[tuple[Any, Any]]]:
     return points
 
 
-def get_polygon(o: dict) -> Optional[Polygon]:
+def get_polygon(o: dict, force_simple_polygons: bool = True) -> Optional[Polygon]:
     """
     Convert object dict into shapely polygon.
     :param o: the Encord object dict.
@@ -140,7 +140,7 @@ def get_polygon(o: dict) -> Optional[Polygon]:
         return None
 
     polygon = Polygon(points)
-    if not polygon.is_simple:
+    if force_simple_polygons and not polygon.is_simple:
         logger.debug("Not simple")
         return None
 
@@ -157,7 +157,8 @@ def get_geometry_from_encord_object(obj: dict, w: int, h: int) -> Optional[np.nd
     :return: The polygon coordinates
     """
 
-    polygon = get_polygon(obj)
+    polygon = get_polygon(obj, force_simple_polygons=False)
+
     if polygon:
         img_size = np.array([[w, h]])
         return (np.array(polygon.exterior.xy).T * img_size).astype(int)
