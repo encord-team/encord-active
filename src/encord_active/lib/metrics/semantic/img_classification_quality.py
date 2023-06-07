@@ -9,7 +9,6 @@ from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
-from encord_active.lib.embeddings.embeddings import get_embeddings
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import (
@@ -20,6 +19,7 @@ from encord_active.lib.metrics.types import (
 )
 from encord_active.lib.metrics.utils import is_multiclass_ontology
 from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -261,8 +261,11 @@ class ImageLevelQualityTest(Metric):
         if not project_has_classifications:
             logger.info("<yellow>[Skipping]</yellow> No frame level classifications in the project ontology.")
 
+        project_file_structure = ProjectFileStructure(iterator.cache_dir)
         if self.metadata.embedding_type:
-            self.label_embeddings = get_embeddings(iterator, embedding_type=self.metadata.embedding_type)
+            _, self.label_embeddings = EmbeddingIndex.from_project(
+                project_file_structure, self.metadata.embedding_type, iterator
+            )
         else:
             logger.error(
                 f"<yellow>[Skipping]</yellow> No `embedding_type` provided for the {self.metadata.title} metric!"
@@ -271,6 +274,7 @@ class ImageLevelQualityTest(Metric):
 
         if len(self.label_embeddings) == 0:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
+            return
 
         nearest_indexes = self.get_nearest_indexes()
         self.fix_nearest_indexes(nearest_indexes)
