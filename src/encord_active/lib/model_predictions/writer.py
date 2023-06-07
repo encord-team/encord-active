@@ -53,6 +53,8 @@ class MainPredictionType(str, Enum):
 
 
 ImageIdentifier = int
+
+
 # This is a hack to not break backward compatibility
 def get_image_identifier(data_hash: str, frame: int) -> ImageIdentifier:
     return abs(hash(f"{data_hash}_{frame}")) % 10_000_000
@@ -307,9 +309,19 @@ class PredictionWriter:
         logger.debug("Preparing label list")
         self.object_labels: List[LabelEntry] = []
         self.classification_labels: List[ClassificationLabelEntry] = []
+        valid_feature_node_hashes = {
+            attr.feature_node_hash
+            for clf in self.project.ontology.classifications
+            for attr in clf.attributes
+            if isinstance(attr, RadioAttribute)
+        }
 
         def append_classification_label(du_hash: str, frame: int, classification_dict: dict, answers_dict: dict):
             label_hash = self.lr_lookup[du_hash]
+
+            if classification_dict["featureHash"] not in valid_feature_node_hashes:
+                return None
+
             classification = LabelClassification(**classification_dict)
 
             classification_answers = answers_dict.get(classification.classificationHash, {}).get("classifications", [])
@@ -420,7 +432,6 @@ class PredictionWriter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-
         if isinstance(self.predictions[0], ClassificationPredictionEntry):
             storage_folder = self.storage_dir / MainPredictionType.CLASSIFICATION.value
             storage_folder.mkdir(parents=True, exist_ok=True)
@@ -519,7 +530,6 @@ class PredictionWriter:
         return object_hash
 
     def __add_classification_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
-
         class_id = self.classification_class_id_lookup.get(prediction.classification)
         if class_id is None:
             raise AttributeError(
