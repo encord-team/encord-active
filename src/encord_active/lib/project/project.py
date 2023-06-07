@@ -6,7 +6,10 @@ import logging
 import tempfile
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
+
+if TYPE_CHECKING:
+    import prisma
 
 import yaml
 from encord import Project as EncordProject
@@ -271,7 +274,7 @@ class Project:
                         download_label_row_and_data,
                         project=project,
                         project_file_structure=project_file_structure,
-                        cache_db=conn
+                        cache_db=conn,
                     ),
                     label_rows_to_download,
                     desc="Collecting new data",
@@ -304,7 +307,9 @@ class Project:
 
 
 def download_label_row(
-    label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure,
+    label_hash: str,
+    project: EncordProject,
+    project_file_structure: ProjectFileStructure,
     cache_db: Optional["prisma.Prisma"] = None,
 ) -> LabelRow:
     label_row = try_execute(partial(project.get_label_row, get_signed_url=True), 5, {"uid": label_hash})
@@ -335,9 +340,9 @@ def download_label_row(
 
 
 def download_data(
-        label_row: LabelRow,
-        project_file_structure: ProjectFileStructure,
-        cache_db: Optional["prisma.Prisma"] = None,
+    label_row: LabelRow,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
 ):
     lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
@@ -386,7 +391,7 @@ def download_data(
                 data={
                     "width": image.width,
                     "height": image.height,
-                }
+                },
             )
 
 
