@@ -69,16 +69,30 @@ def get_frames_per_second(video_file_name: Path) -> float:
     return float(output_str)
 
 
-_DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
-_NAMED_DOWNLOAD_CACHE: Dict[str, IO[bytes]] = {}
+_DOWNLOAD_CACHE: Dict[str, int] = {}
+_DOWNLOAD_CACHE_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
 
 
-def _download_cache(url: str) -> Optional[bytes]:
-    file = _DOWNLOAD_CACHE.get(url, None)
-    if file is None:
-        return None
-    file.seek(0)
-    return file.read()
+def _add_to_cache(key: str) -> Path:
+    if key in _DOWNLOAD_CACHE:
+        raise RuntimeError(f"Duplicate cache write for : {key}")
+    new_id = len(_DOWNLOAD_CACHE)
+    _DOWNLOAD_CACHE[key] = new_id
+    path = Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{new_id}"
+    if path.exists():
+        raise RuntimeError(f"Local temp-file cache bug: {key}")
+    return path
+
+
+def _remove_from_cache(key: str) -> None:
+    del _DOWNLOAD_CACHE[key]
+
+
+def _get_from_cache(key: str) -> Optional[Path]:
+    cache_id = _DOWNLOAD_CACHE.get(key, None)
+    if cache_id is not None:
+        return Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{cache_id}"
+    return None
 
 
 def download_file(
@@ -94,48 +108,50 @@ def download_file(
         destination.symlink_to(in_path)
         return destination
 
-    cached_download = _NAMED_DOWNLOAD_CACHE.get(url, None)
+    cached_download = _get_from_cache(url)
     if cached_download is not None:
-        destination.symlink_to(Path(cached_download.name))
+        destination.symlink_to(cached_download)
         return destination
 
-    cache_tempfile = tempfile.NamedTemporaryFile()
+    new_cache_download = _add_to_cache(url)
+    try:
+        with open(new_cache_download, "x") as file:
+            r = requests.get(url, stream=True)
 
-    r = requests.get(url, stream=True)
+            if r.status_code != 200:
+                raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
-    if r.status_code != 200:
-        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
-
-    for chunk in r.iter_content(chunk_size=byte_size):
-        if chunk:  # filter out keep-alive new chunks
-            cache_tempfile.write(chunk)
-    cache_tempfile.flush()
-
-    destination.symlink_to(Path(cache_tempfile.name))
-    _NAMED_DOWNLOAD_CACHE[url] = cache_tempfile
+            for chunk in r.iter_content(chunk_size=byte_size):
+                if chunk:  # filter out keep-alive new chunks
+                    file.write(chunk)
+            file.flush()
+    except Exception:
+        _remove_from_cache(url)
+        raise
+    destination.symlink_to(new_cache_download)
     return destination
 
 
-def download_image(url: str, cache: bool = True) -> Image.Image:
+def download_image(url: str) -> Image.Image:
     if url.startswith("file:"):
         image_path = Path(unquote(urlparse(url).path))
         return Image.open(image_path)
 
-    cached_image = _DOWNLOAD_CACHE.get(url, None)
+    cached_image = _get_from_cache(url)
     if cached_image is not None:
         return Image.open(cached_image)
 
-    r = requests.get(url)
+    new_cache_download = _add_to_cache(url)
+    try:
+        r = requests.get(url)
 
-    if r.status_code != 200:
-        raise ConnectionError(f"Something happened, couldn't download file from: {url}")
+        if r.status_code != 200:
+            raise ConnectionError(f"Something happened, couldn't download file from: {url}")
 
-    if cache:
-        cached_file = tempfile.TemporaryFile()
-        cached_file.write(r.content)
-        cached_file.seek(0)
-        _DOWNLOAD_CACHE[url] = cached_file
-
+        new_cache_download.write_bytes(r.content)
+    except Exception:
+        _remove_from_cache(url)
+        raise
     return Image.open(BytesIO(r.content))
 
 
