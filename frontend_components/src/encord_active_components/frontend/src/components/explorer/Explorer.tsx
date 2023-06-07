@@ -77,18 +77,19 @@ export const Explorer = ({
     { enabled: !!selectedMetric }
   );
 
-  const { data: similarItems } = useQuery(
+  const { data: similarItems, isLoading: isLoadingSimilarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
     () => api.fetchSimilarItems(similarityItem!, selectedMetric!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
-  const { data: sortedItems } = useQuery(
+  const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric],
     () => api.fetchProjectItemIds(selectedMetric!),
     { enabled: !!selectedMetric }
   );
-  const { data: metrics } = useQuery(["metrics"], () =>
-    api.fetchProjectMetrics(scope)
+  const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
+    ["metrics"],
+    () => api.fetchProjectMetrics(scope)
   );
 
   const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
@@ -119,6 +120,26 @@ export const Explorer = ({
       sortedItems?.filter(({ id }) => itemSet.has(id)) || []
     );
   }, [itemSet, sortedItems]);
+
+  const loadingDescription = useMemo(() => {
+    const descriptions = [
+      {
+        isLoading: isLoadingMetrics,
+        description: "Loading available metrics",
+      },
+      {
+        isLoading: isLoadingSortedItems,
+        description: "Loading available data",
+      },
+      {
+        isLoading: isLoadingSimilarItems,
+        description: "Finding similar images",
+      },
+    ];
+    return descriptions.reduce((res, item) => {
+      return !res && item.isLoading ? item.description : res;
+    }, "");
+  }, [isLoadingMetrics, isLoadingSortedItems, isLoadingSimilarItems]);
 
   return (
     <ApiContext.Provider value={api}>
@@ -273,6 +294,11 @@ export const Explorer = ({
                 onChangePageSize={setPageSize}
               />
             </>
+          ) : !!loadingDescription ? (
+            <div className="h-32 flex items-center gap-2">
+              <Spin />
+              <span className="text-xl">{loadingDescription}</span>
+            </div>
           ) : (
             <div className="h-32 flex items-center gap-2">
               <TbMoodSad2 className="text-3xl" />
@@ -544,11 +570,16 @@ const ImageWithPolygons = ({
   className,
   ...rest
 }: { item: Item } & JSX.IntrinsicElements["figure"]) => {
-  const {ref: image, width: imageWidth, height: imageHeight } = useResizeObserver<HTMLImageElement>();
+  const {
+    ref: image,
+    width: imageWidth,
+    height: imageHeight,
+  } = useResizeObserver<HTMLImageElement>();
   const video = useRef<HTMLVideoElement>(null);
-  const {width: videoWidth, height: videoHeight } = useResizeObserver<HTMLVideoElement>({
-    ref: video
-  });
+  const { width: videoWidth, height: videoHeight } =
+    useResizeObserver<HTMLVideoElement>({
+      ref: video,
+    });
   const width = item.videoTimestamp != null ? videoWidth : imageWidth;
   const height = item.videoTimestamp != null ? videoHeight : imageHeight;
   const [polygons, setPolygons] = useState<
@@ -576,30 +607,28 @@ const ImageWithPolygons = ({
   }, [width, height, item.id]);
   return (
     <figure {...rest} className={classy("relative", className)}>
-      {
-        item.videoTimestamp != null ? (
-          <video
-              ref={video}
-              className="object-contain rounded transition-opacity"
-              src={item.url}
-              muted
-              controls={false}
-              onLoadedMetadata={() => {
-                const videoRef = video.current;
-                if (videoRef != null) {
-                  videoRef.currentTime = item.videoTimestamp || 0;
-                }
-              }}
-          />
-        ) : (
-          <img
-            ref={image}
-            className="object-contain rounded transition-opacity"
-            alt=""
-            src={item.url}
-          />
-        )
-      }
+      {item.videoTimestamp != null ? (
+        <video
+          ref={video}
+          className="object-contain rounded transition-opacity"
+          src={item.url}
+          muted
+          controls={false}
+          onLoadedMetadata={() => {
+            const videoRef = video.current;
+            if (videoRef != null) {
+              videoRef.currentTime = item.videoTimestamp || 0;
+            }
+          }}
+        />
+      ) : (
+        <img
+          ref={image}
+          className="object-contain rounded transition-opacity"
+          alt=""
+          src={item.url}
+        />
+      )}
       {polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(({ points, color, shape }, index) =>
