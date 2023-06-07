@@ -87,6 +87,10 @@ class LabelRowStructure:
                 raise ValueError(f"label_row missing in prisma db(label_hash={self._label_hash})")
             return res
 
+    @property
+    def label_row_from_db(self) -> "prisma.models.LabelRow":
+        return self.get_label_row_from_db()
+
     def get_label_row_json(self, cache_db: Optional[prisma.Prisma] = None) -> Dict[str, Any]:
         entry = self.get_label_row_from_db(cache_db=cache_db)
         label_row_json = None
@@ -107,7 +111,7 @@ class LabelRowStructure:
     def set_label_row_json(self, label_row_json: Dict[str, Any], cache_db: Optional[prisma.Prisma] = None) -> None:
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             conn.labelrow.update(
-                where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, indent=2)}
+                where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json)}
             )
         # Mark out of date.
         self._label_row = None

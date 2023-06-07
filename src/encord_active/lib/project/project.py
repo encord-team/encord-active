@@ -208,7 +208,7 @@ class Project:
         return self.label_row_metas
 
     def save_label_row(self, label_row: LabelRow):
-        new_lr_structure = json.dumps(label_row, indent=2)
+        new_lr_structure = json.dumps(label_row)
         with PrismaConnection(self.file_structure) as conn:
             conn.labelrow.update(
                 data={"label_row_json": new_lr_structure},
@@ -305,7 +305,7 @@ def download_label_row(
     label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
 ) -> LabelRow:
     label_row = try_execute(partial(project.get_label_row, get_signed_url=True), 5, {"uid": label_hash})
-    label_row_json = json.dumps(label_row, indent=2)
+    label_row_json = json.dumps(label_row)
     with PrismaConnection(project_file_structure) as conn:
         conn.labelrow.upsert(
             where={"data_hash": label_row.data_hash},

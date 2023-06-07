@@ -258,7 +258,7 @@ def copy_filtered_data(
                             for data_unit in (label_row_db.data_units or [])
                         ]
                     },
-                    "label_row_json": json.dumps(label_row_mapping[label_row_db.label_hash or ""], indent=2),
+                    "label_row_json": json.dumps(label_row_mapping[label_row_db.label_hash or ""]),
                     "data_hash": label_row_db.data_hash,
                     "data_title": label_row_db.data_title,
                     "data_type": label_row_db.data_type,
