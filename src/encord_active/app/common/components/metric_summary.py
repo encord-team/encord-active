@@ -1,14 +1,11 @@
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
-import prisma
 import streamlit as st
 from pandera.typing import DataFrame
 from streamlit.delta_generator import DeltaGenerator
 
-from encord_active.app.common.components import build_data_tags, divider
 from encord_active.app.common.components.data_quality_summary import summary_item
-from encord_active.app.common.components.tags.individual_tagging import multiselect_tag
 from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.lib.charts.data_quality_summary import (
@@ -18,10 +15,8 @@ from encord_active.lib.charts.data_quality_summary import (
     create_labels_distribution_chart,
     create_outlier_distribution_chart,
 )
-from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.dataset.outliers import (
     AllMetricsOutlierSchema,
-    IqrOutliers,
     MetricsSeverity,
     MetricWithDistanceSchema,
     get_all_metrics_outliers,
@@ -32,10 +27,7 @@ from encord_active.lib.dataset.summary_utils import (
     get_median_value_of_2d_array,
     get_metric_summary,
 )
-from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.metrics.utils import MetricData, MetricScope
-
-_COLUMNS = MetricWithDistanceSchema
 
 
 def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
@@ -287,78 +279,3 @@ def render_label_quality_dashboard(
     ]
     render_issues_pane(metrics_with_severe_outliers, issues_col, MetricScope.LABEL_QUALITY)
     render_2d_metric_plots(get_state().metrics_label_summary)
-
-
-def render_metric_summary(
-    metric: MetricData, df: DataFrame[MetricWithDistanceSchema], iqr_outliers: IqrOutliers, metric_scope: MetricScope
-):
-    n_cols = get_state().page_grid_settings.columns
-    n_rows = get_state().page_grid_settings.rows
-    page_size = n_cols * n_rows
-
-    st.markdown(metric.meta.long_description)
-
-    if iqr_outliers.n_severe_outliers + iqr_outliers.n_moderate_outliers == 0:
-        st.success("No outliers found!")
-        return None
-
-    st.error(f"Number of severe outliers: {iqr_outliers.n_severe_outliers}/{len(df)}")
-    st.warning(f"Number of moderate outliers: {iqr_outliers.n_moderate_outliers}/{len(df)}")
-
-    max_value = float(df[_COLUMNS.dist_to_iqr].max())
-    min_value = float(df[_COLUMNS.dist_to_iqr].min())
-    value = st.slider(
-        "distance to IQR",
-        min_value=min_value,
-        max_value=max_value,
-        step=max(0.1, float((max_value - min_value) / (len(df) / page_size))),
-        value=max_value,
-        key=f"dist_to_iqr{metric.name}",
-    )
-
-    selected_df: DataFrame[MetricWithDistanceSchema] = df[df[_COLUMNS.dist_to_iqr] <= value][:page_size]
-
-    cols: List = []
-    with PrismaConnection(get_state().project_paths) as cache_conn:
-        for i, (_, row) in enumerate(selected_df.iterrows()):
-            if not cols:
-                if i:
-                    divider()
-                cols = list(st.columns(n_cols))
-
-            with cols.pop(0):
-                render_summary_item(row, metric.name, iqr_outliers, metric_scope, cache_conn)
-
-
-def render_summary_item(
-    row,
-    metric_name: str,
-    iqr_outliers: IqrOutliers,
-    metric_scope: MetricScope,
-    cache_db: Optional[prisma.Prisma] = None,
-):
-    image = show_image_and_draw_polygons(
-        row, get_state().project_paths, get_state().object_drawing_configurations, cache_db=cache_db
-    )
-    st.image(image)
-
-    multiselect_tag(row, f"{metric_name}_summary")
-
-    # === Write scores and link to editor === #
-
-    tags_row = row.copy()
-    if row["score"] > iqr_outliers.severe_ub or row["score"] < iqr_outliers.severe_lb:
-        tags_row["outlier"] = "Severe"
-    elif row["score"] > iqr_outliers.moderate_ub or row["score"] < iqr_outliers.moderate_lb:
-        tags_row["outlier"] = "Moderate"
-    else:
-        tags_row["outlier"] = "Low"
-
-    if "object_class" in tags_row and not pd.isna(tags_row["object_class"]):
-        tags_row["label_class_name"] = tags_row["object_class"]
-        tags_row.drop("object_class")
-    tags_row[metric_name] = tags_row["score"]
-    build_data_tags(tags_row, metric_name)
-
-    if not pd.isnull(row["description"]):
-        st.write(f"Description: {row['description']}. ")
