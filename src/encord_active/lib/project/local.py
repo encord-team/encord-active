@@ -8,6 +8,7 @@ import yaml
 from encord.ontology import OntologyStructure
 from tqdm.auto import tqdm
 
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalUserClient,
@@ -143,8 +144,11 @@ def init_local_project(
     transformer = LabelTransformerWrapper(ontology.structure, project.label_rows, label_transformer)
     transformer.add_labels(label_paths or [], data_paths=files)
 
-    for label_row in project.label_rows:
-        project.save_label_row(label_row["label_hash"], label_row)
+    with PrismaConnection(project_file_structure) as conn:
+        batcher = conn.batch_()
+        for label_row in tqdm(project.label_rows, desc="Saving label rows"):
+            project.save_label_row(label_row["label_hash"], label_row, batcher)
+        batcher.commit()
 
     project_file_structure.image_data_unit.write_text(json.dumps(image_to_du))
     project_file_structure.ontology.write_text(json.dumps(project.ontology))
