@@ -56,13 +56,13 @@ def up(pfs: ProjectFileStructure):
                             data_type=data_type,
                             created_at=label_row_meta[label_hash].get("created_at", datetime.now()),
                             last_edited_at=label_row_meta[label_hash].get("last_edited_at", datetime.now()),
-                            label_row_json=json.dumps(label_row_dict, indent=2),
+                            label_row_json=json.dumps(label_row_dict),
                         )
                     )
                 elif old_style_data:
                     batcher.labelrow.update(
                         data={
-                            "label_row_json": json.dumps(label_row_dict, indent=2),
+                            "label_row_json": json.dumps(label_row_dict),
                         },
                         where={
                             "label_hash": label_hash,

@@ -188,7 +188,7 @@ def load_or_fill_image(
 
     _, du_hash, *_ = key.split("_")
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
-    lr = label_row_structure.label_row_json
+    lr = label_row_structure.get_label_row_json(cache_db=cache_db)
 
     h, w = get_du_size(lr["data_units"].get(du_hash, {}), None) or (600, 900)
 
@@ -279,7 +279,7 @@ def get_geometries(
 
     label_row_structure = key_to_label_row_structure(key, project_file_structure)
     label_row = label_row_structure.get_label_row_json(cache_db=cache_db)
-    du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash), None)
+    du_struct = next(label_row_structure.iter_data_unit(data_unit_hash=du_hash, cache_db=cache_db), None)
     if not du_struct:
         return []
 

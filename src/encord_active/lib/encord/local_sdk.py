@@ -386,7 +386,7 @@ class LocalProject:
 
         raw_label = dict(label)
         raw_label["data_type"] = raw_label["data_type"].split("/")[0]
-        label_row_json = json.dumps(raw_label, indent=2)
+        label_row_json = json.dumps(raw_label)
         default_timestamp = "0"
 
         connection = batch if batch is not None else PrismaConnection(self._project_file_structure)

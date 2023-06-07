@@ -74,6 +74,7 @@ class EncordActions:
             raise FileNotFoundError(f"No SSH file in location: {ssh_key_path}")
 
         self.user_client = get_client(ssh_key_path.expanduser())
+        self.ssh_key_path = ssh_key_path
 
     @property
     def original_project(self):
@@ -97,6 +98,7 @@ class EncordActions:
         new_lr_data_hash_to_original_mapping: DataHashMapping,
     ) -> Optional[DataHashMapping]:
         label_row_structure = self.project_file_structure.label_row_structure(label_row_hash)
+        label_row_entry = label_row_structure.get_label_row_from_db()
         label_row = label_row_structure.label_row_json
 
         if label_row["data_type"] == DataType.IMAGE.value:
@@ -109,7 +111,9 @@ class EncordActions:
                     new_lr_data_hash = dataset.upload_image(
                         file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
                     )["data_hash"]
-                new_lr_data_hash_to_original_mapping.set(new_lr_data_hash, label_row["data_hash"])
+                new_lr_data_hash_to_original_mapping.set(
+                    new_lr_data_hash, label_row.get("data_hash", label_row_entry.data_hash)
+                )
                 # The data unit hash and label row data hash of an image (type) are the same
                 new_du_hash_to_original_mapping = DataHashMapping()
                 new_du_hash_to_original_mapping.set(new_lr_data_hash, data_unit_hash)
@@ -321,14 +325,18 @@ class EncordActions:
 
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
+
+        old_project_hash = self.project_meta["project_hash"]
         self.project_meta["has_remote"] = True
+        self.project_meta["ssh_key_path"] = self.ssh_key_path.absolute().as_posix()
         self.project_meta["project_title"] = project_title
+        self.project_meta["project_hash"] = new_project.project_hash
         update_project_meta(self.project_file_structure.project_dir, self.project_meta)
 
         replace_uids(
             self.project_file_structure,
             dataset_creation_result.lr_du_mapping,
-            self.project_meta["project_hash"],
+            old_project_hash,
             new_project.project_hash,
             dataset_creation_result.hash,
         )
@@ -503,7 +511,6 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
         DataUnitUpdateManyMutationInput,
         DataUnitWhereInput,
         LabelRowUpdateInput,
-        _LabelRowWhereUnique_data_hash_Input,
     )
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
@@ -516,8 +523,7 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
                 )
             for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
                 batcher.labelrow.update(
-                    where=_LabelRowWhereUnique_data_hash_Input(data_hash=lr_data_hash),
+                    where={"data_hash": lr_data_hash},
                     data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
                 )
-            batcher.commit()
     Project(project_file_structure.project_dir).refresh()

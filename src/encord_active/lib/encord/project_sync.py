@@ -10,7 +10,7 @@ import pandas as pd
 import yaml
 
 from encord_active.lib.common.data_utils import iterate_in_batches
-from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.types import LabelEmbedding
@@ -184,18 +184,20 @@ def copy_filtered_data(
         )  # Recreate object to reload mappings
 
     local_data_mapping = {}
+    label_row_mapping = {}
     for label_row_hash in filtered_label_rows:
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
-        target_label_row_structure = target_project_structure.label_row_structure(label_row_hash)
         for data_unit in current_label_row_structure.iter_data_unit():
             if data_unit.du_hash in filtered_data_hashes:
                 if data_unit.signed_url.startswith("file:"):
                     old_data = Path(unquote(urlparse(data_unit.signed_url).path))
                     if not target_project_structure.local_data_store.exists():
                         target_project_structure.local_data_store.mkdir(parents=True, exist_ok=True)
-                        new_file = target_project_structure.local_data_store / old_data.name
-                        local_data_mapping[data_unit.signed_url] = new_file.as_uri()
-                        new_file.symlink_to(old_data, target_is_directory=False)
+
+                    # Create local clone if needed.
+                    new_file = target_project_structure.local_data_store / old_data.name
+                    local_data_mapping[data_unit.signed_url] = new_file.as_uri()
+                    new_file.symlink_to(old_data, target_is_directory=False)
 
         label_row = current_label_row_structure.label_row_json
         label_row["data_units"] = {k: v for k, v in label_row["data_units"].items() if k in filtered_data_hashes}
@@ -226,7 +228,45 @@ def copy_filtered_data(
         label_row["classification_answers"] = {
             k: v for k, v in label_row["classification_answers"].items() if k in filtered_label_hashes
         }
-        target_label_row_structure.set_label_row_json(label_row)
+        label_row_mapping[label_row_hash] = label_row
+
+    with PrismaConnection(curr_project_structure) as conn:
+        all_label_rows = conn.labelrow.find_many(
+            where={
+                "label_hash": {"in": list(filtered_label_rows)},
+            },
+            include={"data_units": {"where": {"data_hash": {"in": list(filtered_data_hashes)}}}},
+        )
+    with PrismaConnection(target_project_structure) as conn:
+        for label_row_db in all_label_rows:
+            conn.labelrow.create(
+                data={
+                    "label_hash": label_row_db.label_hash,
+                    "data_units": {
+                        "create": [
+                            {
+                                "data_hash": data_unit.data_hash,
+                                "data_title": data_unit.data_title,
+                                "frame": data_unit.frame,
+                                "data_uri": local_data_mapping.get(data_unit.data_uri, data_unit.data_uri)
+                                if data_unit.data_uri is not None
+                                else None,
+                                "width": data_unit.width,
+                                "height": data_unit.height,
+                                "fps": data_unit.fps,
+                            }
+                            for data_unit in (label_row_db.data_units or [])
+                        ]
+                    },
+                    "label_row_json": json.dumps(label_row_mapping[label_row_db.label_hash or ""]),
+                    "data_hash": label_row_db.data_hash,
+                    "data_title": label_row_db.data_title,
+                    "data_type": label_row_db.data_type,
+                    "created_at": label_row_db.created_at,
+                    "last_edited_at": label_row_db.last_edited_at,
+                },
+                include={"data_units": True},
+            )
 
 
 def create_filtered_db(target_project_dir: Path, filtered_df: pd.DataFrame):
