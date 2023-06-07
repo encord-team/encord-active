@@ -79,8 +79,11 @@ class PredictionIterator(Iterator):
 
     def get_image(self, pred: Series) -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
+        frame = pred.get("frame", None)
+        if frame is not None:
+            frame = int(frame)
         data_unit, image = next(
-            label_row_structure.iter_data_unit_with_image(data_unit_hash=pred["du_hash"], frame=pred.get("frame", None))
+            label_row_structure.iter_data_unit_with_image(data_unit_hash=pred["du_hash"], frame=frame)
         )
         return image
 
