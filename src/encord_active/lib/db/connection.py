@@ -24,9 +24,9 @@ class DBConnection:
 
 class PrismaConnection:
     def __init__(
-            self,
-            project_file_structure: BaseProjectFileStructure,
-            cache_db: Optional["prisma.Prisma"] = None,
+        self,
+        project_file_structure: BaseProjectFileStructure,
+        cache_db: Optional["prisma.Prisma"] = None,
     ) -> None:
         ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride

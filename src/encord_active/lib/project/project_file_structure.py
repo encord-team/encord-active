@@ -59,11 +59,18 @@ def get_encord_project_cached(ssh_key_path: str, project_hash: str) -> encord.Pr
 
 
 class LabelRowStructure:
-    def __init__(self, mappings: dict[str, str], label_hash: str, project: "ProjectFileStructure"):
+    def __init__(
+        self,
+        mappings: dict[str, str],
+        label_hash: str,
+        project: "ProjectFileStructure",
+        label_row: Optional["prisma.models.LabelRow"],
+    ):
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
         self._label_hash = label_hash
         self._project = project
+        self._label_row = label_row
 
     def __hash__(self) -> int:
         return hash(self._label_hash)
@@ -72,6 +79,8 @@ class LabelRowStructure:
         return self._project.project_dir / "data" / self._label_hash / "label_row.json"
 
     def get_label_row_from_db(self, cache_db: Optional[prisma.Prisma] = None) -> "prisma.models.LabelRow":
+        if self._label_row is not None:
+            return self._label_row
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             res = conn.labelrow.find_unique(where={"label_hash": self._label_hash})
             if res is None:
@@ -100,6 +109,8 @@ class LabelRowStructure:
             conn.labelrow.update(
                 where={"label_hash": self._label_hash}, data={"label_row_json": json.dumps(label_row_json, indent=2)}
             )
+        # Mark out of date.
+        self._label_row = None
 
     def clone_label_row_json(self, source: "LabelRowStructure", label_row_json: str, local_path: Optional[str]) -> None:
         with PrismaConnection(source._project) as conn:
@@ -336,13 +347,13 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
     def label_row_structure(self, label_hash: str) -> LabelRowStructure:
         # FIXME - where is this needed?: label_hash = self._mappings.get(label_hash, label_hash)
-        return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
+        return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self, label_row=None)
 
     def data_units(
         self,
         where: Optional["prisma.types.DataUnitWhereInput"] = None,
         include_label_row: bool = False,
-        cache_db: Optional[prisma.Prisma] = None
+        cache_db: Optional[prisma.Prisma] = None,
     ) -> List["prisma.models.DataUnit"]:
         from prisma.types import DataUnitInclude
 
@@ -354,22 +365,22 @@ class ProjectFileStructure(BaseProjectFileStructure):
         with PrismaConnection(self, cache_db=cache_db) as conn:
             return conn.labelrow.find_many()
 
-    def iter_labels(
-        self, cache_db: Optional[prisma.Prisma] = None
-    ) -> Iterator[LabelRowStructure]:
+    def iter_labels(self, cache_db: Optional[prisma.Prisma] = None) -> Iterator[LabelRowStructure]:
         label_rows = self.label_rows(cache_db=cache_db)
         if len(label_rows) == 0:
             for label_row_legacy in self.data_legacy_folder.iterdir():
                 label_hash = label_row_legacy.name
                 if label_hash.startswith("."):
                     continue
-                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self)
+                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self, label_row=None)
         else:
             for label_row in label_rows:
                 label_hash_opt = label_row.label_hash
                 if label_hash_opt is None:
                     continue
-                yield LabelRowStructure(mappings=self._mappings, label_hash=label_hash_opt, project=self)
+                yield LabelRowStructure(
+                    mappings=self._mappings, label_hash=label_hash_opt, project=self, label_row=label_row
+                )
 
     @property
     def mappings(self) -> Path:
