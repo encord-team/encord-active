@@ -116,7 +116,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
             )
             return
 
-        if len(label_embeddings) == 0:
+        if index is None or len(label_embeddings) == 0:
             logger.info("<yellow>[Skipping]</yellow> The object embedding file is empty.")
             return
 

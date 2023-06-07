@@ -56,7 +56,7 @@ class EmbeddingIndex:
         embedding_type: EmbeddingType,
         iterator: Optional[Iterator] = None,
         metric: str = "cosine",
-    ) -> tuple[EmbeddingIndex, list[LabelEmbedding]]:
+    ) -> tuple[Optional[EmbeddingIndex], list[LabelEmbedding]]:
         """
         Get a stored embedding index from disc. If it doesn't exist, it'll be computed on the fly.
 
@@ -80,6 +80,9 @@ class EmbeddingIndex:
             embeddings = get_embeddings(iterator, embedding_type)
         else:
             embeddings = pickle.loads(embedding_file.read_bytes())
+
+        if embeddings == []:
+            return None, []
 
         idx: EmbeddingIndex
         if index_file.is_file():
