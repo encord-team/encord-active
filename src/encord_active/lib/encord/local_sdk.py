@@ -34,6 +34,7 @@ from encord.orm.dataset import DataType
 from encord.orm.label_row import LabelRow, LabelRowMetadata
 from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
+from prisma import Batch
 
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
@@ -376,7 +377,7 @@ class LocalProject:
             )
         return self._label_rows[label_hash]
 
-    def save_label_row(self, uid: str, label: LabelRow):
+    def save_label_row(self, uid: str, label: LabelRow, batch: Optional[Batch] = None):
         label_hash: str = uid
         if uid not in self._label_rows:
             raise ValueError("No label row with that uid. Call `LocalProject.create_label_row` first.")
@@ -387,7 +388,10 @@ class LocalProject:
         raw_label["data_type"] = raw_label["data_type"].split("/")[0]
         label_row_json = json.dumps(raw_label)
         default_timestamp = "0"
-        with PrismaConnection(self._project_file_structure) as conn:
+
+        connection = batch if batch is not None else PrismaConnection(self._project_file_structure)
+
+        with connection as conn:  # type: ignore
             conn.labelrow.upsert(
                 where={"data_hash": label.data_hash},
                 data={
