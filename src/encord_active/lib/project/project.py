@@ -340,22 +340,26 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         if label_row.data_type == DataType.VIDEO.value:
             return
 
-        image = download_image(du["data_link"])
+        data_hash = du["data_hash"]
+        frame = int(du["data_sequence"])
+        data_unit = next(lr_structure.iter_data_unit(data_unit_hash=data_hash, frame=frame))
+
+        image = download_image(data_unit.signed_url)
 
         # Add non-video type of data to the db
         with PrismaConnection(project_file_structure) as conn:
             conn.dataunit.upsert(
                 where={
                     "data_hash_frame": {  # state the values of the compound key
-                        "data_hash": du["data_hash"],
-                        "frame": int(du["data_sequence"]),
+                        "data_hash": data_hash,
+                        "frame": frame,
                     }
                 },
                 data={
                     "create": {
-                        "data_hash": du["data_hash"],
+                        "data_hash": data_hash,
                         "data_title": du["data_title"],
-                        "frame": int(du["data_sequence"]),
+                        "frame": frame,
                         "lr_data_hash": label_row.data_hash,
                         "fps": 0,
                         "width": image.width,
