@@ -27,8 +27,13 @@ class OutputAction(str, Enum):
     INIT = "INIT"
 
 
-def projects_page(projects: List[Project] = []) -> Optional[Tuple[OutputAction, str]]:
-    return render(component=Components.PROJECT_SELECTION, props={"projects": projects})
+class Env(str, Enum):
+    LOCAL = "local"
+    PROD = "prod"
+
+
+def projects_page(projects: List[Project] = [], env: Env = Env.LOCAL) -> Optional[Tuple[OutputAction, str]]:
+    return render(component=Components.PROJECT_SELECTION, props={"projects": projects, "env": env})
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.utils import load_metric_dataframe
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import ProjectNotFound, fetch_project_meta
+from encord_active.server.settings import Env, get_settings
 
 
 @dataclass
@@ -234,7 +235,8 @@ def _get_action_utils():
         """
         )
     except Exception as e:
-        st.error(str(e))
+        if get_settings().ENV == Env.LOCAL:
+            st.error(str(e))
 
 
 def create_and_sync_remote_project(
@@ -477,13 +479,17 @@ def render_export_button(
     set_updates: Callable[[List[UpdateItem]], None],
     is_filtered: bool,
 ):
+    disabled_help = None
+    if not action_utils:
+        disabled_help = "Contact Encord to enable integration"
+    elif not is_filtered:
+        disabled_help = "Export is allowed only for entire datasets, create a subset first or remove all filters"
+
     render_col.button(
         "🏗 Export to Encord",
         on_click=lambda: current_form.set(CurrentForm.EXPORT),  # type: ignore
-        disabled=not action_utils or is_filtered,
-        help="Export to an Encord dataset and project"
-        if not is_filtered
-        else "Export is allowed only for entire datasets, create a subset first or remove all filters",
+        disabled=disabled_help is not None,
+        help=disabled_help or "Export to an Encord dataset and project",
     )
     if current_form.value == CurrentForm.EXPORT:
         df = get_state().merged_metrics
