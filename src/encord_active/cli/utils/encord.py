@@ -3,10 +3,12 @@ from typing import Optional
 
 import encord.exceptions
 import rich
+import typer
 import yaml
 from rich.markup import escape
 from rich.panel import Panel
 
+from encord_active.lib.common.data_utils import collect_async
 from encord_active.lib.encord.utils import get_client, get_encord_projects
 from encord_active.lib.metrics.execute import run_metrics
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
@@ -77,9 +79,19 @@ Check that you have the correct ssh key set up and available projects on [blue]h
     rich.print("Stored the following data:")
     rich.print(f"[magenta]{escape(yaml_str)}")
     rich.print(f'In file: [blue]"{escape(project_file_structure.project_meta.as_posix())}"')
-    rich.print()
-    rich.print("Now downloading data and running metrics")
 
+    has_uninitialized_rows = not all(row["label_hash"] is not None for row in project.label_rows)
+    if has_uninitialized_rows and typer.confirm(
+        """Would you like to include uninitialized label rows?
+NOTE: this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.
+        """
+    ):
+        untoched_data = list(filter(lambda x: x.label_hash is None, project.list_label_rows_v2()))
+        collect_async(lambda x: x.initialise_labels(), untoched_data, desc="Preparing uninitialized label rows")
+        project.refetch_data()
+        rich.print()
+
+    rich.print("Now downloading data and running metrics")
     run_metrics(data_dir=project_path)
 
     return project_path
