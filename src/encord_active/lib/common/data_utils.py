@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 from io import BytesIO
 from pathlib import Path
-from typing import IO, Callable, Dict, Generator, Optional, Sequence, TypeVar
+from typing import Callable, Dict, Generator, Optional, Sequence, TypeVar
 from urllib.parse import unquote, urlparse
 
 import numpy as np
