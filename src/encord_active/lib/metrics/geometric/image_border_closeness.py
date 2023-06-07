@@ -48,7 +48,7 @@ class ImageBorderCloseness(Metric):
 
                 # Equivalent: score = max(1 - min_x, 1 - min_y, max_x, max_y)
                 score = max(np.max(np_max), np.max(np_min))
-                writer.write(score, obj)
+                writer.write(float(score), obj)
                 found_any = True
 
         if not found_any:
