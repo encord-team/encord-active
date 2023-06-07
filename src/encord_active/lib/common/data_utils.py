@@ -16,21 +16,25 @@ from encord.exceptions import EncordException, UnknownException
 from PIL import Image
 from tqdm import tqdm
 
-_EXTRACT_FRAMES_CACHE: Dict[str, tempfile.TemporaryDirectory] = {}
+_EXTRACT_FRAMES_CACHE: Dict[str, int] = {}
+_EXTRACT_FRAMES_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
 
 
 def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
     if data_hash not in _EXTRACT_FRAMES_CACHE:
-        tempdir = tempfile.TemporaryDirectory()
-        _extract_frames(video_file_name, Path(tempdir.name), data_hash)
-        _EXTRACT_FRAMES_CACHE[data_hash] = tempdir
+        cache_id = len(_EXTRACT_FRAMES_CACHE)
+        tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
+        tempdir.mkdir()
+        _extract_frames(video_file_name, tempdir, data_hash)
+        _EXTRACT_FRAMES_CACHE[data_hash] = cache_id
     # Symlink everything in the temporary directory, do not do duplicate work
-    tempdir = _EXTRACT_FRAMES_CACHE[data_hash]
+    read_cache_id = _EXTRACT_FRAMES_CACHE[data_hash]
+    read_tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{read_cache_id}"
     if symlink_folder:
-        img_dir.symlink_to(Path(tempdir.name), target_is_directory=True)
+        img_dir.symlink_to(read_tempdir, target_is_directory=True)
     else:
         img_dir.mkdir(parents=True, exist_ok=True)
-        for frame in Path(tempdir.name).iterdir():
+        for frame in read_tempdir.iterdir():
             (img_dir / frame.name).symlink_to(frame, target_is_directory=False)
 
 
@@ -115,7 +119,7 @@ def download_file(
 
     new_cache_download = _add_to_cache(url)
     try:
-        with open(new_cache_download, "x") as file:
+        with open(new_cache_download, "xb") as file:
             r = requests.get(url, stream=True)
 
             if r.status_code != 200:
