@@ -64,9 +64,6 @@ export const Explorer = ({
   const [selectedMetric, setSelectedMetric] = useState<string>();
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
-  const [loadingDescription, setLoadingDescription] = useState<string | null>(
-    null
-  );
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -124,7 +121,7 @@ export const Explorer = ({
     );
   }, [itemSet, sortedItems]);
 
-  useEffect(() => {
+  const loadingDescription = useMemo(() => {
     const descriptions = [
       {
         isLoading: isLoadingMetrics,
@@ -132,17 +129,16 @@ export const Explorer = ({
       },
       {
         isLoading: isLoadingSortedItems,
-        description: "Loading availabe data",
+        description: "Loading available data",
       },
       {
         isLoading: isLoadingSimilarItems,
         description: "Finding similar images",
       },
     ];
-    const description = descriptions.reduce((res, item) => {
+    return descriptions.reduce((res, item) => {
       return !res && item.isLoading ? item.description : res;
     }, "");
-    setLoadingDescription(description);
   }, [isLoadingMetrics, isLoadingSortedItems, isLoadingSimilarItems]);
 
   return (
