@@ -109,7 +109,7 @@ def generate_image_embeddings(
         label_embeddings.append(entry)
 
     logger.info(
-        f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
+        f"Generating {len(label_embeddings)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
     return label_embeddings
@@ -160,7 +160,7 @@ def generate_object_embeddings(
             label_embeddings.append(entry)
 
     logger.info(
-        f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
+        f"Generating {len(label_embeddings)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
     return label_embeddings
@@ -262,7 +262,7 @@ def generate_classification_embeddings(
             clf_label_embeddings.append(entry)
 
     logger.info(
-        f"Generating {len(iterator)} embeddings took {str(time.perf_counter() - start)} seconds",
+        f"Generating {len(clf_label_embeddings)} embeddings took {str(time.perf_counter() - start)} seconds",
     )
 
     return clf_label_embeddings
