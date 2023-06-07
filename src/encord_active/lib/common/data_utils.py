@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -25,7 +26,11 @@ def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink
         cache_id = len(_EXTRACT_FRAMES_CACHE)
         tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
         tempdir.mkdir()
-        _extract_frames(video_file_name, tempdir, data_hash)
+        try:
+            _extract_frames(video_file_name, tempdir, data_hash)
+        except Exception:
+            shutil.rmtree(tempdir, ignore_errors=True)
+            raise
         _EXTRACT_FRAMES_CACHE[data_hash] = cache_id
     # Symlink everything in the temporary directory, do not do duplicate work
     read_cache_id = _EXTRACT_FRAMES_CACHE[data_hash]
@@ -89,6 +94,11 @@ def _add_to_cache(key: str) -> Path:
 
 
 def _remove_from_cache(key: str) -> None:
+    cache_id = _DOWNLOAD_CACHE[key]
+    cache_path = Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{cache_id}"
+    if cache_path.exists():
+        # Cleanup, so it can be used again
+        os.remove(cache_path)
     del _DOWNLOAD_CACHE[key]
 
 
