@@ -83,7 +83,7 @@ This metric gives each image a score that shows each image's uniqueness.
         pfs = ProjectFileStructure(iterator.cache_dir)
         embedding_index, embedding_info = EmbeddingIndex.from_project(pfs, self.metadata.embedding_type)
 
-        if len(embedding_info) == 0:
+        if embedding_index is None or len(embedding_info) == 0:
             logger.info("<yellow>[Skipping]</yellow> The embedding file is empty.")
             return
 
