@@ -1,3 +1,4 @@
+import numpy as np
 from loguru import logger
 
 from encord_active.lib.common.iterator import Iterator
@@ -41,16 +42,13 @@ class ImageBorderCloseness(Metric):
                 if not coordinates:  # avoid corrupted objects without vertices ([]) and unknown objects' shape (None)
                     continue
 
-                x_coordinates = [x for x, _ in coordinates]
-                min_x = min(x_coordinates)
-                max_x = max(x_coordinates)
+                np_coordinates: np.ndarray = np.array(coordinates, dtype=np.single)
+                np_max = np.max(np_coordinates, axis=0)
+                np_min = 1.0 - np.min(np_coordinates, axis=0)
 
-                y_coordinates = [y for _, y in coordinates]
-                min_y = min(y_coordinates)
-                max_y = max(y_coordinates)
-
-                score = max(1 - min_x, 1 - min_y, max_x, max_y)
-                writer.write(score, obj)
+                # Equivalent: score = max(1 - min_x, 1 - min_y, max_x, max_y)
+                score = max(np.max(np_max), np.max(np_min))
+                writer.write(float(score), obj)
                 found_any = True
 
         if not found_any:

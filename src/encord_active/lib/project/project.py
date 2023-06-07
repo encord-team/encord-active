@@ -6,7 +6,10 @@ import logging
 import tempfile
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
+
+if TYPE_CHECKING:
+    import prisma
 
 import yaml
 from encord import Project as EncordProject
@@ -265,15 +268,17 @@ class Project:
 
         # Download new project data
         if len(label_rows_to_download) > 0:
-            downloaded_label_rows = collect_async(
-                partial(
-                    download_label_row_and_data,
-                    project=project,
-                    project_file_structure=project_file_structure,
-                ),
-                label_rows_to_download,
-                desc="Collecting new data",
-            )
+            with PrismaConnection(project_file_structure) as conn:
+                downloaded_label_rows = collect_async(
+                    partial(
+                        download_label_row_and_data,
+                        project=project,
+                        project_file_structure=project_file_structure,
+                        cache_db=conn,
+                    ),
+                    label_rows_to_download,
+                    desc="Collecting new data",
+                )
         else:
             downloaded_label_rows = []
             logger.info("No new data to be downloaded.")
@@ -302,11 +307,14 @@ class Project:
 
 
 def download_label_row(
-    label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
+    label_hash: str,
+    project: EncordProject,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
 ) -> LabelRow:
     label_row = try_execute(partial(project.get_label_row, get_signed_url=True), 5, {"uid": label_hash})
     label_row_json = json.dumps(label_row)
-    with PrismaConnection(project_file_structure) as conn:
+    with PrismaConnection(project_file_structure, cache_db=cache_db) as conn:
         conn.labelrow.upsert(
             where={"data_hash": label_row.data_hash},
             data={
@@ -331,7 +339,11 @@ def download_label_row(
     return label_row
 
 
-def download_data(label_row: LabelRow, project_file_structure: ProjectFileStructure):
+def download_data(
+    label_row: LabelRow,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
+):
     lr_structure = project_file_structure.label_row_structure(label_row.label_hash)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
@@ -340,39 +352,57 @@ def download_data(label_row: LabelRow, project_file_structure: ProjectFileStruct
         if label_row.data_type == DataType.VIDEO.value:
             return
 
-        image = download_image(du["data_link"])
+        data_hash = du["data_hash"]
+        frame = int(du["data_sequence"])
 
         # Add non-video type of data to the db
-        with PrismaConnection(project_file_structure) as conn:
+        with PrismaConnection(project_file_structure, cache_db=cache_db) as conn:
             conn.dataunit.upsert(
                 where={
                     "data_hash_frame": {  # state the values of the compound key
-                        "data_hash": du["data_hash"],
-                        "frame": int(du["data_sequence"]),
+                        "data_hash": data_hash,
+                        "frame": frame,
                     }
                 },
                 data={
                     "create": {
-                        "data_hash": du["data_hash"],
+                        "data_hash": data_hash,
                         "data_title": du["data_title"],
-                        "frame": int(du["data_sequence"]),
+                        "frame": frame,
                         "lr_data_hash": label_row.data_hash,
                         "fps": 0,
-                        "width": image.width,
-                        "height": image.height,
+                        "width": -1,
+                        "height": -1,
                     },
                     "update": {
                         "data_title": du["data_title"],
                     },
                 },
             )
+            data_unit = next(lr_structure.iter_data_unit(data_unit_hash=data_hash, frame=frame, cache_db=conn))
+            image = download_image(data_unit.signed_url)
+            conn.dataunit.update(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": data_hash,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "width": image.width,
+                    "height": image.height,
+                },
+            )
 
 
 def download_label_row_and_data(
-    label_hash: str, project: EncordProject, project_file_structure: ProjectFileStructure
+    label_hash: str,
+    project: EncordProject,
+    project_file_structure: ProjectFileStructure,
+    cache_db: Optional["prisma.Prisma"] = None,
 ) -> Optional[LabelRow]:
-    label_row = download_label_row(label_hash, project, project_file_structure)
-    download_data(label_row, project_file_structure)
+    label_row = download_label_row(label_hash, project, project_file_structure, cache_db=cache_db)
+    download_data(label_row, project_file_structure, cache_db=cache_db)
     return label_row
 
 
