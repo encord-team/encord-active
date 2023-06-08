@@ -257,7 +257,7 @@ class CocoEncoder:
         data_hash = data_unit["data_hash"]
         self._data_hash_to_image_id_map[(data_hash, 0)] = image_id
         return {
-            "coco_url": data_unit["data_link"],
+            "coco_url": "",
             "flickr_url": "",
             "id": image_id,
             "image_title": data_unit["data_title"],
@@ -291,7 +291,7 @@ class CocoEncoder:
             self.download_video_images(url, destination_path, data_hash, video_title)
 
         images = []
-        coco_url = data_unit["data_link"]
+        coco_url = ""
         height = data_unit["height"]
         width = data_unit["width"]
 
