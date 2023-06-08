@@ -8,6 +8,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IdValue, Item2DEmbedding } from "./api";
 import { bin } from "d3-array";
+import { hexbin } from "d3-hexbin";
+import { counting, max } from "radash";
 
 const BINS = 20;
 
@@ -99,6 +101,8 @@ export const MetricDistributionTiny = ({
 
 const fixedFormatter = (value: number) => value.toFixed(2);
 
+const HEX_BINS = 1000;
+
 export const ScatteredEmbeddings = ({
   embeddings,
   onSelectionChange,
@@ -108,23 +112,56 @@ export const ScatteredEmbeddings = ({
   onSelectionChange: (ids: Item2DEmbedding[]) => void;
   onReset: () => void;
 }) => {
+  const binnedItems = useMemo(() => {
+    if (embeddings.length < HEX_BINS)
+      return embeddings.map((emb) => ({ ...emb, size: 1, items: [emb] }));
+
+    const { maxX, minX, maxY, minY } = embeddings.reduce(
+      (maxPoints, { x, y }) => {
+        maxPoints.maxX = Math.max(x, maxPoints.maxX);
+        maxPoints.minX = Math.min(x, maxPoints.minX);
+        maxPoints.maxY = Math.max(y, maxPoints.maxY);
+        maxPoints.minY = Math.min(y, maxPoints.minY);
+        return maxPoints;
+      },
+      { maxX: 0, maxY: 0, minX: 0, minY: 0 }
+    );
+
+    const bins = hexbin<Item2DEmbedding>()
+      .x((d) => d.x)
+      .y((d) => d.y)
+      .radius(((maxX - minX) * (maxY - minY)) / HEX_BINS)(embeddings);
+
+    return bins.map((items) => {
+      const counters = counting(items, ({ label }) => label);
+      const [label] = max(Object.entries(counters), ([_, value]) => value) || [
+        items[0].label,
+        1,
+      ];
+      return { ...items, size: items.length, label, items };
+    });
+  }, [embeddings]);
+
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
       if (["mouseup", "legend-item:click"].includes(type))
-        // @ts-ignore
-        onSelectionChange(view.filteredData as Item2DEmbedding[]);
+        onSelectionChange(
+          // @ts-ignore
+          view.filteredData.flatMap((bin) => bin.items) as Item2DEmbedding[]
+        );
       else if (type === "brush-reset-button:click") onReset();
     },
-    [embeddings.length]
+    [binnedItems]
   );
 
   return (
     <Scatter
-      data={embeddings}
+      data={binnedItems}
       xField="x"
       yField="y"
       colorField="label"
-      size={3}
+      sizeField="size"
+      size={[5, 30]}
       shape="circle"
       pointStyle={{ fillOpacity: 1 }}
       interactions={[{ type: "reset-button", enable: false }]}
