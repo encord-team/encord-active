@@ -458,15 +458,38 @@ class EncordActions:
             ),
         )
         cloned_project = self.user_client.get_project(cloned_project_hash)
-        cloned_project_label_rows = cloned_project.label_rows
+        cloned_project_label_rows = [
+            cloned_project.get_label_row(src_row.label_hash)
+            for src_row in cloned_project.list_label_rows_v2()
+        ]
         du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project_label_rows}
-        label_row_json_map = {lr["label_hash"]: json.dumps(lr) for lr in cloned_project_label_rows}
         filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
         lr_du_mapping = {
             LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
             for cdu, clr in du_lr_mapping.items()
             if clr
         }
+
+        with PrismaConnection(target_project_structure) as conn:
+            original_label_rows = conn.labelrow.find_many()
+        original_label_row_map = {
+            original_label_row.label_hash: json.loads(original_label_row.label_row_json)
+            for original_label_row in original_label_rows
+        }
+
+        new_label_row_map = {
+            label_row["label_hash"]: label_row
+            for label_row in cloned_project_label_rows
+        }
+
+        label_row_json_map = {}
+        for (old_lr, old_du), (new_lr, new_du) in lr_du_mapping.items():
+            label_row_json_map[new_lr] = json.dumps(self.prepare_label_row(
+                original_label_row_map[old_lr],
+                new_label_row_map[new_lr], new_du,
+                old_du
+            ))
+
         replace_uids(
             target_project_structure,
             lr_du_mapping,
@@ -482,13 +505,13 @@ class EncordActions:
         # Store metadata for data hash mapping lookups.
         src_du_lookup = {}
         with PrismaConnection(target_project_structure) as conn:
-            data_units = conn.dataunit.find_many()
-            for du in data_units:
+            all_data_units = conn.dataunit.find_many()
+            for du in all_data_units:
                 src_du_lookup[(du.lr_data_hash, du.frame)] = du.data_hash
 
         du_hash_map = DataHashMapping()
         for label_row in cloned_project_label_rows:
-            for du in label_row["data_units"].values():
+            for du in label_row.get("data_units", {}).values():
                 frame = du.get("data_sequence", 0)
                 new_data_hash = du["data_hash"]
                 old_data_hash = src_du_lookup[(label_row["data_hash"], frame)]
