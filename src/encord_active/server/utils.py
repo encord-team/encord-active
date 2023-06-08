@@ -13,7 +13,6 @@ from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricScope,
-    get_embedding_type,
     load_available_metrics,
 )
 from encord_active.lib.project.project_file_structure import (
@@ -33,12 +32,6 @@ class Metadata(TypedDict):
 @lru_cache
 def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None) -> List[MetricData]:
     return load_available_metrics(project.metrics, scope)
-
-
-def get_metric_embedding_type(project: ProjectFileStructure, metric_name: str) -> EmbeddingType:
-    metrics = load_project_metrics(project)
-    metric_data = [metric for metric in metrics if metric.name.lower() == metric_name.lower()][0]
-    return get_embedding_type(metric_data.meta.annotation_type)
 
 
 @lru_cache

@@ -63,6 +63,19 @@ export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
+const EmbeddingTypeSchema = z.union([
+  z.literal("classification"),
+  z.literal("object"),
+  z.literal("hu_moments"),
+  z.literal("image"),
+]);
+
+export const MetricSchema = z.object({
+  name: z.string(),
+  embeddingType: EmbeddingTypeSchema,
+});
+export type Metric = z.infer<typeof MetricSchema>;
+
 export const Item2DEmbeddingSchema = PointSchema.extend({
   id: z.string(),
   label: z.string(),
@@ -109,8 +122,10 @@ export const getApi = (
       z
         .boolean()
         .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
-    fetchProject2DEmbeddings: async (selectedMetric: string) => {
-      const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${selectedMetric}`;
+    fetchProject2DEmbeddings: async (
+      embeddingType: Metric["embeddingType"]
+    ) => {
+      const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${embeddingType}`;
       try {
         const response = await (await fetcher(url)).json();
         return Item2DEmbeddingSchema.array().parse(response);
@@ -124,7 +139,7 @@ export const getApi = (
       });
       const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
-      return z.string().array().parse(response);
+      return MetricSchema.array().parse(response);
     },
     fetchProjectItemIds: async (sortByMetric: string) => {
       const queryParams = new URLSearchParams({
@@ -154,11 +169,11 @@ export const getApi = (
         ),
     fetchSimilarItems: async (
       id: string,
-      selectedMetric: string,
+      embeddingType: Metric["embeddingType"],
       pageSize?: number
     ) => {
       const queryParams = new URLSearchParams({
-        current_metric: selectedMetric,
+        embedding_type: embeddingType,
         ...(pageSize ? { page_size: pageSize.toString() } : {}),
       });
 
@@ -168,9 +183,11 @@ export const getApi = (
       const response = await fetcher(url).then((res) => res.json());
       return z.string().array().parse(response);
     },
-    fetchHasSimilaritySearch: async (selectedMetric: string) => {
+    fetchHasSimilaritySearch: async (
+      embeddingType: Metric["embeddingType"]
+    ) => {
       const queryParams = new URLSearchParams({
-        current_metric: selectedMetric,
+        embedding_type: embeddingType,
       });
       const url = `${baseUrl}/projects/${projectName}/has_similarity_search?${queryParams} `;
       const response = await fetcher(url).then((res) => res.json());
@@ -308,12 +325,12 @@ export const useApi = () => {
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
       useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
     fetch2DEmbeddings: (
-      selectedMetric: Parameters<API["fetchProject2DEmbeddings"]>[0]
+      embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0]
     ) =>
       useQuery(
-        ["2d_embeddings"],
-        () => api.fetchProject2DEmbeddings(selectedMetric),
-        { enabled: !!selectedMetric }
+        ["2d_embeddings", embeddingType],
+        () => api.fetchProject2DEmbeddings(embeddingType),
+        { enabled: !!embeddingType, staleTime: Infinity }
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>
       api.searchInProject(...args),

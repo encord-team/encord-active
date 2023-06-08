@@ -1,5 +1,5 @@
 import { Spin } from "./Spinner";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { TbMoodSad2 } from "react-icons/tb";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
@@ -24,6 +24,7 @@ import {
   ApiContext,
   Scope,
   useApi,
+  Metric,
 } from "./api";
 import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
 import { Pagination, usePagination } from "./Pagination";
@@ -61,7 +62,7 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
 
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
-  const [selectedMetric, setSelectedMetric] = useState<string>();
+  const [selectedMetric, setSelectedMetric] = useState<Metric>();
 
   const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
 
@@ -69,27 +70,30 @@ export const Explorer = ({
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-    api.fetchHasPremiumFeatures
+    api.fetchHasPremiumFeatures,
+    { staleTime: Infinity }
   );
   const { data: hasSimilaritySearch } = useQuery(
     ["hasSimilaritySearch"],
-    () => api.fetchHasSimilaritySearch(selectedMetric!),
+    () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
     { enabled: !!selectedMetric }
   );
 
   const { data: similarItems, isLoading: isLoadingSimilarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
-    () => api.fetchSimilarItems(similarityItem!, selectedMetric!),
+    () =>
+      api.fetchSimilarItems(similarityItem!, selectedMetric?.embeddingType!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
   const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric],
-    () => api.fetchProjectItemIds(selectedMetric!),
-    { enabled: !!selectedMetric }
+    () => api.fetchProjectItemIds(selectedMetric?.name!),
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
-    () => api.fetchProjectMetrics(scope)
+    () => api.fetchProjectMetrics(scope),
+    { staleTime: Infinity }
   );
 
   const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
@@ -116,10 +120,11 @@ export const Explorer = ({
   }, [metrics?.length]);
 
   useEffect(() => {
+    if (isLoadingSortedItems) return;
     setSortedAndFiltered(
       sortedItems?.filter(({ id }) => itemSet.has(id)) || []
     );
-  }, [itemSet, sortedItems]);
+  }, [isLoadingSortedItems, itemSet, sortedItems]);
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -162,8 +167,9 @@ export const Explorer = ({
         >
           {selectedMetric && (
             <Embeddings
+              isloadingItems={isLoadingSortedItems}
               idValues={sortedAndFiltered}
-              selectedMetric={selectedMetric}
+              embeddingType={selectedMetric.embeddingType}
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
@@ -188,13 +194,17 @@ export const Explorer = ({
                   <label className="input-group">
                     <select
                       onChange={(event) =>
-                        setSelectedMetric(event.target.value)
+                        setSelectedMetric(
+                          metrics.find(
+                            (metric) => metric.name === event.target.value
+                          )
+                        )
                       }
                       className="select select-bordered focus:outline-none"
                       disabled={!!similarItems?.length}
                     >
-                      {metrics.map((metric) => (
-                        <option key={metric}>{metric}</option>
+                      {metrics.map(({ name }) => (
+                        <option key={name}>{name}</option>
                       ))}
                     </select>
                     <label
@@ -312,27 +322,31 @@ export const Explorer = ({
 };
 
 const Embeddings = ({
+  isloadingItems,
   idValues,
-  selectedMetric,
+  embeddingType,
   onSelectionChange,
   onReset,
 }: {
+  isloadingItems: boolean;
   idValues: IdValue[];
-  selectedMetric: string;
+  embeddingType: Metric["embeddingType"];
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
   onReset: () => void;
 }) => {
   const { isLoading, data: scatteredEmbeddings } =
-    useApi().fetch2DEmbeddings(selectedMetric);
+    useApi().fetch2DEmbeddings(embeddingType);
 
   const filtered = useMemo(() => {
     const ids = new Set(idValues.map(({ id }) => id));
-    return scatteredEmbeddings?.filter(({ id }) => ids.has(id));
+    return scatteredEmbeddings?.filter(
+      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_")))
+    );
   }, [idValues, scatteredEmbeddings]);
 
-  return !isLoading && !scatteredEmbeddings?.length ? (
+  return !isLoading && !isloadingItems && !scatteredEmbeddings?.length ? (
     <div className="alert shadow-lg h-fit">
       <div>
         <BiInfoCircle className="text-base" />
@@ -341,7 +355,7 @@ const Embeddings = ({
     </div>
   ) : (
     <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
-      {isLoading ? (
+      {isLoading || isloadingItems ? (
         <Spin />
       ) : (
         <ScatteredEmbeddings
@@ -465,7 +479,7 @@ const GalleryItem = ({
 }: {
   itemId: string;
   selected: boolean;
-  selectedMetric?: string;
+  selectedMetric?: Metric;
   similaritySearchDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
@@ -479,9 +493,9 @@ const GalleryItem = ({
       </div>
     );
 
-  const [metric, value] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) => metric.toLowerCase() === selectedMetric?.toLowerCase()
-  ) || [selectedMetric, ""];
+  const [metricName, value] = Object.entries(data.metadata.metrics).find(
+    ([metric, _]) => metric.toLowerCase() === selectedMetric?.name.toLowerCase()
+  ) || [selectedMetric?.name, ""];
   const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
   const displayValue =
     intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
@@ -499,7 +513,7 @@ const GalleryItem = ({
         />
         {selectedMetric && (
           <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
-            <span>{metric}:</span>
+            <span>{metricName}:</span>
             <span>{displayValue}</span>
           </div>
         )}
