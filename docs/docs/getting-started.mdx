@@ -12,12 +12,26 @@ import Link from '@docusaurus/Link';
 
 Install `encord-active` in your favorite Python environment with the following commands:
 
+<Tabs groupId="operating-systems">
+  <TabItem value="linux-macos" label="Linux/macOS">
+
 ```shell
 python3.9 -m venv ea-venv
 source ea-venv/bin/activate
-# within venv
 pip install encord-active
 ```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows" default>
+
+```shell
+python -m venv ea-venv
+ea-venv\Scripts\activate
+pip install encord-active
+```
+
+  </TabItem>
+</Tabs>
 
 :::info
 

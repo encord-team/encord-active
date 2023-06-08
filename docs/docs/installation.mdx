@@ -2,6 +2,10 @@
 sidebar_position: 3
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Link from '@docusaurus/Link';
+
 # Installation
 
 :::info
@@ -16,15 +20,26 @@ To install the correct version of python you can use [pyenv](https://github.com/
 
 Install `encord-active` in your favorite Python environment with the following commands:
 
-```shell
-$ python3.9 -m venv ea-venv
-$ # On Linux/MacOS
-$ source ea-venv/bin/activate
-$ # On Windows
-$ ea-venv\Scripts\activate
-(ea-venv)$ python -m pip install encord-active
+<Tabs groupId="operating-systems">
+  <TabItem value="linux-macos" label="Linux/macOS">
 
+```shell
+python3.9 -m venv ea-venv
+source ea-venv/bin/activate
+pip install encord-active
 ```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows" default>
+
+```shell
+python -m venv ea-venv
+ea-venv\Scripts\activate
+pip install encord-active
+```
+
+  </TabItem>
+</Tabs>
 
 #### Coco extras
 
