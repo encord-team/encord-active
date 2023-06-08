@@ -2,7 +2,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Callable, NamedTuple, Optional
+from typing import Callable, NamedTuple, Optional, Dict
 
 import pandas as pd
 from encord import Dataset, Project
@@ -303,6 +303,8 @@ class EncordActions:
         # Copy labels from old project to new project
         # Three things to copy: labels, object_answers, classification_answers
 
+        label_row_json_map: Dict[str, str] = {}
+
         for counter, new_label_row_metadata in enumerate(new_project.label_rows):
             new_lr_data_hash = new_label_row_metadata["data_hash"]
             new_label_row = new_project.create_label_row(new_lr_data_hash)
@@ -321,6 +323,7 @@ class EncordActions:
                 data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
                 for data_unit in label_row["data_units"].values()
             ):
+                label_row_json_map[label_row["label_hash"]] = json.dumps(label_row)
                 try_execute(new_project.save_label_row, 5, {"uid": label_row["label_hash"], "label": label_row})
 
             if progress_callback:
@@ -341,7 +344,12 @@ class EncordActions:
             dataset_creation_result.hash,
         )
 
-        replace_db_uids(self.project_file_structure, dataset_creation_result)
+        replace_db_uids(
+            self.project_file_structure,
+            dataset_creation_result.new_du_hash_to_original_mapping,
+            dataset_creation_result.lr_du_mapping,
+            label_row_json_map
+        )
 
         return new_project
 
@@ -450,7 +458,9 @@ class EncordActions:
             ),
         )
         cloned_project = self.user_client.get_project(cloned_project_hash)
-        du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project.label_rows}
+        cloned_project_label_rows = cloned_project.label_rows
+        du_lr_mapping = {lr["data_hash"]: lr["label_hash"] for lr in cloned_project_label_rows}
+        label_row_json_map = {lr["label_hash"]: json.dumps(lr) for lr in cloned_project_label_rows}
         filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
         lr_du_mapping = {
             LabelRowDataUnit(filtered_du_lr_mapping[cdu], cdu): LabelRowDataUnit(clr, cdu)
@@ -468,6 +478,29 @@ class EncordActions:
         project_meta["has_remote"] = True
         project_meta["project_hash"] = cloned_project_hash
         update_project_meta(target_project_structure.project_dir, project_meta)
+
+        # Store metadata for data hash mapping lookups.
+        src_du_lookup = {}
+        with PrismaConnection(target_project_structure) as conn:
+            data_units = conn.dataunit.find_many()
+            for du in data_units:
+                src_du_lookup[(du.lr_data_hash, du.frame)] = du.data_hash
+
+        du_hash_map = DataHashMapping()
+        for label_row in cloned_project_label_rows:
+            for du in label_row["data_units"].values():
+                frame = du.get("data_sequence", 0)
+                new_data_hash = du["data_hash"]
+                old_data_hash = src_du_lookup[(label_row["data_hash"], frame)]
+                du_hash_map.set(old_data_hash, new_data_hash)
+
+        # Sync database identifiers
+        replace_db_uids(
+            target_project_structure,
+            du_hash_map=du_hash_map,
+            lr_du_mapping=lr_du_mapping,
+            label_row_json_map=label_row_json_map,
+        )
 
         return cloned_project_hash
 
@@ -505,7 +538,12 @@ class DatasetUniquenessError(Exception):
         )
 
 
-def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creation_result: DatasetCreationResult):
+def replace_db_uids(
+    project_file_structure: ProjectFileStructure,
+    du_hash_map: DataHashMapping,
+    lr_du_mapping: dict[LabelRowDataUnit, LabelRowDataUnit],
+    label_row_json_map: dict[str, str]
+):
     # Lazy import to support prisma reload
     from prisma.types import (
         DataUnitUpdateManyMutationInput,
@@ -516,14 +554,18 @@ def replace_db_uids(project_file_structure: ProjectFileStructure, dataset_creati
     # Update the data hash changes in the DataUnit and LabelRow db tables
     with PrismaConnection(project_file_structure) as conn:
         with conn.batch_() as batcher:
-            for new_du_hash, du_hash in dataset_creation_result.new_du_hash_to_original_mapping.items():
+            for new_du_hash, du_hash in du_hash_map.items():
                 batcher.dataunit.update_many(
                     where=DataUnitWhereInput(data_hash=du_hash),
                     data=DataUnitUpdateManyMutationInput(data_hash=new_du_hash),
                 )
-            for new_lr_data_hash, lr_data_hash in dataset_creation_result.new_lr_data_hash_to_original_mapping.items():
+            for (old_lr, old_du), (new_lr, new_du) in lr_du_mapping.items():
                 batcher.labelrow.update(
-                    where={"data_hash": lr_data_hash},
-                    data=LabelRowUpdateInput(data_hash=new_lr_data_hash),
+                    where={"label_hash": old_lr},
+                    data=LabelRowUpdateInput(
+                        data_hash=new_du,
+                        label_hash=new_lr,
+                        label_row_json=label_row_json_map[new_lr]
+                    ),
                 )
     Project(project_file_structure.project_dir).refresh()
