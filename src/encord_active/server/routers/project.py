@@ -3,6 +3,7 @@ from functools import lru_cache
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
@@ -16,7 +17,12 @@ from encord_active.lib.db.helpers.tags import (
 )
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.metrics.utils import MetricScope, filter_none_empty_metrics
+from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.utils import (
+    MetricScope,
+    filter_none_empty_metrics,
+    get_embedding_type,
+)
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
@@ -27,7 +33,6 @@ from encord_active.server.dependencies import (
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
-    get_metric_embedding_type,
     get_similarity_finder,
     load_project_metrics,
     to_item,
@@ -40,15 +45,16 @@ router = APIRouter(
 )
 
 
-@router.get("/{project}/items_id_by_metric")
+@router.get("/{project}/items_id_by_metric", response_class=ORJSONResponse)
 def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascending: bool = True):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all(marshall=False)
 
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
+    res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
 
-    return res.reset_index().rename({"identifier": "id", column: "value"}, axis=1).to_dict("records")
+    return ORJSONResponse(res[["id", "value"]].to_dict("records"))
 
 
 @router.get("/{project}/tagged_items")
@@ -109,15 +115,15 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
 
 
 @router.get("/{project}/has_similarity_search")
-def get_has_similarity_search(project: ProjectFileStructureDep, current_metric: str):
-    embedding_type = get_metric_embedding_type(project, current_metric)
+def get_has_similarity_search(project: ProjectFileStructureDep, embedding_type: EmbeddingType):
     finder = get_similarity_finder(embedding_type, project)
     return finder.index_available
 
 
 @router.get("/{project}/similarities/{id}")
-def get_similar_items(project: ProjectFileStructureDep, id: str, current_metric: str, page_size: Optional[int] = None):
-    embedding_type = get_metric_embedding_type(project, current_metric)
+def get_similar_items(
+    project: ProjectFileStructureDep, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None
+):
     finder = get_similarity_finder(embedding_type, project)
     return finder.get_similarities(id)
 
@@ -125,13 +131,14 @@ def get_similar_items(project: ProjectFileStructureDep, id: str, current_metric:
 @router.get("/{project}/metrics")
 def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[MetricScope] = None):
     metrics = load_project_metrics(project, scope)
-    non_empty_metrics = list(map(lambda i: i.name, filter(filter_none_empty_metrics, metrics)))
-    return natsorted(non_empty_metrics)
+    return [
+        {"name": metric.name, "embeddingType": get_embedding_type(metric.meta.annotation_type)}
+        for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name)
+    ]
 
 
-@router.get("/{project}/2d_embeddings/{current_metric}")
-def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
-    embedding_type = get_metric_embedding_type(project, current_metric)
+@router.get("/{project}/2d_embeddings/{embedding_type}", response_class=ORJSONResponse)
+def get_2d_embeddings(project: ProjectFileStructureDep, embedding_type: EmbeddingType):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
 
     if embeddings_df is None:
@@ -139,7 +146,7 @@ def get_2d_embeddings(project: ProjectFileStructureDep, current_metric: str):
             status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
         )
 
-    return embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records")
+    return ORJSONResponse(embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records"))
 
 
 @router.get("/{project}/tags")
