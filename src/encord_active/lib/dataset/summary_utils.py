@@ -35,12 +35,8 @@ def get_all_image_sizes(project_file_structure: ProjectFileStructure) -> np.ndar
     image_sizes = []
 
     with PrismaConnection(project_file_structure) as conn:
-        for label_row_structure in project_file_structure.iter_labels(cache_db=conn):
-            label_row_meta = label_row_structure.get_label_row_json(cache_db=conn)
-            # TODO Handle videos as well, breaks on datasets containing only videos
-            if label_row_meta["data_type"] in [DataType.IMAGE.value, DataType.IMG_GROUP.value]:
-                for data_unit in label_row_meta["data_units"].values():
-                    image_sizes.append([data_unit["width"], data_unit["height"]])
+        results = conn.query_raw("SELECT width, height FROM DataUnit")
+        image_sizes = [[data_unit["width"], data_unit["height"]] for data_unit in results]
 
     # HACK - return some result for video only datasets
     if len(image_sizes) == 0:
@@ -142,13 +138,13 @@ def get_metric_summary(metrics: list[MetricData]) -> MetricsSeverity:
             continue
 
         df, iqr_outliers = res
+        values = df[[_COLUMNS.identifier, _COLUMNS.outliers_status]].values
 
-        df_dict = df.to_dict("records")
-        for row in df_dict:
-            if row[_COLUMNS.outliers_status] == Severity.severe:
-                total_unique_severe_outliers.add(row[_COLUMNS.identifier])
-            elif row[_COLUMNS.outliers_status] == Severity.moderate:
-                total_unique_moderate_outliers.add(row[_COLUMNS.identifier])
+        for identifier, outlier_status in values:
+            if outlier_status == Severity.severe:
+                total_unique_severe_outliers.add(identifier)
+            elif outlier_status == Severity.moderate:
+                total_unique_moderate_outliers.add(identifier)
 
         metric_severity.metrics[metric.name] = MetricOutlierInfo(
             metric=metric, df=DataFrame[MetricWithDistanceSchema](df), iqr_outliers=iqr_outliers
