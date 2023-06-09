@@ -93,9 +93,7 @@ class LabelRowStructure:
 
     def get_label_row_json(self, cache_db: Optional[prisma.Prisma] = None) -> Dict[str, Any]:
         entry = self.get_label_row_from_db(cache_db=cache_db)
-        label_row_json = None
-        if entry is not None:
-            label_row_json = entry.label_row_json
+        label_row_json = entry.label_row_json
         if label_row_json is None:
             raise ValueError(f"label_row_json does not exist (label_hash={self._label_hash}, row={entry is not None})")
         return json.loads(label_row_json)

@@ -10,6 +10,7 @@ import pandas as pd
 import yaml
 
 from encord_active.lib.common.data_utils import iterate_in_batches
+from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
@@ -72,6 +73,7 @@ def replace_in_files(project_file_structure: ProjectFileStructure, renaming_map)
 def replace_uids(
     project_file_structure: ProjectFileStructure,
     file_mappings: dict[LabelRowDataUnit, LabelRowDataUnit],
+    data_hash_mapping: DataHashMapping,
     old_project_hash: str,
     new_project_hash: str,
     dataset_hash: str,
@@ -84,6 +86,9 @@ def replace_uids(
 
     for (old_lr, old_du), (new_lr, new_du) in file_mappings.items():
         renaming_map[old_lr], renaming_map[old_du] = new_lr, new_du
+
+    for old_dh, new_dh in data_hash_mapping.items():
+        renaming_map[old_dh] = new_dh
 
     try:
         _replace_uids(project_file_structure, renaming_map)

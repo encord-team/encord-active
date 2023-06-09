@@ -490,13 +490,6 @@ class EncordActions:
                 old_du
             ))
 
-        replace_uids(
-            target_project_structure,
-            lr_du_mapping,
-            self.original_project.project_hash,
-            cloned_project_hash,
-            cloned_project.datasets[0]["dataset_hash"],
-        )
         project_meta = fetch_project_meta(target_project_structure.project_dir)
         project_meta["has_remote"] = True
         project_meta["project_hash"] = cloned_project_hash
@@ -516,6 +509,15 @@ class EncordActions:
                 new_data_hash = du["data_hash"]
                 old_data_hash = src_du_lookup[(label_row["data_hash"], frame)]
                 du_hash_map.set(old_data_hash, new_data_hash)
+
+        replace_uids(
+            target_project_structure,
+            lr_du_mapping,
+            du_hash_map,
+            self.original_project.project_hash,
+            cloned_project_hash,
+            cloned_project.datasets[0]["dataset_hash"],
+        )
 
         # Sync database identifiers
         replace_db_uids(
@@ -576,10 +578,23 @@ def replace_db_uids(
 
     # Update the data hash changes in the DataUnit and LabelRow db tables
     with PrismaConnection(project_file_structure) as conn:
+        # Sanity check: delete later as slow (but makes debugging easier)
+        for old_du_hash in du_hash_map.keys():
+            values = conn.dataunit.find_many(where={"data_hash": old_du_hash})
+            if len(values) != 1:
+                raise RuntimeError(f"Sanity validation, du_hash: {old_du_hash} does not exist")
+        for (old_lr, old_du) in lr_du_mapping.keys():
+            value = conn.labelrow.find_unique(where={"label_hash": old_lr})
+            if value is None:
+                raise RuntimeError(f"Sanity validation, label_hash: {old_lr} does not exist")
+            if value.data_hash != old_du:
+                raise RuntimeError(
+                    f"Sanity validation, du hash for label_hash: {old_lr} / {old_du} is wrong: {value.data_hash}"
+                )
         with conn.batch_() as batcher:
-            for new_du_hash, du_hash in du_hash_map.items():
+            for old_du_hash, new_du_hash in du_hash_map.items():
                 batcher.dataunit.update_many(
-                    where=DataUnitWhereInput(data_hash=du_hash),
+                    where=DataUnitWhereInput(data_hash=old_du_hash),
                     data=DataUnitUpdateManyMutationInput(data_hash=new_du_hash),
                 )
             for (old_lr, old_du), (new_lr, new_du) in lr_du_mapping.items():
