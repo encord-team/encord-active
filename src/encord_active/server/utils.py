@@ -119,9 +119,7 @@ def to_item(
     project_meta = project_file_structure.load_project_meta()
     if project_meta.get("has_remote", False):
         project_hash = project_meta["project_hash"]
-        edit_url = f"https://app.encord.com/{du_hash}&{project_hash}"
-        if frame != "" and frame != "0":
-            edit_url = edit_url + f"/{frame}"
+        edit_url = f"https://app.encord.com/label_editor/{du_hash}&{project_hash}/{frame}"
 
     tags = row.pop("tags")
     identifier = row.pop("identifier")
