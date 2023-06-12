@@ -257,11 +257,7 @@ class Project:
             with PrismaConnection(project_file_structure) as conn:
                 with conn.batch_() as batch:
                     collect_async(
-                        partial(
-                            download_label_row,
-                            project=project,
-                            batch=batch
-                        ),
+                        partial(download_label_row, project=project, batch=batch),
                         label_rows_to_update,
                         desc="Updating label rows",
                     )
