@@ -128,11 +128,20 @@ export const getApi = (
         .boolean()
         .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
     fetchProject2DEmbeddings: async (
-      embeddingType: Metric["embeddingType"]
+      embedding_type: Metric["embeddingType"],
+      filters: Filters
     ) => {
-      const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${embeddingType}`;
+      const url = `${baseUrl}/projects/${projectName}/2d_embeddings`;
       try {
-        const response = await (await fetcher(url)).json();
+        const response = await (
+          await fetcher(url, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ embedding_type, filters }),
+          })
+        ).json();
         return Item2DEmbeddingSchema.array().parse(response);
       } catch {
         return [];
@@ -333,11 +342,12 @@ export const useApi = () => {
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
       useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
     fetch2DEmbeddings: (
-      embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0]
+      embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
+      filters: Filters
     ) =>
       useQuery(
         ["2d_embeddings", embeddingType],
-        () => api.fetchProject2DEmbeddings(embeddingType),
+        () => api.fetchProject2DEmbeddings(embeddingType, filters),
         { enabled: !!embeddingType, staleTime: Infinity }
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>

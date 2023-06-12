@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional
 
 import pandas as pd
@@ -27,6 +28,9 @@ class Filters(BaseModel):
     categorical: dict[str, List[float]] = {}
     range: dict[str, Range] = {}
     datetime_range: dict[str, DatetimeRange] = {}
+
+    def __hash__(self):
+        return hash(json.dumps(self.dict(exclude_defaults=True)))
 
 
 def apply_filters(df: pd.DataFrame, filters: Filters):

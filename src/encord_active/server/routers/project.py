@@ -34,6 +34,7 @@ from encord_active.server.dependencies import (
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
+    filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
     to_item,
@@ -53,11 +54,7 @@ def read_item_ids(
     filters: Filters = Filters(),
     ascending: Annotated[bool, Body()] = True,
 ):
-    with DBConnection(project) as conn:
-        merged_metrics = MergedMetrics(conn).all(marshall=False)
-
-    merged_metrics = apply_filters(merged_metrics, filters)
-
+    merged_metrics = filtered_merged_metrics(project, filters)
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
     res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
@@ -145,14 +142,19 @@ def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[Metr
     ]
 
 
-@router.get("/{project}/2d_embeddings/{embedding_type}", response_class=ORJSONResponse)
-def get_2d_embeddings(project: ProjectFileStructureDep, embedding_type: EmbeddingType):
+@router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
+def get_2d_embeddings(
+    project: ProjectFileStructureDep, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
+):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
 
     if embeddings_df is None:
         raise HTTPException(
             status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
         )
+
+    filtered = filtered_merged_metrics(project, filters)
+    embeddings_df[embeddings_df["identifier"].isin(filtered.index)]
 
     return ORJSONResponse(embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records"))
 

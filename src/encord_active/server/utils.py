@@ -6,7 +6,10 @@ from urllib.parse import quote, unquote, urlparse
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
+from encord_active.lib.common.filtering import Filters, apply_filters
+from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import to_grouped_tags
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.types import EmbeddingType
@@ -37,6 +40,14 @@ def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricSc
 @lru_cache
 def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
     return SimilaritiesFinder(embedding_type, project)
+
+
+@lru_cache
+def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
+    with DBConnection(project) as conn:
+        merged_metrics = MergedMetrics(conn).all()
+
+    return apply_filters(merged_metrics, filters)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:

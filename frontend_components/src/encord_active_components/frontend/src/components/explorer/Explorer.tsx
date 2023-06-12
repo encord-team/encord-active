@@ -25,6 +25,7 @@ import {
   Scope,
   useApi,
   Metric,
+  Filters,
 } from "./api";
 import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
 import { Pagination, usePagination } from "./Pagination";
@@ -173,6 +174,7 @@ export const Explorer = ({
             <Embeddings
               isloadingItems={isLoadingSortedItems}
               idValues={sortedAndFiltered}
+              filters={filters}
               embeddingType={selectedMetric.embeddingType}
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
@@ -330,20 +332,24 @@ export const Explorer = ({
 const Embeddings = ({
   isloadingItems,
   idValues,
+  filters,
   embeddingType,
   onSelectionChange,
   onReset,
 }: {
   isloadingItems: boolean;
   idValues: IdValue[];
+  filters: Filters;
   embeddingType: Metric["embeddingType"];
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
   onReset: () => void;
 }) => {
-  const { isLoading, data: scatteredEmbeddings } =
-    useApi().fetch2DEmbeddings(embeddingType);
+  const { isLoading, data: scatteredEmbeddings } = useApi().fetch2DEmbeddings(
+    embeddingType,
+    filters
+  );
 
   const filtered = useMemo(() => {
     const ids = new Set(idValues.map(({ id }) => id));
