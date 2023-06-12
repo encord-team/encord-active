@@ -465,8 +465,7 @@ class EncordActions:
         )
         cloned_project = self.user_client.get_project(cloned_project_hash)
         cloned_project_label_rows = [
-            cloned_project.get_label_row(src_row.label_hash)
-            for src_row in cloned_project.list_label_rows_v2()
+            cloned_project.get_label_row(src_row.label_hash) for src_row in cloned_project.list_label_rows_v2()
         ]
         filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
 
