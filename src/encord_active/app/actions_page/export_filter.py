@@ -19,6 +19,14 @@ from encord_active.app.common.state import get_state
 from encord_active.app.common.state_hooks import UseState
 from encord_active.app.common.utils import human_format, set_page_config
 from encord_active.lib.coco.encoder import generate_coco_file
+from encord_active.lib.common.filtering import (
+    NO_CLASS_LABEL,
+    UNTAGED_FRAMES_LABEL,
+    DatetimeRange,
+    Filters,
+    Range,
+    apply_filters,
+)
 from encord_active.lib.constants import DISCORD_URL, ENCORD_EMAIL
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import Tag, all_tags
@@ -68,134 +76,96 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Filtered dataframe
     """
     with st.container():
-        columns_to_filter = df.columns.to_list()
-        if "url" in columns_to_filter:
-            columns_to_filter.remove("url")
+        filterable_columns = df.columns.to_list()
+        if "url" in filterable_columns:
+            filterable_columns.remove("url")
         # Move some columns to the beginning
-        columns_to_filter.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
+        filterable_columns.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
 
-        to_filter_columns = st.multiselect(
-            "Filter by", columns_to_filter, format_func=lambda name: name.replace("_", " ").title()
+        columns_to_filter = st.multiselect(
+            "Filter by", filterable_columns, format_func=lambda name: name.replace("_", " ").title()
         )
 
-        if not to_filter_columns:
+        if not columns_to_filter:
             return df
 
-        filtered = df.copy()
-        filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
-        filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
-        for column in to_filter_columns:
-            non_applicable = filtered[pd.isna(filtered[column])]
+        filters = render_column_filters(df, columns_to_filter)
+        return apply_filters(df, filters)
 
-            left, right = st.columns((1, 20))
-            left.write("↳")
-            key = f"filter-select-{column.replace(' ', '_').lower()}"
 
-            if column == "tags":
-                # Enable filtering of frames without tags (containing '[]' values in the 'tags' column)
-                no_data_tag_label = "No data"
-                options = all_tags(get_state().project_paths) + [Tag(no_data_tag_label, TagScope.DATA)]
-                tag_filters = right.multiselect(
-                    "Choose tags to filter",
-                    options=options,
-                    format_func=lambda x: x.name,
-                    key=key,
-                )
-                for tag in tag_filters:
-                    # Include frames without annotations if the 'no_tag' meta-tag was selected
-                    if tag.name == no_data_tag_label:
-                        data_rows = filtered[~filtered.is_label_metric]
-                        filtered_rows = [len(x) == 0 for x in data_rows["tags"]]
-                        filtered_items = data_rows.loc[filtered_rows]
-                        filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
-                        continue
+def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
+    filters = Filters()
 
-                    filtered_rows = [tag in x for x in filtered["tags"]]
-                    filtered_items = filtered.loc[filtered_rows]
-                    if tag.scope == TagScope.LABEL:
-                        non_applicable = filtered[filtered.index.isin(filtered_items["data_row_id"])]
-                        filtered = filtered[filtered.index.isin(filtered_items.index)]
-                    else:
-                        filtered = filtered[filtered.data_row_id.isin(filtered_items["data_row_id"])]
+    for column in columns_to_filter:
+        left, right = st.columns((1, 20))
+        left.write("↳")
+        key = f"filter-select-{column.replace(' ', '_').lower()}"
 
-            elif column == "object_class":
-                # Enable filtering of frames without objects (containing 'None' values in the 'object_class' column)
-                no_class_label = "No class"
-                options = filtered[column].unique().tolist()
-                if None in options:
-                    options[options.index(None)] = no_class_label
-                else:  # Ensure that the 'no_class' option is always displayed
-                    options.append(no_class_label)
+        if column == "tags":
+            # Enable filtering of frames without tags (containing '[]' values in the 'tags' column)
+            options = all_tags(get_state().project_paths) + [Tag(UNTAGED_FRAMES_LABEL, TagScope.DATA)]
+            filters.tags = right.multiselect(
+                "Choose tags to filter",
+                options=options,
+                format_func=lambda x: x.name,
+                key=key,
+            )
 
-                user_cat_input = right.multiselect(
-                    "Values for object class",
-                    options=options,
-                    default=options,
-                    key=key,
-                )
+        elif column == "object_class":
+            # Enable filtering of frames without objects (containing 'None' values in the 'object_class' column)
+            options = df[column].unique().tolist()
+            if None in options:
+                options[options.index(None)] = NO_CLASS_LABEL
+            else:  # Ensure that the 'no_class' option is always displayed
+                options.append(NO_CLASS_LABEL)
 
-                # Include all frames that match the user input, excluding frames without annotations
-                filtered_user_input = filtered[filtered[column].isin(user_cat_input)]
+            filters.object_classes = right.multiselect(
+                "Values for object class",
+                options=options,
+                default=options,
+                key=key,
+            )
 
-                # Include frames without annotations
-                if no_class_label in user_cat_input:
-                    filtered_labels_df = filtered[filtered["is_label_metric"]]
-                    # Select frames whose column 'object_class' is equal to None and don't have logged label metrics
-                    filtered_no_annotations = filtered[
-                        (~filtered.data_row_id.isin(filtered_labels_df["data_row_id"])) & (pd.isna(filtered[column]))
-                    ]
-                    filtered = pd.concat([filtered_user_input, filtered_no_annotations])
-                else:
-                    filtered = filtered_user_input
-
-            # Treat columns with < 10 unique values as categorical
-            elif is_categorical_dtype(filtered[column]) or filtered[column].nunique() < 10 or column in ["annotator"]:
-                if filtered[column].isnull().sum() != filtered.shape[0]:
-                    user_cat_input = right.multiselect(
-                        f"Values for {column}",
-                        filtered[column].dropna().unique().tolist(),
-                        default=filtered[column].dropna().unique().tolist(),
-                        key=key,
-                    )
-                    filtered = filtered[filtered[column].isin(user_cat_input)]
-                else:
-                    right.markdown(f"For column *{column}*, all values are NaN")
-            elif is_numeric_dtype(filtered[column]):
-                _min = float(filtered[column].min())
-                _max = float(filtered[column].max())
-                step = (_max - _min) / 100
-                user_num_input = right.slider(
+        # Treat columns with < 10 unique values as categorical
+        elif is_categorical_dtype(df[column]) or df[column].nunique() < 10 or column in ["annotator"]:
+            if df[column].isnull().sum() != df.shape[0]:
+                filters.categorical[column] = right.multiselect(
                     f"Values for {column}",
-                    min_value=_min,
-                    max_value=_max,
-                    value=(_min, _max),
-                    step=step,
+                    df[column].dropna().unique().tolist(),
+                    default=df[column].dropna().unique().tolist(),
                     key=key,
                 )
-                filtered = filtered[filtered[column].between(*user_num_input)]
-            elif is_datetime64_any_dtype(filtered[column]):
-                first = filtered[column].min()
-                last = filtered[column].max()
-                res = right.date_input(
-                    f"Values for {column}", min_value=first, max_value=last, value=(first, last), key=key
-                )
-                if isinstance(res, tuple) and len(res) == 2:
-                    res = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
-                    start_date, end_date = res
-                    filtered = filtered.loc[filtered[column].between(start_date, end_date)]
             else:
-                user_text_input = right.text_input(
-                    f"Substring or regex in {column}",
-                    key=key,
-                )
-                if user_text_input:
-                    filtered = filtered[filtered[column].astype(str).str.contains(user_text_input)]
-            if not non_applicable.empty:
-                filtered_objects_df = non_applicable[non_applicable.data_row_id.isin(filtered["data_row_id"])]
-                filtered = pd.concat([filtered, filtered_objects_df])
+                right.markdown(f"For column *{column}*, all values are NaN")
+        elif is_numeric_dtype(df[column]):
+            _min = float(df[column].min())
+            _max = float(df[column].max())
+            step = (_max - _min) / 100
+            start, end = right.slider(
+                f"Values for {column}",
+                min_value=_min,
+                max_value=_max,
+                value=(_min, _max),
+                step=step,
+                key=key,
+            )
+            filters.range[column] = Range(start=start, end=end)
+        elif is_datetime64_any_dtype(df[column]):
+            first = df[column].min()
+            last = df[column].max()
+            res = right.date_input(
+                f"Values for {column}", min_value=first, max_value=last, value=(first, last), key=key
+            )
+            if isinstance(res, tuple) and len(res) == 2:
+                start, end = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
+                filters.datetime_range[column] = DatetimeRange(start=start, end=end)
+        else:
+            filters.text[column] = right.text_input(
+                f"Substring or regex in {column}",
+                key=key,
+            )
 
-    filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
-    return filtered
+    return filters
 
 
 class InputItem(NamedTuple):
