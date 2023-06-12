@@ -114,7 +114,13 @@ def to_item(
     du_hash: str,
     frame: str,
 ) -> dict:
-    edit_url = row.pop("url", None)
+    # Derive encord url
+    edit_url: Optional[str] = None
+    project_meta = project_file_structure.load_project_meta()
+    if project_meta.get("has_remote", False):
+        project_hash = project_meta["project_hash"]
+        edit_url = f"https://app.encord.com/label_editor/{du_hash}&{project_hash}/{frame}"
+
     tags = row.pop("tags")
     identifier = row.pop("identifier")
     metadata = Metadata(
