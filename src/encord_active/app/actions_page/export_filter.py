@@ -482,7 +482,7 @@ def render_export_button(
     disabled_help = None
     if not action_utils:
         disabled_help = "Contact Encord to enable integration"
-    elif not is_filtered:
+    elif is_filtered:
         disabled_help = "Export is allowed only for entire datasets, create a subset first or remove all filters"
 
     render_col.button(

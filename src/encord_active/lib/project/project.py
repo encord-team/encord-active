@@ -254,15 +254,14 @@ class Project:
 
         # Update label row content
         if len(label_rows_to_update) > 0:
-            collect_async(
-                partial(
-                    download_label_row,
-                    project=project,
-                    project_file_structure=project_file_structure,
-                ),
-                label_rows_to_update,
-                desc="Updating label rows",
-            )
+            with PrismaConnection(project_file_structure) as conn:
+                with conn.batch_() as batch:
+                    collect_async(
+                        partial(download_label_row, project=project, batch=batch),
+                        label_rows_to_update,
+                        desc="Updating label rows",
+                    )
+                    batch.commit()
         else:
             logger.info("No existent data needs to be updated.")
 
