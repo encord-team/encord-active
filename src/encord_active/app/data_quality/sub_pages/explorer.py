@@ -67,9 +67,9 @@ class ExplorerPage(Page):
         explorer(
             auth_token=get_auth_token(),
             project_name=get_state().project_paths.project_dir.name,
-            items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
             api_url=get_settings().API_URL,
+            filters=get_state().filtering_state.filters.dict(),
         )
 
     def render_view_options(self):

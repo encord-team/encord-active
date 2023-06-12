@@ -1,12 +1,13 @@
 from enum import Enum
 from functools import lru_cache
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
+from encord_active.lib.common.filtering import Filters, apply_filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
@@ -45,10 +46,17 @@ router = APIRouter(
 )
 
 
-@router.get("/{project}/items_id_by_metric", response_class=ORJSONResponse)
-def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascending: bool = True):
+@router.post("/{project}/item_ids_by_metric", response_class=ORJSONResponse)
+def read_item_ids(
+    project: ProjectFileStructureDep,
+    sort_by_metric: Annotated[str, Body()],
+    filters: Filters = Filters(),
+    ascending: Annotated[bool, Body()] = True,
+):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all(marshall=False)
+
+    merged_metrics = apply_filters(merged_metrics, filters)
 
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)

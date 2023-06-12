@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.lib.common.filtering import Filters
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
@@ -62,7 +63,7 @@ class FilteringState:
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
-    sorted_items: Optional[DataFrame[MetricSchema]] = None
+    filters: Filters = Filters()
 
 
 @dataclass

@@ -90,6 +90,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             return df
 
         filters = render_column_filters(df, columns_to_filter)
+        get_state().filtering_state.filters = filters
         return apply_filters(df, filters)
 
 

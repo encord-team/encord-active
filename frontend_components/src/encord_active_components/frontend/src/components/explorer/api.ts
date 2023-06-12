@@ -63,6 +63,11 @@ export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
+// TODO: add a proper type when filtering is done from the frontend. currently
+// we only get the filters form streamlit and pass them to the server so the
+// types aren't strictly necessary.
+export type Filters = unknown;
+
 const EmbeddingTypeSchema = z.union([
   z.literal("classification"),
   z.literal("object"),
@@ -141,13 +146,16 @@ export const getApi = (
       const response = await (await fetcher(url)).json();
       return MetricSchema.array().parse(response);
     },
-    fetchProjectItemIds: async (sortByMetric: string) => {
-      const queryParams = new URLSearchParams({
-        sort_by_metric: sortByMetric,
-      });
-
-      const url = `${baseUrl}/projects/${projectName}/items_id_by_metric?${queryParams}`;
-      const result = await (await fetcher(url)).json();
+    fetchProjectItemIds: async (sort_by_metric: string, filters: any) => {
+      const result = await (
+        await fetcher(`${baseUrl}/projects/${projectName}/item_ids_by_metric`, {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sort_by_metric, filters }),
+        })
+      ).json();
       return IdValueSchema.array().parse(result);
     },
     fetchProjectItem: async (id: string) => {

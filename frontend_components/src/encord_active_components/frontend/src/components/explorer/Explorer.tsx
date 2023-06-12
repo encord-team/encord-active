@@ -1,5 +1,5 @@
 import { Spin } from "./Spinner";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaExpand, FaEdit } from "react-icons/fa";
 import { TbMoodSad2 } from "react-icons/tb";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
@@ -39,7 +39,7 @@ import { Assistant } from "./Assistant";
 export type Props = {
   authToken: string | null;
   projectName: string;
-  items: string[];
+  filters: any;
   scope: Scope;
   baseUrl: string;
 };
@@ -47,7 +47,7 @@ export type Props = {
 export const Explorer = ({
   authToken,
   projectName,
-  items,
+  filters,
   scope,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
@@ -56,7 +56,7 @@ export const Explorer = ({
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  const [itemSet, setItemSet] = useState(new Set(items));
+  const [itemSet, setItemSet] = useState(new Set());
 
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
@@ -86,8 +86,8 @@ export const Explorer = ({
     { enabled: !!similarityItem && !!selectedMetric }
   );
   const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
-    ["item_ids", selectedMetric],
-    () => api.fetchProjectItemIds(selectedMetric?.name!),
+    ["item_ids", selectedMetric, JSON.stringify(filters)],
+    () => api.fetchProjectItemIds(selectedMetric?.name!, filters),
     { enabled: !!selectedMetric, staleTime: Infinity }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
@@ -113,6 +113,10 @@ export const Explorer = ({
   const showSimilarItems = (itemId: string) => (
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
+
+  useEffect(() => {
+    setItemSet(new Set(sortedItems?.map((item) => item.id)) || []);
+  }, [sortedItems]);
 
   useEffect(() => {
     if (!selectedMetric && metrics && metrics?.length > 0)
@@ -173,7 +177,7 @@ export const Explorer = ({
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
-              onReset={() => setItemSet(new Set(items))}
+              onReset={() => setItemSet(new Set())}
             />
           )}
           {similarityItem && (
@@ -240,7 +244,9 @@ export const Explorer = ({
                     itemsToRender.length ===
                     (similarItems || sortedItems)?.length,
                 })}
-                onClick={() => setItemSet(new Set(items))}
+                onClick={() =>
+                  setItemSet(new Set(sortedItems?.map((item) => item.id)) || [])
+                }
               >
                 <MdFilterAltOff />
                 Reset filters
@@ -412,7 +418,7 @@ const ItemPreview = ({
   if (isLoading || !data) return <Spin />;
 
   const { description, ...metrics } = data.metadata.metrics;
-  const {editUrl} = data;
+  const { editUrl } = data;
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
@@ -426,8 +432,11 @@ const ItemPreview = ({
             Similar
           </button>
           <button
+            disabled={!data.editUrl}
             className="btn btn-ghost gap-2"
-            onClick={() => editUrl ? window.open(editUrl, "_blank") : undefined}
+            onClick={() =>
+              editUrl ? window.open(editUrl, "_blank") : undefined
+            }
             disabled={editUrl == null}
           >
             <FaEdit />
@@ -555,14 +564,20 @@ const GalleryItem = ({
             >
               <MdImageSearch className="text-base" />
             </button>
-              <button
-                className="btn btn-ghost gap-2 tooltip tooltip-right"
-                data-tip={editUrl ? "Open in Encord Annotate" : "Upload to Encord to edit annotations"}
-                onClick={() => editUrl ? window.open(editUrl.toString(), "_blank") : null}
-                disabled={editUrl == null}
-              >
-                <FaEdit />
-              </button>
+            <button
+              className="btn btn-ghost gap-2 tooltip tooltip-right"
+              data-tip={
+                editUrl
+                  ? "Open in Encord Annotate"
+                  : "Upload to Encord to edit annotations"
+              }
+              onClick={() =>
+                editUrl ? window.open(editUrl.toString(), "_blank") : null
+              }
+              disabled={editUrl == null}
+            >
+              <FaEdit />
+            </button>
           </div>
           {data.metadata.labelClass || data.metadata.annotator ? (
             <div className="flex flex-col">
