@@ -44,7 +44,7 @@ export const ItemSchema = z.object({
   url: z.string(),
   videoTimestamp: z.number().nullish(),
   dataTitle: z.string().nullish(),
-  editUrl: z.string(),
+  editUrl: z.string().nullish(),
   metadata: z.object({
     metrics: z.record(z.coerce.string()),
     annotator: z.string().nullish(),
