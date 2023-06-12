@@ -35,8 +35,8 @@ pip install encord-active
 
 :::info
 
-`encord-active` requires [python3.9](https://www.python.org/downloads/release/python-3915/) or above and [git](https://git-scm.com/download) VCS.
-If you have trouble installing `encord-active`, you can find more detailed instructions on installing it [here](./installation).
+`encord-active` requires [python 3.9][latest-python-3.9-minor-version] or above and [git][git-install] VCS.
+If you encounter any difficulties during the installation of encord-active, you can refer to our detailed instructions available [here](./installation).
 
 :::
 
@@ -88,8 +88,8 @@ You can follow the [COCO sandbox dataset tutorial](tutorials/touring-the-coco-da
 If you want to quickly explore Encord Active without installing anything into your local machine, we
 have the following Google Colab notebooks for you:
 
-1. [Explore Encord Active sandbox dataset](https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing)
-2. [Explore Encord Active through your own Encord projects](https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link)
+1. [Explore Encord Active sandbox dataset][colab-download-sandbox-project]
+2. [Explore Encord Active through your own Encord projects][colab-import-your-own-project]
 
 ## Import Your Own Data
 
@@ -129,11 +129,11 @@ If you don't have an Encord project ready, you can either
 
 :::info
 
-If you are new to the Encord platform, you can easily [sign up](https://app.encord.com/register) for an Encord account.
+If you are new to the Encord platform, you can easily create an Encord account by [signing up][encord-register].
 
 :::
 
-To be able to import an Encord project, you will need the path to your private `ssh-key` associated with Encord (see documentation [here](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)).
+To be able to import an Encord project, you will need the path to your private SSH key associated with Encord (see documentation [here][encord-set-up-public-key-authentication]).
 
 The command will ask you:
 
@@ -149,7 +149,7 @@ When the process is done, follow the printed instructions to open the app or see
 
 ## Running the App
 
-To run the Encord Active app, run the following command:
+To launch the Encord Active app, run the following command:
 
 ```shell
 # within venv
@@ -167,15 +167,31 @@ If the script just seems to hang and nothing happens in your browser, try visiti
 
 ## What's Up Next?
 
-We recommend to take a look at one of the [tutorials](/category/end-to-end-tutorials) that demonstrate Encord Active's capabilities and the [workflows](/category/workflows) section to learn about importing your model predictions and improving your model performance.
+We recommend to take a look at any of the [tutorials](/category/end-to-end-tutorials) that demonstrate Encord Active's capabilities and the [workflows](/category/workflows) section to learn about improving your model performance.
 A couple of example references are:
 
 1. [Import your model predictions](./import/import-predictions)
-2. Find outliers in your [data](./workflows/identify-outliers-edge-cases) or your [labels](./workflows/identify-outliers-edge-cases)
+2. Find outliers in your [data](./workflows/identify-outliers-edge-cases#data-outliers) or your [labels](./workflows/identify-outliers-edge-cases#label-outliers)
 3. [Identify metrics](./workflows/evaluate-detection-model) that are important for your model performance
 
 You can also have a look at how to [write custom metrics](./metrics/write-your-own) and how to use the [command line interface](./cli).
 
 ### Need Support?
 
-If you got any issues with Encord Active you are more than welcome to [connect with us on Discord](https://discord.gg/TU6yT7Uvx3) or reach out to us at active@encord.com
+Please don't hesitate to contact us if you have any questions via our dedicated [Discord server][join-discord] or email at [active@encord.com][ea-email].
+
+If you encounter any errors, we would love to hear from you so we can address them promptly.  
+We receive immediate notifications when issues are submitted through Encord Active's [GitHub][repo-issues] repository.
+Also, feel free to reach out to us via [Discord][join-discord] or email at [active@encord.com][ea-email] for further assistance.  
+We appreciate your feedback and assistance in improving Encord Active.
+
+
+[colab-download-sandbox-project]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
+[colab-import-your-own-project]: https://colab.research.google.com/drive/1zv4i0SH5tyb1KPVsCZfXDwxV72Ip77zS?usp=share_link
+[ea-email]: mailto:active@encord.com
+[encord-register]: https://app.encord.com/register
+[encord-set-up-public-key-authentication]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[git-install]: https://git-scm.com/download
+[join-discord]: https://discord.gg/TU6yT7Uvx3
+[latest-python-3.9-minor-version]: https://www.python.org/downloads/release/python-3917/
+[repo-issues]: https://github.com/encord-team/encord-active/issues
