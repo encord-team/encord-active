@@ -469,16 +469,20 @@ class EncordActions:
         ]
         filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
 
-        def _get_one_data_unit(lr: dict) -> str:
+        def _get_one_data_unit(lr: dict, valid_data_units: dict) -> str:
             data_units = lr["data_units"]
             for data_unit_key in data_units.keys():
-                return data_unit_key
-            raise StopIteration
+                if data_unit_key in valid_data_units:
+                    return data_unit_key
+            raise StopIteration(
+                f"Cannot find data unit to lookup: {list(data_units.keys())}, {list(valid_data_units.keys())}"
+            )
 
         lr_du_mapping = {
             # We only use the label hash as the key for database migration. The data hashes are preserved anyway.
             LabelRowDataUnit(
-                filtered_du_lr_mapping[_get_one_data_unit(lr)], lr["data_hash"]  # This value is the same
+                filtered_du_lr_mapping[_get_one_data_unit(lr, filtered_du_lr_mapping)],
+                lr["data_hash"]  # This value is the same
             ): LabelRowDataUnit(lr["label_hash"], lr["data_hash"])
             for lr in cloned_project_label_rows
         }
