@@ -88,6 +88,7 @@ def get_polygon_from_dict(polygon_dict, W, H):
 # DENIS: TODO: focus on doing the parser for now for segmentations for images as it was intended. Seems like
 #   for other formats I can still add stuff or have the clients extend what we have.
 
+
 # DENIS: should these labels be the data structure that I've invented for them instead of the encord dict?
 class CocoEncoder:
     """This class has been purposefully built in a modular fashion for extensibility in mind. You are encouraged to
@@ -256,11 +257,11 @@ class CocoEncoder:
         data_hash = data_unit["data_hash"]
         self._data_hash_to_image_id_map[(data_hash, 0)] = image_id
         return {
-            "coco_url": data_unit["data_link"],
+            "coco_url": "",
             "flickr_url": "",
             "id": image_id,
             "image_title": data_unit["data_title"],
-            "file_name": self.get_file_name_and_download_image(label_hash, data_unit),
+            "file_name": self.get_local_path_or_file_name(data_unit),
             "height": data_unit["height"],
             "width": data_unit["width"],
             "label_hash": label_hash,
@@ -268,21 +269,13 @@ class CocoEncoder:
             "frame_num": int(data_unit["data_sequence"]),
         }
 
-    def get_file_name_and_download_image(self, label_hash: str, data_unit: dict) -> str:
-        data_hash = data_unit["data_hash"]
-        url = data_unit["data_link"]
-        image_extension = data_unit["data_type"].split("/")[-1]
-
-        relative_destination_path = Path("data").joinpath(
-            Path(label_hash), Path("images"), Path(f"{data_hash}.{image_extension}")
-        )
-        absolute_destination_path = self._download_file_path.joinpath(relative_destination_path)
-        download_condition = self._download_files and not absolute_destination_path.exists()
-
-        if download_condition or self._force_download:
-            self.download_image(url, absolute_destination_path)
-
-        return str(relative_destination_path)
+    def get_local_path_or_file_name(self, data_unit: dict) -> str:
+        url: str = data_unit["data_link"]
+        if not url.startswith("http"):
+            local_url = Path(url)
+            if local_url.is_file():
+                return url
+        return data_unit["data_title"]
 
     def get_video_images(self, label_hash: str, data_unit: dict) -> List[dict]:
         if not self._include_videos:
@@ -298,7 +291,7 @@ class CocoEncoder:
             self.download_video_images(url, destination_path, data_hash, video_title)
 
         images = []
-        coco_url = data_unit["data_link"]
+        coco_url = ""
         height = data_unit["height"]
         width = data_unit["width"]
 
@@ -721,7 +714,6 @@ def download_file(
     url: str,
     destination: Path,
 ) -> None:
-
     r = requests.get(url, stream=True)
     with open(destination, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024):
@@ -741,8 +733,9 @@ def generate_coco_file(df: pd.DataFrame, project_dir: Path, ontology_file: Path)
         dict: Dictionary object of COCO annotations
     """
     project_fs = ProjectFileStructure(project_dir)
+    label_hashes = df.identifier.str.split("_", expand=False).str[0].unique().tolist()
     with PrismaConnection(project_fs) as conn:
-        rows = conn.labelrow.find_many()
+        rows = conn.labelrow.find_many(where={"label_hash": {"in": label_hashes}})
     label_rows = {row.label_hash: json.loads(row.label_row_json or "") for row in rows}
     metrics = df_to_nested_dict(df)
 
