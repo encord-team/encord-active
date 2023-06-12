@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 from encord_active.lib.common.data_utils import (
     download_file,
     download_image,
-    extract_frames,
+    extract_frames, download_image_as_path,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.utils import get_encord_project
@@ -235,6 +235,38 @@ class LabelRowStructure:
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
+                else:
+                    raise RuntimeError("Unsupported data type")
+
+    def iter_data_unit_with_image_as_path(
+        self,
+        data_unit_hash: Optional[str] = None,
+        frame: Optional[int] = None,
+        cache_db: Optional["prisma.Prisma"] = None,
+    ) -> Iterator[Tuple[DataUnitStructure, Path]]:
+        # Temporary directory for all video decodes
+        label_row_json = self.get_label_row_json(cache_db=cache_db)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame, cache_db=cache_db):
+                if data_unit_struct.data_type in {"img_group", "image"}:
+                    image_path = download_image_as_path(data_unit_struct.signed_url)
+                    yield data_unit_struct, image_path
+                elif data_unit_struct.data_type == "video":
+                    video_dir = tmp_path / data_unit_struct.du_hash
+                    video_dir.mkdir(parents=True, exist_ok=True)
+                    images_dir = video_dir / "frames"
+                    existing_image = next(
+                        images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"), None
+                    )
+                    if existing_image is not None:
+                        yield data_unit_struct, existing_image
+                    else:
+                        video_file = video_dir / label_row_json["data_title"]
+                        download_file(data_unit_struct.signed_url, video_file)
+                        extract_frames(video_file, images_dir, data_unit_struct.du_hash)
+                    downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
+                    yield data_unit_struct, downloaded_image
                 else:
                     raise RuntimeError("Unsupported data type")
 

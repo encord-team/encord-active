@@ -169,6 +169,28 @@ def download_image(url: str) -> Image.Image:
     return Image.open(BytesIO(r.content))
 
 
+def download_image_as_path(url: str) -> Path:
+    if url.startswith("file:"):
+        return Path(unquote(urlparse(url).path))
+
+    cached_image = _get_from_cache(url)
+    if cached_image is not None:
+        return cached_image
+
+    new_cache_download = _add_to_cache(url)
+    try:
+        r = requests.get(url)
+
+        if r.status_code != 200:
+            raise ConnectionError(f"Something happened, couldn't download file from: {url}")
+
+        new_cache_download.write_bytes(r.content)
+    except Exception:
+        _remove_from_cache(url)
+        raise
+    return new_cache_download
+
+
 def convert_image_bgr(image: Image.Image) -> np.ndarray:
     rgb_image = image.convert("RGB")
     np_image = np.array(rgb_image)
