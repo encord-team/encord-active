@@ -482,7 +482,7 @@ class EncordActions:
             # We only use the label hash as the key for database migration. The data hashes are preserved anyway.
             LabelRowDataUnit(
                 filtered_du_lr_mapping[_get_one_data_unit(lr, filtered_du_lr_mapping)],
-                lr["data_hash"]  # This value is the same
+                lr["data_hash"],  # This value is the same
             ): LabelRowDataUnit(lr["label_hash"], lr["data_hash"])
             for lr in cloned_project_label_rows
         }
