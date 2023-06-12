@@ -425,15 +425,14 @@ const ItemPreview = ({
             <MdImageSearch className="text-base" />
             Similar
           </button>
-          { editUrl ? (
-              <button
-                className="btn btn-ghost gap-2"
-                onClick={() => window.open(editUrl, "_blank")}
-              >
-                <FaEdit />
-                Edit
-              </button>
-          ) : null}
+          <button
+            className="btn btn-ghost gap-2"
+            onClick={() => editUrl ? window.open(editUrl, "_blank") : undefined}
+            disabled={editUrl == null}
+          >
+            <FaEdit />
+            Edit
+          </button>
           <TaggingDropdown>
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
@@ -556,15 +555,14 @@ const GalleryItem = ({
             >
               <MdImageSearch className="text-base" />
             </button>
-              {editUrl ? (
-                  <button
-                    className="btn btn-ghost gap-2 tooltip tooltip-right"
-                    data-tip="Open in Encord Annotate"
-                    onClick={() => window.open(editUrl.toString(), "_blank")}
-                  >
-                    <FaEdit />
-                  </button>
-              ) : null}
+              <button
+                className="btn btn-ghost gap-2 tooltip tooltip-right"
+                data-tip={editUrl ? "Open in Encord Annotate" : "Upload to Encord to edit annotations"}
+                onClick={() => editUrl ? window.open(editUrl.toString(), "_blank") : null}
+                disabled={editUrl == null}
+              >
+                <FaEdit />
+              </button>
           </div>
           {data.metadata.labelClass || data.metadata.annotator ? (
             <div className="flex flex-col">
