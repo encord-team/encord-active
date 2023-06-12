@@ -457,7 +457,10 @@ def render_subset_button(
                     dataset_description=cols.dataset.description if cols.dataset else None,
                 )
             except Exception as e:
-                st.error(str(e))
+                print(f"EXCEPTION: {e}")
+                import traceback
+                traceback.print_exc()
+                st.error(f"EXCEPTION: {e}")
                 return
 
         set_updates(
