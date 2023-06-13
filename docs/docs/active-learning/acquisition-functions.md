@@ -19,10 +19,9 @@ We include the following uncertainty-based acquisition functions:
 
 :::caution
 On the following scenarios, uncertainty-based acquisition functions must be used with extra care:
-
 - Softmax outputs from deep networks are often not calibrated and tend to be quite overconfident.
 - For convolutional neural networks, small, seemingly meaningless perturbations in the input space can completely change predictions.
-  :::
+:::
 
 ## Which acquisition function should I use?
 
