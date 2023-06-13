@@ -70,8 +70,6 @@ def populate_tags_with_nested_classifications(pfs: ProjectFileStructure, option_
             return
 
         tags = mm.loc[key].tags
-        new_tags: list[Tag] = []
-
         for question in answer_dict[label_hash].get("classifications", [{}]):
             if question["featureHash"] not in option_answer_hashes:
                 continue
@@ -79,17 +77,12 @@ def populate_tags_with_nested_classifications(pfs: ProjectFileStructure, option_
             name = question["name"]
             for answer in question["answers"]:
                 value = answer["name"]
-                new_tags.append(Tag(f"{name}: {value}", TagScope.LABEL))
+                tag = Tag(f"{name}: {value}", TagScope.LABEL)
+                if tag not in tags:
+                    tags.append(tag)
 
-        if not new_tags:
-            new_tags = [no_label_tag]
-        elif no_label_tag in tags:
-            tags.pop(tags.index(no_label_tag))
-
-        for tag in new_tags:
-            if tag in tags:
-                continue
-            tags.append(tag)
+        if len(tags) == 0:
+            tags.append(no_label_tag)
 
         with DBConnection(pfs) as conn:
             MergedMetrics(conn).update_tags(key, tags)

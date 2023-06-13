@@ -94,7 +94,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "project_hash": project.project_hash,
         "ssh_key_path": ssh_key_path.as_posix(),
         "has_remote": True,
-        "nested_attributes_to_tag": list(option_hashes_to_tag),
+        "nested_attributes_as_tags": bool(option_hashes_to_tag),
     }
     yaml_str = yaml.dump(meta_data)
     project_file_structure.project_meta.write_text(yaml_str, encoding="utf-8")
