@@ -850,13 +850,13 @@ tqdm = ">=4.32.1,<5.0.0"
 
 [[package]]
 name = "encord-active-components"
-version = "0.0.20"
+version = "0.0.22"
 description = "Frontend components used by Encord Active"
 optional = false
 python-versions = ">=3.9, !=2.7.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*, !=3.8.*"
 files = [
-    {file = "encord_active_components-0.0.20-py3-none-any.whl", hash = "sha256:ff6711cfede3b853205b2f304e7cb81de49760982c13e2149211f5fdbd82741a"},
-    {file = "encord_active_components-0.0.20.tar.gz", hash = "sha256:1677adc0356607e773fd8c7512a4aa02369013ef8a7150cf05de4561e215fe2f"},
+    {file = "encord_active_components-0.0.22-py3-none-any.whl", hash = "sha256:f42956bc4e66d0aaae018ddbc2f45a0286690b952dbbf5875b7afc2ea9b5614b"},
+    {file = "encord_active_components-0.0.22.tar.gz", hash = "sha256:8a69a0b1fdc38599548454d9af96dbeb5866a9f7880a17731c827d65a318566c"},
 ]
 
 [package.dependencies]
@@ -5183,4 +5183,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.11"
-content-hash = "0ac4ad08a9740ce9ed63b28a114357d808c884d79fbb5598c7a28b9f67daf9d8"
+content-hash = "2c6092de892a695f4d79d6c694eb065ebe1d3cb88111dae50217a80b1f00c634"
