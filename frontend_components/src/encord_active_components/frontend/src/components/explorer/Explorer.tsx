@@ -35,7 +35,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { Assistant } from "./Assistant";
+import { Assistant, useSearch } from "./Assistant";
 
 export type Props = {
   authToken: string | null;
@@ -65,7 +65,7 @@ export const Explorer = ({
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
 
-  const [searchResults, setSearchResults] = useState<IdValue[] | null>(null);
+  /* const [searchResults, setSearchResults] = useState<IdValue[] | null>(null); */
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -104,14 +104,21 @@ export const Explorer = ({
     [isAscending, sortedItems]
   );
 
-  const itemsToRender =
-    similarItems ?? (searchResults ?? withSortOrder).map(({ id }) => id);
+  const {
+    search,
+    setSearch,
+    result: searchResults,
+    loading: searching,
+  } = useSearch(scope, api.searchInProject);
 
   const resetable =
-    itemSet.size || searchResults?.length || similarItems?.length;
+    itemSet.size || searchResults?.ids.length || similarItems?.length;
   const reset = () => (
-    setItemSet(new Set()), setSearchResults(null), setSimilarityItem(null)
+    setItemSet(new Set()), setSearch(undefined), setSimilarityItem(null)
   );
+
+  const itemsToRender =
+    similarItems ?? searchResults?.ids ?? withSortOrder.map(({ id }) => id);
 
   const { pageSize, pageItems, page, setPage, setPageSize } =
     usePagination(itemsToRender);
@@ -149,11 +156,20 @@ export const Explorer = ({
         isLoading: isLoadingSimilarItems,
         description: "Finding similar images",
       },
+      {
+        isLoading: searching,
+        description: "Searching",
+      },
     ];
     return descriptions.reduce((res, item) => {
       return !res && item.isLoading ? item.description : res;
     }, "");
-  }, [isLoadingMetrics, isLoadingSortedItems, isLoadingSimilarItems]);
+  }, [
+    isLoadingMetrics,
+    isLoadingSortedItems,
+    isLoadingSimilarItems,
+    searching,
+  ]);
 
   return (
     <ApiContext.Provider value={api}>
@@ -270,16 +286,11 @@ export const Explorer = ({
             </div>
           </div>
           <Assistant
-            scope={scope}
+            search={search}
+            isFetching={searching}
+            setSearch={setSearch}
+            snippet={searchResults?.snippet}
             disabled={!hasPremiumFeatures}
-            setResults={(ids) => {
-              const idValues = new Map(
-                sortedItems?.map(({ id, value }) => [id, value])
-              );
-              setSearchResults(
-                ids.map((id) => ({ id, value: idValues.get(id) || 0 }))
-              );
-            }}
           />
           {itemsToRender.length ? (
             <>
@@ -436,7 +447,6 @@ const ItemPreview = ({
             Similar
           </button>
           <button
-            disabled={!data.editUrl}
             className="btn btn-ghost gap-2"
             onClick={() =>
               editUrl ? window.open(editUrl, "_blank") : undefined
