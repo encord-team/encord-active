@@ -416,10 +416,17 @@ def generate_create_project_form(
 
         if not st.form_submit_button("➕ Create"):
             return None
+
+        forbidden_chars = ["/", "\\", ">", "<", ":", "|", "?", "*", '"']
+        if any(char in forbidden_chars for char in cols.project.title):
+            st.error(f"Project title should not include characters in {forbidden_chars}!")
+            return None
+
         for item, render_item in zip(cols._fields, cols):
             if render_item and render_item.title == "":
                 st.error(f"{item.capitalize()} title cannot be empty!")
                 return None
+
     return cols
 
 
