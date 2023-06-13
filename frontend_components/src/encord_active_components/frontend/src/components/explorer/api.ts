@@ -155,14 +155,18 @@ export const getApi = (
       const response = await (await fetcher(url)).json();
       return MetricSchema.array().parse(response);
     },
-    fetchProjectItemIds: async (sort_by_metric: string, filters: any) => {
+    fetchProjectItemIds: async (
+      sort_by_metric: string,
+      filters: any,
+      itemSet: Set<string>
+    ) => {
       const result = await (
         await fetcher(`${baseUrl}/projects/${projectName}/item_ids_by_metric`, {
           method: "post",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ sort_by_metric, filters }),
+          body: JSON.stringify({ sort_by_metric, filters, ids: [...itemSet] }),
         })
       ).json();
       return IdValueSchema.array().parse(result);

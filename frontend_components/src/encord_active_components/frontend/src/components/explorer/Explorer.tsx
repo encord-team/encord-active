@@ -57,15 +57,15 @@ export const Explorer = ({
     Streamlit.setFrameHeight(height);
   }, [height]);
 
-  const [itemSet, setItemSet] = useState(new Set());
+  const [itemSet, setItemSet] = useState(new Set<string>());
+  const [isAscending, setIsAscending] = useState(true);
 
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
-
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
 
-  const [sortedAndFiltered, setSortedAndFiltered] = useState<IdValue[]>([]);
+  const [searchResults, setSearchResults] = useState<IdValue[] | null>(null);
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -86,10 +86,11 @@ export const Explorer = ({
       api.fetchSimilarItems(similarityItem!, selectedMetric?.embeddingType!),
     { enabled: !!similarityItem && !!selectedMetric }
   );
+
   const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
-    ["item_ids", selectedMetric, JSON.stringify(filters)],
-    () => api.fetchProjectItemIds(selectedMetric?.name!, filters),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
+    () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
+    { enabled: !!selectedMetric }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
@@ -97,7 +98,21 @@ export const Explorer = ({
     { staleTime: Infinity }
   );
 
-  const itemsToRender = similarItems ?? sortedAndFiltered.map(({ id }) => id);
+  const withSortOrder = useMemo(
+    () =>
+      isAscending ? sortedItems || [] : [...(sortedItems || [])].reverse(),
+    [isAscending, sortedItems]
+  );
+
+  const itemsToRender =
+    similarItems ?? (searchResults ?? withSortOrder).map(({ id }) => id);
+
+  const resetable =
+    itemSet.size || searchResults?.length || similarItems?.length;
+  const reset = () => (
+    setItemSet(new Set()), setSearchResults(null), setSimilarityItem(null)
+  );
+
   const { pageSize, pageItems, page, setPage, setPageSize } =
     usePagination(itemsToRender);
 
@@ -116,20 +131,9 @@ export const Explorer = ({
   );
 
   useEffect(() => {
-    setItemSet(new Set(sortedItems?.map((item) => item.id)) || []);
-  }, [sortedItems]);
-
-  useEffect(() => {
     if (!selectedMetric && metrics && metrics?.length > 0)
       setSelectedMetric(metrics[0]);
   }, [metrics?.length]);
-
-  useEffect(() => {
-    if (isLoadingSortedItems) return;
-    setSortedAndFiltered(
-      sortedItems?.filter(({ id }) => itemSet.has(id)) || []
-    );
-  }, [isLoadingSortedItems, itemSet, sortedItems]);
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -173,7 +177,7 @@ export const Explorer = ({
           {selectedMetric && (
             <Embeddings
               isloadingItems={isLoadingSortedItems}
-              idValues={sortedAndFiltered}
+              idValues={sortedItems || []}
               filters={filters}
               embeddingType={selectedMetric.embeddingType}
               onSelectionChange={(selection) => (
@@ -219,9 +223,7 @@ export const Explorer = ({
                       })}
                     >
                       <input
-                        onChange={() =>
-                          setSortedAndFiltered((prev) => [...prev].reverse())
-                        }
+                        onChange={() => setIsAscending((prev) => !prev)}
                         type="checkbox"
                         disabled={!!similarItems?.length}
                         defaultChecked={true}
@@ -232,7 +234,7 @@ export const Explorer = ({
                   </label>
                   {!similarityItem && (
                     <MetricDistributionTiny
-                      values={sortedAndFiltered || []}
+                      values={sortedItems || []}
                       setSeletedIds={(ids) => setItemSet(new Set(ids))}
                     />
                   )}
@@ -242,13 +244,9 @@ export const Explorer = ({
             <div className="flex gap-2">
               <button
                 className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled":
-                    itemsToRender.length ===
-                    (similarItems || sortedItems)?.length,
+                  "btn-disabled": !resetable,
                 })}
-                onClick={() =>
-                  setItemSet(new Set(sortedItems?.map((item) => item.id)) || [])
-                }
+                onClick={reset}
               >
                 <MdFilterAltOff />
                 Reset filters
@@ -276,9 +274,9 @@ export const Explorer = ({
             disabled={!hasPremiumFeatures}
             setResults={(ids) => {
               const idValues = new Map(
-                sortedAndFiltered.map(({ id, value }) => [id, value])
+                sortedItems?.map(({ id, value }) => [id, value])
               );
-              setSortedAndFiltered(
+              setSearchResults(
                 ids.map((id) => ({ id, value: idValues.get(id) || 0 }))
               );
             }}

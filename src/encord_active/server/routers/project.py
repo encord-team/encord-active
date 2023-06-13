@@ -53,10 +53,13 @@ def read_item_ids(
     sort_by_metric: Annotated[str, Body()],
     filters: Filters = Filters(),
     ascending: Annotated[bool, Body()] = True,
+    ids: Annotated[Optional[list[str]], Body()] = None,
 ):
     merged_metrics = filtered_merged_metrics(project, filters)
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
+    if ids:
+        res = res[res.index.isin(ids)]
     res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
 
     return ORJSONResponse(res[["id", "value"]].to_dict("records"))
