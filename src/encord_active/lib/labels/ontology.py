@@ -24,9 +24,13 @@ def _get_nested_attribute_hashes(obj, out: set[str]):
         return
 
     for attr in options:
-        if attr.has_options_field():
+        if not hasattr(attr, "options"):
+            continue
+
+        nested_options = getattr(attr, "options")
+        if nested_options:
             out.add(attr.feature_node_hash)
-            _traverse_options(attr.options, out)
+            _traverse_options(nested_options, out)
 
 
 def get_nested_radio_and_checklist_hashes(ontology: OntologyStructure) -> set[str]:
