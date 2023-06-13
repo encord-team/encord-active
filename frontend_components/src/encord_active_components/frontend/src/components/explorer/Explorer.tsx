@@ -412,7 +412,7 @@ const ItemPreview = ({
   if (isLoading || !data) return <Spin />;
 
   const { description, ...metrics } = data.metadata.metrics;
-
+  const {editUrl} = data;
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
@@ -427,7 +427,8 @@ const ItemPreview = ({
           </button>
           <button
             className="btn btn-ghost gap-2"
-            onClick={() => window.open(data.editUrl, "_blank")}
+            onClick={() => editUrl ? window.open(editUrl, "_blank") : undefined}
+            disabled={editUrl == null}
           >
             <FaEdit />
             Edit
@@ -500,6 +501,7 @@ const GalleryItem = ({
   const displayValue =
     intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
   const { description } = data.metadata.metrics;
+  const { editUrl } = data;
 
   return (
     <div className="card relative align-middle bg-gray-100 form-control min-h-[230px]">
@@ -553,13 +555,14 @@ const GalleryItem = ({
             >
               <MdImageSearch className="text-base" />
             </button>
-            <button
-              className="btn btn-ghost gap-2 tooltip tooltip-right"
-              data-tip="Open in Encord Annotate"
-              onClick={() => window.open(data.editUrl.toString(), "_blank")}
-            >
-              <FaEdit />
-            </button>
+              <button
+                className="btn btn-ghost gap-2 tooltip tooltip-right"
+                data-tip={editUrl ? "Open in Encord Annotate" : "Upload to Encord to edit annotations"}
+                onClick={() => editUrl ? window.open(editUrl.toString(), "_blank") : null}
+                disabled={editUrl == null}
+              >
+                <FaEdit />
+              </button>
           </div>
           {data.metadata.labelClass || data.metadata.annotator ? (
             <div className="flex flex-col">
