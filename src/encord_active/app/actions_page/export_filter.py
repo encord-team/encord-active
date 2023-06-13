@@ -210,6 +210,11 @@ class RenderItems(NamedTuple):
 
 
 def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool, project_name: str) -> InputItem:
+
+    non_usable_chars = '/\><:|?*"'  # These are the forbidden printable ASCII chars in linux and windows folder names
+    table = str.maketrans("", "", non_usable_chars)
+    project_name = project_name.translate(table)
+
     return InputItem(
         col.text_input(
             f"{item} title",
