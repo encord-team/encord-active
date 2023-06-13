@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Quick import data & labels
 
-**Grep arbitrary images from within a dataset directory**
+**Create a project using images from a dataset directory of your choice**
 
 
 If you already have an image dataset stored locally, you can initialize a project from that dataset using the `init` command.
@@ -32,7 +32,7 @@ It allows you to verify the project content and ensure that everything is set up
 There are various options available to customize the initialization of your project according to your specific requirements.
 For a comprehensive list of these options, please refer to the [Command Line Interface][init-command-cli] (CLI) documentation.
 
-## Including Labels
+## Including labels
 
 If you want to include labels as well, this is also an option.
 To do so, you will have to define how to parse your labels.
