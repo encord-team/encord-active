@@ -104,26 +104,23 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
 
         if column == "tags":
             # Enable filtering of frames without tags (containing '[]' values in the 'tags' column)
-            options = all_tags(get_state().project_paths) + [Tag(UNTAGED_FRAMES_LABEL, TagScope.DATA)]
+            tag_options = all_tags(get_state().project_paths) + [Tag(UNTAGED_FRAMES_LABEL, TagScope.DATA)]
             filters.tags = right.multiselect(
                 "Choose tags to filter",
-                options=options,
+                options=tag_options,
                 format_func=lambda x: x.name,
                 key=key,
             )
 
         elif column == "object_class":
             # Enable filtering of frames without objects (containing 'None' values in the 'object_class' column)
-            options = df[column].unique().tolist()
-            if None in options:
-                options[options.index(None)] = NO_CLASS_LABEL
-            else:  # Ensure that the 'no_class' option is always displayed
-                options.append(NO_CLASS_LABEL)
+            class_options = [object_class for object_class in df[column].unique() if object_class is not None]
+            class_options.append(NO_CLASS_LABEL)
 
             filters.object_classes = right.multiselect(
                 "Values for object class",
-                options=options,
-                default=options,
+                options=class_options,
+                default=class_options,
                 key=key,
             )
 
