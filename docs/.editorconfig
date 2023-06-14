@@ -1,0 +1,5 @@
+root = true
+
+[*.mdx]
+trim_trailing_whitespace = false
+ij_indent_size = 2

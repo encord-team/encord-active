@@ -1,0 +1,93 @@
+---
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Link from '@docusaurus/Link';
+
+# Installation
+
+:::info
+
+Make sure you have [python 3.9][latest-python-3.9-minor-version] and [git][git-download] VCS installed on your system.
+
+To install the correct version of python you can use [pyenv][pyenv-download], [brew (mac only)][latest-python-3.9-brew] or simply [download][latest-python-3.9-minor-version] it.
+
+:::
+
+## From PyPi
+
+Install `encord-active` in your favorite Python environment with the following commands:
+
+<Tabs groupId="operating-systems">
+  <TabItem value="linux-macos" label="Linux/macOS">
+
+```shell
+python3.9 -m venv ea-venv
+source ea-venv/bin/activate
+pip install encord-active
+```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows" default>
+
+```shell
+python -m venv ea-venv
+ea-venv\Scripts\activate
+pip install encord-active
+```
+
+  </TabItem>
+</Tabs>
+
+#### COCO extras
+
+If you intend to work with files using COCO format you'll have to install Encord Active with an extra dependency:
+
+```shell
+pip install encord-active[coco]
+```
+
+:::info
+You might need to install `xcode-select` if you are on Mac or `C++ build tools` if you are on Windows.
+:::
+
+## Check the Installation
+
+To check what version of Encord Active is installed, run:
+
+```shell
+$ encord-active --version
+```
+
+This must be run in the same virtual environment where you installed the package.
+
+The `--help` option provides some context to what you can do with `encord-active`.  
+If you'd like to explore the available commands in the Command Line Interface (CLI), you can refer to the [CLI section](./cli) for more detailed information.
+
+## Docker
+
+We also provide a docker image that works exactly as the CLI.
+
+```shell
+docker run -it --rm -p 8501:8501 -p 8000:8000 -v ${PWD}:/data encord/encord-active <command>
+```
+
+Running the previous command will mount your current working directory, so everything that happens inside the docker container will persist after it is done.
+
+#### SSH key
+
+If you intend to use Encord Active with an Encord Annotate project you'll need to mount a volume with your SSH key as well.
+
+```shell
+docker run -it --rm -p 8501:8501 -p 8000:8000 -v ${PWD}:/data -v ${HOME}/.ssh:/root/.ssh encord/encord-active
+```
+
+Then, when asked for your SSH key, you can point to `~/.ssh/<your-key-file>`
+
+
+[git-download]: https://git-scm.com/download
+[latest-python-3.9-brew]: https://formulae.brew.sh/formula/python@3.9
+[latest-python-3.9-minor-version]: https://www.python.org/downloads/release/python-3917/
+[pyenv-download]: https://github.com/pyenv/pyenv
