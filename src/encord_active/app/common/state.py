@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 from pandera.typing import DataFrame
 
+from encord_active.lib.common.filtering import Filters
 from encord_active.lib.common.image_utils import ObjectDrawingConfigurations
 from encord_active.lib.dataset.outliers import MetricsSeverity
 from encord_active.lib.dataset.summary_utils import AnnotationStatistics
@@ -14,7 +15,7 @@ from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics, initialize_merged_metrics
 from encord_active.lib.embeddings.types import Embedding2DSchema
 from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.metrics.utils import MetricData, MetricSchema
+from encord_active.lib.metrics.utils import MetricData
 from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
 from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
 from encord_active.lib.premium.model import SearchResponse
@@ -62,7 +63,7 @@ class FilteringState:
     selected_annotators: List[str] = field(default_factory=list)
     selected_classes: List[str] = field(default_factory=list)
     sort_by_metric: Optional[MetricData] = None
-    sorted_items: Optional[DataFrame[MetricSchema]] = None
+    filters: Filters = Filters()
 
 
 @dataclass

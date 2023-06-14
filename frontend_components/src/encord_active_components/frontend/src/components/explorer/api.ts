@@ -63,6 +63,11 @@ export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
+// TODO: add a proper type when filtering is done from the frontend. currently
+// we only get the filters form streamlit and pass them to the server so the
+// types aren't strictly necessary.
+export type Filters = unknown;
+
 const EmbeddingTypeSchema = z.union([
   z.literal("classification"),
   z.literal("object"),
@@ -87,7 +92,7 @@ export const searchTypeOptions = {
   search: "Search",
   codegen: "Code Generation",
 } as const;
-type SearchType = keyof typeof searchTypeOptions;
+export type SearchType = keyof typeof searchTypeOptions;
 
 const searchResultSchema = z.object({
   ids: z.string().array(),
@@ -123,11 +128,20 @@ export const getApi = (
         .boolean()
         .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
     fetchProject2DEmbeddings: async (
-      embeddingType: Metric["embeddingType"]
+      embedding_type: Metric["embeddingType"],
+      filters: Filters
     ) => {
-      const url = `${baseUrl}/projects/${projectName}/2d_embeddings/${embeddingType}`;
+      const url = `${baseUrl}/projects/${projectName}/2d_embeddings`;
       try {
-        const response = await (await fetcher(url)).json();
+        const response = await (
+          await fetcher(url, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ embedding_type, filters }),
+          })
+        ).json();
         return Item2DEmbeddingSchema.array().parse(response);
       } catch {
         return [];
@@ -141,13 +155,20 @@ export const getApi = (
       const response = await (await fetcher(url)).json();
       return MetricSchema.array().parse(response);
     },
-    fetchProjectItemIds: async (sortByMetric: string) => {
-      const queryParams = new URLSearchParams({
-        sort_by_metric: sortByMetric,
-      });
-
-      const url = `${baseUrl}/projects/${projectName}/items_id_by_metric?${queryParams}`;
-      const result = await (await fetcher(url)).json();
+    fetchProjectItemIds: async (
+      sort_by_metric: string,
+      filters: any,
+      itemSet: Set<string>
+    ) => {
+      const result = await (
+        await fetcher(`${baseUrl}/projects/${projectName}/item_ids_by_metric`, {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sort_by_metric, filters, ids: [...itemSet] }),
+        })
+      ).json();
       return IdValueSchema.array().parse(result);
     },
     fetchProjectItem: async (id: string) => {
@@ -325,11 +346,12 @@ export const useApi = () => {
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
       useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
     fetch2DEmbeddings: (
-      embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0]
+      embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
+      filters: Filters
     ) =>
       useQuery(
         ["2d_embeddings", embeddingType],
-        () => api.fetchProject2DEmbeddings(embeddingType),
+        () => api.fetchProject2DEmbeddings(embeddingType, filters),
         { enabled: !!embeddingType, staleTime: Infinity }
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>

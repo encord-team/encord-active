@@ -1,51 +1,73 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { API, Scope, searchTypeOptions, useApi } from "./api";
+import { API, Scope, SearchType, searchTypeOptions } from "./api";
 import { Spin } from "./Spinner";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
-export const Assistant = ({
-  scope,
-  setResults,
-  disabled = false,
-}: {
-  scope: Scope;
-  setResults: (
-    args: Awaited<ReturnType<API["searchInProject"]>>["ids"]
-  ) => void;
-  disabled?: boolean;
-}) => {
-  const client = useQueryClient();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [parent, _] = useAutoAnimate();
+type SearchFn = API["searchInProject"];
+type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope">;
+type Result = Awaited<ReturnType<SearchFn>>;
 
-  const search = useApi().search;
+export const useSearch = (scope: Scope, searchFn: SearchFn) => {
+  const client = useQueryClient();
+
+  const [search, setSearch] = useState<ScopelessSearch | undefined>();
+  const [result, setResult] = useState<Result | undefined>();
 
   const { refetch, isFetching, data } = useQuery(
-    ["search"],
+    ["search", scope, search?.type, search?.query],
     ({ signal }) => {
-      const { query, type } = formRef.current!;
-      if (query.value)
-        return search({ scope, query: query.value, type: type.value }, signal);
+      if (!search?.query) return null;
+      client.cancelQueries(["search"]);
+      const res = searchFn(
+        { scope, query: search.query, type: search.type },
+        signal
+      );
+      return res;
     },
     { enabled: false }
   );
 
   useEffect(() => {
-    data?.ids && setResults(data.ids);
+    if (search) refetch();
+    else setResult(undefined);
+  }, [search]);
+
+  useEffect(() => {
+    if (data) setResult(data);
   }, [data]);
+
+  return { search, setSearch, result, loading: isFetching };
+};
+
+export const Assistant = ({
+  defaultSearch,
+  isFetching,
+  snippet,
+  setSearch,
+  disabled = false,
+}: {
+  defaultSearch?: ScopelessSearch;
+  isFetching: boolean;
+  snippet?: string | null;
+  setSearch: (search: ScopelessSearch) => void;
+  disabled?: boolean;
+}) => {
+  const [parent, _] = useAutoAnimate();
 
   return (
     <div ref={parent} className="flex flex-col w-full gap-2">
       <form
-        ref={formRef}
         className="w-full flex"
-        onSubmit={(e) => (
-          e.preventDefault(), client.cancelQueries(["search"]), refetch()
-        )}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const query = e.currentTarget["query"] satisfies HTMLInputElement;
+          const type = e.currentTarget["type"] satisfies HTMLInputElement;
+          setSearch({ query: query.value, type: type.value as SearchType });
+        }}
       >
         <div
           className={classy("form-control w-full", {
@@ -64,12 +86,16 @@ export const Assistant = ({
             <input
               name="query"
               type="text"
+              key={defaultSearch?.query}
+              defaultValue={defaultSearch?.query}
               placeholder="Enter a query"
               className="input input-bordered w-full"
               disabled={disabled}
             />
             <select
               name="type"
+              key={defaultSearch?.type}
+              defaultValue={defaultSearch?.type}
               className="select select-bordered"
               disabled={disabled}
             >
@@ -82,10 +108,10 @@ export const Assistant = ({
           </label>
         </div>
       </form>
-      {!isFetching && data?.snippet && (
+      {!isFetching && snippet && (
         <div className="mockup-code">
           <pre data-prefix="1">
-            <code>{data.snippet}</code>
+            <code>{snippet}</code>
           </pre>
         </div>
       )}

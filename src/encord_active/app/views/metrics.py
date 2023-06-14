@@ -40,11 +40,7 @@ def explorer(metric_type: MetricScope):
                 st.error("You don't seem to have any data in your project.")
                 return
 
-        selected_df = page.sidebar_options(available_metrics, metric_type)
-
-        if selected_df is None:
-            return
-
-        page.build(selected_df, metric_type)
+        page.sidebar_options(available_metrics, metric_type)
+        page.build(metric_type)
 
     return render

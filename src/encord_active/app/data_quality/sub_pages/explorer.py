@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import streamlit as st
 from encord_active_components.components.explorer import explorer
@@ -28,48 +28,47 @@ from encord_active.server.settings import get_settings
 class ExplorerPage(Page):
     title = "🔎 Explorer"
 
-    def sidebar_options(self, available_metrics: List[MetricData], *_) -> Optional[DataFrame[MetricSchema]]:
+    def sidebar_options(self, available_metrics: List[MetricData], *_):
         self.available_metrics = available_metrics
         self.display_settings()
 
-        selected_metric = get_state().filtering_state.sort_by_metric
-        if not selected_metric:
-            return None
-
-        df = load_metric_dataframe(selected_metric)
-
-        selected_classes = get_state().filtering_state.selected_classes
-        is_class_selected = (
-            df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
-        )
-        df = df[is_class_selected]
-
-        selected_annotators = get_state().filtering_state.selected_annotators
-        annotator_selected = (
-            df.shape[0] * [True] if not selected_annotators else df[MetricSchema.annotator].isin(selected_annotators)
-        )
-
-        df = df[annotator_selected].pipe(DataFrame[MetricSchema])
-
-        fmm = get_state().filtering_state.merged_metrics
-        return df.set_index("identifier").loc[fmm.index[fmm.index.isin(df.identifier)]].reset_index()
-
-    def build(self, selected_df: DataFrame[MetricSchema], metric_scope: MetricScope):
+    def build(self, metric_scope: MetricScope):
         selected_metric = get_state().filtering_state.sort_by_metric
         if not selected_metric:
             return
 
-        with st.expander("Dataset Properties", expanded=True):
-            render_dataset_properties(selected_df)
-        with st.expander("Annotator Statistics", expanded=False):
-            render_annotator_properties(selected_df)
+        if metric_scope == MetricScope.LABEL_QUALITY:
+            df = load_metric_dataframe(selected_metric)
+
+            selected_classes = get_state().filtering_state.selected_classes
+            is_class_selected = (
+                df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
+            )
+            df = df[is_class_selected]
+
+            selected_annotators = get_state().filtering_state.selected_annotators
+            annotator_selected = (
+                df.shape[0] * [True]
+                if not selected_annotators
+                else df[MetricSchema.annotator].isin(selected_annotators)
+            )
+
+            df = df[annotator_selected].pipe(DataFrame[MetricSchema])
+
+            fmm = get_state().filtering_state.merged_metrics
+            df = df.set_index("identifier").loc[fmm.index[fmm.index.isin(df.identifier)]].reset_index()
+
+            with st.expander("Dataset Properties", expanded=True):
+                render_dataset_properties(df)
+            with st.expander("Annotator Statistics", expanded=False):
+                render_annotator_properties(df)
 
         explorer(
             auth_token=get_auth_token(),
             project_name=get_state().project_paths.project_dir.name,
-            items=[id for id in get_state().filtering_state.merged_metrics.index.values],
             scope=metric_scope.value,
             api_url=get_settings().API_URL,
+            filters=get_state().filtering_state.filters.dict(),
         )
 
     def render_view_options(self):

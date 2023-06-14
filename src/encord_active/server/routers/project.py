@@ -1,12 +1,13 @@
 from enum import Enum
 from functools import lru_cache
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
+from encord_active.lib.common.filtering import Filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
@@ -33,6 +34,7 @@ from encord_active.server.dependencies import (
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
+    filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
     to_item,
@@ -45,13 +47,19 @@ router = APIRouter(
 )
 
 
-@router.get("/{project}/items_id_by_metric", response_class=ORJSONResponse)
-def read_item_ids(project: ProjectFileStructureDep, sort_by_metric: str, ascending: bool = True):
-    with DBConnection(project) as conn:
-        merged_metrics = MergedMetrics(conn).all(marshall=False)
-
+@router.post("/{project}/item_ids_by_metric", response_class=ORJSONResponse)
+def read_item_ids(
+    project: ProjectFileStructureDep,
+    sort_by_metric: Annotated[str, Body()],
+    filters: Filters = Filters(),
+    ascending: Annotated[bool, Body()] = True,
+    ids: Annotated[Optional[list[str]], Body()] = None,
+):
+    merged_metrics = filtered_merged_metrics(project, filters)
     column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
     res = merged_metrics[[column]].dropna().sort_values(by=[column], ascending=ascending)
+    if ids:
+        res = res[res.index.isin(ids)]
     res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
 
     return ORJSONResponse(res[["id", "value"]].to_dict("records"))
@@ -137,14 +145,19 @@ def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[Metr
     ]
 
 
-@router.get("/{project}/2d_embeddings/{embedding_type}", response_class=ORJSONResponse)
-def get_2d_embeddings(project: ProjectFileStructureDep, embedding_type: EmbeddingType):
+@router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
+def get_2d_embeddings(
+    project: ProjectFileStructureDep, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
+):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
 
     if embeddings_df is None:
         raise HTTPException(
             status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
         )
+
+    filtered = filtered_merged_metrics(project, filters)
+    embeddings_df[embeddings_df["identifier"].isin(filtered.index)]
 
     return ORJSONResponse(embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records"))
 
