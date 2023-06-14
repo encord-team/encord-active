@@ -2,7 +2,6 @@ from typing import Any, Literal, Optional
 
 from encord_active_components.renderer import Components, render
 
-
 Scope = Literal["data_quality", "label_quality", "model_quality"]
 
 

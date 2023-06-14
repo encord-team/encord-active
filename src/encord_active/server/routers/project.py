@@ -7,7 +7,7 @@ from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
-from encord_active.lib.common.filtering import Filters, apply_filters
+from encord_active.lib.common.filtering import Filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
