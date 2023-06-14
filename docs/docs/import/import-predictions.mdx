@@ -1,35 +1,35 @@
 ---
 sidebar_position: 2
+title: Model predictions
 ---
 
 import TOCInline from "@theme/TOCInline";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-# Importing model predictions
+# Import model predictions
 
-**Import model predictions into Encord Active.**
+**Incorporate model predictions into Encord Active**
 
-:::tip
+By incorporating machine learning model predictions, Encord Active expands its capabilities to provide visualizations, model evaluation, identification of failure modes, error detection in labeling, prioritization of high-value data for re-labeling, and other valuable insights, enhancing the overall performance of the system.
 
-If your predictions are stored in the [COCO results format](https://cocodataset.org/#format-results) you can jump to the [import coco predictions](#importing-coco-predictions) section.
-
+:::note
+If you possess predictions in the [COCO Results format](https://cocodataset.org/#format-results), you can conveniently navigate to the [Import COCO predictions](#coco-predictions) subsection.
 :::
 
 To import your model predictions into Encord Active, there are a couple of steps you need to follow:
 
-<TOCInline toc={toc.filter((node, index) => node.level === 2)} />
+<TOCInline toc={toc.filter((node) => node.level === 2 && node.id !== "easy-imports").map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
+
 
 If you are already familiar with `data_hash`es and `featureNodeHash`es from the Encord platform, you can safely skip to [2. Prepare a `.pkl` File to be Imported](#2-prepare-a-pkl-file-to-be-imported).
 Just note that when specifying the `class_id` for a prediction, Encord Active expects the associated `featureNodeHash` from the Encord ontology as id.
 
 :::tip
-
 In the [SDK section](../sdk/prediction-import), you will also find ways to import predictions [KITTI files](../sdk/prediction-import/kitti) and [directories containing mask files](../sdk/prediction-import/masks).
-
 :::
 
-## 1. Covering the Basics
+## Covering the Basics
 
 Before we dive into the details, we have a couple of things that we need to cover.
 
@@ -140,7 +140,7 @@ encord-active print --json ontology
 
 :::
 
-## 2. Prepare a `.pkl` File to be Imported
+## Prepare a `.pkl` File to be Imported
 
 Now, you can prepare a pickle file (`.pkl`) to be imported by Encord Active.
 You do this by building a list of `Prediction` objects.
@@ -315,7 +315,7 @@ with open("/path/to/predictions.pkl", "wb") as f:
 
 In the above code snippet, you will have to fetch `data_hash`, `class_id`, etc., from the for loop in line 5.
 
-## 3. Import Your Predictions via the CLI
+## Import Your Predictions via the CLI
 
 To import the predictions into Encord Active, you run the following command from the command line:
 
@@ -325,17 +325,23 @@ encord-active import predictions /path/to/predictions.pkl
 
 This will import your predictions into Encord Active and run all the [metrics](../category/quality-metrics) on your predictions.
 
-## Importing Coco Predictions
+## Easy imports {#easy-imports}
+
+Encord Active streamlines the import of well-known model prediction formats allowing for easy integration of diverse model types into the system.
+
+The following subsections outline simplified methods to import popular formats, bypassing the previous 3-step process.
+
+### COCO predictions
 
 :::info
 Make sure you have installed Encord Active with the `coco` [extras](../installation#coco-extras).
 :::
 
 :::note
-This command assume that you have imported you project using the [COCO importer](../cli#project) and you are inside the projects directory.
+This command assumes that you have imported you project using the [COCO importer](../cli#project) and that the current working directory is the project folder.
 :::
 
-Importing COCO predictions is currently the easiest way to import predictions to Encord Active.
+Importing COCO predictions is currently the easiest way to import predictions into Encord Active.
 
 You need to have a results JSON file following the [COCO results format](https://cocodataset.org/#format-results) and run the following command on it:
 
@@ -343,4 +349,4 @@ You need to have a results JSON file following the [COCO results format](https:/
 encord-active import predictions --coco results.json
 ```
 
-After the execution is done, you should be ready to [evaluate your model performance](../workflows/evaluate-detection-model).
+After the execution is done, you are ready to [evaluate your model performance](../workflows/evaluate-detection-model).
