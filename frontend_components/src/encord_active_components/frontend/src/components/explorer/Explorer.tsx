@@ -40,7 +40,7 @@ import { Assistant, useSearch } from "./Assistant";
 export type Props = {
   authToken: string | null;
   projectName: string;
-  filters: any;
+  filters: Filters;
   scope: Scope;
   baseUrl: string;
 };
@@ -64,8 +64,6 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
-
-  /* const [searchResults, setSearchResults] = useState<IdValue[] | null>(null); */
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -286,7 +284,7 @@ export const Explorer = ({
             </div>
           </div>
           <Assistant
-            search={search}
+            defaultSearch={search}
             isFetching={searching}
             setSearch={setSearch}
             snippet={searchResults?.snippet}

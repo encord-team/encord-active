@@ -5,8 +5,8 @@ from encord_active_components.renderer import Components, render
 Scope = Literal["data_quality", "label_quality", "model_quality"]
 
 
-# NOTE: typing filters as any for now to not want to sepnd time on setting up a
-# way to share the definition of filters. this is temp until we kill streamlit.
+# NOTE: typing filters as any for now to not spend time on setting up a way to
+# share the definition of filters. this is temp until we kill streamlit.
 def explorer(auth_token: Optional[str], project_name: str, scope: Scope, api_url: str, filters: Optional[Any] = None):
     return render(
         component=Components.EXPLORER,

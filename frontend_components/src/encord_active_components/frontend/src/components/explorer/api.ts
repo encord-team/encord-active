@@ -92,7 +92,7 @@ export const searchTypeOptions = {
   search: "Search",
   codegen: "Code Generation",
 } as const;
-type SearchType = keyof typeof searchTypeOptions;
+export type SearchType = keyof typeof searchTypeOptions;
 
 const searchResultSchema = z.object({
   ids: z.string().array(),
