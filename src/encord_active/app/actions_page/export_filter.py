@@ -210,6 +210,11 @@ class RenderItems(NamedTuple):
 
 
 def _get_column(col: DeltaGenerator, item: str, num_rows: int, subset: bool, project_name: str) -> InputItem:
+
+    non_usable_chars = r'/\><:|?*"'  # These are the forbidden printable ASCII chars in linux and windows folder names
+    table = str.maketrans("", "", non_usable_chars)
+    project_name = project_name.translate(table)
+
     return InputItem(
         col.text_input(
             f"{item} title",
@@ -411,10 +416,17 @@ def generate_create_project_form(
 
         if not st.form_submit_button("➕ Create"):
             return None
+
         for item, render_item in zip(cols._fields, cols):
             if render_item and render_item.title == "":
                 st.error(f"{item.capitalize()} title cannot be empty!")
                 return None
+
+        forbidden_chars = r'/\><:|?*"'
+        if cols.project and any(char in forbidden_chars for char in cols.project.title):
+            st.error(f"Project title should not include characters in {forbidden_chars}!")
+            return None
+
     return cols
 
 
