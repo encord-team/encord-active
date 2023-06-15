@@ -11,16 +11,20 @@ app = FastAPI()
 
 app.include_router(project.router)
 
-origins = ["http://localhost:5173", "http://localhost:8501", get_settings().ALLOWED_ORIGIN]
+origins = [
+    "http://localhost:5173",
+    "http://localhost:8501",
+    get_settings().ALLOWED_ORIGIN,
+    get_settings().API_URL
+]
 
-if get_settings().ENV != Env.LOCAL:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH, follow_symlink=True), name="static")
 
