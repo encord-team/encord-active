@@ -14,6 +14,7 @@ class ProjectMeta(TypedDict):
     ssh_key_path: str
     has_remote: Optional[bool]
     data_version: int
+    store_data_locally: bool
 
 
 class ProjectNotFound(Exception):

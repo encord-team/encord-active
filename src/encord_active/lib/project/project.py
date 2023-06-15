@@ -28,7 +28,7 @@ from encord_active.lib.common.data_utils import (
     download_image,
     extract_frames,
     get_frames_per_second,
-    try_execute,
+    try_execute, file_path_to_url,
 )
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.prisma_init import ensure_prisma_db
@@ -343,6 +343,7 @@ def download_data(
     project_file_structure: ProjectFileStructure,
     batch: "prisma.Batch",
 ):
+    store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
 
@@ -375,25 +376,55 @@ def download_data(
                 },
             },
         )
-        cached_signed_urls = project_file_structure.cached_signed_urls
-        signed_url = du["data_link"]
-        cached_signed_urls[du["data_hash"]] = signed_url
-        image = download_image(
-            signed_url,
-            project_dir=project_file_structure.project_dir,
-        )
-        batch.dataunit.update(
-            where={
-                "data_hash_frame": {  # state the values of the compound key
-                    "data_hash": data_hash,
-                    "frame": frame,
-                }
-            },
-            data={
-                "width": image.width,
-                "height": image.height,
-            },
-        )
+        if store_data_locally:
+            signed_url = du["data_link"]
+            local_path = project_file_structure.local_data_store / data_hash
+            title_split = du["data_title"].split(".")
+            if len(title_split) >= 2:
+                local_path = local_path.with_suffix(title_split[-1])
+            download_file(
+                signed_url,
+                project_file_structure.project_dir,
+                local_path,
+                cache=False,  # Disable cache symlink tricks
+            )
+            image = Image.open(local_path)
+            batch.dataunit.update(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": data_hash,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "width": image.width,
+                    "height": image.height,
+                    "data_uri": file_path_to_url(
+                        local_path,
+                        project_file_structure.project_dir
+                    )
+                },
+            )
+        else:
+            cached_signed_urls = project_file_structure.cached_signed_urls
+            signed_url = du["data_link"]
+            cached_signed_urls[du["data_hash"]] = signed_url
+            image = download_image(
+                signed_url,
+                project_dir=project_file_structure.project_dir,
+            )
+            batch.dataunit.update(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": data_hash,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "width": image.width,
+                    "height": image.height,
+                },
+            )
 
 
 def download_label_row_and_data(

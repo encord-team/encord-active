@@ -114,23 +114,33 @@ def download_file(
     project_dir: Path,
     destination: Path,
     byte_size: int = 1024,
+    cache: bool = True,
 ) -> Path:
     if destination.is_file():
         return destination
 
     url_path = url_to_file_path(url, project_dir)
     if url_path is not None:
-        destination.symlink_to(url_path)
+        if cache:
+            destination.symlink_to(url_path)
+        else:
+            shutil.copyfile(url_path, destination)
         return destination
 
     cached_download = _get_from_cache(url)
     if cached_download is not None:
-        destination.symlink_to(cached_download)
+        if cache:
+            destination.symlink_to(cached_download)
+        else:
+            shutil.copyfile(cached_download, destination)
         return destination
 
-    new_cache_download = _add_to_cache(url)
+    if cache:
+        download_target = _add_to_cache(url)
+    else:
+        download_target = destination
     try:
-        with open(new_cache_download, "xb") as file:
+        with open(download_target, "xb") as file:
             r = requests.get(url, stream=True)
 
             if r.status_code != 200:
@@ -141,9 +151,11 @@ def download_file(
                     file.write(chunk)
             file.flush()
     except Exception:
-        _remove_from_cache(url)
+        if cache:
+            _remove_from_cache(url)
         raise
-    destination.symlink_to(new_cache_download)
+    if cache:
+        destination.symlink_to(download_target)
     return destination
 
 
