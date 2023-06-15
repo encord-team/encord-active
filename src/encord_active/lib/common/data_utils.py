@@ -148,7 +148,7 @@ def download_file(
 
 
 def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
-    if url.startswith("/") or url.startswith("./"):
+    if url.startswith(("/", "./", "../", "~/")):
         return Path(url)
     if url.startswith("file:"):
         return Path(unquote(urlparse(url).path))
@@ -162,12 +162,12 @@ def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
 
 
 def file_path_to_url(path: Path, project_dir: Path, relative: Optional[bool] = None) -> str:
-    path = path.absolute().resolve()
+    path = path.expanduser().absolute().resolve()
     if relative is not None and not relative:
         return path.as_uri()
 
     # Attempt to create relative path
-    root_path = project_dir.absolute().resolve()
+    root_path = project_dir.expanduser().absolute().resolve()
     try:
         rel_path = path.relative_to(root_path)
         return f"relative://{rel_path.as_posix()}"
