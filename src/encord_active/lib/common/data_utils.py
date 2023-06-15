@@ -162,21 +162,21 @@ def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
 
 
 def file_path_to_url(path: Path, project_dir: Path, relative: Optional[bool] = None) -> str:
+    path = path.absolute().resolve()
     if relative is not None and not relative:
-        return path.absolute().as_uri()
+        return path.as_uri()
 
     # Attempt to create relative path
-    abs_path = path.absolute()
-    root_path = project_dir.absolute()
+    root_path = project_dir.absolute().resolve()
     try:
-        rel_path = abs_path.relative_to(root_path)
+        rel_path = path.relative_to(root_path)
         return f"relative://{rel_path.as_posix()}"
     except ValueError:
         if relative is not None:
             raise
 
     # Fallback to strict uri
-    return path.absolute().as_uri()
+    return path.as_uri()
 
 
 def download_image(url: str, project_dir: Path) -> Image.Image:
