@@ -59,8 +59,9 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
         if data_opt.data_type == "video":
             timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
-        file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir).absolute()
+        file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
+            file_path = file_path.absolute()
             settings = get_settings()
             root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
             try:
