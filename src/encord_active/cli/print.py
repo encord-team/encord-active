@@ -33,7 +33,7 @@ def print_encord_projects(
     project_query = None if query is None else ProjectQuery(title_like=query)
     json_projects = get_projects_json(app_config.get_or_query_ssh_key(), project_query)
     if state.get("json_output"):
-        output_file_path = Path("./encord-projects.json")
+        output_file_path = Path("./encord-projects.json").resolve()
         output_file_path.write_text(json_projects, encoding="utf-8")
         rich.print(f"Mapping stored in [blue]`{output_file_path.as_posix()}`")
     else:
