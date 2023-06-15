@@ -446,6 +446,9 @@ def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectF
 
 
 def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
+    store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
+    if store_data_locally:
+        project_file_structure.local_data_store.mkdir(exist_ok=True)
     """
     Take a label row, if it is a video, split the underlying video file into frames.
     :param label_row: The label row to consider splitting.
@@ -456,8 +459,25 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
         with tempfile.TemporaryDirectory() as video_dir:
-            video_path = Path(video_dir) / du["data_title"]
-            download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+            if store_data_locally:
+                video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
+                    Path(du["data_title"]).suffix
+                )
+                data_uri = file_path_to_url(
+                    video_path,
+                    project_dir=project_file_structure.project_dir
+                )
+                download_file(
+                    du["data_link"],
+                    project_file_structure.project_dir,
+                    video_path,
+                    cache=False,  # Disable cache symlink tricks
+                )
+            else:
+                video_path = Path(video_dir) / du["data_title"]
+                data_uri = None
+                download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+                project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
             num_frames = count_frames(video_path)
             frames_per_second = get_frames_per_second(video_path)
             video_images = Path(video_dir) / "images"
@@ -478,6 +498,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                             "width": image.width,
                             "height": image.height,
                             "fps": frames_per_second,
+                            "data_uri": data_uri
                         }
                     )
                 batcher.commit()
