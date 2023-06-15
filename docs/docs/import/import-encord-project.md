@@ -2,55 +2,45 @@
 sidebar_position: 3
 ---
 
-# Importing Encord project
+# From Encord Annotate
 
-**For projects already in the Encord Annotate platform.**
+**Pull projects from Encord Annotate**
 
-This workflow will get you through importing your data from Encord Annotate to a local Encord Active project.
-You will get a directory containing all the data, labels, and [metrics](/category/quality-metrics) of the project.
+If you already have a project in Encord Annotate, you can start with its respective Encord Active project right away.
 
-To import your project, run this command:
+:::info
+If you are new to the Encord platform, [signing up][encord-sign-up] for an Encord account is quick and easy.
+:::
+
+To interactively select a project from the list of available projects in Encord Annotate use the following command:
 
 ```shell
 encord-active import project
 ```
 
-:::note
+To narrow down the search for the project you wish to import, enter some text that matches the project title.
+Use the keyboard arrows to navigate and select the desired project, then press <kbd>Enter</kbd> to confirm your choice.
 
-This will import a project to new folder in your current working directory. If you prefer to specify a different directory, use:
+Alternatively, if you prefer to override the selection process, you can use the `--project-hash` option when executing the command.
 
-```shell
-encord-active import project --targe /path/to/store/project
-```
-
-This will import the project into a subdirectory of `/path/to/store/project`.
-
-:::
-
-:::tip
-
-If you don't have an Encord Annotate project already, you can find other ways to import your local data [here](./quick-import-data).
-
-:::
-
-:::info
-
-If you are new to the Encord platform, you can easily [sign up](https://app.encord.com/register) for an Encord account.
-
-:::
-
-To be able to import an Encord project, you will need the path to your private `ssh-key` associated with Encord (see documentation [here](https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication)).
-
-If this is the first time you import a project, the command line interface (CLI) will ask you for your ssh key.
-To associate an ssh key with Encord, you can follow [the documentation here][encord-docs-ssh].
-You ssh key path will be stored for later reuse.
-
-Next, the CLI will ask you what project to import based on all the projects you have access to at Encord.
-You can type in a search word to find the project you want to import.
-Use the keyboard arrows to select your project and hit <kbd>enter</kbd>.
-
-Next, `encord-active` will fetch your data and labels before computing all the [metrics](/category/quality-metrics) available in `encord-active`.
+You will get a directory containing all the data, labels, and [metrics](/category/quality-metrics) of the project. You have the option to choose whether to store the data in the local file system and can opt-in or opt-out accordingly.
 
 When the process is done, follow the printed instructions to open the app or see more details in the [visualize](../cli#visualize) CLI command.
 
+If you are importing an Encord Annotate project for the first time, the Command Line Interface (CLI) will prompt you to provide the local path of a private SSH key associated with Encord.
+To associate an SSH key with Encord, please refer to the documentation available [here][encord-docs-ssh].
+The provided SSH key path will be stored for future use.
+
+:::note
+The previous command imports a project into a new folder within the current working directory. However, if a different directory needs to be specified, the `--target` option can be included as follows:
+
+```shell
+encord-active import project --target /path/to/store/project
+```
+
+This will import the project in a subdirectory of `/path/to/store/project`.
+:::
+
+
 [encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[encord-sign-up]: https://app.encord.com/register
