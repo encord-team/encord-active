@@ -95,7 +95,7 @@ def import_project(
         False,
         help="Store encord data locally so that it does not need to be download on-demand for analysis",
         rich_help_panel=COCO_RICH_PANEL,
-    )
+    ),
 ):
     """
     [bold]Imports[/bold] a new project from Encord or a local coco project 📦
