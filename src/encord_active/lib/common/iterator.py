@@ -127,7 +127,7 @@ class DatasetIterator(Iterator):
                         download_file(
                             video_metadata.signed_url,
                             project_dir=self.project_file_structure.project_dir,
-                            destination=video_path
+                            destination=video_path,
                         )
                         extract_frames(video_path, video_images_dir, self.du_hash)
 

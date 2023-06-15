@@ -110,10 +110,10 @@ def _get_from_cache(key: str) -> Optional[Path]:
 
 
 def download_file(
-        url: str,
-        project_dir: Path,
-        destination: Path,
-        byte_size: int = 1024,
+    url: str,
+    project_dir: Path,
+    destination: Path,
+    byte_size: int = 1024,
 ) -> Path:
     if destination.is_file():
         return destination
@@ -153,10 +153,10 @@ def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
     if url.startswith("file:"):
         return Path(unquote(urlparse(url).path))
     if url.startswith("relative://"):
-        relative_path = url[len("relative://"):]
+        relative_path = url[len("relative://") :]
         return project_dir / Path(relative_path)
     if url.startswith("absolute://"):
-        absolute_path = url[len("absolute:/"):]
+        absolute_path = url[len("absolute:/") :]
         return Path(absolute_path)
     return None
 
@@ -213,7 +213,7 @@ TType = TypeVar("TType")
 
 
 def iterate_in_batches(seq: Sequence[TType], size: int) -> Generator[Sequence[TType], None, None]:
-    return (seq[pos: pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
 
 def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):

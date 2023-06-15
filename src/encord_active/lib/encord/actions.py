@@ -108,9 +108,7 @@ class EncordActions:
                 with tempfile.TemporaryDirectory() as td:
                     tf_path = Path(td) / data_unit_hash
                     download_file(
-                        data_unit.signed_url,
-                        project_dir=self.project_file_structure.project_dir,
-                        destination=tf_path
+                        data_unit.signed_url, project_dir=self.project_file_structure.project_dir, destination=tf_path
                     )
                     new_lr_data_hash = dataset.upload_image(
                         file_path=tf_path, title=label_row["data_units"][data_unit_hash]["data_title"]
@@ -142,7 +140,7 @@ class EncordActions:
                         download_file(
                             image_url,
                             project_dir=self.project_file_structure.project_dir,
-                            destination=tmp_path / f"{idx}"
+                            destination=tmp_path / f"{idx}",
                         )
 
                     image_paths = [str(tmp_path / f"{idx}") for idx, _ in enumerate(image_urls)]
@@ -167,9 +165,7 @@ class EncordActions:
                 with tempfile.TemporaryDirectory() as td:
                     tf_path = Path(td) / data_unit_hash
                     download_file(
-                        data_unit.signed_url,
-                        project_dir=self.project_file_structure.project_dir,
-                        destination=tf_path
+                        data_unit.signed_url, project_dir=self.project_file_structure.project_dir, destination=tf_path
                     )
                     dataset.upload_video(
                         file_path=str(tf_path), title=label_row["data_units"][data_unit_hash]["data_title"]
