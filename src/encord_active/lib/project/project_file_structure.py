@@ -60,11 +60,11 @@ def get_encord_project_cached(ssh_key_path: str, project_hash: str) -> encord.Pr
 
 class LabelRowStructure:
     def __init__(
-        self,
-        mappings: dict[str, str],
-        label_hash: str,
-        project: "ProjectFileStructure",
-        label_row: Optional["prisma.models.LabelRow"],
+            self,
+            mappings: dict[str, str],
+            label_hash: str,
+            project: "ProjectFileStructure",
+            label_row: Optional["prisma.models.LabelRow"],
     ):
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
@@ -142,10 +142,10 @@ class LabelRowStructure:
                 )
 
     def iter_data_unit(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
@@ -163,17 +163,30 @@ class LabelRowStructure:
                     }
                 },
             )
+
+            # Check to see if any data needs to be fetched from encord api
+            cached_signed_urls = self._project.cached_signed_urls
+            requre_remote_image_fetch = any(
+                du.data_uri is None and du.data_hash not in cached_signed_urls
+                for lr in all_rows
+                for du in lr.data_units
+            )
+
+            # Create encord client if it will be needed in the future.
             encord_project_metadata = self._project.load_project_meta()
             encord_project = None
-            if encord_project_metadata.get("has_remote", False):
+            if encord_project_metadata.get("has_remote", False) and requre_remote_image_fetch:
                 encord_project = get_encord_project_cached(
                     encord_project_metadata["ssh_key_path"], encord_project_metadata["project_hash"]
                 )
-            cached_signed_urls = self._project.cached_signed_urls
+
             for label_row in all_rows:
                 data_links = {}
                 if encord_project is not None:
-                    if any(data_unit.data_hash not in cached_signed_urls for data_unit in label_row.data_units or []):
+                    if any(
+                        data_unit.data_uri is None and data_unit.data_hash not in cached_signed_urls
+                        for data_unit in label_row.data_units or []
+                    ):
                         data_links = encord_project.get_label_row(
                             label_row.label_hash,
                             get_signed_url=True,
@@ -181,20 +194,18 @@ class LabelRowStructure:
                 for data_unit in label_row.data_units or []:
                     du_hash = data_unit.data_hash
                     new_du_hash = self._rev_mappings.get(du_hash, du_hash)
-                    if data_unit.data_hash in cached_signed_urls:
+                    if data_unit.data_uri is not None:
+                        signed_url = data_unit.data_uri
+                    elif data_unit.data_hash in cached_signed_urls:
                         signed_url = cached_signed_urls[data_unit.data_hash]
-                        data_type = label_row.data_type
                     else:
                         data_units = data_links.get("data_units", None)
                         if data_units is not None:
                             signed_url = data_units[du_hash]["data_link"]
                             cached_signed_urls[data_unit.data_hash] = signed_url
                         else:
-                            data_uri = data_unit.data_uri
-                            if data_uri is None:
-                                raise RuntimeError("Missing data_uri & not encord project")
-                            signed_url = data_uri
-                        data_type = label_row.data_type
+                            raise RuntimeError("Missing data_uri & not encord project")
+                    data_type = label_row.data_type
                     label_hash = label_row.label_hash
                     if label_hash is None:
                         raise RuntimeError("Missing label_hash in prisma")
@@ -211,10 +222,10 @@ class LabelRowStructure:
                     )
 
     def iter_data_unit_with_image(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Image.Image]]:
         # Temporary directory for all video decodes
         label_row_json = self.get_label_row_json(cache_db=cache_db)
@@ -248,10 +259,10 @@ class LabelRowStructure:
                     raise RuntimeError("Unsupported data type")
 
     def iter_data_unit_with_image_or_signed_url(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
         # Temporary directory for all video decodes
         label_row_json = self.get_label_row_json(cache_db=cache_db)
@@ -361,10 +372,10 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self, label_row=None)
 
     def data_units(
-        self,
-        where: Optional["prisma.types.DataUnitWhereInput"] = None,
-        include_label_row: bool = False,
-        cache_db: Optional[prisma.Prisma] = None,
+            self,
+            where: Optional["prisma.types.DataUnitWhereInput"] = None,
+            include_label_row: bool = False,
+            cache_db: Optional[prisma.Prisma] = None,
     ) -> List["prisma.models.DataUnit"]:
         from prisma.types import DataUnitInclude
 
