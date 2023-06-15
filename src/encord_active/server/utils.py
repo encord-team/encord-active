@@ -1,11 +1,11 @@
 from functools import lru_cache, partial
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import quote
 
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
+from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, apply_filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import to_grouped_tags
@@ -59,19 +59,24 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
         if data_opt.data_type == "video":
             timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
-        if signed_url.startswith("file://"):
-            image_path = Path(unquote(urlparse(signed_url).path)).absolute()
+        file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir).absolute()
+        if file_path is not None:
             settings = get_settings()
             root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
             try:
-                relative_path = image_path.relative_to(root_path)
+                relative_path = file_path.relative_to(root_path)
                 signed_url = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
             except ValueError as ex:
                 # Use hacky fallback
-                approx_relative_path = image_path.as_posix().removeprefix(root_path.as_posix())
-                if approx_relative_path.startswith("/"):
-                    approx_relative_path = approx_relative_path[1:]
-                signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
+                approx_relative_path = file_path.as_posix().removeprefix(root_path.as_posix())
+                if root_path.as_posix() != approx_relative_path:
+                    if approx_relative_path.startswith("/"):
+                        approx_relative_path = approx_relative_path[1:]
+                    signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
+                else:
+                    # Give up, hope that file paths are allowed in the users browser
+                    print("WARNING: failed to resolve path to relative")
+                    signed_url = file_path.absolute().as_uri()
 
         return signed_url, timestamp
     return None

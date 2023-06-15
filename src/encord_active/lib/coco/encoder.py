@@ -19,7 +19,6 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
-from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import requests
@@ -35,7 +34,7 @@ from encord_active.lib.coco.datastructure import (
     SuperClass,
     to_attributes_field,
 )
-from encord_active.lib.common.data_utils import extract_frames
+from encord_active.lib.common.data_utils import extract_frames, url_to_file_path
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
 
@@ -361,7 +360,7 @@ class CocoEncoder:
         video_decode_path.mkdir(parents=True, exist_ok=True)
         download_file(
             url,
-            video_path,
+            destination=video_path,
         )
         # Incorrect destination path for folder sym-link logic.
         extract_frames(video_path, destination_path, data_hash, symlink_folder=False)
@@ -695,13 +694,9 @@ class CocoEncoder:
     def download_image(self, url: str, path: Path):
         """Check if directory exists, create the directory if needed, download the file, store it into the path."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        if url.startswith("file:"):
-            image_path = Path(unquote(urlparse(url).path))
-            path.symlink_to(image_path, target_is_directory=False)
-            return
-        elif url.startswith("/"):
-            image_path = Path(url)
-            path.symlink_to(image_path, target_is_directory=False)
+        url_path = url_to_file_path(url, self._download_file_path)
+        if url_path is not None:
+            path.symlink_to(url_path, target_is_directory=False)
             return
 
         download_file(url, path)

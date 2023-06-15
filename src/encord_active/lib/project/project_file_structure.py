@@ -60,11 +60,11 @@ def get_encord_project_cached(ssh_key_path: str, project_hash: str) -> encord.Pr
 
 class LabelRowStructure:
     def __init__(
-        self,
-        mappings: dict[str, str],
-        label_hash: str,
-        project: "ProjectFileStructure",
-        label_row: Optional["prisma.models.LabelRow"],
+            self,
+            mappings: dict[str, str],
+            label_hash: str,
+            project: "ProjectFileStructure",
+            label_row: Optional["prisma.models.LabelRow"],
     ):
         self._mappings: dict[str, str] = mappings
         self._rev_mappings: dict[str, str] = {v: k for k, v in mappings.items()}
@@ -74,6 +74,10 @@ class LabelRowStructure:
 
     def __hash__(self) -> int:
         return hash(self._label_hash)
+
+    @property
+    def project(self) -> "ProjectFileStructure":
+        return self._project
 
     def label_row_file_deprecated_for_migration(self) -> Path:
         return self._project.project_dir / "data" / self._label_hash / "label_row.json"
@@ -138,10 +142,10 @@ class LabelRowStructure:
                 )
 
     def iter_data_unit(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[DataUnitStructure]:
         with PrismaConnection(self._project, cache_db=cache_db) as conn:
             where: "prisma.types.LabelRowWhereInput" = {"label_hash": {"equals": self._label_hash}}
@@ -207,10 +211,10 @@ class LabelRowStructure:
                     )
 
     def iter_data_unit_with_image(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Image.Image]]:
         # Temporary directory for all video decodes
         label_row_json = self.get_label_row_json(cache_db=cache_db)
@@ -218,7 +222,10 @@ class LabelRowStructure:
             tmp_path = Path(tmpdir)
             for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame, cache_db=cache_db):
                 if data_unit_struct.data_type in {"img_group", "image"}:
-                    image = download_image(data_unit_struct.signed_url)
+                    image = download_image(
+                        data_unit_struct.signed_url,
+                        project_dir=self._project.project_dir,
+                    )
                     yield data_unit_struct, image
                 elif data_unit_struct.data_type == "video":
                     video_dir = tmp_path / data_unit_struct.du_hash
@@ -231,7 +238,11 @@ class LabelRowStructure:
                         yield data_unit_struct, Image.open(existing_image)
                     else:
                         video_file = video_dir / label_row_json["data_title"]
-                        download_file(data_unit_struct.signed_url, video_file)
+                        download_file(
+                            data_unit_struct.signed_url,
+                            project_dir=self._project.project_dir,
+                            destination=video_file
+                        )
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
@@ -239,10 +250,10 @@ class LabelRowStructure:
                     raise RuntimeError("Unsupported data type")
 
     def iter_data_unit_with_image_or_signed_url(
-        self,
-        data_unit_hash: Optional[str] = None,
-        frame: Optional[int] = None,
-        cache_db: Optional["prisma.Prisma"] = None,
+            self,
+            data_unit_hash: Optional[str] = None,
+            frame: Optional[int] = None,
+            cache_db: Optional["prisma.Prisma"] = None,
     ) -> Iterator[Tuple[DataUnitStructure, Union[str, Image.Image]]]:
         # Temporary directory for all video decodes
         label_row_json = self.get_label_row_json(cache_db=cache_db)
@@ -263,7 +274,11 @@ class LabelRowStructure:
                         yield data_unit_struct, Image.open(existing_image)
                     else:
                         video_file = video_dir / label_row_json["data_title"]
-                        download_file(data_unit_struct.signed_url, video_file)
+                        download_file(
+                            data_unit_struct.signed_url,
+                            project_dir=self._project,
+                            destination=video_file
+                        )
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
@@ -352,10 +367,10 @@ class ProjectFileStructure(BaseProjectFileStructure):
         return LabelRowStructure(mappings=self._mappings, label_hash=label_hash, project=self, label_row=None)
 
     def data_units(
-        self,
-        where: Optional["prisma.types.DataUnitWhereInput"] = None,
-        include_label_row: bool = False,
-        cache_db: Optional[prisma.Prisma] = None,
+            self,
+            where: Optional["prisma.types.DataUnitWhereInput"] = None,
+            include_label_row: bool = False,
+            cache_db: Optional[prisma.Prisma] = None,
     ) -> List["prisma.models.DataUnit"]:
         from prisma.types import DataUnitInclude
 

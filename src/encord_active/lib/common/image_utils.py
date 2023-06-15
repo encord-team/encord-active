@@ -175,7 +175,10 @@ def load_or_fill_image(
         img_du, image_link = img_opt
         try:
             if isinstance(image_link, str):
-                raw_image = download_image(img_du.signed_url)
+                raw_image = download_image(
+                    img_du.signed_url,
+                    project_dir=project_file_structure.project_dir,
+                )
             else:
                 raw_image = image_link
             image = convert_image_bgr(raw_image)
