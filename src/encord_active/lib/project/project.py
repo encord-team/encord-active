@@ -60,6 +60,7 @@ class Project:
                 ssh_key_path="",
                 has_remote=False,
                 data_version=0,
+                store_data_locally=False,
             )
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
@@ -463,10 +464,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                 video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
                     Path(du["data_title"]).suffix
                 )
-                data_uri = file_path_to_url(
-                    video_path,
-                    project_dir=project_file_structure.project_dir
-                )
+                data_uri = file_path_to_url(video_path, project_dir=project_file_structure.project_dir)
                 download_file(
                     du["data_link"],
                     project_file_structure.project_dir,
@@ -498,7 +496,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                             "width": image.width,
                             "height": image.height,
                             "fps": frames_per_second,
-                            "data_uri": data_uri
+                            "data_uri": data_uri,
                         }
                     )
                 batcher.commit()

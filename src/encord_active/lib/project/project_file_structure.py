@@ -169,7 +169,7 @@ class LabelRowStructure:
             requre_remote_image_fetch = any(
                 du.data_uri is None and du.data_hash not in cached_signed_urls
                 for lr in all_rows
-                for du in lr.data_units
+                for du in lr.data_units or []
             )
 
             # Create encord client if it will be needed in the future.
