@@ -73,7 +73,7 @@ def render_2d_metric_similarity_container(
     metric_name_2 = metric_selection_col_2.selectbox(
         "Select the second metric",
         options=options_for_second_metric,
-        index=options_for_second_metric.index("Contrast") if "Contrast" in metrics_filtered else 0,
+        index=options_for_second_metric.index("Contrast") if "Contrast" in options_for_second_metric else 0,
         key=f"project_comparison_metric_selection_2_{get_state().project_paths.project_dir.name}_{project_name_2}",
     )
 
