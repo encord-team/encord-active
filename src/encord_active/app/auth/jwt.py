@@ -4,7 +4,7 @@ import streamlit as st
 from jwt import decode  # type: ignore
 
 from encord_active.app.common.state_hooks import UseState
-from encord_active.server.settings import get_settings
+from encord_active.server.settings import get_settings, Env
 
 AUTH_TOKEN_STATE_KEY = "auth_token"
 
@@ -35,3 +35,6 @@ def auth():
     except:
         st.error("Unauthorized")
         st.stop()
+
+    if get_settings().ENV == Env.LOCAL:
+        st.set_option("enableCORS", False)
