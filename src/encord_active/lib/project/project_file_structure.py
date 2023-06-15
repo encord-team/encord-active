@@ -75,6 +75,10 @@ class LabelRowStructure:
     def __hash__(self) -> int:
         return hash(self._label_hash)
 
+    @property
+    def project(self) -> "ProjectFileStructure":
+        return self._project
+
     def label_row_file_deprecated_for_migration(self) -> Path:
         return self._project.project_dir / "data" / self._label_hash / "label_row.json"
 
@@ -218,7 +222,10 @@ class LabelRowStructure:
             tmp_path = Path(tmpdir)
             for data_unit_struct in self.iter_data_unit(data_unit_hash=data_unit_hash, frame=frame, cache_db=cache_db):
                 if data_unit_struct.data_type in {"img_group", "image"}:
-                    image = download_image(data_unit_struct.signed_url)
+                    image = download_image(
+                        data_unit_struct.signed_url,
+                        project_dir=self._project.project_dir,
+                    )
                     yield data_unit_struct, image
                 elif data_unit_struct.data_type == "video":
                     video_dir = tmp_path / data_unit_struct.du_hash
@@ -231,7 +238,9 @@ class LabelRowStructure:
                         yield data_unit_struct, Image.open(existing_image)
                     else:
                         video_file = video_dir / label_row_json["data_title"]
-                        download_file(data_unit_struct.signed_url, video_file)
+                        download_file(
+                            data_unit_struct.signed_url, project_dir=self._project.project_dir, destination=video_file
+                        )
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
@@ -263,7 +272,7 @@ class LabelRowStructure:
                         yield data_unit_struct, Image.open(existing_image)
                     else:
                         video_file = video_dir / label_row_json["data_title"]
-                        download_file(data_unit_struct.signed_url, video_file)
+                        download_file(data_unit_struct.signed_url, project_dir=self._project, destination=video_file)
                         extract_frames(video_file, images_dir, data_unit_struct.du_hash)
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)

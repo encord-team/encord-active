@@ -111,15 +111,16 @@ def _get_from_cache(key: str) -> Optional[Path]:
 
 def download_file(
     url: str,
+    project_dir: Path,
     destination: Path,
     byte_size: int = 1024,
 ) -> Path:
     if destination.is_file():
         return destination
 
-    if url.startswith("file:"):
-        in_path = Path(unquote(urlparse(url).path))
-        destination.symlink_to(in_path)
+    url_path = url_to_file_path(url, project_dir)
+    if url_path is not None:
+        destination.symlink_to(url_path)
         return destination
 
     cached_download = _get_from_cache(url)
@@ -146,10 +147,42 @@ def download_file(
     return destination
 
 
-def download_image(url: str) -> Image.Image:
+def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
+    if url.startswith(("/", "./", "../", "~/")):
+        return Path(url)
     if url.startswith("file:"):
-        image_path = Path(unquote(urlparse(url).path))
-        return Image.open(image_path)
+        return Path(unquote(urlparse(url).path))
+    if url.startswith("relative://"):
+        relative_path = url[len("relative://") :]
+        return project_dir / Path(relative_path)
+    if url.startswith("absolute://"):
+        absolute_path = url[len("absolute:/") :]
+        return Path(absolute_path)
+    return None
+
+
+def file_path_to_url(path: Path, project_dir: Path, relative: Optional[bool] = None) -> str:
+    path = path.expanduser().absolute().resolve()
+    if relative is not None and not relative:
+        return path.as_uri()
+
+    # Attempt to create relative path
+    root_path = project_dir.expanduser().absolute().resolve()
+    try:
+        rel_path = path.relative_to(root_path)
+        return f"relative://{rel_path.as_posix()}"
+    except ValueError:
+        if relative is not None:
+            raise
+
+    # Fallback to strict uri
+    return path.as_uri()
+
+
+def download_image(url: str, project_dir: Path) -> Image.Image:
+    path = url_to_file_path(url, project_dir)
+    if path is not None:
+        return Image.open(path)
 
     cached_image = _get_from_cache(url)
     if cached_image is not None:

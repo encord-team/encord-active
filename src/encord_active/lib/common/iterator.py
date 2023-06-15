@@ -96,7 +96,10 @@ class DatasetIterator(Iterator):
                             )
                             image = None
                             if img_metadata is not None:
-                                image = download_image(img_metadata.signed_url)
+                                image = download_image(
+                                    img_metadata.signed_url,
+                                    project_dir=self.project_file_structure.project_dir,
+                                )
                             yield data_unit, image
                         except KeyError:
                             logger.error(
@@ -121,7 +124,11 @@ class DatasetIterator(Iterator):
                         working_path = Path(working_dir)
                         video_path = working_path / str(data_unit["data_title"])
                         video_images_dir = working_path / "images"
-                        download_file(video_metadata.signed_url, video_path)
+                        download_file(
+                            video_metadata.signed_url,
+                            project_dir=self.project_file_structure.project_dir,
+                            destination=video_path,
+                        )
                         extract_frames(video_path, video_images_dir, self.du_hash)
 
                         fake_data_unit = deepcopy(data_unit)

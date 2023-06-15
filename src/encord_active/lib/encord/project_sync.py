@@ -4,12 +4,11 @@ import subprocess
 import uuid
 from pathlib import Path
 from typing import NamedTuple
-from urllib.parse import unquote, urlparse
 
 import pandas as pd
 import yaml
 
-from encord_active.lib.common.data_utils import iterate_in_batches
+from encord_active.lib.common.data_utils import iterate_in_batches, url_to_file_path
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
@@ -194,8 +193,9 @@ def copy_filtered_data(
         current_label_row_structure = curr_project_structure.label_row_structure(label_row_hash)
         for data_unit in current_label_row_structure.iter_data_unit():
             if data_unit.du_hash in filtered_data_hashes:
-                if data_unit.signed_url.startswith("file:"):
-                    old_data = Path(unquote(urlparse(data_unit.signed_url).path))
+                data_unit_file_path = url_to_file_path(data_unit.signed_url, curr_project_structure.project_dir)
+                if data_unit_file_path is not None:
+                    old_data = data_unit_file_path
                     if not target_project_structure.local_data_store.exists():
                         target_project_structure.local_data_store.mkdir(parents=True, exist_ok=True)
 

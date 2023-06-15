@@ -378,7 +378,10 @@ def download_data(
         cached_signed_urls = project_file_structure.cached_signed_urls
         signed_url = du["data_link"]
         cached_signed_urls[du["data_hash"]] = signed_url
-        image = download_image(signed_url)
+        image = download_image(
+            signed_url,
+            project_dir=project_file_structure.project_dir,
+        )
         batch.dataunit.update(
             where={
                 "data_hash_frame": {  # state the values of the compound key
@@ -424,7 +427,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         du = label_row.data_units[data_hash]
         with tempfile.TemporaryDirectory() as video_dir:
             video_path = Path(video_dir) / du["data_title"]
-            download_file(du["data_link"], video_path)
+            download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
             num_frames = count_frames(video_path)
             frames_per_second = get_frames_per_second(video_path)
             video_images = Path(video_dir) / "images"

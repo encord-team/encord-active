@@ -36,6 +36,7 @@ from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
 from prisma import Batch
 
+from encord_active.lib.common.data_utils import file_path_to_url
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
 
@@ -427,7 +428,7 @@ class LocalProject:
                         "data_hash": du_hash,
                         "data_title": label.data_title,
                         "frame": 0,  # FIXME: only used as images currently, will break for image groups and videos
-                        "data_uri": image_path.absolute().as_uri(),
+                        "data_uri": file_path_to_url(image_path, self._project_file_structure.project_dir),
                         "lr_data_hash": label.data_hash,
                         "width": image.width,
                         "height": image.height,
