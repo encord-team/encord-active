@@ -14,7 +14,7 @@ It enables insights and actionable results on the following key aspects and more
 4. Understand model's behaviour and potential skewness when facing different subsets of the data. 
 5. **[Encord project only]** Update tasks status to prioritize some unannotated images in the labeling stage and send labels to be reviewed/fixed, all along with descriptive comments for the project users (e.g. annotators and reviewers).
 
-### Standard filter feature
+## Standard filter feature
 
 The standard filter feature provides several options to refine your search:
 1. Data points metadata filters: You can filter data based on metadata attributes like `Object Class` and `Annotator`.
@@ -25,7 +25,7 @@ The standard filter feature provides several options to refine your search:
    This helps in selecting data points based on potentially complex properties. 
 
 
-#### Steps to use the standard filter feature over the project data and labels
+**Steps to use the standard filter feature over the project data and labels**
 1. Go to the toolbox in the explorer pages and locate the filter feature.
   ![toolbox-filter-tab](../images/user-guide/toolbox-filter-tab.png)
 2. Choose one or more filters from the available options.
@@ -39,7 +39,7 @@ You can choose whether to display the data in ascending or descending order, acc
 ![component-order-by](../images/user-guide/component-order-by.png)
 :::
 
-### Natural language search
+## Natural language search
 
 The natural language search textbox feature enables users to enter descriptive queries in everyday language, such as "images that contain baseball items".
 The system intelligently processes the query and retrieves images that match the description.
