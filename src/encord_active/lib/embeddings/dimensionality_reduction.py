@@ -4,14 +4,18 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import umap
+from numba.core.errors import NumbaDeprecationWarning
 from pandera.typing import DataFrame
 
 from encord_active.lib.embeddings.types import Embedding2DSchema, LabelEmbedding
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
+warnings.filterwarnings("ignore", category=NumbaDeprecationWarning)
 warnings.filterwarnings("ignore", "n_neighbors is larger than the dataset size", category=UserWarning)
+
+import umap
+
 MIN_SAMPLES = 4  # The number 4 is experimentally determined, less than this creates error for UMAP calculation
 
 

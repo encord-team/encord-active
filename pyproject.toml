@@ -43,7 +43,7 @@ license = "Apache-2.0"
 encord-active = "encord_active.cli.main:cli"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.9.7 || >3.9.7,<3.11"
+python = ">=3.9,<3.9.7 || >3.9.7,<3.12"
 encord = "^0.1.75"
 numpy = ">=1.23.5,<1.24.0"
 opencv-python = "4.5.5.64"
@@ -54,8 +54,8 @@ shapely = "^1.7.0"
 watchdog = "^2.1.9"
 matplotlib = "^3.5.3"
 scikit-learn = "^1.0.1"
-scipy = "1.8.1"
-av = "^9.2.0"
+scipy = "1.10.1"
+av = "^10.0.0"
 pytz = "^2022.2.1"
 types-pytz = "^2022.2.1"
 plotly = "^5.10.0"
@@ -74,10 +74,10 @@ pandera = "^0.13.4"
 jupyterlab = { version = "^3.5.2", optional = true }
 ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
-statsmodels = "^0.13.5"
+statsmodels = "^0.14.0" # TDOD: remove me when we don't use plotly on the streamlit app
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
-llvmlite = "^0.39.1"                                     # Pinning, as lower versions conflict with other libs
+llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
 encord-active-components = "0.0.23"
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
