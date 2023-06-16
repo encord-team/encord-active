@@ -177,9 +177,10 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         prepared_prompt = st.selectbox(
             "Some prompts to start with",
             [
-                "What are the top three performing classes in terms of mean prediction",
-                "What classes' prediction is low when the Brightness is high",
-                "What are the lowest performing classes in terms of prediction when the area of the image is low",
+                "What are the least three performing classes in terms of mean prediction",
+                "What is the lowest performing classes in terms of mean prediction for small images",
+                "What classes' prediction is low when the brightness is high",
+                "What are the lowest performing classes in terms of mean prediction value when the area of the image is low",
             ],
             disabled=is_disabled,
         )
