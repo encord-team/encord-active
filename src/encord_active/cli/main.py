@@ -31,6 +31,7 @@ from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
 from encord_active.lib.project.metadata import fetch_project_meta
 
+import encord_active.db.models as __fixme_debugging
 
 class OrderedPanelGroup(TyperGroup):
     COMMAND_ORDER = [
