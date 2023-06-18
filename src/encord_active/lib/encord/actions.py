@@ -18,7 +18,7 @@ from encord.orm.project import (
     ReviewApprovalState,
 )
 from encord.utilities.label_utilities import construct_answer_dictionaries
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.app.common.state import get_state
 from encord_active.lib.common.data_utils import download_file, try_execute

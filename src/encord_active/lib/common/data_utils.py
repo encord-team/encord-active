@@ -15,7 +15,7 @@ import numpy as np
 import requests
 from encord.exceptions import EncordException, UnknownException
 from PIL import Image
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 _EXTRACT_FRAMES_CACHE: Dict[str, int] = {}
 _EXTRACT_FRAMES_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()

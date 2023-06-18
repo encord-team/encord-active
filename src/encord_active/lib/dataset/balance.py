@@ -6,7 +6,7 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from encord_active.lib.coco.encoder import generate_coco_file
 from encord_active.lib.metrics.utils import MetricData, load_metric_dataframe

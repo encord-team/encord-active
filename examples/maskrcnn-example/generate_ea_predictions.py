@@ -5,7 +5,7 @@ import pickle
 import cv2
 import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from utils.encord_dataset import EncordMaskRCNNDataset
 from utils.model_libs import get_model_instance_segmentation
 from utils.provider import get_config, get_transform
