@@ -2,6 +2,10 @@
 sidebar_position: 1
 ---
 
+import TOCInline from "@theme/TOCInline";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 # Filtering
 
 **Learn how to filter your data in Encord Active**
@@ -13,6 +17,9 @@ It enables insights and actionable results on the following key aspects and more
 3. Removal of irrelevant, noisy or erroneous data.
 4. Understand model's behaviour and potential skewness when facing different subsets of the data. 
 5. **[Encord project only]** Update tasks status to prioritize some unannotated images in the labeling stage and send labels to be reviewed/fixed, all along with descriptive comments for the project users (e.g. annotators and reviewers).
+
+You have several options to filter your data in Encord Active:
+<TOCInline toc={toc.filter((node) => node.level === 2)} />
 
 ## Standard filter feature {#standard-filter-feature}
 
