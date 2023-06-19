@@ -146,9 +146,3 @@ def get_engine(path: Path) -> Engine:
         SQLModel.metadata.create_all(engine)
         _init_metadata.add(path_key)
     return engine
-
-
-get_engine(Path("encord-active"))
-
-print(f"LOADING: {METRICS_DATA}")
-raise ValueError
