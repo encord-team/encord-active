@@ -73,21 +73,18 @@ class EmbeddingIndex:
         embedding_file = project_file_structure.get_embeddings_file(embedding_type)
         index_file = _get_embedding_index_file(embedding_file, metric)
 
-        embeddings: list[LabelEmbedding]
-        if not embedding_file.is_file():
-            if iterator is None:
-                iterator = DatasetIterator(cache_dir=project_file_structure.project_dir)
-            embeddings = get_embeddings(iterator, embedding_type)
-        else:
-            embeddings = pickle.loads(embedding_file.read_bytes())
+        if iterator is None:
+            iterator = DatasetIterator(cache_dir=project_file_structure.project_dir)
+        embeddings = get_embeddings(iterator, embedding_type)
 
         if embeddings == []:
             return None, []
 
         idx: EmbeddingIndex
-        if index_file.is_file():
+        try:
+            assert index_file.is_file()
             idx = pickle.loads(index_file.read_bytes())
-        else:
+        except:
             np_embeddings = np.stack([e["embedding"] for e in embeddings]).astype(np.float32)
             idx = EmbeddingIndex(np_embeddings, metric=metric)
             idx.prepare()

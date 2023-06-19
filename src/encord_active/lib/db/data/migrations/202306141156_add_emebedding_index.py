@@ -5,5 +5,4 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 
 def up(pfs: ProjectFileStructure):
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]:
-        if not EmbeddingIndex.index_available(pfs, embedding_type):
-            EmbeddingIndex.from_project(pfs, embedding_type)
+        EmbeddingIndex.from_project(pfs, embedding_type)
