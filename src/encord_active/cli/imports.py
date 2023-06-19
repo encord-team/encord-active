@@ -94,7 +94,7 @@ def import_project(
     store_data_locally: bool = typer.Option(
         False,
         help="Store encord data locally so that it does not need to be download on-demand for analysis",
-        rich_help_panel=COCO_RICH_PANEL,
+        rich_help_panel=ENCORD_RICH_PANEL,
     ),
 ):
     """
