@@ -18,6 +18,7 @@ def download_data(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ) -> None:
     project_file_structure = ProjectFileStructure(target)
+    project_file_structure.local_data_store.mkdir(exist_ok=True)
     with PrismaConnection(project_file_structure) as conn:
         batch_updates: Dict[str, str] = {}
         for label in tqdm(project_file_structure.iter_labels(cache_db=conn), desc="Downloading project data locally"):
