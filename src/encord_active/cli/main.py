@@ -10,6 +10,8 @@ from rich.markup import escape
 from rich.panel import Panel
 from typer.core import TyperGroup
 
+from encord_active.cli.project import project_cli
+
 load_dotenv()
 
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
@@ -74,6 +76,7 @@ cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold
 cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
 cli.add_typer(print_cli, name="print")
 cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project metrics :clipboard:")
+cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold] Projects")
 
 
 @cli.command()
