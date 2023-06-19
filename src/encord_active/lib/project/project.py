@@ -27,6 +27,7 @@ from encord_active.lib.common.data_utils import (
     download_file,
     download_image,
     extract_frames,
+    file_path_to_url,
     get_frames_per_second,
     try_execute,
 )
@@ -59,6 +60,7 @@ class Project:
                 ssh_key_path="",
                 has_remote=False,
                 data_version=0,
+                store_data_locally=False,
             )
         self.project_hash: str = ""
         self.ontology: OntologyStructure = OntologyStructure.from_dict(dict(objects=[], classifications=[]))
@@ -343,6 +345,9 @@ def download_data(
     project_file_structure: ProjectFileStructure,
     batch: "prisma.Batch",
 ):
+    store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
+    if store_data_locally:
+        project_file_structure.local_data_store.mkdir(exist_ok=True)
     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
     for du in data_units:
 
@@ -375,25 +380,51 @@ def download_data(
                 },
             },
         )
-        cached_signed_urls = project_file_structure.cached_signed_urls
-        signed_url = du["data_link"]
-        cached_signed_urls[du["data_hash"]] = signed_url
-        image = download_image(
-            signed_url,
-            project_dir=project_file_structure.project_dir,
-        )
-        batch.dataunit.update(
-            where={
-                "data_hash_frame": {  # state the values of the compound key
-                    "data_hash": data_hash,
-                    "frame": frame,
-                }
-            },
-            data={
-                "width": image.width,
-                "height": image.height,
-            },
-        )
+        if store_data_locally:
+            signed_url = du["data_link"]
+            local_path = project_file_structure.local_data_store / data_hash
+            title_suffix = Path(du["data_title"]).suffix
+            local_path = local_path.with_suffix(title_suffix)
+            download_file(
+                signed_url,
+                project_file_structure.project_dir,
+                local_path,
+                cache=False,  # Disable cache symlink tricks
+            )
+            image = Image.open(local_path)
+            batch.dataunit.update(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": data_hash,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "width": image.width,
+                    "height": image.height,
+                    "data_uri": file_path_to_url(local_path, project_file_structure.project_dir),
+                },
+            )
+        else:
+            cached_signed_urls = project_file_structure.cached_signed_urls
+            signed_url = du["data_link"]
+            cached_signed_urls[du["data_hash"]] = signed_url
+            image = download_image(
+                signed_url,
+                project_dir=project_file_structure.project_dir,
+            )
+            batch.dataunit.update(
+                where={
+                    "data_hash_frame": {  # state the values of the compound key
+                        "data_hash": data_hash,
+                        "frame": frame,
+                    }
+                },
+                data={
+                    "width": image.width,
+                    "height": image.height,
+                },
+            )
 
 
 def download_label_row_and_data(
@@ -416,6 +447,9 @@ def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectF
 
 
 def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
+    store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
+    if store_data_locally:
+        project_file_structure.local_data_store.mkdir(exist_ok=True)
     """
     Take a label row, if it is a video, split the underlying video file into frames.
     :param label_row: The label row to consider splitting.
@@ -426,8 +460,22 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
         with tempfile.TemporaryDirectory() as video_dir:
-            video_path = Path(video_dir) / du["data_title"]
-            download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+            if store_data_locally:
+                video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
+                    Path(du["data_title"]).suffix
+                )
+                data_uri = file_path_to_url(video_path, project_dir=project_file_structure.project_dir)
+                download_file(
+                    du["data_link"],
+                    project_file_structure.project_dir,
+                    video_path,
+                    cache=False,  # Disable cache symlink tricks
+                )
+            else:
+                video_path = Path(video_dir) / du["data_title"]
+                data_uri = None
+                download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+                project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
             num_frames = count_frames(video_path)
             frames_per_second = get_frames_per_second(video_path)
             video_images = Path(video_dir) / "images"
@@ -448,6 +496,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                             "width": image.width,
                             "height": image.height,
                             "fps": frames_per_second,
+                            "data_uri": data_uri,
                         }
                     )
                 batcher.commit()

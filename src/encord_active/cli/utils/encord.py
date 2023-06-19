@@ -39,7 +39,12 @@ def suggest_tagging_data(ontology: OntologyStructure) -> set[str]:
     return set()
 
 
-def import_encord_project(ssh_key_path: Path, target: Path, encord_project_hash: Optional[str]) -> Path:
+def import_encord_project(
+    ssh_key_path: Path,
+    target: Path,
+    encord_project_hash: Optional[str],
+    store_data_locally: bool,
+) -> Path:
     from .streamlit import ensure_safe_project
 
     client = get_client(ssh_key_path)
@@ -95,6 +100,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "ssh_key_path": ssh_key_path.as_posix(),
         "has_remote": True,
         "nested_attributes_as_tags": bool(option_hashes_to_tag),
+        "store_data_locally": store_data_locally,
     }
     yaml_str = yaml.dump(meta_data)
     project_file_structure.project_meta.write_text(yaml_str, encoding="utf-8")

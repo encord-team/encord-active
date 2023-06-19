@@ -91,6 +91,11 @@ def import_project(
         help="Use symlinks instead of copying COCO images to the target directory.",
         rich_help_panel=COCO_RICH_PANEL,
     ),
+    store_data_locally: bool = typer.Option(
+        False,
+        help="Store encord data locally so that it does not need to be download on-demand for analysis",
+        rich_help_panel=ENCORD_RICH_PANEL,
+    ),
 ):
     """
     [bold]Imports[/bold] a new project from Encord or a local coco project 📦
@@ -139,6 +144,11 @@ def import_project(
 
         ssh_key_path = app_config.get_or_query_ssh_key()
 
-        project_path = import_encord_project(ssh_key_path, target, encord_project_hash)
+        project_path = import_encord_project(
+            ssh_key_path,
+            target,
+            encord_project_hash,
+            store_data_locally,
+        )
 
     success_with_vizualise_command(project_path, "The data is downloaded and the metrics are complete.")
