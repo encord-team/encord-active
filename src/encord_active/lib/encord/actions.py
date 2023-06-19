@@ -331,8 +331,10 @@ class EncordActions:
                 data_unit["labels"].get("objects", []) or data_unit["labels"].get("classifications", [])
                 for data_unit in label_row["data_units"].values()
             ):
-                label_row_json_map[label_row["label_hash"]] = json.dumps(label_row)
                 try_execute(new_project.save_label_row, 5, {"uid": label_row["label_hash"], "label": label_row})
+
+            # Unconditionally store locally the remapped label hash (needed for correct database migration)
+            label_row_json_map[label_row["label_hash"]] = json.dumps(label_row)
 
             if progress_callback:
                 progress_callback((counter + 1) / len(new_project.label_rows))
