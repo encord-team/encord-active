@@ -6,7 +6,6 @@ if typing.TYPE_CHECKING:
     import prisma
 
 import encord_active.lib.db  # pylint: disable=unused-import
-from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.file_structure.base import BaseProjectFileStructure
 
 
@@ -28,7 +27,6 @@ class PrismaConnection:
         project_file_structure: BaseProjectFileStructure,
         cache_db: Optional["prisma.Prisma"] = None,
     ) -> None:
-        ensure_prisma_db(project_file_structure.prisma_db)
         from prisma.types import DatasourceOverride
 
         self.cache_db = cache_db
