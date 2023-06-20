@@ -11,13 +11,25 @@ def analysis_count(session: Session, label: bool, project_hash: str) -> int:
     return count
 
 
-def proj(session: Session, label: bool, project_hash: str, metric_name: str) -> Union[float, int]:
+def analysis_quartile(
+    session: Session,
+    label: bool,
+    project_hash: str,
+    metric_name: str,
+    quartile: int
+) -> Union[float, int]:
     if not metric_name.startswith("metric_"):
         raise ValueError(f"Invalid metric name: {metric_name}")
     ty = ProjectLabelAnalytics if label else ProjectDataAnalytics
+    metric_attr = getattr(ty, metric_name)
     count: int = session.query(ty)\
         .with_entities(func.count())\
         .where(ty.project_hash == project_hash)\
-        .where(getattr(ty, metric_name) is not None).scalar()
-    offset: int = count // 2
-    session.query(ty).with_entities().offset(offset).limit(1).scalar()
+        .where(metric_attr is not None).scalar()
+    if quartile == 2:
+        offset: int = count // 2
+    else:
+        offset: int = (count * quartile) // 4
+    return session.query(ty).with_entities(metric_attr)\
+        .where(metric_attr is not None).offset(offset).limit(1).scalar()
+
