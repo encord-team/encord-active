@@ -3,6 +3,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import List, Optional, Union
 
+from encord_active.lib.common.data_utils import normalize_file_path
+
 if typing.TYPE_CHECKING:
     import prisma
 
@@ -11,7 +13,7 @@ class BaseProjectFileStructure:
     def __init__(self, project_dir: Union[str, Path]):
         if isinstance(project_dir, str):
             project_dir = Path(project_dir)
-        self.project_dir: Path = project_dir.expanduser().resolve()
+        self.project_dir: Path = normalize_file_path(project_dir)
 
     @abstractmethod
     def cache_clear(self) -> None:

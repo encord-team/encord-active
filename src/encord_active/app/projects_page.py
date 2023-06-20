@@ -21,6 +21,7 @@ from encord_active.cli.utils.decorators import (
     try_find_parent_project,
 )
 from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.lib.common.data_utils import normalize_file_path
 from encord_active.lib.common.image_utils import show_image_and_draw_polygons
 from encord_active.lib.metrics.types import AnnotationType
 from encord_active.lib.metrics.utils import load_metric_metadata
@@ -112,7 +113,7 @@ def get_projects(path: Path) -> GetProjectsResult:
         )
 
     for project_path, project in project_metas.items():
-        posix_path = project_path.resolve().as_posix()
+        posix_path = normalize_file_path(project_path).as_posix()
         if project["project_hash"] in projects:
             projects[project["project_hash"]]["path"] = posix_path
             continue

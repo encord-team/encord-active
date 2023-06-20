@@ -11,6 +11,7 @@ from encord.ontology import OntologyStructure
 from encord.project import LabelRow
 from pydantic import BaseModel
 
+from encord_active.lib.common.data_utils import normalize_file_path
 from encord_active.lib.common.module_loading import load_module
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.encord.utils import (
@@ -210,7 +211,7 @@ This will make a (potentially new) classification question `{LabelTransformerWra
             return
 
         for data_label in self.label_transformer.from_custom_labels(label_paths, data_paths):
-            du = self.file_to_data_unit_map.get(data_label.abs_data_path.expanduser().resolve(), None)
+            du = self.file_to_data_unit_map.get(normalize_file_path(data_label.abs_data_path), None)
             if du is None:
                 continue
 

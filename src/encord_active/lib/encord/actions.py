@@ -21,7 +21,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm.auto import tqdm
 
 from encord_active.app.common.state import get_state
-from encord_active.lib.common.data_utils import download_file, try_execute
+from encord_active.lib.common.data_utils import download_file, try_execute, normalize_file_path
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.encord.project_sync import (
@@ -558,8 +558,9 @@ class MissingProjectMetaAttribute(Exception):
     def __init__(self, attribute: str, project_meta_file: Path):
         self.attribute = attribute
         self.project_meta_file = project_meta_file
+        posix_path = normalize_file_path(project_meta_file).as_posix()
         super().__init__(
-            f"`{attribute}` not specified in the project meta data file `{project_meta_file.resolve().as_posix()}`"
+            f"`{attribute}` not specified in the project meta data file `{posix_path}`"
         )
 
 
