@@ -1,10 +1,10 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Versioning
 
-**How to version your data, labels, and models in Encord Active.**
+**Learn how to version your data, labels, and models in Encord Active.**
 
 ## Why do you version your data?
 When you do experiments and test hypotheses, you typically want to jump back and forth between different versions of your data, labels, and models. For example, when you train a model on a specific subset of your data, you will typically find that there is an edge case for which your model performs poorly. Hence, you expand your dataset with more data to better cover the edge case and train a new model.
@@ -23,9 +23,8 @@ Currently, versioning operates through checkpoints, allowing you to create check
 
 #### Creating a new version
 
-In order to create a new version, navigate to the Versioning page in the Actions menu item.
-
-Provide a version name and click `create`.
+[//]: # (todo check missing steps once the versioning is enabled again, either hosted or local)
+In order to create a new version, navigate to the toolbox in the explorer pages, access the _Version_ tab, provide a version name and click the <kbd>Create</kbd> button.
 
 ![Version creation form](../images/version-creation-form.png)
 
