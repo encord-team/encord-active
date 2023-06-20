@@ -1,54 +1,53 @@
 ---
 sidebar_position: 2
+title: Model predictions
 ---
 
 import TOCInline from "@theme/TOCInline";
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-# Importing model predictions
+# Import model predictions
 
-**Import model predictions into Encord Active.**
+**Incorporate model predictions into Encord Active**
 
-:::tip
+By incorporating machine learning model predictions, Encord Active expands its capabilities to provide visualizations, model evaluation, identification of failure modes, error detection in labeling, prioritization of high-value data for re-labeling, and other valuable insights, enhancing the overall performance of the system.
 
-If your predictions are stored in the [COCO results format](https://cocodataset.org/#format-results) you can jump to the [import coco predictions](#importing-coco-predictions) section.
-
+:::note
+If you possess predictions in the [COCO Results format](https://cocodataset.org/#format-results), you can conveniently navigate to the [Import COCO predictions](#coco-predictions) subsection.
 :::
 
 To import your model predictions into Encord Active, there are a couple of steps you need to follow:
 
-<TOCInline toc={toc.filter((node, index) => node.level === 2)} />
+<TOCInline toc={toc.filter((node) => node.level === 2 && node.id !== "easy-imports").map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
+
 
 If you are already familiar with `data_hash`es and `featureNodeHash`es from the Encord platform, you can safely skip to [2. Prepare a `.pkl` File to be Imported](#2-prepare-a-pkl-file-to-be-imported).
 Just note that when specifying the `class_id` for a prediction, Encord Active expects the associated `featureNodeHash` from the Encord ontology as id.
 
 :::tip
-
 In the [SDK section](../sdk/prediction-import), you will also find ways to import predictions [KITTI files](../sdk/prediction-import/kitti) and [directories containing mask files](../sdk/prediction-import/masks).
-
 :::
 
-## 1. Covering the Basics
+## Covering the basics
 
-Before we dive into the details, we have a couple of things that we need to cover.
+Before diving into the details, there are a couple of things that need to be covered.
 
 :::info
-
-All commands going forward assume you are in the project directory, if now either `cd` into it or use the `--target` option with each command.
-
+All commands used from this point onward assume that the current working directory is the project folder.
+If it is not, please either navigate to it or utilize the `--target` option available in each command.
 :::
 
-### Uniquely Identifying Data Units
+### Uniquely identifying data units
 
 At Encord, every data unit has a `data_hash` which uniquely defines it.
-To see the mapping between the `data_hash`es in your Encord project and the filenames that you uploaded, you can use:
+To view the mapping between the `data_hash` values in your Encord project and the corresponding filenames that were uploaded, execute the following CLI command:
 
 ```shell
 encord-active print data-mapping
 ```
 
-After selecting the project you want to print mapping for via the command line, it will display a JSON object similar to the following with key-value pairs of (`data_hash`, data file name):
+Once you have selected the project for which you want to generate the mapping, it will display a JSON object resembling the following structure, consisting of key-value pairs (`data_hash`, `data_file_name`):
 
 ```
 {
@@ -62,7 +61,7 @@ After selecting the project you want to print mapping for via the command line, 
 
 :::tip
 
-To store the data mapping as `data_mapping.json` in the current working directory, you can do
+To store the data mapping as `data_mapping.json` in the current working directory, run
 
 ```shell
 encord-active print --json data-mapping
@@ -70,8 +69,7 @@ encord-active print --json data-mapping
 
 :::
 
-Note that for `image_groups`, each image in the group has its own `data_hash`, while
-videos have one `data_hash` for the entire video.
+Please note that in the case of image groups, each individual image within the group has its own unique `data_hash`, whereas videos have a single `data_hash` representing the entire video.
 As a consequence, predictions for videos will also need a `frame` to uniquely define where the prediction belongs.
 
 :::caution
@@ -80,19 +78,19 @@ When you are preparing predictions for import, you need to have the `data_hash` 
 
 :::
 
-### Uniquely Identifying Predicted Classes
+### Uniquely identifying predicted classes
 
-The second thing you will need when you are preparing predictions for import, is the `class_id` for each prediction.
-The class id tells Encord Active which class the prediction is associated with.
+The second thing you will need during the preparation of predictions for import, is the `class_id` for each prediction.
+The `class_id` tells Encord Active which class the prediction is associated with.
 
-The `class_id`s of an Encord project is defined by the `featureNodeHash` attribute on objects in the encord ontology.
-You can easily print the class names and `class_id`s from your project ontology:
+The `class_id` values in an Encord project are determined by the `featureNodeHash` attribute associated with labels in the Encord ontology.
+You can conveniently print the class names and corresponding `class_id` values of your project ontology via the CLI:
 
 ```shell
 encord-active print ontology
 ```
 
-After selecting the project you want to print mapping for via the command line, it will display a JSON object similar to the following with key-value pairs of (object name, `class_id`):
+Once you have selected the project for which you want to generate the mapping, it will display a JSON object resembling the following structure, consisting of key-value pairs (`label_name`, `class_id`):
 
 ```json
 {
@@ -101,15 +99,16 @@ After selecting the project you want to print mapping for via the command line, 
     "dog": "Nr52O8Ex",
     "horse": "MjkXn2Mx"
   },
-  "classifications": {}
+  "classifications": {...}
 }
 ```
 
-Or if the ontology is made of classifications
+As classifications with nested and/or checklist attributes (e.g. `has a dog? yes/no -> explain why?`) are represented once for each attribute answer, it's necessary to uniquely identify each classification and corresponding answer.
+This requires utilizing the respective classification, attribute and option hashes from the ontology.
 
 ```json
 {
-  "objects": {},
+  "objects": {...},
   "classifications": {
     "horses": {
       "feature_hash": "55eab8b3",
@@ -132,7 +131,7 @@ Or if the ontology is made of classifications
 
 :::tip
 
-To store the ontology as `ontology_output.json` in the current working directory, you can do
+To store the ontology as `ontology_output.json` in the current working directory, run
 
 ```shell
 encord-active print --json ontology
@@ -140,30 +139,30 @@ encord-active print --json ontology
 
 :::
 
-## 2. Prepare a `.pkl` File to be Imported
+## Prepare a `.pkl` File to be Imported
 
 Now, you can prepare a pickle file (`.pkl`) to be imported by Encord Active.
-You do this by building a list of `Prediction` objects.
-A prediction object holds a unique identifier of the data unit (the `data_hash` and potentially a `frame`), the `class_id`, a model `confidence` score, the actual prediction `data`, and the `format` of that data.
+You can do this by building a list of `Prediction` objects.
+A prediction object holds a unique identifier of the data unit (the `data_hash` and potentially `frame`), the `class_id`, a model `confidence` score, the actual prediction `data`, and the `format` of that data.
 
-#### Creating a `Prediction` Label
+### Creating a `Prediction` label
 
-Below, you can find examples of how to create a label of each of the four supported types.
+Below are examples illustrating how to create a label for each of the four supported types
 
 <Tabs groupId="data-type">
   <TabItem value="classification" label="Classification" default>
 
-Since we can have multiple classifications for the same data unit (e.g. `has a dog?` and `has a cat?`) we need to uniquely identify them by providing the 3 hashes from the ontology.
-
 ```python
 prediction = Prediction(
-    data_hash="<your_data_hash>",
+    data_hash="<data_hash>",
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     classification=FrameClassification(
-        feature_hash="<your_feature_hash>",
-        attribute_hash="<your_attribute_hash>",
-        option_hash="<your_option_hash>",
+        feature_hash="<class_id>",
+        # highlight-start
+        attribute_hash="<attribute_hash>",
+        option_hash="<option_hash>",
+        # highlight-end
     ),
 )
 ```
@@ -192,14 +191,13 @@ That is:
 from encord_active.lib.db.predictions import BoundingBox, Prediction, Format, ObjectDetection
 
 prediction = Prediction(
-    data_hash="<your_data_hash>",
+    data_hash="<data_hash>",
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        feature_hash="<the_class_id>",
+        feature_hash="<class_id>",
         # highlight-start
         format = Format.BOUNDING_BOX,
-        # Your bounding box coordinates in relative terms (% of image width/height).
         data = BoundingBox(x=0.2, y=0.3, w=0.1, h=0.4),
         # highlight-end
     ),
@@ -220,20 +218,19 @@ BoundingBox(x=10/img_w, y=25/img_h, w=200/img_w, h=150/img_h)
   </TabItem>
   <TabItem value="mask" label="Segmentation Mask">
 
-You should specify masks as binary `numpy` arrays of size [height, width] and with `dtype` `np.uint8`.
+You should specify masks as binary `numpy` arrays of size $height \times width$ and `dtype=np.uint8`.
 
 ```python
 from encord_active.lib.db.predictions import Prediction, Format
 
 prediction = Prediction(
-    data_hash =  "<your_data_hash>",
+    data_hash =  "<data_hash>",
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        feature_hash="<the_class_id>",
+        feature_hash="<class_id>",
         # highlight-start
         format = Format.MASK,
-        # _binary_ np.ndarray of shape [h, w] and dtype np.uint8
         data = mask
         # highlight-end
     ),
@@ -243,7 +240,7 @@ prediction = Prediction(
   </TabItem>
   <TabItem value="polygon" label="Polygon">
 
-You should specify your `Polygon` with relative coordinates as a numpy array of shape `[num_points, 2]`.
+You should specify your `Polygon` with relative coordinates as a `numpy` array of shape $num\_points \times 2$.
 That is, an array of relative (`x`, `y`) coordinates:
 
 - `x`: relative x-coordinate of each point of the polygon (pixel coordinate / image width)
@@ -262,14 +259,13 @@ polygon = np.array([
 ])
 
 prediction = Prediction(
-    data_hash =  "<your_data_hash>",
+    data_hash =  "<data_hash>",
     frame = 3,  # optional frame for videos
     confidence = 0.8,
     object=ObjectDetection(
-        feature_hash="<the_class_id>",
+        feature_hash="<class_id>",
         # highlight-start
         format = Format.POLYGON,
-        # np.ndarray of shape [n, 2] and dtype float in range [0,1]
         data = polygon
         # highlight-end
     ),
@@ -292,13 +288,15 @@ Notice the double braces `[[img_w, img_h]]` to get an array of shape `[1, 2]`.
   </TabItem>
 </Tabs>
 
-#### Preparing the Pickle File
+### Creating the pickle file
 
-Now you're ready to prepare the file.
-You can copy the appropriate snippet based on your prediction format from above and paste it in the code below.
-Note the highlighted line, which defines where the `.pkl` file will be stored.
+Now you're ready to create the pickle file.
+You can select the appropriate snippet based on your prediction format from above and paste it in the code below.
+
+Pay attention to the highlighted line, as it specifies the location where the `.pkl` file will be stored.
 
 ```python showLineNumbers
+import pickle
 from encord_active.lib.db.predictions import Prediction, Format
 
 predictions_to_store = []
@@ -315,9 +313,9 @@ with open("/path/to/predictions.pkl", "wb") as f:
 
 In the above code snippet, you will have to fetch `data_hash`, `class_id`, etc., from the for loop in line 5.
 
-## 3. Import Your Predictions via the CLI
+## Import the predictions via the CLI
 
-To import the predictions into Encord Active, you run the following command from the command line:
+To import the predictions into Encord Active, execute the following command in the CLI:
 
 ```shell
 encord-active import predictions /path/to/predictions.pkl
@@ -325,17 +323,23 @@ encord-active import predictions /path/to/predictions.pkl
 
 This will import your predictions into Encord Active and run all the [metrics](../category/quality-metrics) on your predictions.
 
-## Importing Coco Predictions
+## Easy imports {#easy-imports}
+
+Encord Active streamlines the import of well-known model prediction formats allowing for easy integration of diverse model types into the system.
+
+The following subsections outline simplified methods to import popular formats, bypassing the previous 3-step process.
+
+### COCO predictions
 
 :::info
 Make sure you have installed Encord Active with the `coco` [extras](../installation#coco-extras).
 :::
 
 :::note
-This command assume that you have imported you project using the [COCO importer](../cli#project) and you are inside the projects directory.
+This command assumes that you have imported you project using the [COCO importer](../cli#project) and that the current working directory is the project folder.
 :::
 
-Importing COCO predictions is currently the easiest way to import predictions to Encord Active.
+Importing COCO predictions is currently the easiest way to import predictions into Encord Active.
 
 You need to have a results JSON file following the [COCO results format](https://cocodataset.org/#format-results) and run the following command on it:
 
@@ -343,4 +347,4 @@ You need to have a results JSON file following the [COCO results format](https:/
 encord-active import predictions --coco results.json
 ```
 
-After the execution is done, you should be ready to [evaluate your model performance](../workflows/evaluate-detection-model).
+After the execution is done, you are ready to [evaluate your model performance](../workflows/evaluate-detection-model).
