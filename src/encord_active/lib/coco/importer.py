@@ -22,6 +22,7 @@ from encord_active.lib.coco.parsers import (
     parse_info,
 )
 from encord_active.lib.db.predictions import BoundingBox, Point
+from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalDataRow,
@@ -240,6 +241,8 @@ class CocoImporter:
 
         project_file_structure = ProjectFileStructure(self.project_dir)
         project_file_structure.ontology.write_text(json.dumps(project.ontology))
+
+        ensure_prisma_db(project_file_structure.prisma_db)
 
         project_meta = {
             "project_title": project.title,
