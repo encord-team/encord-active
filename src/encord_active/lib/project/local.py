@@ -9,6 +9,7 @@ from encord.ontology import OntologyStructure
 from tqdm.auto import tqdm
 
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalUserClient,
@@ -143,6 +144,8 @@ def init_local_project(
 
     transformer = LabelTransformerWrapper(ontology.structure, project.label_rows, label_transformer)
     transformer.add_labels(label_paths or [], data_paths=files)
+
+    ensure_prisma_db(project_file_structure.prisma_db)
 
     with PrismaConnection(project_file_structure) as conn:
         batcher = conn.batch_()
