@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 import cv2
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 target_width = 1024
 target_height = 1024
