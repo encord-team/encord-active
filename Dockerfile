@@ -1,10 +1,10 @@
-FROM python:3.9-slim
+FROM python:3.11
 
 ARG POETRY_VERSION="1.2.2"
 
 WORKDIR /app
 
-COPY .env pyproject.toml poetry.lock README.md /app
+COPY .env pyproject.toml poetry.lock README.md /app/
 COPY ./src/ /app/src
 
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
