@@ -36,7 +36,7 @@ from encord.project import AnnotationTaskStatus, LabelStatus
 from PIL import Image
 from prisma import Batch
 
-from encord_active.lib.common.data_utils import file_path_to_url
+from encord_active.lib.common.data_utils import file_path_to_url, normalize_file_path
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
 
@@ -57,7 +57,7 @@ class DataRowMedia:
     uid: str
 
     def __post_init__(self):
-        self.path = self.path.resolve()
+        self.path = normalize_file_path(self.path)
 
 
 @dataclass

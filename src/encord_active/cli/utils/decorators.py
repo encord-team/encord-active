@@ -5,6 +5,8 @@ from typing import Any, Callable, List, Optional, TypeVar
 import rich
 import typer
 
+from encord_active.lib.common.data_utils import normalize_file_path
+
 R = TypeVar("R")
 
 
@@ -29,7 +31,7 @@ def try_find_parent_project(target: Path) -> Optional[Path]:
 
 def find_child_projects(target: Path) -> List[Path]:
     child_meta_files = target.glob("*/project_meta.yaml")
-    return [cmf.parent.expanduser().resolve() for cmf in child_meta_files]
+    return [normalize_file_path(cmf.parent) for cmf in child_meta_files]
 
 
 def is_project(target: Path):

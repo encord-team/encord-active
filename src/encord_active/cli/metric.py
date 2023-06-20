@@ -7,6 +7,7 @@ from loguru import logger
 from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
+from encord_active.lib.common.data_utils import normalize_file_path
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
 from encord_active.lib.metrics.metadata import fetch_metrics_meta, update_metrics_meta
@@ -42,7 +43,7 @@ def add_metrics(
         get_module_metrics,
     )
 
-    full_module_path = module_path.expanduser().resolve()
+    full_module_path = normalize_file_path(module_path)
     metric_titles = dict.fromkeys(metric_title or [], full_module_path)
 
     project_file_structure = ProjectFileStructure(target)
@@ -69,7 +70,7 @@ def add_metrics(
             # input metric title was found in the python module
             if title in metrics_meta:
                 old_module_path = metrics_meta[title]["location"]
-                if full_module_path == Path(old_module_path).expanduser().resolve():
+                if full_module_path == normalize_file_path(Path(old_module_path)):
                     rich.print(f"Requirement already satisfied: {title} in '{module_path.as_posix()}'.")
                 else:
                     rich.print(

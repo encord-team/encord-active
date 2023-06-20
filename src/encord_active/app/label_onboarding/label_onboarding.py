@@ -4,6 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 from encord_active.app.common.state import get_state
+from encord_active.lib.common.data_utils import normalize_file_path
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
 from encord_active.lib.labels.classification import (
@@ -71,7 +72,10 @@ def label_onboarding_page():
         project = Project(get_state().project_paths.project_dir).load()
         lr_data_units = [lr["data_units"] for lr in project.label_rows.values()]
         paths = [Path(data_unit["data_link"]) for data_units in lr_data_units for data_unit in data_units.values()]
-        image_to_class_map = {path.expanduser().resolve().as_posix(): path.parent.stem for path in paths}
+        image_to_class_map = {
+            normalize_file_path(path).as_posix(): path.parent.stem
+            for path in paths
+        }
         classes = set(image_to_class_map.values())
         class_names_string = ", ".join(f"`{name}`" for name in classes)
 

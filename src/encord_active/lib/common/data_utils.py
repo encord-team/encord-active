@@ -109,12 +109,24 @@ def _get_from_cache(key: str) -> Optional[Path]:
     return None
 
 
+def normalize_file_path(path: Path) -> Path:
+    path = path.expanduser().absolute()
+    norm_path = Path(os.path.normpath(path.as_posix()))
+    if norm_path.resolve() == path.resolve():
+        path = norm_path
+    else:
+        # Warning: this means that we have a parent reference broken by a symlink.
+        # This may break certain links.
+        path = path.resolve()
+    return path
+
+
 def download_file(
-    url: str,
-    project_dir: Path,
-    destination: Path,
-    byte_size: int = 1024,
-    cache: bool = True,
+        url: str,
+        project_dir: Path,
+        destination: Path,
+        byte_size: int = 1024,
+        cache: bool = True,
 ) -> Path:
     if destination.is_file():
         return destination
@@ -165,21 +177,21 @@ def url_to_file_path(url: str, project_dir: Path) -> Optional[Path]:
     if url.startswith("file:"):
         return Path(unquote(urlparse(url).path))
     if url.startswith("relative://"):
-        relative_path = url[len("relative://") :]
+        relative_path = url[len("relative://"):]
         return project_dir / Path(relative_path)
     if url.startswith("absolute://"):
-        absolute_path = url[len("absolute:/") :]
+        absolute_path = url[len("absolute:/"):]
         return Path(absolute_path)
     return None
 
 
 def file_path_to_url(path: Path, project_dir: Path, relative: Optional[bool] = None) -> str:
-    path = path.expanduser().absolute().resolve()
+    path = normalize_file_path(path)
     if relative is not None and not relative:
         return path.as_uri()
 
     # Attempt to create relative path
-    root_path = project_dir.expanduser().absolute().resolve()
+    root_path = normalize_file_path(project_dir)
     try:
         rel_path = path.relative_to(root_path)
         return f"relative://{rel_path.as_posix()}"
@@ -225,7 +237,7 @@ TType = TypeVar("TType")
 
 
 def iterate_in_batches(seq: Sequence[TType], size: int) -> Generator[Sequence[TType], None, None]:
-    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos: pos + size] for pos in range(0, len(seq), size))
 
 
 def collect_async(fn, job_args, max_workers=min(10, (os.cpu_count() or 1) + 4), **kwargs):
