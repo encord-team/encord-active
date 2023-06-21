@@ -37,6 +37,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Polygon Shape Similarity": "metric_label_poly_similarity",
     "Random Values on Objects": "metric_random",
     'Image-level Annotation Quality': "$SKIP", # FIXME:
+    "Shape outlier detection": "$SKIP", #FIXME:
 }
 
 DERIVED_DATA_METRICS: Set[str] = {
@@ -63,7 +64,7 @@ def up(pfs: ProjectFileStructure) -> None:
             project_hash=project_hash,
             project_name=project_meta["project_title"],
             project_description=project_meta["project_description"],
-            project_remote_ssh_key_path=project_meta["ssh_key_path"],
+            project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
             project_ontology=json.loads(
                 pfs.ontology.read_text(encoding="utf-8")
             ),
@@ -78,12 +79,12 @@ def up(pfs: ProjectFileStructure) -> None:
         for label_row in label_rows:
             data_hash = uuid.UUID(label_row.data_hash)
             label_row_json = json.loads(label_row.label_row_json)
-            if label_row.label_hash != label_row_json["label_hash"]:
+            if "label_hash" in label_row_json and label_row.label_hash != label_row_json["label_hash"]:
                 raise ValueError(
                     f"Inconsistent label hash in label row json: "
                     f"{label_row.label_hash} != {label_row_json['label_hash']}"
                 )
-            if label_row.data_hash != label_row_json["data_hash"]:
+            if "data_hash" in label_row_json and label_row.data_hash != label_row_json["data_hash"]:
                 raise ValueError(
                     f"Inconsistent data hash in label row json: "
                     f"{label_row.data_hash} != {label_row_json['data_hash']}"
