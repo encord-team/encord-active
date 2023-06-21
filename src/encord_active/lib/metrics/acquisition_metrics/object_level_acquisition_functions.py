@@ -1,5 +1,12 @@
 from abc import abstractmethod
-from typing import Any, Optional, Union
+from dataclasses import dataclass
+from typing import Any, List, Optional, Union
+
+import numpy as np
+from PIL import Image
+
+from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import Metric
 from encord_active.lib.metrics.types import (
@@ -8,15 +15,19 @@ from encord_active.lib.metrics.types import (
     EmbeddingType,
     MetricType,
 )
-from PIL import Image
-from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.metrics.writer import CSVMetricWriter
-import numpy as np
+
+
+@dataclass
+class BoundingBoxPrediction:
+    x: float
+    y: float
+    w: float
+    h: float
+    confidence: float
+
 
 class BaseBoundingBoxModelWrapper:
-    def __init__(self, model):
-        self._model = model
-
     @classmethod
     @abstractmethod
     def prepare_data(cls, images: list[Image]) -> list[Any]:
@@ -24,14 +35,15 @@ class BaseBoundingBoxModelWrapper:
         Reads and prepares data samples from local storage to feed the model with it.
 
         Args:
-            images (list[Image]): Images to use as data samples.
+            images (list[Image]): Pillow's PIL Images to use as data samples.
 
         Returns:
-            Data samples prepared to be used as input of `self.predict_probabilities()` method.
+            Data samples prepared to be used as input of `self.predict_boundingboxes()` method.
         """
         pass
 
-    def predict_boundingboxes(self, data) -> List[BoundingBox]:
+    @abstractmethod
+    def predict_boundingboxes(self, data) -> List[BoundingBoxPrediction]:
         """
         Calculate the model-predicted bounding boxes.
 
@@ -39,34 +51,15 @@ class BaseBoundingBoxModelWrapper:
             data: Input data sample.
 
         Returns:
-            An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
+            An array of shape ``(N, K)`` of model-predicted bounding boxes.
             Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
             `x` belongs to each possible class, for each of the K classes.
             In the case the model can't extract any example `x` from the data sample, the method returns ``None``.
         """
-        pred_proba = self._predict_proba(data)
-        if pred_proba is not None and pred_proba.min() < 0:
-            raise ValueError("Model-predicted class probabilities cannot be less than zero.")
-        return pred_proba
-
-    @abstractmethod
-    def _predict_proba(self, X) -> Optional[np.ndarray]:
-        """
-        Probability estimates.
-
-        Note that in the multilabel case, each sample can have any number of labels.
-        This returns the marginal probability that the given sample has the label in question.
-
-        Args:
-            X ({array-like} of shape (n_samples, n_features)): Input data.
-
-        Returns:
-            An array of shape (n_samples, n_classes). Probability of the sample for each class in the model.
-            In the case the model fails, the method returns ``None``.
-        """
         pass
 
-class AcquisitionFunction(Metric):
+
+class BoundingBoxAcquisitionFunction(Metric):
     def __init__(
         self,
         title: str,
@@ -74,7 +67,7 @@ class AcquisitionFunction(Metric):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        model: BaseModelWrapper,
+        model: BaseBoundingBoxModelWrapper,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
         doc_url: Optional[str] = None,
@@ -83,7 +76,7 @@ class AcquisitionFunction(Metric):
         Creates an instance of the acquisition function with a custom model to score data samples.
 
         Args:
-            model (BaseModelWrapper): Machine learning model used to score data samples.
+            model (BaseBoundingBoxModelWrapper): Machine learning model used to score data samples.
         """
         self._model = model
         super().__init__(
@@ -97,14 +90,14 @@ class AcquisitionFunction(Metric):
             prepared_data = self._model.prepare_data([image])
             if not prepared_data:
                 continue
-            pred_proba = self._model.predict_probabilities(prepared_data)
-            if pred_proba is None:
+            predicted_bboxes = self._model.predict_boundingboxes(prepared_data)
+            if predicted_bboxes is None:
                 continue
-            score = self.score_predicted_class_probabilities(pred_proba)
+            score = self.score_bbox_predictions(predicted_bboxes)
             writer.write(score)
 
     @abstractmethod
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+    def score_bbox_predictions(self, predictions: List[BoundingBoxPrediction]) -> float:
         """
         Scores model-predicted class probabilities according the acquisition function description.
 
@@ -119,4 +112,28 @@ class AcquisitionFunction(Metric):
         pass
 
 
-class AverageFrameScore():
+class AverageFrameScore(BoundingBoxAcquisitionFunction):
+    def __init__(self, model):
+        super().__init__(
+            title="Average Frame Score",
+            short_description="Ranks images by average confidence of the predictions",
+            long_description="For each image, this acquisition function returns the average confidence of the "
+            "predictions. If there is no prediction for the given image, it assigns a value of "
+            "zero. This acquisiton function makes sense when at least one ground truth prediction is expected "
+            "for each image.",
+            doc_url="",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+            model=model,
+        )
+
+    def score_bbox_predictions(self, predictions: List[BoundingBoxPrediction]) -> float:
+        if not predictions:
+            return 0.0
+
+        cum_prediction = 0
+        for prediction in predictions:
+            cum_prediction += prediction.confidence
+
+        return cum_prediction / len(predictions)
