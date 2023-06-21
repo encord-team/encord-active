@@ -1,0 +1,5 @@
+Generic single-database configuration.
+
+To generate a new migration version:
+
+alembic revision — autogenerate -m "{migration_identifier}”
