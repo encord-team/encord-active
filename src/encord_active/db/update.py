@@ -11,4 +11,6 @@ def upsert_project_and_data(
     data: List[ProjectDataMetadata],
     data_units: List[ProjectDataUnitMetadata]
 ) -> None:
-    insert(Project,)
+    session.add(project)
+    session.add_all(data)
+    session.add_all(data_units)
