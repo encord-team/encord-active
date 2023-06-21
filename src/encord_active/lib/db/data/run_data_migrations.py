@@ -40,5 +40,6 @@ def run_data_migrations(pfs: ProjectFileStructure):
             spec.loader.exec_module(migration)
             migration.up(pfs)
 
-    project_meta["data_version"] = get_timestamp_of_migration_file(migrations_to_run[-1])
-    update_project_meta(pfs.project_dir, project_meta)
+    # FIXME: re-enable this before merging (just makes debugging much easier)
+    # project_meta["data_version"] = get_timestamp_of_migration_file(migrations_to_run[-1])
+    # update_project_meta(pfs.project_dir, project_meta)
