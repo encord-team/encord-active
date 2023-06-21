@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional, Set
 from uuid import UUID
@@ -71,6 +72,8 @@ class ProjectAnalyticsBase(SQLModel):
     metric_red: Optional[float]
     metric_green: Optional[float]
     metric_blue: Optional[float]
+    # Random
+    metric_random: Optional[float]
 
 
 class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
@@ -97,12 +100,21 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     # Extended primary key
     object_hash: str = Field(primary_key=True)
     # Metrics - Label Only
+    metric_label_duplicates: Optional[float]
+    metric_label_border_closeness: Optional[float]
+    metric_label_poly_similarity: Optional[float]
+    metric_label_missing_or_broken_tracks: Optional[float]
     __table_args__ = tuple([
         Index(
             f"active_label_project_hash_{metric_name}_index", "project_hash", metric_name
         )
         for metric_name in (
-            set() | {
+            {
+                "metric_label_duplicates",
+                "metric_label_border_closeness",
+                "metric_label_poly_similarity",
+                "metric_label_missing_or_broken_tracks",
+            } | {
                 field
                 for field in ProjectAnalyticsBase.__fields__
                 if field.startswith("metric_")
@@ -139,9 +151,12 @@ _init_metadata: Set[str] = set()
 
 
 def get_engine(path: Path) -> Engine:
-    engine = create_engine(f"sqlite:///{path}")
+    override_db = os.getenv("ENCORD_ACTIVE_DATABASE", None)
+    create_db_schema = os.getenv("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
+
+    engine = create_engine(override_db if override_db is not None else f"sqlite:///{path}")
     path_key = path.as_posix()
-    if path_key not in _init_metadata:
+    if path_key not in _init_metadata and create_db_schema == "1":
         SQLModel.metadata.create_all(engine)
         _init_metadata.add(path_key)
     return engine
