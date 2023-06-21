@@ -107,7 +107,8 @@ class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
 class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     __tablename__ = 'active_project_label_analytics'
     # Extended primary key
-    object_hash: str = Field(primary_key=True)
+    object_hash: str = Field(primary_key=True, max_length=8)
+    feature_hash: str = Field(min_length=8, max_length=8)
     # Metrics - Label Only
     metric_label_duplicates: Optional[float]
     metric_label_border_closeness: Optional[float]
@@ -126,7 +127,9 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
                     "metric_label_poly_similarity",
                     "metric_label_missing_or_broken_tracks",
                     "metric_label_annotation_quality",
-                    "metric_label_inconsistent_classification_and_track"
+                    "metric_label_inconsistent_classification_and_track",
+                    # Not a metric, but indexed anyway.
+                    "feature_hash",
                 } | COMMON_METRIC_NAMES
         )
     ])
