@@ -26,7 +26,6 @@ class ProjectDataMetadata(SQLModel, table=True):
     dataset_hash: UUID
     num_frames: int
     frames_per_second: float
-    dataset_hash: str
     dataset_title: str
     data_title: str
     data_type: str
@@ -46,8 +45,8 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     data_uri: Optional[str] = Field(default=None)
     data_uri_is_video: bool = Field(default=False)
     # Per-frame information about the root cause.
-    objects: dict = Field(sa_column=Column(JSON))
-    classifications: dict = Field(sa_column=Column(JSON))
+    objects: list = Field(sa_column=Column(JSON))
+    classifications: list = Field(sa_column=Column(JSON))
 
 
 class ProjectAnalyticsBase(SQLModel):
