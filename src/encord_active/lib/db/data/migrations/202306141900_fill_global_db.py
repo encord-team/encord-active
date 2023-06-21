@@ -35,7 +35,8 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Area - Relative": "metric_area_relative",
     "Object Aspect Ratio": "metric_aspect_ratio",
     "Polygon Shape Similarity": "metric_label_poly_similarity",
-    "Random Values on Objects": "metric_random"
+    "Random Values on Objects": "metric_random",
+    'Image-level Annotation Quality': "$SKIP", # FIXME:
 }
 
 DERIVED_DATA_METRICS: Set[str] = {
@@ -77,15 +78,25 @@ def up(pfs: ProjectFileStructure) -> None:
         for label_row in label_rows:
             data_hash = uuid.UUID(label_row.data_hash)
             label_row_json = json.loads(label_row.label_row_json)
+            if label_row.label_hash != label_row_json["label_hash"]:
+                raise ValueError(
+                    f"Inconsistent label hash in label row json: "
+                    f"{label_row.label_hash} != {label_row_json['label_hash']}"
+                )
+            if label_row.data_hash != label_row_json["data_hash"]:
+                raise ValueError(
+                    f"Inconsistent data hash in label row json: "
+                    f"{label_row.data_hash} != {label_row_json['data_hash']}"
+                )
             data_units_json: dict = label_row_json["data_units"]
             data_type: str = str(label_row_json["data_type"])
             project_data_meta = ProjectDataMetadata(
                 project_hash=project_hash,
                 data_hash=data_hash,
                 label_hash=uuid.UUID(label_row.label_hash),
-                dataset_hash=uuid.uuid4(),
+                dataset_hash=uuid.UUID(label_row_json["dataset_hash"]),
                 num_frames=len(label_row.data_units),
-                frames_per_second=0,
+                frames_per_second=None,
                 dataset_title=str(label_row_json["dataset_title"]),
                 data_title=str(label_row_json["data_title"]),
                 data_type=data_type,
@@ -93,20 +104,23 @@ def up(pfs: ProjectFileStructure) -> None:
             )
             fps: Optional[float] = None
             for data_unit in label_row.data_units:
+                du_hash = uuid.UUID(data_unit.data_hash)
                 du_json = data_units_json[data_unit.data_hash]
-                if data_type == "image":
+                if data_type == "image" or data_type == "img_group":
                     labels_json = du_json["labels"]
-                else:
+                elif data_type == "video":
                     labels_json = du_json["labels"].get(str(data_unit.frame), {})
+                else:
+                    raise ValueError(f"Unsupported data type: {data_type}")
                 if data_unit.fps > 0.0:
                     fps = data_unit.fps
                 objects = labels_json.get("objects", [])
                 for obj in objects:
                     object_hash = str(obj["objectHash"])
-                    object_metrics[(data_hash, data_unit.frame, object_hash)] = {
+                    object_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                     }
-                data_metrics[(data_hash, data_unit.frame)] = {
+                data_metrics[(du_hash, data_unit.frame)] = {
                     "metric_width": data_unit.width,
                     "metric_height": data_unit.height,
                     "metric_area": data_unit.width * data_unit.height,
@@ -116,9 +130,10 @@ def up(pfs: ProjectFileStructure) -> None:
                 }
                 project_data_unit_meta = ProjectDataUnitMetadata(
                     project_hash=project_hash,
+                    du_hash=du_hash,
+                    # FIXME: check calculation of this value is consistent!
+                    frame=data_unit.frame if data_type == "video" else 0,
                     data_hash=data_hash,
-                    frame=data_unit.frame,
-                    data_unit_hash=uuid.UUID(data_unit.data_hash),
                     data_uri=data_unit.data_uri,
                     data_uri_is_video=data_type == "video",
                     objects=objects,
@@ -145,7 +160,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 object_hash = rest[0]
                 if (du_hash, frame, object_hash) not in object_metrics:
                     raise ValueError(
-                        f"Metric references invalid object!: data_hash={du_hash}, frame={frame}, object={object_hash}"
+                        f"Metric references invalid object!: du_hash={du_hash}, frame={frame}, object={object_hash}"
                     )
                 metrics_dict = object_metrics[(du_hash, frame, object_hash)]
                 metrics_derived = DERIVED_LABEL_METRICS
@@ -183,22 +198,22 @@ def up(pfs: ProjectFileStructure) -> None:
     label_db_metrics = [
         ProjectLabelAnalytics(
             project_hash=project_hash,
-            data_hash=data_hash,
+            du_hash=du_hash,
             frame=frame,
             object_hash=object_hash,
             **metrics
         )
-        for (data_hash, frame, object_hash), metrics in object_metrics.items()
+        for (du_hash, frame, object_hash), metrics in object_metrics.items()
     ]
 
     data_db_metrics = [
         ProjectDataAnalytics(
             project_hash=project_hash,
-            data_hash=data_hash,
+            du_hash=du_hash,
             frame=frame,
             **metrics
         )
-        for (data_hash, frame), metrics in data_metrics.items()
+        for (du_hash, frame), metrics in data_metrics.items()
     ]
 
     path = pfs.project_dir.parent.expanduser().resolve() / "encord-active.sqlite"
@@ -210,4 +225,3 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(label_db_metrics)
         sess.add_all(data_db_metrics)
         sess.commit()
-    raise ValueError("Only run migration for exactly 1!!! project")

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import Column, JSON
 from sqlalchemy.engine import Engine
-from sqlmodel import Field, SQLModel, create_engine, Index, Session
+from sqlmodel import Field, SQLModel, create_engine, Index, ForeignKeyConstraint, CheckConstraint
 
 
 class Project(SQLModel, table=True):
@@ -25,22 +25,49 @@ class ProjectDataMetadata(SQLModel, table=True):
     # Metadata
     label_hash: UUID = Field(unique=True)
     dataset_hash: UUID
-    num_frames: int
-    frames_per_second: float
+    num_frames: int = Field(gt=0)
+    frames_per_second: Optional[float] = Field()
     dataset_title: str
     data_title: str
     data_type: str
     label_row_json: dict = Field(sa_column=Column(JSON))
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_hash"],
+            [Project.project_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_data_project_fk",
+        ),
+        #CheckConstraint(
+        #    """
+        #    CHECK (
+        #        (data_type = 'video' AND frames_per_second IS NOT NULL AND frames_per_second > 0)
+        #        OR (data_type = 'img_group' AND frames_per_second = 1)
+        #        OR (data_type = 'image' AND num_frames = 1 AND frames_per_second IS NULL)
+        #    )
+        #    """,
+        #    name="active_project_data_video_consistency"
+        #)
+    )
+
 
 class ProjectDataUnitMetadata(SQLModel, table=True):
     __tablename__ = 'active_project_data_units'
-    project_hash: UUID = Field(primary_key=True)
-    data_hash: UUID = Field(primary_key=True)
-    frame: int = Field(primary_key=True)
-    data_unit_hash: UUID
+    project_hash: UUID = Field(primary_key=True, foreign_key=Project.project_hash)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    data_hash: UUID
     __table_args__ = (
-        Index("unique_data_unit_hash", "data_unit_hash", "frame", unique=True),
+        Index("active_project_data_units_unique_du_hash_frame", "du_hash", "frame", unique=True),
+        ForeignKeyConstraint(
+            ["project_hash", "data_hash"],
+            [ProjectDataMetadata.project_hash, ProjectDataMetadata.data_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_data_unit_data_fk",
+        ),
     )
     # Optionally set to support local data (video can be stored as decoded frames or as a video object)
     data_uri: Optional[str] = Field(default=None)
@@ -53,8 +80,8 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
 class ProjectAnalyticsBase(SQLModel):
     # Base primary key
     project_hash: UUID = Field(primary_key=True)
-    data_hash: UUID = Field(primary_key=True)
-    frame: int = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
@@ -101,7 +128,15 @@ class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
                     "metric_object_density"
                 } | COMMON_METRIC_NAMES
         )
-    ])
+    ]) + (
+        ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame"],
+            [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_data_project_data_fk",
+        ),
+    )
 
 
 class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
@@ -132,7 +167,15 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
                     "feature_hash",
                 } | COMMON_METRIC_NAMES
         )
-    ])
+    ]) + (
+        ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame"],
+            [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_label_project_data_fk",
+        ),
+    )
 
 
 METRICS_DATA = {
