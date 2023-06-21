@@ -76,21 +76,30 @@ class ProjectAnalyticsBase(SQLModel):
     metric_random: Optional[float]
 
 
+COMMON_METRIC_NAMES: Set[str] = {
+    field
+    for field in ProjectAnalyticsBase.__fields__
+    if field.startswith("metric_")
+}
+
+
 class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
     __tablename__ = 'active_project_data_analytics'
     # Metrics - Image only
     metric_object_count: Optional[int]
+    metric_object_density: Optional[float]
+    metric_image_difficulty: Optional[float]
+    metric_image_singularity: Optional[float]
 
     __table_args__ = tuple([
         Index(
             f"active_data_project_hash_{metric_name}_index", "project_hash", metric_name
         )
         for metric_name in (
-            {"metric_object_count"} | {
-                field
-                for field in ProjectAnalyticsBase.__fields__
-                if field.startswith("metric_")
-            }
+                {
+                    "metric_object_count",
+                    "metric_object_density"
+                } | COMMON_METRIC_NAMES
         )
     ])
 
@@ -104,21 +113,21 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     metric_label_border_closeness: Optional[float]
     metric_label_poly_similarity: Optional[float]
     metric_label_missing_or_broken_tracks: Optional[float]
+    metric_label_annotation_quality: Optional[float]
+    metric_label_inconsistent_classification_and_track: Optional[float]
     __table_args__ = tuple([
         Index(
             f"active_label_project_hash_{metric_name}_index", "project_hash", metric_name
         )
         for metric_name in (
-            {
-                "metric_label_duplicates",
-                "metric_label_border_closeness",
-                "metric_label_poly_similarity",
-                "metric_label_missing_or_broken_tracks",
-            } | {
-                field
-                for field in ProjectAnalyticsBase.__fields__
-                if field.startswith("metric_")
-            }
+                {
+                    "metric_label_duplicates",
+                    "metric_label_border_closeness",
+                    "metric_label_poly_similarity",
+                    "metric_label_missing_or_broken_tracks",
+                    "metric_label_annotation_quality",
+                    "metric_label_inconsistent_classification_and_track"
+                } | COMMON_METRIC_NAMES
         )
     ])
 
