@@ -3,6 +3,8 @@ import uuid
 from typing import Optional, Set, Tuple, Dict, Union
 from sqlmodel import Session
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.embeddings.utils import load_label_embeddings
+from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_dataframe, load_available_metrics
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
@@ -16,19 +18,19 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Blur": "metric_blur",
     "Brightness": "metric_brightness",
     "Contrast": "metric_contrast",
-    "Frame object density": "$SKIP",
+    "Frame object density": "metric_object_density",
     "Green Values": "metric_green",
-    "Image Difficulty": "$SKIP",
-    "Image Singularity": "$SKIP",
+    "Image Difficulty": "metric_image_difficulty",
+    "Image Singularity": "metric_image_singularity",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
     "Red Values": "metric_red",
     "Sharpness": "$SKIP",  # SKIPPED : Derived Metric: 1.0 - Blue (FIXME: check)
     "Annotation Duplicates": "metric_label_duplicates",
     "Annotation closeness to image borders": "metric_label_border_closeness",
-    "Inconsistent Object Classification and Track IDs": "$SKIP",
+    "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
     "Missing Objects and Broken Tracks": "metric_label_missing_or_broken_tracks",
-    "Object Annotation Quality": "$SKIP",
+    "Object Annotation Quality": "metric_label_annotation_quality",
     "Object Area - Absolute": "metric_area",
     "Object Area - Relative": "metric_area_relative",
     "Object Aspect Ratio": "metric_aspect_ratio",
@@ -36,12 +38,23 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Random Values on Objects": "metric_random"
 }
 
+DERIVED_DATA_METRICS: Set[str] = {
+    "metric_width",
+    "metric_height",
+    "metric_area",
+    "metric_area_relative",
+    "metric_aspect_ratio",
+    "metric_object_count",
+}
+
+DERIVED_LABEL_METRICS: Set[str] = set()
+
 
 def up(pfs: ProjectFileStructure) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
-    object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float]]] = {}
-    data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float]]] = {}
+    object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes]]] = {}
+    data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]] = {}
 
     # Load metadata
     with PrismaConnection(pfs) as conn:
@@ -98,6 +111,7 @@ def up(pfs: ProjectFileStructure) -> None:
                     "metric_height": data_unit.height,
                     "metric_area": data_unit.width * data_unit.height,
                     "metric_area_relative": 1.0,
+                    "metric_aspect_ratio": float(data_unit.width) / float(data_unit.height),
                     "metric_object_count": len(objects),
                 }
                 project_data_unit_meta = ProjectDataUnitMetadata(
@@ -124,7 +138,6 @@ def up(pfs: ProjectFileStructure) -> None:
         metric_df = load_metric_dataframe(metric, normalize=False).to_dict(orient="records")
         for metric_entry in metric_df:
             label_hash, du_hash_str, frame_str, *rest = metric_entry["identifier"].split("_")
-            object_hash: Optional[str] = None
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
@@ -135,10 +148,37 @@ def up(pfs: ProjectFileStructure) -> None:
                         f"Metric references invalid object!: data_hash={du_hash}, frame={frame}, object={object_hash}"
                     )
                 metrics_dict = object_metrics[(du_hash, frame, object_hash)]
+                metrics_derived = DERIVED_LABEL_METRICS
             else:
                 metrics_dict = data_metrics[(du_hash, frame)]
+                metrics_derived = DERIVED_DATA_METRICS
             if metric_column_name not in metrics_dict:
                 metrics_dict[metric_column_name] = metric_entry["score"]
+            elif metric_column_name not in metrics_derived:
+                raise ValueError(
+                    f"Duplicate metric assignment for, column={metric_column_name},"
+                    f"identifier{metric_entry['identifier']}"
+                )
+
+    # Load embeddings
+    for embedding_type, embedding_name in [
+        (EmbeddingType.IMAGE, "embedding_clip"), (EmbeddingType.OBJECT, "embedding_clip"),
+        # FIXME: EmbeddingType.CLASSIFICATION??
+        # FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu")
+    ]:
+        label_embeddings = load_label_embeddings(embedding_type, pfs)
+        for embedding in label_embeddings:
+            du_hash = uuid.UUID(embedding["data_unit"])
+            frame = int(embedding["frame"])
+            object_hash: Optional[str] = str(embedding["labelHash"])\
+                if embedding.get("labelHash", None) is not None\
+                else None
+            embedding_bytes: bytes = embedding["embedding"].tobytes()
+            if object_hash is not None:
+                metrics_dict = object_metrics[(du_hash, frame, object_hash)]
+            else:
+                metrics_dict = data_metrics[(du_hash, frame)]
+            metrics_dict[embedding_name] = embedding_bytes
 
     label_db_metrics = [
         ProjectLabelAnalytics(
