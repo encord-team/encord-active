@@ -148,7 +148,7 @@ encord-active import project --coco -i ./images -a ./annotations.json
 encord-active import predictions --coco results.json
 ```
 
-### Import from Encord Platform
+### Import from the Encord platform
 
 This section requires [setting up an ssh key][encord-docs-ssh] with Encord, so slightly more technical.
 
