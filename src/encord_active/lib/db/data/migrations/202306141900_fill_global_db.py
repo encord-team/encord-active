@@ -53,7 +53,7 @@ DERIVED_LABEL_METRICS: Set[str] = set()
 def up(pfs: ProjectFileStructure) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
-    object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes]]] = {}
+    object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str]]] = {}
     data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]] = {}
 
     # Load metadata
@@ -104,7 +104,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 for obj in objects:
                     object_hash = str(obj["objectHash"])
                     object_metrics[(data_hash, data_unit.frame, object_hash)] = {
-
+                        "feature_hash": str(obj["featureHash"]),
                     }
                 data_metrics[(data_hash, data_unit.frame)] = {
                     "metric_width": data_unit.width,
