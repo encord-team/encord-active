@@ -8,7 +8,7 @@ from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_dataframe, load_available_metrics
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
-    ProjectLabelAnalytics, ProjectDataAnalytics
+    ProjectLabelAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedLabel
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
@@ -145,6 +145,42 @@ def up(pfs: ProjectFileStructure) -> None:
             project_data_meta.frames_per_second = fps
             data_metas.append(project_data_meta)
 
+        tag_id_map: Dict[int, uuid.UUID] = {}
+        project_tag_definitions = []
+        for tag in conn.tag.find_many():
+            tag_uuid = uuid.uuid4()
+            tag_id_map[tag.id] = tag_uuid
+            project_tag_definitions.append(ProjectTag(
+                tag_uuid=tag_uuid,
+                project_hash=project_hash,
+                name=tag.name,
+            ))
+
+        project_data_tags = []
+        project_label_tags = []
+        for item_tag in conn.itemtag.find_many():
+            du_hash = uuid.UUID(item_tag.data_hash)
+            frame = item_tag.frame
+            object_hash = item_tag.object_hash if len(item_tag.object_hash) > 0 else None
+            tag_uuid = tag_id_map[item_tag.tag_id]
+            if object_hash is None:
+                _exists = data_metrics[(du_hash, frame)]
+                project_data_tags.append(ProjectTaggedDataUnit(
+                    project_hash=project_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    tag_hash=tag_uuid,
+                ))
+            else:
+                _exists = object_metrics[(du_hash, frame, object_hash)]
+                project_label_tags.append(ProjectTaggedLabel(
+                    project_hash=project_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    object_hash=object_hash,
+                    tag_hash=tag_uuid,
+                ))
+
     # Load metrics
     metrics = load_available_metrics(pfs.metrics)
     for metric in metrics:
@@ -225,4 +261,7 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(data_units_metas)
         sess.add_all(label_db_metrics)
         sess.add_all(data_db_metrics)
+        sess.add_all(project_tag_definitions)
+        sess.add_all(project_data_tags)
+        sess.add_all(project_label_tags)
         sess.commit()

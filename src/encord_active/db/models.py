@@ -40,7 +40,7 @@ class ProjectDataMetadata(SQLModel, table=True):
             ondelete="CASCADE",
             name="active_project_data_project_fk",
         ),
-        #CheckConstraint(
+        # CheckConstraint(
         #    """
         #    CHECK (
         #        (data_type = 'video' AND frames_per_second IS NOT NULL AND frames_per_second > 0)
@@ -49,7 +49,7 @@ class ProjectDataMetadata(SQLModel, table=True):
         #    )
         #    """,
         #    name="active_project_data_video_consistency"
-        #)
+        # )
     )
 
 
@@ -129,14 +129,15 @@ class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
                 } | COMMON_METRIC_NAMES
         )
     ]) + (
-        ForeignKeyConstraint(
-            ["project_hash", "du_hash", "frame"],
-            [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-            name="active_data_project_data_fk",
-        ),
-    )
+                         ForeignKeyConstraint(
+                             ["project_hash", "du_hash", "frame"],
+                             [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
+                              ProjectDataUnitMetadata.frame],
+                             onupdate="CASCADE",
+                             ondelete="CASCADE",
+                             name="active_data_project_data_fk",
+                         ),
+                     )
 
 
 class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
@@ -168,13 +169,83 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
                 } | COMMON_METRIC_NAMES
         )
     ]) + (
+                         ForeignKeyConstraint(
+                             ["project_hash", "du_hash", "frame"],
+                             [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
+                              ProjectDataUnitMetadata.frame],
+                             onupdate="CASCADE",
+                             ondelete="CASCADE",
+                             name="active_label_project_data_fk",
+                         ),
+                     )
+
+
+class ProjectTag(SQLModel, table=True):
+    __tablename__ = 'active_project_tags'
+    tag_hash: UUID = Field(primary_key=True)
+    project_hash: UUID = Field(index=True)
+    name: str = Field(min_length=1, max_length=256)
+
+    __table_args__ = (
         ForeignKeyConstraint(
-            ["project_hash", "du_hash", "frame"],
-            [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame],
+            ["project_hash"],
+            [Project.project_hash],
             onupdate="CASCADE",
             ondelete="CASCADE",
-            name="active_label_project_data_fk",
+            name="active_project_tags_project_fk",
         ),
+    )
+
+
+class ProjectTaggedDataUnit(SQLModel, table=True):
+    __tablename__ = 'active_project_tagged_data_units'
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    tag_hash: UUID = Field(primary_key=True, index=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tag_hash"],
+            [ProjectTag.tag_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_tagged_data_units_tag_fk",
+        ),
+        ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame"],
+            [ProjectDataAnalytics.project_hash, ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_tagged_data_units_analysis_fk",
+        )
+    )
+
+
+class ProjectTaggedLabel(SQLModel, table=True):
+    __tablename__ = 'active_project_tagged_labels'
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    tag_hash: UUID = Field(primary_key=True, index=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tag_hash"],
+            [ProjectTag.tag_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_tagged_labels_tag_fk",
+        ),
+        ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame", "object_hash"],
+            [ProjectLabelAnalytics.project_hash, ProjectLabelAnalytics.du_hash,
+             ProjectLabelAnalytics.frame, ProjectLabelAnalytics.object_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_tagged_labels_analysis_fk",
+        )
     )
 
 
@@ -212,6 +283,8 @@ def get_engine(path: Path) -> Engine:
     engine = create_engine(override_db if override_db is not None else f"sqlite:///{path}")
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
+        # import encord_active.db.migrations.env as migrate_env
+        # FIXME: use alembic to auto-run migrations instead of SQLModel!!
         SQLModel.metadata.create_all(engine)
         _init_metadata.add(path_key)
     return engine
