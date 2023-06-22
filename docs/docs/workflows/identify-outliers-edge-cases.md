@@ -30,7 +30,7 @@ Use the slider to navigate your data from most severe outlier to least severe.
 
 ### 2. Tag outliers
 
-When you have identified outliers of interest, use the [tagging](../user-guide/tags) or [bulk tagging](../user-guide/tags) feature to save a group of images.
+When you have identified outliers of interest, use the [individual tagging][individual-tagging] or [bulk tagging][bulk-tagging] feature to save a group of images.
 
 ![data-quality-outliers-tagging.png](../images/data-quality-outliers-tagging.png)
 
@@ -60,7 +60,7 @@ Next, you can use the slider to navigate your data from most severe outlier to l
 
 ![label-quality-outliers-slider.png](../images/label-quality-outliers-slider.png)
 
-When you have identified outliers of interest use the [tagging](../user-guide/tags) or [bulk tagging](../user-guide/tags) feature to select a group of images.
+When you have identified outliers of interest use the [individual tagging][individual-tagging] or [bulk tagging][bulk-tagging] feature to select a group of images.
 After creating a tagged image group, you can access it at the bottom of the left sidebar in the _Actions_ tab.
 
 ![label-quality-outliers-tagging.png](../images/label-quality-outliers-tagging.png)
@@ -68,3 +68,7 @@ After creating a tagged image group, you can access it at the bottom of the left
 Within the _Actions_ tab, click _Filter data frame on_ and select _tags_. Next, choose the tags you would like to export, relabel, augment, review, or delete from your dataset.
 
 ![label-quality-outliers-action.png](../images/label-quality-outliers-action.png)
+
+
+[individual-tagging]: ../user-guide/tagging#individual-tagging
+[bulk-tagging]: ../user-guide/tagging#bulk-tagging

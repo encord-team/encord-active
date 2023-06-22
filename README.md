@@ -177,9 +177,9 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Object Detection/segmentation Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-detection-model)
 - [Classification Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-classification-model)
 - [Similarity Search](https://docs.encord.com/active/docs/workflows/image-similarity)
-- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tags)
+- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tagging)
 - [Visualize TP/FP/FN](https://docs.encord.com/active/docs/workflows/evaluate-detection-model#exploring-the-individual-samples)
-- [COCO Exports](https://docs.encord.com/active/docs/user-guide/filter_export#export-to-coco-file)
+- [COCO Exports](https://docs.encord.com/active/docs/user-guide/exporting#coco)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.

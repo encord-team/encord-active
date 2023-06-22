@@ -42,7 +42,7 @@ It is advisable to stay informed about any updates or announcements regarding ch
 Keeping track of documentation, release notes, or any communication from the Encord Active team will help you stay up to date with any modifications that may affect the structure of the exported CSV file.
 :::
 
-## Generate COCO file
+## Generate COCO file {#coco}
 
 This option enables you to export your data in COCO format, a widely used standard for storing annotations and object detection data.
 This format ensures compatibility with various computer vision and machine learning frameworks and tools.
