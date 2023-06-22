@@ -116,8 +116,14 @@ def up(pfs: ProjectFileStructure) -> None:
                 if data_unit.fps > 0.0:
                     fps = data_unit.fps
                 objects = labels_json.get("objects", [])
+                object_hashes = set()
                 for obj in objects:
                     object_hash = str(obj["objectHash"])
+                    if object_hash in object_hashes:
+                        raise ValueError(
+                            f"Duplicate object_hash={object_hash} in du_hash={du_hash}, frame={data_unit.frame}"
+                        )
+                    object_hashes.add(object_hash)
                     object_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                     }

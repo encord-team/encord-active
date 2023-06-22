@@ -18,7 +18,7 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
 
 
-async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]):
+async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]) -> None:
     settings = get_settings()
     if settings.JWT_SECRET is None:
         return
@@ -33,6 +33,11 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]):
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def verify_token(token: Annotated[str, Depends(oauth2_scheme)], project_hash: str) -> None:
+    # FIXME: tokens should give information about which project_hashes are allowed.
+    return verify_token(token)
 
 
 async def verify_premium():
