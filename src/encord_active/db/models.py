@@ -277,8 +277,8 @@ _init_metadata: Set[str] = set()
 
 
 def get_engine(path: Path) -> Engine:
-    override_db = os.getenv("ENCORD_ACTIVE_DATABASE", None)
-    create_db_schema = os.getenv("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
+    override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
+    create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
     engine = create_engine(override_db if override_db is not None else f"sqlite:///{path}")
     path_key = path.as_posix()
