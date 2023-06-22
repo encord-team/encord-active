@@ -112,11 +112,7 @@ class AverageFrameScore(BoundingBoxAcquisitionFunction):
         )
 
     def score_bbox_predictions(self, predictions: List[BoundingBoxPrediction]) -> float:
-        if not predictions:
+        if predictions:
+            sum([prediction.confidence for prediction in predictions]) / len(predictions)
+        else:
             return 0.0
-
-        cum_prediction = 0
-        for prediction in predictions:
-            cum_prediction += prediction.confidence
-
-        return cum_prediction / len(predictions)
