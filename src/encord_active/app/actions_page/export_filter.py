@@ -495,7 +495,7 @@ def render_export_button(
             new_project_link = f"https://app.encord.com/projects/view/{project_creation_result.project_hash}/summary"
             new_dataset_link = f"https://app.encord.com/datasets/view/{project_creation_result.dataset_hash}"
             update_items = [
-                UpdateItem(type=UpdateItemType.LABEL, text="🎉 Project exported to Encord Annotate!"),
+                UpdateItem(type=UpdateItemType.LABEL, text="🎉 Project exported to the Encord platform!"),
                 UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new project]({new_project_link})"),
                 UpdateItem(type=UpdateItemType.MARKDOWN, text=f"[Go to new dataset]({new_dataset_link})"),
             ]

@@ -58,7 +58,7 @@ When the process is done, follow the printed instructions to launch the app with
 
 :::info
 
-If you wish to make the project available on the Encord platform, please consult the [Export section](../user-guide/filter_export#export-to-encord) for instructions on how to accomplish this.
+If you wish to make the project available on the Encord platform, please consult the [Export section](../user-guide/exporting#export-to-encord) for instructions on how to accomplish this.
 
 :::
 

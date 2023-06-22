@@ -57,12 +57,12 @@ This format ensures compatibility with various computer vision and machine learn
 4. Once the COCO file generation process is complete, the <kbd>⬇ Download filtered data</kbd> button will unlock.
    Click it to download the resulting file.
 
-## Export to Encord Annotate
+## Export to the Encord platform {#export-to-encord}
 
 Encord Active also provides the option to export your local project directly to the Encord platform.
 This allows you to seamlessly transfer your data to Encord, where you can leverage additional features and capabilities for annotation, collaboration, and project management.
 
-**Steps to export you local project to Encord Annotate:**
+**Steps to export your local project to the Encord platform:**
 1. Navigate to the explorer pages and use the [standard filter feature][standard-filter-feature] in the toolbox to select the specific data you want to export.
 2. In the same toolbox, locate and access the _Action_ tab.
    ![toolbox-action-tab-local-project](../images/user-guide/toolbox-action-tab-local-project.png)
@@ -74,7 +74,7 @@ This allows you to seamlessly transfer your data to Encord, where you can levera
 5. Once you have chosen the ontology, dataset, and project title, press the <kbd>➕ Create</kbd> button to initiate the export.
    The export process may take some time depending on the size and complexity of your project.
    
-After following the steps mentioned above, the data from your local project will be exported to Encord Annotate.
+After following the steps mentioned above, the data from your local project will be exported to the Encord platform.
 You will be able to track the progress at the bottom of the export dialog.
 This progress indicator will provide you with real-time updates on the status of the export process, ensuring transparency and visibility into the export operation.
 
