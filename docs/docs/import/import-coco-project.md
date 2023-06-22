@@ -2,37 +2,36 @@
 sidebar_position: 4
 ---
 
-# Importing COCO project
+# From COCO project
 
-**Import a dataset and annotations which are stored in COCO format on your local file system.**
+**Create a project using a dataset and annotations stored in COCO format from your local file system**
 
 :::info
 Make sure you have installed Encord Active with the `coco` [extras](../installation#coco-extras).
 :::
 
-If you already have a project on your local machine using the COCO data format, you can import that project with the following command:
+If you have an existing project on your local machine in the COCO data format, you can import it using the following command:
 
 ```shell
 encord-active import project --coco -i ./images -a ./annotations.json
 ```
 
-This will create a new Encord Active project inside a new directory in you current working directory.
+This command will create a new Encord Active project within a fresh folder in the current working directory.
+The project will include the specified images and annotations.
 
 :::info
-The command above assumes the following structure but is not limited to it.
+The input of the command above assumes the following structure but it is not limited to it:
 
 ```
-
 coco-project-foo
 ├── images
 │   ├── 00000001.jpeg
 │   ├── 00000002.jpeg
 │   ├── ...
 └── annotations.json
-
 ```
 
-You can provide any path to each of the arguments as long as the first one is a directory of images and the second is an annotations file following the [COCO data format](https://cocodataset.org/#format-data).
+You have the flexibility to provide any path for each of the arguments, as long as the first argument represents a directory containing images, and the second argument is an annotations file that adheres to the [COCO data format][coco-data-format].
 :::
 
 Running the importer will do the following things.
@@ -53,13 +52,15 @@ to tell Encord Active to use symlinks instead of copying files. But be aware tha
 
 :::
 
-The whole flow might take a while depending on the size of your dataset.
-Bare with us, it is worth the wait.
+The whole flow might take a while depending on the size of the original dataset.
 
-When the process is done, follow the printed instructions to open the app or see more details [here](../cli#visualize).
+When the process is done, follow the printed instructions to launch the app with the [visualize](../cli#visualize) command.
 
 :::info
 
-If you want the dataset to be available on the Encord platform, please refer to the [Export documentation](../user-guide/filter_export#export-to-encord).
+If you wish to make the project available on the Encord platform, please consult the [Export section](../user-guide/exporting#export-to-encord) for instructions on how to accomplish this.
 
 :::
+
+
+[coco-data-format]: https://cocodataset.org/#format-data

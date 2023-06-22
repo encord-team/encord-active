@@ -22,6 +22,7 @@ from encord_active.lib.coco.parsers import (
     parse_info,
 )
 from encord_active.lib.db.predictions import BoundingBox, Point
+from encord_active.lib.db.prisma_init import ensure_prisma_db
 from encord_active.lib.encord.local_sdk import (
     FileTypeNotSupportedError,
     LocalDataRow,
@@ -213,7 +214,8 @@ class CocoImporter:
             category_info = self.category_shapes.get(cat.id_, default_category_info)
             shapes = category_info.shapes
             for i, shape in enumerate(shapes):
-                new_id = cat.id_ * 10 + i
+                # NOTE: add one the the category id to avoid index 0
+                new_id = (cat.id_ + 1) * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
                 name = f"{cat.name}-{shape.value}" if len(shapes) > 1 else cat.name
                 ontology_structure.add_object(name=name, shape=shape, uid=new_id)
@@ -240,6 +242,8 @@ class CocoImporter:
 
         project_file_structure = ProjectFileStructure(self.project_dir)
         project_file_structure.ontology.write_text(json.dumps(project.ontology))
+
+        ensure_prisma_db(project_file_structure.prisma_db)
 
         project_meta = {
             "project_title": project.title,

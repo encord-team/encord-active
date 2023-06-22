@@ -23,9 +23,16 @@ _EXTRACT_FRAMES_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirector
 
 def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
     if data_hash not in _EXTRACT_FRAMES_CACHE:
-        cache_id = len(_EXTRACT_FRAMES_CACHE)
-        tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
-        tempdir.mkdir()
+        while True:
+            try:
+                cache_id = len(_EXTRACT_FRAMES_CACHE)
+                tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
+                tempdir.mkdir()
+                break
+            except FileExistsError:
+                time.sleep(0.001)
+                pass
+
         try:
             _extract_frames(video_file_name, tempdir, data_hash)
         except Exception:

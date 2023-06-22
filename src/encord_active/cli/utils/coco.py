@@ -31,7 +31,11 @@ def import_coco_predictions(
     # obj["id"] == `10` ->
     #   1 - original category_id
     #   0 - index of the shape -- we can discard and use the actual shape
-    category_to_hash = {(obj["id"][:-1], obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]}
+    # NOTE: we sustract 1 from the id to match the original id since we don't
+    # support 0 index when the project is created
+    category_to_hash = {
+        (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
+    }
     predictions = []
     results = json.loads(predictions_path.read_text(encoding="utf-8"))
 
