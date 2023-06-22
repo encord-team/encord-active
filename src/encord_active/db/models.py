@@ -142,7 +142,7 @@ class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
 class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     __tablename__ = 'active_project_label_analytics'
     # Extended primary key
-    object_hash: str = Field(primary_key=True, max_length=8)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     feature_hash: str = Field(min_length=8, max_length=8)
     # Metrics - Label Only
     metric_label_duplicates: Optional[float]
