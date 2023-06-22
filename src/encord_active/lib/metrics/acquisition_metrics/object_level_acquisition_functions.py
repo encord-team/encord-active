@@ -28,22 +28,8 @@ class BoundingBoxPrediction:
 
 
 class BaseBoundingBoxModelWrapper:
-    @classmethod
     @abstractmethod
-    def prepare_data(cls, images: list[Image]) -> list[Any]:
-        """
-        Reads and prepares data samples from local storage to feed the model with it.
-
-        Args:
-            images (list[Image]): Pillow's PIL Images to use as data samples.
-
-        Returns:
-            Data samples prepared to be used as input of `self.predict_boundingboxes()` method.
-        """
-        pass
-
-    @abstractmethod
-    def predict_boundingboxes(self, data) -> List[BoundingBoxPrediction]:
+    def predict_boundingboxes(self, image: Image) -> List[BoundingBoxPrediction]:
         """
         Calculate the model-predicted bounding boxes.
 
@@ -87,10 +73,7 @@ class BoundingBoxAcquisitionFunction(Metric):
         for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             if image is None:
                 continue
-            prepared_data = self._model.prepare_data([image])
-            if not prepared_data:
-                continue
-            predicted_bboxes = self._model.predict_boundingboxes(prepared_data)
+            predicted_bboxes = self._model.predict_boundingboxes(image)
             if predicted_bboxes is None:
                 continue
             score = self.score_bbox_predictions(predicted_bboxes)
