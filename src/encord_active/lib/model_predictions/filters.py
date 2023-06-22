@@ -17,7 +17,7 @@ def filter_labels_for_frames_wo_predictions(
     return sorted_labels[sorted_labels["img_id"].isin(pred_keys)]
 
 
-def prediction_and_label_filtering(
+def prediction_and_label_filtering_detection(
     selected_class_idx: dict,
     labels: pd.DataFrame,
     metrics: pd.DataFrame,

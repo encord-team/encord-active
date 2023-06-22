@@ -162,7 +162,7 @@ def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List
     return get_metric_data(entry_points)
 
 
-def get_model_predictions(
+def load_model_predictions(
     predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
 ) -> Union[DataFrame[PredictionSchema], DataFrame[ClassificationPredictionSchema], None]:
     df = _load_csv_and_merge_metrics(predictions_dir / "predictions.csv", metric_data)

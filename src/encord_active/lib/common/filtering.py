@@ -33,7 +33,7 @@ class Filters(BaseModel):
     categorical: dict[str, List[float]] = {}
     range: dict[str, Range] = {}
     datetime_range: dict[str, DatetimeRange] = {}
-    prediction_filters: PredictionsFilters = PredictionsFilters()
+    prediction_filters: Optional[PredictionsFilters] = None
 
     def __hash__(self):
         return hash(json.dumps(self.dict(exclude_defaults=True)))

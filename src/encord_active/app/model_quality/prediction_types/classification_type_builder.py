@@ -3,10 +3,12 @@ from typing import List, Optional, cast
 
 import altair as alt
 import streamlit as st
+from encord_active_components.components.explorer import explorer
 from loguru import logger
 from pandera.typing import DataFrame
 
 import encord_active.lib.model_predictions.reader as reader
+from encord_active.app.auth.jwt import get_auth_token
 from encord_active.app.common.components.interactive_plots import render_plotly_events
 from encord_active.app.common.components.prediction_grid import (
     prediction_grid_classifications,
@@ -19,6 +21,7 @@ from encord_active.app.model_quality.prediction_type_builder import (
 )
 from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
     ClassificationOutcomeType,
+    PredictionsFilters,
 )
 from encord_active.lib.charts.classification_metrics import (
     get_accuracy,
@@ -159,7 +162,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             with c1:
                 self._explorer_outcome_type = st.selectbox(
                     "Outcome",
-                    [x for x in self.OutcomeType],
+                    [x for x in ClassificationOutcomeType],
                     format_func=lambda x: x.value,
                     help="Only the samples with this outcome will be shown",
                 )
@@ -284,7 +287,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
     def render_explorer(self):
         with st.expander("Details"):
-            if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS:
+            if self._explorer_outcome_type == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS:
                 view_text = "These are the predictions where the model correctly predicts the true class."
             else:
                 view_text = "These are the predictions where the model incorrectly predicts the positive class."
@@ -308,7 +311,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             return
 
         filtered_merged_metrics = get_state().filtering_state.merged_metrics
-        value = 1.0 if self._explorer_outcome_type == self.OutcomeType.CORRECT_CLASSIFICATIONS else 0.0
+        value = 1.0 if self._explorer_outcome_type == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS else 0.0
         view_df = self._model_predictions[
             self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
         ].dropna(subset=[metric_name])
@@ -360,4 +363,21 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         else:
             histogram = get_histogram(view_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
-            prediction_grid_classifications(get_state().project_paths, model_predictions=view_df)
+
+            if self._explorer_outcome_type:
+                filters = get_state().filtering_state.filters
+                filters.prediction_filters = PredictionsFilters(
+                    type=MainPredictionType.CLASSIFICATION,
+                    outcome=self._explorer_outcome_type,
+                    iou_threshold=get_state().iou_threshold,
+                )
+
+                explorer(
+                    auth_token=get_auth_token(),
+                    project_name=get_state().project_paths.project_dir.name,
+                    scope="model_quality",
+                    api_url=get_settings().API_URL,
+                    filters=filters.dict(),
+                )
+            #
+            # prediction_grid_classifications(get_state().project_paths, model_predictions=view_df)

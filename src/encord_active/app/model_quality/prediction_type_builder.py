@@ -186,7 +186,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             key=f"label_metric_datas_{project_path}_{prediction_type.value}",
         )
         model_predictions, _ = use_memo(
-            lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
+            lambda: reader.load_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
             key=f"model_predictions_{project_path}_{prediction_type.value}",
         )
         labels, _ = use_memo(

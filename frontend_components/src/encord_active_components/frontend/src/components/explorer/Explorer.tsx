@@ -91,7 +91,7 @@ export const Explorer = ({
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
-    () => api.fetchProjectMetrics(scope),
+    () => api.fetchProjectMetrics(scope, filters?.prediction_filters?.type),
     { staleTime: Infinity }
   );
 

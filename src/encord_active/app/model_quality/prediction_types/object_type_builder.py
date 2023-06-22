@@ -38,7 +38,7 @@ from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.filters import (
     filter_labels_for_frames_wo_predictions,
-    prediction_and_label_filtering,
+    prediction_and_label_filtering_detection,
 )
 from encord_active.lib.model_predictions.map_mar import (
     PerformanceMetricSchema,
@@ -115,7 +115,12 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         else:
             labels_filtered = sorted_labels
 
-        self._labels, self._metrics, self._model_predictions, self._precisions = prediction_and_label_filtering(
+        (
+            self._labels,
+            self._metrics,
+            self._model_predictions,
+            self._precisions,
+        ) = prediction_and_label_filtering_detection(
             get_state().predictions.selected_classes_objects,
             labels_filtered,
             metrics,
@@ -460,7 +465,9 @@ matched to any predictions. The remaining objects are predictions, where colors 
         if self._explorer_outcome_type:
             filters = get_state().filtering_state.filters
             filters.prediction_filters = PredictionsFilters(
-                outcome=self._explorer_outcome_type, iou_threshold=get_state().iou_threshold
+                type=MainPredictionType.OBJECT,
+                outcome=self._explorer_outcome_type,
+                iou_threshold=get_state().iou_threshold,
             )
 
             explorer(

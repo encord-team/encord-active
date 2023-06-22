@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 from urllib.parse import quote
 
 from encord.ontology import OntologyStructure
@@ -56,6 +56,11 @@ def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
         merged_metrics = MergedMetrics(conn).all()
 
     return apply_filters(merged_metrics, filters, project)
+
+
+@lru_cache
+def get_class_idx(predictions_dir: Path):
+    return _get_class_idx(predictions_dir)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
@@ -184,7 +189,10 @@ def to_item(
         except:
             pass
 
-    predictions = build_item_predictions(row, project_file_structure, metadata, img_w, img_h, object_hash)
+    object_predictions = build_item_object_predictions(row, project_file_structure, metadata, img_w, img_h, object_hash)
+    classification_predictions = build_item_classification_predictions(
+        row, project_file_structure, metadata
+    )
 
     return {
         "id": identifier,
@@ -195,11 +203,11 @@ def to_item(
         "metadata": metadata,
         "tags": to_grouped_tags(tags or []),
         "labels": labels or {"objects": [], "classifications": []},
-        "predictions": predictions,
+        "predictions": {"objects": object_predictions, "classifications": classification_predictions},
     }
 
 
-def build_item_predictions(
+def build_item_object_predictions(
     row: Dict,
     project_file_structure: ProjectFileStructure,
     metadata: Metadata,
@@ -207,17 +215,17 @@ def build_item_predictions(
     img_h: int,
     object_hash: Optional[str] = None,
 ):
-    predictions = {"objects": [], "classifications": []}
+    objects: List[Dict] = []
     rle = row.pop("rle", None)
     if not object_hash or not rle:
-        return predictions
+        return objects
 
     mask = rle_to_binary_mask(json.loads(rle.replace("'", '"')))
     polygon, bbox = mask_to_polygon(mask)
     class_id = row.pop("class_id", None)
 
-    if not polygon or not class_id:
-        return predictions
+    if not polygon or class_id is None:
+        return objects
 
     x, y, w, h = bbox
     x, y, w, h = (x / img_w, y / img_h, w / img_w, h / img_h)
@@ -229,7 +237,7 @@ def build_item_predictions(
     }
 
     for key in [
-        "Unnamed 0",
+        "Unnamed: 0",
         "false_positive_reason",
         "img_id",
         "iou",
@@ -249,7 +257,7 @@ def build_item_predictions(
     metadata["labelClass"] = class_name
 
     prediction_points = {i: {"x": x / img_w, "y": y / img_h} for i, (x, y) in enumerate(polygon)}
-    predictions["objects"].append(
+    objects.append(
         {
             "name": class_name,
             "color": "#22c55e" if is_true_positive else "#ef4444",
@@ -269,9 +277,44 @@ def build_item_predictions(
         }
     )
 
-    return predictions
+    return objects
 
 
-@lru_cache
-def get_class_idx(predictions_dir: Path):
-    return _get_class_idx(predictions_dir)
+def build_item_classification_predictions(
+    row: Dict,
+    project_file_structure: ProjectFileStructure,
+    metadata: Metadata,
+):
+    classifications: List[Dict] = []
+    class_id = row.pop("class_id", None)
+
+    if class_id is None:
+        return classifications
+
+    for key in ["Unnamed: 0", "false_positive_reason", "img_id", "gt_class_id", "is_true_positive"]:
+        row.pop(key, None)
+
+    expected_class_name = row.pop("gt_class_name", None)
+
+    class_idx = get_class_idx(project_file_structure.predictions / MainPredictionType.CLASSIFICATION.value)
+    class_name = row.pop("class_name", None)
+
+    metadata["annotator"] = "Prediction"
+    metadata["labelClass"] = class_name
+
+    classifications.append(
+        {
+            "name": class_name,
+            "value": class_name,
+            "createdAt": "Thu, 25 Aug 2022 15:46:59 GMT",
+            "createdBy": "robot@cord.tech",
+            "confidence": row["confidence"],
+            "featureHash": class_idx[str(class_id)]["featureHash"],
+            "lastEditedAt": "Thu, 25 Aug 2022 15:46:59 GMT",
+            "lastEditedBy": "robot@encord.com",
+            "manualAnnotation": False,
+            "reviews": [],
+        }
+    )
+
+    return classifications

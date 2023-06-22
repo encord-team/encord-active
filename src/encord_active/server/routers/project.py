@@ -1,3 +1,4 @@
+import json
 from enum import Enum
 from functools import cache, lru_cache
 from pathlib import Path
@@ -12,7 +13,9 @@ from pydantic import BaseModel
 from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
 from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
     ObjectDetectionOutcomeType,
+    get_model_prediction_by_id,
     get_model_predictions,
+    read_prediction_files,
 )
 from encord_active.lib.common.filtering import Filters
 from encord_active.lib.db.connection import DBConnection
@@ -32,6 +35,7 @@ from encord_active.lib.metrics.utils import (
     get_embedding_type,
 )
 from encord_active.lib.model_predictions.reader import get_class_idx as _get_class_idx
+from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
@@ -111,10 +115,9 @@ def tagged_items(project: ProjectFileStructureDep):
 def read_item(project: ProjectFileStructureDep, id: str):
     lr_hash, du_hash, frame, *object_hash = id.split("_")
 
-    df, _ = get_model_predictions(project)
+    row = get_model_prediction_by_id(project, id)
 
-    if df is not None and id in df.index:
-        row = {**df.loc[id].to_dict(), "identifier": id}
+    if row:
         return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)
 
     with DBConnection(project) as conn:
@@ -165,9 +168,13 @@ def get_similar_items(
 
 
 @router.get("/{project}/metrics")
-def get_available_metrics(project: ProjectFileStructureDep, scope: Optional[MetricScope] = None):
+def get_available_metrics(
+    project: ProjectFileStructureDep,
+    scope: Optional[MetricScope] = None,
+    prediction_type: Optional[MainPredictionType] = None,
+):
     if scope == MetricScope.MODEL_QUALITY:
-        _, metrics = get_model_predictions(project)
+        metrics, *_ = read_prediction_files(project, prediction_type)
     else:
         metrics = load_project_metrics(project, scope)
     return [
