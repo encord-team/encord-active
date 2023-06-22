@@ -30,7 +30,8 @@ def auth():
             token = token_state.value
 
         decoded = decode(token, settings.JWT_SECRET, algorithms=["HS256"])
-        assert decoded["deployment_name"] == settings.DEPLOYMENT_NAME
+        if decoded["deployment_name"] == settings.DEPLOYMENT_NAME:
+            raise ValueError("Cannot access deployment")
         st.experimental_set_query_params()
     except:
         st.error("Unauthorized")
