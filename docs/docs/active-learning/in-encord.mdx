@@ -1,0 +1,77 @@
+---
+sidebar_position: 2
+title: In Encord
+---
+
+import TOCInline from "@theme/TOCInline";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Active Learning in Encord
+
+**Learn how to set up an active learning workflow in Encord**
+
+:::note Requirements
+
+The active learning workflow in the Encord platform is specifically designed for workflow projects within the platform.
+This requirement allows for seamless task movement between essential stages such as `label`, `review`, and `complete` when utilizing the SDK.
+
+Note that deviating from this requirement may require customizing certain steps to align with your specific needs.
+
+:::
+
+The active learning workflow in Encord Active consists of the following key stages:
+<TOCInline toc={toc.filter((node) => node.level === 2).map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
+
+## Initialization
+To begin the active learning workflow, you need an initial labeled dataset for training the machine learning model.
+In the Encord platform, this corresponds to having a project with annotations.
+
+### Choose an Encord project
+
+To proceed, you should pull the project into Encord Active.
+Execute the following CLI command and remember to acknowledge that you would like to include uninitialized label rows, as they represent unannotated data.
+```bash
+encord-active import project
+```
+If you require detailed information on the options available during the import process, you can refer to the [Import from Encord platform][import-encord-project] guide.  
+
+If your workflow project already contains annotations, you can skip the next part of the initialization step and proceed directly to [Model training](#model-training).
+
+Alternatively, if you have a trained model that you intend to use in the active learning workflow, you can jump to the [Querying](#querying) step.
+
+### Prioritize high value data to label
+
+If your project lacks annotations, you will need to annotate data.
+While random selection is an option, Encord Active offers metrics like [`Image Difficulty`][image-difficulty-metric] to guide and optimize annotation impact.
+This metric ranks images based on their ease of annotation, enabling prioritization of suitable and manageable data.
+
+For example, you can follow these steps to prioritize labeling for data with the lowest `Image Difficulty` score:
+1. Go to the toolbox in the explorer pages and locate the _Filter_ tab.
+2. Utilize that [filter feature][standard-filter-feature] to select the 5% of data with the lowest `Image Difficulty` score.
+3. Locate and access the _Action_ tab in the same toolbox.
+4. Use the <kbd>🖋 Relabel</kbd> button to [prioritize labeling][relabeling-guide] for the selected data.
+
+:::info
+
+
+:::
+
+## Model training {#model-training}
+
+## Querying {#querying}
+
+## Labeling
+
+## Model update
+
+## Iteration
+
+
+https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
+
+
+[import-encord-project]: ../import/import-encord-project
+[image-difficulty-metric]: ../metrics/data-quality-metrics#image-difficulty
+[standard-filter-feature]: ../user-guide/filtering#standard-filter-feature
+[relabeling-guide]: ../user-guide/relabeling
