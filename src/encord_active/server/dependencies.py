@@ -26,7 +26,7 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]):
     try:
         decoded = decode(token, settings.JWT_SECRET, algorithms=["HS256"])
         if decoded["deployment_name"] != settings.DEPLOYMENT_NAME:
-            raise ValueError()
+            raise ValueError("Cannot acccess deployment")
     except:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
