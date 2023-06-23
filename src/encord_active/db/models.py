@@ -77,6 +77,12 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     classifications: list = Field(sa_column=Column(JSON))
 
 
+MetricFieldTypeNormal = Field(ge=0, le=0)
+MetricFieldTypePercentage = Field(ge=0, le=100)  # FIXME: these should be converted into Normal
+MetricFieldTypePositiveInteger = Field(ge=0)
+MetricFieldTypePositiveFloat = Field(ge=0)
+
+
 class ProjectAnalyticsBase(SQLModel):
     # Base primary key
     project_hash: UUID = Field(primary_key=True)
@@ -86,21 +92,21 @@ class ProjectAnalyticsBase(SQLModel):
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
     # Metrics - Absolute Size
-    metric_width: Optional[int]
-    metric_height: Optional[int]
-    metric_area: Optional[int]
+    metric_width: Optional[int] = MetricFieldTypePositiveInteger
+    metric_height: Optional[int] = MetricFieldTypePositiveInteger
+    metric_area: Optional[int] = MetricFieldTypePositiveInteger
     # Metrics - Relative Size
-    metric_area_relative: Optional[float]
-    metric_aspect_ratio: Optional[float]
+    metric_area_relative: Optional[float] = MetricFieldTypePercentage # FIXME: percentage only in labels!!
+    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
     # Metrics Color
-    metric_brightness: Optional[float]
-    metric_contrast: Optional[float]
-    metric_blur: Optional[float]
-    metric_red: Optional[float]
-    metric_green: Optional[float]
-    metric_blue: Optional[float]
+    metric_brightness: Optional[float] = MetricFieldTypeNormal
+    metric_contrast: Optional[float] = MetricFieldTypeNormal
+    metric_blur: Optional[float] = MetricFieldTypeNormal
+    metric_red: Optional[float] = MetricFieldTypeNormal
+    metric_green: Optional[float] = MetricFieldTypeNormal
+    metric_blue: Optional[float] = MetricFieldTypeNormal
     # Random
-    metric_random: Optional[float]
+    metric_random: Optional[float] = MetricFieldTypeNormal
 
 
 COMMON_METRIC_NAMES: Set[str] = {
@@ -129,10 +135,10 @@ def shared_metrics_table_args(
 class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
     __tablename__ = 'active_project_data_analytics'
     # Metrics - Image only
-    metric_object_count: Optional[int]
-    metric_object_density: Optional[float]
-    metric_image_difficulty: Optional[float]
-    metric_image_singularity: Optional[float]
+    metric_object_count: Optional[int] = MetricFieldTypePositiveInteger
+    metric_object_density: Optional[float] = MetricFieldTypePercentage  # FIXME: normalise
+    metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
+    metric_image_singularity: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = shared_metrics_table_args(
         "active_data",
@@ -159,12 +165,12 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     feature_hash: str = Field(min_length=8, max_length=8)
     # Metrics - Label Only
-    metric_label_duplicates: Optional[float]
-    metric_label_border_closeness: Optional[float]
-    metric_label_poly_similarity: Optional[float]
-    metric_label_missing_or_broken_tracks: Optional[float]
-    metric_label_annotation_quality: Optional[float]
-    metric_label_inconsistent_classification_and_track: Optional[float]
+    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_label_border_closeness: Optional[float] # FIXME: almost but not quite normal (sometime returns above 1??)
+    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
+    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
+    metric_label_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = shared_metrics_table_args(
         "active_label",
