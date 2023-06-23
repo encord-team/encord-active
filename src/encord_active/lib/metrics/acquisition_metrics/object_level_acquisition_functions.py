@@ -99,10 +99,10 @@ class AverageFrameScore(BoundingBoxAcquisitionFunction):
     def __init__(self, model):
         super().__init__(
             title="Average Frame Score",
-            short_description="Ranks images by average confidence of the predictions",
+            short_description="Ranks images by average of the prediction confidences",
             long_description="For each image, this acquisition function returns the average confidence of the "
             "predictions. If there is no prediction for the given image, it assigns a value of "
-            "zero. This acquisiton function makes sense when at least one ground truth prediction is expected "
+            "zero. This acquisition function makes sense when at least one ground truth prediction is expected "
             "for each image.",
             doc_url="",
             metric_type=MetricType.HEURISTIC,
