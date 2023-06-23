@@ -314,6 +314,12 @@ class ProjectPredictionLabelResults(SQLModel, table=True):
     frame: int = Field(primary_key=True, ge=0)
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
 
+    # Prediction metadata
+    confidence: float
+    # FIXME: should these be null
+    rle: Optional[float]
+    iou: Optional[float]
+
     __table_args__ = (
         ForeignKeyConstraint(
             ["prediction_hash"],
