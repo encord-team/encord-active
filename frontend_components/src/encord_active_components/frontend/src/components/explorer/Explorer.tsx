@@ -175,6 +175,7 @@ export const Explorer = ({
           <ItemPreview
             id={previewedItem}
             similaritySearchDisabled={!hasSimilaritySearch}
+            scope="model_quality"
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
@@ -209,7 +210,13 @@ export const Explorer = ({
           <div className="flex w-full justify-between gap-5 flex-wrap">
             <div className="flex gap-2 max-w-[50%]">
               <TaggingDropdown
-                className={classy({ "btn-disabled": !selectedItems.size })}
+                disabledReason={
+                  scope === "model_quality"
+                    ? "predictions"
+                    : !selectedItems.size
+                      ? "missing-target"
+                      : undefined
+                }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
@@ -417,11 +424,13 @@ const SimilarityItem = ({
 const ItemPreview = ({
   id,
   similaritySearchDisabled,
+  scope,
   onClose,
   onShowSimilar,
 }: {
   id: string;
   similaritySearchDisabled: boolean;
+  scope: Scope;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
 }) => {
@@ -454,7 +463,11 @@ const ItemPreview = ({
             <FaEdit />
             Edit
           </button>
-          <TaggingDropdown>
+          <TaggingDropdown
+            disabledReason={
+              scope === "model_quality" ? "predictions" : undefined
+            }
+          >
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
               seletedTags={data.tags}
@@ -624,16 +637,6 @@ const getObjects = (item: Item) => {
     ? [...item.labels.objects, prediction]
     : item.labels.objects;
 };
-
-const pointsRecordToList = (
-  points: Item["labels"]["objects"][0]["points"],
-  width: number,
-  height: number
-) =>
-  Object.values(points).map(({ x, y }) => ({
-    x: x * width,
-    y: y * height,
-  }));
 
 type ItemLabelObject = Item["labels"]["objects"][0];
 
