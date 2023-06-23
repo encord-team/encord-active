@@ -3,6 +3,8 @@ import math
 import uuid
 from typing import Optional, Set, Tuple, Dict, Union
 from sqlmodel import Session
+
+from encord_active.lib.common.data_utils import url_to_file_path, file_path_to_url
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.utils import load_label_embeddings
 from encord_active.lib.metrics.types import EmbeddingType
@@ -62,6 +64,8 @@ def up(pfs: ProjectFileStructure) -> None:
     object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str]]] = {}
     classification_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, str]] = {}
     data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]] = {}
+
+    database_dir = pfs.project_dir.parent.expanduser().resolve()
 
     # Load metadata
     with PrismaConnection(pfs) as conn:
@@ -156,13 +160,20 @@ def up(pfs: ProjectFileStructure) -> None:
                     "metric_aspect_ratio": float(data_unit.width) / float(data_unit.height),
                     "metric_object_count": len(objects),
                 }
+                # Ensure relative uri paths remain correct!!
+                data_uri = data_unit.data_uri
+                if data_uri is not None and data_uri.startswith("relative://"):
+                    data_uri_path = url_to_file_path(data_uri, pfs.project_dir)
+                    if data_uri_path is not None:
+                        data_uri = file_path_to_url(data_uri_path.expanduser().resolve(), database_dir)
+                # Add data unit to the database
                 project_data_unit_meta = ProjectDataUnitMetadata(
                     project_hash=project_hash,
                     du_hash=du_hash,
                     # FIXME: check calculation of this value is consistent!
                     frame=data_unit.frame if data_type == "video" else 0,
                     data_hash=data_hash,
-                    data_uri=data_unit.data_uri,
+                    data_uri=data_uri,
                     data_uri_is_video=data_type == "video",
                     objects=objects,
                     classifications=classifications,
@@ -378,7 +389,7 @@ def up(pfs: ProjectFileStructure) -> None:
         for (du_hash, frame), metrics in data_metrics.items()
     ]
 
-    path = pfs.project_dir.parent.expanduser().resolve() / "encord-active.sqlite"
+    path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     with Session(engine) as sess:
         sess.add(project)
