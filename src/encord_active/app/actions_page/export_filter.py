@@ -7,6 +7,7 @@ from typing import Callable, List, NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
 import streamlit as st
+from encord.project import LabelRowV2
 from pandas.api.types import (
     is_categorical_dtype,
     is_datetime64_any_dtype,
@@ -61,8 +62,10 @@ class CurrentForm(str, Enum):
     NONE = "none"
     EXPORT = "export"
     CLONE = "clone"
-    RELABEL_CONFIRM = "relabel_confirm"
-    RELABEL_SUCCESS = "relabel_success"
+    WORKFLOW_TASK_TO_LABEL_STAGE_CONFIRM = "workflow_task_to_label_stage_confirm"
+    WORKFLOW_TASK_TO_LABEL_STAGE_SUCCESS = "workflow_task_to_label_stage_success"
+    WORKFLOW_TASK_TO_COMPLETE_STAGE_CONFIRM = "workflow_task_to_complete_stage_confirm"
+    WORKFLOW_TASK_TO_COMPLETE_STAGE_SUCCESS = "workflow_task_to_complete_stage_success"
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -342,6 +345,9 @@ def actions():
             updates.set,
             is_filtered=(row_count != original_row_count),
         )
+    else:
+        # Use the UI space from the nonexistent 'Export' button in remote projects to put the 'Mark as Complete' button
+        render_mark_as_complete_button(export_button_col, get_state().project_paths, filtered_df, current_form)
 
     if row_count != original_row_count:
         render_subset_button(
@@ -580,90 +586,137 @@ def render_generate_csv(
         )
 
 
+def render_workflow_action_button(
+    render_column: DeltaGenerator,
+    pfs: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
+    current_form: UseState[CurrentForm],
+    workflow_stage_name: str,
+    workflow_action_button_title: str,
+    workflow_action_button_help_text: str,
+    workflow_action_confirm_form: CurrentForm,
+    workflow_action_success_form: CurrentForm,
+    workflow_action_function: Callable[[LabelRowV2], None],
+):
+    project_meta = fetch_project_meta(pfs.project_dir)
+    label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+
+    # Verify the project meets the requirements to enable task status updates on Encord platform.
+    # It should be a remote and workflow project.
+    is_disabled = False
+    disabled_explanation_text = ""
+
+    # Don't allow local projects
+    if not project_meta.get("has_remote", False):
+        is_disabled = True
+        disabled_explanation_text = (
+            " Task status updates are only supported on workflow projects and this project is local."
+            " Please, first export the data to a workflow project in the Encord platform."
+        )
+
+    # Don't allow non-workflow projects
+    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
+        is_disabled = True
+        disabled_explanation_text = (
+            " Relabeling is only supported on workflow projects."
+            " Please, first upgrade your project to use workflows."
+        )
+
+    # Display workflow action button
+    workflow_action_placeholder = render_column.empty()
+    workflow_action_placeholder.button(
+        label=workflow_action_button_title,
+        help=workflow_action_button_help_text + disabled_explanation_text,
+        disabled=is_disabled,
+        on_click=lambda: current_form.set(workflow_action_confirm_form),
+    )
+    if current_form.value not in [workflow_action_confirm_form, workflow_action_success_form]:
+        return
+
+    # Obtain the label rows whose task status is going to be updated
+    all_identifiers = filtered_df["identifier"].to_list()
+    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
+
+    # Show the confirmation form
+    if current_form.value == workflow_action_confirm_form:
+        confirmation_form_placeholder = st.empty()
+        with confirmation_form_placeholder.form(workflow_action_confirm_form):
+            confirmation_label = st.empty()
+            confirmation_label.text(
+                f"A total of {len(unique_lr_hashes)} tasks are going to be moved to {workflow_stage_name}.\n"
+                f"Are you sure you want to proceed?"
+            )
+
+            if not st.form_submit_button("Confirm"):
+                return None
+        confirmation_form_placeholder.empty()  # Make the form disappear after clicking the confirmation button
+
+        # Change the task status of the label rows
+        label = st.empty()
+        label.text(f"Sending the selected data to {workflow_stage_name}.")
+        update_progress_bar, clear_progress_bar = render_progress_bar()
+        update_progress_bar(0)  # Show progress bar
+
+        encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
+        for index, label_row in enumerate(encord_project.list_label_rows_v2(label_hashes=unique_lr_hashes), start=1):
+            workflow_action_function(label_row)
+            update_progress_bar(index / len(unique_lr_hashes))
+
+        clear_progress_bar()
+        label.empty()
+        current_form.set(workflow_action_success_form)
+
+    if current_form.value == workflow_action_success_form:
+        # Display the success message and a button that directs to the project in Encord Annotate
+        with st.form(workflow_action_success_form):
+            successful_operation_label = st.empty()
+            successful_operation_label.text(
+                f"Update operation successfully completed.\n"
+                f"A total of {len(unique_lr_hashes)} tasks have been moved to {workflow_stage_name} in Encord Annotate."
+            )
+            if st.form_submit_button("Go to the project"):
+                encord_project_url = f"https://app.encord.com/projects/view/{project_meta['project_hash']}/summary"
+                webbrowser.open_new_tab(encord_project_url)
+
+
+def render_mark_as_complete_button(
+    render_column: DeltaGenerator,
+    pfs: ProjectFileStructure,
+    filtered_df: pd.DataFrame,
+    current_form: UseState[CurrentForm],
+):
+    render_workflow_action_button(
+        render_column,
+        pfs,
+        filtered_df,
+        current_form,
+        workflow_stage_name="the Complete stage",
+        workflow_action_button_title="✅ Mark as Complete",
+        workflow_action_button_help_text="Mark the filtered data as complete in the Encord platform.",
+        workflow_action_confirm_form=CurrentForm.WORKFLOW_TASK_TO_COMPLETE_STAGE_CONFIRM,
+        workflow_action_success_form=CurrentForm.WORKFLOW_TASK_TO_COMPLETE_STAGE_SUCCESS,
+        workflow_action_function=lambda label_row: label_row.workflow_complete(),
+    )
+
+
 def render_relabel_button(
     render_column: DeltaGenerator,
     pfs: ProjectFileStructure,
     filtered_df: pd.DataFrame,
     current_form: UseState[CurrentForm],
 ):
-    project_meta = fetch_project_meta(pfs.project_dir)
-    label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
-
-    # Check the conditions to be able to send the filtered data to labeling on Encord (remote project)
-    is_disabled = False
-    extra_help_text = ""
-    if not project_meta.get("has_remote", False):
-        # Shouldn't work with local projects
-        is_disabled = True
-        extra_help_text = (
-            " Relabeling is only supported on workflow projects and this project is local."
-            " Please, first export the data to a workflow project in the Encord platform."
-        )
-
-    elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
-        # Relabeling is not supported on non-workflow projects
-        is_disabled = True
-        extra_help_text = (
-            " Relabeling is only supported on workflow projects."
-            " Please, first upgrade your project so it uses workflows."
-        )
-
-    relabel_placeholder = render_column.empty()
-    relabel_placeholder.button(
-        "🖋 Re-label",
-        help="Assign the filtered data for relabeling in the Encord platform." + extra_help_text,
-        disabled=is_disabled,
-        on_click=lambda: current_form.set(CurrentForm.RELABEL_CONFIRM),
+    render_workflow_action_button(
+        render_column,
+        pfs,
+        filtered_df,
+        current_form,
+        workflow_stage_name="the first labeling stage",
+        workflow_action_button_title="🖋 Relabel",
+        workflow_action_button_help_text="Assign the filtered data for relabeling in the Encord platform.",
+        workflow_action_confirm_form=CurrentForm.WORKFLOW_TASK_TO_LABEL_STAGE_CONFIRM,
+        workflow_action_success_form=CurrentForm.WORKFLOW_TASK_TO_LABEL_STAGE_SUCCESS,
+        workflow_action_function=lambda label_row: label_row.workflow_reopen(),
     )
-
-    if current_form.value not in [CurrentForm.RELABEL_CONFIRM, CurrentForm.RELABEL_SUCCESS]:
-        return
-
-    # Get the label rows to submit for labeling
-    all_identifiers = filtered_df["identifier"].to_list()
-    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
-
-    if current_form.value == CurrentForm.RELABEL_CONFIRM:
-        confirmation_form_placeholder = st.empty()  # Show the confirmation form
-        with confirmation_form_placeholder.form("relabel_confirmation_form"):
-            confirmation_label = st.empty()
-            confirmation_label.text(
-                # Next line should stay commented while 'all_identifiers' has a wrong amount of items
-                # f"You have selected {len(all_identifiers)} items to submit for labeling in Encord Annotate.\n"
-                f"A total of {len(unique_lr_hashes)} tasks are going to be assigned to the first labeling stage.\n"
-                f"Are you sure you want to proceed?"
-            )
-
-            if not st.form_submit_button("Confirm"):
-                return None
-        confirmation_form_placeholder.empty()  # Disappear the form after clicking the confirmation button
-
-        # Start the submission of the selected label rows for labeling
-        label = st.empty()
-        label.text("Sending the selected data to labeling.")
-        update_progress_bar, clear_progress_bar = render_progress_bar()
-        update_progress_bar(0)  # Show progress bar
-
-        encord_project = get_encord_project(project_meta["ssh_key_path"], project_meta["project_hash"])
-        for index, label_row in enumerate(encord_project.list_label_rows_v2(label_hashes=unique_lr_hashes), start=1):
-            label_row.workflow_reopen()
-            update_progress_bar(index / len(unique_lr_hashes))
-
-        clear_progress_bar()
-        label.empty()
-        current_form.set(CurrentForm.RELABEL_SUCCESS)
-
-    if current_form.value == CurrentForm.RELABEL_SUCCESS:
-        # Display the success message and a button that directs to the project in Encord Annotate
-        with st.form("relabel_successful_operation_form"):
-            successful_operation_label = st.empty()
-            successful_operation_label.text(
-                f"Data successfully submitted for labeling in Encord Annotate.\n"
-                f"A total of {len(unique_lr_hashes)} tasks have been assigned to the first labeling stage."
-            )
-            if st.form_submit_button("Go to the project"):
-                encord_project_url = f"https://app.encord.com/projects/view/{project_meta['project_hash']}/summary"
-                webbrowser.open_new_tab(encord_project_url)
 
 
 def render_progress_bar():

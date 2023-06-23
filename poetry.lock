@@ -842,17 +842,17 @@ files = [
 
 [[package]]
 name = "encord"
-version = "0.1.75"
+version = "0.1.83"
 description = "Encord Python SDK Client"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "encord-0.1.75-py3-none-any.whl", hash = "sha256:bf688ad9a304f21d0e775230cf6f865998ec09c84bbf4142cc87a36b5716e862"},
-    {file = "encord-0.1.75.tar.gz", hash = "sha256:df283a2686d13e4e339c2d9cf044d9b1598c3f6dc068ff1c2977647ebab93fe3"},
+    {file = "encord-0.1.83-py3-none-any.whl", hash = "sha256:c3116c75f60f413ec552024a18755524cc4c7d5b6b774fce883c680c0d747316"},
+    {file = "encord-0.1.83.tar.gz", hash = "sha256:7a923c47ca21cf3980ef618ff049383d61ecc82641671fabececc9ba0a32e46c"},
 ]
 
 [package.dependencies]
-cryptography = ">=3.4.8,<4.0.0"
+cryptography = ">=3.4.8"
 python-dateutil = ">=2.8.2,<3.0.0"
 requests = ">=2.25.0,<3.0.0"
 tqdm = ">=4.32.1,<5.0.0"
@@ -5183,4 +5183,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "3677b684864d6983027d5f599ded32dd07d95d31266f9c581ff5955928d8ecb7"
+content-hash = "71927bd9d44d9174ca652c165e4a3096151f32c2e8c9a5314d8d714dc88106b2"
