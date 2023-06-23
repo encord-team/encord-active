@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 from urllib.parse import quote
 
+import pandas as pd
 from encord.ontology import OntologyStructure
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
@@ -61,6 +62,10 @@ def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
 @lru_cache
 def get_class_idx(predictions_dir: Path):
     return _get_class_idx(predictions_dir)
+
+
+def partial_index(df: pd.DataFrame, parts: int):
+    return df.index.str.split("_", n=parts).str[0:parts].str.join("_")
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
@@ -190,9 +195,7 @@ def to_item(
             pass
 
     object_predictions = build_item_object_predictions(row, project_file_structure, metadata, img_w, img_h, object_hash)
-    classification_predictions = build_item_classification_predictions(
-        row, project_file_structure, metadata
-    )
+    classification_predictions = build_item_classification_predictions(row, project_file_structure, metadata)
 
     return {
         "id": identifier,

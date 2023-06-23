@@ -45,6 +45,7 @@ from encord_active.server.utils import (
     filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
+    partial_index,
     to_item,
 )
 
@@ -74,9 +75,9 @@ def read_item_ids(
                 raise
             df, _ = get_model_predictions(project, filters.prediction_filters)
             column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
-            # TODO: Filter items
-            # df = df[df.index.isin(merged_metrics.index)]
-            # df = df[df.is_true_positive == 1]
+            df = df[partial_index(df, 3).isin(partial_index(merged_metrics, 3).unique())]
+            if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+                df = df[df.index.isin(merged_metrics.index)]
         except:
             raise Exception("Couldn't find the selected metric in the the project")
 
