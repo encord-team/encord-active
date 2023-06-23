@@ -1,4 +1,5 @@
 import json
+import math
 import uuid
 from typing import Optional, Set, Tuple, Dict, Union
 from sqlmodel import Session
@@ -11,7 +12,7 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
     ProjectLabelAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedLabel, \
-    ProjectClassificationAnalytics, ProjectPrediction
+    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionLabelResults
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
@@ -39,8 +40,8 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Aspect Ratio": "metric_aspect_ratio",
     "Polygon Shape Similarity": "metric_label_poly_similarity",
     "Random Values on Objects": "metric_random",
-    'Image-level Annotation Quality': "$SKIP", # FIXME:
-    "Shape outlier detection": "$SKIP", #FIXME:
+    'Image-level Annotation Quality': "$SKIP",  # FIXME:
+    "Shape outlier detection": "$SKIP",  # FIXME:
 }
 
 DERIVED_DATA_METRICS: Set[str] = {
@@ -219,7 +220,10 @@ def up(pfs: ProjectFileStructure) -> None:
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
-            if len(rest) == 1:
+            if len(rest) == 1 or len(rest) == 2:
+                # FIXME: len(rest) == 2 may need special case handling, not sure why it is generated!
+                if len(rest) == 2:
+                    print(f"WARNING: dropping second object hash in extended identifier: {metric_entry['identifier']}")
                 object_hash = rest[0]
                 if (du_hash, frame, object_hash) not in object_metrics:
                     raise ValueError(
@@ -250,8 +254,8 @@ def up(pfs: ProjectFileStructure) -> None:
         for embedding in label_embeddings:
             du_hash = uuid.UUID(embedding["data_unit"])
             frame = int(embedding["frame"])
-            object_hash: Optional[str] = str(embedding["labelHash"])\
-                if embedding.get("labelHash", None) is not None\
+            object_hash: Optional[str] = str(embedding["labelHash"]) \
+                if embedding.get("labelHash", None) is not None \
                 else None
             embedding_bytes: bytes = embedding["embedding"].tobytes()
             if object_hash is not None:
@@ -266,6 +270,7 @@ def up(pfs: ProjectFileStructure) -> None:
     # Load predictions
     prediction_hash = uuid.uuid4()
     predictions_run_db = []
+    predictions_objects_db = []
     for prediction_type in [
         MainPredictionType.OBJECT,
         # FIXME: MainPredictionType.CLASSIFICATION
@@ -275,10 +280,57 @@ def up(pfs: ProjectFileStructure) -> None:
         predictions_metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
         model_predictions = reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
         if model_predictions is None:
+            # No predictions to migrate, hence can be safely ignored
             continue
         for model_prediction in model_predictions.to_dict(orient="records"):
-            print("DEBUG", model_prediction)
-            continue
+            identifier: str = model_prediction.pop('identifier')
+            model_prediction.pop('url')
+            model_prediction.pop('Unnamed: 0')
+            img_id = int(model_prediction.pop('img_id'))
+            class_id = int(model_prediction.pop('class_id'))
+            confidence = float(model_prediction.pop('confidence'))
+            rle = float(model_prediction.pop('rle'))
+            iou = float(model_prediction.pop('iou'))
+            pbb = [
+                float(model_prediction.pop('x1')),
+                float(model_prediction.pop('y1')),
+                float(model_prediction.pop('x2')),
+                float(model_prediction.pop('y2'))
+            ]
+            p_metrics = {}
+            f_metrics = {}
+            for metric_name, metric_value in model_prediction.items():
+                metric_target = metric_name[-4:]
+                metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
+                if metric_key == "$SKIP":
+                    continue
+                if metric_target == ' (P)':
+                    p_metrics[metric_key] = metric_value
+                elif metric_target == ' (F)':
+                    f_metrics[metric_key] = metric_value
+                else:
+                    raise ValueError(f"Unknown metric target: '{metric_target}'")
+
+            # Add the new prediction to the database!!!
+            label_hash, du_hash_str, frame_str, obj_or_class_hash, *rest = identifier.split("_")
+            du_hash = uuid.UUID(du_hash_str)
+            frame = int(frame_str)
+            if len(rest) != 0:
+                print(f"WARNING: throwing away rest of identifier in prediction: {rest} (ident={identifier})")
+
+            predictions_objects_db.append(
+                ProjectPredictionLabelResults(
+                    prediction_hash=prediction_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    object_hash=obj_or_class_hash, # FIXME: need to condition on if this is classification or not!
+                    confidence=confidence,
+                    # FIXME: nan -> null, is this correct behaviour?
+                    rle=rle,
+                    iou=iou,
+                    # FIXME: pbb (aim to support all prediction descriptors (bytes??)
+                )
+            )
 
         # label_metric_datas = reader.get_label_metric_data(metrics_dir)
         # labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
@@ -338,4 +390,6 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(project_tag_definitions)
         sess.add_all(project_data_tags)
         sess.add_all(project_label_tags)
+        sess.add_all(predictions_run_db)
+        sess.add_all(predictions_objects_db)
         sess.commit()
