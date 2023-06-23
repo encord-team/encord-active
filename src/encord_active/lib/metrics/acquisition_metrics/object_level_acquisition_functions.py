@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 from PIL import Image
@@ -27,25 +27,28 @@ class BoundingBoxPrediction:
     confidence: float
 
 
-class BaseBoundingBoxModelWrapper:
+@dataclass
+class SegmentationPrediction:
+    points: np.ndarray  # an array of shape Nx2, where columns refer to relative x and y coordinates, respectively
+    confidence: float
+
+
+class BaseObjectModel:
     @abstractmethod
-    def predict_boundingboxes(self, image: Image) -> List[BoundingBoxPrediction]:
+    def predict_objects(self, image: Image) -> List[Union[BoundingBoxPrediction, SegmentationPrediction]]:
         """
-        Calculate the model-predicted bounding boxes.
+        Calculate the model-predicted objects.
 
         Args:
-            data: Input data sample.
+            image: Input image.
 
         Returns:
-            An array of shape ``(N, K)`` of model-predicted bounding boxes.
-            Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
-            `x` belongs to each possible class, for each of the K classes.
-            In the case the model can't extract any example `x` from the data sample, the method returns ``None``.
+            The list of predicted objects. If there is no prediction, an empty list is returned.
         """
         pass
 
 
-class BoundingBoxAcquisitionFunction(Metric):
+class BaseObjectAcquisitionFunction(Metric):
     def __init__(
         self,
         title: str,
@@ -53,7 +56,7 @@ class BoundingBoxAcquisitionFunction(Metric):
         long_description: str,
         metric_type: MetricType,
         data_type: DataType,
-        model: BaseBoundingBoxModelWrapper,
+        model: BaseObjectModel,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
         doc_url: Optional[str] = None,
@@ -62,7 +65,7 @@ class BoundingBoxAcquisitionFunction(Metric):
         Creates an instance of the acquisition function with a custom model to score data samples.
 
         Args:
-            model (BaseBoundingBoxModelWrapper): Machine learning model used to score data samples.
+            model (BaseObjectModel): Machine learning model used to score data samples.
         """
         self._model = model
         super().__init__(
@@ -73,29 +76,29 @@ class BoundingBoxAcquisitionFunction(Metric):
         for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
             if image is None:
                 continue
-            predicted_bboxes = self._model.predict_boundingboxes(image)
-            if predicted_bboxes is None:
+            predicted_objects = self._model.predict_objects(image)
+            if predicted_objects is None:
                 continue
-            score = self.score_bbox_predictions(predicted_bboxes)
+            score = self.score_object_predictions(predicted_objects)
             writer.write(score)
 
     @abstractmethod
-    def score_bbox_predictions(self, predictions: List[BoundingBoxPrediction]) -> float:
+    def score_object_predictions(
+        self, predictions: List[Union[BoundingBoxPrediction, SegmentationPrediction]]
+    ) -> float:
         """
-        Scores model-predicted class probabilities according the acquisition function description.
+        Scores model-predicted class probabilities according to the acquisition function description.
 
         Args:
-            pred_proba: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
-                Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities
-                that `x` belongs to each possible class, for each of the K classes.
+            predictions: A list of predicted objects.
 
         Returns:
-             score: Score of the model-predicted class probabilities.
+             score: Score given to image regarding the predictions.
         """
         pass
 
 
-class AverageFrameScore(BoundingBoxAcquisitionFunction):
+class AverageFrameScore(BaseObjectAcquisitionFunction):
     def __init__(self, model):
         super().__init__(
             title="Average Frame Score",
@@ -111,8 +114,10 @@ class AverageFrameScore(BoundingBoxAcquisitionFunction):
             model=model,
         )
 
-    def score_bbox_predictions(self, predictions: List[BoundingBoxPrediction]) -> float:
+    def score_object_predictions(
+        self, predictions: List[Union[BoundingBoxPrediction, SegmentationPrediction]]
+    ) -> float:
         if predictions:
-            sum([prediction.confidence for prediction in predictions]) / len(predictions)
+            return sum([prediction.confidence for prediction in predictions]) / len(predictions)
         else:
             return 0.0
