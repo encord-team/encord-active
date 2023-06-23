@@ -6,9 +6,12 @@ from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.utils import load_label_embeddings
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_dataframe, load_available_metrics
+from encord_active.lib.model_predictions import reader
+from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
-    ProjectLabelAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedLabel
+    ProjectLabelAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedLabel, \
+    ProjectClassificationAnalytics, ProjectPrediction
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
@@ -56,6 +59,7 @@ def up(pfs: ProjectFileStructure) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
     object_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str]]] = {}
+    classification_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, str]] = {}
     data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]] = {}
 
     # Load metadata
@@ -127,6 +131,22 @@ def up(pfs: ProjectFileStructure) -> None:
                     object_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                     }
+                classifications = labels_json.get("classifications", [])
+                for classify in classifications:
+                    classification_hash = str(classify["classificationHash"])
+                    if classification_hash in object_hashes:
+                        raise ValueError(
+                            f"Duplicate object_hash/classification_hash={classification_hash} "
+                            f"in du_hash={du_hash}, frame={data_unit.frame}"
+                        )
+                    object_hashes.add(classification_hash)
+                    classification_metrics[(du_hash, data_unit.frame, classification_hash)] = {
+                        "feature_hash": str(obj["featureHash"]),
+                    }
+
+                # FIXME: if len(classifications) == 0 && len(objects) == 0:
+                #  what should the correct behaviour be?
+
                 data_metrics[(du_hash, data_unit.frame)] = {
                     "metric_width": data_unit.width,
                     "metric_height": data_unit.height,
@@ -144,7 +164,7 @@ def up(pfs: ProjectFileStructure) -> None:
                     data_uri=data_unit.data_uri,
                     data_uri_is_video=data_type == "video",
                     objects=objects,
-                    classifications=labels_json.get("classifications", []),
+                    classifications=classifications,
                 )
                 data_units_metas.append(project_data_unit_meta)
             # Apply to parent
@@ -199,7 +219,7 @@ def up(pfs: ProjectFileStructure) -> None:
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
-            if len(rest) > 0:
+            if len(rest) == 1:
                 object_hash = rest[0]
                 if (du_hash, frame, object_hash) not in object_metrics:
                     raise ValueError(
@@ -207,9 +227,11 @@ def up(pfs: ProjectFileStructure) -> None:
                     )
                 metrics_dict = object_metrics[(du_hash, frame, object_hash)]
                 metrics_derived = DERIVED_LABEL_METRICS
-            else:
+            elif len(rest) == 0:
                 metrics_dict = data_metrics[(du_hash, frame)]
                 metrics_derived = DERIVED_DATA_METRICS
+            else:
+                raise ValueError(f"Unknown packing of identifier: {metric_entry['identifier']}")
             if metric_column_name not in metrics_dict:
                 metrics_dict[metric_column_name] = metric_entry["score"]
             elif metric_column_name not in metrics_derived:
@@ -238,6 +260,40 @@ def up(pfs: ProjectFileStructure) -> None:
                 metrics_dict = data_metrics[(du_hash, frame)]
             metrics_dict[embedding_name] = embedding_bytes
 
+    # Load 2d embeddings
+    # FIXME: implement (reduction should be marked as separate)
+
+    # Load predictions
+    prediction_hash = uuid.uuid4()
+    predictions_run_db = []
+    for prediction_type in [
+        MainPredictionType.OBJECT,
+        # FIXME: MainPredictionType.CLASSIFICATION
+    ]:
+        predictions_dir = pfs.predictions
+        metrics_dir = pfs.metrics
+        predictions_metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
+        model_predictions = reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
+        if model_predictions is None:
+            continue
+        for model_prediction in model_predictions.to_dict(orient="records"):
+            print("DEBUG", model_prediction)
+            continue
+
+        # label_metric_datas = reader.get_label_metric_data(metrics_dir)
+        # labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
+        # FIXME: store prediction metadata for the prediction run.
+
+        # Ensure prediction currently stored actually exists.
+        if len(predictions_run_db) == 0:
+            predictions_run_db.append(
+                ProjectPrediction(
+                    project_hash=project_hash,
+                    prediction_hash=prediction_hash,
+                    name="Migrated Prediction",
+                )
+            )
+
     label_db_metrics = [
         ProjectLabelAnalytics(
             project_hash=project_hash,
@@ -247,6 +303,17 @@ def up(pfs: ProjectFileStructure) -> None:
             **metrics
         )
         for (du_hash, frame, object_hash), metrics in object_metrics.items()
+    ]
+
+    classification_db_metrics = [
+        ProjectClassificationAnalytics(
+            project_hash=project_hash,
+            du_hash=du_hash,
+            frame=frame,
+            classification_hash=classification_hash,
+            **metrics,
+        )
+        for (du_hash, frame, classification_hash), metrics in classification_metrics.items()
     ]
 
     data_db_metrics = [
@@ -266,6 +333,7 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(data_metas)
         sess.add_all(data_units_metas)
         sess.add_all(label_db_metrics)
+        sess.add_all(classification_db_metrics)
         sess.add_all(data_db_metrics)
         sess.add_all(project_tag_definitions)
         sess.add_all(project_data_tags)

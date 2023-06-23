@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Tuple, Union, Iterable
 from uuid import UUID
 
 from sqlalchemy import Column, JSON
@@ -110,6 +110,22 @@ COMMON_METRIC_NAMES: Set[str] = {
 }
 
 
+def shared_metrics_table_args(
+        metric_prefix: str,
+        extra_values: Set[str],
+        extra_constraints: Iterable[Union[Index, ForeignKeyConstraint]],
+        include_common_metrics: bool = True,
+) -> Tuple[Union[Index, ForeignKeyConstraint], ...]:
+    values = [
+        Index(
+            f"{metric_prefix}_project_hash_{metric_name}_index", "project_hash", metric_name
+        )
+        for metric_name in extra_values | (COMMON_METRIC_NAMES if include_common_metrics else set())
+    ]
+    values = values + list(extra_constraints)
+    return tuple(values)
+
+
 class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
     __tablename__ = 'active_project_data_analytics'
     # Metrics - Image only
@@ -118,26 +134,23 @@ class ProjectDataAnalytics(ProjectAnalyticsBase, table=True):
     metric_image_difficulty: Optional[float]
     metric_image_singularity: Optional[float]
 
-    __table_args__ = tuple([
-        Index(
-            f"active_data_project_hash_{metric_name}_index", "project_hash", metric_name
-        )
-        for metric_name in (
-                {
-                    "metric_object_count",
-                    "metric_object_density"
-                } | COMMON_METRIC_NAMES
-        )
-    ]) + (
-                         ForeignKeyConstraint(
-                             ["project_hash", "du_hash", "frame"],
-                             [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
-                              ProjectDataUnitMetadata.frame],
-                             onupdate="CASCADE",
-                             ondelete="CASCADE",
-                             name="active_data_project_data_fk",
-                         ),
-                     )
+    __table_args__ = shared_metrics_table_args(
+        "active_data",
+        {
+            "metric_object_count",
+            "metric_object_density"
+        },
+        [
+            ForeignKeyConstraint(
+                ["project_hash", "du_hash", "frame"],
+                [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
+                 ProjectDataUnitMetadata.frame],
+                onupdate="CASCADE",
+                ondelete="CASCADE",
+                name="active_data_project_data_fk",
+            ),
+        ]
+    )
 
 
 class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
@@ -152,32 +165,61 @@ class ProjectLabelAnalytics(ProjectAnalyticsBase, table=True):
     metric_label_missing_or_broken_tracks: Optional[float]
     metric_label_annotation_quality: Optional[float]
     metric_label_inconsistent_classification_and_track: Optional[float]
-    __table_args__ = tuple([
-        Index(
-            f"active_label_project_hash_{metric_name}_index", "project_hash", metric_name
-        )
-        for metric_name in (
-                {
-                    "metric_label_duplicates",
-                    "metric_label_border_closeness",
-                    "metric_label_poly_similarity",
-                    "metric_label_missing_or_broken_tracks",
-                    "metric_label_annotation_quality",
-                    "metric_label_inconsistent_classification_and_track",
-                    # Not a metric, but indexed anyway.
-                    "feature_hash",
-                } | COMMON_METRIC_NAMES
-        )
-    ]) + (
-                         ForeignKeyConstraint(
-                             ["project_hash", "du_hash", "frame"],
-                             [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
-                              ProjectDataUnitMetadata.frame],
-                             onupdate="CASCADE",
-                             ondelete="CASCADE",
-                             name="active_label_project_data_fk",
-                         ),
-                     )
+
+    __table_args__ = shared_metrics_table_args(
+        "active_label",
+        {
+            "metric_label_duplicates",
+            "metric_label_border_closeness",
+            "metric_label_poly_similarity",
+            "metric_label_missing_or_broken_tracks",
+            "metric_label_annotation_quality",
+            "metric_label_inconsistent_classification_and_track",
+            # Not a metric, but indexed anyway.
+            "feature_hash",
+        },
+        [
+            ForeignKeyConstraint(
+                ["project_hash", "du_hash", "frame"],
+                [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
+                 ProjectDataUnitMetadata.frame],
+                onupdate="CASCADE",
+                ondelete="CASCADE",
+                name="active_label_project_data_fk",
+            ),
+        ]
+    )
+
+
+class ProjectClassificationAnalytics(SQLModel, table=True):
+    __tablename__ = 'active_project_classification_analytics'
+    # Base primary key
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    feature_hash: str = Field(min_length=8, max_length=8)
+    # Classification metrics (most metrics are shared with data metrics)
+    # so this only contains metrics that are depend on the classification itself.
+    __table_args__ = shared_metrics_table_args(
+        "active_classification",
+        {
+            # Metrics
+            # Not a metric, but indexed anyway.
+            "feature_hash",
+        },
+        [
+            ForeignKeyConstraint(
+                ["project_hash", "du_hash", "frame"],
+                [ProjectDataUnitMetadata.project_hash, ProjectDataUnitMetadata.du_hash,
+                 ProjectDataUnitMetadata.frame],
+                onupdate="CASCADE",
+                ondelete="CASCADE",
+                name="active_label_project_data_fk",
+            ),
+        ],
+        include_common_metrics=False
+    )
 
 
 class ProjectTag(SQLModel, table=True):
@@ -247,6 +289,61 @@ class ProjectTaggedLabel(SQLModel, table=True):
             name="active_project_tagged_labels_analysis_fk",
         )
     )
+
+
+class ProjectPrediction(SQLModel, table=True):
+    __tablename__ = 'active_project_prediction'
+    prediction_hash: UUID = Field(primary_key=True)
+    project_hash: UUID
+    name: str
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_hash"],
+            [Project.project_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_prediction_project_hash_fk",
+        ),
+    )
+
+
+class ProjectPredictionLabelResults(SQLModel, table=True):
+    __tablename__ = 'active_project_prediction_label_results'
+    prediction_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["prediction_hash"],
+            [ProjectPrediction.prediction_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_prediction_labels_prediction_fk",
+        ),
+    )
+
+
+class ProjectPredictionClassificationResults(SQLModel, table=True):
+    __tablename__ = 'active_project_prediction_classification_results'
+    prediction_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["prediction_hash"],
+            [ProjectPrediction.prediction_hash],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="active_project_prediction_classifications_prediction_fk",
+        ),
+    )
+
+
+# FIXME: metrics should be inline predictions or separate (need same keys for easy comparison)
 
 
 METRICS_DATA = {
