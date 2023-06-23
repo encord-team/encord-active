@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { z } from "zod";
 
-export const DEFAULT_BASE_URL = "http://localhost:8000";
+export const DEFAULT_BASE_URL = "http://localhost:8502";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 

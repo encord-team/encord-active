@@ -214,7 +214,8 @@ class CocoImporter:
             category_info = self.category_shapes.get(cat.id_, default_category_info)
             shapes = category_info.shapes
             for i, shape in enumerate(shapes):
-                new_id = cat.id_ * 10 + i
+                # NOTE: add one the the category id to avoid index 0
+                new_id = (cat.id_ + 1) * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
                 name = f"{cat.name}-{shape.value}" if len(shapes) > 1 else cat.name
                 ontology_structure.add_object(name=name, shape=shape, uid=new_id)

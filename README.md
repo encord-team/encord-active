@@ -71,7 +71,7 @@ encord-active quickstart
 or you can use <a href="https://hub.docker.com/r/encord/encord-active"><img src="https://www.docker.com/wp-content/uploads/2022/03/horizontal-logo-monochromatic-white.png" height="20"/></a>:
 
 ```shell
-docker run -it --rm -p 8501:8501 -p 8000:8000 -v ${PWD}:/data encord/encord-active quickstart
+docker run -it --rm -p 8501:8501 -p 8502:8502 -v ${PWD}:/data encord/encord-active quickstart
 ```
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
@@ -177,9 +177,9 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Object Detection/segmentation Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-detection-model)
 - [Classification Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-classification-model)
 - [Similarity Search](https://docs.encord.com/active/docs/workflows/image-similarity)
-- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tags)
+- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tagging)
 - [Visualize TP/FP/FN](https://docs.encord.com/active/docs/workflows/evaluate-detection-model#exploring-the-individual-samples)
-- [COCO Exports](https://docs.encord.com/active/docs/user-guide/filter_export#export-to-coco-file)
+- [COCO Exports](https://docs.encord.com/active/docs/user-guide/exporting#coco)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.
