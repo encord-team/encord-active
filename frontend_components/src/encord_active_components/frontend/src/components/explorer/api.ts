@@ -66,11 +66,21 @@ export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
 export type PredictionType = "object" | "classification";
+export type PredictionOutcome =
+  | "Correct Classifications"
+  | "Misclassifications"
+  | "True Positive"
+  | "False Positive"
+  | "False Negative";
+
 // TODO: add a proper type when filtering is done from the frontend. currently
 // we only get the filters form streamlit and pass them to the server so the
 // types aren't strictly necessary.
 export type Filters = unknown & {
-  prediction_filters?: unknown & { type?: PredictionType };
+  prediction_filters?: unknown & {
+    type?: PredictionType;
+    outcome?: PredictionOutcome;
+  };
 };
 
 const EmbeddingTypeSchema = z.union([
@@ -154,11 +164,13 @@ export const getApi = (
     },
     fetchProjectMetrics: async (
       scope: Scope,
-      prediction_type?: PredictionType
+      prediction_type?: PredictionType,
+      prediction_outcome?: PredictionOutcome
     ) => {
       const queryParams = new URLSearchParams({
         ...(scope ? { scope } : {}),
         ...(prediction_type ? { prediction_type } : {}),
+        ...(prediction_outcome ? { prediction_outcome } : {}),
       });
       const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();

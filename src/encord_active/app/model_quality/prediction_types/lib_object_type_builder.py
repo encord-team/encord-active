@@ -21,6 +21,7 @@ from encord_active.lib.model_predictions.reader import (
     ClassificationLabelSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
+    LabelMatchSchema,
     LabelSchema,
     PredictionMatchSchema,
     PredictionSchema,
@@ -160,11 +161,16 @@ def get_object_detection_predictions(
         precisions,
     )
 
-    model_predictions = model_predictions.set_index("identifier")
-
-    if predictions_filters.outcome:
+    if predictions_filters.outcome in [
+        ObjectDetectionOutcomeType.TRUE_POSITIVES,
+        ObjectDetectionOutcomeType.FALSE_POSITIVES,
+    ]:
         value = 1.0 if predictions_filters.outcome == ObjectDetectionOutcomeType.TRUE_POSITIVES else 0.0
         model_predictions = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == value]
+    elif predictions_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+        model_predictions = labels[labels[LabelMatchSchema.is_false_negative]]
+
+    model_predictions = model_predictions.set_index("identifier")
 
     return model_predictions, predictions_metric_datas
 

@@ -91,7 +91,12 @@ export const Explorer = ({
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
-    () => api.fetchProjectMetrics(scope, filters?.prediction_filters?.type),
+    () =>
+      api.fetchProjectMetrics(
+        scope,
+        filters?.prediction_filters?.type,
+        filters?.prediction_filters?.outcome
+      ),
     { staleTime: Infinity }
   );
 
@@ -214,8 +219,8 @@ export const Explorer = ({
                   scope === "model_quality"
                     ? "predictions"
                     : !selectedItems.size
-                      ? "missing-target"
-                      : undefined
+                    ? "missing-target"
+                    : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />

@@ -1,17 +1,14 @@
-import json
 from enum import Enum
-from functools import cache, lru_cache
-from pathlib import Path
-from typing import Annotated, Any, List, Optional, Tuple
+from functools import lru_cache
+from typing import Annotated, List, Optional, Union
 
-import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
-from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
 from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
+    ClassificationOutcomeType,
     ObjectDetectionOutcomeType,
     get_model_prediction_by_id,
     get_model_predictions,
@@ -34,7 +31,6 @@ from encord_active.lib.metrics.utils import (
     filter_none_empty_metrics,
     get_embedding_type,
 )
-from encord_active.lib.model_predictions.reader import get_class_idx as _get_class_idx
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
@@ -74,6 +70,8 @@ def read_item_ids(
         df = merged_metrics
     except:
         try:
+            if filters.prediction_filters is None:
+                raise
             df, _ = get_model_predictions(project, filters.prediction_filters)
             column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
             # TODO: Filter items
@@ -172,9 +170,13 @@ def get_available_metrics(
     project: ProjectFileStructureDep,
     scope: Optional[MetricScope] = None,
     prediction_type: Optional[MainPredictionType] = None,
+    prediction_outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None,
 ):
     if scope == MetricScope.MODEL_QUALITY:
-        metrics, *_ = read_prediction_files(project, prediction_type)
+        prediction_metrics, label_metrics, *_ = read_prediction_files(project, prediction_type)
+        metrics = (
+            label_metrics if prediction_outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES else prediction_metrics
+        )
     else:
         metrics = load_project_metrics(project, scope)
     return [
