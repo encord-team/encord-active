@@ -83,7 +83,9 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if "url" in filterable_columns:
             filterable_columns.remove("url")
         # Move some columns to the beginning
-        filterable_columns.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
+        filterable_columns.sort(
+            key=lambda column: column in ["object_class", "tags", "annotator", "workflow_stage"], reverse=True
+        )
 
         columns_to_filter = st.multiselect(
             "Filter by", filterable_columns, format_func=lambda name: name.replace("_", " ").title()
