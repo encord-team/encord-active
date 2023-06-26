@@ -420,4 +420,4 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
 def is_workflow_project(pfs: ProjectFileStructure):
     label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
-    return next(iter(label_row_meta.values()), dict()).get("workflow_graph_node") is not None
+    return len(label_row_meta) > 0 and next(iter(label_row_meta.values())).get("workflow_graph_node") is not None
