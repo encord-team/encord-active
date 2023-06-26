@@ -1,9 +1,9 @@
 import json
-import math
 import uuid
 from typing import Optional, Set, Tuple, Dict, Union
 from sqlmodel import Session
 
+from encord_active.db.metrics import DataMetrics, ObjectMetrics, MetricType
 from encord_active.lib.common.data_utils import url_to_file_path, file_path_to_url
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.utils import load_label_embeddings
@@ -13,15 +13,15 @@ from encord_active.lib.model_predictions import reader
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
-    ProjectLabelAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedLabel, \
-    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionLabelResults
+    ProjectObjectAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedObject, \
+    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionObjectResults
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
     "Area": "metric_area",
     "Aspect Ratio": "metric_aspect_ratio",
     "Blue Values": "metric_blue",
-    "Blur": "metric_blur",
+    "Blur": "$SKIP", # Virtual attribute = 1.0 - metric_sharpness
     "Brightness": "metric_brightness",
     "Contrast": "metric_contrast",
     "Frame object density": "metric_object_density",
@@ -31,7 +31,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
     "Red Values": "metric_red",
-    "Sharpness": "$SKIP",  # SKIPPED : Derived Metric: 1.0 - Blue (FIXME: check)
+    "Sharpness": "metric_sharpness",
     "Annotation Duplicates": "metric_label_duplicates",
     "Annotation closeness to image borders": "metric_label_border_closeness",
     "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
@@ -46,6 +46,12 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Shape outlier detection": "$SKIP",  # FIXME:
 }
 
+# Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.
+WELL_KNOWN_PERCENTAGE_METRICS: Set[str] = {
+    "metric_object_density",
+    "metric_area_relative",
+}
+
 DERIVED_DATA_METRICS: Set[str] = {
     "metric_width",
     "metric_height",
@@ -56,6 +62,13 @@ DERIVED_DATA_METRICS: Set[str] = {
 }
 
 DERIVED_LABEL_METRICS: Set[str] = set()
+
+
+def assert_valid_args(cls, dct: dict) -> dict:
+    for k in dct.keys():
+        if k not in cls.__fields__:
+            raise ValueError(f"Invalid field type: {k} for class: {cls.__name__}")
+    return dct
 
 
 def up(pfs: ProjectFileStructure) -> None:
@@ -156,7 +169,6 @@ def up(pfs: ProjectFileStructure) -> None:
                     "metric_width": data_unit.width,
                     "metric_height": data_unit.height,
                     "metric_area": data_unit.width * data_unit.height,
-                    "metric_area_relative": 1.0,
                     "metric_aspect_ratio": float(data_unit.width) / float(data_unit.height),
                     "metric_object_count": len(objects),
                 }
@@ -195,7 +207,7 @@ def up(pfs: ProjectFileStructure) -> None:
             ))
 
         project_data_tags = []
-        project_label_tags = []
+        project_object_tags = []
         for item_tag in conn.itemtag.find_many():
             du_hash = uuid.UUID(item_tag.data_hash)
             frame = item_tag.frame
@@ -211,7 +223,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 ))
             else:
                 _exists = object_metrics[(du_hash, frame, object_hash)]
-                project_label_tags.append(ProjectTaggedLabel(
+                project_object_tags.append(ProjectTaggedObject(
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
@@ -242,18 +254,39 @@ def up(pfs: ProjectFileStructure) -> None:
                     )
                 metrics_dict = object_metrics[(du_hash, frame, object_hash)]
                 metrics_derived = DERIVED_LABEL_METRICS
+                metric_types = ObjectMetrics
             elif len(rest) == 0:
                 metrics_dict = data_metrics[(du_hash, frame)]
                 metrics_derived = DERIVED_DATA_METRICS
+                metric_types = DataMetrics
             else:
                 raise ValueError(f"Unknown packing of identifier: {metric_entry['identifier']}")
             if metric_column_name not in metrics_dict:
-                metrics_dict[metric_column_name] = metric_entry["score"]
+                score = metric_entry["score"]
+                if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
+                    score = score / 100.0
+                metric_def = metric_types[metric_column_name]
+                if metric_def.type == MetricType.NORMAL:
+                    # Clamp 0->1 (some metrics do not generate correctly clamped scores.
+                    original_score = score
+                    score = min(max(score, 0.0), 1.0)
+                    if original_score != score:
+                        print(
+                            f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}"
+                        )
+                if metric_def.virtual is None:
+                    # Virtual attributes should not be stored!!
+                    metrics_dict[metric_column_name] = score
             elif metric_column_name not in metrics_derived:
                 raise ValueError(
                     f"Duplicate metric assignment for, column={metric_column_name},"
                     f"identifier{metric_entry['identifier']}"
                 )
+            else:
+                existing_score = metrics_dict[metric_column_name]
+                if existing_score != metric_entry["score"]:
+                    print(f"WARNING: different derived and calculated scores: "
+                          f"{metric_column_name}, {existing_score}, {metric_entry['score']}")
 
     # Load embeddings
     for embedding_type, embedding_name in [
@@ -330,7 +363,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 print(f"WARNING: throwing away rest of identifier in prediction: {rest} (ident={identifier})")
 
             predictions_objects_db.append(
-                ProjectPredictionLabelResults(
+                ProjectPredictionObjectResults(
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
@@ -357,34 +390,34 @@ def up(pfs: ProjectFileStructure) -> None:
                 )
             )
 
-    label_db_metrics = [
-        ProjectLabelAnalytics(
+    metrics_db_objects = [
+        ProjectObjectAnalytics(
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
             object_hash=object_hash,
-            **metrics
+            **assert_valid_args(ProjectObjectAnalytics, metrics)
         )
         for (du_hash, frame, object_hash), metrics in object_metrics.items()
     ]
 
-    classification_db_metrics = [
+    metrics_db_classifications = [
         ProjectClassificationAnalytics(
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
             classification_hash=classification_hash,
-            **metrics,
+            **assert_valid_args(ProjectClassificationAnalytics, metrics),
         )
         for (du_hash, frame, classification_hash), metrics in classification_metrics.items()
     ]
 
-    data_db_metrics = [
+    metrics_db_data = [
         ProjectDataAnalytics(
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
-            **metrics
+            **assert_valid_args(ProjectDataAnalytics, metrics)
         )
         for (du_hash, frame), metrics in data_metrics.items()
     ]
@@ -395,12 +428,12 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add(project)
         sess.add_all(data_metas)
         sess.add_all(data_units_metas)
-        sess.add_all(label_db_metrics)
-        sess.add_all(classification_db_metrics)
-        sess.add_all(data_db_metrics)
+        sess.add_all(metrics_db_objects)
+        sess.add_all(metrics_db_classifications)
+        sess.add_all(metrics_db_data)
         sess.add_all(project_tag_definitions)
         sess.add_all(project_data_tags)
-        sess.add_all(project_label_tags)
+        sess.add_all(project_object_tags)
         sess.add_all(predictions_run_db)
         sess.add_all(predictions_objects_db)
         sess.commit()
