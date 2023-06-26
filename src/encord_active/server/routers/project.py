@@ -1,7 +1,9 @@
+import re
 from enum import Enum
 from functools import lru_cache
 from typing import Annotated, List, Optional, Union
 
+import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
@@ -10,6 +12,7 @@ from pydantic import BaseModel
 from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
     ClassificationOutcomeType,
     ObjectDetectionOutcomeType,
+    PredictionsFilters,
     get_model_prediction_by_id,
     get_model_predictions,
     read_prediction_files,
@@ -25,11 +28,17 @@ from encord_active.lib.db.helpers.tags import (
 )
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
+from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricScope,
     filter_none_empty_metrics,
     get_embedding_type,
+)
+from encord_active.lib.model_predictions.reader import (
+    ClassificationPredictionMatchSchema,
+    LabelMatchSchema,
+    PredictionMatchSchema,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
@@ -45,7 +54,7 @@ from encord_active.server.utils import (
     filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
-    partial_index,
+    partial_column,
     to_item,
 )
 
@@ -74,16 +83,23 @@ def read_item_ids(
             if filters.prediction_filters is None:
                 raise
             df, _ = get_model_predictions(project, filters.prediction_filters)
+
+            if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+                sort_by_metric = re.sub(r"(.*?\()P(\))", r"\1O\2", sort_by_metric)
+
             column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
-            df = df[partial_index(df, 3).isin(partial_index(merged_metrics, 3).unique())]
+            df = df[partial_column(df.index, 3).isin(partial_column(merged_metrics.index, 3).unique())]
             if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
                 df = df[df.index.isin(merged_metrics.index)]
         except:
             raise Exception("Couldn't find the selected metric in the the project")
 
-    res = df[[column]].dropna().sort_values(by=[column], ascending=ascending)
+    res: pd.DataFrame = df[[column]].dropna().sort_values(by=[column], ascending=ascending)
     if ids:
-        res = res[res.index.isin(ids)]
+        if filters.prediction_filters and filters.prediction_filters.type == MainPredictionType.OBJECT:
+            res = res[partial_column(res.index, 3).isin(ids)]
+        else:
+            res = res[res.index.isin(ids)]
     res = res.reset_index().rename({"identifier": "id", column: "value"}, axis=1)
 
     return ORJSONResponse(res[["id", "value"]].to_dict("records"))
@@ -191,6 +207,7 @@ def get_2d_embeddings(
     project: ProjectFileStructureDep, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
 ):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
+    embeddings_df.set_index("identifier", inplace=True)
 
     if embeddings_df is None:
         raise HTTPException(
@@ -198,9 +215,48 @@ def get_2d_embeddings(
         )
 
     filtered = filtered_merged_metrics(project, filters)
-    embeddings_df[embeddings_df["identifier"].isin(filtered.index)]
+    embeddings_df = embeddings_df[embeddings_df.index.isin(filtered.index)]
 
-    return ORJSONResponse(embeddings_df.rename({"identifier": "id"}, axis=1).to_dict("records"))
+    if filters.prediction_filters is not None:
+        embeddings_df["data_row_id"] = partial_column(embeddings_df.index, 3)
+        predictions, labels = get_model_predictions(project, PredictionsFilters(type=filters.prediction_filters.type))
+
+        if filters.prediction_filters.type == MainPredictionType.OBJECT:
+            labels = labels[[LabelMatchSchema.is_false_negative]]
+            labels = labels[labels[LabelMatchSchema.is_false_negative] == True]
+            labels["data_row_id"] = partial_column(labels.index, 3)
+            labels["score"] = 0
+            labels.drop(LabelMatchSchema.is_false_negative, axis=1, inplace=True)
+            predictions = predictions[[PredictionMatchSchema.is_true_positive]]
+            predictions["data_row_id"] = partial_column(predictions.index, 3)
+            predictions.rename(columns={PredictionMatchSchema.is_true_positive: "score"}, inplace=True)
+
+            merged_score = pd.concat([labels, predictions], axis=0)
+            grouped_score = (
+                merged_score.groupby("data_row_id")[Embedding2DScoreSchema.score].mean().to_frame().reset_index()
+            )
+            embeddings_df = embeddings_df.merge(grouped_score, on="data_row_id", how="outer").fillna(0)
+            embeddings_df.rename({"data_row_id": "identifier"}, axis=1, inplace=True)
+        else:
+            predictions = predictions[[ClassificationPredictionMatchSchema.is_true_positive]]
+            predictions["data_row_id"] = partial_column(predictions.index, 3)
+
+            embeddings_df = embeddings_df.merge(predictions, on="data_row_id", how="outer")
+
+            embeddings_df.drop(columns=[Embedding2DSchema.label], inplace=True)
+            embeddings_df.rename(
+                columns={
+                    ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label,
+                    "data_row_id": "identifier",
+                },
+                inplace=True,
+            )
+
+            embeddings_df[Embedding2DSchema.label] = embeddings_df[Embedding2DSchema.label].apply(
+                lambda x: "True prediction" if x == 1.0 else "False prediction"
+            )
+
+    return ORJSONResponse(embeddings_df.reset_index().rename({"identifier": "id"}, axis=1).to_dict("records"))
 
 
 @router.get("/{project}/tags")

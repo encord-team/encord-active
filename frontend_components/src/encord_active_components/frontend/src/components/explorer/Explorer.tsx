@@ -1,32 +1,35 @@
-import { Spin } from "./Spinner";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaExpand, FaEdit } from "react-icons/fa";
-import { TbMoodSad2 } from "react-icons/tb";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
-import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
-import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { BsCardText } from "react-icons/bs";
+import { FaEdit, FaExpand } from "react-icons/fa";
+import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
 import { RiUserLine } from "react-icons/ri";
+import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
+import { Spin } from "./Spinner";
 
 import { Streamlit } from "streamlit-component-lib";
 
+import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
-import { useQuery } from "@tanstack/react-query";
-import { splitId } from "./id";
 import {
+  ApiContext,
+  classificationsPredictionOutcomes,
   DEFAULT_BASE_URL,
+  Filters,
   getApi,
   IdValue,
   Item,
-  ApiContext,
+  Metric,
+  objectPredictionOutcomes,
+  PredictionOutcome,
   Scope,
   useApi,
-  Metric,
-  Filters,
 } from "./api";
+import { Assistant, useSearch } from "./Assistant";
 import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
+import { splitId } from "./id";
 import { Pagination, usePagination } from "./Pagination";
 import {
   BulkTaggingForm,
@@ -34,7 +37,6 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { Assistant, useSearch } from "./Assistant";
 
 export type Props = {
   authToken: string | null;
@@ -47,7 +49,7 @@ export type Props = {
 export const Explorer = ({
   authToken,
   projectName,
-  filters,
+  filters: inputFilters,
   scope,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
@@ -63,6 +65,19 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
+  const [predictionOutcome, setPredictionOutcome] = useState<
+    PredictionOutcome | undefined
+  >();
+  const [iou, setIou] = useState<number | undefined>();
+  delete inputFilters.prediction_filters?.outcome;
+  delete inputFilters.prediction_filters?.iou_threshold;
+
+  const filters = inputFilters;
+  if (scope === "model_quality" && filters.prediction_filters) {
+    if (predictionOutcome)
+      filters.prediction_filters.outcome = predictionOutcome;
+    if (iou) filters.prediction_filters.iou_threshold = iou;
+  }
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -194,12 +209,23 @@ export const Explorer = ({
           )}
         >
           {/* TODO: move model predictions embeddings plot to FE */}
-          {scope !== "model_quality" && selectedMetric && (
+          {selectedMetric && (
             <Embeddings
               isloadingItems={isLoadingSortedItems}
-              idValues={sortedItems || []}
+              idValues={
+                (scope === "model_quality"
+                  ? sortedItems?.map(({ id, ...item }) => ({
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
+                  : sortedItems) || []
+              }
               filters={filters}
-              embeddingType={selectedMetric.embeddingType}
+              embeddingType={
+                scope === "model_quality"
+                  ? "image"
+                  : selectedMetric.embeddingType
+              }
               onSelectionChange={(selection) => (
                 setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
@@ -212,96 +238,103 @@ export const Explorer = ({
               onClose={() => setSimilarityItem(null)}
             />
           )}
-          <div className="flex w-full justify-between gap-5 flex-wrap">
-            <div className="flex gap-2 max-w-[50%]">
+          <div className="flex w-full gap-2 flex-col flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               <TaggingDropdown
                 disabledReason={
                   scope === "model_quality"
                     ? "predictions"
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
               {metrics && metrics?.length && (
-                <>
-                  <label className="input-group">
-                    <select
-                      onChange={(event) =>
-                        setSelectedMetric(
-                          metrics.find(
-                            (metric) => metric.name === event.target.value
-                          )
+                <label className="input-group  w-auto">
+                  <select
+                    onChange={(event) =>
+                      setSelectedMetric(
+                        metrics.find(
+                          (metric) => metric.name === event.target.value
                         )
-                      }
-                      className="select select-bordered focus:outline-none"
+                      )
+                    }
+                    className="select select-bordered focus:outline-none"
+                    disabled={!!similarItems?.length}
+                  >
+                    {metrics.map(({ name }) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </select>
+                  <label
+                    className={classy("btn swap swap-rotate", {
+                      "btn-disabled": !!similarItems?.length,
+                    })}
+                  >
+                    <input
+                      onChange={() => setIsAscending((prev) => !prev)}
+                      type="checkbox"
                       disabled={!!similarItems?.length}
-                    >
-                      {metrics.map(({ name }) => (
-                        <option key={name}>{name}</option>
-                      ))}
-                    </select>
-                    <label
-                      className={classy("btn swap swap-rotate", {
-                        "btn-disabled": !!similarItems?.length,
-                      })}
-                    >
-                      <input
-                        onChange={() => setIsAscending((prev) => !prev)}
-                        type="checkbox"
-                        disabled={!!similarItems?.length}
-                        defaultChecked={true}
-                      />
-                      <TbSortAscending className="swap-on text-base" />
-                      <TbSortDescending className="swap-off text-base" />
-                    </label>
-                  </label>
-                  {!similarityItem && (
-                    <MetricDistributionTiny
-                      values={sortedItems || []}
-                      setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                      defaultChecked={true}
                     />
-                  )}
-                </>
+                    <TbSortAscending className="swap-on text-base" />
+                    <TbSortDescending className="swap-off text-base" />
+                  </label>
+                </label>
+              )}
+              {scope === "model_quality" && (
+                <PredictionFilters
+                  predictionType={filters.prediction_filters?.type}
+                  onOutcomeChange={setPredictionOutcome}
+                  onIouChange={predictionOutcome && setIou}
+                />
+              )}
+              {!similarityItem && (
+                <MetricDistributionTiny
+                  values={sortedItems || []}
+                  setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                />
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": !resetable,
-                })}
-                onClick={reset}
-              >
-                <MdFilterAltOff />
-                Reset filters
-              </button>
-              <button
-                className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": !selectedItems.size,
-                })}
-                onClick={() => setSelectedItems(new Set())}
-              >
-                <VscClearAll />
-                Clear selection ({selectedItems.size})
-              </button>
-              <button
-                className="btn btn-ghost gap-2"
-                onClick={() => setSelectedItems(new Set(itemsToRender))}
-              >
-                <BiSelectMultiple />
-                Select all ({itemsToRender.length})
-              </button>
+            <div className="flex justify-between gap-2 flex-wrap">
+              <Assistant
+                defaultSearch={search}
+                isFetching={searching}
+                setSearch={setSearch}
+                snippet={searchResults?.snippet}
+                disabled={!hasPremiumFeatures}
+              />
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !resetable,
+                  })}
+                  onClick={reset}
+                >
+                  <MdFilterAltOff />
+                  Reset filters
+                </button>
+                <button
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !selectedItems.size,
+                  })}
+                  onClick={() => setSelectedItems(new Set())}
+                >
+                  <VscClearAll />
+                  Clear selection ({selectedItems.size})
+                </button>
+                <button
+                  className="btn btn-ghost gap-2"
+                  onClick={() => setSelectedItems(new Set(itemsToRender))}
+                >
+                  <BiSelectMultiple />
+                  Select all ({itemsToRender.length})
+                </button>
+              </div>
             </div>
           </div>
-          <Assistant
-            defaultSearch={search}
-            isFetching={searching}
-            setSearch={setSearch}
-            snippet={searchResults?.snippet}
-            disabled={!hasPremiumFeatures}
-          />
           {itemsToRender.length ? (
             <>
               <form
@@ -348,6 +381,69 @@ export const Explorer = ({
   );
 };
 
+const ALL_PREDICTION_OUTCOMES = "All Prediction Outcomes";
+
+const PredictionFilters = ({
+  predictionType,
+  onOutcomeChange,
+  onIouChange,
+}: {
+  predictionType: NonNullable<Filters["prediction_filters"]>["type"];
+  onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
+  onIouChange?: (iou: number) => void;
+}) => {
+  if (!predictionType) return null;
+
+  const [iou, setIou] = useState(0.5);
+  const [drag, setDrag] = useState(false);
+
+  useEffect(() => {
+    if (iou != null && !drag) onIouChange?.(iou);
+  }, [iou, drag]);
+
+  const outcomes =
+    predictionType === "object"
+      ? objectPredictionOutcomes
+      : classificationsPredictionOutcomes;
+
+  return (
+    <>
+      <select
+        className="select select-bordered w-full max-w-xs"
+        onChange={({ target: { value } }) =>
+          onOutcomeChange(
+            value === ALL_PREDICTION_OUTCOMES
+              ? undefined
+              : (value as PredictionOutcome)
+          )
+        }
+      >
+        {[ALL_PREDICTION_OUTCOMES, ...outcomes].map((outcome) => (
+          <option key={outcome}>{outcome}</option>
+        ))}
+      </select>
+      {predictionType === "object" && onIouChange && (
+        <div className="form-control w-full max-w-xs">
+          <label>
+            <span>IOU: {iou}</span>
+          </label>
+          <input
+            type="range"
+            min={0.01}
+            max={1}
+            step={0.01}
+            defaultValue={iou}
+            onMouseUp={() => setDrag(false)}
+            onMouseDown={() => setDrag(true)}
+            onChange={({ target: { value } }) => setIou(parseFloat(value))}
+            className="range range-xs"
+          />
+        </div>
+      )}
+    </>
+  );
+};
+
 const Embeddings = ({
   isloadingItems,
   idValues,
@@ -375,7 +471,7 @@ const Embeddings = ({
     return scatteredEmbeddings?.filter(
       ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_")))
     );
-  }, [idValues, scatteredEmbeddings]);
+  }, [JSON.stringify(idValues), JSON.stringify(scatteredEmbeddings)]);
 
   return !isLoading && !isloadingItems && !scatteredEmbeddings?.length ? (
     <div className="alert shadow-lg h-fit">
@@ -393,6 +489,7 @@ const Embeddings = ({
           embeddings={filtered || []}
           onSelectionChange={onSelectionChange}
           onReset={onReset}
+          predictionType={filters.prediction_filters?.type}
         />
       )}
     </div>

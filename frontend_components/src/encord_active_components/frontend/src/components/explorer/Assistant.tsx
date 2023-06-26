@@ -59,7 +59,7 @@ export const Assistant = ({
   const [parent, _] = useAutoAnimate();
 
   return (
-    <div ref={parent} className="flex flex-col w-full gap-2">
+    <div ref={parent} className="flex flex-col gap-2 flex-1">
       <form
         className="w-full flex"
         onSubmit={(e) => {

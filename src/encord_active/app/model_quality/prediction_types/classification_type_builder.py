@@ -324,6 +324,22 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             st.write("There are no predictions for the given class(es).")
             return
 
+        if self._explorer_outcome_type:
+            filters = get_state().filtering_state.filters.copy()
+            filters.prediction_filters = PredictionsFilters(
+                type=MainPredictionType.CLASSIFICATION,
+            )
+
+            explorer(
+                auth_token=get_auth_token(),
+                project_name=get_state().project_paths.project_dir.name,
+                scope="model_quality",
+                api_url=get_settings().API_URL,
+                filters=filters.dict(),
+            )
+
+        return
+
         if get_state().reduced_embeddings[EmbeddingType.IMAGE] is None:
             st.info("There is no 2D embedding file to display.")
         else:
@@ -364,20 +380,4 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             histogram = get_histogram(view_df, metric_name)
             st.altair_chart(histogram, use_container_width=True)
 
-            if self._explorer_outcome_type:
-                filters = get_state().filtering_state.filters
-                filters.prediction_filters = PredictionsFilters(
-                    type=MainPredictionType.CLASSIFICATION,
-                    outcome=self._explorer_outcome_type,
-                    iou_threshold=get_state().iou_threshold,
-                )
-
-                explorer(
-                    auth_token=get_auth_token(),
-                    project_name=get_state().project_paths.project_dir.name,
-                    scope="model_quality",
-                    api_url=get_settings().API_URL,
-                    filters=filters.dict(),
-                )
-            #
             # prediction_grid_classifications(get_state().project_paths, model_predictions=view_df)

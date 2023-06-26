@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
 from urllib.parse import quote
 
 import pandas as pd
@@ -64,8 +64,8 @@ def get_class_idx(predictions_dir: Path):
     return _get_class_idx(predictions_dir)
 
 
-def partial_index(df: pd.DataFrame, parts: int):
-    return df.index.str.split("_", n=parts).str[0:parts].str.join("_")
+def partial_column(column: Union[pd.Index, pd.Series], parts: int):
+    return column.str.split("_", n=parts).str[0:parts].str.join("_")
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
@@ -241,7 +241,6 @@ def build_item_object_predictions(
 
     for key in [
         "Unnamed: 0",
-        "false_positive_reason",
         "img_id",
         "iou",
         "x1",

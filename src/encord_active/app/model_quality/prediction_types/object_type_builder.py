@@ -408,9 +408,9 @@ matched to any predictions. The remaining objects are predictions, where colors 
             st.error("No metric selected")
             return
 
-        color = self._render_explorer_details()
-        if color is None:
-            st.warning("An error occurred while rendering the explorer page")
+        # color = self._render_explorer_details()
+        # if color is None:
+        #     st.warning("An error occurred while rendering the explorer page")
 
         if EmbeddingType.IMAGE not in get_state().reduced_embeddings:
             get_state().reduced_embeddings[EmbeddingType.IMAGE] = get_2d_embedding_data(
@@ -422,6 +422,24 @@ matched to any predictions. The remaining objects are predictions, where colors 
         if view_df is None:
             st.error(f"An error occurred during getting data according to the {metric_name} metric")
             return
+
+        if self._explorer_outcome_type:
+            filters = get_state().filtering_state.filters.copy()
+            filters.prediction_filters = PredictionsFilters(
+                type=MainPredictionType.OBJECT,
+                outcome=self._explorer_outcome_type,
+                iou_threshold=get_state().iou_threshold,
+            )
+
+            explorer(
+                auth_token=get_auth_token(),
+                project_name=get_state().project_paths.project_dir.name,
+                scope="model_quality",
+                api_url=get_settings().API_URL,
+                filters=filters.dict(),
+            )
+
+        return
 
         if get_state().reduced_embeddings[EmbeddingType.IMAGE] is None:
             st.info("There is no 2D embedding file to display.")
@@ -461,24 +479,6 @@ matched to any predictions. The remaining objects are predictions, where colors 
                 view_df["data_row_id"] = view_df[MetricSchema.identifier].str.split("_", n=3).str[0:3].str.join("_")
                 view_df = view_df[view_df["data_row_id"].isin(selected_rows["data_row_id"])]
                 view_df.drop("data_row_id", axis=1, inplace=True)
-
-        if self._explorer_outcome_type:
-            filters = get_state().filtering_state.filters
-            filters.prediction_filters = PredictionsFilters(
-                type=MainPredictionType.OBJECT,
-                outcome=self._explorer_outcome_type,
-                iou_threshold=get_state().iou_threshold,
-            )
-
-            explorer(
-                auth_token=get_auth_token(),
-                project_name=get_state().project_paths.project_dir.name,
-                scope="model_quality",
-                api_url=get_settings().API_URL,
-                filters=filters.dict(),
-            )
-
-        return
 
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")

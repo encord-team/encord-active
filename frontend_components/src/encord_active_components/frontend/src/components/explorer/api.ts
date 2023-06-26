@@ -66,12 +66,22 @@ export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
 export type PredictionType = "object" | "classification";
+export const classificationsPredictionOutcomes = [
+  "Correct Classifications",
+  "Misclassifications",
+] as const;
+export type ClassificationsPredictionOutcome =
+  (typeof classificationsPredictionOutcomes)[number];
+export const objectPredictionOutcomes = [
+  "True Positive",
+  "False Positive",
+  "False Negative",
+] as const;
+export type ObjectPredictionOutcom = (typeof objectPredictionOutcomes)[number];
+
 export type PredictionOutcome =
-  | "Correct Classifications"
-  | "Misclassifications"
-  | "True Positive"
-  | "False Positive"
-  | "False Negative";
+  | ObjectPredictionOutcom
+  | ClassificationsPredictionOutcome;
 
 // TODO: add a proper type when filtering is done from the frontend. currently
 // we only get the filters form streamlit and pass them to the server so the
@@ -80,6 +90,7 @@ export type Filters = unknown & {
   prediction_filters?: unknown & {
     type?: PredictionType;
     outcome?: PredictionOutcome;
+    iou_threshold?: number;
   };
 };
 
@@ -99,6 +110,7 @@ export type Metric = z.infer<typeof MetricSchema>;
 export const Item2DEmbeddingSchema = PointSchema.extend({
   id: z.string(),
   label: z.string(),
+  score: z.number().optional(),
 });
 
 export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;

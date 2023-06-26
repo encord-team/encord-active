@@ -3,6 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, FrozenSet, List, NamedTuple, Optional, Set, Union, cast
 
+import numpy as np
 import pandas as pd
 from pandera.typing import DataFrame
 from pydantic import BaseModel, Field
@@ -50,7 +51,7 @@ class ObjectDetectionOutcomeType(str, Enum):
 class PredictionsFilters(BaseModel):
     type: MainPredictionType
     outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None
-    iou_threshold: Annotated[float, Field(ge=0, le=1)] = 0.5
+    iou_threshold: Optional[Annotated[float, Field(ge=0, le=1)]] = None
     ignore_frames_without_predictions: bool = True
 
     class Config:
@@ -171,8 +172,9 @@ def get_object_detection_predictions(
         model_predictions = labels[labels[LabelMatchSchema.is_false_negative]]
 
     model_predictions = model_predictions.set_index("identifier")
+    labels = labels.set_index("identifier")
 
-    return model_predictions, predictions_metric_datas
+    return model_predictions, labels
 
 
 def get_classification_predictions(
@@ -187,11 +189,7 @@ def get_classification_predictions(
 
     all_classes_classifications = get_class_idx(predictions_dir)
 
-    (
-        labels_filtered,
-        predictions_filtered,
-        model_predictions_matched_filtered,
-    ) = prediction_and_label_filtering_classification(
+    (labels, model_predictions, model_predictions_matched_filtered,) = prediction_and_label_filtering_classification(
         all_classes_classifications,
         all_classes_classifications,
         labels,
@@ -200,21 +198,14 @@ def get_classification_predictions(
     )
 
     img_id_intersection = list(
-        set(labels_filtered[ClassificationLabelSchema.img_id]).intersection(
-            set(predictions_filtered[ClassificationPredictionSchema.img_id])
+        set(labels[ClassificationLabelSchema.img_id]).intersection(
+            set(model_predictions[ClassificationPredictionSchema.img_id])
         )
     )
-    labels_filtered_intersection = labels_filtered[
-        labels_filtered[ClassificationLabelSchema.img_id].isin(img_id_intersection)
+    labels_filtered_intersection = labels[labels[ClassificationLabelSchema.img_id].isin(img_id_intersection)]
+    predictions_filtered_intersection = model_predictions[
+        model_predictions[ClassificationPredictionSchema.img_id].isin(img_id_intersection)
     ]
-    predictions_filtered_intersection = predictions_filtered[
-        predictions_filtered[ClassificationPredictionSchema.img_id].isin(img_id_intersection)
-    ]
-
-    _labels, _predictions = (
-        list(labels_filtered_intersection[ClassificationLabelSchema.class_id]),
-        list(predictions_filtered_intersection[ClassificationPredictionSchema.class_id]),
-    )
 
     _model_predictions = model_predictions_matched_filtered.copy()[
         model_predictions_matched_filtered[ClassificationPredictionMatchSchemaWithClassNames.img_id].isin(
@@ -222,7 +213,8 @@ def get_classification_predictions(
         )
     ]
 
-    _model_predictions = _model_predictions.set_index("identifier")
+    _model_predictions.set_index("identifier", inplace=True)
+    labels.set_index("identifier", inplace=True)
 
     if predictions_filters.outcome:
         value = 1.0 if predictions_filters.outcome == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS else 0.0
@@ -230,4 +222,4 @@ def get_classification_predictions(
             _model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
         ]
 
-    return _model_predictions, predictions_metric_datas
+    return _model_predictions, labels

@@ -6,9 +6,10 @@ import {
   Tooltip,
 } from "@ant-design/plots";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { IdValue, Item2DEmbedding } from "./api";
+import { IdValue, Item2DEmbedding, PredictionType } from "./api";
 import { bin } from "d3-array";
 import { hexbin } from "d3-hexbin";
+import { scaleLinear } from "d3-scale";
 import { counting, max } from "radash";
 
 const BINS = 20;
@@ -71,7 +72,7 @@ export const MetricDistributionTiny = ({
 
   return (
     <Column
-      className="w-full max-w-xs"
+      className="w-full max-h-12"
       autoFit={true}
       data={columns}
       columnWidthRatio={1}
@@ -82,13 +83,13 @@ export const MetricDistributionTiny = ({
       brush={
         bins.length > 1
           ? {
-            enabled: true,
-            type: "x-rect",
-            action: "filter",
-            mask: {
-              style: { fill: "rgba(255,0,0,0.15)" },
-            },
-          }
+              enabled: true,
+              type: "x-rect",
+              action: "filter",
+              mask: {
+                style: { fill: "rgba(255,0,0,0.15)" },
+              },
+            }
           : {}
       }
       onEvent={onEvent}
@@ -99,18 +100,22 @@ export const MetricDistributionTiny = ({
   );
 };
 
-const fixedFormatter = (value: number) => value.toFixed(2);
+const fixedFormatter = (value: string | number | null) =>
+  value != null ? parseFloat(value.toString()).toFixed(2) : "Missing";
 
 const HEX_BINS = 1000;
+const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export const ScatteredEmbeddings = ({
   embeddings,
   onSelectionChange,
   onReset,
+  predictionType,
 }: {
   embeddings: Item2DEmbedding[];
   onSelectionChange: (ids: Item2DEmbedding[]) => void;
   onReset: () => void;
+  predictionType?: PredictionType;
 }) => {
   const binnedItems = useMemo(() => {
     if (embeddings.length < HEX_BINS)
@@ -140,7 +145,7 @@ export const ScatteredEmbeddings = ({
       ];
       return { ...items, size: items.length, label, items };
     });
-  }, [embeddings]);
+  }, [JSON.stringify(embeddings)]);
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
@@ -151,18 +156,47 @@ export const ScatteredEmbeddings = ({
         );
       else if (type === "brush-reset-button:click") onReset();
     },
-    [binnedItems]
+    [JSON.stringify(binnedItems)]
   );
+
+  const colorConfig = useMemo<{
+    colorField: string;
+    color?: Parameters<typeof Scatter>[0]["color"];
+  }>(() => {
+    if (predictionType === "object")
+      return {
+        colorField: "score",
+        color: (datum) => getColor(datum.score ?? 0),
+      };
+    if (predictionType === "classification")
+      return {
+        colorField: "label",
+        color: (datum) =>
+          (datum.label as string).toLowerCase().includes("true")
+            ? "#3b82f6"
+            : "#ef4444",
+      };
+
+    return { colorField: "label" };
+  }, [predictionType]);
 
   return (
     <Scatter
+      {...colorConfig}
       data={binnedItems}
       xField="x"
       yField="y"
-      colorField="label"
       sizeField="size"
       size={[5, 30]}
       shape="circle"
+      legend={{
+        layout: "vertical",
+        position: "right",
+        rail: { size: 20, defaultLength: 200 },
+        label: {
+          formatter: fixedFormatter,
+        },
+      }}
       pointStyle={{ fillOpacity: 1 }}
       interactions={[{ type: "reset-button", enable: false }]}
       brush={{
