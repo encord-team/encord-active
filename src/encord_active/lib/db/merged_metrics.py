@@ -127,20 +127,6 @@ class MergedMetrics(object):
         if marshall:
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
 
-        # Add workflow stage metadata in runtime
-        for id_, name, filename in self.connection.execute("PRAGMA database_list"):
-            if name == "main" and filename is not None:
-                db_path = filename
-                break
-        merged_metrics["label_hash"] = merged_metrics.index.str.split("_", n=1).str[0]
-        lr_metadata = json.loads(ProjectFileStructure(Path(db_path).parent).label_row_meta.read_text(encoding="utf-8"))
-        lr_to_workflow_stage = {
-            lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
-            for lr_hash, metadata in lr_metadata.items()
-        }
-        merged_metrics["workflow_stage"] = merged_metrics["label_hash"].map(lr_to_workflow_stage)
-        merged_metrics.drop(columns="label_hash", inplace=True)
-
         return merged_metrics
 
     def replace_all(self, df: pd.DataFrame, marshall=True):

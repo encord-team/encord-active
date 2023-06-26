@@ -47,7 +47,7 @@ def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all()
 
-    return apply_filters(merged_metrics, filters)
+    return apply_filters(merged_metrics, filters, project)
 
 
 def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
