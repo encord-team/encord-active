@@ -24,13 +24,13 @@ class BoundingBoxPrediction:
     y: float
     w: float
     h: float
-    confidence: float
+    class_probs: np.ndarray
 
 
 @dataclass
 class SegmentationPrediction:
     points: np.ndarray  # an array of shape Nx2, where columns refer to relative x and y coordinates, respectively
-    confidence: float
+    class_probs: np.ndarray
 
 
 class BaseObjectModel:
@@ -57,6 +57,7 @@ class BaseObjectAcquisitionFunction(Metric):
         metric_type: MetricType,
         data_type: DataType,
         model: BaseObjectModel,
+        data_units: Optional[str] = None,
         annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
         embedding_type: Optional[EmbeddingType] = None,
         doc_url: Optional[str] = None,
@@ -68,19 +69,21 @@ class BaseObjectAcquisitionFunction(Metric):
             model (BaseObjectModel): Machine learning model used to score data samples.
         """
         self._model = model
+        self._data_units = data_units
         super().__init__(
             title, short_description, long_description, metric_type, data_type, annotation_type, embedding_type
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
-            if image is None:
-                continue
-            predicted_objects = self._model.predict_objects(image)
-            if predicted_objects is None:
-                continue
-            score = self.score_object_predictions(predicted_objects)
-            writer.write(score)
+        for du, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
+            if self._data_units is not None and du["data_unit"] in self._data_units:
+                if image is None:
+                    continue
+                predicted_objects = self._model.predict_objects(image)
+                if predicted_objects is None:
+                    continue
+                score = self.score_object_predictions(predicted_objects)
+                writer.write(score)
 
     @abstractmethod
     def score_object_predictions(
@@ -99,7 +102,7 @@ class BaseObjectAcquisitionFunction(Metric):
 
 
 class AverageFrameScore(BaseObjectAcquisitionFunction):
-    def __init__(self, model):
+    def __init__(self, model, data_units: Optional[str] = None):
         super().__init__(
             title="Average Frame Score",
             short_description="Ranks images by average of the prediction confidences",
@@ -112,12 +115,13 @@ class AverageFrameScore(BaseObjectAcquisitionFunction):
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
             model=model,
+            data_units=data_units,
         )
 
     def score_object_predictions(
         self, predictions: List[Union[BoundingBoxPrediction, SegmentationPrediction]]
     ) -> float:
         if predictions:
-            return sum([prediction.confidence for prediction in predictions]) / len(predictions)
+            return sum([prediction.class_probs.max() for prediction in predictions]) / len(predictions)
         else:
             return 0.0
