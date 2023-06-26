@@ -126,7 +126,6 @@ class MergedMetrics(object):
         )
         if marshall:
             merged_metrics.tags = merged_metrics.tags.apply(unmarshall_tags)
-
         return merged_metrics
 
     def replace_all(self, df: pd.DataFrame, marshall=True):
