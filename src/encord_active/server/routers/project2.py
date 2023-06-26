@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
-    ProjectTaggedLabel, ProjectTag, ProjectDataAnalytics, ProjectLabelAnalytics
+    ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.server.dependencies import verify_token
 from encord_active.server.settings import get_settings
@@ -76,11 +76,11 @@ def display_preview(project_hash: str, du_hash: str, frame: int, object_hash: Op
             query_tags = select(
                 ProjectTag,
             ).where(
-                ProjectTaggedLabel.project_hash == project_hash,
-                ProjectTaggedLabel.du_hash == du_hash,
-                ProjectTaggedLabel.frame == frame,
-                ProjectTaggedLabel.object_hash == object_hash,
-            ).join(ProjectTaggedLabel, ProjectTaggedLabel.tag_hash == ProjectTag.tag_hash)
+                ProjectTaggedObject.project_hash == project_hash,
+                ProjectTaggedObject.du_hash == du_hash,
+                ProjectTaggedObject.frame == frame,
+                ProjectTaggedObject.object_hash == object_hash,
+            ).join(ProjectTaggedObject, ProjectTaggedObject.tag_hash == ProjectTag.tag_hash)
         result_tags = sess.exec(query_tags).fetchall()
     if result is None:
         return None
@@ -178,11 +178,11 @@ def scatter_2d_data_metric(project_hash: str, x_metric: str, y_metric: str):
 def scatter_2d_label_metric(project_hash: str, x_metric: str, y_metric: str):
     with Session(engine) as sess:
         scatter_query = select(
-            ProjectLabelAnalytics.du_hash,
-            ProjectLabelAnalytics.frame,
+            ProjectObjectAnalytics.du_hash,
+            ProjectObjectAnalytics.frame,
             x_metric,
             y_metric  # FIXME: resolve to actual keys
-        ).where(ProjectLabelAnalytics.project_hash == project_hash)
+        ).where(ProjectObjectAnalytics.project_hash == project_hash)
         scatter_results = sess.exec(scatter_query).fetchall()
     return [
         {"x": x, "y": y, "du_hash": du_hash, "frame": frame}
