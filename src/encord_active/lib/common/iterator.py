@@ -141,7 +141,7 @@ class DatasetIterator(Iterator):
 
                         fake_data_unit = deepcopy(data_unit)
 
-                        for frame_id in range(int(data_unit["data_fps"] * data_unit["data_duration"])):
+                        for frame_id in range(len(list(video_images_dir.glob("*_*.*")))):
                             self.frame = frame_id
                             fake_data_unit["labels"] = data_unit["labels"].get(str(frame_id), {})
 
