@@ -47,14 +47,16 @@ In contrast to uncertainty-based methods, which prioritize examples that the mod
 
 We include the following diversity-based acquisition function:
 
-- [Image Diversity][ea-acquisition-function-image-diversity]: This metric clusters the images according to number of classes in the 
+- [Image Diversity][ea-acquisition-function-image-diversity]  
+
+  This metric clusters the images according to number of classes in the 
 ontology file. Then, it chooses samples from each cluster one-by-one to form an equal number of samples from 
 each cluster. Samples are chosen according to their proximity to cluster centroids (closer samples will be 
 chosen first).
 
 :::tip
 Diversity-based acquisition functions are generally easier to use compared to the uncertainty-based functions because 
-they may not require any ML model. See [diversity-sampling-on-unlabeled-data example](../tutorials/diversity-sampling-on-unlabeled-data.mdx) to 
+they may not require any ML model. See [diversity-sampling-on-unlabeled-data example][diversity-sampling-on-unlabeled-data-example] to 
 learn how to use them in you project easily.
 :::
 
@@ -81,3 +83,5 @@ Explore the [Easy Active Learning on MNIST][easy-active-learning-in-mnist] tutor
 [ea-acquisition-function-variance]: ../metrics/model-quality-metrics/#variance
 [ea-acquisition-function-entropy]: ../metrics/model-quality-metrics/#entropy
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
+[ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
+[diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx

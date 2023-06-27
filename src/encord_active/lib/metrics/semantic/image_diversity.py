@@ -29,7 +29,7 @@ and rank images inside each cluster by assigning lower
 score to the ones which are closer to the cluster center. Finally, ranked images in different clusters are 
 merged by keeping the samples of classes the same for the first _N_ samples.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-diverdity",
+            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-diversity",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.IMAGE,
