@@ -169,10 +169,11 @@ def execute_metrics(
     data_dir: Path,
     iterator_cls: Type[Iterator] = DatasetIterator,
     use_cache_only: bool = False,
+    on_unlabeled_data: bool = False,
     **kwargs,
 ):
     project = None if use_cache_only else fetch_project_info(data_dir)
-    iterator = iterator_cls(data_dir, project=project, **kwargs)
+    iterator = iterator_cls(data_dir, project=project, on_unlabeled_data=on_unlabeled_data, **kwargs)
 
     if "prediction_type" in kwargs:
         cache_dir = data_dir / "predictions" / kwargs["prediction_type"].value
