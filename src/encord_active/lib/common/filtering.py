@@ -43,22 +43,12 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure)
     filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
     filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
 
-    # Add workflow stage column in workflow projects
-    if is_workflow_project(pfs):
-        filtered["label_hash"] = filtered.index.str.split("_", n=1).str[0]
-        lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
-        lr_to_workflow_stage = {
-            lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
-            for lr_hash, metadata in lr_metadata.items()
-        }
-        filtered["workflow_stage"] = filtered["label_hash"].map(lr_to_workflow_stage)
-
     filtered = filter_tags(filtered, filters.tags or [])
     if filters.object_classes is not None:
         filtered = filter_object_classes(filtered, filters.object_classes)
 
     if filters.workflow_stages is not None:
-        filtered = filter_workflow_stages(filtered, filters.workflow_stages)
+        filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
 
     for column, categorical_filter in filters.categorical.items():
         non_applicable = filtered[pd.isna(filtered[column])]
@@ -73,10 +63,7 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure)
     for column, text_filter in filters.text.items():
         filtered = filtered[filtered[column].astype(str).str.contains(text_filter)]
 
-    columns_to_delete = ["data_row_id", "is_label_metric"]
-    if "label_hash" in filtered.columns:
-        columns_to_delete.append("label_hash")
-    filtered.drop(columns=columns_to_delete, inplace=True)
+    filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
 
     return filtered
 
@@ -123,7 +110,16 @@ def filter_object_classes(to_filter: pd.DataFrame, classes: List[str]):
         return filtered_user_input
 
 
-def filter_workflow_stages(to_filter: pd.DataFrame, stages: List[str]):
+def filter_workflow_stages(to_filter: pd.DataFrame, stages: List[str], pfs: ProjectFileStructure):
+    # Add 'workflow_stage' column for posterior filter / export actions
+    label_hashes = to_filter.index.str.split("_", n=1).str[0]
+    lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+    lr_to_workflow_stage = {
+        lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
+        for lr_hash, metadata in lr_metadata.items()
+    }
+    to_filter["workflow_stage"] = label_hashes.map(lr_to_workflow_stage)
+
     filtered_user_input = to_filter[to_filter["workflow_stage"].isin(stages)]
     return filtered_user_input
 
