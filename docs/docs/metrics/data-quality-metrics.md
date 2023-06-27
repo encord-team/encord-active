@@ -6,20 +6,20 @@ sidebar_position: 2
 
 Data Quality Metrics work on images or individual video frames and depend on the image content without labels.
 
-| Title                                                                                                                  | Metric Type                                                | Data Type                                                                                                          |
-|------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [Area](#area) - <small>Ranks images by their area (width/height).</small>                                              | `image`                                                    |                                                                                                                    |
-| [Aspect Ratio](#aspect-ratio) - <small>Ranks images by their aspect ratio (width/height).</small>                      | `image`                                                    |                                                                                                                    |
-| [Blue Values](#blue-values) - <small>Ranks images by how blue the average value of the image is.</small>               | `image`                                                    |                                                                                                                    |
-| [Blur](#blur) - <small>Ranks images by their blurriness.</small>                                                       | `image`                                                    |                                                                                                                    |
-| [Brightness](#brightness) - <small>Ranks images by their brightness.</small>                                           | `image`                                                    |                                                                                                                    |
-| [Contrast](#contrast) - <small>Ranks images by their contrast.</small>                                                 | `image`                                                    |                                                                                                                    |
-| [Green Values](#green-values) - <small>Ranks images by how green the average value of the image is.</small>            | `image`                                                    |                                                                                                                    |
-| [Image Singularity](#image-singularity) - <small>Finds duplicate and near-duplicate images.</small>                    | `image`                                                    |                                                                                                                    |
-| [Image Difficulty](#image-difficulty) - <small>Ranks images from easy samples to hard samples.</small>                 | `image`                                                    |                                                                                                                    |
-| [Random Values on Images](#random-values-on-images) - <small>Assigns a random value between 0 and 1 to images.</small> | `image`                                                    |                                                                                                                    |
-| [Red Values](#red-values) - <small>Ranks images by how red the average value of the image is.</small>                  | `image`                                                    |                                                                                                                    |
-| [Sharpness](#sharpness) - <small>Ranks images by their sharpness.</small>                                              | `image`                                                    |                                                                                                                    |
+| Title                                                                                                                                                   | Metric Type                                                | Data Type                                                                                                          |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [Area](#area) - <small>Ranks images by their area (width/height).</small>                                                                               | `image`                                                    |                                                                                                                    |
+| [Aspect Ratio](#aspect-ratio) - <small>Ranks images by their aspect ratio (width/height).</small>                                                       | `image`                                                    |                                                                                                                    |
+| [Blue Values](#blue-values) - <small>Ranks images by how blue the average value of the image is.</small>                                                | `image`                                                    |                                                                                                                    |
+| [Blur](#blur) - <small>Ranks images by their blurriness.</small>                                                                                        | `image`                                                    |                                                                                                                    |
+| [Brightness](#brightness) - <small>Ranks images by their brightness.</small>                                                                            | `image`                                                    |                                                                                                                    |
+| [Contrast](#contrast) - <small>Ranks images by their contrast.</small>                                                                                  | `image`                                                    |                                                                                                                    |
+| [Green Values](#green-values) - <small>Ranks images by how green the average value of the image is.</small>                                             | `image`                                                    |                                                                                                                    |
+| [Image Singularity](#image-singularity) - <small>Finds duplicate and near-duplicate images.</small>                                                     | `image`                                                    |                                                                                                                    |
+| [Image Diversity](#image-diversity) - <small> Forms clusters based on the ontology and ranks images from easy samples to hard samples.</small> | `image`                                                    |                                                                                                                    |
+| [Random Values on Images](#random-values-on-images) - <small>Assigns a random value between 0 and 1 to images.</small>                                  | `image`                                                    |                                                                                                                    |
+| [Red Values](#red-values) - <small>Ranks images by how red the average value of the image is.</small>                                                   | `image`                                                    |                                                                                                                    |
+| [Sharpness](#sharpness) - <small>Ranks images by their sharpness.</small>                                                                               | `image`                                                    |                                                                                                                    |
 
 
 ## Area  
@@ -91,7 +91,7 @@ This metric gives each image a score that shows each image's uniqueness.
 
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/semantic/image_singularity.py)
 
-## Image Difficulty
+## Image Diversity
 
 For selecting the first samples to annotate when there is no label in the project, choosing simple samples that 
 represent those classes well gives better results.
@@ -106,7 +106,7 @@ centers refer to easy samples.
 3. Different clusters are combined in a way that the result is ordered from easy to hard and the number of samples for 
 each class is balanced for the first _N_ samples.
 
-Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/semantic/image_difficulty.py)
+Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/semantic/image_diversity.py)
 
 ## Random Values on Images  
 Uses a uniform distribution to generate a value between 0 and 1 to each image  
