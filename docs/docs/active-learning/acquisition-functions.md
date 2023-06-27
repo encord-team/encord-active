@@ -56,7 +56,7 @@ chosen first).
 
 :::tip
 Diversity-based acquisition functions are generally easier to use compared to the uncertainty-based functions because 
-they may not require any ML model. See [diversity-sampling-on-unlabeled-data example][diversity-sampling-on-unlabeled-data-example] to 
+they may not require any ML model. See [diversity sampling on unlabeled data example][diversity-sampling-on-unlabeled-data-example] to 
 learn how to use them in you project easily.
 :::
 
@@ -84,4 +84,4 @@ Explore the [Easy Active Learning on MNIST][easy-active-learning-in-mnist] tutor
 [ea-acquisition-function-entropy]: ../metrics/model-quality-metrics/#entropy
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
 [ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
-[diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx
+[diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data
