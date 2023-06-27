@@ -108,17 +108,14 @@ def filter_object_classes(to_filter: pd.DataFrame, classes: List[str]):
 
 
 def filter_workflow_stages(to_filter: pd.DataFrame, stages: List[str], pfs: ProjectFileStructure):
-    # Add 'workflow_stage' column for posterior filter / export actions
     label_hashes = to_filter.index.str.split("_", n=1).str[0]
     lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
-    lr_to_workflow_stage = {
-        lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
+    filtered_label_hashes = {
+        lr_hash
         for lr_hash, metadata in lr_metadata.items()
+        if metadata.get("workflow_graph_node", dict()).get("title", None) in stages
     }
-    to_filter["workflow_stage"] = label_hashes.map(lr_to_workflow_stage)
-
-    filtered_user_input = to_filter[to_filter["workflow_stage"].isin(stages)]
-    return filtered_user_input
+    return to_filter[label_hashes.isin(filtered_label_hashes)]
 
 
 def add_non_applicable(df: pd.DataFrame, non_applicable: pd.DataFrame):
