@@ -416,3 +416,8 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
     def __eq__(self, other):
         return isinstance(other, BaseProjectFileStructure) and other.project_dir == self.project_dir
+
+
+def is_workflow_project(pfs: ProjectFileStructure):
+    label_row_meta: dict[str, dict] = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+    return len(label_row_meta) > 0 and next(iter(label_row_meta.values())).get("workflow_graph_node") is not None

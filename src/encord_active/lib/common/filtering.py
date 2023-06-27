@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from encord_active.lib.db.helpers.tags import Tag
 from encord_active.lib.db.tags import TagScope
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 UNTAGED_FRAMES_LABEL = "Untaged frames"
 NO_CLASS_LABEL = "No class"
@@ -24,6 +25,7 @@ class Range(BaseModel):
 class Filters(BaseModel):
     tags: Optional[List[Tag]] = None
     object_classes: Optional[List[str]] = None
+    workflow_stages: Optional[List[str]] = None
     text: dict[str, str] = {}
     categorical: dict[str, List[float]] = {}
     range: dict[str, Range] = {}
@@ -33,7 +35,7 @@ class Filters(BaseModel):
         return hash(json.dumps(self.dict(exclude_defaults=True)))
 
 
-def apply_filters(df: pd.DataFrame, filters: Filters):
+def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure):
     filtered = df.copy()
     filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
     filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
@@ -41,6 +43,9 @@ def apply_filters(df: pd.DataFrame, filters: Filters):
     filtered = filter_tags(filtered, filters.tags or [])
     if filters.object_classes is not None:
         filtered = filter_object_classes(filtered, filters.object_classes)
+
+    if filters.workflow_stages is not None:
+        filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
 
     for column, categorical_filter in filters.categorical.items():
         non_applicable = filtered[pd.isna(filtered[column])]
@@ -100,6 +105,17 @@ def filter_object_classes(to_filter: pd.DataFrame, classes: List[str]):
         return pd.concat([filtered_user_input, filtered_no_annotations])
     else:
         return filtered_user_input
+
+
+def filter_workflow_stages(to_filter: pd.DataFrame, stages: List[str], pfs: ProjectFileStructure):
+    label_hashes = to_filter.index.str.split("_", n=1).str[0]
+    lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+    filtered_label_hashes = {
+        lr_hash
+        for lr_hash, metadata in lr_metadata.items()
+        if metadata.get("workflow_graph_node", dict()).get("title", None) in stages
+    }
+    return to_filter[label_hashes.isin(filtered_label_hashes)]
 
 
 def add_non_applicable(df: pd.DataFrame, non_applicable: pd.DataFrame):

@@ -38,6 +38,7 @@ from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.utils import load_metric_dataframe
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import ProjectNotFound, fetch_project_meta
+from encord_active.lib.project.project_file_structure import is_workflow_project
 from encord_active.server.settings import Env, get_settings
 
 
@@ -80,10 +81,14 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     with st.container():
         filterable_columns = df.columns.to_list()
+        if is_workflow_project(get_state().project_paths):  # include 'workflow stage' filter in workflow projects
+            filterable_columns.append("workflow_stage")
         if "url" in filterable_columns:
             filterable_columns.remove("url")
         # Move some columns to the beginning
-        filterable_columns.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
+        filterable_columns.sort(
+            key=lambda column: column in ["object_class", "tags", "annotator", "workflow_stage"], reverse=True
+        )
 
         columns_to_filter = st.multiselect(
             "Filter by", filterable_columns, format_func=lambda name: name.replace("_", " ").title()
@@ -92,12 +97,12 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if not columns_to_filter:
             return df
 
-        filters = render_column_filters(df, columns_to_filter)
+        filters = render_column_filters(df, columns_to_filter, get_state().project_paths)
         get_state().filtering_state.filters = filters
-        return apply_filters(df, filters)
+        return apply_filters(df, filters, get_state().project_paths)
 
 
-def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
+def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str], pfs: ProjectFileStructure):
     filters = Filters()
 
     for column in columns_to_filter:
@@ -124,6 +129,20 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
                 "Values for object class",
                 options=class_options,
                 default=class_options,
+                key=key,
+            )
+
+        elif column == "workflow_stage":
+            lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+            lr_to_workflow_stage = {
+                lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
+                for lr_hash, metadata in lr_metadata.items()
+            }
+            workflow_stage_available_options = sorted(set(lr_to_workflow_stage.values()))
+            filters.workflow_stages = right.multiselect(
+                "Values for workflow stage",
+                options=workflow_stage_available_options,
+                default=workflow_stage_available_options,
                 key=key,
             )
 
