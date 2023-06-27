@@ -54,7 +54,7 @@ chosen first).
 
 :::tip
 Diversity-based acquisition functions are generally easier to use compared to the uncertainty-based functions because 
-they do not require any ML model. See [diversity-sampling-on-unlabeled-data example](../tutorials/diversity-sampling-on-unlabeled-data.mdx) to 
+they may not require any ML model. See [diversity-sampling-on-unlabeled-data example](../tutorials/diversity-sampling-on-unlabeled-data.mdx) to 
 learn how to use them in you project easily.
 :::
 
