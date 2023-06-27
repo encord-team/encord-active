@@ -1,7 +1,7 @@
 from typing import Dict, Union, Callable, Optional, TypeVar
 from enum import Enum
 from dataclasses import dataclass
-
+from sqlmodel import column
 from pydantic import BaseModel
 
 
@@ -21,7 +21,7 @@ class MetricType(Enum):
 class MetricVirtualDefinition:
     src: str
     flip_ord: bool
-    map: Callable[[Union[float, int]], Union[float, int]]
+    map: Callable[[Union[float, int, column]], Union[float, int, column]]
 
 
 @dataclass
