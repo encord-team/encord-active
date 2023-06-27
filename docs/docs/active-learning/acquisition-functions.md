@@ -39,6 +39,27 @@ On the following scenarios, uncertainty-based acquisition functions must be used
 - For convolutional neural networks, small, seemingly meaningless perturbations in the input space can completely change predictions.
 :::
 
+## Diversity-based acquisition functions {#diversity-based-acquisition-function}
+
+Diversity sampling is an active learning strategy that aims to ensure that the labeled training set includes a broad range of examples from across the input space. The underlying assumption is that a diverse set of training examples will allow the model to learn a more generalized representation, improving its performance on unseen data.
+
+In contrast to uncertainty-based methods, which prioritize examples that the model finds difficult to classify, diversity-based methods prioritize examples based on their novelty or dissimilarity to examples that are already in the training set. This can be particularly useful when the input space is large and the distribution of examples is uneven.
+
+We include the following diversity-based acquisition function:
+
+- [Image Diversity][ea-acquisition-function-image-diversity]  
+
+  This metric clusters the images according to number of classes in the 
+ontology file. Then, it chooses samples from each cluster one-by-one to form an equal number of samples from 
+each cluster. Samples are chosen according to their proximity to cluster centroids (closer samples will be 
+chosen first).
+
+:::tip
+Diversity-based acquisition functions are generally easier to use compared to the uncertainty-based functions because 
+they may not require any ML model. See [diversity-sampling-on-unlabeled-data example][diversity-sampling-on-unlabeled-data-example] to 
+learn how to use them in you project easily.
+:::
+
 ## Which acquisition function should I use?
 
 _“Ok, I have this list of acquisition functions now, but which one is the best? How do I choose?”_
@@ -62,3 +83,5 @@ Explore the [Easy Active Learning on MNIST][easy-active-learning-in-mnist] tutor
 [ea-acquisition-function-variance]: ../metrics/model-quality-metrics/#variance
 [ea-acquisition-function-entropy]: ../metrics/model-quality-metrics/#entropy
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
+[ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
+[diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx

@@ -23,7 +23,7 @@ from encord_active.lib.project.metadata import fetch_project_meta
 METRICS_TO_EXCLUDE = [
     "Random Values on Objects",
     "Random Values on Images",
-    "Image Difficulty",
+    "Image Diversity",
 ]
 
 
