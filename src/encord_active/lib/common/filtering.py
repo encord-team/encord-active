@@ -6,10 +6,7 @@ from pydantic import BaseModel
 
 from encord_active.lib.db.helpers.tags import Tag
 from encord_active.lib.db.tags import TagScope
-from encord_active.lib.project.project_file_structure import (
-    ProjectFileStructure,
-    is_workflow_project,
-)
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 UNTAGED_FRAMES_LABEL = "Untaged frames"
 NO_CLASS_LABEL = "No class"
