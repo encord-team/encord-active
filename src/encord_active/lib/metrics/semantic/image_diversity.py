@@ -16,9 +16,9 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 logger = logger.opt(colors=True)
 
 
-class ImageDifficulty(Metric):
+class ImageDiversity(Metric):
     def __init__(self):
-        super(ImageDifficulty, self).__init__(
+        super(ImageDiversity, self).__init__(
             title="Image Difficulty",
             short_description="Ranks images according to their proximity to class prototypes (lower values = closer to "
             "class prototypes = easy samples)",
