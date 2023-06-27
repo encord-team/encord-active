@@ -1,6 +1,7 @@
 import uuid
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
+from sqlalchemy.sql.operators import is_not
 
 from fastapi import APIRouter
 from sqlalchemy.sql.operators import in_op
