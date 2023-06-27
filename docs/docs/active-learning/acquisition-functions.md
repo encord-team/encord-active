@@ -11,11 +11,21 @@ The assumption is that samples the model is unconfident about are likely to be m
 
 We include the following uncertainty-based acquisition functions:
 
-- [Least Confidence][ea-acquisition-function-least-confidence]: $U(x) = 1 - P_\theta(\hat{y}|x)$, where $\hat{y} = \underset{y \in \mathcal{Y}}{\arg\max} P_\theta(y|x)$
-- [Margin][ea-acquisition-function-margin]: $U(x) = P_\theta(\hat{y_1}|x) - P_\theta(\hat{y_2}|x)$, where $\hat{y_1}$ and $\hat{y_2}$ are the first and second highest-predicted labels
-- [Variance][ea-acquisition-function-variance]: $U(x) = Var(P_\theta(y|x)) = \frac{1}{|Y|} \underset{y \in \mathcal{Y}}{\sum} (P_\theta(y|x) - \mu)^2$, where $\mu = \frac{1}{|Y|} \underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x)$
+- [Least Confidence][ea-acquisition-function-least-confidence]
 
-- [Entropy][ea-acquisition-function-entropy]: $U(x) = \mathcal{H}(P_\theta(y|x)) = -\underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x) \log P_\theta(y|x)$
+  $U(x) = 1 - P_\theta(\hat{y}|x)$, where $\hat{y} = \underset{y \in \mathcal{Y}}{\arg\max} P_\theta(y|x)$
+
+- [Margin][ea-acquisition-function-margin]
+
+  $U(x) = P_\theta(\hat{y_1}|x) - P_\theta(\hat{y_2}|x)$, where $\hat{y_1}$ and $\hat{y_2}$ are the first and second highest-predicted labels
+
+- [Variance][ea-acquisition-function-variance]
+
+  $U(x) = Var(P_\theta(y|x)) = \frac{1}{|Y|} \underset{y \in \mathcal{Y}}{\sum} (P_\theta(y|x) - \mu)^2$, where $\mu = \frac{1}{|Y|} \underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x)$
+
+- [Entropy][ea-acquisition-function-entropy]
+
+  $U(x) = \mathcal{H}(P_\theta(y|x)) = -\underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x) \log P_\theta(y|x)$
 
 :::tip
 
