@@ -65,9 +65,10 @@ class Iterator(Sized):
 
 
 class DatasetIterator(Iterator):
-    def __init__(self, cache_dir: Path, subset_size: Optional[int] = None, **kwargs):
+    def __init__(self, cache_dir: Path, subset_size: Optional[int] = None, skip_labeled_data: bool = False, **kwargs):
         super().__init__(cache_dir, subset_size, **kwargs)
         self.key = ""
+        self._skip_labeled_data = skip_labeled_data
         self.length = reduce(
             lambda s, lr: s
             + sum(map(lambda du: 1 if "objects" in du["labels"] else len(du["labels"]), lr["data_units"].values())),
@@ -85,6 +86,13 @@ class DatasetIterator(Iterator):
                     self.num_frames = len(label_row.data_units)
                     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
                     for data_unit in data_units:
+
+                        if self._skip_labeled_data:
+                            du_label = data_unit.get("labels", {})
+                            if du_label.get("objects", []) != [] or du_label.get("classifications", []) != []:
+                                pbar.update(1)
+                                continue
+
                         self.du_hash = data_unit["data_hash"]
                         self.frame = int(data_unit["data_sequence"])
                         try:
