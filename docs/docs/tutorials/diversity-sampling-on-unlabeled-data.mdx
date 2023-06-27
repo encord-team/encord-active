@@ -1,0 +1,32 @@
+---
+sidebar_position: 1
+---
+
+import TOCInline from "@theme/TOCInline";
+
+# Running Diversity Based Acquisition Function on Unlabeled Data
+
+In this tutorial, you will see how to run a clustering based diversity sampling to rank the images to label next.
+
+<TOCInline toc={toc.filter((node) => node.level === 2)} />
+
+:::note
+
+This tutorial assumes that you have [installed](../installation) `encord-active`.
+
+:::
+
+## 1. Execute metric
+
+First, you need to get the root directory of the encord-active project. Then, we will use ImageDiversity() metric
+
+```python
+from pathlib import Path
+from encord_active.lib.metrics.semantic.image_diversity import ImageDiversity
+from encord_active.lib.metrics.execute import execute_metrics
+
+data_dir = Path("/path/to/encord-active/project")
+acquisition_func = ImageDiversity()
+execute_metrics([acquisition_func], data_dir=data_dir, skip_labeled_data=True)
+```
+
