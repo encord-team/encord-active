@@ -11,21 +11,21 @@ import TOCInline from "@theme/TOCInline";
 
 :::note Requirements
 
-The active learning workflow in the Encord platform is specifically designed for workflow projects within the platform.
+Active learning workflows in the Encord platform are specifically designed for workflow projects within the platform.
 This requirement allows for seamless task movement between essential stages such as `label`, `review`, and `complete` when utilizing the SDK.
 
 Note that deviating from this requirement may require customizing certain steps to align with your specific needs.
 
 :::
 
-The active learning workflow in Encord Active consists of the following key stages:
-<TOCInline toc={toc.filter((node) => node.level === 2).map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
+[//]: # (The active learning workflow in Encord Active consists of the following key stages:)
+[//]: # (<TOCInline toc={toc.filter&#40;&#40;node&#41; => node.level === 2&#41;.map&#40;&#40;node, index&#41; => &#40;{ ...node, value: `${index + 1}. ${node.value}` }&#41;&#41;} />)
 
 ## Initialization
-To begin the active learning workflow, you need an initial labeled dataset for training the machine learning model.
+To start an active learning workflow, you need an initial labeled dataset for training the machine learning model.
 In the Encord platform, this corresponds to having a project with annotations.
 
-If you don't have any projects yet, you can watch the tutorial video on setting up a [workflow project](https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial) to get started quickly.
+If you don't have any projects yet, you can watch the tutorial video on setting up a [workflow project][workflow-project-tutorial] to get started quickly.
 
 ### Choose an Encord project
 
@@ -36,9 +36,9 @@ encord-active import project
 ```
 If you require detailed information on the options available during the import process, you can refer to the [Import from Encord platform][import-encord-project] guide.  
 
-If your workflow project already contains annotations, you can skip the next part of the initialization step and proceed directly to [Model training](#model-training).
+[//]: # (If your workflow project already contains annotations, you can skip the next part of the initialization step and proceed directly to [Model training]&#40;#model-training&#41;.)
 
-Alternatively, if you have a trained model that you intend to use in the active learning workflow, you can jump to the [Querying](#querying) step.
+[//]: # (Alternatively, if you have a trained model that you intend to use in the active learning workflow, you can jump to the [Querying]&#40;#querying&#41; step.)
 
 ### Prioritize high value data to label
 
@@ -48,7 +48,7 @@ This metric ranks images based on their ease of annotation, enabling prioritizat
 
 For example, you can follow these steps to prioritize labeling for data with the lowest `Image Difficulty` score:
 1. In the _Data Quality_ explorer page, navigate to the toolbox and click on the _Filter_ tab.
-2. Select the `No class` option under `Object Class` to filter unannotated data.
+2. Select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the unannotated data.
 3. Add the `Image Difficulty` filter and adjust the slider to select the 5% of data with the lowest score.
 4. Access the _Action_ tab in the toolbox.
 5. Click on the <kbd>🖋 Relabel</kbd> button and follow the instructions to [prioritize labeling][relabeling-guide] for the selected data.
@@ -59,32 +59,30 @@ For example, you can follow these steps to prioritize labeling for data with the
 Task prioritization for labeling is currently a closed-beta feature in the Encord platform. To learn more about this feature, please reach out to us on [Discord][join-discord] or via [email][ea-email].
 
 Nevertheless, to mimic the behavior of task prioritization, you can follow these steps:
-1. In the _Filter_ tab, select the `No class` option under `Object Class` to filter unannotated data.
+1. In the _Filter_ tab, select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the unannotated data.
 2. Use the [bulk tagging][bulk-tagging-feature] feature to mark them with a data tag, such as `unlabeled`.
-3. Access the _Action tab_ in the toolbox.
-4. Click on the <kbd>✅ Mark as Complete</kbd> button and follow the instructions to temporarily move all unannotated data to the workflow's `Complete` stage.
-5. Return to the _Filter_ tab, add the `Image Difficulty` filter and adjust the slider to select the 5% of unannotated data with the lowest score.
-6. Access the _Action_ tab in the toolbox again.
-7. Click on the <kbd>🖋 Relabel</kbd> button and follow the instructions to [prioritize labeling][relabeling-guide] for the selected data.
-8. Once the selected data has been labeled, use the following filter combination to bring back the unannotated data from to the `Complete` stage to the first labeling stage:
+3. Add the `Image Difficulty` filter and adjust the slider to select the 5% of unannotated data with the lowest score.
+4. Use the bulk tagging feature to mark this further selection with a data tag, such as `to label next`.
+5. Reset the filters and choose the `unlabeled` tag option under `Tags`.
+6. Access the _Action tab_ in the toolbox and click on the <kbd>✅ Mark as Complete</kbd> button and follow the instructions to temporarily move all unannotated data to the workflow's `Complete` stage.
+7. Return to the _Filter_ tab, reset the filters and choose the `to label next` tag option under `Tags`.
+8. Access the _Action_ tab in the toolbox again, click on the <kbd>🖋 Relabel</kbd> button and follow the instructions to move the selected data to the workflow's first annotation stage.
+9. Once the selected data has been labeled, use the following filter combination to bring back the unannotated data from the `Complete` stage to the first labeling stage:
   Select the  `No class` option under `Object Class` and choose the proper tag name (e.g. `unlabeled`) option under `Tags`.
 
 By following these steps, you can ensure that the first labeling stage contains only the prioritized data for labeling, and the task states align at the end with the flow that utilizes the task prioritization feature.
 
 :::
 
-## Model training {#model-training}
+[//]: # (## Model training {#model-training})
 
-## Querying {#querying}
+[//]: # (## Querying {#querying})
 
-## Labeling
+[//]: # (## Labeling)
 
-## Model update
+[//]: # (## Model update)
 
-## Iteration
-
-
-https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
+[//]: # (## Iteration)
 
 
 [ea-email]: mailto:active@encord.com
@@ -94,3 +92,4 @@ https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#wo
 [relabeling-guide]: ../user-guide/relabeling
 [standard-filter-feature]: ../user-guide/filtering#standard-filter-feature
 [bulk-tagging-feature]: ../user-guide/tagging#bulk-tagging
+[workflow-project-tutorial]: https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
