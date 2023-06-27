@@ -1,20 +1,25 @@
+import uuid
 from os import environ
-from typing import Optional, Dict, Tuple, Union, List
+from typing import Optional, Dict, Tuple, Union, List, Type
 from urllib.parse import quote
+from sqlalchemy.sql.operators import is_not
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
+from sqlalchemy import func
 from sqlmodel import Session, select
 
+from encord_active.db.metrics import DataMetrics, ClassificationMetrics, ObjectMetrics, MetricDefinition
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
-    ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics
+    ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics, ProjectDataMetadata, \
+    ProjectClassificationAnalytics
 from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.server.dependencies import verify_token
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.settings import get_settings
 
 router = APIRouter(
     prefix="/projects_v2",
     tags=["projects_v2"],
-    dependencies=[Depends(verify_token)],
+    # FIXME: dependencies=[Depends(verify_token)],
 )
 
 engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
@@ -36,34 +41,79 @@ def get_all_projects():
     }
 
 
+def _metric_summary(metrics: Dict[str, MetricDefinition]):
+    return {
+        metric_name: {
+            "title": metric.title,
+            "short_desc": metric.short_desc,
+            "long_desc": metric.long_desc,
+            "type": metric.type.name,
+        }
+        for metric_name, metric in metrics.items()
+    }
+
+
 @router.get("/get/{project_hash}/summary")
-def get_project_summary():
+def get_project_summary(project_hash: uuid.UUID):
     with Session(engine) as sess:
-        pass
+        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+        if project is None:
+            raise ValueError()
+
+        tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
     return {
-        "title": "",
-        "name": "",
-        "ontology": "",
-        "data_metrics": [],
-        "label_metrics": [],
-        "tags": [],
+        "name": project.project_name,
+        "description": project.project_description,
+        "ontology": project.project_ontology,
+        "data": {
+            "metrics": _metric_summary(DataMetrics),
+            "enums": {},
+        },
+        "objects": {
+            "metrics": _metric_summary(ObjectMetrics),
+            "enums": {
+                "feature_hash": None,
+            },
+        },
+        "classifications": {
+            "metrics": _metric_summary(ClassificationMetrics),
+            "enums": {
+                "feature_hash": None,
+            },
+        },
+        "tags": {
+            tag.tag_hash: tag.name
+            for tag in tags
+        },
     }
 
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/{object_hash?}")
 def display_preview(project_hash: str, du_hash: str, frame: int, object_hash: Optional[str] = None):
+    objects = []
     with Session(engine) as sess:
+        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         query = select(
             ProjectDataUnitMetadata.data_uri,
             ProjectDataUnitMetadata.data_uri_is_video,
-            ProjectDataUnitMetadata.objects
+            ProjectDataUnitMetadata.objects,
+            ProjectDataUnitMetadata.data_hash,
         ).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
             ProjectDataUnitMetadata.du_hash == du_hash,
             ProjectDataUnitMetadata.frame == frame
         )
         result = sess.exec(query).fetchone()
+        if result is None:
+            raise ValueError("Missing project data unit metadata")
+        uri, uri_is_video, objects, data_hash = result
+        label_hash = sess.exec(select(ProjectDataMetadata.label_hash)
+                               .where(ProjectDataMetadata.project_hash == project_hash,
+                                      ProjectDataMetadata.data_hash == data_hash)).first()
+        if label_hash is None:
+            raise ValueError("Missing label_hash")
+
         if object_hash is None:
             query_tags = select(
                 ProjectTag,
@@ -82,9 +132,6 @@ def display_preview(project_hash: str, du_hash: str, frame: int, object_hash: Op
                 ProjectTaggedObject.object_hash == object_hash,
             ).join(ProjectTaggedObject, ProjectTaggedObject.tag_hash == ProjectTag.tag_hash)
         result_tags = sess.exec(query_tags).fetchall()
-    if result is None:
-        return None
-    uri, uri_is_video, objects = result
     if object_hash is None:
         objects = [
             obj
@@ -95,15 +142,18 @@ def display_preview(project_hash: str, du_hash: str, frame: int, object_hash: Op
             return None
     if uri is not None:
         settings = get_settings()
-        relative_path = settings.SERVER_START_PATH
-        # FIXME:
-        raise ValueError("Not yet implemented")
-        # url_path = url_to_file_path(uri, project_dir) # FIXME: store project_dir in database.
-        # if url_path is not None:
-        #    uri = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+        root_path = settings.SERVER_START_PATH.expanduser().resolve()
+        url_path = url_to_file_path(uri, root_path)
+        if url_path is not None:
+            relative_path = url_path.relative_to(root_path)
+            uri = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+    elif project is not None and project.project_remote_ssh_key_path is not None:
+        encord_project = get_encord_project(ssh_key_path=project.project_remote_ssh_key_path, project_hash=project_hash)
+        uri = encord_project.get_label_row(
+            label_hash, get_signed_url=True,
+        )["data_units"][du_hash]["data_link"]
     else:
-        # Also: NOT YET IMPLEMENTED!!!
-        pass
+        raise ValueError(f"Cannot resolve project url")
     return {
         "url": uri,
         "video_timestamp": "",
@@ -118,25 +168,248 @@ def display_preview(project_hash: str, du_hash: str, frame: int, object_hash: Op
     }
 
 
-@router.get("/get/{project_hash}/data_search")
-def search_data(
-        project_hash: str,
-        metric_filters: Dict[str, Tuple[Union[int, float], Union[int, float]]],
-        enum_filters: Dict[str, List[str]],
+@router.get("/get/{project_hash}/item/{du_hash}/{frame}/")
+def item(project_hash: str, du_hash: str, frame: int):
+    with Session(engine) as sess:
+        du_meta = sess.exec(select(ProjectDataUnitMetadata).where(
+            ProjectDataUnitMetadata.project_hash == project_hash,
+            ProjectDataUnitMetadata.du_hash == du_hash,
+            ProjectDataUnitMetadata.frame == frame
+        )).first()
+        du_analytics = sess.exec(
+            select(
+                ProjectDataAnalytics
+            ).where(
+                ProjectDataAnalytics.project_hash == project_hash,
+                ProjectDataAnalytics.du_hash == du_hash,
+                ProjectDataAnalytics.frame == frame,
+            )
+        ).first()
+        object_analytics = sess.exec(
+            select(
+                ProjectObjectAnalytics
+            ).where(
+                ProjectObjectAnalytics.project_hash == project_hash,
+                ProjectObjectAnalytics.du_hash == du_hash,
+                ProjectObjectAnalytics.frame == frame,
+            )
+        ).fetchall()
+        classification_analytics = sess.exec(
+            select(
+                ProjectClassificationAnalytics
+            ).where(
+                ProjectClassificationAnalytics.project_hash == project_hash,
+                ProjectClassificationAnalytics.du_hash == du_hash,
+                ProjectClassificationAnalytics.frame == frame,
+            )
+        ).fetchall()
+    if du_meta is None or du_analytics is None:
+        raise ValueError
+    obj_metrics = {
+        o.object_hash: o
+        for o in object_analytics or []
+    }
+    classify_metrics = {
+        c.classification_hash: c
+        for c in classification_analytics or []
+    }
+
+    return {
+        "metrics": {
+            k: getattr(du_analytics, k)
+            for k in DataMetrics
+        },
+        "objects": [
+            {
+                **obj,
+                "metrics": {
+                    k: getattr(obj_metrics[obj["objectHash"]], k)
+                    for k in ObjectMetrics
+                },
+                "tags": [],
+            }
+            for obj in du_meta.objects
+        ],
+        "classifications": [
+            {
+                **classify,
+                "metrics": {
+                    k: getattr(classify_metrics[classify["classificationHash"]], k)
+                    for k in ClassificationMetrics
+                },
+                "tags": [],
+            }
+            for classify in du_meta.classifications
+        ]
+    }
+
+
+def _get_metric_domain(domain: str) -> Tuple[
+    Union[Type[ProjectDataAnalytics], Type[ProjectObjectAnalytics], Type[ProjectClassificationAnalytics]],
+    Dict[str, MetricDefinition]
+]:
+    if domain == "data":
+        return ProjectDataAnalytics, DataMetrics
+    elif domain == "object":
+        return ProjectObjectAnalytics, ObjectMetrics
+    elif domain == "classification":
+        return ProjectClassificationAnalytics, ClassificationMetrics
+    else:
+        raise ValueError("Bad domain")
+
+
+def _where_metric_not_null(cls, metric_name: str, metrics: Dict[str, MetricDefinition]):
+    metric = metrics[metric_name]
+    if metric.virtual is not None:
+        metric_name = metric.virtual.src
+    return is_not(getattr(cls, metric_name), None)
+
+
+def _get_metric(cls, metric_name: str, metrics: Dict[str, MetricDefinition]):
+    metric = metrics[metric_name]
+    if metric.virtual is not None:
+        return metric.virtual.map(getattr(cls, metric.virtual.src))
+    return getattr(cls, metric_name)
+
+
+def _load_metric(
+        sess: Session,
+        project_hash: uuid.UUID,
+        metric_name: str,
+        metric: MetricDefinition,
+        cls: Type[Union[ProjectDataAnalytics, ProjectObjectAnalytics, ProjectClassificationAnalytics]]
+) -> dict:
+    if metric.virtual is not None:
+        metric_attr = getattr(cls, metric.virtual.src)
+    else:
+        metric_attr = getattr(cls, metric_name)
+    where = [
+        cls.project_hash == project_hash,
+        is_not(metric_attr, None)
+    ]
+    count: int = sess.exec(select(func.count()).where(*where)).first()
+    if count > 0:
+        metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()
+        metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()
+        median_offset = count // 2
+        q1_offset = count // 4
+        q3_offset = (count * 3) // 4
+        median = sess.exec(
+            select(metric_attr).where(*where).order_by(metric_attr).offset(median_offset).limit(1)).first()
+        q1 = sess.exec(select(metric_attr).where(*where).order_by(metric_attr).offset(q1_offset).limit(1)).first()
+        q3 = sess.exec(select(metric_attr).where(*where).order_by(metric_attr).offset(q3_offset).limit(1)).first()
+        if metric.virtual is not None:
+            metric_min = metric.virtual.map(metric_min)
+            q1 = metric.virtual.map(q1)
+            median = metric.virtual.map(median)
+            q3 = metric.virtual.map(q3)
+            metric_max = metric.virtual.map(metric_max)
+            if metric.virtual.flip_ord:
+                metric_min, metric_max = metric_max, metric_min
+                q1, q3 = q3, q1
+    else:
+        metric_min = None
+        q1 = None
+        median = None
+        q3 = None
+        metric_max = None
+    return {
+        "title": metric.title,
+        "short_desc": metric.short_desc,
+        "long_desc": metric.long_desc,
+        "type": metric.type.name,
+        "statistics": {
+            "min": metric_min,
+            "q1": q1,
+            "median": median,
+            "q3": q3,
+            "max": metric_max,
+            "count": count,
+        }
+    }
+
+
+@router.get("/get/{project_hash}/metrics/{domain}/summary")
+def metric_summary(
+        project_hash: uuid.UUID,
+        domain: str
+):
+    domain_ty, domain_metrics = _get_metric_domain(domain)
+    with Session(engine) as sess:
+        count: int = sess.exec(select(func.count()).where(
+            domain_ty.project_hash == project_hash
+        )).first()
+    return {
+        "count": count,
+        "metrics": {
+            metric_name: _load_metric(sess, project_hash, metric_name, metric, domain_ty)
+            for metric_name, metric in domain_metrics.items()
+        },
+        "enums": {
+            # FIXME: do summary of object classes
+        }
+    }
+
+
+@router.get("/get/{project_hash}/metrics/{domain}/search")
+def metric_search(
+        project_hash: uuid.UUID,
+        domain: str,
+        metric_filters: Optional[Dict[str, Tuple[Union[int, float], Union[int, float]]]] = None,
+        enum_filters: Optional[Dict[str, List[str]]] = None,
         order_by: Optional[str] = None,
         desc: bool = False
 ):
-    # FIXME: Need hardcoded definition of all metrics for the 2 queries
+    domain_ty, domain_metrics = _get_metric_domain(domain)
+
+    # Add metric filtering.
     query_filters = []
+    if metric_filters is not None:
+        for metric_name, (range_start, range_end) in metric_filters.items():
+            metric_meta = domain_metrics[metric_name]
+            metric_filter = getattr(domain_ty, metric_name)
+            if metric_meta.virtual is not None:
+                range_start = metric_meta.virtual.map(range_start)
+                range_end = metric_meta.virtual.map(range_end)
+                if metric_meta.virtual.flip_ord:
+                    range_start, range_end = range_end, range_start
+                metric_filter = getattr(domain_ty, metric_meta.virtual.src)
+            if range_start == range_end:
+                query_filters.append(
+                    metric_filter == range_start
+                )
+            else:
+                query_filters.append(
+                    metric_filter >= range_start
+                )
+                query_filters.append(
+                    metric_filter <= range_end
+                )
+
+    if enum_filters is not None:
+        for enum_filter_name, enum_filter_list in enum_filters.items():
+            if enum_filter_list not in ["feature_hash"]:
+                raise ValueError(f"Unsupported enum filter: {enum_filter_name}")
+            enum_filter_col = getattr(domain_ty, enum_filter_name)
+            # FIXME: implement this
 
     with Session(engine) as sess:
         search_query = select(
-            ProjectDataAnalytics.du_hash,
-            ProjectDataAnalytics.frame,
+            domain_ty.du_hash,
+            domain_ty.frame,
         ).where(
-            ProjectDataAnalytics.project_hash == project_hash,
+            domain_ty.project_hash == project_hash,
             *query_filters
-        ).limit(
+        )
+        if order_by is not None:
+            order_by_field = getattr(domain_ty, order_by)
+            if desc:
+                order_by_field = order_by_field.desc()
+            search_query = search_query.order_by(
+                order_by_field
+            )
+
+        search_query = search_query.limit(
             # 10_000 max results in a search query (+1 to detect truncation).
             limit=10_001
         )
@@ -152,46 +425,29 @@ def search_data(
     }
 
 
-@router.get("/get/{project_hash}/label_search")
-def search_labels(project_hash: str, filters: Dict[str, Tuple[int, int]]) -> None:
-    # FIXME: search (new tables)
-    return None
-
-
-@router.get("/get/{project_hash}/data_scatter2d")
-def scatter_2d_data_metric(project_hash: str, x_metric: str, y_metric: str):
+@router.get("/get/{project_hash}/metrics/{domain}/scatter")
+def scatter_2d_data_metric(project_hash: str, domain: str, x_metric: str, y_metric: str):
+    domain_ty, domain_metrics = _get_metric_domain(domain)
     with Session(engine) as sess:
         scatter_query = select(
-            ProjectDataAnalytics.du_hash,
-            ProjectDataAnalytics.frame,
-            x_metric,
-            y_metric  # FIXME: resolve to actual keys
-        ).where(ProjectDataAnalytics.project_hash == project_hash)
+            domain_ty.du_hash,
+            domain_ty.frame,
+            _get_metric(domain_ty, x_metric, domain_metrics),
+            _get_metric(domain_ty, y_metric, domain_metrics),
+        ).where(
+            domain_ty.project_hash == project_hash,
+            _where_metric_not_null(domain_ty, x_metric, domain_metrics),
+            _where_metric_not_null(domain_ty, y_metric, domain_metrics),
+        )
         scatter_results = sess.exec(scatter_query).fetchall()
-    return [
-        {"x": x, "y": y, "du_hash": du_hash, "frame": frame}
+    results = [
+        {"x": x, "y": y, "n": 1, "du_hash": du_hash, "frame": frame}
         for du_hash, frame, x, y in scatter_results
     ]
+    return {
+        "sampling": 1.0,
+        "results": results,
+    }
 
-
-@router.get("/get/{project_hash}/label_scatter2d")
-def scatter_2d_label_metric(project_hash: str, x_metric: str, y_metric: str):
-    with Session(engine) as sess:
-        scatter_query = select(
-            ProjectObjectAnalytics.du_hash,
-            ProjectObjectAnalytics.frame,
-            x_metric,
-            y_metric  # FIXME: resolve to actual keys
-        ).where(ProjectObjectAnalytics.project_hash == project_hash)
-        scatter_results = sess.exec(scatter_query).fetchall()
-    return [
-        {"x": x, "y": y, "du_hash": du_hash, "frame": frame}
-        for du_hash, frame, x, y in scatter_results
-    ]
-
-
-@router.get("/get/{project_hash}")
-@router.get("/get/{project_hash}/metric_outliers")
-def get_outliers(project_hash, metric_name: str) -> None:
-    # FIXME: list all outliers (for outlier summary)
-    return None
+@router.get("/get/{project_hash}/metrics/{domain}/distribution")
+def get_metric_distribution(project_hash: str, domain: str, metric: str):

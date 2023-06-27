@@ -10,12 +10,13 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 from encord_active.server.dependencies import verify_premium
 from encord_active.server.utils import get_similarity_finder
 
-from .routers import project
+from .routers import project, project2
 from .settings import get_settings
 
 app = FastAPI()
 
 app.include_router(project.router)
+app.include_router(project2.router)
 
 origins = ["http://localhost:5173", "http://localhost:8501", get_settings().ALLOWED_ORIGIN]
 
