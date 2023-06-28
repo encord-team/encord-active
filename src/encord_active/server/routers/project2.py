@@ -1,3 +1,4 @@
+import json
 import uuid
 from enum import Enum
 from os import environ
@@ -402,11 +403,14 @@ def metric_summary(
 def metric_search(
         project_hash: uuid.UUID,
         domain: AnalysisDomain,
-        metric_filters: Optional[Dict[str, Tuple[Union[int, float], Union[int, float]]]] = None,
-        enum_filters: Optional[Dict[str, List[str]]] = None,
+        metric_filters: Optional[str] = None,
+        enum_filters: Optional[str] = None,
         order_by: Optional[str] = None,
         desc: bool = False
 ):
+    metric_filters: Optional[Dict[str, Tuple[Union[int, float], Union[int, float]]]] = None if metric_filters is None \
+        else json.loads(metric_filters)
+    enum_filters: Optional[Dict[str, List[str]]] = None if enum_filters is None else json.loads(enum_filters)
     domain_ty, domain_metrics, domain_grouping = _get_metric_domain(domain)
 
     # Add metric filtering.
