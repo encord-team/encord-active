@@ -140,15 +140,26 @@ class DatasetIterator(Iterator):
                         extract_frames(video_path, video_images_dir, self.du_hash)
 
                         fake_data_unit = deepcopy(data_unit)
-                        for frame_sequence, frame_annotations in data_unit["labels"].items():
-                            self.frame = int(frame_sequence)
-                            fake_data_unit["labels"] = frame_annotations
-                            image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_sequence}.*"), None)
+
+                        for frame_id in range(len(list(video_images_dir.glob("*_*.*")))):
+                            self.frame = frame_id
+                            fake_data_unit["labels"] = data_unit["labels"].get(str(frame_id), {})
+
+                            if self._skip_labeled_data:
+                                if (
+                                    fake_data_unit["labels"].get("objects", []) != []
+                                    or fake_data_unit["labels"].get("classifications", []) != []
+                                ):
+                                    pbar.update(1)
+                                    continue
+
+                            image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_id}.*"), None)
                             if image_path:
                                 yield fake_data_unit, Image.open(image_path)
                             else:
                                 yield fake_data_unit, None
                             pbar.update(1)
+
                 else:
                     logger.error(f"Label row '{label_hash}' with data type '{label_row.data_type}' is not recognized")
 
