@@ -1,140 +1,47 @@
-from abc import abstractmethod
-from typing import Any, Optional, Union
+from typing import List, Union
 
 import numpy as np
-from PIL import Image
 
-from encord_active.lib.common.iterator import Iterator
-from encord_active.lib.labels.classification import ClassificationType
-from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import (
-    AnnotationType,
-    DataType,
-    EmbeddingType,
-    MetricType,
+from encord_active.lib.metrics.acquisition_metrics.common import (
+    AcquisitionFunction,
+    BaseClassificationModel,
+    BaseObjectModel,
+    BoundingBoxPrediction,
+    SegmentationPrediction,
 )
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
 
 
-class BaseModelWrapper:
-    def __init__(self, model):
-        self._model = model
-
-    @classmethod
-    @abstractmethod
-    def prepare_data(cls, images: list[Image]) -> list[Any]:
-        """
-        Reads and prepares data samples from local storage to feed the model with it.
-
-        Args:
-            images (list[Image]): Images to use as data samples.
-
-        Returns:
-            Data samples prepared to be used as input of `self.predict_probabilities()` method.
-        """
-        pass
-
-    def predict_probabilities(self, data) -> Optional[np.ndarray]:
-        """
-        Calculate the model-predicted class probabilities of the examples in the data sample found by the model.
-
-        Args:
-            data: Input data sample.
-
-        Returns:
-            An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
-            Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities that
-            `x` belongs to each possible class, for each of the K classes.
-            In the case the model can't extract any example `x` from the data sample, the method returns ``None``.
-        """
-        pred_proba = self._predict_proba(data)
-        if pred_proba is not None and pred_proba.min() < 0:
-            raise ValueError("Model-predicted class probabilities cannot be less than zero.")
-        return pred_proba
-
-    @abstractmethod
-    def _predict_proba(self, X) -> Optional[np.ndarray]:
-        """
-        Probability estimates.
-
-        Note that in the multilabel case, each sample can have any number of labels.
-        This returns the marginal probability that the given sample has the label in question.
-
-        Args:
-            X ({array-like} of shape (n_samples, n_features)): Input data.
-
-        Returns:
-            An array of shape (n_samples, n_classes). Probability of the sample for each class in the model.
-            In the case the model fails, the method returns ``None``.
-        """
-        pass
-
-
-class SKLearnModelWrapper(BaseModelWrapper):
-    @classmethod
-    def prepare_data(cls, images: list[Image]) -> list[Any]:
-        return [np.asarray(image).flatten() / 255 for image in images]
-
-    def _predict_proba(self, X) -> Optional[np.ndarray]:
-        return self._model.predict_proba(X)
-
-
-class AcquisitionFunction(Metric):
-    def __init__(
-        self,
-        title: str,
-        short_description: str,
-        long_description: str,
-        metric_type: MetricType,
-        data_type: DataType,
-        model: BaseModelWrapper,
-        annotation_type: list[Union[ObjectShape, ClassificationType]] = [],
-        embedding_type: Optional[EmbeddingType] = None,
-        doc_url: Optional[str] = None,
-    ):
-        """
-        Creates an instance of the acquisition function with a custom model to score data samples.
-
-        Args:
-            model (BaseModelWrapper): Machine learning model used to score data samples.
-        """
-        self._model = model
+class AverageFrameScore(AcquisitionFunction):
+    def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
-            title, short_description, long_description, metric_type, data_type, annotation_type, embedding_type
+            title="Average Frame Score",
+            short_description="Ranks images by average of the prediction confidences",
+            long_description="For each image, this acquisition function returns the average confidence of the "
+            "predictions. If there is no prediction for the given image, it assigns a value of "
+            "zero. This acquisition function makes sense when at least one ground truth object is expected "
+            "for each image.",
+            doc_url="",
+            metric_type=MetricType.HEURISTIC,
+            data_type=DataType.IMAGE,
+            annotation_type=AnnotationType.NONE,
+            model=model,
         )
 
-    def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for _, image in iterator.iterate(desc=f"Running {self.metadata.title} acquisition function"):
-            if image is None:
-                continue
-            prepared_data = self._model.prepare_data([image])
-            if not prepared_data:
-                continue
-            pred_proba = self._model.predict_probabilities(prepared_data)
-            if pred_proba is None:
-                continue
-            score = self.score_predicted_class_probabilities(pred_proba)
-            writer.write(score)
+    def score_predictions(
+        self, predictions: Union[np.ndarray, List[Union[BoundingBoxPrediction, SegmentationPrediction]]]
+    ) -> float:
 
-    @abstractmethod
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
-        """
-        Scores model-predicted class probabilities according the acquisition function description.
-
-        Args:
-            pred_proba: An array of shape ``(N, K)`` of model-predicted class probabilities, ``P(label=k|x)``.
-                Each row of this matrix corresponds to an example `x` and contains the model-predicted probabilities
-                that `x` belongs to each possible class, for each of the K classes.
-
-        Returns:
-             score: Score of the model-predicted class probabilities.
-        """
-        pass
+        if isinstance(predictions, np.ndarray):
+            raise Exception("This acquisition function only evaluates object predictions (bounding-box/segmentation)")
+        if predictions:
+            return sum([prediction.class_probs.max() for prediction in predictions]) / len(predictions)
+        else:
+            return 0.0
 
 
 class Entropy(AcquisitionFunction):
-    def __init__(self, model):
+    def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
             title="Entropy",
             short_description="Ranks images by their entropy.",
@@ -156,15 +63,22 @@ class Entropy(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+    def score_predictions(
+        self, predictions: Union[np.ndarray, List[Union[BoundingBoxPrediction, SegmentationPrediction]]]
+    ) -> float:
         # silence divide by zero warning as the result will be correct (log2(0) is -inf, when multiplied by 0 gives 0)
         # raise exception if invalid (negative) values are found in the pred_proba array
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.reshape(1, -1)
+        else:
+            predictions = np.stack([prediction.class_probs for prediction in predictions])
+
         with np.errstate(divide="ignore", invalid="raise"):
-            return -np.multiply(pred_proba, np.nan_to_num(np.log2(pred_proba))).sum(axis=1).mean()
+            return -np.multiply(predictions, np.nan_to_num(np.log2(predictions))).sum(axis=1).mean()
 
 
 class LeastConfidence(AcquisitionFunction):
-    def __init__(self, model):
+    def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
             title="Least Confidence",
             short_description="Ranks images by their least confidence score.",
@@ -187,12 +101,19 @@ class LeastConfidence(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
-        return (1 - pred_proba.max(axis=1)).mean()
+    def score_predictions(
+        self, predictions: Union[np.ndarray, List[Union[BoundingBoxPrediction, SegmentationPrediction]]]
+    ) -> float:
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.reshape(1, -1)
+        else:
+            predictions = np.stack([prediction.class_probs for prediction in predictions])
+
+        return (1 - predictions.max(axis=1)).mean()
 
 
 class Margin(AcquisitionFunction):
-    def __init__(self, model):
+    def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
             title="Margin",
             short_description="Ranks images by their margin score.",
@@ -212,14 +133,21 @@ class Margin(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
+    def score_predictions(
+        self, predictions: Union[np.ndarray, List[Union[BoundingBoxPrediction, SegmentationPrediction]]]
+    ) -> float:
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.reshape(1, -1)
+        else:
+            predictions = np.stack([prediction.class_probs for prediction in predictions])
+
         # move the second highest and highest class prediction values to the last two columns respectively
-        preds = np.partition(pred_proba, -2)
+        preds = np.partition(predictions, -2)
         return (preds[:, -1] - preds[:, -2]).mean()
 
 
 class Variance(AcquisitionFunction):
-    def __init__(self, model):
+    def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
             title="Variance",
             short_description="Ranks images by their variance.",
@@ -242,5 +170,12 @@ class Variance(AcquisitionFunction):
             model=model,
         )
 
-    def score_predicted_class_probabilities(self, pred_proba: np.ndarray) -> float:
-        return pred_proba.var(axis=1).mean()
+    def score_predictions(
+        self, predictions: Union[np.ndarray, List[Union[BoundingBoxPrediction, SegmentationPrediction]]]
+    ) -> float:
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.reshape(1, -1)
+        else:
+            predictions = np.stack([prediction.class_probs for prediction in predictions])
+
+        return predictions.var(axis=1).mean()
