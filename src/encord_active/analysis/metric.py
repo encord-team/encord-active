@@ -1,10 +1,15 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, Set, Optional, Dict, Union
 from dataclasses import dataclass
-from torch import ByteTensor, BoolTensor, FloatTensor
+
+from torch import Tensor
 
 from encord_active.analysis.base import BaseAnalysis, TemporalBaseAnalysis
-from encord_active.analysis.types import ObjectMetadata
+from encord_active.analysis.types import (
+    ImageTensor,
+    MaskTensor,
+    MetricResult,
+    ObjectMetadata,
+)
 
 
 @dataclass
@@ -15,20 +20,13 @@ class MetricConfig:
             and transformed implicitly to the index under ORDER BY ASC
             instead. (smallest value is rank 1, largest value is rank N)
     """
+
     version: int
     ranked: bool
     # FIXME: groupings (float => string enum)
 
 
-def image_width(image: ByteTensor) -> int:
-    return image.shape[1]
-
-
-def image_height(image: ByteTensor) -> int:
-    return image.shape[0]
-
-
-MetricDependencies = Dict[str, Union[FloatTensor, float]]
+MetricDependencies = dict[str, Tensor | float]
 
 
 class OneImageMetric(BaseAnalysis, metaclass=ABCMeta):
@@ -37,22 +35,30 @@ class OneImageMetric(BaseAnalysis, metaclass=ABCMeta):
     also apply to objects by only considering the subset of the image the object is present in.
     """
 
-    def __init__(self, ident: str, dependencies: Set[str], long_name: str, short_desc: str, long_desc: str,
-                 apply_to_objects: bool = True, apply_to_classifications: bool = True) -> None:
-        super().__init__(ident, dependencies, long_name, short_desc, long_desc)
+    def __init__(
+        self,
+        ident: str,
+        dependencies: set[str],
+        long_name: str,
+        desc: str,
+        apply_to_objects: bool = True,
+        apply_to_classifications: bool = True,
+    ) -> None:
+        super().__init__(ident, dependencies, long_name, desc)
         self.apply_to_objects = apply_to_objects
         self.apply_to_classifications = apply_to_classifications
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor]) -> float:
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
         ...
 
-    def calculate_for_object(self, deps: MetricDependencies, image: ByteTensor, mask: BoolTensor,
-                             coordinates: FloatTensor) -> float:
-        _coordinates = coordinates  # Only used in override logic for special case shortcuts
+    def calculate_for_object(
+        self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor  # , coordinates: FloatTensor
+    ) -> MetricResult:
+        # _coordinates = coordinates  # Only used in override logic for special case shortcuts
         return self.calculate(deps, image, mask)
 
-    def calculate_for_image(self, deps: MetricDependencies, image: ByteTensor) -> float:
+    def calculate_for_image(self, deps: MetricDependencies, image: ImageTensor) -> MetricResult:
         return self.calculate(deps, image, None)
 
 
@@ -63,7 +69,7 @@ class OneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, obj: ObjectMetadata) -> float:
+    def calculate(self, deps: MetricDependencies, obj: ObjectMetadata) -> MetricResult:
         ...
 
 
@@ -74,15 +80,17 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def calculate(self, img_deps: MetricDependencies, obj_deps: Dict[str, MetricDependencies],
-                  objs: Dict[str, ObjectMetadata]) -> Dict[str, float]:
+    def calculate(
+        self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
+    ) -> dict[str, MetricResult]:
         ...
 
 
 class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
     @abstractmethod
-    def calculate(self, img_deps: MetricDependencies, obj_deps: Dict[str, MetricDependencies],
-                  objs: Dict[str, ObjectMetadata]) -> float:
+    def calculate(
+        self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
+    ) -> MetricResult:
         ...
 
 
@@ -91,17 +99,30 @@ class TemporalOneImageMetric(TemporalBaseAnalysis, metaclass=ABCMeta):
     Temporal variant of [OneImageMetric]
     """
 
-    def __init__(self, ident: str, dependencies: Set[str], long_name: str, short_desc: str, long_desc: str,
-                 prev_frame_count: int, next_frame_count: int,
-                 apply_to_objects: bool = True, apply_to_classifications: bool = True) -> None:
-        super().__init__(ident, dependencies, long_name, short_desc, long_desc, prev_frame_count, next_frame_count)
+    def __init__(
+        self,
+        ident: str,
+        dependencies: set[str],
+        long_name: str,
+        desc: str,
+        prev_frame_count: int,
+        next_frame_count: int,
+        apply_to_objects: bool = True,
+        apply_to_classifications: bool = True,
+    ) -> None:
+        super().__init__(ident, dependencies, long_name, desc, prev_frame_count, next_frame_count)
         self.apply_to_objects = apply_to_objects
         self.apply_to_classifications = apply_to_classifications
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, image: ByteTensor, mask: Optional[BoolTensor],
-                  prev_frames: List[Tuple[MetricDependencies, ByteTensor, Optional[BoolTensor]]],
-                  next_frames: List[Tuple[MetricDependencies, ByteTensor, Optional[BoolTensor]]]) -> float:
+    def calculate(
+        self,
+        deps: MetricDependencies,
+        image: ImageTensor,
+        mask: MaskTensor | None,
+        prev_frames: list[tuple[MetricDependencies, ImageTensor, MaskTensor | None]],
+        next_frames: list[tuple[MetricDependencies, ImageTensor, MaskTensor | None]],
+    ) -> MetricResult:
         ...
 
 
@@ -111,23 +132,26 @@ class TemporalOneObjectMetric(TemporalBaseAnalysis, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, obj: ObjectMetadata,
-                  prev_frames: List[Tuple[MetricDependencies, ObjectMetadata]],
-                  next_frames: List[Tuple[MetricDependencies, ObjectMetadata]]) -> float:
+    def calculate(
+        self,
+        deps: MetricDependencies,
+        obj: ObjectMetadata,
+        prev_frames: list[tuple[MetricDependencies, ObjectMetadata]],
+        next_frames: list[tuple[MetricDependencies, ObjectMetadata]],
+    ) -> MetricResult:
         ...
 
 
 class TemporalObjectByFrameMetric(TemporalBaseAnalysis, metaclass=ABCMeta):
     @abstractmethod
-    def calculate(self, img_deps: MetricDependencies, obj_deps: Dict[str, MetricDependencies],
-                  objs: Dict[str, ObjectMetadata],
-                  prev_frames: List[
-                      Tuple[MetricDependencies, Dict[str, MetricDependencies], Dict[str, ObjectMetadata]]
-                  ],
-                  next_frames: List[
-                      Tuple[MetricDependencies, Dict[str, MetricDependencies], Dict[str, ObjectMetadata]]
-                  ],
-                  ) -> Dict[str, float]:
+    def calculate(
+        self,
+        img_deps: MetricDependencies,
+        obj_deps: dict[str, MetricDependencies],
+        objs: dict[str, ObjectMetadata],
+        prev_frames: list[tuple[MetricDependencies, dict[str, MetricDependencies], dict[str, ObjectMetadata]]],
+        next_frames: list[tuple[MetricDependencies, dict[str, MetricDependencies], dict[str, ObjectMetadata]]],
+    ) -> dict[str, MetricResult]:
         ...
 
 
@@ -137,15 +161,21 @@ class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
     also apply to objects by only considering the subset of the image the object is present in.
     """
 
-    def __init__(self, ident: str, dependencies: Set[str], long_name: str, short_desc: str, long_desc: str,
-                 apply_to_images: bool = True,
-                 apply_to_objects: bool = True,
-                 apply_to_classifications: bool = True) -> None:
-        super().__init__(ident, dependencies, long_name, short_desc, long_desc)
+    def __init__(
+        self,
+        ident: str,
+        dependencies: set[str],
+        long_name: str,
+        desc: str,
+        apply_to_images: bool = True,
+        apply_to_objects: bool = True,
+        apply_to_classifications: bool = True,
+    ) -> None:
+        super().__init__(ident, dependencies, long_name, desc)
         self.apply_to_images = apply_to_images
         self.apply_to_objects = apply_to_objects
         self.apply_to_classifications = apply_to_classifications
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies) -> float:
+    def calculate(self, deps: MetricDependencies) -> MetricResult:
         ...
