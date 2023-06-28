@@ -1,7 +1,7 @@
 import pandas as pd
 from pandera.typing import DataFrame
 
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     ClassificationLabelSchema,
     ClassificationPredictionMatchSchema,
     ClassificationPredictionMatchSchemaWithClassNames,

@@ -12,7 +12,7 @@ from encord_active.app.common.state import MetricNames, PredictionsState, get_st
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     ClassificationLabelSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
@@ -177,20 +177,20 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         predictions_dir = get_state().project_paths.predictions / prediction_type.value
 
         predictions_metric_datas, _ = use_memo(
-            lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir),
+            lambda: reader.read_prediction_metric_data(predictions_dir, metrics_dir),
             key=f"predictions_metrics_data_{project_path}_{prediction_type.value}",
         )
 
         label_metric_datas, _ = use_memo(
-            lambda: reader.get_label_metric_data(metrics_dir),
+            lambda: reader.read_label_metric_data(metrics_dir),
             key=f"label_metric_datas_{project_path}_{prediction_type.value}",
         )
         model_predictions, _ = use_memo(
-            lambda: reader.load_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
+            lambda: reader.read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
             key=f"model_predictions_{project_path}_{prediction_type.value}",
         )
         labels, _ = use_memo(
-            lambda: reader.get_labels(predictions_dir, label_metric_datas, prediction_type),
+            lambda: reader.read_labels(predictions_dir, label_metric_datas, prediction_type),
             key=f"labels_{project_path}_{prediction_type.value}",
         )
 

@@ -1,13 +1,11 @@
-from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, TypedDict, Union, cast
+from typing import Iterable, List, Optional, Union, cast
 
 import pandas as pd
-import pandera as pa
-import pandera.dtypes as padt
 from loguru import logger
 from natsort import natsorted
-from pandera.typing import DataFrame, Series
+from pandera.typing import DataFrame
 
 from encord_active.lib.common.utils import load_json
 from encord_active.lib.metrics.utils import (
@@ -17,69 +15,29 @@ from encord_active.lib.metrics.utils import (
     load_available_metrics,
     load_metric_dataframe,
 )
+from encord_active.lib.model_predictions.filters import (
+    filter_labels_for_frames_wo_predictions,
+    prediction_and_label_filtering_classification,
+    prediction_and_label_filtering_detection,
+)
+from encord_active.lib.model_predictions.map_mar import compute_mAP_and_mAR
+from encord_active.lib.model_predictions.types import (
+    ClassificationLabelSchema,
+    ClassificationOutcomeType,
+    ClassificationPredictionMatchSchema,
+    ClassificationPredictionMatchSchemaWithClassNames,
+    ClassificationPredictionSchema,
+    LabelMatchSchema,
+    LabelSchema,
+    MetricEntryPoint,
+    ObjectDetectionOutcomeType,
+    OntologyObjectJSON,
+    PredictionMatchSchema,
+    PredictionSchema,
+    PredictionsFilters,
+)
 from encord_active.lib.model_predictions.writer import MainPredictionType
-
-
-class OntologyObjectJSON(TypedDict):
-    featureHash: str
-    name: str
-    color: str
-
-
-@dataclass
-class MetricEntryPoint:
-    metric_path: Path
-    is_predictions: bool
-    filter_fn: Optional[Callable[[MetricData], Any]] = None
-
-
-class ClassificationLabelSchema(IdentifierSchema):
-    url: Series[str] = pa.Field()
-    img_id: Series[padt.Int64] = pa.Field(coerce=True)
-    class_id: Series[padt.Int64] = pa.Field(coerce=True)
-
-
-class ClassificationPredictionSchema(ClassificationLabelSchema):
-    confidence: Series[padt.Float64] = pa.Field(coerce=True)
-
-
-class ClassificationPredictionMatchSchema(ClassificationPredictionSchema):
-    is_true_positive: Series[float] = pa.Field()
-    gt_class_id: Series[padt.Int64] = pa.Field(coerce=True)
-
-
-class ClassificationPredictionMatchSchemaWithClassNames(ClassificationPredictionMatchSchema):
-    class_name: Series[str] = pa.Field()
-    gt_class_name: Series[str] = pa.Field()
-
-
-class ClassificationLabelMatchSchema(ClassificationLabelSchema):
-    is_false_negative: Series[bool] = pa.Field()
-
-
-class LabelSchema(IdentifierSchema):
-    url: Series[str] = pa.Field()
-    img_id: Series[padt.Int64] = pa.Field(coerce=True)
-    class_id: Series[padt.Int64] = pa.Field(coerce=True)
-    x1: Series[padt.Float64] = pa.Field(nullable=True, coerce=True)
-    y1: Series[padt.Float64] = pa.Field(nullable=True, coerce=True)
-    x2: Series[padt.Float64] = pa.Field(nullable=True, coerce=True)
-    y2: Series[padt.Float64] = pa.Field(nullable=True, coerce=True)
-    rle: Series[object] = pa.Field(nullable=True, coerce=True)
-
-
-class PredictionSchema(LabelSchema):
-    confidence: Series[padt.Float64] = pa.Field(coerce=True)
-    iou: Series[padt.Float64] = pa.Field(coerce=True)
-
-
-class PredictionMatchSchema(PredictionSchema):
-    is_true_positive: Series[float] = pa.Field()
-    false_positive_reason: Series[str] = pa.Field()
-
-
-class LabelMatchSchema(LabelSchema):
-    is_false_negative: Series[bool] = pa.Field()
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def check_model_prediction_availability(predictions_dir):
@@ -95,7 +53,7 @@ def filter_label_metrics_for_predictions(metric: MetricData) -> bool:
     return not rest
 
 
-def get_metric_data(entry_points: List[MetricEntryPoint], append_level_to_titles: bool = True) -> List[MetricData]:
+def read_metric_data(entry_points: List[MetricEntryPoint], append_level_to_titles: bool = True) -> List[MetricData]:
     all_metrics: List[MetricData] = []
 
     for entry in entry_points:
@@ -150,7 +108,7 @@ def _load_csv_and_merge_metrics(path: Path, metric_data: List[MetricData]) -> Op
     return append_metric_columns(df, metric_data)
 
 
-def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List[MetricData]:
+def read_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List[MetricData]:
     predictions_metric_dir = predictions_dir / "metrics"
     if not predictions_metric_dir.is_dir():
         return []
@@ -159,10 +117,10 @@ def get_prediction_metric_data(predictions_dir: Path, metrics_dir: Path) -> List
         MetricEntryPoint(metrics_dir, is_predictions=False, filter_fn=filter_label_metrics_for_predictions),
         MetricEntryPoint(predictions_metric_dir, is_predictions=True, filter_fn=filter_none_empty_metrics),
     ]
-    return get_metric_data(entry_points)
+    return read_metric_data(entry_points)
 
 
-def load_model_predictions(
+def read_model_predictions(
     predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
 ) -> Union[DataFrame[PredictionSchema], DataFrame[ClassificationPredictionSchema], None]:
     df = _load_csv_and_merge_metrics(predictions_dir / "predictions.csv", metric_data)
@@ -176,17 +134,17 @@ def load_model_predictions(
         return None
 
 
-def get_label_metric_data(metrics_dir: Path) -> List[MetricData]:
+def read_label_metric_data(metrics_dir: Path) -> List[MetricData]:
     if not metrics_dir.is_dir():
         return []
 
     entry_points = [
         MetricEntryPoint(metrics_dir, is_predictions=False, filter_fn=filter_none_empty_metrics),
     ]
-    return get_metric_data(entry_points)
+    return read_metric_data(entry_points)
 
 
-def get_labels(
+def read_labels(
     predictions_dir: Path, metric_data: List[MetricData], prediction_type: MainPredictionType
 ) -> Union[DataFrame[LabelSchema], DataFrame[ClassificationLabelSchema], None]:
     df = _load_csv_and_merge_metrics(predictions_dir / "labels.csv", metric_data)
@@ -200,21 +158,200 @@ def get_labels(
         return None
 
 
-def get_gt_matched(predictions_dir: Path) -> Optional[dict]:
+def read_gt_matched(predictions_dir: Path) -> Optional[dict]:
     gt_path = predictions_dir / "ground_truths_matched.json"
     return load_json(gt_path)
 
 
-def get_class_idx(predictions_dir: Path) -> dict[str, OntologyObjectJSON]:
+def read_class_idx(predictions_dir: Path) -> dict[str, OntologyObjectJSON]:
     class_idx_pth = predictions_dir / "class_idx.json"
     return load_json(class_idx_pth) or {}
 
 
-def get_classification_labels(predictions_dir: Path) -> Optional[DataFrame[ClassificationLabelSchema]]:
+def read_classification_labels(predictions_dir: Path) -> Optional[DataFrame[ClassificationLabelSchema]]:
     predictions = pd.read_csv(predictions_dir / "labels.csv")
     return predictions.pipe(DataFrame[ClassificationLabelSchema])
 
 
-def get_classification_predictions(predictions_dir: Path) -> Optional[DataFrame[ClassificationPredictionSchema]]:
+def read_classification_predictions(predictions_dir: Path) -> Optional[DataFrame[ClassificationPredictionSchema]]:
     labels = pd.read_csv(predictions_dir / "predictions.csv")
     return labels.pipe(DataFrame[ClassificationPredictionSchema])
+
+
+def match_predictions_and_labels(
+    model_predictions: DataFrame[ClassificationPredictionSchema], labels: DataFrame[ClassificationLabelSchema]
+) -> DataFrame[ClassificationPredictionMatchSchema]:
+    _model_predictions = model_predictions.copy()
+    _labels = labels.copy()
+
+    _model_predictions[ClassificationPredictionMatchSchema.is_true_positive] = (
+        _model_predictions[ClassificationPredictionSchema.class_id]
+        .eq(_labels[ClassificationLabelSchema.class_id])
+        .astype(float)
+    )
+    _model_predictions[ClassificationPredictionMatchSchema.gt_class_id] = _labels[ClassificationLabelSchema.class_id]
+
+    return _model_predictions.pipe(ClassificationPredictionMatchSchema)
+
+
+@lru_cache
+def read_prediction_files(project_file_structure: ProjectFileStructure, prediction_type: MainPredictionType):
+    metrics_dir = project_file_structure.metrics
+    predictions_dir = project_file_structure.predictions / prediction_type.value
+
+    predictions_metric_datas = read_prediction_metric_data(predictions_dir, metrics_dir)
+    label_metric_datas = read_label_metric_data(metrics_dir)
+
+    model_predictions = read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
+    labels = read_labels(predictions_dir, label_metric_datas, prediction_type)
+
+    return predictions_metric_datas, label_metric_datas, model_predictions, labels
+
+
+def get_model_prediction_by_id(project_file_structure: ProjectFileStructure, id: str):
+    for prediction_type in MainPredictionType:
+        _, _, model_predictions, _ = read_prediction_files(project_file_structure, prediction_type)
+        if model_predictions is not None and id in pd.Index(model_predictions["identifier"]):
+            try:
+                df, _ = get_model_predictions(project_file_structure, PredictionsFilters(type=prediction_type))
+                if df is not None:
+                    return {**df.loc[id].dropna().to_dict(), "identifier": id}
+            except Exception as err:
+                pass
+
+
+@lru_cache
+def get_model_predictions(
+    project_file_structure: ProjectFileStructure,
+    predictions_filters: PredictionsFilters,
+):
+    predictions_dir = project_file_structure.predictions / predictions_filters.type.value
+    predictions_metric_datas, label_metric_datas, model_predictions, labels = read_prediction_files(
+        project_file_structure, predictions_filters.type
+    )
+    if model_predictions is None:
+        raise Exception("Couldn't load model predictions")
+
+    if labels is None:
+        raise Exception("Couldn't load labels properly")
+
+    if predictions_filters.type == MainPredictionType.OBJECT:
+        return get_object_detection_predictions(
+            predictions_filters,
+            predictions_dir,
+            predictions_metric_datas,
+            label_metric_datas,
+            cast(DataFrame[PredictionSchema], model_predictions),
+            cast(DataFrame[LabelSchema], labels),
+        )
+    else:
+        return get_classification_predictions(
+            predictions_filters,
+            predictions_dir,
+            predictions_metric_datas,
+            label_metric_datas,
+            cast(DataFrame[ClassificationPredictionSchema], model_predictions),
+            cast(DataFrame[ClassificationLabelSchema], labels),
+        )
+
+
+def get_object_detection_predictions(
+    predictions_filters: PredictionsFilters,
+    predictions_dir: Path,
+    predictions_metric_datas: List[MetricData],
+    label_metric_datas: List[MetricData],
+    model_predictions: DataFrame[PredictionSchema],
+    labels: DataFrame[LabelSchema],
+):
+    matched_gt = read_gt_matched(predictions_dir)
+    if not matched_gt:
+        raise Exception("Couldn't match ground truths")
+
+    all_classes_objects = read_class_idx(predictions_dir)
+
+    (predictions_filtered, labels_filtered, metrics, precisions,) = compute_mAP_and_mAR(
+        model_predictions,
+        labels,
+        matched_gt,
+        all_classes_objects,
+        iou_threshold=predictions_filters.iou_threshold,
+        ignore_unmatched_frames=predictions_filters.ignore_frames_without_predictions,
+    )
+
+    # Sort predictions and labels according to selected metrics.
+    pred_sort_column = predictions_metric_datas[0].name
+    sorted_model_predictions = predictions_filtered.sort_values([pred_sort_column], axis=0)
+
+    label_sort_column = label_metric_datas[0].name
+    sorted_labels = labels_filtered.sort_values([label_sort_column], axis=0)
+
+    if predictions_filters.ignore_frames_without_predictions:
+        labels_filtered = filter_labels_for_frames_wo_predictions(predictions_filtered, sorted_labels)
+    else:
+        labels_filtered = sorted_labels
+
+    labels, metrics, model_predictions, precisions = prediction_and_label_filtering_detection(
+        all_classes_objects,
+        labels_filtered,
+        metrics,
+        sorted_model_predictions,
+        precisions,
+    )
+
+    if predictions_filters.outcome in [
+        ObjectDetectionOutcomeType.TRUE_POSITIVES,
+        ObjectDetectionOutcomeType.FALSE_POSITIVES,
+    ]:
+        value = 1.0 if predictions_filters.outcome == ObjectDetectionOutcomeType.TRUE_POSITIVES else 0.0
+        model_predictions = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == value]
+    elif predictions_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+        model_predictions = labels[labels[LabelMatchSchema.is_false_negative]]
+
+    model_predictions = model_predictions.set_index("identifier")
+    labels = labels.set_index("identifier")
+
+    return model_predictions, labels
+
+
+def get_classification_predictions(
+    predictions_filters: PredictionsFilters,
+    predictions_dir: Path,
+    predictions_metric_datas: List[MetricData],
+    label_metric_datas: List[MetricData],
+    model_predictions: DataFrame[ClassificationPredictionSchema],
+    labels: DataFrame[ClassificationLabelSchema],
+):
+    model_predictions_matched = match_predictions_and_labels(model_predictions, labels)
+
+    all_classes_classifications = read_class_idx(predictions_dir)
+
+    (labels, model_predictions, model_predictions_matched_filtered,) = prediction_and_label_filtering_classification(
+        all_classes_classifications,
+        all_classes_classifications,
+        labels,
+        model_predictions,
+        model_predictions_matched,
+    )
+
+    img_id_intersection = list(
+        set(labels[ClassificationLabelSchema.img_id]).intersection(
+            set(model_predictions[ClassificationPredictionSchema.img_id])
+        )
+    )
+
+    _model_predictions = model_predictions_matched_filtered.copy()[
+        model_predictions_matched_filtered[ClassificationPredictionMatchSchemaWithClassNames.img_id].isin(
+            img_id_intersection
+        )
+    ]
+
+    _model_predictions.set_index("identifier", inplace=True)
+    labels.set_index("identifier", inplace=True)
+
+    if predictions_filters.outcome:
+        value = 1.0 if predictions_filters.outcome == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS else 0.0
+        _model_predictions = _model_predictions[
+            _model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
+        ]
+
+    return _model_predictions, labels

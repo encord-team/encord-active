@@ -10,7 +10,6 @@ from encord_active_components.components.explorer import explorer
 from loguru import logger
 from pandera.typing import DataFrame
 
-import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.auth.jwt import get_auth_token
 from encord_active.app.common.components.divider import divider
@@ -22,9 +21,6 @@ from encord_active.app.model_quality.prediction_type_builder import (
     MetricType,
     ModelQualityPage,
     PredictionTypeBuilder,
-)
-from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
-    ObjectDetectionOutcomeType,
 )
 from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
@@ -46,9 +42,14 @@ from encord_active.lib.model_predictions.map_mar import (
     compute_mAP_and_mAR,
 )
 from encord_active.lib.model_predictions.reader import (
+    check_model_prediction_availability,
+    read_class_idx,
+    read_gt_matched,
+)
+from encord_active.lib.model_predictions.types import (
     LabelMatchSchema,
+    ObjectDetectionOutcomeType,
     PredictionMatchSchema,
-    get_class_idx,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.server.settings import get_settings
@@ -87,7 +88,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
         self.display_settings()
 
         matched_gt, _ = use_memo(
-            lambda: reader.get_gt_matched(predictions_dir),
+            lambda: read_gt_matched(predictions_dir),
             key=f"matched_gt_{get_state().project_paths.project_dir.as_posix()}",
         )
         if not matched_gt:
@@ -154,7 +155,7 @@ class ObjectTypeBuilder(PredictionTypeBuilder):
 
     def render_view_options(self):
         if not get_state().predictions.all_classes_objects:
-            get_state().predictions.all_classes_objects = get_class_idx(
+            get_state().predictions.all_classes_objects = read_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.OBJECT.value
             )
 
@@ -326,7 +327,7 @@ matched to any predictions. The remaining objects are predictions, where colors 
         return view_df
 
     def is_available(self) -> bool:
-        return reader.check_model_prediction_availability(
+        return check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.OBJECT.value
         )
 

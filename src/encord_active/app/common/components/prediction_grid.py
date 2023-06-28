@@ -20,7 +20,7 @@ from encord_active.lib.common.image_utils import (
     show_image_and_draw_polygons,
     show_image_with_predictions_and_label,
 )
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     ClassificationPredictionMatchSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     LabelMatchSchema,

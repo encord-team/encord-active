@@ -8,7 +8,7 @@ import pandera.dtypes as dtypes
 from pandera.typing import DataFrame, Series
 
 from encord_active.lib.charts.scopes import PredictionMatchScope
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     LabelMatchSchema,
     PredictionMatchSchema,
 )

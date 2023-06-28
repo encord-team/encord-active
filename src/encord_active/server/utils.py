@@ -23,7 +23,7 @@ from encord_active.lib.metrics.utils import (
     MetricScope,
     load_available_metrics,
 )
-from encord_active.lib.model_predictions.reader import get_class_idx as _get_class_idx
+from encord_active.lib.model_predictions.reader import read_class_idx as _read_class_idx
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
@@ -60,8 +60,8 @@ def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
 
 
 @lru_cache
-def get_class_idx(predictions_dir: Path):
-    return _get_class_idx(predictions_dir)
+def read_class_idx(predictions_dir: Path):
+    return _read_class_idx(predictions_dir)
 
 
 def partial_column(column: Union[pd.Index, pd.Series], parts: int):
@@ -252,7 +252,7 @@ def build_item_object_predictions(
 
     is_true_positive = row.pop("is_true_positive")
 
-    class_idx = get_class_idx(project_file_structure.predictions / MainPredictionType.OBJECT.value)
+    class_idx = read_class_idx(project_file_structure.predictions / MainPredictionType.OBJECT.value)
     class_name = row.pop("class_name", None)
 
     metadata["annotator"] = "Prediction"
@@ -264,16 +264,9 @@ def build_item_object_predictions(
             "name": class_name,
             "color": "#22c55e" if is_true_positive else "#ef4444",
             "shape": "polygon",
-            "value": class_name,
-            "createdAt": "Thu, 25 Aug 2022 15:46:59 GMT",
-            "createdBy": "robot@cord.tech",
             "confidence": row["confidence"],
             "objectHash": object_hash,
             "featureHash": class_idx[str(class_id)]["featureHash"],
-            "lastEditedAt": "Thu, 25 Aug 2022 15:46:59 GMT",
-            "lastEditedBy": "robot@encord.com",
-            "manualAnnotation": False,
-            "reviews": [],
             "points": prediction_points,
             "boundingBoxPoints": bbox_points,
         }
@@ -293,29 +286,23 @@ def build_item_classification_predictions(
     if class_id is None:
         return classifications
 
-    for key in ["Unnamed: 0", "false_positive_reason", "img_id", "gt_class_id", "is_true_positive"]:
+    for key in ["Unnamed: 0", "false_positive_reason", "img_id", "gt_class_id"]:
         row.pop(key, None)
 
     expected_class_name = row.pop("gt_class_name", None)
 
-    class_idx = get_class_idx(project_file_structure.predictions / MainPredictionType.CLASSIFICATION.value)
+    class_idx = read_class_idx(project_file_structure.predictions / MainPredictionType.CLASSIFICATION.value)
     class_name = row.pop("class_name", None)
 
-    metadata["annotator"] = "Prediction"
+    is_true_positive = row.pop("is_true_positive")
+    metadata["annotator"] = "Correct Classifictaion" if is_true_positive else "Misclassification"
     metadata["labelClass"] = class_name
 
     classifications.append(
         {
             "name": class_name,
-            "value": class_name,
-            "createdAt": "Thu, 25 Aug 2022 15:46:59 GMT",
-            "createdBy": "robot@cord.tech",
             "confidence": row["confidence"],
             "featureHash": class_idx[str(class_id)]["featureHash"],
-            "lastEditedAt": "Thu, 25 Aug 2022 15:46:59 GMT",
-            "lastEditedBy": "robot@encord.com",
-            "manualAnnotation": False,
-            "reviews": [],
         }
     )
 

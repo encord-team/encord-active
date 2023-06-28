@@ -9,14 +9,6 @@ from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pydantic import BaseModel
 
-from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
-    ClassificationOutcomeType,
-    ObjectDetectionOutcomeType,
-    PredictionsFilters,
-    get_model_prediction_by_id,
-    get_model_predictions,
-    read_prediction_files,
-)
 from encord_active.lib.common.filtering import Filters
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import (
@@ -36,9 +28,17 @@ from encord_active.lib.metrics.utils import (
     get_embedding_type,
 )
 from encord_active.lib.model_predictions.reader import (
+    get_model_prediction_by_id,
+    get_model_predictions,
+    read_prediction_files,
+)
+from encord_active.lib.model_predictions.types import (
+    ClassificationOutcomeType,
     ClassificationPredictionMatchSchema,
     LabelMatchSchema,
+    ObjectDetectionOutcomeType,
     PredictionMatchSchema,
+    PredictionsFilters,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery

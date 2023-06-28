@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
+from encord_active.lib.model_predictions.reader import (
     read_prediction_files,
 )
 from encord_active.cli.utils.decorators import find_child_projects, is_project

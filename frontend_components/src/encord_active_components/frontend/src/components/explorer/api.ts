@@ -30,9 +30,31 @@ export const LabelRowObjectSchema = z.object({
   shape: LabelRowObjectShapeSchema,
 });
 
+export const ObjectPredictionSchema = z.object({
+  color: z.string(),
+  confidence: z.number(),
+  featureHash: z.string(),
+  name: z.string(),
+  objectHash: z.string(),
+  points: z.record(PointSchema),
+  boundingBoxPoints: z.record(PointSchema).nullish(),
+  shape: LabelRowObjectShapeSchema,
+});
+
+export const ClassificationPredictionSchema = z.object({
+  confidence: z.number(),
+  featureHash: z.string(),
+  name: z.string(),
+});
+
 export const LabelsSchema = z.object({
   classification: z.any().array().nullish(),
   objects: LabelRowObjectSchema.array(),
+});
+
+export const PredictionSchema = z.object({
+  classification: ClassificationPredictionSchema.array().nullish(),
+  objects: ObjectPredictionSchema.array(),
 });
 
 export const GroupedTagsSchema = z.object({
@@ -53,7 +75,7 @@ export const ItemSchema = z.object({
   }),
   tags: GroupedTagsSchema,
   labels: LabelsSchema,
-  predictions: LabelsSchema,
+  predictions: PredictionSchema,
 });
 
 const IdValueSchema = z.object({ id: z.string(), value: z.number() });

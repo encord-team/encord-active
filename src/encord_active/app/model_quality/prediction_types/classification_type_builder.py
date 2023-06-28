@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List, Optional, cast
 
 import altair as alt
@@ -7,21 +6,13 @@ from encord_active_components.components.explorer import explorer
 from loguru import logger
 from pandera.typing import DataFrame
 
-import encord_active.lib.model_predictions.reader as reader
 from encord_active.app.auth.jwt import get_auth_token
 from encord_active.app.common.components.interactive_plots import render_plotly_events
-from encord_active.app.common.components.prediction_grid import (
-    prediction_grid_classifications,
-)
 from encord_active.app.common.state import MetricNames, get_state
 from encord_active.app.model_quality.prediction_type_builder import (
     MetricType,
     ModelQualityPage,
     PredictionTypeBuilder,
-)
-from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
-    ClassificationOutcomeType,
-    PredictionsFilters,
 )
 from encord_active.lib.charts.classification_metrics import (
     get_accuracy,
@@ -36,18 +27,21 @@ from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embeddi
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricSchema
-from encord_active.lib.model_predictions.classification_metrics import (
-    match_predictions_and_labels,
-)
 from encord_active.lib.model_predictions.filters import (
     prediction_and_label_filtering_classification,
 )
 from encord_active.lib.model_predictions.reader import (
+    check_model_prediction_availability,
+    match_predictions_and_labels,
+    read_class_idx,
+)
+from encord_active.lib.model_predictions.types import (
     ClassificationLabelSchema,
+    ClassificationOutcomeType,
     ClassificationPredictionMatchSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
-    get_class_idx,
+    PredictionsFilters,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
@@ -134,7 +128,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
 
     def render_view_options(self):
         if not get_state().predictions.all_classes_classifications:
-            get_state().predictions.all_classes_classifications = get_class_idx(
+            get_state().predictions.all_classes_classifications = read_class_idx(
                 get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
             )
 
@@ -213,7 +207,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
                 st.write("An output could not obtained for this code")
 
     def is_available(self) -> bool:
-        return reader.check_model_prediction_availability(
+        return check_model_prediction_availability(
             get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
         )
 

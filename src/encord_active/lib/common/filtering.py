@@ -4,11 +4,9 @@ from typing import List, Optional
 import pandas as pd
 from pydantic import BaseModel
 
-from encord_active.app.model_quality.prediction_types.lib_object_type_builder import (
-    PredictionsFilters,
-)
 from encord_active.lib.db.helpers.tags import Tag
 from encord_active.lib.db.tags import TagScope
+from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 UNTAGED_FRAMES_LABEL = "Untaged frames"
