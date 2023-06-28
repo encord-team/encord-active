@@ -1,17 +1,25 @@
-from typing import List, Set, Optional, Dict
 from dataclasses import dataclass
 
 from torch import FloatTensor
 from torch.types import Device
 
-from encord_active.analysis.base import BaseEvaluation, TemporalBaseAnalysis
-from encord_active.analysis.embedding import NearestImageEmbeddingQuery
-from encord_active.analysis.embeddings.clip import ClipImgEmbedding
-from encord_active.analysis.embeddings.hu_moment import HuMomentEmbeddings
-from encord_active.analysis.metrics.geometric.image_border_closeness import ImageBorderCloseness
-from encord_active.analysis.metrics.heuristic.image_features import ContrastMetric, BrightnessMetric, SharpnessMetric, \
-    AspectRatioMetric, AreaMetric, HSVMetric
-from encord_active.analysis.metrics.heuristic.object_count import ObjectCountMetric
+from .base import BaseEvaluation, TemporalBaseAnalysis
+from .conversions.hsv import RGBToHSV
+from .embedding import NearestImageEmbeddingQuery
+from .embeddings.clip import ClipImgEmbedding
+from .embeddings.hu_moment import HuMomentEmbeddings
+from .metrics.image.area import AreaMetric
+from .metrics.image.aspect_ratio import AspectRatioMetric
+from .metrics.image.brightness import BrightnessMetric
+from .metrics.image.colors import HSVColorMetric
+from .metrics.image.contrast import ContrastMetric
+from .metrics.image.height import HeightMetric
+from .metrics.image.random import RandomMetric
+from .metrics.image.sharpness import SharpnessMetric
+from .metrics.image.width import WidthMetric
+from .metrics.object.count import ObjectCountMetric
+from .metrics.object.distance_to_border import DistanceToBorderMetric
+from .metrics.object.maximum_label_iou import MaximumLabelIOUMetric
 
 """
 Operations to support tracking for:
@@ -23,10 +31,14 @@ Operations to support tracking for:
     - invalidate nearby embeddings
 3. Add object
     - see new input
+    - calculate new data
+    - invalidate nearby embeddings
 4. Update object
     - internally implement as delete + add (as 1 transaction in db state)
 5. Delete object
     - see new output
+    - cascade delete data
+    - invalidate nearby embeddings
 """
 
 
@@ -34,28 +46,28 @@ Operations to support tracking for:
 class InvalidatedKey:
     data_hash: str
     frame: int
-    object_hash: Optional[str]
+    object_hash: str | None
 
 
-Invalidations = Set[InvalidatedKey]
+Invalidations = set[InvalidatedKey]
 
 
 @dataclass(frozen=True)
 class MetricResult:
     value: float
-    message: Optional[str]
+    message: str | None
 
 
 @dataclass
 class AnalysisResult:
-    metrics: Dict[str, MetricResult]
-    embeddings: Dict[str, FloatTensor]
+    metrics: dict[str, MetricResult]
+    embeddings: dict[str, FloatTensor]
 
 
 @dataclass
 class AnalysisResultWithObjects:
     image: AnalysisResult
-    objects: Dict[str, AnalysisResult]
+    objects: dict[str, AnalysisResult]
 
 
 class AnalysisConfig:
@@ -65,10 +77,12 @@ class AnalysisConfig:
     Based upon the results.
     """
 
-    def __init__(self,
-                 analysis: List[BaseEvaluation],
-                 derived_embeddings: List[NearestImageEmbeddingQuery],
-                 derived_metrics: List[object]) -> None:
+    def __init__(
+        self,
+        analysis: list[BaseEvaluation],
+        derived_embeddings: list[NearestImageEmbeddingQuery],
+        derived_metrics: list[object],
+    ) -> None:
         """
         Args:
             analysis:
@@ -92,8 +106,9 @@ class AnalysisConfig:
         """
         Asserts that the given analysis config is valid for execution.
         """
+        ...
 
-    def analysis_versions(self) -> Dict[str, int]:
+    def analysis_versions(self) -> dict[str, int]:
         """
         Returns:
             The version for each exported metric or embedding,
@@ -107,35 +122,40 @@ class AnalysisConfig:
     def analyse_image(self, image_url: str) -> AnalysisResult:
         ...
 
-    def analyse_video(self, video_url: str, start_timestamp: float,
-                      start_frame: int, end_frame: int) -> AnalysisResult:
+    def analyse_video(self, video_url: str, start_timestamp: float, start_frame: int, end_frame: int) -> AnalysisResult:
         ...
 
     def derive_embeddings(self, metric_db: None) -> None:
         pass
 
     def derive_metric(self, analysis_result: AnalysisResult) -> AnalysisResult:
-        pass
+        ...
 
 
 def create_analysis(device: Device) -> AnalysisConfig:
-    """ List of all analysis passes to be executed by encord active"""
+    """List of all analysis passes to be executed by encord active"""
     analysis = [
         # Generate embeddings
         ClipImgEmbedding(device, "clip", "ViT-B/32"),
         HuMomentEmbeddings("hu-moments"),
+        # Data conversions
+        RGBToHSV(),
         # Image+object hybrid feature metrics
         AspectRatioMetric(),
         AreaMetric(),
         BrightnessMetric(),
         ContrastMetric(),
         SharpnessMetric(),
-        HSVMetric("red", h_filter=[(0, 10), (170, 179)]),
-        HSVMetric("green", h_filter=(35, 75)),
-        HSVMetric("blue", h_filter=(90, 130)),
+        HSVColorMetric("red", hue_query=0.0),
+        HSVColorMetric("green", hue_query=1 / 3.0),
+        HSVColorMetric("blue", hue_query=2 / 3.0),
+        HeightMetric(),
+        WidthMetric(),
+        RandomMetric(),
         # Geometric metrics
-        ImageBorderCloseness(),
+        MaximumLabelIOUMetric(),
         # Heuristic metrics
+        DistanceToBorderMetric(),
         ObjectCountMetric(),
     ]
     derived_embeddings = [
@@ -145,28 +165,25 @@ def create_analysis(device: Device) -> AnalysisConfig:
     derived_metrics = [
         # Metrics depending on derived embedding / metric properties ONLY
     ]
-    return AnalysisConfig(
-        analysis=analysis,
-        derived_embeddings=derived_embeddings,
-        derived_metrics=derived_metrics
-    )
+    return AnalysisConfig(analysis=analysis, derived_embeddings=derived_embeddings, derived_metrics=derived_metrics)
 
 
-def verify_analysis(analysis_list: List[BaseEvaluation]) -> Set[str]:
+def verify_analysis(analysis_list: list[BaseEvaluation]) -> set[str]:
     """Verify the config of the set of embedding and analysis passes to execute"""
-    all_idents: Set[str] = set()
+    all_idents: set[str] = set()
     for analysis in analysis_list:
         if analysis.ident in all_idents:
             raise RuntimeError(f"Duplicate analysis ident: {analysis.ident}")
         for dependency in analysis.dependencies:
             if dependency not in all_idents:
                 raise RuntimeError(
-                    f"Dependency {dependency} for {analysis.ident} is not evaluated earlier in the ordering")
+                    f"Dependency {dependency} for {analysis.ident} is not evaluated earlier in the ordering"
+                )
         all_idents.add(analysis.ident)
     return all_idents
 
 
-def split_analysis(analysis_list: List[BaseEvaluation]) -> List[List[BaseEvaluation]]:
+def split_analysis(analysis_list: list[BaseEvaluation]) -> list[list[BaseEvaluation]]:
     complex_dependency_set = set()
     res = [[]]
     for analysis in analysis_list:
