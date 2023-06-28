@@ -637,8 +637,28 @@ def render_workflow_action_button(
     elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
         is_disabled = True
         disabled_explanation_text = (
-            " Relabeling is only supported on workflow projects."
+            " Task status updates are only supported on workflow projects."
             " Please, first upgrade your project to use workflows."
+        )
+
+    # Obtain the label rows whose task status is going to be updated
+    all_identifiers = filtered_df["identifier"].to_list()
+    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
+
+    # Only allow support native images
+    # Context: Moving individual data units through the workflow stages is not feasible, only at task level, so
+    # if a frame is moved then the whole label row will too. This unexpected behaviour only doesn't occur in
+    # native images (1 data unit per label row) so we are blocking the action if we find any other data type.
+    # TODO Enable for all data types when the Encord SDK allows to move individual data units
+    includes_unsupported_data_types = any(
+        label_row_meta[lr_hash]["data_type"] != "IMAGE" for lr_hash in unique_lr_hashes
+    )
+    if not is_disabled and includes_unsupported_data_types:
+        is_disabled = True
+        disabled_explanation_text = (
+            " Currently, task status updates are only supported for individual images."
+            " To enable this button, remove non-individual images from the filtered data."
+            " For more information, please contact our support team."
         )
 
     # Display workflow action button
@@ -651,10 +671,6 @@ def render_workflow_action_button(
     )
     if current_form.value not in [workflow_action_confirm_form, workflow_action_success_form]:
         return
-
-    # Obtain the label rows whose task status is going to be updated
-    all_identifiers = filtered_df["identifier"].to_list()
-    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
 
     # Show the confirmation form
     if current_form.value == workflow_action_confirm_form:
