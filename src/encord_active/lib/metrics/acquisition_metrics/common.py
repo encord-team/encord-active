@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 from PIL import Image
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, root_validator
 
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.labels.classification import ClassificationType
@@ -17,10 +17,17 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 class BaseObjectPrediction(BaseModel):
     class_probs: np.ndarray
 
-    @validator("class_probs")
-    def class_probs_vector(cls, v):  # pylint: disable=no-self-argument
+    @root_validator
+    def class_probs_should_be_one_dimensional(cls, values):  # pylint: disable=no-self-argument
+        v = values.get("class_probs")
         if v.ndim != 1:
             raise ValueError("Class probabilities should be 1 dimensional (1xN)")
+        if v.shape[0] < 2:
+            raise ValueError("There should be at least 2 probability values")
+        return values
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class BoundingBoxPrediction(BaseObjectPrediction):
