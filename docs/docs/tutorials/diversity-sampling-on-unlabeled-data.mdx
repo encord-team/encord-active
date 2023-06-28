@@ -14,8 +14,8 @@ This tutorial assumes that you have [installed](../installation) `encord-active`
 
 ## 1. Inference on the unlabeled data
 
-First, get the root directory path of the encord-active project and copy it to `data_dir` variable below.
-Then, you will use [Image Diversity](../metrics/data-quality-metrics#image-diversity) metric
+First, terminate any running Encord-Active app before running any code. Then, get the root directory path of the encord-active project and copy 
+it to `data_dir` variable below. You will use [Image Diversity](../metrics/data-quality-metrics#image-diversity) metric
 to rank the images. Image Diversity metric simply clusters the dataset according to the number of classes in the ontology and 
 selects equal number of samples from each cluster. Your project may consists of both labeled and unlabeled examples and you may want to run this acquisition 
 function only on the unlabeled data; therefore, you will set `skip_labeled_data` to `True`.
@@ -27,7 +27,7 @@ from encord_active.lib.metrics.execute import execute_metrics
 
 data_dir = Path("/path/to/encord-active/project")
 acquisition_func = ImageDiversity()
-execute_metrics([acquisition_func], data_dir=data_dir, skip_labeled_data=True)
+execute_metrics([acquisition_func], data_dir=data_dir, use_cache_only=True, skip_labeled_data=True)
 ```
 
 ## 2. Refresh metric files
