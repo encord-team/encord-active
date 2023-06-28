@@ -7,7 +7,7 @@ import TOCInline from "@theme/TOCInline";
 
 # Active Learning in Encord
 
-**Learn how to set up an active learning workflow in Encord**
+**Learn how to set up the components of your active learning process in Encord**
 
 :::note Requirements
 
@@ -36,7 +36,7 @@ encord-active import project
 ```
 If you require detailed information on the options available during the import process, you can refer to the [Import from Encord platform][import-encord-project] guide.  
 
-[//]: # (If your workflow project already contains annotations, you can skip the next part of the initialization step and proceed directly to [Model training]&#40;#model-training&#41;.)
+If your workflow project already contains annotations, you can proceed directly to [Model training and update](#model-training).
 
 [//]: # (Alternatively, if you have a trained model that you intend to use in the active learning workflow, you can jump to the [Querying]&#40;#querying&#41; step.)
 
@@ -52,7 +52,7 @@ Check out the [quality metrics page][quality-metrics-page] for a comprehensive o
 
 :::
 
-For example, you can follow these steps to prioritize labeling for data with the lowest `Image Diversity` score:
+For example, you can follow these steps to prioritize labeling for data with the lowest `Image Diversity` score using the UI:
 1. In the _Data Quality_ explorer page, navigate to the toolbox and click on the _Filter_ tab.
 2. Select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the unannotated data.
 3. Add the `Image Diversity` filter and adjust the slider to select the 5% of data with the lowest score.
