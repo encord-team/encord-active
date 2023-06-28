@@ -58,16 +58,16 @@ For example, you can follow these steps to prioritize labeling for data with the
 [//]: # (todo remove this info section once Encord Annotate provides task prioritization to the public)
 Task prioritization for labeling is currently a closed-beta feature in the Encord platform. To learn more about this feature, please reach out to us on [Discord][join-discord] or via [email][ea-email].
 
-Nevertheless, to mimic the behavior of task prioritization, you can follow these steps:
-1. In the _Filter_ tab, select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the unannotated data.
+Nevertheless, to mimic the behavior of task prioritization in projects with only single images, you can follow these steps:
+1. In the _Filter_ tab, select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the data ready to be labeled.
 2. Use the [bulk tagging][bulk-tagging-feature] feature to mark them with a data tag, such as `unlabeled`.
-3. Add the `Image Difficulty` filter and adjust the slider to select the 5% of unannotated data with the lowest score.
+3. Add the `Image Difficulty` filter and adjust the slider to select the 5% of filtered data with the lowest score.
 4. Use the bulk tagging feature to mark this further selection with a data tag, such as `to label next`.
 5. Reset the filters and choose the `unlabeled` tag option under `Tags`.
-6. Access the _Action tab_ in the toolbox and click on the <kbd>✅ Mark as Complete</kbd> button and follow the instructions to temporarily move all unannotated data to the workflow's `Complete` stage.
+6. Access the _Action tab_ in the toolbox and click on the <kbd>✅ Mark as Complete</kbd> button and follow the instructions to temporarily move all the selected data to the workflow's `Complete` stage.
 7. Return to the _Filter_ tab, reset the filters and choose the `to label next` tag option under `Tags`.
 8. Access the _Action_ tab in the toolbox again, click on the <kbd>🖋 Relabel</kbd> button and follow the instructions to move the selected data to the workflow's first annotation stage.
-9. Once the selected data has been labeled, use the following filter combination to bring back the unannotated data from the `Complete` stage to the first labeling stage:
+9. Once the selected data has been labeled, use the following filter combination to bring back the remaining data from the `Complete` stage to the first labeling stage as in step (8):
   Select the  `No class` option under `Object Class` and choose the proper tag name (e.g. `unlabeled`) option under `Tags`.
 
 By following these steps, you can ensure that the first labeling stage contains only the prioritized data for labeling, and the task states align at the end with the flow that utilizes the task prioritization feature.
