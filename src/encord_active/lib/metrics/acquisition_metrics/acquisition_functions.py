@@ -16,11 +16,11 @@ class AverageFrameScore(AcquisitionFunction):
     def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
             title="Average Frame Score",
-            short_description="Ranks images by average of the prediction confidences",
+            short_description="Ranks images by average of its predicted objects' confidences",
             long_description="For each image, this acquisition function returns the average confidence of the "
             "predictions. If there is no prediction for the given image, it assigns a value of "
-            "zero. This acquisition function makes sense when at least one ground truth object is expected "
-            "for each image.",
+            "zero. This acquisition function is only valid for objects and makes sense when at least one ground truth "
+            "object is expected for each image.",
             doc_url="",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
@@ -46,7 +46,7 @@ class Entropy(AcquisitionFunction):
             title="Entropy",
             short_description="Ranks images by their entropy.",
             long_description=(
-                "Ranks images by their entropy. \n \n"
+                "Ranks images by their predictions' entropy. \n \n"
                 "In information theory, the **entropy** of a random variable is the average level of “information”, "
                 "“surprise”, or “uncertainty” inherent to the variable's possible outcomes. "
                 "The higher the entropy, the more “uncertain” the variable outcome. \n \n"
@@ -54,7 +54,7 @@ class Entropy(AcquisitionFunction):
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the entropies of the model-predicted class probabilities in the "
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
-                "As a result, data samples with higher entropy score should be offered for annotation."
+                "As a result, data samples with higher entropy score can be offered for annotation."
             ),
             doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#entropy",
             metric_type=MetricType.HEURISTIC,
@@ -83,7 +83,7 @@ class LeastConfidence(AcquisitionFunction):
             title="Least Confidence",
             short_description="Ranks images by their least confidence score.",
             long_description=(
-                "Ranks images by their least confidence score. \n \n"
+                "Ranks images by their predictions' least confidence score. \n \n"
                 "**Least confidence** (**LC**) score of a model's prediction is the difference between 1 "
                 "(100% confidence) and its most confidently predicted class label. The higher the **LC** score, the "
                 "more “uncertain” the prediction. \n \n"
@@ -92,7 +92,7 @@ class LeastConfidence(AcquisitionFunction):
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the **LC** score of the model-predicted class probabilities in the "
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
-                "As a result, data samples with higher **LC** score should be offered for annotation."
+                "As a result, data samples with higher **LC** score can be offered for annotation."
             ),
             doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#least-confidence",
             metric_type=MetricType.HEURISTIC,
@@ -118,13 +118,13 @@ class Margin(AcquisitionFunction):
             title="Margin",
             short_description="Ranks images by their margin score.",
             long_description=(
-                "Ranks images by their margin score. \n \n"
+                "Ranks images by their predictions' margin score. \n \n"
                 "**Margin** score of a model's prediction is the difference between the two classes with the highest "
                 "probabilities. The lower the margin score, the more “uncertain” the prediction. \n \n"
                 "It can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the margin score of the model-predicted class probabilities in the"
                 " image. Like before, the lower the image's score, the more “confused” the model is. "
-                "As a result, data samples with lower margin score should be offered for annotation."
+                "As a result, data samples with lower margin score can be offered for annotation."
             ),
             doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#margin",
             metric_type=MetricType.HEURISTIC,
@@ -152,7 +152,7 @@ class Variance(AcquisitionFunction):
             title="Variance",
             short_description="Ranks images by their variance.",
             long_description=(
-                "Ranks images by their variance. \n \n"
+                "Ranks images by their predictions' variance. \n \n"
                 "Variance is a measure of dispersion that takes into account the spread of all data points in a "
                 "data set. The variance is the mean squared difference between each data point and the centre of the "
                 "distribution measured by the mean. The lower the variance, the more “clustered” the data points. \n \n"
@@ -161,7 +161,7 @@ class Variance(AcquisitionFunction):
                 " \n \nIt can be employed to define a heuristic that measures a model’s uncertainty about the classes "
                 "in an image using the average of the variance of the model-predicted class probabilities in the "
                 "image. Like before, the lower the image's score, the more “confused” the model is. "
-                "As a result, data samples with lower variance score should be offered for annotation."
+                "As a result, data samples with lower variance score can be offered for annotation."
             ),
             doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#variance",
             metric_type=MetricType.HEURISTIC,
