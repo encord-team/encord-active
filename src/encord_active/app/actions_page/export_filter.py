@@ -637,7 +637,7 @@ def render_workflow_action_button(
     elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
         is_disabled = True
         disabled_explanation_text = (
-            " Relabeling is only supported on workflow projects."
+            " Task status updates are only supported on workflow projects."
             " Please, first upgrade your project to use workflows."
         )
 
