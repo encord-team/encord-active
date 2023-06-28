@@ -18,7 +18,7 @@ Note that deviating from this requirement may require customizing certain steps 
 
 :::
 
-[//]: # (The active learning workflow in Encord Active consists of the following key stages:)
+[//]: # (Active learning workflows in Encord Active share the following key stages:)
 [//]: # (<TOCInline toc={toc.filter&#40;&#40;node&#41; => node.level === 2&#41;.map&#40;&#40;node, index&#41; => &#40;{ ...node, value: `${index + 1}. ${node.value}` }&#41;&#41;} />)
 
 ## Initialization
@@ -40,11 +40,17 @@ If you require detailed information on the options available during the import p
 
 [//]: # (Alternatively, if you have a trained model that you intend to use in the active learning workflow, you can jump to the [Querying]&#40;#querying&#41; step.)
 
-### Prioritize high value data to label
+## Prioritize high value data to label
 
-If your project lacks annotations, you will need to annotate data.
-While random selection is an option, Encord Active offers metrics like [`Image Diversity`][image-diversity-metric] to guide and optimize annotation impact.
+If your project does not have any annotations or you are seeking the most appropriate data for labeling, it's essential to score and rank your data.
+While random selection is a possibility, Encord Active provides metrics such as [`Image Diversity`][image-diversity-metric] to enhance and optimize annotation impact.
 This metric ranks images based on their ease of annotation, enabling prioritization of suitable and manageable data.
+
+:::tip
+
+Check out the [quality metrics page][quality-metrics-page] for a comprehensive overview of available metrics in Encord Active, including the [acquisition functions][acquisition-functions] used for sample selection.
+
+:::
 
 For example, you can follow these steps to prioritize labeling for data with the lowest `Image Diversity` score:
 1. In the _Data Quality_ explorer page, navigate to the toolbox and click on the _Filter_ tab.
@@ -85,11 +91,13 @@ By following these steps, you can ensure that the first labeling stage contains 
 [//]: # (## Iteration)
 
 
+[bulk-tagging-feature]: ../user-guide/tagging#bulk-tagging
+[acquisition-functions]: ../metrics/model-quality-metrics/#acquisition-functions
 [ea-email]: mailto:active@encord.com
+[quality-metrics-page]: /category/quality-metrics
 [import-encord-project]: ../import/import-encord-project
 [image-diversity-metric]: ../metrics/data-quality-metrics#image-diversity
 [join-discord]: https://discord.gg/TU6yT7Uvx3
 [relabeling-guide]: ../user-guide/relabeling
 [standard-filter-feature]: ../user-guide/filtering#standard-filter-feature
-[bulk-tagging-feature]: ../user-guide/tagging#bulk-tagging
 [workflow-project-tutorial]: https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
