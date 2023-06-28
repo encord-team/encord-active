@@ -6,17 +6,17 @@ import pandas as pd
 from PIL import Image
 
 from encord_active.lib.common.iterator import DatasetIterator
-from encord_active.lib.metrics.acquisition_functions import BaseModelWrapper
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def get_data(
-    project_fs: ProjectFileStructure, model: BaseModelWrapper, data_hashes: list[tuple[str, str]], class_name: str
+    project_fs: ProjectFileStructure,
+    data_hashes: list[tuple[str, str]],
+    class_name: str,
 ):
     image_paths, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
     images = [Image.open(image_path) for image_path in image_paths]
-    X = model.prepare_data(images)
-    return X, y
+    return images, y
 
 
 def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: int = None) -> list[tuple[str, str]]:
