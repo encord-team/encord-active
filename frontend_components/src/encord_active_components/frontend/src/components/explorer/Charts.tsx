@@ -7,10 +7,10 @@ import {
 } from "@ant-design/plots";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IdValue, Item2DEmbedding, PredictionType } from "./api";
-import { bin } from "d3-array";
+import { bin, group } from "d3-array";
 import { hexbin } from "d3-hexbin";
 import { scaleLinear } from "d3-scale";
-import { counting, max } from "radash";
+import { counting, fork, max } from "radash";
 
 const BINS = 20;
 
@@ -143,7 +143,18 @@ export const ScatteredEmbeddings = ({
         items[0].label,
         1,
       ];
-      return { ...items, size: items.length, label, items };
+
+      const bin = { ...items, size: items.length, label, items };
+
+      if (!predictionType) return bin;
+
+      const [correct, inccorect] = fork(items, ({ score }) => !!score);
+      const score =
+        inccorect.length > 0
+          ? correct.length / (correct.length + inccorect.length)
+          : 1;
+
+      return { ...bin, score };
     });
   }, [JSON.stringify(embeddings)]);
 
@@ -163,18 +174,10 @@ export const ScatteredEmbeddings = ({
     colorField: string;
     color?: Parameters<typeof Scatter>[0]["color"];
   }>(() => {
-    if (predictionType === "object")
+    if (predictionType)
       return {
         colorField: "score",
         color: (datum) => getColor(datum.score ?? 0),
-      };
-    if (predictionType === "classification")
-      return {
-        colorField: "label",
-        color: (datum) =>
-          (datum.label as string).toLowerCase().includes("true")
-            ? "#3b82f6"
-            : "#ef4444",
       };
 
     return { colorField: "label" };

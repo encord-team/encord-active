@@ -252,8 +252,9 @@ def get_2d_embeddings(
                 inplace=True,
             )
 
+            embeddings_df["score"] = embeddings_df[Embedding2DSchema.label]
             embeddings_df[Embedding2DSchema.label] = embeddings_df[Embedding2DSchema.label].apply(
-                lambda x: "True prediction" if x == 1.0 else "False prediction"
+                lambda x: "Correct Classifictaion" if x == 1.0 else "Misclassification"
             )
 
     return ORJSONResponse(embeddings_df.reset_index().rename({"identifier": "id"}, axis=1).to_dict("records"))
