@@ -6,16 +6,17 @@ import pandas as pd
 from PIL import Image
 
 from encord_active.lib.common.iterator import DatasetIterator
-from encord_active.lib.metrics.acquisition_functions import BaseModelWrapper
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 def get_data(
-    project_fs: ProjectFileStructure, model: BaseModelWrapper, data_hashes: list[tuple[str, str]], class_name: str
+    project_fs: ProjectFileStructure,
+    data_hashes: list[tuple[str, str]],
+    class_name: str,
 ):
-    images, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
-    X = model.prepare_data(images)
-    return X, y
+    image_paths, y = get_data_from_data_hashes(project_fs, data_hashes, class_name)
+    images = [Image.open(image_path) for image_path in image_paths]
+    return images, y
 
 
 def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: int = None) -> list[tuple[str, str]]:
@@ -26,14 +27,14 @@ def get_data_hashes_from_project(project_fs: ProjectFileStructure, subset_size: 
 
 def get_data_from_data_hashes(
     project_fs: ProjectFileStructure, data_hashes: list[tuple[str, str]], class_name: str
-) -> Tuple[List[Image.Image], List[str]]:
-    images, class_labels = zip(*(get_data_sample(project_fs, data_hash, class_name) for data_hash in data_hashes))
-    return list(images), list(class_labels)
+) -> Tuple[List[str], List[str]]:
+    image_urls, class_labels = zip(*(get_data_sample(project_fs, data_hash, class_name) for data_hash in data_hashes))
+    return list(image_urls), list(class_labels)
 
 
 def get_data_sample(
     project_fs: ProjectFileStructure, data_hash: tuple[str, str], class_name: str
-) -> Tuple[Image.Image, Optional[str]]:
+) -> Tuple[str, Optional[str]]:
     label_hash, du_hash = data_hash
     lr_struct = project_fs.label_row_structure(label_hash)
 
@@ -41,10 +42,10 @@ def get_data_sample(
     label_row = lr_struct.label_row_json
     class_label = get_classification_label(label_row, du_hash, class_name=class_name)
 
-    # get image
-    image = next(img for du_struct, img in lr_struct.iter_data_unit_with_image(du_hash))
+    # get image path
+    image_url = next(du_struct.signed_url for du_struct in lr_struct.iter_data_unit(du_hash))
 
-    return image, class_label
+    return image_url, class_label
 
 
 def get_classification_label(label_row, du_hash: str, class_name: str):
