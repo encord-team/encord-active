@@ -72,7 +72,7 @@ export const MetricDistributionTiny = ({
 
   return (
     <Column
-      className="w-full max-h-12"
+      className="w-64 max-h-12"
       autoFit={true}
       data={columns}
       columnWidthRatio={1}

@@ -6,8 +6,8 @@ from encord_active_components.components.explorer import explorer
 from loguru import logger
 from pandera.typing import DataFrame
 
+from encord_active.app.actions_page.export_filter import render_filter
 from encord_active.app.auth.jwt import get_auth_token
-from encord_active.app.common.components.interactive_plots import render_plotly_events
 from encord_active.app.common.state import MetricNames, get_state
 from encord_active.app.model_quality.prediction_type_builder import (
     MetricType,
@@ -20,13 +20,8 @@ from encord_active.lib.charts.classification_metrics import (
     get_precision_recall_f1,
     get_precision_recall_graph,
 )
-from encord_active.lib.charts.histogram import get_histogram
 from encord_active.lib.charts.performance_by_metric import performance_rate_by_metric
 from encord_active.lib.charts.scopes import PredictionMatchScope
-from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
-from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
-from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.metrics.utils import MetricSchema
 from encord_active.lib.model_predictions.filters import (
     prediction_and_label_filtering_classification,
 )
@@ -38,7 +33,6 @@ from encord_active.lib.model_predictions.reader import (
 from encord_active.lib.model_predictions.types import (
     ClassificationLabelSchema,
     ClassificationOutcomeType,
-    ClassificationPredictionMatchSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
     PredictionsFilters,
@@ -127,15 +121,18 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         return True
 
     def render_view_options(self):
-        if not get_state().predictions.all_classes_classifications:
-            get_state().predictions.all_classes_classifications = read_class_idx(
-                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-            )
+        if self.page_mode != ModelQualityPage.EXPLORER:
+            if not get_state().predictions.all_classes_classifications:
+                get_state().predictions.all_classes_classifications = read_class_idx(
+                    get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+                )
 
-        get_state().predictions.selected_classes_classifications = self._render_class_filtering_component(
-            get_state().predictions.all_classes_classifications
-        )
-        self._topbar_additional_settings()
+            get_state().predictions.selected_classes_classifications = self._render_class_filtering_component(
+                get_state().predictions.all_classes_classifications
+            )
+            self._topbar_additional_settings()
+
+        render_filter()
 
     def _topbar_additional_settings(self):
         if self.page_mode == ModelQualityPage.METRICS:
@@ -280,98 +277,15 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             pass
 
     def render_explorer(self):
-        with st.expander("Details"):
-            if self._explorer_outcome_type == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS:
-                view_text = "These are the predictions where the model correctly predicts the true class."
-            else:
-                view_text = "These are the predictions where the model incorrectly predicts the positive class."
-            st.markdown(
-                f"""### The view
-{view_text}
-                    """,
-                unsafe_allow_html=True,
-            )
+        filters = get_state().filtering_state.filters.copy()
+        filters.prediction_filters = PredictionsFilters(
+            type=MainPredictionType.CLASSIFICATION,
+        )
 
-            self._metric_details_description(get_state().predictions.metric_datas_classification)
-
-        if EmbeddingType.IMAGE not in get_state().reduced_embeddings:
-            get_state().reduced_embeddings[EmbeddingType.IMAGE] = get_2d_embedding_data(
-                get_state().project_paths, EmbeddingType.IMAGE
-            )
-
-        metric_name = get_state().predictions.metric_datas_classification.selected_prediction
-        if not metric_name:
-            st.error("No prediction metric selected")
-            return
-
-        filtered_merged_metrics = get_state().filtering_state.merged_metrics
-        value = 1.0 if self._explorer_outcome_type == ClassificationOutcomeType.CORRECT_CLASSIFICATIONS else 0.0
-        view_df = self._model_predictions[
-            self._model_predictions[ClassificationPredictionMatchSchemaWithClassNames.is_true_positive] == value
-        ].dropna(subset=[metric_name])
-
-        lr_du = filtered_merged_metrics.index.str.split("_", n=2).str[0:2].str.join("_")
-        view_df["data_row_id"] = view_df.identifier.str.split("_", n=2).str[0:2].str.join("_")
-        view_df = view_df[view_df.data_row_id.isin(lr_du)]
-
-        if view_df.shape[0] == 0:
-            st.write("There are no predictions for the given class(es).")
-            return
-
-        if self._explorer_outcome_type:
-            filters = get_state().filtering_state.filters.copy()
-            filters.prediction_filters = PredictionsFilters(
-                type=MainPredictionType.CLASSIFICATION,
-            )
-
-            explorer(
-                auth_token=get_auth_token(),
-                project_name=get_state().project_paths.project_dir.name,
-                scope="model_quality",
-                api_url=get_settings().API_URL,
-                filters=filters.dict(),
-            )
-
-        return
-
-        if get_state().reduced_embeddings[EmbeddingType.IMAGE] is None:
-            st.info("There is no 2D embedding file to display.")
-        else:
-            current_reduced_embedding = get_state().reduced_embeddings[EmbeddingType.IMAGE]
-            current_reduced_embedding["data_row_id"] = (
-                current_reduced_embedding.identifier.str.split("_", n=2).str[0:2].str.join("_")
-            )
-
-            reduced_embedding_filtered = current_reduced_embedding[current_reduced_embedding.data_row_id.isin(lr_du)]
-
-            predictions_matched = self._model_predictions[
-                [ClassificationPredictionMatchSchema.identifier, ClassificationPredictionMatchSchema.is_true_positive]
-            ]
-
-            reduced_embedding_filtered = reduced_embedding_filtered.merge(
-                predictions_matched, on=ClassificationPredictionMatchSchema.identifier
-            )
-
-            reduced_embedding_filtered.drop(columns=[Embedding2DSchema.label], inplace=True)
-            reduced_embedding_filtered.rename(
-                columns={ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label}, inplace=True
-            )
-
-            reduced_embedding_filtered[Embedding2DSchema.label] = reduced_embedding_filtered[
-                Embedding2DSchema.label
-            ].apply(lambda x: "True prediction" if x == 1.0 else "False prediction")
-            reduced_embedding_filtered[Embedding2DScoreSchema.score] = None
-
-            selected_rows = render_plotly_events(reduced_embedding_filtered)
-            if selected_rows is not None:
-                view_df = view_df[view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
-
-        view_df.drop("data_row_id", axis=1, inplace=True)
-
-        if view_df.shape[0] == 0:
-            st.write(f"No {self._explorer_outcome_type}")
-        else:
-            histogram = get_histogram(view_df, metric_name)
-            st.altair_chart(histogram, use_container_width=True)
-
-            # prediction_grid_classifications(get_state().project_paths, model_predictions=view_df)
+        explorer(
+            auth_token=get_auth_token(),
+            project_name=get_state().project_paths.project_dir.name,
+            scope="model_quality",
+            api_url=get_settings().API_URL,
+            filters=filters.dict(),
+        )

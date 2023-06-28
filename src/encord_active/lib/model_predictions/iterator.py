@@ -51,7 +51,7 @@ class PredictionIterator(Iterator):
         self.length = predictions["img_id"].nunique()
 
         identifiers = predictions["identifier"].str.split("_", expand=True)
-        identifiers.columns = ["label_hash", "du_hash", "frame", "object_hash"][: len(identifiers.columns)]
+        identifiers.columns = ["label_hash", "du_hash", "frame", "object_hash"][: len(identifiers.columns)]  # type: ignore
         identifiers["frame"] = pd.to_numeric(identifiers["frame"])
 
         predictions = pd.concat([predictions, identifiers], axis=1)
@@ -84,7 +84,7 @@ class PredictionIterator(Iterator):
 
     def get_image(self, pred: Series, cache_db: "prisma.Prisma") -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
-        frame = pred.get("frame", None)
+        frame = pred.to_dict().get("frame", None)
         if frame is not None:
             frame = int(frame)
         data_unit, image = next(

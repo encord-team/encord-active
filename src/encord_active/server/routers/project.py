@@ -1,12 +1,13 @@
 import re
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, List, Optional, Union, cast
 
 import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
+from pandera.typing import DataFrame
 from pydantic import BaseModel
 
 from encord_active.lib.common.filtering import Filters
@@ -207,7 +208,6 @@ def get_2d_embeddings(
     project: ProjectFileStructureDep, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
 ):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
-    embeddings_df.set_index("identifier", inplace=True)
 
     if embeddings_df is None:
         raise HTTPException(
@@ -215,7 +215,9 @@ def get_2d_embeddings(
         )
 
     filtered = filtered_merged_metrics(project, filters)
-    embeddings_df = embeddings_df[embeddings_df.index.isin(filtered.index)]
+
+    embeddings_df.set_index("identifier", inplace=True)
+    embeddings_df = cast(DataFrame[Embedding2DSchema], embeddings_df[embeddings_df.index.isin(filtered.index)])
 
     if filters.prediction_filters is not None:
         embeddings_df["data_row_id"] = partial_column(embeddings_df.index, 3)
@@ -235,21 +237,26 @@ def get_2d_embeddings(
             grouped_score = (
                 merged_score.groupby("data_row_id")[Embedding2DScoreSchema.score].mean().to_frame().reset_index()
             )
-            embeddings_df = embeddings_df.merge(grouped_score, on="data_row_id", how="outer").fillna(0)
-            embeddings_df.rename({"data_row_id": "identifier"}, axis=1, inplace=True)
+            embeddings_df = cast(
+                DataFrame[Embedding2DSchema],
+                embeddings_df.merge(grouped_score, on="data_row_id", how="outer")
+                .fillna(0)
+                .rename({"data_row_id": "identifier"}, axis=1),
+            )
         else:
             predictions = predictions[[ClassificationPredictionMatchSchema.is_true_positive]]
             predictions["data_row_id"] = partial_column(predictions.index, 3)
 
-            embeddings_df = embeddings_df.merge(predictions, on="data_row_id", how="outer")
-
-            embeddings_df.drop(columns=[Embedding2DSchema.label], inplace=True)
-            embeddings_df.rename(
-                columns={
-                    ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label,
-                    "data_row_id": "identifier",
-                },
-                inplace=True,
+            embeddings_df = cast(
+                DataFrame[Embedding2DSchema],
+                embeddings_df.merge(predictions, on="data_row_id", how="outer")
+                .drop(columns=[Embedding2DSchema.label])
+                .rename(
+                    columns={
+                        ClassificationPredictionMatchSchema.is_true_positive: Embedding2DSchema.label,
+                        "data_row_id": "identifier",
+                    }
+                ),
             )
 
             embeddings_df["score"] = embeddings_df[Embedding2DSchema.label]

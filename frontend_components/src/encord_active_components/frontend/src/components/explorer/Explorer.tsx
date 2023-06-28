@@ -37,7 +37,6 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { keys } from "radash";
 
 export type Props = {
   authToken: string | null;
@@ -70,8 +69,6 @@ export const Explorer = ({
     PredictionOutcome | undefined
   >();
   const [iou, setIou] = useState<number | undefined>();
-  delete inputFilters.prediction_filters?.outcome;
-  delete inputFilters.prediction_filters?.iou_threshold;
 
   const filters = inputFilters;
   if (scope === "model_quality" && filters.prediction_filters) {
@@ -285,17 +282,17 @@ export const Explorer = ({
                   </label>
                 </label>
               )}
+              {!similarityItem && (
+                <MetricDistributionTiny
+                  values={sortedItems || []}
+                  setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                />
+              )}
               {scope === "model_quality" && (
                 <PredictionFilters
                   predictionType={filters.prediction_filters?.type}
                   onOutcomeChange={setPredictionOutcome}
                   onIouChange={predictionOutcome && setIou}
-                />
-              )}
-              {!similarityItem && (
-                <MetricDistributionTiny
-                  values={sortedItems || []}
-                  setSeletedIds={(ids) => setItemSet(new Set(ids))}
                 />
               )}
             </div>
@@ -408,7 +405,7 @@ const PredictionFilters = ({
       : classificationsPredictionOutcomes;
 
   return (
-    <>
+    <div className="flex gap-2">
       <select
         className="select select-bordered w-full max-w-xs"
         onChange={({ target: { value } }) =>
@@ -424,7 +421,7 @@ const PredictionFilters = ({
         ))}
       </select>
       {predictionType === "object" && onIouChange && (
-        <div className="form-control w-full max-w-xs">
+        <div className="form-control w-full max-w-xs min-w-[256px]">
           <label>
             <span>IOU: {iou}</span>
           </label>
@@ -441,7 +438,7 @@ const PredictionFilters = ({
           />
         </div>
       )}
-    </>
+    </div>
   );
 };
 

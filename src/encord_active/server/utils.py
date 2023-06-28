@@ -1,11 +1,10 @@
 import json
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, TypeVar
 from urllib.parse import quote
 
 import pandas as pd
-from encord.ontology import OntologyStructure
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -64,7 +63,10 @@ def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
 
 
-def partial_column(column: Union[pd.Index, pd.Series], parts: int):
+IndexOrSeries = TypeVar("IndexOrSeries", pd.Index, pd.Series)
+
+
+def partial_column(column: IndexOrSeries, parts: int) -> IndexOrSeries:
     return column.str.split("_", n=parts).str[0:parts].str.join("_")
 
 

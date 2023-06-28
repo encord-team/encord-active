@@ -29,7 +29,7 @@ PAGES = {
     "Data Drift": project_similarity(),
 }
 
-DEFAULT_PAGE_PATH = ["Model Quality", "Explorer"]
+DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
 SEPARATOR = "#"
 
 

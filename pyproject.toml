@@ -70,7 +70,7 @@ toml = "^0.10.2"
 pydantic = "^1.10.2"
 pycocotools = { version = "^2.0.6", optional = true }
 psutil = "^5.9.4"
-pandera = "^0.13.4"
+pandera = {extras = ["mypy"], version = "^0.15.1"}
 jupyterlab = { version = "^3.5.2", optional = true }
 ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
@@ -136,6 +136,7 @@ include = '.*\/.*\.i?py(nb)?$'
 profile = "black"
 
 [tool.mypy]
+plugins = "pandera.mypy"
 ignore_missing_imports = true
 enable_recursive_aliases = true
 exclude = ['examples/']

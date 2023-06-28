@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple, Optional, Tuple, cast
 
 import pandas as pd
 import pandera as pa
@@ -10,8 +10,8 @@ from encord_active.lib.metrics.utils import MetricData, MetricSchema
 
 
 class MetricWithDistanceSchema(MetricSchema):
-    dist_to_iqr: Optional[Series[float]] = pa.Field(coerce=True)
-    outliers_status: Optional[Series[str]] = pa.Field(coerce=True)
+    dist_to_iqr: Series[float] = pa.Field(coerce=True)
+    outliers_status: Series[str] = pa.Field(coerce=True)
 
 
 class IqrOutliers(NamedTuple):
@@ -57,7 +57,7 @@ def get_iqr_outliers(
     if input.empty:
         return None
 
-    df = DataFrame[MetricWithDistanceSchema](input)
+    df = cast(DataFrame[MetricWithDistanceSchema], input)
 
     moderate_iqr_scale = 1.5
     severe_iqr_scale = 2.5
@@ -90,7 +90,9 @@ def get_iqr_outliers(
 
     n_severe_outliers = ((df[_COLUMNS.score] < severe_lb) | (df[_COLUMNS.score] > severe_ub)).sum()
 
-    return df, IqrOutliers(n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub)
+    return df.pipe(DataFrame[MetricWithDistanceSchema]), IqrOutliers(
+        n_moderate_outliers, n_severe_outliers, moderate_lb, moderate_ub, severe_lb, severe_ub
+    )
 
 
 def get_all_metrics_outliers(metrics_data_summary: MetricsSeverity) -> DataFrame[AllMetricsOutlierSchema]:

@@ -44,7 +44,7 @@ class ExplorerPage(Page):
             is_class_selected = (
                 df.shape[0] * [True] if not selected_classes else df[MetricSchema.object_class].isin(selected_classes)
             )
-            df = df[is_class_selected]
+            df = df[is_class_selected]  # type: ignore
 
             selected_annotators = get_state().filtering_state.selected_annotators
             annotator_selected = (

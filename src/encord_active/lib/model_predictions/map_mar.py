@@ -124,8 +124,8 @@ def compute_mAP_and_mAR(
         - fns: An indicator array for which `fns[j] == True` if `_labels.iloc[j]`
             was not matched by any prediction.
     """
-    model_predictions = model_predictions.copy()
-    labels = labels.copy()
+    model_predictions = model_predictions.copy()  # type: ignore
+    labels = labels.copy()  # type: ignore
 
     rec_thresholds = rec_thresholds or np.linspace(0.0, 1.00, round(1.00 / 0.01) + 1)
 

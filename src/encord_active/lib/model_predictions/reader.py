@@ -78,14 +78,15 @@ def append_metric_columns(df: pd.DataFrame, metric_entries: List[MetricData]) ->
 
     for metric in metric_entries:
         metric_scores = load_metric_dataframe(metric, normalize=False)
-        metric_scores = metric_scores.set_index(keys=["identifier"])
+        if metric_scores.index.name != "identifier":
+            metric_scores.set_index("identifier", inplace=True)
 
         has_object_level_keys = len(cast(str, metric_scores.index[0]).split("_")) > 3
         metric_column = "identifier" if has_object_level_keys else "identifier_no_oh"
 
         # TODO: When EA supports different classification questions, the following must be fixed
         if (len(df[IdentifierSchema.identifier][0].split("_")) == 3) and (has_object_level_keys):
-            metric_scores = metric_scores.copy()
+            metric_scores = metric_scores.copy()  # type: ignore
             metric_scores.index = metric_scores.index.str.replace(r"^(\S{73}_\d+)(.*)", r"\1", regex=True)
 
         # Join data and rename column to metric name.
@@ -191,7 +192,7 @@ def match_predictions_and_labels(
     )
     _model_predictions[ClassificationPredictionMatchSchema.gt_class_id] = _labels[ClassificationLabelSchema.class_id]
 
-    return _model_predictions.pipe(ClassificationPredictionMatchSchema)
+    return _model_predictions.pipe(DataFrame[ClassificationPredictionMatchSchema])
 
 
 @lru_cache
@@ -283,12 +284,10 @@ def get_object_detection_predictions(
     sorted_model_predictions = predictions_filtered.sort_values([pred_sort_column], axis=0)
 
     label_sort_column = label_metric_datas[0].name
-    sorted_labels = labels_filtered.sort_values([label_sort_column], axis=0)
+    labels_filtered.sort_values([label_sort_column], axis=0, inplace=True)
 
     if predictions_filters.ignore_frames_without_predictions:
-        labels_filtered = filter_labels_for_frames_wo_predictions(predictions_filtered, sorted_labels)
-    else:
-        labels_filtered = sorted_labels
+        labels_filtered = filter_labels_for_frames_wo_predictions(predictions_filtered, labels_filtered)
 
     labels, metrics, model_predictions, precisions = prediction_and_label_filtering_detection(
         all_classes_objects,
@@ -303,12 +302,15 @@ def get_object_detection_predictions(
         ObjectDetectionOutcomeType.FALSE_POSITIVES,
     ]:
         value = 1.0 if predictions_filters.outcome == ObjectDetectionOutcomeType.TRUE_POSITIVES else 0.0
-        model_predictions = model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == value]
+        model_predictions = cast(
+            DataFrame[PredictionSchema],
+            model_predictions[model_predictions[PredictionMatchSchema.is_true_positive] == value],
+        )
     elif predictions_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
-        model_predictions = labels[labels[LabelMatchSchema.is_false_negative]]
+        model_predictions = cast(DataFrame[PredictionSchema], labels[labels[LabelMatchSchema.is_false_negative]])
 
-    model_predictions = model_predictions.set_index("identifier")
-    labels = labels.set_index("identifier")
+    model_predictions.set_index("identifier", inplace=True)
+    labels.set_index("identifier", inplace=True)
 
     return model_predictions, labels
 

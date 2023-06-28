@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 import pandas as pd
 import streamlit as st
@@ -186,7 +186,9 @@ def render_data_quality_dashboard(
     metrics_with_severe_outliers = all_metrics_outliers[
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
-    render_issues_pane(metrics_with_severe_outliers, issues_col, MetricScope.DATA_QUALITY)
+    render_issues_pane(
+        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.DATA_QUALITY
+    )
 
     render_2d_metric_plots(get_state().metrics_data_summary)
 
@@ -277,5 +279,7 @@ def render_label_quality_dashboard(
     metrics_with_severe_outliers = all_metrics_outliers[
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
-    render_issues_pane(metrics_with_severe_outliers, issues_col, MetricScope.LABEL_QUALITY)
+    render_issues_pane(
+        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.LABEL_QUALITY
+    )
     render_2d_metric_plots(get_state().metrics_label_summary)

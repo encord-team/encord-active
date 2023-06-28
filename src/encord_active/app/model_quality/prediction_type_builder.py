@@ -263,7 +263,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             with st.spinner("Computing index importance..."):
                 try:
                     metric_importance_chart = create_metric_importance_charts(
-                        model_predictions,
+                        model_predictions,  # type: ignore
                         metric_columns=metric_columns,
                         num_samples=num_samples,
                         prediction_type=MainPredictionType.CLASSIFICATION,
