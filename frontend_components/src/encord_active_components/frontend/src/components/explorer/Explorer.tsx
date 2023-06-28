@@ -37,6 +37,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
+import { keys } from "radash";
 
 export type Props = {
   authToken: string | null;
@@ -215,9 +216,9 @@ export const Explorer = ({
               idValues={
                 (scope === "model_quality"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                    ...item,
-                    id: id.slice(0, id.lastIndexOf("_")),
-                  }))
+                      ...item,
+                      id: id.slice(0, id.lastIndexOf("_")),
+                    }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -245,8 +246,8 @@ export const Explorer = ({
                   scope === "model_quality"
                     ? "predictions"
                     : !selectedItems.size
-                      ? "missing-target"
-                      : undefined
+                    ? "missing-target"
+                    : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -754,9 +755,8 @@ const pointsRecordToPolygonPoints = (
 const ImageWithPolygons = ({
   item,
   className,
-  /* splitLabels = false, */
   ...rest
-}: { item: Item; splitLabels?: boolean } & JSX.IntrinsicElements["figure"]) => {
+}: { item: Item } & JSX.IntrinsicElements["figure"]) => {
   const {
     ref: image,
     width: imageWidth,
@@ -836,32 +836,38 @@ const ImageWithPolygons = ({
                     />
                   </>
                 ) : (
-                  <polygon
-                    key={index}
-                    style={{
-                      fill: shape === "polyline" ? "none" : color,
-                      fillOpacity: ".20",
-                      stroke: color,
-                      strokeWidth: "2px",
-                    }}
-                    points={pointsRecordToPolygonPoints(points, width, height)}
-                  />
-                )}
-                {boundingBoxPoints && (
-                  <polygon
-                    key={index + "_box"}
-                    style={{
-                      fill: shape === "polyline" ? "none" : color,
-                      fillOpacity: ".40",
-                      stroke: color,
-                      strokeWidth: "4px",
-                    }}
-                    points={pointsRecordToPolygonPoints(
-                      boundingBoxPoints,
-                      width,
-                      height
+                  <>
+                    <polygon
+                      key={index + "_polygon"}
+                      style={{
+                        fill: shape === "polyline" ? "none" : color,
+                        fillOpacity: ".20",
+                        stroke: color,
+                        strokeWidth: "2px",
+                      }}
+                      points={pointsRecordToPolygonPoints(
+                        points,
+                        width,
+                        height
+                      )}
+                    />
+                    {boundingBoxPoints && (
+                      <polygon
+                        key={index + "_box"}
+                        style={{
+                          fill: shape === "polyline" ? "none" : color,
+                          fillOpacity: ".40",
+                          stroke: color,
+                          strokeWidth: "4px",
+                        }}
+                        points={pointsRecordToPolygonPoints(
+                          boundingBoxPoints,
+                          width,
+                          height
+                        )}
+                      />
                     )}
-                  />
+                  </>
                 )}
               </>
             )
