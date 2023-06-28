@@ -18,8 +18,10 @@ Note that deviating from this requirement may require customizing certain steps 
 
 :::
 
-[//]: # (Active learning workflows in Encord Active share the following key stages:)
-[//]: # (<TOCInline toc={toc.filter&#40;&#40;node&#41; => node.level === 2&#41;.map&#40;&#40;node, index&#41; => &#40;{ ...node, value: `${index + 1}. ${node.value}` }&#41;&#41;} />)
+Active learning workflows in Encord Active share the following key stages:
+<TOCInline toc={toc.filter((node) => node.level === 2).map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
+
+If you prefer to witness an active learning workflow in action please take a look at our end-to-end tutorial about [easy active learning on MNIST][easy-active-learning-in-mnist-tutorial].
 
 ## Initialization
 To start an active learning workflow, you need an initial labeled dataset for training the machine learning model.
@@ -80,20 +82,20 @@ By following these steps, you can ensure that the first labeling stage contains 
 
 :::
 
-[//]: # (## Model training {#model-training})
+## Model training and update {#model-training}
 
-[//]: # (## Querying {#querying})
+In the active learning workflow, model training plays a crucial role.
+It involves training a machine learning model using the initial labeled dataset and iteratively updating it with newly labeled data.
+Encord Actives provides support for a wide range of models by allowing you to plug in your own model and interface with it using convenient wrappers.
 
-[//]: # (## Labeling)
-
-[//]: # (## Model update)
-
-[//]: # (## Iteration)
+Check more on this [hands-on section][model-training-in-easy-active-learning-in-mnist-tutorial].
 
 
 [bulk-tagging-feature]: ../user-guide/tagging#bulk-tagging
 [acquisition-functions]: ../metrics/model-quality-metrics/#acquisition-functions
 [ea-email]: mailto:active@encord.com
+[easy-active-learning-in-mnist-tutorial]: ../tutorials/easy-active-learning-on-mnist
+[model-training-in-easy-active-learning-in-mnist-tutorial]: ../tutorials/easy-active-learning-on-mnist/#model-training
 [quality-metrics-page]: /category/quality-metrics
 [import-encord-project]: ../import/import-encord-project
 [image-diversity-metric]: ../metrics/data-quality-metrics#image-diversity
