@@ -12,9 +12,9 @@ from encord_active.db.metrics import MetricDefinition, DataMetrics, ObjectMetric
 
 
 def fk_constraint(
-    fields: List[str],
-    table: Type[SQLModel],
-    name: str,
+        fields: List[str],
+        table: Type[SQLModel],
+        name: str,
 ) -> ForeignKeyConstraint:
     return ForeignKeyConstraint(
         fields,
@@ -76,17 +76,18 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     classifications: list = Field(sa_column=Column(JSON))
 
 
-#MetricFieldTypeNormal = Field(ge=0, le=0)
-#MetricFieldTypePositiveInteger = Field(ge=0)
-#MetricFieldTypePositiveFloat = Field(ge=0)
+# MetricFieldTypeNormal = Field(ge=0, le=0)
+# MetricFieldTypePositiveInteger = Field(ge=0)
+# MetricFieldTypePositiveFloat = Field(ge=0)
 MetricFieldTypeNormal = Field()
 MetricFieldTypePositiveInteger = Field()
 MetricFieldTypePositiveFloat = Field()
 
+
 def define_metric_indices(
-    metric_prefix: str,
-    metrics: Dict[str, MetricDefinition],
-    extra: Iterable[Union[Index, ForeignKeyConstraint]],
+        metric_prefix: str,
+        metrics: Dict[str, MetricDefinition],
+        extra: Iterable[Union[Index, ForeignKeyConstraint]],
 ) -> Tuple[Union[Index, ForeignKeyConstraint], ...]:
     values = [
         Index(
@@ -280,11 +281,11 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     confidence: float = Field(ge=0, le=1)
     match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_feature_hash: Optional[str] = Field(min_length=8, max_length=8)
-    match_duplicate: bool
+    match_duplicate_iou: float = Field(ge=0, le=1)
     iou: float = Field(ge=0, le=1)
 
     # FIXME: should these be null??
-    rle: Optional[float] # FIXME: wrong type - sort out typing later
+    rle: Optional[float]  # FIXME: wrong type - sort out typing later
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
@@ -296,6 +297,20 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     )
 
 
+class ProjectPredictionUnmatchedResults(SQLModel, table=True):
+    __tablename__ = 'active_project_prediction_unmatched'
+    prediction_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    feature_hash: str = Field(min_length=8, max_length=8)
+
+    __table_args__ = (
+        fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_unmatched_prediction_fk"),
+        Index("active_project_prediction_unmatched_feature_hash_index", "prediction_hash", "feature_hash")
+    )
+
+
 class ProjectPredictionClassificationResults(SQLModel, table=True):
     __tablename__ = 'active_project_prediction_classification'
     prediction_hash: UUID = Field(primary_key=True)
@@ -304,7 +319,8 @@ class ProjectPredictionClassificationResults(SQLModel, table=True):
     classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
 
     __table_args__ = (
-        fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_classifications_prediction_fk"),
+        fk_constraint(["prediction_hash"], ProjectPrediction,
+                      "active_project_prediction_classifications_prediction_fk"),
     )
 
 
@@ -314,11 +330,15 @@ class ProjectPredictionClassificationResults(SQLModel, table=True):
 _init_metadata: Set[str] = set()
 
 
-def get_engine(path: Path) -> Engine:
+def get_engine(path: Path, concurrent: bool = False) -> Engine:
     override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
     create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
-    engine = create_engine(override_db if override_db is not None else f"sqlite:///{path}")
+    connect_args = {"check_same_thread": False} if concurrent else {}
+    engine = create_engine(
+        override_db if override_db is not None else f"sqlite:///{path}",
+        connect_args=connect_args
+    )
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
         # import encord_active.db.migrations.env as migrate_env
