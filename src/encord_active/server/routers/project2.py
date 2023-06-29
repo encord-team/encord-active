@@ -2,18 +2,20 @@ import json
 import uuid
 from enum import Enum
 from os import environ
-from typing import Optional, Dict, Tuple, Union, List, Type
+from typing import Optional, Dict, Tuple, Union, List, Type, Literal
 from urllib.parse import quote
-from sqlalchemy.sql.operators import is_not, not_between_op, between_op
+
+import numpy as np
+from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
 
 from fastapi import APIRouter
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from encord_active.db.metrics import DataMetrics, ClassificationMetrics, ObjectMetrics, MetricDefinition
+from encord_active.db.metrics import DataMetrics, ClassificationMetrics, ObjectMetrics, MetricDefinition, MetricType
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
     ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics, ProjectDataMetadata, \
-    ProjectClassificationAnalytics
+    ProjectClassificationAnalytics, ProjectPrediction
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.settings import get_settings
@@ -26,6 +28,9 @@ router = APIRouter(
 
 engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
 engine = get_engine(engine_path)
+
+MODERATE_IQR_SCALE = 1.5
+SEVERE_IQR_SCALE = 2.5
 
 
 class AnalysisDomain(Enum):
@@ -130,7 +135,7 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
             select(ProjectDataMetadata.label_hash, ProjectDataMetadata.frames_per_second)
             .where(ProjectDataMetadata.project_hash == project_hash,
                    ProjectDataMetadata.data_hash == data_hash)
-            ).first()
+        ).first()
         if label_hash is None:
             raise ValueError("Missing label_hash")
 
@@ -277,14 +282,15 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
 def _get_metric_domain(domain: AnalysisDomain) -> Tuple[
     Union[Type[ProjectDataAnalytics], Type[ProjectObjectAnalytics], Type[ProjectClassificationAnalytics]],
     Dict[str, MetricDefinition],
-    Optional[str]
+    Optional[str],
+    Dict[str, None]
 ]:
     if domain == AnalysisDomain.Data:
-        return ProjectDataAnalytics, DataMetrics, None
+        return ProjectDataAnalytics, DataMetrics, None, {}
     elif domain == AnalysisDomain.Object:
-        return ProjectObjectAnalytics, ObjectMetrics, "object_hash"
+        return ProjectObjectAnalytics, ObjectMetrics, "object_hash", {"feature_hash": None}
     elif domain == AnalysisDomain.Classification:
-        return ProjectClassificationAnalytics, ClassificationMetrics, "classification_hash"
+        return ProjectClassificationAnalytics, ClassificationMetrics, "classification_hash", {"feature_hash": None}
     else:
         raise ValueError(f"Bad domain: {domain}")
 
@@ -308,8 +314,9 @@ def _load_metric(
         project_hash: uuid.UUID,
         metric_name: str,
         metric: MetricDefinition,
-        cls: Type[Union[ProjectDataAnalytics, ProjectObjectAnalytics, ProjectClassificationAnalytics]]
-) -> dict:
+        cls: Type[Union[ProjectDataAnalytics, ProjectObjectAnalytics, ProjectClassificationAnalytics]],
+        iqr_only: bool = False
+) -> Optional[dict]:
     if metric.virtual is not None:
         metric_attr = getattr(cls, metric.virtual.src)
     else:
@@ -322,32 +329,40 @@ def _load_metric(
     if count == 0:
         return None
 
-    # Calculate base statistics
-    metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()
-    metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()
     median_offset = count // 2
     q1_offset = count // 4
     q3_offset = (count * 3) // 4
-    median = sess.exec(
-        select(metric_attr).where(*where).order_by(metric_attr).offset(median_offset).limit(1)).first()
+
+    # Calculate base statistics
+    if iqr_only:
+        metric_min = 0
+        metric_max = 0
+        median = 0
+    else:
+        metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()
+        metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()
+        median = sess.exec(
+            select(metric_attr).where(*where).order_by(metric_attr).offset(median_offset).limit(1)).first()
     q1 = sess.exec(select(metric_attr).where(*where).order_by(metric_attr).offset(q1_offset).limit(1)).first()
     q3 = sess.exec(select(metric_attr).where(*where).order_by(metric_attr).offset(q3_offset).limit(1)).first()
 
     # Calculate count of moderate & severe outliers
-    moderate_iqr_scale = 1.5
-    severe_iqr_scale = 2.5
-    iqr = q3 - q1
-    moderate_lb, moderate_ub = q1 - moderate_iqr_scale * iqr, q3 + moderate_iqr_scale * iqr
-    severe_lb, severe_ub = q1 - severe_iqr_scale * iqr, q3 + severe_iqr_scale * iqr
-    severe_count = sess.exec(select(func.count()).where(
-        *where,
-        not_between_op(metric_attr, severe_lb, severe_ub)
-    )).first()
-    moderate_count = sess.exec(select(func.count()).where(
-        *where,
-        not_between_op(metric_attr, moderate_lb, moderate_ub),
-        between_op(metric_attr, severe_lb, severe_ub)
-    )).first()
+    if iqr_only:
+        severe_count = 0
+        moderate_count = 0
+    else:
+        iqr = q3 - q1
+        moderate_lb, moderate_ub = q1 - MODERATE_IQR_SCALE * iqr, q3 + MODERATE_IQR_SCALE * iqr
+        severe_lb, severe_ub = q1 - SEVERE_IQR_SCALE * iqr, q3 + SEVERE_IQR_SCALE * iqr
+        severe_count = sess.exec(select(func.count()).where(
+            *where,
+            not_between_op(metric_attr, severe_lb, severe_ub)
+        )).first()
+        moderate_count = sess.exec(select(func.count()).where(
+            *where,
+            not_between_op(metric_attr, moderate_lb, moderate_ub),
+            between_op(metric_attr, severe_lb, severe_ub)
+        )).first()
 
     # Apply virtual metric transformations
     if metric.virtual is not None:
@@ -377,7 +392,7 @@ def metric_summary(
         project_hash: uuid.UUID,
         domain: AnalysisDomain
 ):
-    domain_ty, domain_metrics, *_ = _get_metric_domain(domain)
+    domain_ty, domain_metrics, extra_key, domain_enums, *_ = _get_metric_domain(domain)
     with Session(engine) as sess:
         count: int = sess.exec(select(func.count()).where(
             domain_ty.project_hash == project_hash
@@ -393,9 +408,7 @@ def metric_summary(
             for k, v in metrics.items()
             if v is not None
         },
-        "enums": {
-            # FIXME: do summary of object classes
-        }
+        "enums": domain_enums,
     }
 
 
@@ -404,14 +417,17 @@ def metric_search(
         project_hash: uuid.UUID,
         domain: AnalysisDomain,
         metric_filters: Optional[str] = None,
+        metric_outliers: Optional[str] = None,
         enum_filters: Optional[str] = None,
         order_by: Optional[str] = None,
         desc: bool = False
 ):
     metric_filters: Optional[Dict[str, Tuple[Union[int, float], Union[int, float]]]] = None if metric_filters is None \
         else json.loads(metric_filters)
+    metric_outliers: Optional[Dict[str, Literal["warning", "severe"]]] = None if metric_outliers is None \
+        else json.loads(metric_outliers)
     enum_filters: Optional[Dict[str, List[str]]] = None if enum_filters is None else json.loads(enum_filters)
-    domain_ty, domain_metrics, domain_grouping = _get_metric_domain(domain)
+    domain_ty, domain_metrics, domain_grouping, *_ = _get_metric_domain(domain)
 
     # Add metric filtering.
     query_filters = []
@@ -442,9 +458,34 @@ def metric_search(
             if enum_filter_list not in ["feature_hash"]:
                 raise ValueError(f"Unsupported enum filter: {enum_filter_name}")
             enum_filter_col = getattr(domain_ty, enum_filter_name)
-            # FIXME: implement this
+            query_filters.append(
+                in_op(enum_filter_col, enum_filter_list)
+            )
 
     with Session(engine) as sess:
+        if metric_outliers is not None:
+            for metric, outlier_type in metric_outliers:
+                metric_info = domain_metrics[metric]
+                if metric_info.virtual is not None:
+                    raw_metric = metric_info.virtual.src
+                else:
+                    raw_metric = metric
+                summary = _load_metric(
+                    sess, project_hash, raw_metric, domain_metrics[raw_metric], domain_ty,
+                    iqr_only=True
+                )
+                metric_attr = getattr(domain_ty, raw_metric)
+                q1 = summary["q1"]
+                q3 = summary["q3"]
+                iqr = q3 - q1
+                moderate_lb, moderate_ub = q1 - MODERATE_IQR_SCALE * iqr, q3 + MODERATE_IQR_SCALE * iqr
+                severe_lb, severe_ub = q1 - SEVERE_IQR_SCALE * iqr, q3 + SEVERE_IQR_SCALE * iqr
+                if outlier_type == "severe":
+                    query_filters.append(not_between_op(metric_attr, severe_lb, severe_ub))
+                else:
+                    query_filters.append(not_between_op(metric_attr, moderate_lb, moderate_ub))
+                    query_filters.append(between_op(metric_attr, severe_lb, severe_ub))
+
         search_query = select(
             domain_ty.du_hash,
             domain_ty.frame,
@@ -499,18 +540,97 @@ def scatter_2d_data_metric(project_hash: uuid.UUID, domain: AnalysisDomain, x_me
         {"x": x, "y": y, "n": 1, "du_hash": du_hash, "frame": frame}
         for du_hash, frame, x, y in scatter_results
     ]
+
+    # Derive linear regression
+    x = np.array(list(res[2] for res in scatter_results), dtype=np.float)
+    y = np.array(list(res[3] for res in scatter_results), dtype=np.float)
+    a = np.vstack([x, np.ones(len(x))]).T
+    m, c = np.linalg.lstsq(a, y, rcond=None)[0]
+
     return {
         "sampling": 1.0,
         "samples": samples,
-        # FIXME: trend calculation!?
-        "m": None,
-        "c": None,
+        "m": m,
+        "c": c,
     }
 
 
 @router.get("/get/{project_hash}/analysis/{domain}/dist")
-def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, metric: str):
+def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, group: str):
+    domain_ty, domain_metrics, object_key, domain_enums, *_ = _get_metric_domain(domain)
+    if group in domain_metrics:
+        metric = domain_metrics[group]
+        if metric.virtual is not None:
+            filter_attr = getattr(domain_ty, metric.virtual.src)
+            metric_attr = metric.virtual.map(filter_attr)
+        else:
+            metric_attr = getattr(domain_ty, group)
+            filter_attr = metric_attr
+        if metric.type == MetricType.NORMAL:
+            group_by_attr = func.floor(metric_attr * 100.0) / 100.0
+        else:
+            group_by_attr = metric_attr
+    elif group in domain_enums:
+        group_by_attr = getattr(domain_ty, group)
+        filter_attr = group_by_attr
+    else:
+        raise ValueError(f"{group} is not a valid distribution key")
+
+    with Session(engine) as sess:
+        grouping_query = select(
+            group_by_attr,
+            func.count()
+        ).where(
+            domain_ty.project_hash == project_hash,
+            is_not(filter_attr, None)
+        ).group_by(group_by_attr)
+        grouping_results = sess.exec(
+            grouping_query
+        ).fetchall()
+
+    return {
+        "results": [
+            {
+                "group": grouping,
+                "count": count,
+            }
+            for grouping, count in grouping_results
+        ]
+    }
+
+
+@router.get("/get/{project_hash}/predictions/list")
+def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = None, limit: Optional[int] = None):
+    with Session(engine) as sess:
+        predictions = sess.exec(select(ProjectPrediction)
+                                .where(ProjectPrediction.project_hash == project_hash)).fetchall()
+    return {
+        "total": len(predictions),
+        "results": [
+            {
+                "name": prediction.name,
+                "prediction_hash": prediction.prediction_hash
+            }
+            for prediction in predictions
+        ]
+    }
+
+
+@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/summary")
+def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
+    return {
+        "mAP": 0.0,
+        "mAR": 0.0,
+        "correlation": {},
+        "importance": {},
+    }
+
+
+@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/precision")
+def get_project_prediction_importance(project_hash: uuid.UUID, prediction_hash: uuid.UUID, metric: str):
     pass
 
 
-# FIXME: predictions.
+@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/correlation")
+def get_project_prediction_correlation(project_hash: uuid.UUID, prediction_hash: uuid.UUID, metric: str):
+    pass

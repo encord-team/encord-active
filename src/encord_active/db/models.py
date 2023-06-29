@@ -274,15 +274,25 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    feature_hash: str = Field(min_length=8, max_length=8)
 
     # Prediction metadata
-    confidence: float
+    confidence: float = Field(ge=0, le=1)
+    match_object_hash: str = Field(min_length=8, max_length=8)
+    match_feature_hash: str = Field(min_length=8, max_length=8)
+    match_duplicate: bool
+    iou: float = Field(ge=0, le=1)
+
     # FIXME: should these be null??
-    rle: Optional[float]
-    iou: Optional[float]
+    rle: Optional[float] # FIXME: wrong type - sort out typing later
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
+        Index("active_project_prediction_objects_confidence_index", "prediction_hash", "confidence"),
+        Index(
+            "active_project_prediction_objects_feature_confidence_index",
+            "prediction_hash", "feature_hash", "confidence"
+        )
     )
 
 
