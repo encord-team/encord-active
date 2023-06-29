@@ -11,13 +11,13 @@ Model quality metrics help you evaluate your data and labels based on a trained 
 
 Acquisition functions are a special type of model quality metric, primarily used in active learning to score data samples according to how informative they are for the model and enable smart labeling of unannotated data.
 
-| Title                                                                                                | Metric Type | Data Type |
-|------------------------------------------------------------------------------------------------------|-------------|----------|
-| [Entropy](#entropy) - <small>Rank images by their entropy.</small>                                   | `image`     |          |
-| [LeastConfidence](#least-confidence) - <small>Rank images by their least confidence score.</small>   | `image`     |          |
-| [Margin](#margin) - <small>Rank images by their margin score.</small>                                | `image`     |          |
-| [Variance](#variance) - <small>Rank images by their variance.</small>                                | `image`     |          |
-| [AverageFrameScore](#average-frame-score) - <small>Rank images by their average object score</small> | `image`     | `object`  |
+| Title                                                                                              | Metric Type | Data Type |
+|----------------------------------------------------------------------------------------------------|-------------|----------|
+| [Entropy](#entropy) - <small>Rank images by their entropy.</small>                                 | `image`     |          |
+| [LeastConfidence](#least-confidence) - <small>Rank images by their least confidence score.</small> | `image`     |          |
+| [Margin](#margin) - <small>Rank images by their margin score.</small>                              | `image`     |          |
+| [Variance](#variance) - <small>Rank images by their variance.</small>                              | `image`     |          |
+| [MeanObjectScore](#mean-object-score) - <small>Rank images by their average object score</small>   | `image`     | `object`  |
 
 ### Entropy {#entropy}
 
@@ -88,7 +88,7 @@ As a result, data samples with lower variance score should be offered for annota
 Implementation on [GitHub](https://github.com/encord-team/encord-active/blob/main/src/encord_active/lib/metrics/acquisition_metrics/acquisition_functions.py)
 
 
-### Average Frame Score {#average-frame-score}
+### Mean Object Confidence {#mean-object-confidence}
 
 This method ranks images based on the mean score of their predicted objects, applicable specifically for object-level predictions such as bounding-box or segmentation.
 

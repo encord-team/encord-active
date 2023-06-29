@@ -31,7 +31,7 @@ We include the following uncertainty-based acquisition functions:
 
   $U(x) = \mathcal{H}(P_\theta(y|x)) = -\underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x) \log P_\theta(y|x)$
 
-- [Average Frame Score][ea-acquisition-function-average-frame-score]
+- [Mean Object Confidence][ea-acquisition-function-mean-object-confidence]
   
   $U(x) = \frac{1}{N} \sum_{i=1}^{N} {\max} P_\theta^i(y|x)$
     
@@ -91,7 +91,7 @@ If you’d like to talk to an expert on the topic, the Encord ML team can be fou
 [ea-acquisition-function-margin]: ../metrics/model-quality-metrics/#margin
 [ea-acquisition-function-variance]: ../metrics/model-quality-metrics/#variance
 [ea-acquisition-function-entropy]: ../metrics/model-quality-metrics/#entropy
-[ea-acquisition-function-average-frame-score]: ../metrics/model-quality-metrics.md/#average-frame-score
+[ea-acquisition-function-mean-object-confidence]: ../metrics/model-quality-metrics.md/#mean-object-score
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
 [ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
 [diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx
