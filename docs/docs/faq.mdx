@@ -3,14 +3,14 @@ sidebar_position: 11
 title: FAQ
 ---
 
-## Can I use Encord active without an Encord account
+## Can I use Encord active without an Encord account?
 
-You can.
-Encord Active is an open source project aimed to support all computer vision based active learning projects.
-You can, for example, use the [`init`](./cli#init) command to initialize a project from an image directory.
-You can also [import a COCO project](./import/import-coco-project).
+Absolutely!
+Encord Active is an open-source project aimed to support all computer vision based active learning projects.
+You can initialize a project using the [`init`][cli-init-command] command with a local image directory.
+Additionally, [integration with COCO projects][import-coco-project] is also possible in Encord Active.
 
-The [Importing Data and Labels][importing-data] page is a great resource for more information on your possibilities.
+For more information and details on your possibilities, check out the [Import section][import-section].
 
 ---
 
@@ -19,23 +19,25 @@ The [Importing Data and Labels][importing-data] page is a great resource for mor
 **Yes!** - period.
 
 Everything you do with this library stays within your local machine.
-No statistics, data or other information will be sent elsewhere.
+No statistics, data, or other information will be collected or sent elsewhere.
 
-The only communication happening with the outside world is with Encord's main platform if you have a project which is linked to Encord.
+The only communication that occurs with the outside world is with Encord's main platform if you have a project linked to Encord.
 
 ---
 
 ## What do I do if I have issues with the installation?
 
-Get in touch with us!
-You can contact us via [Discord][join-discord] or by [email][ea-email].
+If you encounter any issues during the installation process, we recommend checking that you have followed the steps outlined in the [installation guide][installation-guide] carefully.
+
+If the problem persists or if you have any further questions, please don't hesitate to get in touch with us.
+You can reach out to us via [Discord][join-discord] or by [email][ea-email], and we'll be happy to assist you with any installation-related issues you may have.
 
 ---
 
 ## What is a quality metric?
 
-You can think of a metric as any function you can apply to your data, labels, and model predictions to rank or index them.
-From the quality metrics, Encord Active will automatically decompose and analyze your data, labels, and model predictions.
+A quality metric is a function that can be applied to your data, labels, and model predictions to assess their quality and rank them accordingly.
+Encord Active uses these metrics to analyze and decompose your data, labels, and predictions.
 
 Here is a [blog][ea-intro-blogpost] post on how we like to think about quality metrics.
 
@@ -47,8 +49,13 @@ In fact, the power lies in defining your own quality metrics for indexing your d
 
 ## How do I import my model predictions?
 
-You build a list of `encord_active.lib.db.Prediction` objects, store them in a pickle file and run `encord-active import predictions /path/to/your/file.pkl`.
-Here is the [workflow description](./import/import-predictions) for importing model predictions.
+To import your model predictions into Encord Active, you need to follow these steps:
+1. Build a list of `encord_active.lib.db.predictions.Prediction` objects that represent your model predictions.
+2. Store the list of predictions in a pickle file.
+3. Run the command `encord-active import predictions /path/to/your/file.pkl`, where `/path/to/your/file.pkl` is the path to the pickle file containing your predictions.
+
+By executing this command, Encord Active will import and incorporate your model predictions into the project.
+You can refer to the [workflow description][import-predictions] for importing model predictions for more detailed instructions.
 
 ---
 
@@ -67,14 +74,14 @@ While we're working on improving the efficiency, there are a couple of tricks th
    This will allow you to continuously see what have been computed so far.
    Refresh the browser once in a while when new metrics are done computing in your first terminal.
 
-2. You can also kill the import process as soon as metrics have started to compute. This will leave you with a project containing less metrics. As a consequence, you will not be able to see as many insights as if the process is allowed to finish.
-   However, you can always use the [`encord-active metric run`](./cli#run)command to run metrics that are missing.
+2. You can also kill the import process as soon as metrics have started to compute. This will leave you with a project containing fewer metrics. As a consequence, you will not be able to see as many insights as if the process is allowed to finish.
+   However, you can always use the [`encord-active metric run`](./cli#run) command to run metrics that are missing.
 
 ---
 
 ## How do I add my own embeddings?
 
-Please see this [notebook](https://github.com/encord-team/encord-active/blob/main/examples/adding-own-custom-embeddings.ipynb) to learn how to add your own custom embeddings.
+Please see this [notebook](https://colab.research.google.com/github/encord-team/encord-active/blob/main/examples/adding-own-custom-embeddings.ipynb) to learn how to add your own custom embeddings.
 
 ---
 
@@ -95,9 +102,9 @@ Other good resources can be found in our [example notebooks][ea-examples].
 ## How does Encord Active integrate without the Encord annotation platform?
 
 There are multiple ways in which you can integrate your data with Encord Active.
-We have described how to import data [here][importing-data].
-To also integrate model predictions, you can read more [here][importing-predictions].
-Exporting data back into the rest of your pipeline can be done via the toolbox on the explorer pages.
+We have described how to import data [here][import-section].
+To also integrate model predictions, you can read more [here][import-predictions].
+Exporting data back into the rest of your pipeline can be done via the toolbox in the application's explorer pages.
 
 ---
 
@@ -106,7 +113,7 @@ Exporting data back into the rest of your pipeline can be done via the toolbox o
 Dataset management can be done in two ways.
 
 1. You can [tag][tagging] your data to keep track of subsets (or versions) of your dataset.
-2. If you are planning to do more involved changes to your dataset and you want the ability to go back, your best option is to use the _Clone_ button in the toolbox of the explorer pages.
+2. If you are planning to do more involved changes to your dataset and you want the ability to go back, your best option is to use the <kbd>Clone</kbd> button in the _Action_ tab of the toolbox in the application's explorer pages.
    This will create a clone of your entire project and you will always be able to come back to the old project.
 
 ---
@@ -126,7 +133,7 @@ data/**/*.tiff
 data/**/*.mp4
 ```
 
-Next, run `git add .; git commit -am "Initial commit"`.
+Afterwards, run `git add .; git commit -am "Initial commit"`.
 
 ---
 
@@ -143,7 +150,7 @@ You can, e.g., use the tags to [filter][filter-guide] and [export][export-guide]
 
 ## How do I use Encord Active to find label errors?
 
-[Here][finding-label-errors] is a blog post on how to find and fix label errors.
+[Here][finding-label-errors] is a blog post on how to find and fix label errors using Encord Active.
 
 ---
 
@@ -158,37 +165,39 @@ Encord Active supports the active learning process by allowing you to
 5. Automatically decompose your model performance to help you determine where to put your focus for the next model iteration
 6. Tag subsets of data to set aside test sets for specific edge cases for which you want to maintain your model performance between each production model
 
-You can find more information on Active Learning [here][active-learning].
+For detailed information on active learning and the role of Encord Active, you can refer to our documentation on [Active Learning within Encord Active][active-learning].
 
 ---
 
-## How do I upload my data and labels to Encord Annotate?
+## How do I upload my data and labels to the Encord platform?
 
-Uploading your data to Encord Annotate is as simple as clicking the _Export to Encord_ button in the toolbox on the explorer pages.
+Uploading your data to the Encord platform is as simple as clicking the <kbd>🏗 Export to Encord</kbd> button in the _Action_ tab of the toolbox in the application's explorer pages.
 This will create an ontology, a dataset, and a project on Encord Annotate and provide you with links to the three.
 
 :::tip
 
-This requires you to have an ssh-key associated with Encord Active:
+This action requires an ssh-key associated with Encord Active:
 
-1. [Add your public][ssh-key-association] key to Encord Annotate
-2. Associate the private key with Encord Active:
+1. [Add a public key][ssh-key-association] in the Encord platform.
+2. Associate the private key with Encord Active.
 
-```shell
-encord-active config set ssh-key-pash /path/to/private/key
-```
+  ```shell
+  encord-active config set ssh-key-pash /path/to/private/key
+  ```
 
 :::
 
 ---
 
-## What should I do if I see an error?
+## What should I do if I encounter an error?
 
-If you see an error, we're here to help.
-Get in touch with us on [Discord][join-discord] or shoot us an [email][ea-email] and we'll get back to you.
+If you come across an error, don't worry! We're here to assist you.
+Reach out to us on [Discord][join-discord] or shoot us an [email][ea-email], and we'll promptly address your concern.
 
-We would also love if you wouldn't mind [reporting an issue][report-issue] on GitHub.
+Additionally, we greatly appreciate it if you could [report the issue][report-issue] on GitHub.
+Your feedback and bug reports help us improve Encord Active for everyone.
 
+[cli-init-command]: ./cli#init
 [ea-app]: https://github.com/encord-team/encord-active/tree/main/src/encord_active/app
 [ea-examples]: https://github.com/encord-team/encord-active/tree/main/examples
 [ea-intro-blogpost]: https://encord.com/blog/closing-the-ai-production-gap-encord-active-a-new/
@@ -196,8 +205,10 @@ We would also love if you wouldn't mind [reporting an issue][report-issue] on Gi
 [filter-guide]: ./user-guide/filtering
 [export-guide]: ./user-guide/exporting
 [active-learning]: ./active-learning
-[importing-data]: /import
-[importing-predictions]: ./import/import-predictions
+[import-coco-project]: ./import/import-coco-project
+[import-section]: ./import
+[import-predictions]: ./import/import-predictions
+[installation-guide]: ./installation
 [join-discord]: https://discord.gg/TU6yT7Uvx3
 [tagging]: ./user-guide/tagging
 [write-metric]: ./metrics/write-your-own
