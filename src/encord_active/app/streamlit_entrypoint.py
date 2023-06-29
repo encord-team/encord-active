@@ -1,5 +1,7 @@
 import torch
 
+from encord_active.server.settings import get_settings
+
 torch_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 import argparse
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import streamlit as st
+from encord_active_components.components.active import active
 from encord_active_components.components.projects_page import Project
 
 from encord_active.app.auth.jwt import auth

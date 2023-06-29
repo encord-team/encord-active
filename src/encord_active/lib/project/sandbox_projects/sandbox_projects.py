@@ -18,7 +18,7 @@ class PrebuiltProject(TypedDict):
     url: str
     hash: str
     name: str
-    image_path: Path
+    image_filename: str
     stats: ProjectStats
 
 
@@ -29,42 +29,42 @@ BASE_PROJECTS: dict[str, PrebuiltProject] = {
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-coco-2017-dataset.zip",
         hash="f2140a72-c644-4c31-be66-3ef80b3718e5",
         name="[open-source][validation]-coco-2017-dataset",
-        image_path=(IMAGES_PATH / "coco.jpeg"),
+        image_filename="coco.jpeg",
         stats=ProjectStats(dataUnits=4952, labels=41420, classes=80),
     ),
     "[open-source]-covid-19-segmentations": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-covid-19-segmentations.zip",
         hash="d18819cb-2b75-4040-beb6-c63a901e6c84",
         name="[open-source]-covid-19-segmentations",
-        image_path=(IMAGES_PATH / "covid_segmentations.jpeg"),
+        image_filename="covid_segmentations.jpeg",
         stats=ProjectStats(dataUnits=100, labels=588, classes=13),
     ),
     "[open-source][validation]-bdd-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Bvalidation%5D-bdd-dataset.zip",
         hash="b37a48e0-6462-472d-baaa-2fcaf5ab9521",
         name="[open-source][validation]-bdd-dataset",
-        image_path=(IMAGES_PATH / "bdd.jpeg"),
+        image_filename="bdd.jpeg",
         stats=ProjectStats(dataUnits=981, labels=12983, classes=8),
     ),
     "[open-source][test]-mnist-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-mnist-dataset.zip",
         hash="5c96df58-beac-4e42-a74d-fce16622c5af",
         name="[open-source][test]-mnist-dataset",
-        image_path=IMAGES_PATH / "mnist.png",
+        image_filename="mnist.png",
         stats=ProjectStats(dataUnits=70000, labels=0, classes=0),
     ),
     "rareplanes": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/rareplanes.zip",
         hash="1f4752d7-4a7a-4c0e-8b08-dd4b1c5a8bc6",
         name="rareplanes",
-        image_path=(IMAGES_PATH / "rareplanes.jpeg"),
+        image_filename="rareplanes.jpeg",
         stats=ProjectStats(dataUnits=2710, labels=6812, classes=7),
     ),
     "quickstart": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/quickstart.zip",
         hash="d6423838-f60e-41d9-b2ca-715aa2edef9c",
         name="quickstart",
-        image_path=(IMAGES_PATH / "quickstart.jpeg"),
+        image_filename="quickstart.jpeg",
         stats=ProjectStats(dataUnits=199, labels=1617, classes=71),
     ),
 }
@@ -74,42 +74,42 @@ ADDITIONAL_PROJECTS: dict[str, PrebuiltProject] = {
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-limuc-ulcerative-colitis-classification.zip",
         hash="aa2b21bd-6f2e-48fc-8f4f-4ba4d9b7bd67",
         name="[open-source][test]-limuc-ulcerative-colitis-classification",
-        image_path=(IMAGES_PATH / "limuc.png"),
+        image_filename="limuc.png",
         stats=ProjectStats(dataUnits=1686, labels=1686, classes=4),
     ),
     "[open-source]-TACO-Official": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Official.zip",
         hash="dc1cf137-f1b9-4c2f-973d-32512c971955",
         name="[open-source]-TACO-Official",
-        image_path=(IMAGES_PATH / "taco.jpeg"),
+        image_filename="taco.jpeg",
         stats=ProjectStats(dataUnits=1500, labels=5038, classes=59),
     ),
     "[open-source]-TACO-Unofficial": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-TACO-Unofficial.zip",
         hash="14a52852-55f6-46c9-850a-40e11540605f",
         name="[open-source]-TACO-Unofficial",
-        image_path=(IMAGES_PATH / "taco_unofficial.jpeg"),
+        image_filename="taco_unofficial.jpeg",
         stats=ProjectStats(dataUnits=3731, labels=8419, classes=60),
     ),
     "[open-source][train]-mnist-dataset": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btrain%5D-mnist-dataset.zip",
         hash="34413f3b-fed5-4a34-a279-b68a0c5fe325",
         name="[open-source][train]-mnist-dataset",
-        image_path=IMAGES_PATH / "mnist.png",
+        image_filename="mnist.png",
         stats=ProjectStats(dataUnits=119000, labels=0, classes=0),
     ),
     "[open-source][train]-Caltech-101": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btrain%5D-Caltech-101.zip",
         hash="d083bd28-fd4a-4b58-a80d-a1a9074d2cdc",
         name="[open-source][train]-Caltech-101",
-        image_path=(IMAGES_PATH / "caltech101_train.jpeg"),
+        image_filename="caltech101_train.jpeg",
         stats=ProjectStats(dataUnits=5171, labels=5171, classes=101),
     ),
     "[open-source][test]-Caltech-101": PrebuiltProject(
         url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D%5Btest%5D-Caltech-101.zip",
         hash="c1679f72-6ad5-46f0-b011-f5b2c60e23d5",
         name="[open-source][test]-Caltech-101",
-        image_path=(IMAGES_PATH / "caltech101_test.jpeg"),
+        image_filename="caltech101_test.jpeg",
         stats=ProjectStats(dataUnits=3506, labels=3506, classes=101),
     ),
 }
