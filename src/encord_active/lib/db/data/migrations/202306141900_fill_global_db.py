@@ -1,6 +1,6 @@
 import json
 import uuid
-from typing import Optional, Set, Tuple, Dict, Union
+from typing import Optional, Set, Tuple, Dict, Union, List
 from sqlmodel import Session
 
 from encord_active.db.metrics import DataMetrics, ObjectMetrics, MetricType
@@ -320,20 +320,61 @@ def up(pfs: ProjectFileStructure) -> None:
         # FIXME: MainPredictionType.CLASSIFICATION
     ]:
         predictions_dir = pfs.predictions
+
+        # No predictions exist
+        if not predictions_dir.exists():
+            continue
+        predictions_child_dirs = list(predictions_dir.iterdir())
+        if len(predictions_child_dirs) == 0:
+            continue
+        names = {
+            child_dir.name
+            for child_dir in predictions_child_dirs
+        }
+        if prediction_type.value in names and "predictions.csv" not in names:
+            predictions_dir = predictions_dir / prediction_type.value
+        elif prediction_type == MainPredictionType.CLASSIFICATION:
+            # SKIP, will already be loaded by object classification type
+            continue
+        # raise ValueError(f"Debugging: {prediction_type.value} / {predictions_dir} / {names}")
+
         metrics_dir = pfs.metrics
         predictions_metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
         model_predictions = reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
-        if model_predictions is None:
-            # No predictions to migrate, hence can be safely ignored
-            continue
+        class_idx_dict = reader.get_class_idx(predictions_dir)
+        gt_matched = reader.get_gt_matched(predictions_dir)
+
+        label_metric_datas = reader.get_label_metric_data(metrics_dir)
+        labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
+        if gt_matched is None or labels is None or model_predictions is None:
+            raise ValueError(f"Missing prediction files for migration!")
+
+        gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
+            ((int(class_id), int(img_id), int(pidx)), int(mapping["lidx"]))
+            for class_id, rest in gt_matched.items()
+            for img_id, mapping_list in rest.items()
+            for mapping in mapping_list
+            for pidx in mapping["pidxs"]
+        ]
+        gt_matched_inverted_map = dict(gt_matched_inverted_list)
+        if len(gt_matched_inverted_list) != len(gt_matched_inverted_map):
+            raise ValueError(
+                f"Inconsistency in prediction mapping lookup: "
+                f"{len(gt_matched_inverted_list)} / {len(gt_matched_inverted_map)}"
+            )
+
+        model_prediction_best_match_candidate: Dict[Tuple[uuid.UUID, int, str], ProjectPredictionObjectResults] = {}
+
         for model_prediction in model_predictions.to_dict(orient="records"):
             identifier: str = model_prediction.pop('identifier')
             model_prediction.pop('url')
-            model_prediction.pop('Unnamed: 0')
+            pidx = int(model_prediction.pop('Unnamed: 0'))
             img_id = int(model_prediction.pop('img_id'))
             class_id = int(model_prediction.pop('class_id'))
+            feature_hash = class_idx_dict[str(class_id)]["featureHash"]
             confidence = float(model_prediction.pop('confidence'))
-            rle = float(model_prediction.pop('rle'))
+            theta = model_prediction.pop('theta', None)
+            rle = str(model_prediction.pop('rle'))
             iou = float(model_prediction.pop('iou'))
             pbb = [
                 float(model_prediction.pop('x1')),
@@ -355,29 +396,72 @@ def up(pfs: ProjectFileStructure) -> None:
                 else:
                     raise ValueError(f"Unknown metric target: '{metric_target}'")
 
-            # Add the new prediction to the database!!!
-            label_hash, du_hash_str, frame_str, obj_or_class_hash, *rest = identifier.split("_")
+            # Decompose identifier
+            label_hash, du_hash_str, frame_str, *object_hashes = identifier.split("_")
+            if len(object_hashes) == 0:
+                raise ValueError(f"Missing label hash: {identifier}")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
-            if len(rest) != 0:
-                print(f"WARNING: throwing away rest of identifier in prediction: {rest} (ident={identifier})")
 
-            predictions_objects_db.append(
-                ProjectPredictionObjectResults(
+            # label_match_id => match_properties
+            label_match_id = gt_matched_inverted_map.get((class_id, img_id, pidx), None)
+            match_object_hash = None
+            match_feature_hash = None
+            if label_match_id is not None:
+                matched_label = labels.iloc[label_match_id].to_dict()
+                if int(matched_label.pop('Unnamed: 0')) != label_match_id:
+                    raise ValueError(f"Inconsistent lookup: {label_match_id}")
+                matched_label_class_id = matched_label.pop("class_id")
+                matched_label_img_id = matched_label.pop("img_id")
+                matched_label_identifier = matched_label.pop("identifier")
+                matched_label_label_hash, matched_label_du_hash_str, matched_label_frame_str, *matched_label_hashes = \
+                    matched_label_identifier.split("_")
+                if len(matched_label_hashes) != 1:
+                    raise ValueError(f"Matched against multiple labels, this is invalid: {matched_label_identifier}")
+                if uuid.UUID(matched_label_du_hash_str) != du_hash:
+                    raise ValueError(f"Matched against different du_hash")
+                if int(matched_label_frame_str) != frame:
+                    raise ValueError(f"Matched against different frame")
+                # FIXME: this has metrics - should they be used anywhere??
+
+                # Set new values
+                match_object_hash = matched_label_hashes[0]
+                match_feature_hash = class_idx_dict[str(matched_label_class_id)]["featureHash"]
+
+            # Add the new prediction to the database!!!
+            for object_hash in object_hashes:
+                new_predictions_object_db = ProjectPredictionObjectResults(
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=obj_or_class_hash, # FIXME: need to condition on if this is classification or not!
+                    object_hash=object_hash,
+                    feature_hash=feature_hash,
                     confidence=confidence,
-                    # FIXME: nan -> null, is this correct behaviour?
-                    rle=rle,
                     iou=iou,
+                    # Match
+                    match_object_hash=match_object_hash,
+                    match_feature_hash=match_feature_hash,
+                    match_duplicate=False,# Set via script after execution.
+                    # Metrics
                     # FIXME: pbb (aim to support all prediction descriptors (bytes??)
                 )
-            )
+                predictions_objects_db.append(
+                    new_predictions_object_db
+                )
+                if match_object_hash is not None:
+                    # Assign all duplicate matches to match with non-highest iou
+                    match_key = (du_hash, frame, match_object_hash)
+                    best_match = model_prediction_best_match_candidate.get(match_key, None)
+                    if best_match is None:
+                        model_prediction_best_match_candidate[match_key] = new_predictions_object_db
+                    elif best_match.iou > new_predictions_object_db.iou:
+                        new_predictions_object_db.match_duplicate = True
+                    elif best_match.iou < new_predictions_object_db.iou:
+                        best_match.match_duplicate = True
+                        model_prediction_best_match_candidate[match_key] = new_predictions_object_db
+                    else:
+                        raise ValueError(f"Duplicate prediction with exact same iou, failing to ignore")
 
-        # label_metric_datas = reader.get_label_metric_data(metrics_dir)
-        # labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
         # FIXME: store prediction metadata for the prediction run.
 
         # Ensure prediction currently stored actually exists.
@@ -437,3 +521,8 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(predictions_run_db)
         sess.add_all(predictions_objects_db)
         sess.commit()
+
+        # Now correctly assign duplicates
+        for prediction in predictions_run_db:
+            prediction_hash = prediction.prediction_hash
+
