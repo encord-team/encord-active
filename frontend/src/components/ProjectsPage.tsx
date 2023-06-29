@@ -1,49 +1,29 @@
-import emptyUrl from "../../../assets/empty.svg";
-import importUrl from "../../../assets/import.svg";
-import encordImportUrl from "../../../assets/encord-import.svg";
-import fileImageUrl from "../../../assets/file-image.svg";
-import annotationsUrl from "../../../assets/annotations.svg";
-import classesUrl from "../../../assets/classes.svg";
-import DEFAUL_PROJECT_IMAGE from "../../../assets/default_project_image.webp";
+import emptyUrl from "../../assets/empty.svg";
+import importUrl from "../../assets/import.svg";
+import encordImportUrl from "../../assets/encord-import.svg";
+import fileImageUrl from "../../assets/file-image.svg";
+import annotationsUrl from "../../assets/annotations.svg";
+import classesUrl from "../../assets/classes.svg";
+import DEFAUL_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 
-import { Streamlit } from "streamlit-component-lib";
-import { classy } from "../../helpers/classy";
+import { classy } from "../helpers/classy";
 import { fork } from "radash";
+import { IntegratedProjectMetadata } from "./james/IntegratedActiveAPI";
 
-type Env = "prod" | "local";
-
-export type Project = {
-  name: string;
-  hash: string;
-  imageUrl?: string;
-  path?: string;
-  sandbox?: boolean;
-  stats: {
-    dataUnits: number;
-    labels: number;
-    classes: number;
-  };
+export type Props = {
+  projects: IntegratedProjectMetadata[];
+  onSelectLocalProject: (projectHash: string) => void;
 };
-
-type Output = [
-  (
-    | "SELECT_SANDBOX_PROJECT"
-    | "SELECT_USER_PROJECT"
-    | "IMPORT_ENCORD"
-    | "IMPORT_COCO"
-    | "INIT"
-  ),
-  string
-];
-
-const pushOutput = (output: Output) => Streamlit.setComponentValue(output);
-
-export type Props = { projects: Project[]; env: Env };
-export const ProjectsPage = ({ projects = [], env }: Props) => {
+export const ProjectsPage = ({
+  projects = [],
+  onSelectLocalProject,
+}: Props) => {
   const [sandboxProjects, userProjects] = fork(
     projects,
     ({ sandbox }) => !!sandbox
   );
+
+  const env = import.meta.env.VITE_ENV;
 
   return (
     <div className="h-max p-5 flex flex-col gap-5">
@@ -74,9 +54,9 @@ export const ProjectsPage = ({ projects = [], env }: Props) => {
         {userProjects.length ? (
           userProjects.map((project) => (
             <ProjectCard
-              key={project.hash}
+              key={project.projectHash}
               project={project}
-              onClick={() => pushOutput(["SELECT_USER_PROJECT", project.hash])}
+              onClick={() => onSelectLocalProject(project.projectHash)}
             />
           ))
         ) : (
@@ -90,15 +70,13 @@ export const ProjectsPage = ({ projects = [], env }: Props) => {
           </h2>
           <div className="flex flex-wrap gap-5">
             {sandboxProjects
-              .sort((a, b) => -!!a.path - -!!b.path)
+              .sort((a, b) => -!!a.downloaded - -!!b.downloaded)
               .map((project) => (
                 <ProjectCard
-                  key={project.hash}
+                  key={project.projectHash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() =>
-                    pushOutput(["SELECT_SANDBOX_PROJECT", project.hash])
-                  }
+                  onClick={() => onSelectLocalProject(project.projectHash)}
                 />
               ))}
           </div>
@@ -164,23 +142,16 @@ const ProjectCard = ({
   showDownloadedBadge = false,
   onClick,
 }: {
-  project: Project;
+  project: IntegratedProjectMetadata;
   showDownloadedBadge?: boolean;
   onClick: ButtonCardProps["onClick"];
 }) => (
   <ButtonCard onClick={onClick}>
     <figure className="max-h-36 rounded">
-      <img
-        src={
-          project.imageUrl
-            ? document.referrer + project.imageUrl
-            : DEFAUL_PROJECT_IMAGE
-        }
-        alt={project.name}
-      />
+      <img src={project.imageUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
     </figure>
     <div className="card-body w-full p-0 justify-between gap-1">
-      <h2 className="card-title text-sm line-clamp-2">{project.name}</h2>
+      <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
       <div className="flex flex-col">
         <ProjectStat
           title={"Dataset"}
@@ -199,7 +170,7 @@ const ProjectCard = ({
         />
       </div>
     </div>
-    {showDownloadedBadge && project.path ? (
+    {showDownloadedBadge && project.downloaded ? (
       <div className="badge absolute top-1">Downloaded</div>
     ) : null}
   </ButtonCard>

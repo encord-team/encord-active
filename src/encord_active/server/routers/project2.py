@@ -1,11 +1,9 @@
 import uuid
-from typing import Dict, List, Optional, Tuple, Literal
+from typing import Dict, List, Optional, Tuple, Literal, TypedDict
 from urllib.parse import quote
-from sqlalchemy.sql.operators import is_not
 
 from fastapi import APIRouter
 from sqlalchemy import func
-from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
 
 from encord_active.db.enums import EnumDefinition, DataEnums, AnnotationEnums
@@ -24,6 +22,9 @@ from encord_active.db.models import (
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.routers import project2_analysis, project2_prediction, project2_actions
+from encord_active.lib.project.sandbox_projects.sandbox_projects import (
+    available_prebuilt_projects,
+)
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
 
@@ -37,17 +38,85 @@ router.include_router(project2_prediction.router)
 router.include_router(project2_actions.router)
 
 
+class ProjectStats(TypedDict):
+    dataUnits: int
+    labels: int
+    classes: int
+
+
+class ProjectReturn(TypedDict):
+    title: str
+    description: str
+    projectHash: uuid.UUID
+    imageUrl: str
+    downloaded: bool
+    sandbox: bool
+    stats: Optional[ProjectStats]
+
+
+def _get_first_image_with_polygons_url(project_hash: uuid.UUID):
+    with Session(engine) as sess:
+        offset = 0
+        while offset >= 0:
+            data_unit = sess.exec(select(ProjectDataUnitMetadata).offset(offset).limit(1)).one()
+            if not data_unit:
+                break
+            if len(data_unit.objects) and not data_unit.data_uri_is_video and data_unit.data_uri is not None:
+                settings = get_settings()
+                root_path = settings.SERVER_START_PATH.expanduser().resolve()
+                url_path = url_to_file_path(data_unit.data_uri, root_path)
+                if url_path is not None:
+                    relative_path = url_path.relative_to(root_path)
+                    return f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+
+
 @router.get("/")
 def get_all_projects():
+    # FIXME: revert back to this code!
+    # with Session(engine) as sess:
+    #  projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
+    # return {
+    #     project_hash: {
+    #         "title": title,
+    #         "description": description,
+    #     }
+    #     for project_hash, title, description in projects
+    # }
+    sandbox_projects = {}
+    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
+        project_hash_uuid = uuid.UUID(data["hash"])
+        sandbox_projects[project_hash_uuid] = ProjectReturn(
+            title=name,
+            description="",
+            projectHash=project_hash_uuid,
+            stats=data["stats"],
+            downloaded=False,
+            imageUrl=f"ea-sandbox-static/{data['image_filename']}",
+            sandbox=True,
+        )
+
     with Session(engine) as sess:
-        projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
-    return {
-        project_hash: {
-            "title": title,
-            "description": description,
-        }
-        for project_hash, title, description in projects
-    }
+        db_projects = sess.exec(
+            select(Project.project_hash, Project.project_name, Project.project_description)
+        ).fetchall()
+
+    projects = {}
+    for project_hash, title, description in db_projects:
+        if project_hash in sandbox_projects:
+            sandbox_projects[project_hash]["downloaded"] = True
+            continue
+
+        projects[project_hash] = ProjectReturn(
+            title=title,
+            description=description,
+            projectHash=project_hash,
+            stats=None,  # TODO: fix me
+            downloaded=True,
+            imageUrl=_get_first_image_with_polygons_url(project_hash) or "",
+            sandbox=False,
+        )
+
+    return {**projects, **sandbox_projects}
 
 
 def _metric_summary(metrics: Dict[str, MetricDefinition]):
