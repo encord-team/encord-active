@@ -33,7 +33,7 @@ We include the following uncertainty-based acquisition functions:
 
 - [Average Frame Score][ea-acquisition-function-average-frame-score]
   
-  $U(x) = \frac{1}{N} \sum_{i=1}^{N} {\max} P_\theta(y|x)$
+  $U(x) = \frac{1}{N} \sum_{i=1}^{N} {\max} P_\theta^i(y|x)$
     
 
 :::tip
@@ -83,8 +83,8 @@ If you’d like to talk to an expert on the topic, the Encord ML team can be fou
 ### Tutorials
 
 [Easy Active Learning on MNIST][easy-active-learning-in-mnist]: A quick overview of the acquisition functions using a well-known example dataset.  
-[Diversity sampling without an ML model][diversity-sampling-on-unlabeled-data-example]: Using diversity sampling to rank images without training any model.
-[Selecting hard samples for object detection](https://github.com/encord-team/encord-active/blob/main/examples/active%20learning/object-detection/select-hard-samples-to-annotate.ipynb): A jupyter notebook to run acquisition functions using an object detector.
+[Diversity sampling without an ML model][diversity-sampling-on-unlabeled-data-example]: Using diversity sampling to rank images without training any model.  
+[Selecting hard samples for object detection][selecting-hard-samples-for-object-detection]: A jupyter notebook to run acquisition functions using an object detector.
 
 
 [ea-acquisition-function-least-confidence]: ../metrics/model-quality-metrics/#least-confidence
@@ -95,3 +95,4 @@ If you’d like to talk to an expert on the topic, the Encord ML team can be fou
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
 [ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
 [diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx
+[selecting-hard-samples-for-object-detection]: https://github.com/encord-team/encord-active/blob/main/examples/active%20learning/object-detection/select-hard-samples-to-annotate.ipynb
