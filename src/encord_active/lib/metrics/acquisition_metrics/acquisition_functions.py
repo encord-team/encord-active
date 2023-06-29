@@ -12,10 +12,10 @@ from encord_active.lib.metrics.acquisition_metrics.common import (
 from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
 
 
-class AverageFrameScore(AcquisitionFunction):
+class MeanObjectConfidence(AcquisitionFunction):
     def __init__(self, model: Union[BaseClassificationModel, BaseObjectModel]):
         super().__init__(
-            title="Average Frame Score",
+            title="Mean Object Confidence",
             short_description="Ranks images by average of its predicted objects' confidences",
             long_description="For each image, this acquisition function returns the average confidence of the "
             "predictions. If there is no prediction for the given image, it assigns a value of "

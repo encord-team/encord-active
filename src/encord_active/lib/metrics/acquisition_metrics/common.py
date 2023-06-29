@@ -23,7 +23,10 @@ class BaseObjectPrediction(BaseModel):
         if v.ndim != 1:
             raise ValueError("Class probabilities should be 1 dimensional (1xN)")
         if v.shape[0] < 2:
-            raise ValueError("There should be at least 2 probability values")
+            raise ValueError(
+                "There should be at least 2 probability values. If there is only one class in the ontology"
+                ", probabilities should be [P(class), 1-P(class)]"
+            )
         return values
 
     class Config:
