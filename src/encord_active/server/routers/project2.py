@@ -1,21 +1,22 @@
 import json
 import uuid
 from enum import Enum
-from os import environ
 from typing import Optional, Dict, Tuple, Union, List, Type, Literal
 from urllib.parse import quote
 
 import numpy as np
-from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
 
 from fastapi import APIRouter
-from sqlalchemy import func
+from sqlalchemy import func, bindparam, text
+from sqlalchemy.types import Float
+from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
 from sqlmodel import Session, select
+from sqlmodel.sql.sqltypes import GUID
 
 from encord_active.db.metrics import DataMetrics, ClassificationMetrics, ObjectMetrics, MetricDefinition, MetricType
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
     ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics, ProjectDataMetadata, \
-    ProjectClassificationAnalytics, ProjectPrediction
+    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionObjectResults
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.settings import get_settings
@@ -27,7 +28,7 @@ router = APIRouter(
 )
 
 engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
-engine = get_engine(engine_path)
+engine = get_engine(engine_path, concurrent=True)
 
 MODERATE_IQR_SCALE = 1.5
 SEVERE_IQR_SCALE = 2.5
@@ -617,10 +618,98 @@ def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = No
 
 
 @router.get("/get/{project_hash}/predictions/get/{prediction_hash}/summary")
-def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
+def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uuid.UUID, iou: float):
+    guid = GUID()
+    with Session(engine) as sess:
+        sql = text(
+            """
+            SELECT feature_hash, coalesce(ap, 0.0) as ap, coalesce(ar, 0.0) as ar FROM (
+                SELECT FG.feature_hash, (
+                    SELECT sum(
+                        coalesce(cast(ap_positives as real) / ap_total, 0.0)
+                    ) / (
+                        count(*) + (
+                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                            WHERE UM.prediction_hash = FG.prediction_hash
+                            AND UM.feature_hash == FG.feature_hash
+                        )
+                    ) as ap FROM (
+                        SELECT
+                            row_number() OVER (
+                                ORDER BY AP.confidence DESC ROWS UNBOUNDED PRECEDING
+                            ) AS ap_total,
+                            sum(cast(
+                                (
+                                    AP.iou >= :iou and
+                                    coalesce(AP.feature_hash = AP.match_feature_hash, false) and
+                                    AP.match_duplicate_iou < :iou
+                                ) as integer
+                            )) OVER (
+                                ORDER BY AP.confidence DESC ROWS UNBOUNDED PRECEDING
+                            ) AS ap_positives
+                        FROM active_project_prediction_object AP
+                        WHERE AP.prediction_hash = FG.prediction_hash
+                        AND AP.feature_hash == FG.feature_hash
+                        ORDER BY AP.confidence DESC
+                    )
+                ) as ap,
+                (
+                    SELECT sum(
+                        coalesce(cast(ar_positives as real) / ar_total, 0.0)
+                    ) / (
+                        count(*) + (
+                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                            WHERE UM.prediction_hash = FG.prediction_hash
+                            AND UM.feature_hash == FG.feature_hash
+                        )
+                    ) FROM (
+                        SELECT
+                            row_number() OVER (
+                                ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
+                            ) AS ar_total,
+                            sum(cast(
+                                (
+                                    AR.iou >= :iou and
+                                    coalesce(AR.feature_hash = AR.match_feature_hash, false) and
+                                    AR.match_duplicate_iou < :iou
+                                ) as integer
+                            )) OVER (
+                                ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
+                            ) AS ar_positives
+                        FROM active_project_prediction_object AR
+                        WHERE AR.prediction_hash = FG.prediction_hash
+                        AND AR.feature_hash = FG.feature_hash
+                        ORDER BY AR.iou
+                    )
+                ) as ar
+                FROM active_project_prediction_object FG, active_project_prediction FP
+                WHERE FG.prediction_hash = FP.prediction_hash
+                AND FP.project_hash = :project_hash
+                AND FP.prediction_hash = :prediction_hash
+                GROUP BY FG.feature_hash
+            )
+            """
+        ).bindparams(bindparam("prediction_hash", GUID), bindparam("project_hash", GUID), bindparam("iou", Float))
+        precision_recall = sess.execute(
+            sql,
+            params={
+                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                "project_hash": guid.process_bind_param(project_hash, engine.dialect),
+                "iou": iou
+            },
+        ).fetchall()
+        print(f"DEBUGGING: {precision_recall}")
     return {
-        "mAP": 0.0,
-        "mAR": 0.0,
+        "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
+        "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
+        "precisions": {
+            pr["feature_hash"]: pr["ap"]
+            for pr in precision_recall
+        },
+        "recalls": {
+            pr["feature_hash"]: pr["ar"]
+            for pr in precision_recall
+        },
         "correlation": {},
         "importance": {},
     }
