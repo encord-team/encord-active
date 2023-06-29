@@ -122,9 +122,9 @@ const NewProjectButton = ({
   const disabled = !onClick;
   const containerProps = disabled
     ? {
-      className: "tooltip",
-      "data-tip": "Coming soon, please use the CLI",
-    }
+        className: "tooltip",
+        "data-tip": "Coming soon, please use the CLI",
+      }
     : {};
 
   return (

@@ -1,10 +1,10 @@
 import uuid
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
 from urllib.parse import quote
-from sqlalchemy.sql.operators import is_not
+from uuid import UUID
 
 from fastapi import APIRouter
-from sqlalchemy.sql.operators import in_op
+from sqlalchemy.sql.operators import in_op, is_not
 from sqlmodel import Session, select
 
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
@@ -21,6 +21,9 @@ from encord_active.db.models import (
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
+from encord_active.lib.project.sandbox_projects.sandbox_projects import (
+    available_prebuilt_projects,
+)
 from encord_active.server.routers import project2_analysis, project2_prediction
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
@@ -34,17 +37,75 @@ router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
 
 
+class ProjectStats(TypedDict):
+    dataUnits: int
+    labels: int
+    classes: int
+
+
+class ProjectReturn(TypedDict):
+    title: str
+    description: str
+    projectHash: UUID
+    imageUrl: str
+    downloaded: bool
+    sandbox: bool
+    stats: Optional[ProjectStats]
+
+
+def _get_first_image_with_polygons_url(project_hash: UUID):
+    with Session(engine) as sess:
+        offset = 0
+        while offset >= 0:
+            data_unit = sess.exec(select(ProjectDataUnitMetadata).offset(offset).limit(1)).one()
+            if not data_unit:
+                break
+            if len(data_unit.objects) and not data_unit.data_uri_is_video and data_unit.data_uri is not None:
+                settings = get_settings()
+                root_path = settings.SERVER_START_PATH.expanduser().resolve()
+                url_path = url_to_file_path(data_unit.data_uri, root_path)
+                if url_path is not None:
+                    relative_path = url_path.relative_to(root_path)
+                    return f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+
+
 @router.get("/list")
 def get_all_projects():
+    sandbox_projects = {}
+    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
+        hash = UUID(data["hash"])
+        sandbox_projects[hash] = ProjectReturn(
+            title=name,
+            description="",
+            projectHash=hash,
+            stats=data["stats"],
+            downloaded=False,
+            imageUrl=f"ea-sandbox-static/{data['image_filename']}",
+            sandbox=True,
+        )
+
     with Session(engine) as sess:
-        projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
-    return {
-        project_hash: {
-            "title": title,
-            "description": description,
-        }
-        for project_hash, title, description in projects
-    }
+        db_projects = sess.exec(
+            select(Project.project_hash, Project.project_name, Project.project_description)
+        ).fetchall()
+
+    projects = {}
+    for project_hash, title, description in db_projects:
+        if project_hash in sandbox_projects:
+            sandbox_projects[project_hash]["downloaded"] = True
+            continue
+
+        projects[project_hash] = ProjectReturn(
+            title=title,
+            description=description,
+            projectHash=project_hash,
+            stats=None,  # TODO: fix me
+            downloaded=True,
+            imageUrl=_get_first_image_with_polygons_url(project_hash) or "",
+            sandbox=False,
+        )
+
+    return {**projects, **sandbox_projects}
 
 
 def _metric_summary(metrics: Dict[str, MetricDefinition]):
@@ -60,7 +121,7 @@ def _metric_summary(metrics: Dict[str, MetricDefinition]):
 
 
 @router.get("/get/{project_hash}/summary")
-def get_project_summary(project_hash: uuid.UUID):
+def get_project_summary(project_hash: UUID):
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
@@ -108,8 +169,8 @@ def get_project_summary(project_hash: uuid.UUID):
 
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
-def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):
-    objects: List[dict] = []
+def display_preview(project_hash: UUID, du_hash: UUID, frame: int, object_hash: Optional[str] = None):
+    objects = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         query = select(
@@ -194,12 +255,12 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
 
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/")
-def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def display_preview_data(project_hash: UUID, du_hash: UUID, frame: int):
     return display_preview(project_hash, du_hash, frame)
 
 
 @router.get("/get/{project_hash}/item/{du_hash}/{frame}/")
-def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def item(project_hash: UUID, du_hash: UUID, frame: int):
     with Session(engine) as sess:
         du_meta = sess.exec(
             select(ProjectDataUnitMetadata).where(
@@ -257,7 +318,7 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
 
 
 @router.get("/get/{project_hash}/predictions/list")
-def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = None, limit: Optional[int] = None):
+def list_project_predictions(project_hash: UUID, offset: Optional[int] = None, limit: Optional[int] = None):
     with Session(engine) as sess:
         predictions = sess.exec(
             select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)
