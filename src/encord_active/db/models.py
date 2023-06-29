@@ -278,8 +278,8 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
 
     # Prediction metadata
     confidence: float = Field(ge=0, le=1)
-    match_object_hash: str = Field(min_length=8, max_length=8)
-    match_feature_hash: str = Field(min_length=8, max_length=8)
+    match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
+    match_feature_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_duplicate: bool
     iou: float = Field(ge=0, le=1)
 
