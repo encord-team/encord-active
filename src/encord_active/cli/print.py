@@ -33,7 +33,9 @@ def print_encord_projects(
     project_query = None if query is None else ProjectQuery(title_like=query)
     json_projects = get_projects_json(app_config.get_or_query_ssh_key(), project_query)
     if state.get("json_output"):
-        Path("./encord-projects.json").write_text(json_projects, encoding="utf-8")
+        output_file_path = Path("./encord-projects.json").resolve()
+        output_file_path.write_text(json_projects, encoding="utf-8")
+        rich.print(f"Mapping stored in [blue]`{output_file_path.as_posix()}`")
     else:
         rich.print(escape(json_projects))
 
@@ -80,8 +82,9 @@ Couldn't identify a project ontology. The reason for this may be that you have a
     json_ontology = json.dumps({"objects": objects, "classifications": classifications}, indent=2)
 
     if state.get("json_output"):
-        Path("./ontology_output.json").write_text(json_ontology, encoding="utf-8")
-        rich.print("Stored mapping in [blue]`./ontology_output.json`")
+        output_file_path = Path("./ontology_output.json").resolve()
+        output_file_path.write_text(json_ontology, encoding="utf-8")
+        rich.print(f"Mapping stored in [blue]`{output_file_path.as_posix()}`")
     else:
         rich.print(escape(json_ontology))
 
@@ -113,8 +116,9 @@ def print_data_mapping(
     json_mapping = json.dumps(mapping, indent=2)
 
     if state.get("json_output"):
-        Path("./data_mapping.json").write_text(json_mapping, encoding="utf-8")
-        rich.print("Stored mapping in [blue]`./data_mapping.json`")
+        output_file_path = Path("./data_mapping.json").resolve()
+        output_file_path.write_text(json_mapping, encoding="utf-8")
+        rich.print(f"Mapping stored in [blue]`{output_file_path.as_posix()}`")
     else:
         rich.print(escape(json_mapping))
 
