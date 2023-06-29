@@ -14,14 +14,14 @@ from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
     ProjectObjectAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedObject, \
-    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionObjectResults
+    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionObjectResults, ProjectPredictionUnmatchedResults
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
     "Area": "metric_area",
     "Aspect Ratio": "metric_aspect_ratio",
     "Blue Values": "metric_blue",
-    "Blur": "$SKIP", # Virtual attribute = 1.0 - metric_sharpness
+    "Blur": "$SKIP",  # Virtual attribute = 1.0 - metric_sharpness
     "Brightness": "metric_brightness",
     "Contrast": "metric_contrast",
     "Frame object density": "metric_object_density",
@@ -239,54 +239,56 @@ def up(pfs: ProjectFileStructure) -> None:
             continue
         metric_df = load_metric_dataframe(metric, normalize=False).to_dict(orient="records")
         for metric_entry in metric_df:
-            label_hash, du_hash_str, frame_str, *rest = metric_entry["identifier"].split("_")
+            label_hash, du_hash_str, frame_str, *object_hash_list = metric_entry["identifier"].split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
-            if len(rest) == 1 or len(rest) == 2:
-                # FIXME: len(rest) == 2 may need special case handling, not sure why it is generated!
-                if len(rest) == 2:
-                    print(f"WARNING: dropping second object hash in extended identifier: {metric_entry['identifier']}")
-                object_hash = rest[0]
-                if (du_hash, frame, object_hash) not in object_metrics:
-                    raise ValueError(
-                        f"Metric references invalid object!: du_hash={du_hash}, frame={frame}, object={object_hash}"
-                    )
-                metrics_dict = object_metrics[(du_hash, frame, object_hash)]
+            if len(object_hash_list) >= 1:
+                for object_hash in object_hash_list:
+                    if (du_hash, frame, object_hash) not in object_metrics:
+                        raise ValueError(
+                            f"Metric references invalid object!: du_hash={du_hash}, frame={frame}, object={object_hash}"
+                        )
+                metrics_dict_list = [
+                    object_metrics[(du_hash, frame, object_hash)]
+                    for object_hash in object_hash_list
+                ]
                 metrics_derived = DERIVED_LABEL_METRICS
                 metric_types = ObjectMetrics
-            elif len(rest) == 0:
-                metrics_dict = data_metrics[(du_hash, frame)]
+            else:
+                metrics_dict_list = [data_metrics[(du_hash, frame)]]
                 metrics_derived = DERIVED_DATA_METRICS
                 metric_types = DataMetrics
-            else:
-                raise ValueError(f"Unknown packing of identifier: {metric_entry['identifier']}")
-            if metric_column_name not in metrics_dict:
-                score = metric_entry["score"]
-                if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
-                    score = score / 100.0
-                metric_def = metric_types[metric_column_name]
-                if metric_def.type == MetricType.NORMAL:
-                    # Clamp 0->1 (some metrics do not generate correctly clamped scores.
-                    original_score = score
-                    score = min(max(score, 0.0), 1.0)
-                    if original_score != score:
-                        print(
-                            f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}"
-                        )
-                if metric_def.virtual is None:
-                    # Virtual attributes should not be stored!!
-                    metrics_dict[metric_column_name] = score
-            elif metric_column_name not in metrics_derived:
-                raise ValueError(
-                    f"Duplicate metric assignment for, column={metric_column_name},"
-                    f"identifier{metric_entry['identifier']}"
-                )
-            else:
-                existing_score = metrics_dict[metric_column_name]
-                if existing_score != metric_entry["score"]:
-                    print(f"WARNING: different derived and calculated scores: "
-                          f"{metric_column_name}, {existing_score}, {metric_entry['score']}")
+            for metrics_dict in metrics_dict_list:
+                if metric_column_name not in metrics_dict:
+                    score = metric_entry["score"]
+                    if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
+                        score = score / 100.0
+                    metric_def = metric_types[metric_column_name]
+                    if metric_column_name == "metric_sharpness":
+                        score = min(max(score, 0.0), 1.0)
+                        # FIXME: properly scale sharpness to a normalised result!!!
+                    elif metric_def.type == MetricType.NORMAL:
+                        # Clamp 0->1 (some metrics do not generate correctly clamped scores.
+                        original_score = score
+                        score = min(max(score, 0.0), 1.0)
+                        if original_score != score:
+                            print(
+                                f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}"
+                            )
+                    if metric_def.virtual is None:
+                        # Virtual attributes should not be stored!!
+                        metrics_dict[metric_column_name] = score
+                elif metric_column_name not in metrics_derived:
+                    raise ValueError(
+                        f"Duplicate metric assignment for, column={metric_column_name},"
+                        f"identifier{metric_entry['identifier']}"
+                    )
+                else:
+                    existing_score = metrics_dict[metric_column_name]
+                    if existing_score != metric_entry["score"]:
+                        print(f"WARNING: different derived and calculated scores: "
+                              f"{metric_column_name}, {existing_score}, {metric_entry['score']}")
 
     # Load embeddings
     for embedding_type, embedding_name in [
@@ -312,13 +314,14 @@ def up(pfs: ProjectFileStructure) -> None:
     # FIXME: implement (reduction should be marked as separate)
 
     # Load predictions
-    prediction_hash = uuid.uuid4()
     predictions_run_db = []
     predictions_objects_db = []
+    predictions_missed_db = []
     for prediction_type in [
         MainPredictionType.OBJECT,
-        # FIXME: MainPredictionType.CLASSIFICATION
+        MainPredictionType.CLASSIFICATION
     ]:
+        prediction_hash = uuid.uuid4()
         predictions_dir = pfs.predictions
 
         # No predictions exist
@@ -363,7 +366,10 @@ def up(pfs: ProjectFileStructure) -> None:
                 f"{len(gt_matched_inverted_list)} / {len(gt_matched_inverted_map)}"
             )
 
-        model_prediction_best_match_candidate: Dict[Tuple[uuid.UUID, int, str], ProjectPredictionObjectResults] = {}
+        model_prediction_best_match_candidates: Dict[
+            Tuple[uuid.UUID, int, str], List[ProjectPredictionObjectResults]
+        ] = {}
+        model_prediction_unmatched_indices = set(range(len(labels)))
 
         for model_prediction in model_predictions.to_dict(orient="records"):
             identifier: str = model_prediction.pop('identifier')
@@ -411,6 +417,8 @@ def up(pfs: ProjectFileStructure) -> None:
                 matched_label = labels.iloc[label_match_id].to_dict()
                 if int(matched_label.pop('Unnamed: 0')) != label_match_id:
                     raise ValueError(f"Inconsistent lookup: {label_match_id}")
+                if label_match_id in model_prediction_unmatched_indices:
+                    model_prediction_unmatched_indices.remove(label_match_id)
                 matched_label_class_id = matched_label.pop("class_id")
                 matched_label_img_id = matched_label.pop("img_id")
                 matched_label_identifier = matched_label.pop("identifier")
@@ -441,7 +449,7 @@ def up(pfs: ProjectFileStructure) -> None:
                     # Match
                     match_object_hash=match_object_hash,
                     match_feature_hash=match_feature_hash,
-                    match_duplicate=False,# Set via script after execution.
+                    match_duplicate_iou=0.0,  # by default, never a duplicate
                     # Metrics
                     # FIXME: pbb (aim to support all prediction descriptors (bytes??)
                 )
@@ -451,20 +459,71 @@ def up(pfs: ProjectFileStructure) -> None:
                 if match_object_hash is not None:
                     # Assign all duplicate matches to match with non-highest iou
                     match_key = (du_hash, frame, match_object_hash)
-                    best_match = model_prediction_best_match_candidate.get(match_key, None)
-                    if best_match is None:
-                        model_prediction_best_match_candidate[match_key] = new_predictions_object_db
-                    elif best_match.iou > new_predictions_object_db.iou:
-                        new_predictions_object_db.match_duplicate = True
-                    elif best_match.iou < new_predictions_object_db.iou:
-                        best_match.match_duplicate = True
-                        model_prediction_best_match_candidate[match_key] = new_predictions_object_db
-                    else:
-                        raise ValueError(f"Duplicate prediction with exact same iou, failing to ignore")
+                    all_match_candidates = model_prediction_best_match_candidates.setdefault(match_key, [])
+                    all_match_candidates.append(new_predictions_object_db)
 
-        # FIXME: store prediction metadata for the prediction run.
+        # Post-process, determine metadata for dynamic duplicate detection.
+        # A duplicate is a valid (feature hash match & iou >= THRESHOLD)
+        # match with the highest confidence.
+        # So we sort and detect the threshold where the result changes.
+        for model_prediction_group in model_prediction_best_match_candidates.values():
+            if len(model_prediction_group) <= 1:
+                # No post-processing needed (feature hash mismatches are by default excluded anyway).
+                continue
+            model_prediction_group.sort(
+                key=lambda m_obj: (m_obj.iou, m_obj.confidence, m_obj.object_hash),
+                reverse=True
+            )
+
+            def confidence_compare_key(m_obj):
+                return m_obj.confidence, m_obj.iou, m_obj.object_hash
+
+            # Currently ordered by maximum iou, (first entry is trivially correct as it is the only one with
+            #  the desired iou).
+            current_best_confidence = None
+            current_best_compare_key = None
+            for model_prediction_entry in model_prediction_group:
+                if model_prediction_entry.feature_hash == model_prediction_entry.match_feature_hash:
+                    model_compare_key = confidence_compare_key(model_prediction_entry)
+                    if current_best_confidence is None:
+                        current_best_confidence = model_prediction_entry
+                        current_best_compare_key = model_compare_key
+                    elif current_best_compare_key is None:
+                        raise ValueError(f"Correctness violation for sorted order")
+                    elif model_compare_key > current_best_compare_key:
+                        # IOU decrease has changed the maximum, assign thresholds.
+                        current_best_confidence.match_duplicate_iou = model_prediction_entry.iou
+                        current_best_confidence = model_prediction_entry
+                        current_best_compare_key = model_compare_key
+                    elif model_compare_key < current_best_compare_key:
+                        # This model is always a duplicate
+                        model_prediction_entry.match_duplicate_iou = model_prediction_entry.iou
+                    else:
+                        raise ValueError(f"Failed to generate deterministic ordering for iou")
+
+        # Add match failures to side table.
+        for missing_label_idx in model_prediction_unmatched_indices:
+            missing_label = labels.iloc[missing_label_idx].to_dict()
+            if int(missing_label.pop('Unnamed: 0')) != missing_label_idx:
+                raise ValueError(f"Inconsistent lookup: {missing_label}")
+            missing_label_class_id = int(missing_label.pop('class_id'))
+            missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
+            missing_label_identifier = missing_label.pop("identifier")
+            _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = \
+                missing_label_identifier.split("_")
+            if len(matched_label_hashes) != 1:
+                raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
+
+            predictions_missed_db.append(ProjectPredictionUnmatchedResults(
+                prediction_hash=prediction_hash,
+                du_hash=uuid.UUID(missing_du_hash_str),
+                frame=int(missing_frame_str),
+                object_hash=str(matched_label_hashes[0]),
+                feature_hash=str(missing_feature_hash)
+            ))
 
         # Ensure prediction currently stored actually exists.
+        # FIXME: store prediction metadata for the prediction run.
         if len(predictions_run_db) == 0:
             predictions_run_db.append(
                 ProjectPrediction(
@@ -520,9 +579,9 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(project_object_tags)
         sess.add_all(predictions_run_db)
         sess.add_all(predictions_objects_db)
+        sess.add_all(predictions_missed_db)
         sess.commit()
 
         # Now correctly assign duplicates
         for prediction in predictions_run_db:
             prediction_hash = prediction.prediction_hash
-
