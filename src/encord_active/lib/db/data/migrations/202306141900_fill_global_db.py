@@ -489,7 +489,8 @@ def up(pfs: ProjectFileStructure) -> None:
                     # Ground truth match metadata
                     match_object_hash=match_object_hash,
                     match_feature_hash=match_feature_hash,
-                    match_duplicate_iou=0.0,  # by default, never a duplicate
+                    match_duplicate_iou=-1.0 if match_feature_hash is not None and match_feature_hash == feature_hash
+                    else 1.0,  # 1.0 = always duplicate, -1.0 = never duplicate.
                     # Metrics
                     **assert_valid_args(ProjectPredictionObjectResults, p_metrics),
                 )
@@ -540,6 +541,9 @@ def up(pfs: ProjectFileStructure) -> None:
                         model_prediction_entry.match_duplicate_iou = model_prediction_entry.iou
                     else:
                         raise ValueError(f"Failed to generate deterministic ordering for iou")
+                else:
+                    # Never match as feature hash comparison is incorrect.
+                    model_prediction_entry.match_duplicate_iou = 1.0
 
         # Add match failures to side table.
         for missing_label_idx in model_prediction_unmatched_indices:
