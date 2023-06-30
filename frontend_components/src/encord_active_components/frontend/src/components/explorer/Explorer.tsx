@@ -196,7 +196,8 @@ export const Explorer = ({
           <ItemPreview
             id={previewedItem}
             similaritySearchDisabled={!hasSimilaritySearch}
-            scope="model_quality"
+            scope={scope}
+            iou={iou}
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
@@ -216,9 +217,9 @@ export const Explorer = ({
               idValues={
                 (scope === "model_quality"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                    ...item,
-                    id: id.slice(0, id.lastIndexOf("_")),
-                  }))
+                      ...item,
+                      id: id.slice(0, id.lastIndexOf("_")),
+                    }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -246,8 +247,8 @@ export const Explorer = ({
                   scope === "model_quality"
                     ? "predictions"
                     : !selectedItems.size
-                      ? "missing-target"
-                      : undefined
+                    ? "missing-target"
+                    : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -295,7 +296,7 @@ export const Explorer = ({
                 <PredictionFilters
                   predictionType={filters.prediction_filters?.type}
                   onOutcomeChange={setPredictionOutcome}
-                  onIouChange={predictionOutcome && setIou}
+                  onIouChange={setIou}
                   disabled={!!similarityItem}
                 />
               )}
@@ -355,6 +356,7 @@ export const Explorer = ({
                     similaritySearchDisabled={!hasSimilaritySearch}
                     onShowSimilar={() => showSimilarItems(id)}
                     selected={selectedItems.has(id)}
+                    iou={iou}
                   />
                 ))}
               </form>
@@ -427,7 +429,7 @@ const PredictionFilters = ({
           <option key={outcome}>{outcome}</option>
         ))}
       </select>
-      {predictionType === "object" && onIouChange && (
+      {predictionType === "object" && (
         <div className="form-control w-full max-w-xs min-w-[256px]">
           <label>
             <span>IOU: {iou}</span>
@@ -533,6 +535,7 @@ const ItemPreview = ({
   id,
   similaritySearchDisabled,
   scope,
+  iou,
   onClose,
   onShowSimilar,
 }: {
@@ -541,8 +544,9 @@ const ItemPreview = ({
   scope: Scope;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  iou?: number;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(id);
+  const { data, isLoading } = useApi().fetchItem(id, iou);
   const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spin />;
@@ -619,6 +623,7 @@ const GalleryItem = ({
   similaritySearchDisabled,
   onExpand,
   onShowSimilar,
+  iou,
 }: {
   itemId: string;
   selected: boolean;
@@ -626,8 +631,9 @@ const GalleryItem = ({
   similaritySearchDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  iou?: number;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(itemId);
+  const { data, isLoading } = useApi().fetchItem(itemId, iou);
 
   if (isLoading || !data)
     return (

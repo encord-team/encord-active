@@ -129,10 +129,10 @@ def tagged_items(project: ProjectFileStructureDep):
 
 
 @router.get("/{project}/items/{id:path}")
-def read_item(project: ProjectFileStructureDep, id: str):
+def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = None):
     lr_hash, du_hash, frame, *object_hash = id.split("_")
 
-    row = get_model_prediction_by_id(project, id)
+    row = get_model_prediction_by_id(project, id, iou)
 
     if row:
         return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)

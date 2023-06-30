@@ -209,12 +209,15 @@ def read_prediction_files(project_file_structure: ProjectFileStructure, predicti
     return predictions_metric_datas, label_metric_datas, model_predictions, labels
 
 
-def get_model_prediction_by_id(project_file_structure: ProjectFileStructure, id: str):
+def get_model_prediction_by_id(project_file_structure: ProjectFileStructure, id: str, iou: Optional[float] = None):
     for prediction_type in MainPredictionType:
         _, _, model_predictions, _ = read_prediction_files(project_file_structure, prediction_type)
         if model_predictions is not None and id in pd.Index(model_predictions["identifier"]):
             try:
-                df, _ = get_model_predictions(project_file_structure, PredictionsFilters(type=prediction_type))
+                df, _ = get_model_predictions(
+                    project_file_structure,
+                    PredictionsFilters(type=prediction_type, iou_threshold=iou),
+                )
                 if df is not None:
                     return {**df.loc[id].dropna().to_dict(), "identifier": id}
             except Exception as err:

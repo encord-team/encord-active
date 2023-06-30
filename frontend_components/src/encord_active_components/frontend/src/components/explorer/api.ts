@@ -226,10 +226,16 @@ export const getApi = (
       ).json();
       return IdValueSchema.array().parse(result);
     },
-    fetchProjectItem: async (id: string) => {
+    fetchProjectItem: async (id: string, iou?: number) => {
+      const queryParams = new URLSearchParams({
+        ...(iou != null ? { iou: iou.toString() } : {}),
+      });
+
       const item = await (
         await fetcher(
-          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(id)}`
+          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(
+            id
+          )}?${queryParams}`
         )
       ).json();
       return ItemSchema.parse(item) as Item;
@@ -255,7 +261,7 @@ export const getApi = (
 
       const url = `${baseUrl}/projects/${projectName}/similarities/${encodeURIComponent(
         id
-      )}?${queryParams} `;
+      )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
       return z.string().array().parse(response);
     },
