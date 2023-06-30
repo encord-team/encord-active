@@ -92,7 +92,6 @@ ftfy = "^6.1.1"
 regex = "^2023.5.5"
 poethepoet = "^0.16.5"
 orjson = "^3.9.0"
-pyinstrument = "^4.5.0"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]
@@ -115,6 +114,7 @@ ipdb = "^0.13.9"
 types-toml = "^0.10.8"
 tuna = "^0.5.11"
 jupyter = "^1.0.0"
+pyinstrument = "^4.5.0"
 
 [tool.poe.tasks]
 importtime = { shell = "python -X importtime -c 'import encord_active.cli.main' 2> imports.prof && python -m tuna imports.prof" }

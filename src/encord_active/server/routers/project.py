@@ -87,7 +87,7 @@ def read_item_ids(
             df, _ = get_model_predictions(project, filters.prediction_filters)
 
             if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
-                sort_by_metric = re.sub(r"(.*?\()P(\))", r"\1O\2", sort_by_metric)
+                sort_by_metric = sort_by_metric.replace("(P)", "(O)")
 
             column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
             df = df[partial_column(df.index, 3).isin(partial_column(merged_metrics.index, 3).unique())]
@@ -138,8 +138,12 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
         return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)
 
     with DBConnection(project) as conn:
-        row = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")[0]
+        rows = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")
 
+        if not rows:
+            raise HTTPException(status_code=404, detail=f"Item with id: {id} was not found for project: {project}")
+
+        row = rows[0]
         # Include data tags from the relevant frame when the inspected item is a label
         data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
         if row["identifier"] != data_row_id:
