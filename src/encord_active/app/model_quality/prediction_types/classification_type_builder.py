@@ -121,12 +121,12 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
         return True
 
     def render_view_options(self):
-        if self.page_mode != ModelQualityPage.EXPLORER:
-            if not get_state().predictions.all_classes_classifications:
-                get_state().predictions.all_classes_classifications = read_class_idx(
-                    get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
-                )
+        if not get_state().predictions.all_classes_classifications:
+            get_state().predictions.all_classes_classifications = read_class_idx(
+                get_state().project_paths.predictions / MainPredictionType.CLASSIFICATION.value
+            )
 
+        if self.page_mode != ModelQualityPage.EXPLORER:
             get_state().predictions.selected_classes_classifications = self._render_class_filtering_component(
                 get_state().predictions.all_classes_classifications
             )
