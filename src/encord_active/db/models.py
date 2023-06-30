@@ -125,6 +125,8 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_blue: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
+    # Both - Annotation based
+    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Image Only
     metric_object_count: Optional[int] = MetricFieldTypePositiveInteger
     metric_object_density: Optional[float] = MetricFieldTypeNormal
@@ -167,13 +169,15 @@ class ProjectObjectAnalytics(SQLModel, table=True):
     metric_blue: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
+    # Both - Annotation based
+    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Metrics - Label Only
     metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
     metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
     metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
-    metric_label_annotation_quality: Optional[float] = MetricFieldTypeNormal
     metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
+    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = define_metric_indices(
         "active_label",
@@ -286,6 +290,33 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
 
     # FIXME: should these be null??
     rle: Optional[float]  # FIXME: wrong type - sort out typing later
+
+    # Prediction object metrics
+    # Metrics - Absolute Size
+    metric_width: Optional[int] = MetricFieldTypePositiveInteger
+    metric_height: Optional[int] = MetricFieldTypePositiveInteger
+    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    # Metrics - Relative Size
+    metric_area_relative: Optional[float] = MetricFieldTypeNormal
+    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    # Metrics Color
+    metric_brightness: Optional[float] = MetricFieldTypeNormal
+    metric_contrast: Optional[float] = MetricFieldTypeNormal
+    metric_sharpness: Optional[float] = MetricFieldTypeNormal
+    metric_red: Optional[float] = MetricFieldTypeNormal
+    metric_green: Optional[float] = MetricFieldTypeNormal
+    metric_blue: Optional[float] = MetricFieldTypeNormal
+    # Random
+    metric_random: Optional[float] = MetricFieldTypeNormal
+    # Both - Annotation based
+    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    # Metrics - Label Only
+    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
+    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
+    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
+    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
+    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
