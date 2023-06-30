@@ -49,7 +49,7 @@ export type Props = {
 export const Explorer = ({
   authToken,
   projectName,
-  filters: inputFilters,
+  filters,
   scope,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
@@ -70,11 +70,9 @@ export const Explorer = ({
   >();
   const [iou, setIou] = useState<number | undefined>();
 
-  const filters = inputFilters;
   if (scope === "model_quality" && filters.prediction_filters) {
-    if (predictionOutcome)
-      filters.prediction_filters.outcome = predictionOutcome;
-    if (iou) filters.prediction_filters.iou_threshold = iou;
+    filters.prediction_filters.outcome = predictionOutcome;
+    filters.prediction_filters.iou_threshold = iou;
   }
 
   const api = getApi(projectName, authToken, baseUrl);
@@ -99,6 +97,8 @@ export const Explorer = ({
       ),
     { enabled: !!similarityItem && !!selectedMetric }
   );
+
+  console.log(filters);
 
   const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
