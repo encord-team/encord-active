@@ -137,7 +137,13 @@ DataOnlyMetrics: Dict[str, MetricDefinition] = {
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
-    )
+    ),
+    "metric_annotation_quality": MetricDefinition(
+        title="Annotation Quality",
+        short_desc="",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
 }
 
 ObjectOnlyMetrics: Dict[str, MetricDefinition] = {
@@ -171,7 +177,7 @@ ObjectOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_annotation_quality": MetricDefinition(
+    "metric_annotation_quality": MetricDefinition(
         title="Annotation Quality",
         short_desc="",
         long_desc="",
@@ -179,6 +185,12 @@ ObjectOnlyMetrics: Dict[str, MetricDefinition] = {
     ),
     "metric_label_inconsistent_classification_and_track": MetricDefinition(
         title="Inconsistent Classification And Track",
+        short_desc="",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_label_shape_outlier": MetricDefinition(
+        title="Shape Outlier",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
