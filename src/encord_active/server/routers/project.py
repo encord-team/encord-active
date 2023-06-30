@@ -52,6 +52,7 @@ from encord_active.server.dependencies import (
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
+    IndexOrSeries,
     filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
@@ -180,6 +181,8 @@ def get_similar_items(
     project: ProjectFileStructureDep, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None
 ):
     finder = get_similarity_finder(embedding_type, project)
+    if embedding_type == EmbeddingType.IMAGE:
+        id = "_".join(id.split("_", maxsplit=3)[:3])
     return finder.get_similarities(id)
 
 
@@ -287,36 +290,52 @@ class SearchType(str, Enum):
     CODEGEN = "codegen"
 
 
-@router.get("/{project}/search", dependencies=[Depends(verify_premium)])
-def search(project: ProjectFileStructureDep, query: str, type: SearchType, scope: Optional[MetricScope] = None):
+def get_ids(ids_column: IndexOrSeries, scope: Optional[MetricScope] = None):
+    if scope == MetricScope.DATA_QUALITY or scope == MetricScope.MODEL_QUALITY:
+        return partial_column(ids_column, 3).unique().tolist()
+    elif scope == MetricScope.LABEL_QUALITY:
+        data_ids = partial_column(ids_column, 3).unique().tolist()
+        return ids_column[~ids_column.isin(data_ids)].tolist()
+    return ids_column.tolist()
+
+
+@router.post("/{project}/search", dependencies=[Depends(verify_premium)])
+def search(
+    project: ProjectFileStructureDep,
+    query: Annotated[str, Body()],
+    type: Annotated[SearchType, Body()],
+    filters: Filters = Filters(),
+    scope: Annotated[Optional[MetricScope], Body()] = None,
+):
     if not query:
         raise HTTPException(status_code=422, detail="Invalid query")
     querier = get_querier(project)
 
-    with DBConnection(project) as conn:
-        df = MergedMetrics(conn).all(False, columns=["identifier"])
+    merged_metrics = filtered_merged_metrics(project, filters)
 
-    if scope == MetricScope.DATA_QUALITY:
-        ids = df.index.str.split("_", n=3).str[0:3].str.join("_").unique().tolist()
-    elif scope == MetricScope.LABEL_QUALITY:
-        data_ids = df.index.str.split("_", n=3).str[0:3].str.join("_")
-        ids = df.index[~df.index.isin(data_ids)].tolist()
-    else:
-        ids = df.index.tolist()
+    def _search(ids: List[str]):
+        snippet = None
+        text_query = TextQuery(text=query, limit=-1, identifiers=ids)
+        if type == SearchType.SEARCH:
+            result = querier.search_semantics(text_query)
+        else:
+            result = querier.search_with_code(text_query)
+            if result:
+                snippet = result.snippet
 
-    snippet = None
-    text_query = TextQuery(text=query, limit=-1, identifiers=ids)
-    if type == SearchType.SEARCH:
-        result = querier.search_semantics(text_query)
-    else:
-        result = querier.search_with_code(text_query)
-        if result:
-            snippet = result.snippet
+        if not result:
+            raise HTTPException(status_code=422, detail="Invalid query")
 
-    if not result:
-        raise HTTPException(status_code=422, detail="Invalid query")
+        return [item.identifier for item in result.result_identifiers], snippet
 
-    return {
-        "ids": [item.identifier for item in result.result_identifiers],
-        "snippet": snippet,
-    }
+    if scope == MetricScope.MODEL_QUALITY:
+        _, _, predictions, _ = read_prediction_files(project, filters.prediction_filters.type)
+        if predictions is not None:
+            ids, snippet = _search(get_ids(predictions["identifier"], scope))
+            prediction_ids = predictions["identifier"].sort_values(
+                key=lambda column: partial_column(column, 3).map(lambda id: ids.index(id))
+            )
+            return {"ids": prediction_ids.to_list(), "snippet": snippet}
+
+    ids, snippet = _search(get_ids(merged_metrics.index, scope))
+    return {"ids": ids, "snippet": snippet}

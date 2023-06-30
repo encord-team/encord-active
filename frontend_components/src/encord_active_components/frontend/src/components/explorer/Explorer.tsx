@@ -93,7 +93,10 @@ export const Explorer = ({
   const { data: similarItems, isLoading: isLoadingSimilarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
     () =>
-      api.fetchSimilarItems(similarityItem!, selectedMetric?.embeddingType!),
+      api.fetchSimilarItems(
+        similarityItem!,
+        scope === "model_quality" ? "image" : selectedMetric?.embeddingType!
+      ),
     { enabled: !!similarityItem && !!selectedMetric }
   );
 
@@ -124,7 +127,7 @@ export const Explorer = ({
     setSearch,
     result: searchResults,
     loading: searching,
-  } = useSearch(scope, api.searchInProject);
+  } = useSearch(scope, filters, api.searchInProject);
 
   const resetable =
     itemSet.size || searchResults?.ids.length || similarItems?.length;
@@ -213,9 +216,9 @@ export const Explorer = ({
               idValues={
                 (scope === "model_quality"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -243,8 +246,8 @@ export const Explorer = ({
                   scope === "model_quality"
                     ? "predictions"
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -293,6 +296,7 @@ export const Explorer = ({
                   predictionType={filters.prediction_filters?.type}
                   onOutcomeChange={setPredictionOutcome}
                   onIouChange={predictionOutcome && setIou}
+                  disabled={!!similarityItem}
                 />
               )}
             </div>
@@ -385,10 +389,12 @@ const PredictionFilters = ({
   predictionType,
   onOutcomeChange,
   onIouChange,
+  disabled = false,
 }: {
   predictionType: NonNullable<Filters["prediction_filters"]>["type"];
   onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
   onIouChange?: (iou: number) => void;
+  disabled?: boolean;
 }) => {
   if (!predictionType) return null;
 
@@ -407,6 +413,7 @@ const PredictionFilters = ({
   return (
     <div className="flex gap-2">
       <select
+        disabled={disabled}
         className="select select-bordered w-full max-w-xs"
         onChange={({ target: { value } }) =>
           onOutcomeChange(
@@ -426,6 +433,7 @@ const PredictionFilters = ({
             <span>IOU: {iou}</span>
           </label>
           <input
+            disabled={disabled}
             type="range"
             min={0.01}
             max={1}

@@ -291,14 +291,22 @@ export const getApi = (
       });
     },
     searchInProject: async (
-      { scope, query, type }: { scope: Scope; query: string; type: SearchType },
+      {
+        scope,
+        query,
+        type,
+        filters,
+      }: { scope: Scope; query: string; type: SearchType; filters: Filters },
       signal?: AbortSignal
     ) => {
-      const queryParams = new URLSearchParams({ query, scope, type });
-
       const response = await fetcher(
-        `${baseUrl}/projects/${projectName}/search?${queryParams}`,
+        `${baseUrl}/projects/${projectName}/search`,
         {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query, scope, type, filters }),
           signal,
         }
       );
