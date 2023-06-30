@@ -273,6 +273,7 @@ class ProjectPrediction(SQLModel, table=True):
     )
 
 
+@assert_cls_metrics_match(ObjectMetrics)
 class ProjectPredictionObjectResults(SQLModel, table=True):
     __tablename__ = 'active_project_prediction_object'
     prediction_hash: UUID = Field(primary_key=True)
@@ -285,7 +286,7 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     confidence: float = Field(ge=0, le=1)
     match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_feature_hash: Optional[str] = Field(min_length=8, max_length=8)
-    match_duplicate_iou: float = Field(ge=0, le=1)
+    match_duplicate_iou: float = Field(ge=-1, le=1)  # 0 -> 1, -1 is special case always match.
     iou: float = Field(ge=0, le=1)
 
     # FIXME: should these be null??
