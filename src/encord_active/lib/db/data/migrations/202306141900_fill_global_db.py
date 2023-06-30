@@ -3,7 +3,7 @@ import uuid
 from typing import Optional, Set, Tuple, Dict, Union, List
 from sqlmodel import Session
 
-from encord_active.db.metrics import DataMetrics, ObjectMetrics, MetricType
+from encord_active.db.metrics import DataMetrics, ObjectMetrics, MetricType, MetricDefinition
 from encord_active.lib.common.data_utils import url_to_file_path, file_path_to_url
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.utils import load_label_embeddings
@@ -36,14 +36,14 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Annotation closeness to image borders": "metric_label_border_closeness",
     "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
     "Missing Objects and Broken Tracks": "metric_label_missing_or_broken_tracks",
-    "Object Annotation Quality": "metric_label_annotation_quality",
+    "Object Annotation Quality": "metric_annotation_quality",
     "Object Area - Absolute": "metric_area",
     "Object Area - Relative": "metric_area_relative",
     "Object Aspect Ratio": "metric_aspect_ratio",
     "Polygon Shape Similarity": "metric_label_poly_similarity",
     "Random Values on Objects": "metric_random",
-    'Image-level Annotation Quality': "$SKIP",  # FIXME:
-    "Shape outlier detection": "$SKIP",  # FIXME:
+    'Image-level Annotation Quality': "metric_annotation_quality",
+    "Shape outlier detection": "metric_label_shape_outlier",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.
@@ -69,6 +69,49 @@ def assert_valid_args(cls, dct: dict) -> dict:
         if k not in cls.__fields__:
             raise ValueError(f"Invalid field type: {k} for class: {cls.__name__}")
     return dct
+
+
+def _assign_metrics(
+        metric_column_name: str,
+        metrics_dict: dict,
+        score: float,
+        metric_types: Dict[str, MetricDefinition],
+        metrics_derived: Set[str],
+        error_identifier: str
+):
+    if metric_column_name not in metrics_dict:
+        if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
+            score = score / 100.0
+        metric_def = metric_types[metric_column_name]
+        if metric_column_name == "metric_sharpness" or metric_column_name == "metric_label_shape_outlier":
+            score = min(max(score, 0.0), 1.0)
+            # FIXME: properly scale sharpness to a normalised result!!!
+        elif metric_def.type == MetricType.NORMAL:
+            # Clamp 0->1 (some metrics do not generate correctly clamped scores.
+            original_score = score
+            score = min(max(score, 0.0), 1.0)
+            if original_score != score:
+                score_delta = float(abs(original_score - score))
+                score_p1 = (score_delta / float(score)) * 100.0
+                score_p2 = (score_delta / float(original_score)) * 100.0
+                print(
+                    f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}, "
+                    f"Percentage = {score_p1}, {score_p2}"
+                    f"identifier={error_identifier}"
+                )
+        if metric_def.virtual is None:
+            # Virtual attributes should not be stored!!
+            metrics_dict[metric_column_name] = score
+    elif metric_column_name not in metrics_derived:
+        raise ValueError(
+            f"Duplicate metric assignment for, column={metric_column_name},"
+            f"identifier={error_identifier}"
+        )
+    else:
+        existing_score = metrics_dict[metric_column_name]
+        if existing_score != score:
+            print(f"WARNING: different derived and calculated scores: "
+                  f"{metric_column_name}, {existing_score}, {score}")
 
 
 def up(pfs: ProjectFileStructure) -> None:
@@ -246,49 +289,28 @@ def up(pfs: ProjectFileStructure) -> None:
             if len(object_hash_list) >= 1:
                 for object_hash in object_hash_list:
                     if (du_hash, frame, object_hash) not in object_metrics:
-                        raise ValueError(
-                            f"Metric references invalid object!: du_hash={du_hash}, frame={frame}, object={object_hash}"
+                        print(
+                            f"WARNING: Metric references invalid object!: "
+                            f"du_hash={du_hash}, frame={frame}, object={object_hash}"
                         )
-                metrics_dict_list = [
-                    object_metrics[(du_hash, frame, object_hash)]
-                    for object_hash in object_hash_list
-                ]
-                metrics_derived = DERIVED_LABEL_METRICS
-                metric_types = ObjectMetrics
-            else:
-                metrics_dict_list = [data_metrics[(du_hash, frame)]]
-                metrics_derived = DERIVED_DATA_METRICS
-                metric_types = DataMetrics
-            for metrics_dict in metrics_dict_list:
-                if metric_column_name not in metrics_dict:
-                    score = metric_entry["score"]
-                    if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
-                        score = score / 100.0
-                    metric_def = metric_types[metric_column_name]
-                    if metric_column_name == "metric_sharpness":
-                        score = min(max(score, 0.0), 1.0)
-                        # FIXME: properly scale sharpness to a normalised result!!!
-                    elif metric_def.type == MetricType.NORMAL:
-                        # Clamp 0->1 (some metrics do not generate correctly clamped scores.
-                        original_score = score
-                        score = min(max(score, 0.0), 1.0)
-                        if original_score != score:
-                            print(
-                                f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}"
-                            )
-                    if metric_def.virtual is None:
-                        # Virtual attributes should not be stored!!
-                        metrics_dict[metric_column_name] = score
-                elif metric_column_name not in metrics_derived:
-                    raise ValueError(
-                        f"Duplicate metric assignment for, column={metric_column_name},"
-                        f"identifier{metric_entry['identifier']}"
+                        continue
+                    _assign_metrics(
+                        metric_column_name=metric_column_name,
+                        metrics_dict=object_metrics[(du_hash, frame, object_hash)],
+                        score=metric_entry["score"],
+                        metric_types=ObjectMetrics,
+                        metrics_derived=DERIVED_LABEL_METRICS,
+                        error_identifier=metric_entry["identifier"],
                     )
-                else:
-                    existing_score = metrics_dict[metric_column_name]
-                    if existing_score != metric_entry["score"]:
-                        print(f"WARNING: different derived and calculated scores: "
-                              f"{metric_column_name}, {existing_score}, {metric_entry['score']}")
+            else:
+                _assign_metrics(
+                    metric_column_name=metric_column_name,
+                    metrics_dict=data_metrics[(du_hash, frame)],
+                    score=metric_entry["score"],
+                    metric_types=DataMetrics,
+                    metrics_derived=DERIVED_DATA_METRICS,
+                    error_identifier=metric_entry["identifier"],
+                )
 
     # Load embeddings
     for embedding_type, embedding_name in [
@@ -324,7 +346,8 @@ def up(pfs: ProjectFileStructure) -> None:
         prediction_hash = uuid.uuid4()
         predictions_dir = pfs.predictions
 
-        # No predictions exist
+        # Work out what prediction type we are loading and the correct folders to search for both variants of legacy
+        # predictions storage. If they exist.
         if not predictions_dir.exists():
             continue
         predictions_child_dirs = list(predictions_dir.iterdir())
@@ -339,8 +362,8 @@ def up(pfs: ProjectFileStructure) -> None:
         elif prediction_type == MainPredictionType.CLASSIFICATION:
             # SKIP, will already be loaded by object classification type
             continue
-        # raise ValueError(f"Debugging: {prediction_type.value} / {predictions_dir} / {names}")
 
+        # Load all metadata for this prediction store.
         metrics_dir = pfs.metrics
         predictions_metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
         model_predictions = reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
@@ -352,6 +375,7 @@ def up(pfs: ProjectFileStructure) -> None:
         if gt_matched is None or labels is None or model_predictions is None:
             raise ValueError(f"Missing prediction files for migration!")
 
+        # Setup inverse matching dictionary for calculating the label being matched against the
         gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
             ((int(class_id), int(img_id), int(pidx)), int(mapping["lidx"]))
             for class_id, rest in gt_matched.items()
@@ -366,6 +390,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 f"{len(gt_matched_inverted_list)} / {len(gt_matched_inverted_map)}"
             )
 
+        # Tracking for applying associated metadata to the query.
         model_prediction_best_match_candidates: Dict[
             Tuple[uuid.UUID, int, str], List[ProjectPredictionObjectResults]
         ] = {}
@@ -396,7 +421,19 @@ def up(pfs: ProjectFileStructure) -> None:
                 if metric_key == "$SKIP":
                     continue
                 if metric_target == ' (P)':
-                    p_metrics[metric_key] = metric_value
+                    if metric_key in ObjectMetrics:
+                        _assign_metrics(
+                            metric_column_name=metric_key,
+                            metrics_dict=p_metrics,
+                            score=metric_value,
+                            metric_types=ObjectMetrics,
+                            metrics_derived=set(),
+                            error_identifier=identifier,
+                        )
+                    elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
+                        pass  # FIXME: this p-metric should be stored somewhere.
+                    else:
+                        print(f"DEBUG, Extra p_metric: {metric_key}")
                 elif metric_target == ' (F)':
                     f_metrics[metric_key] = metric_value
                 else:
@@ -439,19 +476,22 @@ def up(pfs: ProjectFileStructure) -> None:
             # Add the new prediction to the database!!!
             for object_hash in object_hashes:
                 new_predictions_object_db = ProjectPredictionObjectResults(
+                    # Identifier
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
                     object_hash=object_hash,
+                    # Prediction metadata
                     feature_hash=feature_hash,
                     confidence=confidence,
                     iou=iou,
-                    # Match
+                    # FIXME: pbb (aim to support all prediction descriptors (bytes??)
+                    # Ground truth match metadata
                     match_object_hash=match_object_hash,
                     match_feature_hash=match_feature_hash,
                     match_duplicate_iou=0.0,  # by default, never a duplicate
                     # Metrics
-                    # FIXME: pbb (aim to support all prediction descriptors (bytes??)
+                    **assert_valid_args(ProjectPredictionObjectResults, p_metrics),
                 )
                 predictions_objects_db.append(
                     new_predictions_object_db

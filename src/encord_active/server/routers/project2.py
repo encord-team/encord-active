@@ -698,7 +698,89 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                 "iou": iou
             },
         ).fetchall()
-        print(f"DEBUGGING: {precision_recall}")
+
+        # FIXME: sqlite does not have corr() function, so have to implement manually.
+        sql = text(
+            """
+            SELECT
+                avg(
+                    ((
+                        iou >= :iou and
+                        coalesce(feature_hash = match_feature_hash, false) and
+                        match_duplicate_iou < :iou
+                    ) - e_score) * (metric - e_metric)) / (std_score * std_metric)
+            FROM active_project_prediction_object, (
+                SELECT 
+                    avg(
+                        iou >= :iou and
+                        coalesce(feature_hash = match_feature_hash, false) and
+                        match_duplicate_iou < :iou
+                    ) as e_score,
+                    stdev(
+                        iou >= :iou and
+                        coalesce(feature_hash = match_feature_hash, false) and
+                        match_duplicate_iou < :iou
+                    ) as std_score
+                FROM active_project_prediction_object
+            )
+            """
+        )
+
+        # Precision recall curves
+        prs = {}
+        for pr_summary in precision_recall:
+            feature_hash = pr_summary["feature_hash"]
+            sql = text(
+                """
+                SELECT
+                    cast(tp_count as real) / max(tp_and_fp_count) as p,
+                    cast(tp_count as real) / (
+                        (
+                            SELECT COUNT(*) FROM active_project_prediction_object CTP
+                            WHERE CTP.prediction_hash = :prediction_hash
+                            AND CTP.feature_hash = :prediction_hash
+                            AND CTP.iou >= :iou and
+                            coalesce(CTP.feature_hash = CTP.match_feature_hash, false) and
+                            CTP.match_duplicate_iou < :iou
+                        ) + (
+                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                            WHERE UM.prediction_hash = :prediction_hash
+                            AND UM.feature_hash == :feature_hash
+                        )
+                    )as r
+                FROM (
+                    SELECT
+                        row_number() OVER (
+                            ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                        ) AS tp_and_fp_count,
+                        sum(cast(
+                            (
+                                PR.iou >= :iou and
+                                coalesce(PR.feature_hash = PR.match_feature_hash, false) and
+                                PR.match_duplicate_iou < :iou
+                            ) as integer
+                        )) OVER (
+                            ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                        ) AS tp_count
+                    FROM active_project_prediction_object PR, active_project_prediction FP
+                    WHERE PR.prediction_hash = FP.prediction_hash
+                    AND FP.project_hash = :project_hash
+                    AND FP.prediction_hash = :prediction_hash
+                    AND PR.feature_hash = feature_hash
+                    ORDER BY confidence DESC
+                ) GROUP BY tp_count
+                """
+            ).bindparams(bindparam("prediction_hash", GUID), bindparam("project_hash", GUID), bindparam("iou", Float))
+            pr_result = sess.execute(
+                sql,
+                params={
+                    "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                    "project_hash": guid.process_bind_param(project_hash, engine.dialect),
+                    "iou": iou,
+                    "feature_hash": feature_hash
+                },
+            ).fetchall()
+            prs[feature_hash] = pr_result
     return {
         "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
         "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
@@ -712,6 +794,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
         },
         "correlation": {},
         "importance": {},
+        "prs": prs
     }
 
 
