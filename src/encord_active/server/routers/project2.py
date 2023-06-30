@@ -1,4 +1,5 @@
 import json
+import math
 import uuid
 from enum import Enum
 from typing import Optional, Dict, Tuple, Union, List, Type, Literal
@@ -179,8 +180,8 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
             project_hash=str(project_hash)
         )
         uri = encord_project.get_label_row(
-            label_hash, get_signed_url=True,
-        )["data_units"][du_hash]["data_link"]
+            str(label_hash), get_signed_url=True,
+        )["data_units"][str(du_hash)]["data_link"]
     else:
         raise ValueError(f"Cannot resolve project url")
 
@@ -621,6 +622,7 @@ def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = No
 def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uuid.UUID, iou: float):
     guid = GUID()
     with Session(engine) as sess:
+        # FIXME: check that feature_hash compare can be removed with changes to pre-calculation of match_iou condition.
         sql = text(
             """
             SELECT feature_hash, coalesce(ap, 0.0) as ap, coalesce(ar, 0.0) as ar FROM (
@@ -699,32 +701,107 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
             },
         ).fetchall()
 
-        # FIXME: sqlite does not have corr() function, so have to implement manually.
-        sql = text(
-            """
-            SELECT
-                avg(
-                    ((
-                        iou >= :iou and
-                        coalesce(feature_hash = match_feature_hash, false) and
-                        match_duplicate_iou < :iou
-                    ) - e_score) * (metric - e_metric)) / (std_score * std_metric)
-            FROM active_project_prediction_object, (
+        # Calculate correlation for metrics
+        # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
+        metric_names = [
+            key
+            for key, value in ObjectMetrics.items()
+            if value.virtual is None
+        ]
+        metric_stats = sess.execute(
+            text(
+                f"""
                 SELECT 
+                    e_score,
                     avg(
-                        iou >= :iou and
-                        coalesce(feature_hash = match_feature_hash, false) and
-                        match_duplicate_iou < :iou
-                    ) as e_score,
-                    stdev(
-                        iou >= :iou and
-                        coalesce(feature_hash = match_feature_hash, false) and
-                        match_duplicate_iou < :iou
-                    ) as std_score
+                        ((
+                            iou >= :iou and
+                            coalesce(feature_hash = match_feature_hash, false) and
+                            match_duplicate_iou < :iou
+                        ) - e_score) * ((
+                            iou >= :iou and
+                            coalesce(feature_hash = match_feature_hash, false) and
+                            match_duplicate_iou < :iou
+                        ) - e_score)
+                    ) as var_score,
+                    {",".join([
+                        f"e_{metric_name},"
+                        f"avg(({metric_name} - e_{metric_name}) * ({metric_name} - e_{metric_name})) "
+                        f"as var_{metric_name}"
+                        for metric_name in metric_names
+                    ])}
+                FROM active_project_prediction_object, (
+                    SELECT
+                        avg(
+                            iou >= :iou and
+                            coalesce(feature_hash = match_feature_hash, false) and
+                            match_duplicate_iou < :iou
+                        ) as e_score,
+                        {",".join([
+                            f"avg({metric_name}) as e_{metric_name}"
+                            for metric_name in metric_names
+                        ])}
+                     FROM active_project_prediction_object
+                     WHERE prediction_hash = :prediction_hash
+                )
+                WHERE prediction_hash = :prediction_hash
+                """
+            ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float)),
+            params={
+                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                "iou": iou,
+            },
+        ).first()
+        metric_stat_names = [
+            f"{ty}_{name}"
+            for name in ["score"] + metric_names
+            for ty in ["e", "var"]
+        ]
+        valid_metric_stats = {}
+        valid_metric_stat_name_set = set(metric_names)
+        for stat_name, stat_value in zip(metric_stat_names, metric_stats):
+            if stat_value is None:
+                stat = stat_name[len(stat_name.split("_")[0]) + 1:]
+                if stat in valid_metric_stat_name_set:
+                    valid_metric_stat_name_set.remove(stat)
+            else:
+                if stat_name.startswith("var_"):
+                    valid_metric_stats[stat_name.replace("var_", "std_")] = math.sqrt(stat_value)
+                else:
+                    valid_metric_stats[stat_name] = stat_value
+        valid_metric_stat_names = list(valid_metric_stat_name_set)
+        correlation_result = sess.execute(
+            text(
+                f"""
+                SELECT
+                    {",".join([
+                        f'''
+                        avg(
+                            (
+                                (
+                                    iou >= :iou and
+                                    coalesce(feature_hash = match_feature_hash, false) and
+                                    match_duplicate_iou < :iou
+                                ) - :e_score
+                            ) * ({metric_name} - :e_{metric_name})
+                        ) / (:std_score * :std_{metric_name}) as corr_{metric_name}
+                        '''
+                        for metric_name in valid_metric_stat_names
+                    ])}
                 FROM active_project_prediction_object
-            )
-            """
-        )
+                WHERE prediction_hash = :prediction_hash
+                """
+            ),
+            params={
+                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                "iou": iou,
+                **valid_metric_stats
+            },
+        ).first()
+        correlations = {
+            name: value
+            for name, value in zip(valid_metric_stat_names, correlation_result)
+        }
 
         # Precision recall curves
         prs = {}
@@ -735,19 +812,12 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                 SELECT
                     cast(tp_count as real) / max(tp_and_fp_count) as p,
                     cast(tp_count as real) / (
-                        (
-                            SELECT COUNT(*) FROM active_project_prediction_object CTP
-                            WHERE CTP.prediction_hash = :prediction_hash
-                            AND CTP.feature_hash = :prediction_hash
-                            AND CTP.iou >= :iou and
-                            coalesce(CTP.feature_hash = CTP.match_feature_hash, false) and
-                            CTP.match_duplicate_iou < :iou
-                        ) + (
+                        max(tp_count) + (
                             SELECT COUNT(*) FROM active_project_prediction_unmatched UM
                             WHERE UM.prediction_hash = :prediction_hash
                             AND UM.feature_hash == :feature_hash
                         )
-                    )as r
+                    ) as r
                 FROM (
                     SELECT
                         row_number() OVER (
@@ -792,7 +862,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
             pr["feature_hash"]: pr["ar"]
             for pr in precision_recall
         },
-        "correlation": {},
+        "correlation": correlations,
         "importance": {},
         "prs": prs
     }
