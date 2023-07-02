@@ -193,7 +193,7 @@ Commands:
  project      Imports a new project from Encord or a local coco project 📦
 ```
 
-### `project`
+### `project` {#import-project}
 
 Imports a new project from Encord or a local coco project.
 
@@ -213,7 +213,7 @@ Options:
  --target  -t      DIRECTORY  Directory where the project would be saved. [default: CWD]
 ```
 
-### `predictions`
+### `predictions` {#import-predictions}
 
 Imports a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
 If `--coco` option is specified the file should be a json following the coco results format.
@@ -269,7 +269,7 @@ Commands:
 Make sure your shell's current working directory is that of an Encord Active project, or your command points to one with the `--target` global option.
 :::
 
-### `add`
+### `add` {#metric-add}
 
 Add metrics to the project by specifying a path to a metrics module and titles of metrics within the module. If no metric titles are provided then all metrics found in the python module will be added to the project.
 
@@ -291,7 +291,7 @@ In case a metric title is not found in the python module, you will get an error.
 Some shells may treat square braces (`[` and `]`) as special characters. It is suggested to always quote arguments containing these characters to prevent unexpected shell expansion.
 :::
 
-### `remove`
+### `remove` {#metric-remove}
 
 Removes metrics from a project.
 
@@ -305,7 +305,7 @@ Options:
  --target  -t        DIRECTORY  Path to the target project. [default: CWD]
 ```
 
-### `list`
+### `list` {#metric-list}
 
 List metrics in the project, including editables. Metrics are listed in a case-insensitive sorted order.
 
@@ -316,7 +316,7 @@ Options:
  --target  -t        DIRECTORY  Path to the target project. [default: CWD]
 ```
 
-### `run`
+### `run` {#metric-run}
 
 Run metrics on the project's data and labels.
 
@@ -332,7 +332,7 @@ Options:
  --fuzzy                      Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄
 ```
 
-### `show`
+### `show` {#metric-show}
 
 Show information about one or more available metrics in the project.
 
