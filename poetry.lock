@@ -862,16 +862,14 @@ name = "encord-active-components"
 version = "0.0.24"
 description = "Frontend components used by Encord Active"
 optional = false
-python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
-files = []
-develop = true
+python-versions = ">=3.9, !=2.7.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*, !=3.8.*"
+files = [
+    {file = "encord_active_components-0.0.24-py3-none-any.whl", hash = "sha256:c1d945d5ba61c4fb714d0c959b5d0d88e8f6e86558a9cee4985edd57d3ab2200"},
+    {file = "encord_active_components-0.0.24.tar.gz", hash = "sha256:5287147a794e9186f0e5e9938446a2e120dfeb08d158a20c1ef08f0108975ab4"},
+]
 
 [package.dependencies]
-streamlit = "^1.19.0"
-
-[package.source]
-type = "directory"
-url = "frontend_components"
+streamlit = ">=1.19.0,<2.0.0"
 
 [[package]]
 name = "entrypoints"
@@ -5294,4 +5292,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "85640fafe86b49be2f0375d878d9c07f5ca303f9fbd64e9e38d30872b7fdec75"
+content-hash = "74db0f3498dc992f8c6561cba797f0076d4c43b3286cf086fcf094a6849902bc"
