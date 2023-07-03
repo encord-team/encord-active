@@ -33,7 +33,7 @@ class MetricDefinition:
     virtual: Optional[MetricVirtualDefinition] = None
 
 
-DataObjectSharedMetrics: Dict[str, MetricDefinition] = {
+DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
     "metric_width": MetricDefinition(
         title="Width",
         short_desc="Width in pixels",
@@ -76,17 +76,17 @@ DataObjectSharedMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_blur": MetricDefinition(
-        title="Blur",
-        short_desc="",
-        long_desc="",
-        type=MetricType.NORMAL,
-        virtual=MetricVirtualDefinition(
-            src="metric_sharpness",
-            flip_ord=True,
-            map=lambda x: 1.0 - x,
-        )
-    ),
+    #"metric_blur": MetricDefinition(
+    #    title="Blur",
+    #    short_desc="",
+    #    long_desc="",
+    #    type=MetricType.NORMAL,
+    #    virtual=MetricVirtualDefinition(
+    #        src="metric_sharpness",
+    #        flip_ord=True,
+    #        map=lambda x: 1.0 - x,
+    #    )
+    #),
     "metric_red": MetricDefinition(
         title="Red",
         short_desc="Redness of the image data",
@@ -113,7 +113,7 @@ DataObjectSharedMetrics: Dict[str, MetricDefinition] = {
     )
 }
 
-DataOnlyMetrics: Dict[str, MetricDefinition] = {
+_DataOnlyMetrics: Dict[str, MetricDefinition] = {
     "metric_object_count": MetricDefinition(
         title="Object Count",
         short_desc="",
@@ -146,7 +146,7 @@ DataOnlyMetrics: Dict[str, MetricDefinition] = {
     ),
 }
 
-ObjectOnlyMetrics: Dict[str, MetricDefinition] = {
+AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
     "metric_area_relative": MetricDefinition(
         title="Relative Area",
         short_desc="Relative area compared to the data source",
@@ -197,13 +197,9 @@ ObjectOnlyMetrics: Dict[str, MetricDefinition] = {
     ),
 }
 
-ClassificationOnlyMetrics: Dict[str, MetricDefinition] = {
-    # FIXME: define stuff??
-}
 
-DataMetrics = DataObjectSharedMetrics | DataOnlyMetrics
-ObjectMetrics = DataObjectSharedMetrics | ObjectOnlyMetrics
-ClassificationMetrics = ClassificationOnlyMetrics
+DataMetrics = DataAnnotationSharedMetrics | _DataOnlyMetrics
+AnnotationMetrics = DataAnnotationSharedMetrics | AnnotationOnlyMetrics
 
 TSQLClass = TypeVar("TSQLClass", bound=BaseModel)
 
