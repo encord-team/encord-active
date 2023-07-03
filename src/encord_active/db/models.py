@@ -1,14 +1,14 @@
 import os
+import enum
 from pathlib import Path
 from typing import Optional, Set, Tuple, Union, Iterable, List, Type, Dict
 from uuid import UUID
 
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, Enum as SQLEnum
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, SQLModel, create_engine, Index, ForeignKeyConstraint
 
-from encord_active.db.metrics import MetricDefinition, DataMetrics, ObjectMetrics, ClassificationMetrics, \
-    assert_cls_metrics_match
+from encord_active.db.metrics import MetricDefinition, DataMetrics, AnnotationMetrics, assert_cls_metrics_match
 
 
 def fk_constraint(
@@ -26,6 +26,17 @@ def fk_constraint(
         ondelete="CASCADE",
         name=name,
     )
+
+
+class AnnotationType(enum.Enum):
+    CLASSIFICATION = 'classification'
+    BOUNDING_BOX = 'bounding_box'
+    ROT_BOUNDING_BOX = 'rot_bounding_box'
+    POINT = 'point'
+    POLYLINE = 'polyline'
+    POLYGON = 'polygon'
+    SKELETON = 'skeleton'
+    BITMASK = 'bitmask'
 
 
 class Project(SQLModel, table=True):
@@ -140,9 +151,9 @@ class ProjectDataAnalytics(SQLModel, table=True):
     )
 
 
-@assert_cls_metrics_match(ObjectMetrics)
-class ProjectObjectAnalytics(SQLModel, table=True):
-    __tablename__ = 'active_project_analytics_object'
+@assert_cls_metrics_match(AnnotationMetrics)
+class ProjectAnnotationAnalytics(SQLModel, table=True):
+    __tablename__ = 'active_project_analytics_annotation'
     # Base primary key
     project_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
@@ -150,6 +161,10 @@ class ProjectObjectAnalytics(SQLModel, table=True):
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     # Extra properties
     feature_hash: str = Field(min_length=8, max_length=8)
+    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_value: Optional[str]
+    annotation_creator: Optional[str]
+    annotation_confidence: float
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
@@ -181,30 +196,8 @@ class ProjectObjectAnalytics(SQLModel, table=True):
 
     __table_args__ = define_metric_indices(
         "active_label",
-        ObjectMetrics,
+        AnnotationMetrics,
         [fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "active_label_project_data_fk")]
-    )
-
-
-@assert_cls_metrics_match(ClassificationMetrics)
-class ProjectClassificationAnalytics(SQLModel, table=True):
-    __tablename__ = 'active_project_analytics_classification'
-    # Base primary key
-    project_hash: UUID = Field(primary_key=True)
-    du_hash: UUID = Field(primary_key=True)
-    frame: int = Field(primary_key=True, ge=0)
-    classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
-    # Extra metadata
-    feature_hash: str = Field(min_length=8, max_length=8)
-    # Classification metrics (most metrics are shared with data metrics)
-    # so this only contains metrics that are depend on the classification itself.
-    __table_args__ = define_metric_indices(
-        "active_classification",
-        ClassificationMetrics,
-        [
-            fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata,
-                          "active_classification_project_data_fk")
-        ],
     )
 
 
@@ -233,8 +226,8 @@ class ProjectTaggedDataUnit(SQLModel, table=True):
     )
 
 
-class ProjectTaggedObject(SQLModel, table=True):
-    __tablename__ = 'active_project_tagged_object'
+class ProjectTaggedAnnotation(SQLModel, table=True):
+    __tablename__ = 'active_project_tagged_annotation'
     project_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
@@ -243,23 +236,8 @@ class ProjectTaggedObject(SQLModel, table=True):
 
     __table_args__ = (
         fk_constraint(["tag_hash"], ProjectTag, "active_project_tagged_objects_tag_fk"),
-        fk_constraint(["project_hash", "du_hash", "frame", "object_hash"], ProjectObjectAnalytics,
+        fk_constraint(["project_hash", "du_hash", "frame", "object_hash"], ProjectAnnotationAnalytics,
                       "active_project_tagged_objects_analysis_fk")
-    )
-
-
-class ProjectTaggedClassification(SQLModel, table=True):
-    __tablename__ = 'active_project_tagged_classification'
-    project_hash: UUID = Field(primary_key=True)
-    du_hash: UUID = Field(primary_key=True)
-    frame: int = Field(primary_key=True, ge=0)
-    classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
-    tag_hash: UUID = Field(primary_key=True, index=True)
-
-    __table_args__ = (
-        fk_constraint(["tag_hash"], ProjectTag, "active_project_tagged_classifications_tag_fk"),
-        fk_constraint(["project_hash", "du_hash", "frame", "classification_hash"], ProjectClassificationAnalytics,
-                      "active_project_tagged_classifications_analysis_fk")
     )
 
 
@@ -273,9 +251,9 @@ class ProjectPrediction(SQLModel, table=True):
     )
 
 
-@assert_cls_metrics_match(ObjectMetrics)
+@assert_cls_metrics_match(AnnotationMetrics)
 class ProjectPredictionObjectResults(SQLModel, table=True):
-    __tablename__ = 'active_project_prediction_object'
+    __tablename__ = 'active_project_prediction_results'
     prediction_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
@@ -343,20 +321,7 @@ class ProjectPredictionUnmatchedResults(SQLModel, table=True):
     )
 
 
-class ProjectPredictionClassificationResults(SQLModel, table=True):
-    __tablename__ = 'active_project_prediction_classification'
-    prediction_hash: UUID = Field(primary_key=True)
-    du_hash: UUID = Field(primary_key=True)
-    frame: int = Field(primary_key=True, ge=0)
-    classification_hash: str = Field(primary_key=True, min_length=8, max_length=8)
-
-    __table_args__ = (
-        fk_constraint(["prediction_hash"], ProjectPrediction,
-                      "active_project_prediction_classifications_prediction_fk"),
-    )
-
-
-# FIXME: metrics should be inline predictions or separate (need same keys for easy comparison)
+# FIXME: metrics should be inline predictions or separate (need same keys for easy comparison)??
 
 
 _init_metadata: Set[str] = set()
@@ -367,6 +332,8 @@ def get_engine(path: Path, concurrent: bool = False) -> Engine:
     create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
     connect_args = {"check_same_thread": False} if concurrent else {}
+    path = path.expanduser().resolve()
+    print(f"Connection to database: {path}")
     engine = create_engine(
         override_db if override_db is not None else f"sqlite:///{path}",
         connect_args=connect_args

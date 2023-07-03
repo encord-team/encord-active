@@ -14,10 +14,10 @@ from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.metrics import DataMetrics, ClassificationMetrics, ObjectMetrics, MetricDefinition, MetricType
+from encord_active.db.metrics import DataMetrics, AnnotationMetrics, MetricDefinition, MetricType
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
-    ProjectTaggedObject, ProjectTag, ProjectDataAnalytics, ProjectObjectAnalytics, ProjectDataMetadata, \
-    ProjectClassificationAnalytics, ProjectPrediction, ProjectPredictionObjectResults
+    ProjectTaggedAnnotation, ProjectTag, ProjectDataAnalytics, ProjectAnnotationAnalytics, ProjectDataMetadata, \
+    ProjectPrediction, AnnotationType
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.settings import get_settings
@@ -36,9 +36,8 @@ SEVERE_IQR_SCALE = 2.5
 
 
 class AnalysisDomain(Enum):
-    Object = "object"
     Data = "data"
-    Classification = "classification"
+    Annotation = "annotation"
 
 
 @router.get("/list")
@@ -62,7 +61,7 @@ def _metric_summary(metrics: Dict[str, MetricDefinition]):
             "title": metric.title,
             "short_desc": metric.short_desc,
             "long_desc": metric.long_desc,
-            "type": metric.type.name,
+            "type": metric.type.value,
         }
         for metric_name, metric in metrics.items()
     }
@@ -77,8 +76,8 @@ def get_project_summary(project_hash: uuid.UUID):
 
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
-        preview = sess.exec(select(ProjectObjectAnalytics.du_hash, ProjectObjectAnalytics.frame)
-                            .where(ProjectObjectAnalytics.project_hash == project_hash).limit(1)).first()
+        preview = sess.exec(select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
+                            .where(ProjectAnnotationAnalytics.project_hash == project_hash).limit(1)).first()
         if preview is None:
             preview = sess.exec(select(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
                                 .where(ProjectDataUnitMetadata.project_hash == project_hash).limit(1)).first()
@@ -91,14 +90,8 @@ def get_project_summary(project_hash: uuid.UUID):
             "metrics": _metric_summary(DataMetrics),
             "enums": {},
         },
-        "objects": {
-            "metrics": _metric_summary(ObjectMetrics),
-            "enums": {
-                "feature_hash": None,
-            },
-        },
-        "classifications": {
-            "metrics": _metric_summary(ClassificationMetrics),
+        "annotations": {
+            "metrics": _metric_summary(AnnotationMetrics),
             "enums": {
                 "feature_hash": None,
             },
@@ -153,11 +146,11 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
             query_tags = select(
                 ProjectTag,
             ).where(
-                ProjectTaggedObject.project_hash == project_hash,
-                ProjectTaggedObject.du_hash == du_hash,
-                ProjectTaggedObject.frame == frame,
-                ProjectTaggedObject.object_hash == object_hash,
-            ).join(ProjectTaggedObject, ProjectTaggedObject.tag_hash == ProjectTag.tag_hash)
+                ProjectTaggedAnnotation.project_hash == project_hash,
+                ProjectTaggedAnnotation.du_hash == du_hash,
+                ProjectTaggedAnnotation.frame == frame,
+                ProjectTaggedAnnotation.object_hash == object_hash,
+            ).join(ProjectTaggedAnnotation, ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash)
         result_tags = sess.exec(query_tags).fetchall()
     if object_hash is not None:
         objects = [
@@ -224,20 +217,11 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
         ).first()
         object_analytics = sess.exec(
             select(
-                ProjectObjectAnalytics
+                ProjectAnnotationAnalytics
             ).where(
-                ProjectObjectAnalytics.project_hash == project_hash,
-                ProjectObjectAnalytics.du_hash == du_hash,
-                ProjectObjectAnalytics.frame == frame,
-            )
-        ).fetchall()
-        classification_analytics = sess.exec(
-            select(
-                ProjectClassificationAnalytics
-            ).where(
-                ProjectClassificationAnalytics.project_hash == project_hash,
-                ProjectClassificationAnalytics.du_hash == du_hash,
-                ProjectClassificationAnalytics.frame == frame,
+                ProjectAnnotationAnalytics.project_hash == project_hash,
+                ProjectAnnotationAnalytics.du_hash == du_hash,
+                ProjectAnnotationAnalytics.frame == frame,
             )
         ).fetchall()
     if du_meta is None or du_analytics is None:
@@ -245,10 +229,6 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     obj_metrics = {
         o.object_hash: o
         for o in object_analytics or []
-    }
-    classify_metrics = {
-        c.classification_hash: c
-        for c in classification_analytics or []
     }
 
     return {
@@ -261,38 +241,37 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
                 **obj,
                 "metrics": {
                     k: getattr(obj_metrics[obj["objectHash"]], k)
-                    for k in ObjectMetrics
+                    for k in AnnotationMetrics
                 },
                 "tags": [],
             }
             for obj in du_meta.objects
-        ],
-        "classifications": [
-            {
-                **classify,
-                "metrics": {
-                    k: getattr(classify_metrics[classify["classificationHash"]], k)
-                    for k in ClassificationMetrics
-                },
-                "tags": [],
-            }
-            for classify in du_meta.classifications
         ]
     }
 
 
 def _get_metric_domain(domain: AnalysisDomain) -> Tuple[
-    Union[Type[ProjectDataAnalytics], Type[ProjectObjectAnalytics], Type[ProjectClassificationAnalytics]],
+    Union[Type[ProjectDataAnalytics], Type[ProjectAnnotationAnalytics]],
     Dict[str, MetricDefinition],
     Optional[str],
-    Dict[str, None]
+    Dict[str, dict]
 ]:
     if domain == AnalysisDomain.Data:
         return ProjectDataAnalytics, DataMetrics, None, {}
-    elif domain == AnalysisDomain.Object:
-        return ProjectObjectAnalytics, ObjectMetrics, "object_hash", {"feature_hash": None}
-    elif domain == AnalysisDomain.Classification:
-        return ProjectClassificationAnalytics, ClassificationMetrics, "classification_hash", {"feature_hash": None}
+    elif domain == AnalysisDomain.Annotation:
+        enum_props = {
+            "feature_hash": {
+                "type": "ontology"
+            },
+            "annotation_type": {
+                "type": "set",
+                "values": {
+                    annotation_type.value: annotation_type.name
+                    for annotation_type in AnnotationType
+                }
+            }
+        }
+        return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props
     else:
         raise ValueError(f"Bad domain: {domain}")
 
@@ -304,11 +283,24 @@ def _where_metric_not_null(cls, metric_name: str, metrics: Dict[str, MetricDefin
     return is_not(getattr(cls, metric_name), None)
 
 
-def _get_metric(cls, metric_name: str, metrics: Dict[str, MetricDefinition]):
+def _get_metric(cls, metric_name: str, metrics: Dict[str, MetricDefinition], approximate: bool = False):
     metric = metrics[metric_name]
     if metric.virtual is not None:
         return metric.virtual.map(getattr(cls, metric.virtual.src))
-    return getattr(cls, metric_name)
+    raw_metric = getattr(cls, metric_name)
+    if approximate:
+        if metric.type == MetricType.NORMAL:
+            return func.floor(raw_metric * 500.0) / 500.0
+        elif metric.type == MetricType.UFLOAT:
+            # FIXME: something smart with log?
+            return func.floor(raw_metric * 10.0) / 10.0
+        elif metric.type == MetricType.UINT:
+            # FIXME: something smart again
+            return raw_metric
+        else:
+            return raw_metric
+    else:
+        return raw_metric
 
 
 def _load_metric(
@@ -316,7 +308,7 @@ def _load_metric(
         project_hash: uuid.UUID,
         metric_name: str,
         metric: MetricDefinition,
-        cls: Type[Union[ProjectDataAnalytics, ProjectObjectAnalytics, ProjectClassificationAnalytics]],
+        cls: Type[Union[ProjectDataAnalytics, ProjectAnnotationAnalytics]],
         iqr_only: bool = False
 ) -> Optional[dict]:
     if metric.virtual is not None:
@@ -505,20 +497,20 @@ def metric_search(
             )
 
         search_query = search_query.limit(
-            # 10_000 max results in a search query (+1 to detect truncation).
-            limit=10_001
+            # 1000 max results in a search query (+1 to detect truncation).
+            limit=1001
         )
         search_results = sess.exec(search_query).fetchall()
-    truncated = len(search_results) == 10_001
+    truncated = len(search_results) == 1001
 
     return {
         "truncated": truncated,
         "results": [
             {"du_hash": du_hash, "frame": frame, domain_grouping: group_hash}
-            for du_hash, frame, group_hash in search_results
+            for du_hash, frame, group_hash in search_results[:-1]
         ] if domain_grouping is not None else [
             {"du_hash": du_hash, "frame": frame}
-            for du_hash, frame, group_hash in search_results
+            for du_hash, frame, group_hash in search_results[:-1]
         ]
     }
 
@@ -527,20 +519,26 @@ def metric_search(
 def scatter_2d_data_metric(project_hash: uuid.UUID, domain: AnalysisDomain, x_metric: str, y_metric: str):
     domain_ty, domain_metrics, *_ = _get_metric_domain(domain)
     with Session(engine) as sess:
+        x_metric_fn = _get_metric(domain_ty, x_metric, domain_metrics, approximate=True)
+        y_metric_fn = _get_metric(domain_ty, y_metric, domain_metrics, approximate=True)
         scatter_query = select(
             domain_ty.du_hash,
             domain_ty.frame,
-            _get_metric(domain_ty, x_metric, domain_metrics),
-            _get_metric(domain_ty, y_metric, domain_metrics),
+            x_metric_fn,
+            y_metric_fn,
+            func.count()
         ).where(
             domain_ty.project_hash == project_hash,
             _where_metric_not_null(domain_ty, x_metric, domain_metrics),
             _where_metric_not_null(domain_ty, y_metric, domain_metrics),
+        ).group_by(
+            x_metric_fn,
+            y_metric_fn
         )
         scatter_results = sess.exec(scatter_query).fetchall()
     samples = [
-        {"x": x, "y": y, "n": 1, "du_hash": du_hash, "frame": frame}
-        for du_hash, frame, x, y in scatter_results
+        {"x": x, "y": y, "n": n, "du_hash": du_hash, "frame": frame}
+        for du_hash, frame, x, y, n in scatter_results
     ]
 
     # Derive linear regression
@@ -649,7 +647,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             )) OVER (
                                 ORDER BY AP.confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_positives
-                        FROM active_project_prediction_object AP
+                        FROM active_project_prediction_results AP
                         WHERE AP.prediction_hash = FG.prediction_hash
                         AND AP.feature_hash == FG.feature_hash
                         ORDER BY AP.confidence DESC
@@ -678,13 +676,13 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             )) OVER (
                                 ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
                             ) AS ar_positives
-                        FROM active_project_prediction_object AR
+                        FROM active_project_prediction_results AR
                         WHERE AR.prediction_hash = FG.prediction_hash
                         AND AR.feature_hash = FG.feature_hash
                         ORDER BY AR.iou
                     )
                 ) as ar
-                FROM active_project_prediction_object FG, active_project_prediction FP
+                FROM active_project_prediction_results FG, active_project_prediction FP
                 WHERE FG.prediction_hash = FP.prediction_hash
                 AND FP.project_hash = :project_hash
                 AND FP.prediction_hash = :prediction_hash
@@ -705,7 +703,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
         # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
         metric_names = [
             key
-            for key, value in ObjectMetrics.items()
+            for key, value in AnnotationMetrics.items()
             if value.virtual is None
         ]
         metric_stats = sess.execute(
@@ -730,7 +728,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                         f"as var_{metric_name}"
                         for metric_name in metric_names
                     ])}
-                FROM active_project_prediction_object, (
+                FROM active_project_prediction_results, (
                     SELECT
                         avg(
                             iou >= :iou and
@@ -741,7 +739,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             f"avg({metric_name}) as e_{metric_name}"
                             for metric_name in metric_names
                         ])}
-                     FROM active_project_prediction_object
+                     FROM active_project_prediction_results
                      WHERE prediction_hash = :prediction_hash
                 )
                 WHERE prediction_hash = :prediction_hash
@@ -788,7 +786,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                         '''
                         for metric_name in valid_metric_stat_names
                     ])}
-                FROM active_project_prediction_object
+                FROM active_project_prediction_results
                 WHERE prediction_hash = :prediction_hash
                 """
             ),
@@ -832,7 +830,7 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                         )) OVER (
                             ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_count
-                    FROM active_project_prediction_object PR, active_project_prediction FP
+                    FROM active_project_prediction_results PR, active_project_prediction FP
                     WHERE PR.prediction_hash = FP.prediction_hash
                     AND FP.project_hash = :project_hash
                     AND FP.prediction_hash = :prediction_hash
@@ -866,13 +864,3 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
         "importance": {},
         "prs": prs
     }
-
-
-@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/precision")
-def get_project_prediction_importance(project_hash: uuid.UUID, prediction_hash: uuid.UUID, metric: str):
-    pass
-
-
-@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/correlation")
-def get_project_prediction_correlation(project_hash: uuid.UUID, prediction_hash: uuid.UUID, metric: str):
-    pass
