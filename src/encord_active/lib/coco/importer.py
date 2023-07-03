@@ -132,7 +132,9 @@ def upload_annotation(
         if annot.segmentation:
             obj = id_shape_to_obj[(annot.category_id, Shape.POLYGON)]
             polygon = annot.segmentation
-            polygon_points = [Point(polygon[i] / img_w, polygon[i + 1] / img_h) for i in range(0, len(polygon), 2)]
+            polygon_points = [
+                Point(max(1.0, polygon[i] / img_w), max(1.0, polygon[i + 1] / img_h)) for i in range(0, len(polygon), 2)
+            ]
             objects.append(make_object_dict(ontology_object=obj, object_data=polygon_points))
         elif len(annot.bbox or []) == 4:
             try:
@@ -144,7 +146,7 @@ def upload_annotation(
             use_rotation = category_shapes[annot.category_id].has_rotation
             shape = Shape.ROTATABLE_BOUNDING_BOX if use_rotation else Shape.BOUNDING_BOX
             obj = id_shape_to_obj[(annot.category_id, shape)]
-            bounding_box = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
+            bounding_box = BoundingBox(x=x / img_w, y=y / img_h, w=max(1.0, w / img_w), h=max(1.0, h / img_h))
             if use_rotation:
                 bounding_box.theta = annot.rotation or 0.0
             objects.append(make_object_dict(ontology_object=obj, object_data=bounding_box.dict()))

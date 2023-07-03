@@ -50,7 +50,7 @@ def import_coco_predictions(
         elif res.bbox:
             format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
             x, y, w, h = res.bbox
-            data = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
+            data = BoundingBox(x=x / img_w, y=y / img_h, w=max(1.0, w / img_w), h=max(1.0, h / img_h))
         else:
             raise Exception("Unsupported result format")
 
