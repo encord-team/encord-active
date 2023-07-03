@@ -8,7 +8,7 @@ import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 type SearchFn = API["searchInProject"];
-type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope">;
+type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope" | "filters">;
 type Result = Awaited<ReturnType<SearchFn>>;
 
 export const useSearch = (
@@ -68,8 +68,8 @@ export const Assistant = ({
         className="w-full flex"
         onSubmit={(e) => {
           e.preventDefault();
-          const query = e.currentTarget["query"]satisfies HTMLInputElement;
-          const type = e.currentTarget["type"]satisfies HTMLInputElement;
+          const query = e.currentTarget["query"] satisfies HTMLInputElement;
+          const type = e.currentTarget["type"] satisfies HTMLInputElement;
           setSearch({ query: query.value, type: type.value as SearchType });
         }}
       >
