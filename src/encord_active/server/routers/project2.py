@@ -8,6 +8,7 @@ from urllib.parse import quote
 import numpy as np
 
 from fastapi import APIRouter
+from sklearn.feature_selection import mutual_info_regression
 from sqlalchemy import func, bindparam, text
 from sqlalchemy.types import Float
 from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
@@ -17,7 +18,7 @@ from sqlmodel.sql.sqltypes import GUID
 from encord_active.db.metrics import DataMetrics, AnnotationMetrics, MetricDefinition, MetricType
 from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
     ProjectTaggedAnnotation, ProjectTag, ProjectDataAnalytics, ProjectAnnotationAnalytics, ProjectDataMetadata, \
-    ProjectPrediction, AnnotationType
+    ProjectPrediction, AnnotationType, ProjectPredictionObjectResults
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.settings import get_settings
@@ -849,6 +850,27 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                 },
             ).fetchall()
             prs[feature_hash] = pr_result
+
+            """
+            # FIXME: importance is not easy to implement in sqlite, so load all data and run manyally
+            importance = {}
+            for metric_name in AnnotationMetrics.keys():
+                importance_data_query = select(
+                    ProjectPredictionObjectResults.iou * (
+                        (ProjectPredictionObjectResults.iou >= iou) &
+                        (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                    ),
+                    getattr(ProjectPredictionObjectResults, metric_name)
+                )
+                importance_data = sess.exec(importance_data_query)
+                print(f"Debugging: {importance_data}")
+                importance_regression = mutual_info_regression(
+                    [[0 if d[1] is None or math.isnan(d[1]) else d[1] for d in importance_data]],
+                    [0 if d[0] is None or math.isnan(d[0]) else d[0] for d in importance_data],
+                    random_state=42
+                )
+                print(f"Debugging: {importance_regression}")
+    """
     return {
         "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
         "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
