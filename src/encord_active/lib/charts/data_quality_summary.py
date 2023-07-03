@@ -113,7 +113,10 @@ def create_2d_metric_chart(
     trendline = None
     if show_trendline:  # Check that it's possible to compute a trend line.
         trendline = (
-            "ols" if metrics_df[CrossMetricSchema.x].var() > 0 or metrics_df[CrossMetricSchema.y].var() > 0 else None
+            "ols"
+            if float(str(metrics_df[CrossMetricSchema.x].astype(float).var())) > 0
+            or float(str(metrics_df[CrossMetricSchema.y].var())) > 0
+            else None
         )
 
     fig = px.scatter(

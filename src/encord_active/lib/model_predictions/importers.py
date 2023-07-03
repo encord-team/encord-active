@@ -229,7 +229,7 @@ def import_KITTI_labels(
         headers = list(map(lambda x: x[0], KITTI_COLUMNS))
         # Hack to account for additional "custom" columns
         headers += [f"undefined{i}" for i in range(df.shape[1] - len(headers))]
-        df.columns = headers
+        df.columns = pd.Index(headers)
 
         for _, row in df.iterrows():
             class_name = cast(str, hash_lookup[row["class_name"]])

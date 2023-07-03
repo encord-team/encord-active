@@ -16,7 +16,7 @@ from encord_active.lib.db.merged_metrics import MergedMetrics, initialize_merged
 from encord_active.lib.embeddings.types import Embedding2DSchema
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.reader import LabelSchema, OntologyObjectJSON
+from encord_active.lib.model_predictions.types import LabelSchema, OntologyObjectJSON
 from encord_active.lib.model_predictions.writer import OntologyClassificationJSON
 from encord_active.lib.premium.model import SearchResponse
 from encord_active.lib.project import ProjectFileStructure

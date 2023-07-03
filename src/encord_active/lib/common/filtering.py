@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from encord_active.lib.db.helpers.tags import Tag
 from encord_active.lib.db.tags import TagScope
+from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 UNTAGED_FRAMES_LABEL = "Untaged frames"
@@ -30,6 +31,7 @@ class Filters(BaseModel):
     categorical: dict[str, List[float]] = {}
     range: dict[str, Range] = {}
     datetime_range: dict[str, DatetimeRange] = {}
+    prediction_filters: Optional[PredictionsFilters] = None
 
     def __hash__(self):
         return hash(json.dumps(self.dict(exclude_defaults=True)))
