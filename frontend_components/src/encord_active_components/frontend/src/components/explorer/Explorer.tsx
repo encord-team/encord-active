@@ -85,10 +85,10 @@ export const Explorer = ({
   const { data: hasSimilaritySearch } = useQuery(
     ["hasSimilaritySearch"],
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric }
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
 
-  const { data: similarItems, isLoading: isLoadingSimilarItems } = useQuery(
+  const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
     () =>
       api.fetchSimilarItems(
@@ -98,12 +98,10 @@ export const Explorer = ({
     { enabled: !!similarityItem && !!selectedMetric }
   );
 
-  console.log(filters);
-
-  const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
+  const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
     () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
-    { enabled: !!selectedMetric }
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
@@ -229,7 +227,9 @@ export const Explorer = ({
                   : selectedMetric.embeddingType
               }
               onSelectionChange={(selection) => (
-                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
+                setPage(1),
+                console.log("embeddings"),
+                setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}
             />
@@ -286,7 +286,7 @@ export const Explorer = ({
                   </label>
                 </label>
               )}
-              {!similarityItem && (
+              {!similarityItem && scope !== "model_quality" && (
                 <MetricDistributionTiny
                   values={sortedItems || []}
                   setSeletedIds={(ids) => setItemSet(new Set(ids))}
@@ -338,7 +338,12 @@ export const Explorer = ({
               </div>
             </div>
           </div>
-          {itemsToRender.length ? (
+          {!!loadingDescription ? (
+            <div className="h-32 flex items-center gap-2">
+              <Spin />
+              <span className="text-xl">{loadingDescription}</span>
+            </div>
+          ) : itemsToRender.length ? (
             <>
               <form
                 onChange={({ target }) =>
@@ -368,11 +373,6 @@ export const Explorer = ({
                 onChangePageSize={setPageSize}
               />
             </>
-          ) : !!loadingDescription ? (
-            <div className="h-32 flex items-center gap-2">
-              <Spin />
-              <span className="text-xl">{loadingDescription}</span>
-            </div>
           ) : (
             <div className="h-32 flex items-center gap-2">
               <TbMoodSad2 className="text-3xl" />

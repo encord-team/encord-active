@@ -33,11 +33,11 @@ export const MetricDistributionTiny = ({
 
   useEffect(() => {
     if (!values.length) return;
-    setSeletedIds(
-      selectedBins.length
-        ? selectedBins.flatMap((bin) => bins[bin].map(({ id }) => id))
-        : values.map(({ id }) => id)
-    );
+    const selectedIds = selectedBins.length
+      ? selectedBins.flatMap((bin) => bins[bin].map(({ id }) => id))
+      : values.map(({ id }) => id);
+
+    if (values.length !== selectedIds.length) setSeletedIds(selectedIds);
   }, [selectedBins]);
 
   const onEvent = useCallback<NonNullable<ColumnConfig["onEvent"]>>(
