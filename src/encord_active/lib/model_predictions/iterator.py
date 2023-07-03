@@ -1,5 +1,6 @@
 import json
 import logging
+import typing
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
@@ -28,6 +29,9 @@ from encord_active.lib.model_predictions.writer import (
     ClassificationAttributeOption,
     iterate_classification_attribute_options,
 )
+
+if typing.TYPE_CHECKING:
+    import prisma
 
 logger = logging.getLogger(__name__)
 GMT_TIMEZONE = pytz.timezone("GMT")
