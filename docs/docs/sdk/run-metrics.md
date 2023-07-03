@@ -2,9 +2,9 @@
 sidebar_position: 2
 ---
 
-# Run quality metrics
+# Quality metric execution
 
-**Learn how to execute quality metrics**
+**Learn how to execute built-in and custom quality metrics**
 
 Quality metrics calculation using Python code provides the same functionality as executing the [`metric run`][cli-metric-run] command in the CLI.
 
