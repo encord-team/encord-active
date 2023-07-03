@@ -89,9 +89,7 @@ class PredictionIterator(Iterator):
             frame = int(frame)
         data_unit, image = next(
             label_row_structure.iter_data_unit_with_image(
-                data_unit_hash=pred["du_hash"],
-                frame=frame,
-                cache_db=cache_db
+                data_unit_hash=pred["du_hash"], frame=frame, cache_db=cache_db
             )
         )
         return image
@@ -197,7 +195,9 @@ class PredictionIterator(Iterator):
                             )
                         elif class_id in self.ontology_classifications:
                             classifications.append(
-                                asdict(self.get_encord_classification(prediction, self.ontology_classifications[class_id]))
+                                asdict(
+                                    self.get_encord_classification(prediction, self.ontology_classifications[class_id])
+                                )
                             )
                         else:
                             logger.error("The prediction is not in the ontology objects or classifications")
