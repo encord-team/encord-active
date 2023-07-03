@@ -12,6 +12,7 @@ from encord_active_components.components.pages_menu import (
 from encord_active.app.actions_page.versioning import is_latest
 from encord_active.app.common.state import get_state, refresh
 from encord_active.app.common.state_hooks import UseState
+from encord_active.app.experimental.langchain_experimental import langchain_experimental
 from encord_active.app.model_quality.prediction_type_builder import ModelQualityPage
 from encord_active.app.project_comparison.project_similarity import project_similarity
 from encord_active.app.views.metrics import explorer, summary
@@ -27,6 +28,7 @@ PAGES = {
         "Explorer": model_quality(ModelQualityPage.EXPLORER),
     },
     "Data Drift": project_similarity(),
+    "Experimental": langchain_experimental(),
 }
 
 DEFAULT_PAGE_PATH = ["Data Quality", "Summary"]
