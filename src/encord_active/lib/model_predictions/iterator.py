@@ -172,13 +172,13 @@ class PredictionIterator(Iterator):
                 if label_hash not in self.label_rows:
                     continue
 
-                self.label_hash = label_hash
-                label_row = self.label_rows[label_hash]
+                self.label_hash = str(label_hash)
+                label_row = self.label_rows[self.label_hash]
                 self.dataset_title = label_row["dataset_title"]
 
                 for frame, fr_preds in lh_group.groupby("frame"):
                     self.du_hash = fr_preds.iloc[0]["du_hash"]
-                    self.frame = frame
+                    self.frame = int(str(frame))
 
                     du = deepcopy(label_row["data_units"][self.du_hash])
                     width = int(du["width"])

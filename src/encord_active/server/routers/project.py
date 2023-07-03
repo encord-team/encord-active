@@ -1,4 +1,3 @@
-import re
 from enum import Enum
 from functools import lru_cache
 from typing import Annotated, List, Optional, Union, cast
@@ -332,7 +331,7 @@ def search(
 
         return [item.identifier for item in result.result_identifiers], snippet
 
-    if scope == MetricScope.MODEL_QUALITY:
+    if scope == MetricScope.MODEL_QUALITY and filters.prediction_filters is not None:
         _, _, predictions, _ = read_prediction_files(project, filters.prediction_filters.type)
         if predictions is not None:
             ids, snippet = _search(get_ids(predictions["identifier"], scope))
