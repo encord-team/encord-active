@@ -291,7 +291,7 @@ def build_item_classification_predictions(
     for key in ["Unnamed: 0", "false_positive_reason", "img_id", "gt_class_id"]:
         row.pop(key, None)
 
-    expected_class_name = row.pop("gt_class_name", None)
+    row["Ground Truth Class"] = row.pop("gt_class_name", None)
 
     class_idx = read_class_idx(project_file_structure.predictions / MainPredictionType.CLASSIFICATION.value)
     class_name = row.pop("class_name", None)
