@@ -1,3 +1,4 @@
+import functools
 import json
 import math
 import uuid
@@ -8,6 +9,7 @@ from urllib.parse import quote
 import numpy as np
 
 from fastapi import APIRouter
+from pynndescent import NNDescent
 from sklearn.feature_selection import mutual_info_regression
 from sqlalchemy import func, bindparam, text
 from sqlalchemy.types import Float
@@ -207,6 +209,10 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
             ProjectDataUnitMetadata.du_hash == du_hash,
             ProjectDataUnitMetadata.frame == frame
         )).first()
+        data_meta = sess.exec(select(ProjectDataMetadata).where(
+            ProjectDataMetadata.project_hash == project_hash,
+            ProjectDataMetadata.data_hash == du_meta.data_hash
+        )).first()
         du_analytics = sess.exec(
             select(
                 ProjectDataAnalytics
@@ -247,7 +253,15 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
                 "tags": [],
             }
             for obj in du_meta.objects
-        ]
+        ],
+        "dataset_title": data_meta.dataset_title,
+        "dataset_hash": data_meta.dataset_hash,
+        "data_title": data_meta.data_title,
+        "data_hash": data_meta.data_hash,
+        "label_hash": data_meta.label_hash,
+        "num_frames": data_meta.num_frames,
+        "frames_per_second": data_meta.frames_per_second,
+        "data_type": data_meta.data_type,
     }
 
 
@@ -387,7 +401,7 @@ def metric_summary(
         project_hash: uuid.UUID,
         domain: AnalysisDomain
 ):
-    domain_ty, domain_metrics, extra_key, domain_enums, *_ = _get_metric_domain(domain)
+    domain_ty, domain_metrics, extra_key, domain_enums = _get_metric_domain(domain)
     with Session(engine) as sess:
         count: int = sess.exec(select(func.count()).where(
             domain_ty.project_hash == project_hash
@@ -422,7 +436,7 @@ def metric_search(
     metric_outliers: Optional[Dict[str, Literal["warning", "severe"]]] = None if metric_outliers is None \
         else json.loads(metric_outliers)
     enum_filters: Optional[Dict[str, List[str]]] = None if enum_filters is None else json.loads(enum_filters)
-    domain_ty, domain_metrics, domain_grouping, *_ = _get_metric_domain(domain)
+    domain_ty, domain_metrics, domain_grouping, domain_enums = _get_metric_domain(domain)
 
     # Add metric filtering.
     query_filters = []
@@ -600,6 +614,65 @@ def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, gro
     }
 
 
+@functools.lru_cache(maxsize=2)
+def _get_nn_descent(
+        project_hash: uuid.UUID, domain: AnalysisDomain
+) -> Tuple[NNDescent, List[Tuple[Optional[bytes], uuid.UUID, int, Optional[str]]]]:
+    domain_ty, domain_metrics, object_key, domain_enums = _get_metric_domain(domain)
+    with Session(engine) as sess:
+        query = select(
+            domain_ty.embedding_clip,
+            domain_ty.du_hash,
+            domain_ty.frame,
+            *([] if object_key is None else [getattr(domain_ty, object_key)]),
+        ).where(
+            domain_ty.project_hash == project_hash,
+            is_not(domain_ty.embedding_clip, None)
+        )
+        results = sess.exec(query).fetchall()
+    embeddings = np.stack([np.frombuffer(e[0], dtype=np.float) for e in results]).astype(np.float32)
+    index = NNDescent(embeddings, n_neighbors=50, metric="cosine")
+    return index, results
+
+
+@router.get("/get/{project_hash}/analysis/{domain}/similarity/{du_hash}/{frame}")
+def search_similarity(project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int, embedding: str):
+    domain_ty, domain_metrics, object_key, domain_enums = _get_metric_domain(domain)
+    if embedding != "embedding_clip":
+        raise ValueError("Unsupported embedding")
+    with Session(engine) as sess:
+        src_embedding = sess.exec(select(domain_ty.embedding_clip).where(
+            domain_ty.project_hash == project_hash,
+            domain_ty.du_hash == du_hash,
+            domain_ty.frame == frame,
+            # FIXME: object_hash??
+        )).first()
+        if src_embedding is None:
+            raise ValueError("Source entry does not exist or missing embedding")
+
+    index, results = _get_nn_descent(project_hash, domain)
+    indices, similarity = index.query(np.frombuffer(src_embedding, dtype=np.float).reshape(1, -1), k=50)
+    seen = set()
+    similarity_results = []
+    for i, s in zip(indices[0], similarity[0]):
+        if i in seen:
+            continue
+        _, s_du_hash, s_frame, *keys = results[i]
+        if s_du_hash == du_hash and s_frame == frame: # FIXME: object_hash comparison
+            seen.add(i)  # Do not return 'self'
+            continue
+        similarity_results.append({
+            "du_hash": s_du_hash,
+            "frame": s_frame,
+            "similarity": s,
+            **({} if len(keys) == 0 else {"object_hash": keys[0]})
+        })
+        seen.add(i)
+    return {
+        "results": similarity_results
+    }
+
+
 @router.get("/get/{project_hash}/predictions/list")
 def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = None, limit: Optional[int] = None):
     with Session(engine) as sess:
@@ -642,7 +715,6 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             sum(cast(
                                 (
                                     AP.iou >= :iou and
-                                    coalesce(AP.feature_hash = AP.match_feature_hash, false) and
                                     AP.match_duplicate_iou < :iou
                                 ) as integer
                             )) OVER (
@@ -671,7 +743,6 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             sum(cast(
                                 (
                                     AR.iou >= :iou and
-                                    coalesce(AR.feature_hash = AR.match_feature_hash, false) and
                                     AR.match_duplicate_iou < :iou
                                 ) as integer
                             )) OVER (
@@ -715,11 +786,9 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                     avg(
                         ((
                             iou >= :iou and
-                            coalesce(feature_hash = match_feature_hash, false) and
                             match_duplicate_iou < :iou
                         ) - e_score) * ((
                             iou >= :iou and
-                            coalesce(feature_hash = match_feature_hash, false) and
                             match_duplicate_iou < :iou
                         ) - e_score)
                     ) as var_score,
@@ -733,7 +802,6 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                     SELECT
                         avg(
                             iou >= :iou and
-                            coalesce(feature_hash = match_feature_hash, false) and
                             match_duplicate_iou < :iou
                         ) as e_score,
                         {",".join([
@@ -779,7 +847,6 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                             (
                                 (
                                     iou >= :iou and
-                                    coalesce(feature_hash = match_feature_hash, false) and
                                     match_duplicate_iou < :iou
                                 ) - :e_score
                             ) * ({metric_name} - :e_{metric_name})
@@ -809,35 +876,48 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
             sql = text(
                 """
                 SELECT
-                    cast(tp_count as real) / max(tp_and_fp_count) as p,
-                    cast(tp_count as real) / (
-                        max(tp_count) + (
-                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
-                            WHERE UM.prediction_hash = :prediction_hash
-                            AND UM.feature_hash == :feature_hash
-                        )
-                    ) as r
+                    max(p) as p,
+                    floor(r * 50) / 50 as r
                 FROM (
                     SELECT
-                        row_number() OVER (
-                            ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
-                        ) AS tp_and_fp_count,
-                        sum(cast(
+                        cast(tp_count as real) / tp_and_fp_count as p,
+                        cast(tp_count as real) / (
                             (
-                                PR.iou >= :iou and
-                                coalesce(PR.feature_hash = PR.match_feature_hash, false) and
-                                PR.match_duplicate_iou < :iou
-                            ) as integer
-                        )) OVER (
-                            ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
-                        ) AS tp_count
-                    FROM active_project_prediction_results PR, active_project_prediction FP
-                    WHERE PR.prediction_hash = FP.prediction_hash
-                    AND FP.project_hash = :project_hash
-                    AND FP.prediction_hash = :prediction_hash
-                    AND PR.feature_hash = feature_hash
-                    ORDER BY confidence DESC
-                ) GROUP BY tp_count
+                                SELECT COUNT(*) FROM active_project_prediction_results PM
+                                WHERE PM.prediction_hash = :prediction_hash
+                                AND PM.feature_hash = :feature_hash
+                                AND PM.iou >= :iou
+                                AND PM.match_duplicate_iou < :iou
+                            ) + (
+                                SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                                WHERE UM.prediction_hash = :prediction_hash
+                                AND UM.feature_hash == :feature_hash
+                            )
+                        ) as r
+                    FROM (
+                        SELECT
+                            row_number() OVER (
+                                ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                            ) AS tp_and_fp_count,
+                            sum(cast(
+                                (
+                                    PR.iou >= :iou and
+                                    PR.match_duplicate_iou < :iou
+                                ) as integer
+                            )) OVER (
+                                ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                            ) AS tp_count
+                        FROM active_project_prediction_results PR, active_project_prediction FP
+                        WHERE PR.prediction_hash = FP.prediction_hash
+                        AND FP.project_hash = :project_hash
+                        AND FP.prediction_hash = :prediction_hash
+                        AND PR.feature_hash = :feature_hash
+                        ORDER BY confidence DESC
+                    )
+                    GROUP BY tp_count
+                )
+                GROUP BY floor(r * 50) / 50
+                ORDER BY floor(r * 50) / 50 DESC
                 """
             ).bindparams(bindparam("prediction_hash", GUID), bindparam("project_hash", GUID), bindparam("iou", Float))
             pr_result = sess.execute(
@@ -851,8 +931,6 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
             ).fetchall()
             prs[feature_hash] = pr_result
 
-            """
-            # FIXME: importance is not easy to implement in sqlite, so load all data and run manyally
             importance = {}
             for metric_name in AnnotationMetrics.keys():
                 importance_data_query = select(
@@ -861,16 +939,20 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
                         (ProjectPredictionObjectResults.match_duplicate_iou < iou)
                     ),
                     getattr(ProjectPredictionObjectResults, metric_name)
+                ).where(
+                    ProjectPredictionObjectResults.prediction_hash == prediction_hash,
+                    is_not(getattr(ProjectPredictionObjectResults, metric_name), None)
                 )
-                importance_data = sess.exec(importance_data_query)
-                print(f"Debugging: {importance_data}")
+                importance_data = sess.exec(importance_data_query).fetchall()
+                if len(importance_data) == 0:
+                    continue
                 importance_regression = mutual_info_regression(
-                    [[0 if d[1] is None or math.isnan(d[1]) else d[1] for d in importance_data]],
-                    [0 if d[0] is None or math.isnan(d[0]) else d[0] for d in importance_data],
+                    np.array([float(d[1]) for d in importance_data]).reshape(-1, 1),
+                    np.array([float(d[0]) for d in importance_data]),
                     random_state=42
                 )
-                print(f"Debugging: {importance_regression}")
-    """
+                importance[metric_name] = float(importance_regression[0])
+
     return {
         "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
         "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
@@ -883,6 +965,61 @@ def get_project_prediction_summary(project_hash: uuid.UUID, prediction_hash: uui
             for pr in precision_recall
         },
         "correlation": correlations,
-        "importance": {},
+        "importance": importance,
         "prs": prs
+    }
+
+
+@router.get("/get/{project_hash}/predictions/get/{prediction_hash}/metric_performance")
+def prediction_metric_performance(
+        project_hash: uuid.UUID, prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str
+):
+    with Session(engine) as sess:
+        metric = AnnotationMetrics[metric_name]
+        metric_attr = getattr(ProjectPredictionObjectResults, metric_name)
+        where = [
+            ProjectPredictionObjectResults.prediction_hash == prediction_hash,
+            is_not(metric_attr, None)
+        ]
+        if metric.type == MetricType.NORMAL:
+            metric_min = 0.0
+            metric_max = 1.0
+        else:
+            metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()
+            metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()
+            if metric_min is None or metric_max is None:
+                return {
+                    "precision": {},
+                    "fns": {},
+                }
+            metric_min = float(metric_min)
+            metric_max = float(metric_max)
+        metric_bucket_size = (metric_max - metric_min) / buckets
+        metric_buckets = sess.exec(
+            select(
+                ProjectPredictionObjectResults.feature_hash,
+                func.min(func.floor((metric_attr - metric_min) / metric_bucket_size), buckets - 1),
+                func.avg(
+                    (ProjectPredictionObjectResults.iou >= iou) &
+                    (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                ),
+                func.count()
+            ).where(
+                *where,
+            ).group_by(
+                func.min(func.floor((metric_attr - metric_min) / metric_bucket_size), buckets - 1),
+                ProjectPredictionObjectResults.feature_hash
+            )
+        )
+        precision = {}
+        for feature, bucket_id, bucket_avg, bucket_num in metric_buckets:
+            precision.setdefault(feature, []).append({
+                "m": metric_min + (metric_bucket_size * int(bucket_num)),
+                "a": bucket_avg,
+                "n": bucket_num
+            })
+
+    return {
+        "precision": precision,
+        "fns": {},
     }
