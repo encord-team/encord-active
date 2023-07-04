@@ -351,6 +351,7 @@ class ClassificationTypeBuilder(PredictionTypeBuilder):
             reduced_embedding_filtered[Embedding2DScoreSchema.score] = None
 
             selected_rows = render_plotly_events(reduced_embedding_filtered)
+
             if selected_rows is not None:
                 view_df = view_df[view_df[MetricSchema.identifier].isin(selected_rows[Embedding2DSchema.identifier])]
 

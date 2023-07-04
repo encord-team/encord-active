@@ -449,6 +449,56 @@ matched to any predictions. The remaining objects are predictions, where colors 
                 view_df = view_df[view_df["data_row_id"].isin(selected_rows["data_row_id"])]
                 view_df.drop("data_row_id", axis=1, inplace=True)
 
+                # Hackaton
+                import random
+
+                from dotenv import load_dotenv
+                from langchain.document_loaders import ImageCaptionLoader
+                from langchain.indexes import VectorstoreIndexCreator
+
+                # st.session_state["misprediction_clusters"]
+
+                IMAGES_LIMIT = 10
+
+                load_dotenv(
+                    "/Users/encord/Desktop/encord-projects/encord-active/src/encord_active/app/experimental/.env"
+                )
+
+                images = []
+                for row in view_df.itertuples():
+                    label_hash, data_hash, *_ = row.identifier.split("_")
+                    images.append(
+                        (
+                            get_state().project_paths.project_dir
+                            / "data"
+                            / label_hash
+                            / "images"
+                            / (data_hash + ".jpeg")
+                        ).as_posix()
+                    )
+
+                images = list(set(images))
+                st.write(f"Selected: {len(images)} images ...")
+
+                # Limit to make it fast
+                images = random.sample(images, IMAGES_LIMIT)
+
+                loader = ImageCaptionLoader(path_images=images)
+
+                index = VectorstoreIndexCreator().from_loaders([loader])
+
+                query = "What kind of images are there?"
+                st.markdown(f"**Image types:** {index.query(query)}")
+
+                query = "What are the common objects or concepts in these images?"
+                st.markdown(f"**Common concepts:** {index.query(query)}")
+
+                # with st.expander("Image captions"):
+                #     list_docs = loader.load()
+                #     for i in range(IMAGES_LIMIT):
+                #         st.write(list_docs[i].page_content.replace(" [SEP]", ""))
+                #         st.divider()
+
         if view_df.shape[0] == 0:
             st.write(f"No {self._explorer_outcome_type}")
         else:

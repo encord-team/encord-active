@@ -13,6 +13,8 @@ def langchain_experimental():
         setup_page()
         load_dotenv()
 
+        st.header("EA Hackaton")
+
         llm = OpenAI(openai_api_key=os.getenv("OPENAI_API_KEY"), temperature=0)
         tools = load_tools(["serpapi", "llm-math"], llm=llm)
         agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
