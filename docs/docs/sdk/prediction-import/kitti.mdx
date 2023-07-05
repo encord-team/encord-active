@@ -11,8 +11,8 @@ Encord Active enhances your experience by migrating such labels to the Encord fo
 
 The following approach **only works for bounding boxes**.
 
-Every time you run this importer, previously imported predictions will be overwritten!
-Make sure to [version your project][project-versioning] if you want to be able to go back to previous model iterations.
+When running an importer, any previously imported predictions will be overwritten!
+To ensure the ability to revert to previous model iterations, it is important to [version your projects][project-versioning]. 
 
 :::
 
@@ -38,7 +38,7 @@ We cover these two components in detail below.
 
 ### Label Files Format
 
-The KITTI importer supports the label format described [here](https://docs.nvidia.com/tao/tao-toolkit-archive/tlt-20/tlt-user-guide/text/preparing_data_input.html#label-files) with the addition of a column corresponding to the model confidence.
+The KITTI importer supports the label format described [here][kitti-label-file-format-description] with the addition of a column corresponding to the model confidence.
 
 An example:
 
@@ -77,7 +77,7 @@ The columns flagged as `ignored` have to appear in the label format but their va
 
 The JSON class map should follow a specific format where the keys should correspond to the `featureNodeHash` of the bounding box objects in the project ontology, and the values should correspond to their respective KITTI class names.
 
-```json
+```python
 {
   # featureNodeHash: class_name
   "OTk2MzM3": "pedestrian",
@@ -107,7 +107,7 @@ print({o["featureNodeHash"]: o["name"] for o in ontology["objects"]})
 
 ### Importing the Predictions
 
-Once you have a valid KITTI predictions folder, you can import the predictions running the following script:
+Once you have a valid KITTI predictions folder, you can import the predictions into an Encord Active project running the following script:
 
 ```python
 import json
@@ -135,3 +135,4 @@ with PredictionWriter(project=Project(project_path), custom_object_map=object_ma
 ```
 
 [project-versioning]: ../../user-guide/versioning
+[kitti-label-file-format-description]: https://docs.nvidia.com/tao/tao-toolkit-archive/tlt-20/tlt-user-guide/text/preparing_data_input.html#label-files
