@@ -96,7 +96,7 @@ def print_data_mapping(
     limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes"),
 ):
     """
-    [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`
+    [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`.
     """
     mapping: Dict[str, str] = {}
     project_file_structure = ProjectFileStructure(target)

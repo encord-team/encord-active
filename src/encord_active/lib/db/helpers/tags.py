@@ -1,6 +1,4 @@
-from typing import Dict, List, Set, TypedDict
-
-import pandas as pd
+from typing import List, Set, TypedDict
 
 from encord_active.lib.common.iterator import DatasetIterator
 from encord_active.lib.db.connection import DBConnection
@@ -22,20 +20,6 @@ def all_tags(project_file_structure: ProjectFileStructure) -> List[Tag]:
     with DBConnection(project_file_structure) as conn:
         tag_list = MergedMetrics(conn).all(columns=["tags"])["tags"].values
     return list({tag for tag_list in tag_list for tag in tag_list})
-
-
-def count_of_tags(tag_list: List[Tag], df: pd.DataFrame) -> Dict[str, int]:
-    if not tag_list:
-        return {}
-
-    tag_counts = df["tags"].value_counts()
-
-    total_tags_count: Dict[str, int] = {tag.name: 0 for tag in tag_list}
-    for unique_list, count in tag_counts.items():
-        for tag in unique_list:
-            total_tags_count[tag.name] += count
-
-    return total_tags_count
 
 
 def to_grouped_tags(tags: List[Tag]) -> GroupedTags:

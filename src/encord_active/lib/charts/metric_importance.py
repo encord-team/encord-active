@@ -5,7 +5,7 @@ import pandas as pd
 from pandera.typing import DataFrame
 from sklearn.feature_selection import mutual_info_regression
 
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     ClassificationPredictionMatchSchema,
     PredictionMatchSchema,
 )

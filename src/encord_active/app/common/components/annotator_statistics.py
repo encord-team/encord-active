@@ -21,7 +21,7 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
     left_col.markdown(
         "<h5 style='text-align: center; color: black;'>Distribution of annotations</h1>", unsafe_allow_html=True
     )
-    annotators_df = pd.DataFrame(annotators.values())
+    annotators_df = pd.DataFrame(list(annotators.values()))
 
     fig = px.pie(annotators_df, values="total_annotations", names="name", hover_data=["mean_score"])
 
@@ -34,9 +34,9 @@ def render_annotator_properties(df: DataFrame[MetricSchema]):
 
     total_annotations = annotators_df["total_annotations"].sum()
     total_mean_score = (annotators_df["mean_score"] * annotators_df["total_annotations"]).sum() / total_annotations
-    annotators_df.loc[len(annotators_df.index)] = AnnotatorInfo(
-        name="all", total_annotations=total_annotations, mean_score=total_mean_score
-    )
+
+    info = AnnotatorInfo(name="all", total_annotations=total_annotations, mean_score=total_mean_score)
+    annotators_df = pd.concat([annotators_df, pd.Series(info).to_frame().T], ignore_index=True)
 
     deviation = (annotators_df["mean_score"] - total_mean_score) / total_mean_score * 100
     annotators_df["deviation"] = deviation

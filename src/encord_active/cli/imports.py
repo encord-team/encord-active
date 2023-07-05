@@ -20,11 +20,12 @@ import_cli = typer.Typer(rich_markup_mode="markdown")
 def import_predictions(
     predictions_path: Path = typer.Argument(..., help="Path to a predictions file.", dir_okay=False, exists=True),
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
-    coco: bool = typer.Option(False, help="Import a coco result format file"),
+    coco: bool = typer.Option(False, help="Import a COCO results format file."),
 ):
     """
     [green bold]Imports[/green bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
-    If `--coco` option is specified the file should be a json following the coco results format. :brain:
+
+    If the `--coco` option is specified then the file should be a json following the COCO results format. :brain:
     """
     from encord_active.lib.project import Project
 
@@ -42,7 +43,7 @@ def import_predictions(
         import_predictions as app_import_predictions,
     )
 
-    app_import_predictions(project, target, predictions)
+    app_import_predictions(project, predictions)
 
 
 ENCORD_RICH_PANEL = "Encord Project Arguments"
@@ -67,7 +68,7 @@ def import_project(
         rich_help_panel=ENCORD_RICH_PANEL,
     ),
     # COCO
-    coco: bool = typer.Option(False, help="Import a project from the coco format", rich_help_panel=COCO_RICH_PANEL),
+    coco: bool = typer.Option(False, help="Import a project from the COCO format.", rich_help_panel=COCO_RICH_PANEL),
     images: Optional[Path] = typer.Option(
         None,
         "--images",
@@ -93,12 +94,12 @@ def import_project(
     ),
     store_data_locally: bool = typer.Option(
         False,
-        help="Store encord data locally so that it does not need to be download on-demand for analysis",
+        help="Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.",
         rich_help_panel=ENCORD_RICH_PANEL,
     ),
 ):
     """
-    [bold]Imports[/bold] a new project from Encord or a local coco project 📦
+    [bold]Imports[/bold] a new project from Encord or a local COCO project. 📦
 
     Confirm with each help panel what information you will have to provide.
     """

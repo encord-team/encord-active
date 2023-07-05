@@ -2,16 +2,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { API, Scope, SearchType, searchTypeOptions } from "./api";
+import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
 import { Spin } from "./Spinner";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 type SearchFn = API["searchInProject"];
-type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope">;
+type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope" | "filters">;
 type Result = Awaited<ReturnType<SearchFn>>;
 
-export const useSearch = (scope: Scope, searchFn: SearchFn) => {
+export const useSearch = (
+  scope: Scope,
+  filters: Filters,
+  searchFn: SearchFn
+) => {
   const client = useQueryClient();
 
   const [search, setSearch] = useState<ScopelessSearch | undefined>();
@@ -23,7 +27,7 @@ export const useSearch = (scope: Scope, searchFn: SearchFn) => {
       if (!search?.query) return null;
       client.cancelQueries(["search"]);
       const res = searchFn(
-        { scope, query: search.query, type: search.type },
+        { scope, filters, query: search.query, type: search.type },
         signal
       );
       return res;
@@ -59,7 +63,7 @@ export const Assistant = ({
   const [parent, _] = useAutoAnimate();
 
   return (
-    <div ref={parent} className="flex flex-col w-full gap-2">
+    <div ref={parent} className="flex flex-col gap-2 flex-1">
       <form
         className="w-full flex"
         onSubmit={(e) => {

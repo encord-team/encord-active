@@ -4,10 +4,10 @@ sidebar_position: 8
 
 # Command Line Interface
 
-Encord Active ships with a command-line interface to help you interact with Encord Active.
-With the CLI your can initialize projects, import labels, import existing, run metrics and start the application.
+Encord Active is equipped with a command line interface (CLI) that simplifies your interaction with the platform.
+With the CLI, you can easily initialize projects, import projects and labels, manage and run metrics, and launch the application.
 
-We do our best to make our CLI self explainable so you don't need to jump between your terminal and the documentation.
+We strive to ensure that our CLI is self-explanatory, eliminating the need for frequent switching between the terminal and documentation.
 
 Simply run `encord-active --help` to get details about all the top-level commands and `encord-active COMMAND --help`
 
@@ -17,9 +17,10 @@ Here is a list of all the top-level commands:
 quickstart         Start Encord Active straight away 🏃💨
 download           Download a sandbox dataset to get started 📁
 init               Initialize a project from your local file system 🌱
-import             Import Projects or Predictions ⬇️
+import             Import projects or predictions ⬇️
 refresh            Sync data and labels from a remote Encord project 🔄
 visualize          Launch the application with the provided project ✨
+project            Manage project settings ⚙️
 metric             Manage project metrics 📋
 print              Print useful information 🖨️
 config             Configure global settings 🔧
@@ -27,26 +28,28 @@ config             Configure global settings 🔧
 
 ## `quickstart`
 
-The command will download a small example project to a subdirectory called `quickstart` in current working directory and open the application straight away.
+The command will download a small example project to a subdirectory named `quickstart` in the current working directory and automatically launch the application.
 
 ```
 Usage: encord-active quickstart [OPTIONS]
 
 Options:
- --target   -t  DIRECTORY  Directory where the project would be saved.
+ --target  -t  DIRECTORY  Directory where the project would be saved.
 ```
 
 ## `download`
 
-In addition to the `quickstart` example, there are a few more examples of open source datasets you can download and use to explore Encord Active capabilities.
+In addition to the `quickstart` example, there are a several other open-source datasets available for download that you can use to explore the capabilities of Encord Active.
+
+The command will display a list of available sandbox projects, allowing you to select one from the menu interactively.
+If you prefer to skip the interactive selection, you can directly specify the sandbox project name using the `--project-name` optional argument.
 
 ```
-# List the available projects and choose which one to download
 Usage: encord-active download [OPTIONS]
 
 Options:
- --project-name          TEXT       Name of the chosen project.
- --target        -t      DIRECTORY  Directory where the project would be saved.
+ --project-name      TEXT       Name of the chosen project.
+ --target        -t  DIRECTORY  Directory where the project would be saved.
 ```
 
 <details>
@@ -137,50 +140,46 @@ Launch the application with the provided project ✨
 Usage: encord-active quickstart [OPTIONS]
 
 Options:
- --target   -t  DIRECTORY  Path of the projects you would like to visualize
+ --target  -t  DIRECTORY  Path of the projects you would like to visualize
 ```
 
 ## `init`
 
 The command initializes new project from locally stored images and labels. It will search for images based on the `data-glob` arguments. By default, all jpeg, jpg, png, and tiff files will be matched.
 
-It will optionally search for labels as well if `label-glob`and `transformer` options are provided.
-
-Both glob results will be passed to your implementation of the `LabelTransformer` interface if you provide a
-`transformer` argument.
+It will search for labels as well if the `label-glob` and `transformer` options are provided.
+Both glob results will be passed to your implementation of the `LabelTransformer` interface if you specify the `transformer` argument.
 
 ```
 Usage: encord-active init [OPTIONS] ROOT
 
 Arguments:
- * root                 DIRECTORY  The root directory of the dataset you are trying to import
+ * root              DIRECTORY  The root directory of the dataset you are trying to import
 
 Options:
- --data-glob    -dg     TEXT       Glob pattern to choose files. Repeat the `--data-glob` argument to
-                                   match multiple globs.
-                                   [default: **/*.jpg, **/*.png, **/*.jpeg, **/*.tiff]
- --label-glob   -lg     TEXT       Glob pattern to choose label files. Repeat the `--label-glob`
-                                   argument to match multiple globs. This argument is only used if you
-                                   also provide the `transformer` argument [default: None]
- --target       -t      DIRECTORY  Directory where the project would be saved. [default: CWD]
- --name         -n      TEXT       Name to give the new project. If no name is provided, the root
-                                   directory will be used with '[EA] ' prepended.
- --symlinks                        Use symlinks instead of copying images to the target directory.
- --dryrun                          Print the files that will be imported WITHOUT importing them.
- --no-metrics                      Skip metrics execution on the initiated project.
- --transformer          PATH       Path to python module with one or more implementations of the
-                                   `encord_active.lib.labels.label_transformer.LabelTransformer`
-                                   interface
-                                   [default: None]
+ --data-glob    -dg  TEXT       Glob pattern to choose files. Repeat the `--data-glob` argument to
+                                match multiple globs.
+ --label-glob   -lg  TEXT       Glob pattern to choose label files. Repeat the `--label-glob`
+                                argument to match multiple globs. This argument is only used if you
+                                also provide the `transformer` argument.
+ --target       -t   DIRECTORY  Directory where the project would be saved.
+ --name         -n   TEXT       Name to give the new project. If no name is provided, the root
+                                directory will be used with '[EA] ' prepended.
+ --symlinks                     Use symlinks instead of copying images to the target directory.
+ --dryrun                       Print the files that will be imported WITHOUT importing them.
+ --no-metrics                   Skip metrics execution on the initiated project.
+ --transformer       PATH       Path to python module with one or more implementations of the
+                                `encord_active.lib.labels.label_transformer.LabelTransformer`
+                                interface.
 ```
 
-The [Initialising from local data](./import/quick-import-data) workflow is a great starting point to using this command.
+The [Quick import data & labels](./import/quick-import-data) workflow is a great starting point for utilizing this command.
 
 ## `import`
 
-The command is used to import projects and predictions from various sources.
+The command is used to import projects and predictions from different sources.
 
-Concrete usage example can be found [here](./import).
+Refer to the [Import](./import) section for specific usage examples.
 
 ```
 Usage: encord-active import [OPTIONS] COMMAND [ARGS]...
@@ -190,45 +189,48 @@ Import Projects or Predictions ⬇️
 Commands:
  predictions  Imports a predictions file. The predictions should be using the `Prediction` model
               and be stored in a pkl file.
- project      Imports a new project from Encord or a local coco project 📦
+              If the `--coco` option is specified then the file should be a json following the COCO results format. 🧠
+ project      Imports a new project from Encord or a local COCO project. 📦
 ```
 
 ### `project` {#import-project}
 
-Imports a new project from Encord or a local coco project.
+Imports a new project from Encord or a local COCO project.
 
 ```
 Usage: encord-active import project [OPTIONS]
 
 Encord Project Arguments:
- --project-hash      TEXT       Encord project hash of the project you wish to import.
-                                Leaving it blank will allow you to choose one interactively.
+ --project-hash            TEXT       Encord project hash of the project you wish to import.
+                                      Leaving it blank will allow you to choose one interactively.
+ --store-data-locally                 Store project data locally to avoid the need for on-demand download when visualizing and analyzing it. 
+
 COCO Project Arguments:
- --coco                         Import a project from the coco format
- --images       -i   DIRECTORY  Path to the directory containing the dataset images.
- --annotations  -a   FILE       Path to the file containing the dataset annotations.
- --symlinks                     Use symlinks instead of copying COCO images to the target directory.
+ --coco                               Import a project from the COCO format.
+ --images              -i  DIRECTORY  Path to the directory containing the dataset images.
+ --annotations         -a  FILE       Path to the file containing the dataset annotations.
+ --symlinks                           Use symlinks instead of copying COCO images to the target directory.
 
 Options:
- --target  -t      DIRECTORY  Directory where the project would be saved. [default: CWD]
+ --target              -t  DIRECTORY  Directory where the project would be saved.
 ```
 
 ### `predictions` {#import-predictions}
 
 Imports a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
-If `--coco` option is specified the file should be a json following the coco results format.
+If the `--coco` option is specified then the file should be a json following the COCO results format.
 
-Concrete usage example can be found [here](./import/import-predictions).
+Refer to the [Import model predictions](./import/import-predictions) section for specific usage examples.
 
 ```
 Usage: encord-active import predictions [OPTIONS] PREDICTIONS_PATH
 
 Arguments:
- * predictions_path   FILE  Path to a predictions file. [required]
+ * predictions_path      FILE       Path to a predictions file.
 
 Options:
- --target  -t         DIRECTORY  Path to the target project. [default: CWD]
- --coco                          Import a coco result format file
+ --target            -t  DIRECTORY  Path to the target project.
+ --coco                             Import a COCO results format file.
 ```
 
 ## `refresh`
@@ -239,7 +241,7 @@ Sync data and labels from a remote Encord project.
 Usage: encord-active refresh [OPTIONS]
 
 Options:
- --target  -t         DIRECTORY  Path to the target project. [default: CWD]
+ --target  -t  DIRECTORY  Path to the target project.
 ```
 
 The local project should have a reference to the remote Encord project in its config file (`project_meta.yaml`).
@@ -250,6 +252,28 @@ The required attributes are:
 
 This command works in local projects created via `encord-active import project` and those successfully exported to Encord from the "Actions" tab in the UI's toolbox.
 
+## `project`
+
+Manage project settings ⚙️
+
+```
+Usage: encord-active project [OPTIONS] COMMAND [ARGS]...
+
+Commands:
+ download-data     Download all data locally for improved responsiveness.
+```
+
+### `download-data`
+
+Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.
+
+```
+Usage: encord-active project download-data [OPTIONS]
+
+Options:
+ --target  -t  DIRECTORY  Path to the target project.
+```
+
 ## `metric`
 
 Manage project metrics.
@@ -258,11 +282,11 @@ Manage project metrics.
 Usage: encord-active metric [OPTIONS] COMMAND [ARGS]...
 
 Commands:
- add                  Add metrics.
- list                 List metrics.
- remove               Remove metrics.
- run                  Run metrics.
- show                 Show information about available metrics.
+ add               Add metrics.
+ list              List metrics.
+ remove            Remove metrics.
+ run               Run metrics.
+ show              Show information about available metrics.
 ```
 
 :::info
@@ -271,21 +295,23 @@ Make sure your shell's current working directory is that of an Encord Active pro
 
 ### `add` {#metric-add}
 
-Add metrics to the project by specifying a path to a metrics module and titles of metrics within the module. If no metric titles are provided then all metrics found in the python module will be added to the project.
+Add metrics to the project by specifying the path to a metrics module and the titles of the desired metrics within the module.
+If no metric titles are provided, all metrics found in the Python module will be automatically added to the project.
 
 ```
 Usage: encord-active metric add [OPTIONS] MODULE_PATH [METRIC_TITLE]...
 
 Arguments:
- *  module_path       FILE               Path to the python module where the metric resides. [required]
+ *  module_path       FILE               Path to the python module where the metric resides.
     metric_title      [METRIC_TITLE]...  Title of the metric. Can be used multiple times.
 
 Options:
- --target  -t         DIRECTORY  Path to the target project. [default: CWD]
+ --target         -t  DIRECTORY          Path to the target project.
 ```
 
-If you try to add a metric that is already present, it will be skipped and you will receive a notification.
-In case a metric title is not found in the python module, you will get an error.
+If you attempt to add a metric that already exists, it will be skipped, and you will be notified accordingly.
+However, if a metric title is not found in the Python module, an error will occur.
+Please ensure that the metric titles are accurate and correspond to the metrics available in the module.
 
 :::caution
 Some shells may treat square braces (`[` and `]`) as special characters. It is suggested to always quote arguments containing these characters to prevent unexpected shell expansion.
@@ -299,10 +325,10 @@ Removes metrics from a project.
 Usage: encord-active metric remove [OPTIONS] METRIC_TITLE...
 
 Arguments:
- * metric_title      METRIC_TITLE...  Title of the metric. Can be used multiple times. [required]
+ * metric_title      METRIC_TITLE...  Title of the metric. Can be used multiple times.
 
 Options:
- --target  -t        DIRECTORY  Path to the target project. [default: CWD]
+ --target        -t  DIRECTORY        Path to the target project.
 ```
 
 ### `list` {#metric-list}
@@ -313,12 +339,12 @@ List metrics in the project, including editables. Metrics are listed in a case-i
 Usage: encord-active metric list [OPTIONS]
 
 Options:
- --target  -t        DIRECTORY  Path to the target project. [default: CWD]
+ --target  -t  DIRECTORY  Path to the target project.
 ```
 
 ### `run` {#metric-run}
 
-Run metrics on the project's data and labels.
+Run metrics on project data and labels.
 
 ```
 Usage: encord-active metric run [OPTIONS] [METRIC_TITLE]...
@@ -327,9 +353,9 @@ Arguments:
  metric_title      [METRIC_TITLE]...  Title of the metric. Can be used multiple times.
 
 Options:
- --target  -t      DIRECTORY  Path to the target project. [default: CWD]
- --all                        Run all metrics.
- --fuzzy                      Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄
+ --target      -t  DIRECTORY          Path to the target project.
+ --all                                Run all metrics.
+ --fuzzy                              Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄
 ```
 
 ### `show` {#metric-show}
@@ -340,10 +366,10 @@ Show information about one or more available metrics in the project.
 Usage: encord-active metric show [OPTIONS] METRIC_TITLE...
 
 Arguments:
- * metric_title      METRIC_TITLE...  Title of the metric. Can be used multiple times. [required]
+ * metric_title      METRIC_TITLE...  Title of the metric. Can be used multiple times.
 
 Options:
- --target  -t        DIRECTORY  Path to the target project. [default: CWD]
+ --target        -t  DIRECTORY        Path to the target project.
 ```
 
 ## `config`
@@ -357,17 +383,17 @@ The config file is stored at:
 - Windows: `%APPDATA%/encord-active/config.toml`
 
 ```toml
-ssh_key_path = "/absolute/path/to/ssh-key" # A key to use when accessing Encord projects
+ssh_key_path = "/absolute/path/to/ssh-key" # The API key to use when accessing remote Encord projects
 ```
 
 ```
 Usage: encord-active config [OPTIONS] COMMAND [ARGS]...
 
 Commands:
- get           Print the value of an Encord Active configuration property.
- list          List Encord Active configuration properties.
- set           Sets an Encord Active configuration property.
- unset         Unsets the value of an Encord Active configuration property.
+ get               Print the value of an Encord Active configuration property.
+ list              List Encord Active configuration properties.
+ set               Sets an Encord Active configuration property.
+ unset             Unsets the value of an Encord Active configuration property.
 ```
 
 ## `print`
@@ -379,11 +405,11 @@ Print useful information.
 Usage: encord-active print [OPTIONS] COMMAND [ARGS]...
 
 Commands:
- data-mapping           Prints a mapping between `data_hashes` and their corresponding `filename`
- encord-projects        Print the mapping between `project_hash`es of your Encord projects and their titles.
- ontology               Prints an ontology mapping between the class name to the `featureNodeHash` JSON format.
- system-info            Prints the information of the system for the purpose of bug reporting.
+ data-mapping      Prints a mapping between `data_hashes` and their corresponding `filename`.
+ encord-projects   Print the mapping between `project_hash`es of your Encord projects and their titles.
+ ontology          Prints an ontology mapping between the class name to the `featureNodeHash` JSON format.
+ system-info       Prints the information of the system for the purpose of bug reporting.
 
 Options:
- --json                 Save output to a json file.
+ --json            Save output to a json file.
 ```

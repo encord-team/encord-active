@@ -19,10 +19,10 @@ from encord_active.lib.project import ProjectFileStructure
 
 
 def import_coco_predictions(
-    target: Path,
+    project_path: Path,
     predictions_path: Path,
 ):
-    project_file_structure = ProjectFileStructure(target)
+    project_file_structure = ProjectFileStructure(project_path)
     image_data_unit = json.loads(project_file_structure.image_data_unit.read_text(encoding="utf-8"))
     ontology = json.loads(project_file_structure.ontology.read_text(encoding="utf-8"))
     # NOTE: when we import a coco project, we change the category id to support
@@ -31,7 +31,7 @@ def import_coco_predictions(
     # obj["id"] == `10` ->
     #   1 - original category_id
     #   0 - index of the shape -- we can discard and use the actual shape
-    # NOTE: we sustract 1 from the id to match the original id since we don't
+    # NOTE: we subtract 1 from the id to match the original id since we don't
     # support 0 index when the project is created
     category_to_hash = {
         (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
@@ -50,7 +50,15 @@ def import_coco_predictions(
         elif res.bbox:
             format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
             x, y, w, h = res.bbox
-            data = BoundingBox(x=x / img_w, y=y / img_h, w=w / img_w, h=h / img_h)
+
+            x = min(max(x / img_w, 0.0), 1.0)
+            y = min(max(y / img_h, 0.0), 1.0)
+
+            # Make sure w and h do not cause the bounding box to exceed the limits.
+            w = min(max(w / img_w, 0.0), 1.0 - x)
+            h = min(max(h / img_h, 0.0), 1.0 - y)
+
+            data = BoundingBox(x=x, y=y, w=w, h=h)
         else:
             raise Exception("Unsupported result format")
 

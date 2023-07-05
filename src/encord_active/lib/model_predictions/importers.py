@@ -229,7 +229,7 @@ def import_KITTI_labels(
         headers = list(map(lambda x: x[0], KITTI_COLUMNS))
         # Hack to account for additional "custom" columns
         headers += [f"undefined{i}" for i in range(df.shape[1] - len(headers))]
-        df.columns = headers
+        df.columns = pd.Index(headers)
 
         for _, row in df.iterrows():
             class_name = cast(str, hash_lookup[row["class_name"]])
@@ -248,7 +248,7 @@ def import_KITTI_labels(
             )
 
 
-def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
+def import_predictions(project: Project, predictions: List[Prediction]):
     with PredictionWriter(project) as writer:
         for pred in predictions:
             writer.add_prediction(pred)
@@ -261,5 +261,8 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
         raise EmptyDataError("Predictions do not exist!")
 
     run_all_prediction_metrics(
-        data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True, prediction_type=prediction_type
+        data_dir=project.file_structure.project_dir,
+        iterator_cls=PredictionIterator,
+        use_cache_only=True,
+        prediction_type=prediction_type,
     )

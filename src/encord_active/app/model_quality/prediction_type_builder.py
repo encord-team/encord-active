@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import streamlit as st
 from pandera.typing import DataFrame
@@ -12,7 +12,7 @@ from encord_active.app.common.state import MetricNames, PredictionsState, get_st
 from encord_active.app.common.state_hooks import use_memo
 from encord_active.lib.charts.metric_importance import create_metric_importance_charts
 from encord_active.lib.metrics.utils import MetricData
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     ClassificationLabelSchema,
     ClassificationPredictionMatchSchemaWithClassNames,
     ClassificationPredictionSchema,
@@ -25,6 +25,7 @@ from encord_active.lib.model_predictions.writer import (
     MainPredictionType,
     OntologyClassificationJSON,
 )
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 
 class ModelQualityPage(str, Enum):
@@ -39,6 +40,8 @@ class MetricType(str, Enum):
 
 
 class PredictionTypeBuilder(Page):
+    _project_file_structure: Optional[ProjectFileStructure] = None
+
     def sidebar_options(self, *args, **kwargs):
         pass
 
@@ -174,20 +177,20 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
         predictions_dir = get_state().project_paths.predictions / prediction_type.value
 
         predictions_metric_datas, _ = use_memo(
-            lambda: reader.get_prediction_metric_data(predictions_dir, metrics_dir),
+            lambda: reader.read_prediction_metric_data(predictions_dir, metrics_dir),
             key=f"predictions_metrics_data_{project_path}_{prediction_type.value}",
         )
 
         label_metric_datas, _ = use_memo(
-            lambda: reader.get_label_metric_data(metrics_dir),
+            lambda: reader.read_label_metric_data(metrics_dir),
             key=f"label_metric_datas_{project_path}_{prediction_type.value}",
         )
         model_predictions, _ = use_memo(
-            lambda: reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
+            lambda: reader.read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type),
             key=f"model_predictions_{project_path}_{prediction_type.value}",
         )
         labels, _ = use_memo(
-            lambda: reader.get_labels(predictions_dir, label_metric_datas, prediction_type),
+            lambda: reader.read_labels(predictions_dir, label_metric_datas, prediction_type),
             key=f"labels_{project_path}_{prediction_type.value}",
         )
 
@@ -260,7 +263,7 @@ For metrics that are computed on predictions (P) in the "True Positive Rate" plo
             with st.spinner("Computing index importance..."):
                 try:
                     metric_importance_chart = create_metric_importance_charts(
-                        model_predictions,
+                        model_predictions,  # type: ignore
                         metric_columns=metric_columns,
                         num_samples=num_samples,
                         prediction_type=MainPredictionType.CLASSIFICATION,

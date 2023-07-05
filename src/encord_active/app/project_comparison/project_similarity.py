@@ -81,7 +81,7 @@ def render_2d_metric_similarity_container(
         st.warning("Please choose a different metric")
         return
 
-    project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy().dropna()
+    project_values_1 = merged_metrics_1[[metric_name_1, metric_name_2]].copy().dropna()  # type: ignore
     project_name_1 = get_state().project_paths.project_dir.name
     project_values_1["project"] = project_name_1
 
@@ -94,7 +94,7 @@ def render_2d_metric_similarity_container(
         st.write(f"Metric **{metric_name_2}** is not available for the project `{project_name_2}`.")
         return
 
-    project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()
+    project_values_2 = merged_metrics_2[[metric_name_1, metric_name_2]].copy().dropna()  # type: ignore
     project_values_2["project"] = project_name_2
 
     project_values = pd.concat([project_values_1, project_values_2], ignore_index=True)

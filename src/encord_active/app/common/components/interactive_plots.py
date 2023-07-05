@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import pandas as pd
 import plotly.express as px
@@ -16,15 +16,15 @@ from encord_active.lib.embeddings.types import (
 
 
 def get_selected_rows(
-    embeddings_2d: DataFrame[Embedding2DSchema], selected_points: list[dict]
-) -> DataFrame[Embedding2DSchema]:
+    embeddings_2d: DataFrame[Embedding2DScoreSchema], selected_points: list[dict]
+) -> DataFrame[Embedding2DScoreSchema]:
     selection_raw = DataFrame[PointSelectionSchema](pd.DataFrame(selected_points))
     selected_rows = embeddings_2d.copy().merge(
         selection_raw[[PointSchema2D.x, PointSchema2D.y]],
         on=[PointSchema2D.x, PointSchema2D.y],
         how="inner",
     )
-    return DataFrame[Embedding2DSchema](selected_rows)
+    return cast(DataFrame[Embedding2DScoreSchema], selected_rows)
 
 
 def render_plotly_events(

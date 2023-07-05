@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, TypedDict
 
 import yaml
-from encord import Project
+from encord import Project as EncordProject
 
 from encord_active.lib.encord.utils import get_client
 
@@ -43,7 +43,7 @@ def update_project_meta(data_dir: Path, updated_meta: ProjectMeta):
     meta_file_path.write_text(yaml.safe_dump(updated_meta), encoding="utf-8")
 
 
-def fetch_project_info(data_dir: Path) -> Project:
+def fetch_encord_project_instance(data_dir: Path) -> EncordProject:
     project_meta = fetch_project_meta(data_dir)
     # == Key file == #
     if "ssh_key_path" not in project_meta:
