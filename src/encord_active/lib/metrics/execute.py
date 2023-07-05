@@ -17,7 +17,7 @@ from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
-from encord_active.lib.project.metadata import fetch_project_info
+from encord_active.lib.project.metadata import fetch_encord_project_instance
 
 logger = logger.opt(colors=True)
 
@@ -172,7 +172,7 @@ def execute_metrics(
     skip_labeled_data: bool = False,
     **kwargs,
 ):
-    project = None if use_cache_only else fetch_project_info(data_dir)
+    project = None if use_cache_only else fetch_encord_project_instance(data_dir)
     iterator = iterator_cls(data_dir, project=project, skip_labeled_data=skip_labeled_data, **kwargs)
 
     if "prediction_type" in kwargs:
