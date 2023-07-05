@@ -20,7 +20,7 @@ from encord_active.db.metrics import (
 from encord_active.db.models import (
     AnnotationType,
     ProjectAnnotationAnalytics,
-    ProjectDataAnalytics,
+    ProjectDataAnalytics, ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra,
 )
 from encord_active.server.routers.project2_engine import engine
 
@@ -44,9 +44,10 @@ def _get_metric_domain(
     Dict[str, MetricDefinition],
     Optional[str],
     Dict[str, dict],
+    Union[Type[ProjectDataAnalyticsExtra], Type[ProjectAnnotationAnalyticsExtra]]
 ]:
     if domain == AnalysisDomain.Data:
-        return ProjectDataAnalytics, DataMetrics, None, {}
+        return ProjectDataAnalytics, DataMetrics, None, {}, ProjectDataAnalyticsExtra
     elif domain == AnalysisDomain.Annotation:
         enum_props: Dict[str, dict] = {
             "feature_hash": {"type": "ontology"},
@@ -55,7 +56,7 @@ def _get_metric_domain(
                 "values": {annotation_type.value: annotation_type.name for annotation_type in AnnotationType},
             },
         }
-        return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props
+        return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props, ProjectAnnotationAnalyticsExtra
     else:
         raise ValueError(f"Bad domain: {domain}")
 
@@ -169,7 +170,7 @@ def _load_metric(
 
 @router.get("/summary")
 def metric_summary(project_hash: uuid.UUID, domain: AnalysisDomain):
-    domain_ty, domain_metrics, extra_key, domain_enums = _get_metric_domain(domain)
+    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     with Session(engine) as sess:
         count: int = sess.exec(select(func.count()).where(domain_ty.project_hash == project_hash)).first()  # type: ignore
     metrics = {
@@ -200,7 +201,7 @@ def metric_search(
         None if metric_outliers is None else json.loads(metric_outliers)
     )
     enum_filters_dict: Optional[Dict[str, List[str]]] = None if enum_filters is None else json.loads(enum_filters)
-    domain_ty, domain_metrics, domain_grouping, domain_enums = _get_metric_domain(domain)
+    domain_ty, domain_metrics, domain_grouping, domain_enums, domain_ty_extra = _get_metric_domain(domain)
 
     # Add metric filtering.
     query_filters = []
@@ -282,7 +283,7 @@ def metric_search(
 def scatter_2d_data_metric(
     project_hash: uuid.UUID, domain: AnalysisDomain, x_metric: str, y_metric: str, buckets: int = 500
 ):
-    domain_ty, domain_metrics, *_ = _get_metric_domain(domain)
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     with Session(engine) as sess:
         x_metric_fn = _get_metric(domain_ty, x_metric, domain_metrics, buckets=buckets)
         y_metric_fn = _get_metric(domain_ty, y_metric, domain_metrics, buckets=buckets)
@@ -308,7 +309,7 @@ def scatter_2d_data_metric(
 
 @router.get("/dist")
 def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, group: str, buckets: int = 100):
-    domain_ty, domain_metrics, object_key, domain_enums, *_ = _get_metric_domain(domain)
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     if group in domain_metrics:
         metric = domain_metrics[group]
         if metric.virtual is not None:
@@ -351,32 +352,36 @@ def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, gro
 def _get_nn_descent(
     project_hash: uuid.UUID, domain: AnalysisDomain
 ) -> Tuple[NNDescent, List[Tuple[Optional[bytes], uuid.UUID, int, Optional[str]]]]:
-    domain_ty, domain_metrics, object_key, domain_enums = _get_metric_domain(domain)
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     with Session(engine) as sess:
         query = select(
-            domain_ty.embedding_clip,
-            domain_ty.du_hash,
-            domain_ty.frame,
-            *([] if object_key is None else [getattr(domain_ty, object_key)]),
-        ).where(domain_ty.project_hash == project_hash, is_not(domain_ty.embedding_clip, None))
+            domain_ty_extra.embedding_clip,
+            domain_ty_extra.du_hash,
+            domain_ty_extra.frame,
+            *([] if object_key is None else [getattr(domain_ty_extra, object_key)]),
+        ).where(domain_ty_extra.project_hash == project_hash, is_not(domain_ty_extra.embedding_clip, None))
         results = sess.exec(query).fetchall()
     embeddings = np.stack([np.frombuffer(e[0], dtype=np.float) for e in results]).astype(np.float32)  # type: ignore
     index = NNDescent(embeddings, n_neighbors=50, metric="cosine")
     return index, results  # type: ignore
 
 
-@router.get("/similarity/{du_hash}/{frame}")
-def search_similarity(project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int, embedding: str):
-    domain_ty, domain_metrics, object_key, domain_enums = _get_metric_domain(domain)
+@router.get("/similarity/{du_hash}/{frame}/{object_hash}")
+@router.get("/similarity/{du_hash}/{frame}/")
+def search_similarity(
+        project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int,
+        embedding: str, object_hash: Optional[str] = None
+):
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     if embedding != "embedding_clip":
         raise ValueError("Unsupported embedding")
     with Session(engine) as sess:
         src_embedding = sess.exec(
-            select(domain_ty.embedding_clip).where(
-                domain_ty.project_hash == project_hash,
-                domain_ty.du_hash == du_hash,
-                domain_ty.frame == frame,
-                # FIXME: object_hash??
+            select(domain_ty_extra.embedding_clip).where(
+                domain_ty_extra.project_hash == project_hash,
+                domain_ty_extra.du_hash == du_hash,
+                domain_ty_extra.frame == frame,
+                *([] if object_key is None else (getattr(domain_ty_extra, object_key) == object_hash))
             )
         ).first()
         if src_embedding is None:
