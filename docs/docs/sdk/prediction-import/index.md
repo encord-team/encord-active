@@ -25,7 +25,7 @@ project_path = Path("/path/to/your/project/root")
 
 predictions: list[Prediction] = ...  # Your list of predictions
 
-import_predictions(Project(project_path), project_path, predictions)
+import_predictions(Project(project_path), predictions)
 ```
 
 ## Other Options

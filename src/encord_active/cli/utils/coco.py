@@ -19,10 +19,10 @@ from encord_active.lib.project import ProjectFileStructure
 
 
 def import_coco_predictions(
-    target: Path,
+    project_path: Path,
     predictions_path: Path,
 ):
-    project_file_structure = ProjectFileStructure(target)
+    project_file_structure = ProjectFileStructure(project_path)
     image_data_unit = json.loads(project_file_structure.image_data_unit.read_text(encoding="utf-8"))
     ontology = json.loads(project_file_structure.ontology.read_text(encoding="utf-8"))
     # NOTE: when we import a coco project, we change the category id to support
