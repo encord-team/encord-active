@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from encord_active.analysis.metric import MetricDependencies, ObjectByFrameMetric
-from encord_active.analysis.types import MetricResult, ObjectMetadata
+from encord_active.analysis.types import MetricKey, MetricResult, ObjectMetadata
 
 
 class MaximumLabelIOUMetric(ObjectByFrameMetric):
@@ -15,8 +15,11 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
         )
 
     def calculate(
-        self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
-    ) -> dict[str, MetricResult]:
+        self,
+        img_deps: MetricDependencies,
+        obj_deps: dict[str, MetricDependencies],
+        objs: dict[MetricKey, ObjectMetadata],
+    ) -> dict[MetricKey, MetricResult]:
         # TODO: instead of every object holding it's mask tensor, we could do it
         # with obj_deps if necessary. I do, however, think that it's such a common
         # thing that it makes sense to just have on the object.

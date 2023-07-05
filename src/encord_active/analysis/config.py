@@ -3,11 +3,16 @@ from dataclasses import dataclass
 from torch import FloatTensor
 from torch.types import Device
 
-from .base import BaseEvaluation, TemporalBaseAnalysis
+from encord_active.analysis.metrics.object.nearest_neighbor_agreement import (
+    NearestNeighborAgreement,
+)
+
+from .base import BaseEvaluation
 from .conversions.hsv import RGBToHSV
 from .embedding import NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
+from .metric import DerivedMetric
 from .metrics.image.area import AreaMetric
 from .metrics.image.aspect_ratio import AspectRatioMetric
 from .metrics.image.brightness import BrightnessMetric
@@ -81,7 +86,7 @@ class AnalysisConfig:
         self,
         analysis: list[BaseEvaluation],
         derived_embeddings: list[NearestImageEmbeddingQuery],
-        derived_metrics: list[object],
+        derived_metrics: list[DerivedMetric],
     ) -> None:
         """
         Args:
@@ -119,22 +124,10 @@ class AnalysisConfig:
         """
         ...
 
-    def analyse_image(self, image_url: str) -> AnalysisResult:
-        ...
-
-    def analyse_video(self, video_url: str, start_timestamp: float, start_frame: int, end_frame: int) -> AnalysisResult:
-        ...
-
-    def derive_embeddings(self, metric_db: None) -> None:
-        pass
-
-    def derive_metric(self, analysis_result: AnalysisResult) -> AnalysisResult:
-        ...
-
 
 def create_analysis(device: Device) -> AnalysisConfig:
     """List of all analysis passes to be executed by encord active"""
-    analysis = [
+    analysis: list[BaseEvaluation] = [
         # Generate embeddings
         ClipImgEmbedding(device, "clip", "ViT-B/32"),
         HuMomentEmbeddings("hu-moments"),
@@ -158,12 +151,14 @@ def create_analysis(device: Device) -> AnalysisConfig:
         DistanceToBorderMetric(),
         ObjectCountMetric(),
     ]
-    derived_embeddings = [
+    derived_embeddings: list[NearestImageEmbeddingQuery] = [
         # Derive properties from embedding
+        # TODO ☝️  The typing needs to be more general eventually
         NearestImageEmbeddingQuery("clip-nearest", "clip"),
     ]
-    derived_metrics = [
+    derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY
+        NearestNeighborAgreement()
     ]
     return AnalysisConfig(analysis=analysis, derived_embeddings=derived_embeddings, derived_metrics=derived_metrics)
 
