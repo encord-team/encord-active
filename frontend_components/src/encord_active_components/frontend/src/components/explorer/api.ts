@@ -36,7 +36,7 @@ export const ObjectPredictionSchema = z.object({
   featureHash: z.string(),
   name: z.string(),
   objectHash: z.string(),
-  points: z.record(PointSchema),
+  points: z.record(PointSchema).nullish(),
   boundingBoxPoints: z.record(PointSchema).nullish(),
   shape: LabelRowObjectShapeSchema,
 });
