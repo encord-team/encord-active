@@ -117,9 +117,6 @@ class ProjectDataAnalytics(SQLModel, table=True):
     project_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
-    # Embeddings
-    embedding_clip: Optional[bytes]
-    embedding_hu: Optional[bytes]
     # Metrics - Absolute Size
     metric_width: Optional[int] = MetricFieldTypePositiveInteger
     metric_height: Optional[int] = MetricFieldTypePositiveInteger
@@ -150,6 +147,19 @@ class ProjectDataAnalytics(SQLModel, table=True):
     )
 
 
+class ProjectDataAnalyticsExtra(SQLModel, table=True):
+    __tablename__ = "active_project_analytics_data_extra"
+    # Base primary key
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    # Embeddings
+    embedding_clip: Optional[bytes]
+    embedding_hu: Optional[bytes]
+    # Metric comments
+    metric_metadata: dict = Field(sa_column=Column(JSON))
+
+
 @assert_cls_metrics_match(AnnotationMetrics)
 class ProjectAnnotationAnalytics(SQLModel, table=True):
     __tablename__ = "active_project_analytics_annotation"
@@ -161,7 +171,6 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     # Extra properties
     feature_hash: str = Field(min_length=8, max_length=8)
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
-    annotation_value: Optional[str]
     annotation_creator: Optional[str]
     annotation_confidence: float
     # Embeddings
@@ -200,11 +209,26 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     )
 
 
+class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
+    __tablename__ = "active_project_analytics_annotation_extra"
+    # Base primary key
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    # Embeddings
+    embedding_clip: Optional[bytes]
+    embedding_hu: Optional[bytes]
+    # Metric comments
+    metric_metadata: dict = Field(sa_column=Column(JSON))
+
+
 class ProjectTag(SQLModel, table=True):
     __tablename__ = "active_project_tags"
     tag_hash: UUID = Field(primary_key=True)
     project_hash: UUID = Field(index=True)
     name: str = Field(min_length=1, max_length=256)
+    description: str
 
     __table_args__ = (fk_constraint(["project_hash"], Project, "active_project_tags_project_fk"),)
 
@@ -259,15 +283,16 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     feature_hash: str = Field(min_length=8, max_length=8)
 
+    # Prediction data for display.
+    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_bytes: bytes
+
     # Prediction metadata
     confidence: float = Field(ge=0, le=1)
     match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_feature_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_duplicate_iou: float = Field(ge=-1, le=1)  # 0 -> 1, -1 is special case always match.
     iou: float = Field(ge=0, le=1)
-
-    # FIXME: should these be null??
-    rle: Optional[float]  # FIXME: wrong type - sort out typing later
 
     # Prediction object metrics
     # Metrics - Absolute Size
@@ -314,7 +339,39 @@ class ProjectPredictionUnmatchedResults(SQLModel, table=True):
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+
+    # Unmatched annotation properties
     feature_hash: str = Field(min_length=8, max_length=8)
+    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_creator: Optional[str]
+    annotation_confidence: float
+
+    # Unmatched annotation metrics.
+    # Metrics - Absolute Size
+    metric_width: Optional[int] = MetricFieldTypePositiveInteger
+    metric_height: Optional[int] = MetricFieldTypePositiveInteger
+    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    # Metrics - Relative Size
+    metric_area_relative: Optional[float] = MetricFieldTypeNormal
+    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    # Metrics Color
+    metric_brightness: Optional[float] = MetricFieldTypeNormal
+    metric_contrast: Optional[float] = MetricFieldTypeNormal
+    metric_sharpness: Optional[float] = MetricFieldTypeNormal
+    metric_red: Optional[float] = MetricFieldTypeNormal
+    metric_green: Optional[float] = MetricFieldTypeNormal
+    metric_blue: Optional[float] = MetricFieldTypeNormal
+    # Random
+    metric_random: Optional[float] = MetricFieldTypeNormal
+    # Both - Annotation based
+    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    # Metrics - Label Only
+    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
+    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
+    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
+    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
+    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_unmatched_prediction_fk"),
