@@ -36,10 +36,11 @@ class OrderedPanelGroup(TyperGroup):
     COMMAND_ORDER = [
         "quickstart",
         "download",
+        "visualize",
         "init",
         "import",
         "refresh",
-        "visualize",
+        "project",
         "metric",
         "print",
         "config",
@@ -73,10 +74,10 @@ Made by Encord. [bold]Get in touch[/bold]:
 """,
 )
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
-cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] Projects or Predictions ⬇️")
+cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] projects or predictions ⬇️")
 cli.add_typer(print_cli, name="print")
 cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project metrics :clipboard:")
-cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold] Projects")
+cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold] project settings ⚙️")
 
 
 @cli.command()
@@ -89,8 +90,7 @@ def download(
     """
     [green bold]Download[/green bold] a sandbox dataset to get started 📁
 
-    * If --project_name is not given as an argument, available sandbox projects will be listed
-     and you can select one from the menu.
+    * If the argument --project-name is not provided, a list of available sandbox projects will be displayed, allowing you to select one from the menu.
     """
     from InquirerPy import inquirer as i
 
@@ -153,7 +153,7 @@ def import_local_project(
         None,
         "--label-glob",
         "-lg",
-        help="Glob pattern to choose label files. Repeat the `--label-glob` argument to match multiple globs. This argument is only used if you also provide the `transformer` argument",
+        help="Glob pattern to choose label files. Repeat the `--label-glob` argument to match multiple globs. This argument is only used if you also provide the `transformer` argument.",
     ),
     target: Path = typer.Option(
         Path.cwd(),
@@ -182,7 +182,7 @@ def import_local_project(
     ),
     transformer: Path = typer.Option(
         None,
-        help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface",
+        help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface.",
         exists=True,
     ),
 ):
@@ -395,7 +395,7 @@ def refresh(
     The required attributes are:
     1. The remote flag set to `true` (has_remote: true).
     2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
-    3. The path to the private Encord user SSH key (ssh_key_path: private-encord-user-ssh-key-path).
+    3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
     """
     from encord_active.lib.project import Project
 

@@ -32,7 +32,7 @@ def add_metrics(
     Add metrics from:
     - local python modules
 
-    If no metric title is provided then all metrics found in the python module will be added to the project.
+    If no metric titles are provided, all metrics found in the Python module will be automatically added to the project.
     """
     rich.print("Inspecting provided module ...")
 
@@ -153,7 +153,7 @@ def run_metrics(
         False, help="Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄"
     ),
 ):
-    """Run metrics on the project's data."""
+    """Run metrics on project data and labels."""
     from InquirerPy import inquirer as i
     from InquirerPy.base.control import Choice
 

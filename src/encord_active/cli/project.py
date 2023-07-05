@@ -12,11 +12,14 @@ from encord_active.lib.project import ProjectFileStructure
 project_cli = typer.Typer(rich_markup_mode="markdown")
 
 
-@project_cli.command(name="download-data", short_help="Downloads all data locally for faster iteration")
+@project_cli.command(name="download-data", short_help="Download all data locally for improved responsiveness.")
 @ensure_project()
 def download_data(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ) -> None:
+    """
+    Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.
+    """
     project_file_structure = ProjectFileStructure(target)
     project_file_structure.local_data_store.mkdir(exist_ok=True)
     with PrismaConnection(project_file_structure) as conn:
