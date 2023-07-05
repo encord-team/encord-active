@@ -15,6 +15,7 @@ from encord_active.cli.project import project_cli
 load_dotenv()
 
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
+import encord_active.db.models as __fixme_debugging
 import encord_active.lib.db  # pylint: disable=unused-import
 from encord_active.app.app_config import APP_NAME
 from encord_active.cli.config import config_cli
@@ -31,7 +32,6 @@ from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
 from encord_active.lib.project.metadata import fetch_project_meta
 
-import encord_active.db.models as __fixme_debugging
 
 class OrderedPanelGroup(TyperGroup):
     COMMAND_ORDER = [
