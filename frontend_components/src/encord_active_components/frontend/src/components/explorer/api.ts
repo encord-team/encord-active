@@ -25,7 +25,7 @@ export const LabelRowObjectSchema = z.object({
   manualAnnotation: z.boolean(),
   name: z.string(),
   objectHash: z.string(),
-  points: z.record(PointSchema),
+  points: z.record(PointSchema).nullish(),
   boundingBoxPoints: z.record(PointSchema).nullish(),
   shape: LabelRowObjectShapeSchema,
 });
