@@ -196,8 +196,14 @@ def to_item(
         except:
             pass
 
-    object_predictions = build_item_object_predictions(row, project_file_structure, metadata, img_w, img_h, object_hash)
-    classification_predictions = build_item_classification_predictions(row, project_file_structure, metadata)
+    object_predictions = []
+    classification_predictions = []
+    if "iou" in row:
+        object_predictions = build_item_object_predictions(
+            row, project_file_structure, metadata, img_w, img_h, object_hash
+        )
+    else:
+        classification_predictions = build_item_classification_predictions(row, project_file_structure, metadata)
 
     return {
         "id": identifier,
@@ -222,18 +228,29 @@ def build_item_object_predictions(
 ):
     objects: List[Dict] = []
     rle = row.pop("rle", None)
-    if not object_hash or not rle:
-        return objects
+    if not object_hash:
+        return []
 
-    mask = rle_to_binary_mask(json.loads(rle.replace("'", '"')))
-    polygon, bbox = mask_to_polygon(mask)
     class_id = row.pop("class_id", None)
+    if class_id is None:
+        return []
 
-    if not polygon or class_id is None:
-        return objects
+    prediction_points = None
+    if rle:
+        mask = rle_to_binary_mask(json.loads(rle.replace("'", '"')))
+        polygon, bbox = mask_to_polygon(mask)
+        x, y, w, h = bbox
+        if polygon is None:
+            return []
+        prediction_points = {i: {"x": x / img_w, "y": y / img_h} for i, (x, y) in enumerate(polygon)}
+    else:
+        x1, x2, y1, y2 = row["x1"], row["x2"], row["y1"], row["y2"]
+        x, y = x1, y1
+        w = x2 - x1
+        h = y2 - y1
 
-    x, y, w, h = bbox
     x, y, w, h = (x / img_w, y / img_h, w / img_w, h / img_h)
+
     bbox_points = {
         0: {"x": x, "y": y},
         1: {"x": x + w, "y": y},
@@ -244,7 +261,6 @@ def build_item_object_predictions(
     for key in [
         "Unnamed: 0",
         "img_id",
-        "iou",
         "x1",
         "x2",
         "y1",
@@ -252,15 +268,14 @@ def build_item_object_predictions(
     ]:
         row.pop(key, None)
 
-    is_true_positive = row.pop("is_true_positive")
+    is_true_positive = row["is_true_positive"]
 
     class_idx = read_class_idx(project_file_structure.predictions / MainPredictionType.OBJECT.value)
-    class_name = row.pop("class_name", None)
+    class_name = row.get("class_name", None)
 
     metadata["annotator"] = "Prediction"
     metadata["labelClass"] = class_name
 
-    prediction_points = {i: {"x": x / img_w, "y": y / img_h} for i, (x, y) in enumerate(polygon)}
     objects.append(
         {
             "name": class_name,
