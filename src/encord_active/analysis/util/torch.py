@@ -9,9 +9,12 @@ from encord_active.analysis.types import (
     ImageTensor,
     LaplacianTensor,
     MaskTensor,
+    MetricKey,
+    ObjectMetadata,
     Point,
     PointTensor,
 )
+from encord_active.lib.labels.object import ObjectShape
 
 _laplacian_kernel = (
     torch.tensor([0.0, 1.0, 0.0, 1.0, -4.0, 1.0, 0.0, 1.0, 0.0], requires_grad=False).reshape(1, 1, 3, 3).float()
@@ -25,6 +28,51 @@ def pillow_to_tensor(image: Image.Image) -> ImageTensor:
     if not image.mode == "RGB":
         image = image.convert("RGB")
     return pil_to_tensor(image)
+
+
+def _obj_to_points(obj: dict, img_w: int, img_h: int) -> PointTensor:
+    # TODO fix me
+    return torch.zeros((10, 2), dtype=torch.float)
+
+
+def _obj_to_mask(obj: dict, img_w: int, img_h) -> MaskTensor:
+    # TODO fix me
+    shape = obj.get("shape")
+    if not shape:
+        raise ValueError("Object has no `shape` property")
+    if shape == ObjectShape.POLYGON:
+        ...
+    elif shape == ObjectShape.POLYLINE:
+        ...
+    elif shape == ObjectShape.BOUNDING_BOX:
+        ...
+    elif shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
+        ...
+    elif shape == ObjectShape.KEY_POINT:
+        ...
+    elif shape == ObjectShape.SKELETON:
+        ...
+    return torch.zeros((img_h, img_w), dtype=torch.uint8)
+
+
+def obj_to_object_meta(obj: dict, img_w: int, img_h: int) -> ObjectMetadata:
+    points = _obj_to_points(obj, img_w=img_w, img_h=img_h)
+    mask = _obj_to_mask(obj, img_w=img_w, img_h=img_h)
+    return ObjectMetadata(feature_hash=obj["featureHash"], object_hash=obj["objectHash"], points=points, mask=mask)
+
+
+def data_unit_to_object_meta(data_unit: dict, partial_key: MetricKey) -> dict[MetricKey, ObjectMetadata]:
+    img_w, img_h = data_unit.get("width"), data_unit.get("height")
+    if img_w is None or img_h is None:
+        raise ValueError("The data unit does not provide image shape so can't construct object metadata")
+
+    obj_list = data_unit.get("labels", {}).get("objects", [])
+    if not obj_list:
+        return {}
+
+    return {
+        partial_key.with_annotation(o["objectHash"]): obj_to_object_meta(o, img_w=img_w, img_h=img_h) for o in obj_list
+    }
 
 
 def tensor_to_pillow(tensor: ImageTensor) -> Image.Image:

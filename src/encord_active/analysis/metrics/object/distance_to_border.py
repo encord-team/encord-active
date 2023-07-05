@@ -1,4 +1,4 @@
-from encord_active.analysis.metric import MetricDependencies, OneObjectMetric
+from encord_active.analysis.metric import OneObjectMetric
 from encord_active.analysis.types import MetricResult, ObjectMetadata
 
 
@@ -11,7 +11,7 @@ class DistanceToBorderMetric(OneObjectMetric):
             desc="",
         )
 
-    def calculate(self, deps: MetricDependencies, obj: ObjectMetadata) -> MetricResult:
+    def calculate(self, obj: ObjectMetadata) -> MetricResult:
         points = obj.torch_points()
         xmin, ymin = points.min(0).values
         xmax, ymax = 1 - points.max(0).values

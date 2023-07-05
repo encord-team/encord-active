@@ -1,12 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 
-from torch import Tensor
-
 from encord_active.analysis.base import BaseAnalysis, TemporalBaseAnalysis
 from encord_active.analysis.types import (
+    AnnotationsMetricDependencies,
+    AnnotationsMetricResult,
+    ClassificationMetadata,
     ImageTensor,
     MaskTensor,
+    MetricDependencies,
+    MetricKey,
     MetricResult,
     ObjectMetadata,
 )
@@ -24,9 +27,6 @@ class MetricConfig:
     version: int
     ranked: bool
     # FIXME: groupings (float => string enum)
-
-
-MetricDependencies = dict[str, Tensor | float]
 
 
 class OneImageMetric(BaseAnalysis, metaclass=ABCMeta):
@@ -48,18 +48,31 @@ class OneImageMetric(BaseAnalysis, metaclass=ABCMeta):
         self.apply_to_objects = apply_to_objects
         self.apply_to_classifications = apply_to_classifications
 
-    @abstractmethod
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
-        ...
-
-    def calculate_for_object(
-        self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor  # , coordinates: FloatTensor
-    ) -> MetricResult:
-        # _coordinates = coordinates  # Only used in override logic for special case shortcuts
+    def _calculate(
+        self,
+        image: ImageTensor,
+        image_deps: MetricDependencies,
+        obj: ObjectMetadata | None,
+        obj_deps: MetricDependencies | None,
+        clf: ClassificationMetadata | None,
+        clf_deps: MetricDependencies | None,
+        objects: dict[MetricKey, ObjectMetadata],
+        objects_deps: AnnotationsMetricResult | None,
+        classifications: dict[MetricKey, ClassificationMetadata],
+        classifications_deps: AnnotationsMetricResult | None,
+        **kwargs,
+    ) -> MetricResult | AnnotationsMetricResult:
+        mask = None
+        deps = image_deps
+        if obj is not None:
+            assert obj_deps is not None
+            mask = obj.mask
+            deps = obj_deps
         return self.calculate(deps, image, mask)
 
-    def calculate_for_image(self, deps: MetricDependencies, image: ImageTensor) -> MetricResult:
-        return self.calculate(deps, image, None)
+    @abstractmethod
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
+        pass
 
 
 class OneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
@@ -68,9 +81,27 @@ class OneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
     This is implicitly applied to all child classifications of an object.
     """
 
+    def _calculate(
+        self,
+        image: ImageTensor,
+        image_deps: MetricDependencies,
+        obj: ObjectMetadata | None,
+        obj_deps: MetricDependencies | None,
+        clf: ClassificationMetadata | None,
+        clf_deps: MetricDependencies | None,
+        objects: dict[MetricKey, ObjectMetadata],
+        objects_deps: AnnotationsMetricResult | None,
+        classifications: dict[MetricKey, ClassificationMetadata],
+        classifications_deps: AnnotationsMetricResult | None,
+        **kwargs,
+    ) -> MetricResult | AnnotationsMetricResult:
+        if obj is None:
+            return None
+        return self.calculate(obj)
+
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, obj: ObjectMetadata) -> MetricResult:
-        ...
+    def calculate(self, obj: ObjectMetadata) -> MetricResult:
+        pass
 
 
 class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
@@ -79,10 +110,31 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
     present in the single frame. The keys of the result should match the keys of 'objs'.
     """
 
+    def _calculate(
+        self,
+        image: ImageTensor,
+        image_deps: MetricDependencies,
+        obj: ObjectMetadata | None,
+        obj_deps: MetricDependencies | None,
+        clf: ClassificationMetadata | None,
+        clf_deps: MetricDependencies | None,
+        objects: dict[MetricKey, ObjectMetadata],
+        objects_deps: AnnotationsMetricDependencies | None,
+        classifications: dict[MetricKey, ClassificationMetadata],
+        classifications_deps: AnnotationsMetricDependencies | None,
+        **kwargs,
+    ) -> MetricResult | AnnotationsMetricResult:
+        if obj is not None or objects is None or objects_deps is None:
+            return None
+
+        return self.calculate(objects_deps, objects)
+
     @abstractmethod
     def calculate(
-        self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
-    ) -> dict[str, MetricResult]:
+        self,
+        obj_deps: AnnotationsMetricDependencies,
+        objects: dict[MetricKey, ObjectMetadata],
+    ) -> AnnotationsMetricResult:
         ...
 
 
@@ -90,7 +142,10 @@ class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
     @abstractmethod
     def calculate(
         self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
-    ) -> MetricResult:
+    ) -> MetricResult | AnnotationsMetricResult:
+        """
+        TODO: This is currently only used by object count which doesn't require all these arguments.
+        """
         ...
 
 
@@ -113,6 +168,8 @@ class TemporalOneImageMetric(TemporalBaseAnalysis, metaclass=ABCMeta):
         super().__init__(ident, dependencies, long_name, desc, prev_frame_count, next_frame_count)
         self.apply_to_objects = apply_to_objects
         self.apply_to_classifications = apply_to_classifications
+
+    # TODO Fix me
 
     @abstractmethod
     def calculate(
