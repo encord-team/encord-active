@@ -1,21 +1,43 @@
 import json
 import math
 import uuid
-from typing import Optional, Set, Tuple, Dict, Union, List
+from typing import Dict, List, Optional, Set, Tuple, Union
+
 from sqlmodel import Session
 
-from encord_active.db.metrics import DataMetrics, AnnotationMetrics, MetricType, MetricDefinition, DataAnnotationSharedMetrics
-from encord_active.lib.common.data_utils import url_to_file_path, file_path_to_url
+from encord_active.db.metrics import (
+    AnnotationMetrics,
+    DataAnnotationSharedMetrics,
+    DataMetrics,
+    MetricDefinition,
+    MetricType,
+)
+from encord_active.db.models import (
+    AnnotationType,
+    Project,
+    ProjectAnnotationAnalytics,
+    ProjectDataAnalytics,
+    ProjectDataMetadata,
+    ProjectDataUnitMetadata,
+    ProjectPrediction,
+    ProjectPredictionObjectResults,
+    ProjectPredictionUnmatchedResults,
+    ProjectTag,
+    ProjectTaggedAnnotation,
+    ProjectTaggedDataUnit,
+    get_engine,
+)
+from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.embeddings.utils import load_label_embeddings
 from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.metrics.utils import load_metric_dataframe, load_available_metrics
+from encord_active.lib.metrics.utils import (
+    load_available_metrics,
+    load_metric_dataframe,
+)
 from encord_active.lib.model_predictions import reader
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project import ProjectFileStructure
-from encord_active.db.models import Project, ProjectDataMetadata, ProjectDataUnitMetadata, get_engine, \
-    ProjectAnnotationAnalytics, ProjectDataAnalytics, ProjectTag, ProjectTaggedDataUnit, ProjectTaggedAnnotation, \
-    ProjectPrediction, ProjectPredictionObjectResults, ProjectPredictionUnmatchedResults, AnnotationType
 from encord_active.lib.project.metadata import fetch_project_meta
 
 WELL_KNOWN_METRICS: Dict[str, str] = {
@@ -43,7 +65,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Aspect Ratio": "metric_aspect_ratio",
     "Polygon Shape Similarity": "metric_label_poly_similarity",
     "Random Values on Objects": "metric_random",
-    'Image-level Annotation Quality': "metric_annotation_quality",
+    "Image-level Annotation Quality": "metric_annotation_quality",
     "Shape outlier detection": "metric_label_shape_outlier",
 }
 
@@ -73,12 +95,12 @@ def assert_valid_args(cls, dct: dict) -> dict:
 
 
 def _assign_metrics(
-        metric_column_name: str,
-        metrics_dict: dict,
-        score: float,
-        metric_types: Dict[str, MetricDefinition],
-        metrics_derived: Set[str],
-        error_identifier: str
+    metric_column_name: str,
+    metrics_dict: dict,
+    score: float,
+    metric_types: Dict[str, MetricDefinition],
+    metrics_derived: Set[str],
+    error_identifier: str,
 ):
     if metric_column_name not in metrics_dict:
         if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
@@ -106,8 +128,7 @@ def _assign_metrics(
             metrics_dict[metric_column_name] = score
     elif metric_column_name not in metrics_derived:
         raise ValueError(
-            f"Duplicate metric assignment for, column={metric_column_name},"
-            f"identifier={error_identifier}"
+            f"Duplicate metric assignment for, column={metric_column_name}," f"identifier={error_identifier}"
         )
     else:
         existing_score = metrics_dict[metric_column_name]
@@ -126,9 +147,13 @@ def _assign_metrics(
 def up(pfs: ProjectFileStructure) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
-    annotation_metrics: Dict[Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str]]] = {}
+    annotation_metrics: Dict[
+        Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str, AnnotationType, None]]
+    ] = {}
     data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]] = {}
-    data_classification_metrics: Dict[Tuple[uuid.UUID, int], List[Dict[str, Union[int, float, bytes, str]]]] = {}
+    data_classification_metrics: Dict[
+        Tuple[uuid.UUID, int], List[Dict[str, Union[int, float, bytes, str, AnnotationType, None]]]
+    ] = {}
 
     database_dir = pfs.project_dir.parent.expanduser().resolve()
 
@@ -139,9 +164,7 @@ def up(pfs: ProjectFileStructure) -> None:
             project_name=project_meta["project_title"],
             project_description=project_meta["project_description"],
             project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
-            project_ontology=json.loads(
-                pfs.ontology.read_text(encoding="utf-8")
-            ),
+            project_ontology=json.loads(pfs.ontology.read_text(encoding="utf-8")),
         )
         label_rows = conn.labelrow.find_many(
             include={
@@ -152,7 +175,7 @@ def up(pfs: ProjectFileStructure) -> None:
         data_units_metas = []
         for label_row in label_rows:
             data_hash = uuid.UUID(label_row.data_hash)
-            label_row_json = json.loads(label_row.label_row_json)
+            label_row_json = json.loads(label_row.label_row_json or "")
             if "label_hash" in label_row_json and label_row.label_hash != label_row_json["label_hash"]:
                 raise ValueError(
                     f"Inconsistent label hash in label row json: "
@@ -170,7 +193,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 data_hash=data_hash,
                 label_hash=uuid.UUID(label_row.label_hash),
                 dataset_hash=uuid.UUID(label_row_json["dataset_hash"]),
-                num_frames=len(label_row.data_units),
+                num_frames=len(label_row.data_units or []),
                 frames_per_second=None,
                 dataset_title=str(label_row_json["dataset_title"]),
                 data_title=str(label_row_json["data_title"]),
@@ -178,7 +201,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 label_row_json=label_row_json,
             )
             fps: Optional[float] = None
-            for data_unit in label_row.data_units:
+            for data_unit in label_row.data_units or []:
                 du_hash = uuid.UUID(data_unit.data_hash)
                 du_json = data_units_json[data_unit.data_hash]
                 if data_type == "image" or data_type == "img_group":
@@ -190,37 +213,37 @@ def up(pfs: ProjectFileStructure) -> None:
                 if data_unit.fps > 0.0:
                     fps = data_unit.fps
                 objects = labels_json.get("objects", [])
-                object_hashes = set()
+                object_hashes_seen = set()
                 for obj in objects:
                     object_hash = str(obj["objectHash"])
-                    if object_hash in object_hashes:
+                    if object_hash in object_hashes_seen:
                         raise ValueError(
                             f"Duplicate object_hash={object_hash} in du_hash={du_hash}, frame={data_unit.frame}"
                         )
-                    object_hashes.add(object_hash)
+                    object_hashes_seen.add(object_hash)
                     annotation_type = AnnotationType(str(obj["shape"]))
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,
                         "annotation_value": obj.get("value", None),
                         "annotation_creator": str(obj["createdBy"]) if obj["manualAnnotation"] else None,
-                        "annotation_confidence": float(obj["confidence"])
+                        "annotation_confidence": float(obj["confidence"]),
                     }
                 classifications = labels_json.get("classifications", [])
                 for classify in classifications:
                     classification_hash = str(classify["classificationHash"])
-                    if classification_hash in object_hashes:
+                    if classification_hash in object_hashes_seen:
                         raise ValueError(
                             f"Duplicate object_hash/classification_hash={classification_hash} "
                             f"in du_hash={du_hash}, frame={data_unit.frame}"
                         )
-                    object_hashes.add(classification_hash)
+                    object_hashes_seen.add(classification_hash)
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
                         "feature_hash": str(classify["featureHash"]),
                         "annotation_type": AnnotationType.CLASSIFICATION,
                         "annotation_value": classify.get("value", None),
                         "annotation_creator": str(classify["createdBy"]) if classify["manualAnnotation"] else None,
-                        "annotation_confidence": float(classify["confidence"])
+                        "annotation_confidence": float(classify["confidence"]),
                     }
                     data_classification_metrics.setdefault((du_hash, data_unit.frame), []).append(
                         annotation_metrics[(du_hash, data_unit.frame, classification_hash)]
@@ -261,36 +284,42 @@ def up(pfs: ProjectFileStructure) -> None:
         for tag in conn.tag.find_many():
             tag_uuid = uuid.uuid4()
             tag_id_map[tag.id] = tag_uuid
-            project_tag_definitions.append(ProjectTag(
-                tag_uuid=tag_uuid,
-                project_hash=project_hash,
-                name=tag.name,
-            ))
+            project_tag_definitions.append(
+                ProjectTag(
+                    tag_uuid=tag_uuid,
+                    project_hash=project_hash,
+                    name=tag.name,
+                )
+            )
 
-        project_data_tags = []
-        project_object_tags = []
+        project_data_tags: List[ProjectTaggedDataUnit] = []
+        project_object_tags: List[ProjectTaggedAnnotation] = []
         for item_tag in conn.itemtag.find_many():
             du_hash = uuid.UUID(item_tag.data_hash)
             frame = item_tag.frame
-            object_hash = item_tag.object_hash if len(item_tag.object_hash) > 0 else None
+            object_hash_opt = item_tag.object_hash if len(item_tag.object_hash) > 0 else None
             tag_uuid = tag_id_map[item_tag.tag_id]
-            if object_hash is None:
-                _exists = data_metrics[(du_hash, frame)]
-                project_data_tags.append(ProjectTaggedDataUnit(
-                    project_hash=project_hash,
-                    du_hash=du_hash,
-                    frame=frame,
-                    tag_hash=tag_uuid,
-                ))
+            if object_hash_opt is None:
+                _exists = data_metrics[(du_hash, frame)]  # type: ignore
+                project_data_tags.append(
+                    ProjectTaggedDataUnit(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        tag_hash=tag_uuid,
+                    )
+                )
             else:
-                _exists = annotation_metrics[(du_hash, frame, object_hash)]
-                project_object_tags.append(ProjectTaggedAnnotation(
-                    project_hash=project_hash,
-                    du_hash=du_hash,
-                    frame=frame,
-                    object_hash=object_hash,
-                    tag_hash=tag_uuid,
-                ))
+                _exists = annotation_metrics[(du_hash, frame, object_hash)]  # type: ignore
+                project_object_tags.append(
+                    ProjectTaggedAnnotation(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        object_hash=object_hash_opt,
+                        tag_hash=tag_uuid,
+                    )
+                )
 
     # Load metrics
     metrics = load_available_metrics(pfs.metrics)
@@ -337,7 +366,7 @@ def up(pfs: ProjectFileStructure) -> None:
                             score=metric_entry["score"],
                             metric_types=AnnotationMetrics,
                             metrics_derived=DERIVED_LABEL_METRICS,
-                            error_identifier=f"classify for: {metric_entry['identifier']}"
+                            error_identifier=f"classify for: {metric_entry['identifier']}",
                         )
 
     # Load embeddings
@@ -351,27 +380,26 @@ def up(pfs: ProjectFileStructure) -> None:
         for embedding in label_embeddings:
             du_hash = uuid.UUID(embedding["data_unit"])
             frame = int(embedding["frame"])
-            object_hash: Optional[str] = str(embedding["labelHash"]) \
-                if embedding.get("labelHash", None) is not None \
-                else None
+            object_hash_emb_opt: Optional[str] = (
+                str(embedding["labelHash"]) if embedding.get("labelHash", None) is not None else None
+            )
             embedding_bytes: bytes = embedding["embedding"].tobytes()
-            if object_hash is not None:
-                metrics_dict = annotation_metrics[(du_hash, frame, object_hash)]
+            if object_hash_emb_opt is not None:
+                metrics_dict_emb: Dict[str, Union[int, float, bytes, str, AnnotationType, None]] = annotation_metrics[
+                    (du_hash, frame, object_hash_emb_opt)
+                ]
             else:
-                metrics_dict = data_metrics[(du_hash, frame)]
-            metrics_dict[embedding_name] = embedding_bytes
+                metrics_dict_emb = data_metrics[(du_hash, frame)]  # type: ignore
+            metrics_dict_emb[embedding_name] = embedding_bytes
 
     # Load 2d embeddings
     # FIXME: implement (reduction should be marked as separate)
 
     # Load predictions
-    predictions_run_db = []
-    predictions_objects_db = []
-    predictions_missed_db = []
-    for prediction_type in [
-        MainPredictionType.OBJECT,
-        MainPredictionType.CLASSIFICATION
-    ]:
+    predictions_run_db: List[ProjectPrediction] = []
+    predictions_objects_db: List[ProjectPredictionObjectResults] = []
+    predictions_missed_db: List[ProjectPredictionUnmatchedResults] = []
+    for prediction_type in [MainPredictionType.OBJECT, MainPredictionType.CLASSIFICATION]:
         prediction_hash = uuid.uuid4()
         predictions_dir = pfs.predictions
 
@@ -382,10 +410,7 @@ def up(pfs: ProjectFileStructure) -> None:
         predictions_child_dirs = list(predictions_dir.iterdir())
         if len(predictions_child_dirs) == 0:
             continue
-        names = {
-            child_dir.name
-            for child_dir in predictions_child_dirs
-        }
+        names = {child_dir.name for child_dir in predictions_child_dirs}
         if prediction_type.value in names and "predictions.csv" not in names:
             predictions_dir = predictions_dir / prediction_type.value
         elif prediction_type == MainPredictionType.CLASSIFICATION:
@@ -402,7 +427,7 @@ def up(pfs: ProjectFileStructure) -> None:
         label_metric_datas = reader.get_label_metric_data(metrics_dir)
         labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
         if gt_matched is None or labels is None or model_predictions is None:
-            raise ValueError(f"Missing prediction files for migration!")
+            raise ValueError("Missing prediction files for migration!")
 
         # Setup inverse matching dictionary for calculating the label being matched against the
         gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
@@ -426,30 +451,30 @@ def up(pfs: ProjectFileStructure) -> None:
         model_prediction_unmatched_indices = set(range(len(labels)))
 
         for model_prediction in model_predictions.to_dict(orient="records"):
-            identifier: str = model_prediction.pop('identifier')
-            model_prediction.pop('url')
-            pidx = int(model_prediction.pop('Unnamed: 0'))
-            img_id = int(model_prediction.pop('img_id'))
-            class_id = int(model_prediction.pop('class_id'))
+            identifier: str = model_prediction.pop("identifier")
+            model_prediction.pop("url")
+            pidx = int(model_prediction.pop("Unnamed: 0"))
+            img_id = int(model_prediction.pop("img_id"))
+            class_id = int(model_prediction.pop("class_id"))
             feature_hash = class_idx_dict[str(class_id)]["featureHash"]
-            confidence = float(model_prediction.pop('confidence'))
-            theta = model_prediction.pop('theta', None)
-            rle = str(model_prediction.pop('rle'))
-            iou = float(model_prediction.pop('iou'))
-            pbb = [
-                float(model_prediction.pop('x1')),
-                float(model_prediction.pop('y1')),
-                float(model_prediction.pop('x2')),
-                float(model_prediction.pop('y2'))
+            confidence = float(model_prediction.pop("confidence"))
+            theta = model_prediction.pop("theta", None)
+            rle = str(model_prediction.pop("rle"))
+            iou = float(model_prediction.pop("iou"))
+            pbb: List[float] = [
+                float(model_prediction.pop("x1")),
+                float(model_prediction.pop("y1")),
+                float(model_prediction.pop("x2")),
+                float(model_prediction.pop("y2")),
             ]
-            p_metrics = {}
-            f_metrics = {}
+            p_metrics: dict = {}
+            f_metrics: dict = {}
             for metric_name, metric_value in model_prediction.items():
                 metric_target = metric_name[-4:]
                 metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
                 if metric_key == "$SKIP":
                     continue
-                if metric_target == ' (P)':
+                if metric_target == " (P)":
                     if metric_key in AnnotationMetrics:
                         _assign_metrics(
                             metric_column_name=metric_key,
@@ -463,7 +488,7 @@ def up(pfs: ProjectFileStructure) -> None:
                         pass  # FIXME: this p-metric should be stored somewhere.
                     else:
                         print(f"DEBUG, Extra p_metric: {metric_key}")
-                elif metric_target == ' (F)':
+                elif metric_target == " (F)":
                     f_metrics[metric_key] = metric_value
                 else:
                     raise ValueError(f"Unknown metric target: '{metric_target}'")
@@ -481,21 +506,25 @@ def up(pfs: ProjectFileStructure) -> None:
             match_feature_hash = None
             if label_match_id is not None:
                 matched_label = labels.iloc[label_match_id].to_dict()
-                if int(matched_label.pop('Unnamed: 0')) != label_match_id:
+                if int(matched_label.pop("Unnamed: 0")) != label_match_id:
                     raise ValueError(f"Inconsistent lookup: {label_match_id}")
                 if label_match_id in model_prediction_unmatched_indices:
                     model_prediction_unmatched_indices.remove(label_match_id)
                 matched_label_class_id = matched_label.pop("class_id")
                 matched_label_img_id = matched_label.pop("img_id")
                 matched_label_identifier = matched_label.pop("identifier")
-                matched_label_label_hash, matched_label_du_hash_str, matched_label_frame_str, *matched_label_hashes = \
-                    matched_label_identifier.split("_")
+                (
+                    matched_label_label_hash,
+                    matched_label_du_hash_str,
+                    matched_label_frame_str,
+                    *matched_label_hashes,
+                ) = matched_label_identifier.split("_")
                 if len(matched_label_hashes) != 1:
                     raise ValueError(f"Matched against multiple labels, this is invalid: {matched_label_identifier}")
                 if uuid.UUID(matched_label_du_hash_str) != du_hash:
-                    raise ValueError(f"Matched against different du_hash")
+                    raise ValueError(f"Matched against different du_hash: {du_hash}")
                 if int(matched_label_frame_str) != frame:
-                    raise ValueError(f"Matched against different frame")
+                    raise ValueError(f"Matched against different frame: {frame}")
                 # FIXME: this has metrics - should they be used anywhere??
 
                 # Set new values
@@ -518,14 +547,13 @@ def up(pfs: ProjectFileStructure) -> None:
                     # Ground truth match metadata
                     match_object_hash=match_object_hash,
                     match_feature_hash=match_feature_hash,
-                    match_duplicate_iou=-1.0 if match_feature_hash is not None and match_feature_hash == feature_hash
+                    match_duplicate_iou=-1.0
+                    if match_feature_hash is not None and match_feature_hash == feature_hash
                     else 1.0,  # 1.0 = always duplicate, -1.0 = never duplicate.
                     # Metrics
                     **assert_valid_args(ProjectPredictionObjectResults, p_metrics),
                 )
-                predictions_objects_db.append(
-                    new_predictions_object_db
-                )
+                predictions_objects_db.append(new_predictions_object_db)
                 if match_object_hash is not None:
                     # Assign all duplicate matches to match with non-highest iou
                     match_key = (du_hash, frame, match_object_hash)
@@ -541,8 +569,7 @@ def up(pfs: ProjectFileStructure) -> None:
                 # No post-processing needed (feature hash mismatches are by default excluded anyway).
                 continue
             model_prediction_group.sort(
-                key=lambda m_obj: (m_obj.iou, m_obj.confidence, m_obj.object_hash),
-                reverse=True
+                key=lambda m_obj: (m_obj.iou, m_obj.confidence, m_obj.object_hash), reverse=True
             )
 
             def confidence_compare_key(m_obj):
@@ -559,7 +586,7 @@ def up(pfs: ProjectFileStructure) -> None:
                         current_best_confidence = model_prediction_entry
                         current_best_compare_key = model_compare_key
                     elif current_best_compare_key is None:
-                        raise ValueError(f"Correctness violation for sorted order")
+                        raise ValueError(f"Correctness violation for sorted order: {model_prediction_group}")
                     elif model_compare_key > current_best_compare_key:
                         # IOU decrease has changed the maximum, assign thresholds.
                         current_best_confidence.match_duplicate_iou = model_prediction_entry.iou
@@ -569,7 +596,7 @@ def up(pfs: ProjectFileStructure) -> None:
                         # This model is always a duplicate
                         model_prediction_entry.match_duplicate_iou = model_prediction_entry.iou
                     else:
-                        raise ValueError(f"Failed to generate deterministic ordering for iou")
+                        raise ValueError(f"Failed to generate deterministic ordering for iou: {model_prediction_group}")
                 else:
                     # Never match as feature hash comparison is incorrect.
                     model_prediction_entry.match_duplicate_iou = 1.0
@@ -577,23 +604,26 @@ def up(pfs: ProjectFileStructure) -> None:
         # Add match failures to side table.
         for missing_label_idx in model_prediction_unmatched_indices:
             missing_label = labels.iloc[missing_label_idx].to_dict()
-            if int(missing_label.pop('Unnamed: 0')) != missing_label_idx:
+            if int(missing_label.pop("Unnamed: 0")) != missing_label_idx:
                 raise ValueError(f"Inconsistent lookup: {missing_label}")
-            missing_label_class_id = int(missing_label.pop('class_id'))
+            missing_label_class_id = int(missing_label.pop("class_id"))
             missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
             missing_label_identifier = missing_label.pop("identifier")
-            _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = \
-                missing_label_identifier.split("_")
+            _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split(
+                "_"
+            )
             if len(matched_label_hashes) != 1:
                 raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
 
-            predictions_missed_db.append(ProjectPredictionUnmatchedResults(
-                prediction_hash=prediction_hash,
-                du_hash=uuid.UUID(missing_du_hash_str),
-                frame=int(missing_frame_str),
-                object_hash=str(matched_label_hashes[0]),
-                feature_hash=str(missing_feature_hash)
-            ))
+            predictions_missed_db.append(
+                ProjectPredictionUnmatchedResults(
+                    prediction_hash=prediction_hash,
+                    du_hash=uuid.UUID(missing_du_hash_str),
+                    frame=int(missing_frame_str),
+                    object_hash=str(matched_label_hashes[0]),
+                    feature_hash=str(missing_feature_hash),
+                )
+            )
 
         # Ensure prediction currently stored actually exists.
         # FIXME: store prediction metadata for the prediction run.
@@ -612,17 +642,14 @@ def up(pfs: ProjectFileStructure) -> None:
             du_hash=du_hash,
             frame=frame,
             object_hash=object_hash,
-            **assert_valid_args(ProjectAnnotationAnalytics, metrics)
+            **assert_valid_args(ProjectAnnotationAnalytics, metrics),
         )
         for (du_hash, frame, object_hash), metrics in annotation_metrics.items()
     ]
 
     metrics_db_data = [
         ProjectDataAnalytics(
-            project_hash=project_hash,
-            du_hash=du_hash,
-            frame=frame,
-            **assert_valid_args(ProjectDataAnalytics, metrics)
+            project_hash=project_hash, du_hash=du_hash, frame=frame, **assert_valid_args(ProjectDataAnalytics, metrics)
         )
         for (du_hash, frame), metrics in data_metrics.items()
     ]

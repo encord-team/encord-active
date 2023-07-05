@@ -1,22 +1,17 @@
-import functools
 import math
 import uuid
-import json
-from enum import Enum
-from typing import Optional, Dict, Tuple, Union, List, Literal, Type
+from typing import Dict, List
 
 import numpy as np
 from fastapi import APIRouter
-from pynndescent import NNDescent
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import func, bindparam, Float, text
-from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
+from sqlalchemy import Float, bindparam, func, text
+from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.metrics import DataMetrics, AnnotationMetrics, MetricDefinition, MetricType
-from encord_active.db.models import ProjectDataAnalytics, ProjectAnnotationAnalytics, AnnotationType, \
-    ProjectPredictionObjectResults
+from encord_active.db.metrics import AnnotationMetrics, MetricType
+from encord_active.db.models import ProjectPredictionObjectResults
 from encord_active.server.routers.project2_engine import engine
 
 router = APIRouter(
@@ -25,6 +20,7 @@ router = APIRouter(
 
 
 # FIXME: verify project_hash <=> prediction hash is allowed to access
+
 
 @router.get("/summary")
 def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
@@ -98,19 +94,12 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
         ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float))
         precision_recall = sess.execute(
             sql,
-            params={
-                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
-                "iou": iou
-            },
+            params={"prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect), "iou": iou},
         ).fetchall()
 
         # Calculate correlation for metrics
         # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
-        metric_names = [
-            key
-            for key, value in AnnotationMetrics.items()
-            if value.virtual is None
-        ]
+        metric_names = [key for key, value in AnnotationMetrics.items() if value.virtual is None]
         metric_stats = sess.execute(
             text(
                 f"""
@@ -152,16 +141,12 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                 "iou": iou,
             },
         ).first()
-        metric_stat_names = [
-            f"{ty}_{name}"
-            for name in ["score"] + metric_names
-            for ty in ["e", "var"]
-        ]
+        metric_stat_names = [f"{ty}_{name}" for name in ["score"] + metric_names for ty in ["e", "var"]]
         valid_metric_stats = {}
         valid_metric_stat_name_set = set(metric_names)
-        for stat_name, stat_value in zip(metric_stat_names, metric_stats):
+        for stat_name, stat_value in zip(metric_stat_names, metric_stats or []):
             if stat_value is None:
-                stat = stat_name[len(stat_name.split("_")[0]) + 1:]
+                stat = stat_name[len(stat_name.split("_")[0]) + 1 :]
                 if stat in valid_metric_stat_name_set:
                     valid_metric_stat_name_set.remove(stat)
             else:
@@ -194,13 +179,10 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
             params={
                 "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
                 "iou": iou,
-                **valid_metric_stats
+                **valid_metric_stats,
             },
         ).first()
-        correlations = {
-            name: value
-            for name, value in zip(valid_metric_stat_names, correlation_result)
-        }
+        correlations = {name: value for name, value in zip(valid_metric_stat_names, correlation_result)}  # type: ignore
 
         # Precision recall curves
         prs = {}
@@ -256,7 +238,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                 params={
                     "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
                     "iou": iou,
-                    "feature_hash": feature_hash
+                    "feature_hash": feature_hash,
                 },
             ).fetchall()
             prs[feature_hash] = pr_result
@@ -264,14 +246,15 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
             importance = {}
             for metric_name in AnnotationMetrics.keys():
                 importance_data_query = select(
-                    ProjectPredictionObjectResults.iou * (
-                            (ProjectPredictionObjectResults.iou >= iou) &
-                            (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                    ProjectPredictionObjectResults.iou
+                    * (
+                        (ProjectPredictionObjectResults.iou >= iou)
+                        & (ProjectPredictionObjectResults.match_duplicate_iou < iou)
                     ),
-                    getattr(ProjectPredictionObjectResults, metric_name)
+                    getattr(ProjectPredictionObjectResults, metric_name),
                 ).where(
                     ProjectPredictionObjectResults.prediction_hash == prediction_hash,
-                    is_not(getattr(ProjectPredictionObjectResults, metric_name), None)
+                    is_not(getattr(ProjectPredictionObjectResults, metric_name), None),
                 )
                 importance_data = sess.exec(importance_data_query).fetchall()
                 if len(importance_data) == 0:
@@ -279,44 +262,33 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                 importance_regression = mutual_info_regression(
                     np.array([float(d[1]) for d in importance_data]).reshape(-1, 1),
                     np.array([float(d[0]) for d in importance_data]),
-                    random_state=42
+                    random_state=42,
                 )
                 importance[metric_name] = float(importance_regression[0])
 
     return {
         "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
         "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
-        "precisions": {
-            pr["feature_hash"]: pr["ap"]
-            for pr in precision_recall
-        },
-        "recalls": {
-            pr["feature_hash"]: pr["ar"]
-            for pr in precision_recall
-        },
+        "precisions": {pr["feature_hash"]: pr["ap"] for pr in precision_recall},
+        "recalls": {pr["feature_hash"]: pr["ar"] for pr in precision_recall},
         "correlation": correlations,
         "importance": importance,
-        "prs": prs
+        "prs": prs,
     }
 
 
 @router.get("/metric_performance")
-def prediction_metric_performance(
-        prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str
-):
+def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str):
     with Session(engine) as sess:
         metric = AnnotationMetrics[metric_name]
         metric_attr = getattr(ProjectPredictionObjectResults, metric_name)
-        where = [
-            ProjectPredictionObjectResults.prediction_hash == prediction_hash,
-            is_not(metric_attr, None)
-        ]
+        where = [ProjectPredictionObjectResults.prediction_hash == prediction_hash, is_not(metric_attr, None)]
         if metric.type == MetricType.NORMAL:
             metric_min = 0.0
             metric_max = 1.0
         else:
-            metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()
-            metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()
+            metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()  # type: ignore
+            metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()  # type: ignore
             if metric_min is None or metric_max is None:
                 return {
                     "precision": {},
@@ -326,28 +298,28 @@ def prediction_metric_performance(
             metric_max = float(metric_max)
         metric_bucket_size = (metric_max - metric_min) / buckets
         metric_buckets = sess.exec(
-            select(
+            select(  # type: ignore
                 ProjectPredictionObjectResults.feature_hash,
                 func.min(func.floor((metric_attr - metric_min) / metric_bucket_size), buckets - 1),
                 func.avg(
-                    (ProjectPredictionObjectResults.iou >= iou) &
-                    (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                    (ProjectPredictionObjectResults.iou >= iou)
+                    & (ProjectPredictionObjectResults.match_duplicate_iou < iou)
                 ),
-                func.count()
-            ).where(
+                func.count(),
+            )
+            .where(
                 *where,
-            ).group_by(
+            )
+            .group_by(
                 func.min(func.floor((metric_attr - metric_min) / metric_bucket_size), buckets - 1),
-                ProjectPredictionObjectResults.feature_hash
+                ProjectPredictionObjectResults.feature_hash,
             )
         )
-        precision = {}
+        precision: Dict[str, List[dict]] = {}
         for feature, bucket_id, bucket_avg, bucket_num in metric_buckets:
-            precision.setdefault(feature, []).append({
-                "m": metric_min + (metric_bucket_size * int(bucket_num)),
-                "a": bucket_avg,
-                "n": bucket_num
-            })
+            precision.setdefault(feature, []).append(
+                {"m": metric_min + (metric_bucket_size * int(bucket_num)), "a": bucket_avg, "n": bucket_num}
+            )
 
     return {
         "precision": precision,

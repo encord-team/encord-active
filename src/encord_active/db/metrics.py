@@ -1,12 +1,14 @@
-from typing import Dict, Union, Callable, Optional, TypeVar
-from enum import Enum
 from dataclasses import dataclass
-from sqlmodel import column
+from enum import Enum
+from typing import Callable, Dict, Optional, Type, TypeVar, Union
+
 from pydantic import BaseModel
+from sqlmodel import column
 
 
 class MetricType(Enum):
-    """ Type of the metric """
+    """Type of the metric"""
+
     NORMAL = "normal"
     """ Normal float between 0 and 1"""
     UINT = "uint"
@@ -76,7 +78,7 @@ DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    #"metric_blur": MetricDefinition(
+    # "metric_blur": MetricDefinition(
     #    title="Blur",
     #    short_desc="",
     #    long_desc="",
@@ -86,7 +88,7 @@ DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
     #        flip_ord=True,
     #        map=lambda x: 1.0 - x,
     #    )
-    #),
+    # ),
     "metric_red": MetricDefinition(
         title="Red",
         short_desc="Redness of the image data",
@@ -110,7 +112,7 @@ DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
         short_desc="Random value",
         long_desc="",
         type=MetricType.NORMAL,
-    )
+    ),
 }
 
 _DataOnlyMetrics: Dict[str, MetricDefinition] = {
@@ -204,23 +206,23 @@ AnnotationMetrics = DataAnnotationSharedMetrics | AnnotationOnlyMetrics
 TSQLClass = TypeVar("TSQLClass", bound=BaseModel)
 
 
-def assert_cls_metrics_match(metrics: Dict[str, MetricDefinition]) -> Callable[[TSQLClass], TSQLClass]:
-    def wrapper(cls: TSQLClass) -> TSQLClass:
-        fields = cls.__fields__
+def assert_cls_metrics_match(metrics: Dict[str, MetricDefinition]) -> Callable[[Type[TSQLClass]], Type[TSQLClass]]:
+    def wrapper(cls: Type[TSQLClass]) -> Type[TSQLClass]:
+        fields: Dict[str, None] = cls.__fields__  # type: ignore
         # No missing metrics
         for metric_name, metric_definition in metrics.items():
             if metric_definition.virtual is not None:
                 continue
             field = fields.get(metric_name, None)
             if field is None:
-                raise ValueError(f"Class: {cls.__name__} is missing metric field: {metric_name}")
+                raise ValueError(f"Class: {cls.__name__} is missing metric field: {metric_name}")  # type: ignore
 
         # No extra metrics
         for field in fields:
             if field.startswith("metric_"):
                 metric = metrics.get(field, None)
                 if metric is None or metric.virtual is not None:
-                    raise ValueError(f"Class: {cls.__name__} has extra metric: {field}")
+                    raise ValueError(f"Class: {cls.__name__} has extra metric: {field}")  # type: ignore
         return cls
 
     return wrapper
