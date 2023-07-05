@@ -231,11 +231,11 @@ def get_2d_embeddings(
 
         if filters.prediction_filters.type == MainPredictionType.OBJECT:
             labels = labels[[LabelMatchSchema.is_false_negative]]
-            labels = labels[labels[LabelMatchSchema.is_false_negative] == True]
+            labels = labels[labels[LabelMatchSchema.is_false_negative] == True].copy()
             labels["data_row_id"] = partial_column(labels.index, 3)
             labels["score"] = 0
             labels.drop(LabelMatchSchema.is_false_negative, axis=1, inplace=True)
-            predictions = predictions[[PredictionMatchSchema.is_true_positive]]
+            predictions = predictions[[PredictionMatchSchema.is_true_positive]].copy()
             predictions["data_row_id"] = partial_column(predictions.index, 3)
             predictions.rename(columns={PredictionMatchSchema.is_true_positive: "score"}, inplace=True)
 
