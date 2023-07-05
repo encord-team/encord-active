@@ -1,52 +1,42 @@
-import functools
-import json
-import math
 import uuid
-from enum import Enum
-from typing import Optional, Dict, Tuple, Union, List, Type, Literal
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
 
-import numpy as np
-
 from fastapi import APIRouter
-from pynndescent import NNDescent
-from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import func, bindparam, text
-from sqlalchemy.types import Float
-from sqlalchemy.sql.operators import is_not, in_op, not_between_op, between_op
+from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
-from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.metrics import DataMetrics, AnnotationMetrics, MetricDefinition, MetricType
-from encord_active.db.models import get_engine, Project, ProjectDataUnitMetadata, ProjectTaggedDataUnit, \
-    ProjectTaggedAnnotation, ProjectTag, ProjectDataAnalytics, ProjectAnnotationAnalytics, ProjectDataMetadata, \
-    ProjectPrediction, AnnotationType, ProjectPredictionObjectResults
+from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
+from encord_active.db.models import (
+    Project,
+    ProjectAnnotationAnalytics,
+    ProjectDataAnalytics,
+    ProjectDataMetadata,
+    ProjectDataUnitMetadata,
+    ProjectPrediction,
+    ProjectTag,
+    ProjectTaggedAnnotation,
+    ProjectTaggedDataUnit,
+)
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.routers import project2_analysis, project2_prediction
-from encord_active.server.settings import get_settings
 from encord_active.server.routers.project2_engine import engine
-
+from encord_active.server.settings import get_settings
 
 router = APIRouter(
     prefix="/projects_v2",
     tags=["projects_v2"],
     # FIXME: dependencies=[Depends(verify_token)],
 )
-router.include_router(
-    project2_analysis.router
-)
-router.include_router(
-    project2_prediction.router
-)
+router.include_router(project2_analysis.router)
+router.include_router(project2_prediction.router)
 
 
 @router.get("/list")
 def get_all_projects():
     with Session(engine) as sess:
-        projects = sess.exec(
-            select(Project.project_hash, Project.project_name, Project.project_description)
-        ).fetchall()
+        projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
     return {
         project_hash: {
             "title": title,
@@ -77,11 +67,17 @@ def get_project_summary(project_hash: uuid.UUID):
 
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
-        preview = sess.exec(select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
-                            .where(ProjectAnnotationAnalytics.project_hash == project_hash).limit(1)).first()
+        preview = sess.exec(
+            select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
+            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+            .limit(1)
+        ).first()
         if preview is None:
-            preview = sess.exec(select(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
-                                .where(ProjectDataUnitMetadata.project_hash == project_hash).limit(1)).first()
+            preview = sess.exec(
+                select(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
+                .where(ProjectDataUnitMetadata.project_hash == project_hash)
+                .limit(1)
+            ).first()
 
     return {
         "name": project.project_name,
@@ -97,20 +93,14 @@ def get_project_summary(project_hash: uuid.UUID):
                 "feature_hash": None,
             },
         },
-        "tags": {
-            tag.tag_hash: tag.name
-            for tag in tags
-        },
-        "preview": {
-            "du_hash": preview[0],
-            "frame": preview[1]
-        } if preview is not None else None
+        "tags": {tag.tag_hash: tag.name for tag in tags},
+        "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
     }
 
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
 def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):
-    objects = []
+    objects: List[dict] = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         query = select(
@@ -121,44 +111,51 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
         ).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
             ProjectDataUnitMetadata.du_hash == du_hash,
-            ProjectDataUnitMetadata.frame == frame
+            ProjectDataUnitMetadata.frame == frame,
         )
         result = sess.exec(query).fetchone()
         if result is None:
             raise ValueError("Missing project data unit metadata")
-        uri, uri_is_video, objects, data_hash = result
-        label_hash, frames_per_second = sess.exec(
-            select(ProjectDataMetadata.label_hash, ProjectDataMetadata.frames_per_second)
-            .where(ProjectDataMetadata.project_hash == project_hash,
-                   ProjectDataMetadata.data_hash == data_hash)
+        uri, uri_is_video, objects, data_hash = result  # type: ignore
+        data_metadata = sess.exec(
+            select(ProjectDataMetadata.label_hash, ProjectDataMetadata.frames_per_second).where(
+                ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == data_hash
+            )
         ).first()
+        if data_metadata is None:
+            raise ValueError("Missing project data metadata")
+        label_hash, frames_per_second = data_metadata
         if label_hash is None:
             raise ValueError("Missing label_hash")
 
         if object_hash is None:
-            query_tags = select(
-                ProjectTag,
-            ).where(
-                ProjectTaggedDataUnit.project_hash == project_hash,
-                ProjectTaggedDataUnit.du_hash == du_hash,
-                ProjectTaggedDataUnit.frame == frame,
-            ).join(ProjectTaggedDataUnit, ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash)
+            query_tags = (
+                select(
+                    ProjectTag,
+                )
+                .where(
+                    ProjectTaggedDataUnit.project_hash == project_hash,
+                    ProjectTaggedDataUnit.du_hash == du_hash,
+                    ProjectTaggedDataUnit.frame == frame,
+                )
+                .join(ProjectTaggedDataUnit, ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash)
+            )
         else:
-            query_tags = select(
-                ProjectTag,
-            ).where(
-                ProjectTaggedAnnotation.project_hash == project_hash,
-                ProjectTaggedAnnotation.du_hash == du_hash,
-                ProjectTaggedAnnotation.frame == frame,
-                ProjectTaggedAnnotation.object_hash == object_hash,
-            ).join(ProjectTaggedAnnotation, ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash)
+            query_tags = (
+                select(
+                    ProjectTag,
+                )
+                .where(
+                    ProjectTaggedAnnotation.project_hash == project_hash,
+                    ProjectTaggedAnnotation.du_hash == du_hash,
+                    ProjectTaggedAnnotation.frame == frame,
+                    ProjectTaggedAnnotation.object_hash == object_hash,
+                )
+                .join(ProjectTaggedAnnotation, ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash)
+            )
         result_tags = sess.exec(query_tags).fetchall()
     if object_hash is not None:
-        objects = [
-            obj
-            for obj in objects
-            if obj["objectHash"] == object_hash
-        ]
+        objects = [obj for obj in objects if obj["objectHash"] == object_hash]
         if len(objects) == 0:
             raise ValueError("ObjectHash does not exist at that frame")
     if uri is not None:
@@ -170,28 +167,21 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
             uri = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
     elif project is not None and project.project_remote_ssh_key_path is not None:
         encord_project = get_encord_project(
-            ssh_key_path=project.project_remote_ssh_key_path,
-            project_hash=str(project_hash)
+            ssh_key_path=project.project_remote_ssh_key_path, project_hash=str(project_hash)
         )
-        uri = encord_project.get_label_row(
-            str(label_hash), get_signed_url=True,
-        )["data_units"][str(du_hash)]["data_link"]
+        uri = encord_project.get_label_row(str(label_hash), get_signed_url=True,)["data_units"][
+            str(du_hash)
+        ]["data_link"]
     else:
-        raise ValueError(f"Cannot resolve project url")
+        raise ValueError(f"Cannot resolve project url: {project_hash} / {label_hash} / {du_hash}")
 
     timestamp = None
     if uri_is_video:
-        timestamp = (float(int(frame)) + 0.5) / frames_per_second
+        if frames_per_second is None:
+            raise ValueError(f"Video defined but missing valid frames_per_second")
+        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
 
-    return {
-        "url": uri,
-        "timestamp": timestamp,
-        "objects": objects,
-        "tags": [
-            tag.tag_hash
-            for tag in result_tags
-        ]
-    }
+    return {"url": uri, "timestamp": timestamp, "objects": objects, "tags": [tag.tag_hash for tag in result_tags]}
 
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/")
@@ -202,28 +192,31 @@ def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int
 @router.get("/get/{project_hash}/item/{du_hash}/{frame}/")
 def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     with Session(engine) as sess:
-        du_meta = sess.exec(select(ProjectDataUnitMetadata).where(
-            ProjectDataUnitMetadata.project_hash == project_hash,
-            ProjectDataUnitMetadata.du_hash == du_hash,
-            ProjectDataUnitMetadata.frame == frame
-        )).first()
-        data_meta = sess.exec(select(ProjectDataMetadata).where(
-            ProjectDataMetadata.project_hash == project_hash,
-            ProjectDataMetadata.data_hash == du_meta.data_hash
-        )).first()
+        du_meta = sess.exec(
+            select(ProjectDataUnitMetadata).where(
+                ProjectDataUnitMetadata.project_hash == project_hash,
+                ProjectDataUnitMetadata.du_hash == du_hash,
+                ProjectDataUnitMetadata.frame == frame,
+            )
+        ).first()
+        if du_meta is None:
+            raise ValueError("Invalid request")
+        data_meta = sess.exec(
+            select(ProjectDataMetadata).where(
+                ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == du_meta.data_hash
+            )
+        ).first()
+        if data_meta is None:
+            raise ValueError("Invalid request")
         du_analytics = sess.exec(
-            select(
-                ProjectDataAnalytics
-            ).where(
+            select(ProjectDataAnalytics).where(
                 ProjectDataAnalytics.project_hash == project_hash,
                 ProjectDataAnalytics.du_hash == du_hash,
                 ProjectDataAnalytics.frame == frame,
             )
         ).first()
         object_analytics = sess.exec(
-            select(
-                ProjectAnnotationAnalytics
-            ).where(
+            select(ProjectAnnotationAnalytics).where(
                 ProjectAnnotationAnalytics.project_hash == project_hash,
                 ProjectAnnotationAnalytics.du_hash == du_hash,
                 ProjectAnnotationAnalytics.frame == frame,
@@ -231,23 +224,14 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
         ).fetchall()
     if du_meta is None or du_analytics is None:
         raise ValueError
-    obj_metrics = {
-        o.object_hash: o
-        for o in object_analytics or []
-    }
+    obj_metrics = {o.object_hash: o for o in object_analytics or []}
 
     return {
-        "metrics": {
-            k: getattr(du_analytics, k)
-            for k in DataMetrics
-        },
+        "metrics": {k: getattr(du_analytics, k) for k in DataMetrics},
         "objects": [
             {
                 **obj,
-                "metrics": {
-                    k: getattr(obj_metrics[obj["objectHash"]], k)
-                    for k in AnnotationMetrics
-                },
+                "metrics": {k: getattr(obj_metrics[obj["objectHash"]], k) for k in AnnotationMetrics},
                 "tags": [],
             }
             for obj in du_meta.objects
@@ -266,17 +250,14 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
 @router.get("/get/{project_hash}/predictions/list")
 def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = None, limit: Optional[int] = None):
     with Session(engine) as sess:
-        predictions = sess.exec(select(ProjectPrediction)
-                                .where(ProjectPrediction.project_hash == project_hash)).fetchall()
+        predictions = sess.exec(
+            select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)
+        ).fetchall()
     return {
         "total": len(predictions),
         "results": [
-            {
-                "name": prediction.name,
-                "prediction_hash": prediction.prediction_hash
-            }
-            for prediction in predictions
-        ]
+            {"name": prediction.name, "prediction_hash": prediction.prediction_hash} for prediction in predictions
+        ],
     }
 
 
@@ -284,18 +265,9 @@ def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = No
 def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], name: str):
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
-        sess.add(ProjectTag(
-            tag_hash=tag_hash,
-            project_hash=project_hash,
-            name=name
-        ))
+        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
         tags = [
-            ProjectTaggedDataUnit(
-                project_hash=project_hash,
-                du_hash=du_hash,
-                frame=frame,
-                tag_hash=tag_hash
-            )
+            ProjectTaggedDataUnit(project_hash=project_hash, du_hash=du_hash, frame=frame, tag_hash=tag_hash)
             for du_hash, frame in data
         ]
         sess.add_all(tags)
@@ -306,18 +278,10 @@ def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], 
 def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.UUID, int, str]], name: str):
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
-        sess.add(ProjectTag(
-            tag_hash=tag_hash,
-            project_hash=project_hash,
-            name=name
-        ))
+        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
         tags = [
             ProjectTaggedAnnotation(
-                project_hash=project_hash,
-                du_hash=du_hash,
-                frame=frame,
-                object_hash=object_hash,
-                tag_hash=tag_hash
+                project_hash=project_hash, du_hash=du_hash, frame=frame, object_hash=object_hash, tag_hash=tag_hash
             )
             for du_hash, frame, object_hash in annotations
         ]
@@ -334,21 +298,19 @@ def create_active_subset(project_hash: uuid.UUID, du_hashes: List[uuid.UUID], na
         if project.project_remote_ssh_key_path is None:
             # Run for local project
             subset_hash = uuid.uuid4()
-            sess.add(Project(
-                project_hash=subset_hash,
-                project_name=name,
-                project_description=description,
-                project_remote_ssh_key_path=None,
-                project_ontology=project.project_ontology,
-            ))
+            sess.add(
+                Project(
+                    project_hash=subset_hash,
+                    project_name=name,
+                    project_description=description,
+                    project_remote_ssh_key_path=None,
+                    project_ontology=project.project_ontology,
+                )
+            )
             # FIXME: if partial du_hash is requested for image group, what is correct behaviour??
             # FIXME: allow partial frame selection??
-            data_list = select(
-                ProjectDataUnitMetadata.data_hash,
-                ProjectDataUnitMetadata.du_hash,
-            ).where(
-                ProjectDataUnitMetadata.project_hash == project_hash,
-                in_op(ProjectDataUnitMetadata.du_hash, du_hashes)
+            data_list = select(ProjectDataUnitMetadata.data_hash, ProjectDataUnitMetadata.du_hash,).where(
+                ProjectDataUnitMetadata.project_hash == project_hash, in_op(ProjectDataUnitMetadata.du_hash, du_hashes)
             )
             # TODO: data_hashes => (du_hash, frame) pairs
             # populate metadata tables

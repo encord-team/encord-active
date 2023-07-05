@@ -3,7 +3,7 @@ import logging
 import sys
 from pathlib import Path
 
-from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
+from encord_active.lib.project.metadata import fetch_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logging.getLogger("Data Migrations")
