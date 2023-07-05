@@ -43,7 +43,7 @@ def import_predictions(
         import_predictions as app_import_predictions,
     )
 
-    app_import_predictions(project, target, predictions)
+    app_import_predictions(project, predictions)
 
 
 ENCORD_RICH_PANEL = "Encord Project Arguments"

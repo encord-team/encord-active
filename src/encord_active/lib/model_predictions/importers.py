@@ -248,7 +248,7 @@ def import_KITTI_labels(
             )
 
 
-def import_predictions(project: Project, data_dir: Path, predictions: List[Prediction]):
+def import_predictions(project: Project, predictions: List[Prediction]):
     with PredictionWriter(project) as writer:
         for pred in predictions:
             writer.add_prediction(pred)
@@ -261,5 +261,8 @@ def import_predictions(project: Project, data_dir: Path, predictions: List[Predi
         raise EmptyDataError("Predictions do not exist!")
 
     run_all_prediction_metrics(
-        data_dir=data_dir, iterator_cls=PredictionIterator, use_cache_only=True, prediction_type=prediction_type
+        data_dir=project.file_structure.project_dir,
+        iterator_cls=PredictionIterator,
+        use_cache_only=True,
+        prediction_type=prediction_type,
     )
