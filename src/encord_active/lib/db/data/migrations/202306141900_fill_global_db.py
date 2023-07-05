@@ -25,7 +25,7 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine,
+    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.db.connection import PrismaConnection
@@ -95,12 +95,14 @@ def assert_valid_args(cls, dct: dict) -> dict:
 
 
 def _assign_metrics(
-    metric_column_name: str,
-    metrics_dict: dict,
-    score: float,
-    metric_types: Dict[str, MetricDefinition],
-    metrics_derived: Set[str],
-    error_identifier: str,
+        metric_column_name: str,
+        metrics_dict: dict,
+        score: float,
+        metric_types: Dict[str, MetricDefinition],
+        metrics_derived: Set[str],
+        error_identifier: str,
+        description_dict: Optional[Tuple[Dict[str, bytes], Dict[str, str]]],
+        description: Optional[str],
 ):
     if metric_column_name not in metrics_dict:
         if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
@@ -142,6 +144,40 @@ def _assign_metrics(
                     f"Percentage = {score_p1}, {score_p2}"
                     f"{metric_column_name}, {existing_score}, {score}"
                 )
+    # Assign description
+    if description_dict is not None and description is not None \
+            and isinstance(description, str) and len(description) > 0:
+        _, metric_description_map = description_dict
+        if metric_column_name not in metric_description_map:
+            metric_description_map[metric_column_name] = description
+        elif description not in metric_description_map[metric_column_name]:
+            metric_description_map[metric_column_name] = str(metric_description_map[metric_column_name] + ", " + description)
+
+
+def _load_embeddings(
+        pfs: ProjectFileStructure,
+        data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]],
+        annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]],
+) -> None:
+    for embedding_type, embedding_name in [
+        (EmbeddingType.IMAGE, "embedding_clip"),
+        (EmbeddingType.OBJECT, "embedding_clip"),
+        (EmbeddingType.CLASSIFICATION, "embedding_clip"),
+        #FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu"),
+    ]:
+        label_embeddings = load_label_embeddings(embedding_type, pfs)
+        for embedding in label_embeddings:
+            du_hash = uuid.UUID(embedding["data_unit"])
+            frame = int(embedding["frame"])
+            annotation_hash: Optional[str] = (
+                str(embedding["labelHash"]) if embedding.get("labelHash", None) is not None else None
+            )
+            embedding_bytes: bytes = embedding["embedding"].tobytes()
+            if annotation_hash is not None:
+                embedding_dict, _ = annotation_metric_extra[(du_hash, frame, annotation_hash)]
+            else:
+                embedding_dict, _ = data_metric_extra[(du_hash, frame)]
+            embedding_dict[embedding_name] = embedding_bytes
 
 
 def up(pfs: ProjectFileStructure) -> None:
@@ -154,6 +190,8 @@ def up(pfs: ProjectFileStructure) -> None:
     data_classification_metrics: Dict[
         Tuple[uuid.UUID, int], List[Dict[str, Union[int, float, bytes, str, AnnotationType, None]]]
     ] = {}
+    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]] = {}
+    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]] = {}
 
     database_dir = pfs.project_dir.parent.expanduser().resolve()
 
@@ -225,10 +263,10 @@ def up(pfs: ProjectFileStructure) -> None:
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,
-                        "annotation_value": obj.get("value", None),
                         "annotation_creator": str(obj["createdBy"]) if obj["manualAnnotation"] else None,
                         "annotation_confidence": float(obj["confidence"]),
                     }
+                    annotation_metric_extra[(du_hash, data_unit.frame, object_hash)] = ({}, {})
                 classifications = labels_json.get("classifications", [])
                 for classify in classifications:
                     classification_hash = str(classify["classificationHash"])
@@ -241,10 +279,10 @@ def up(pfs: ProjectFileStructure) -> None:
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
                         "feature_hash": str(classify["featureHash"]),
                         "annotation_type": AnnotationType.CLASSIFICATION,
-                        "annotation_value": classify.get("value", None),
                         "annotation_creator": str(classify["createdBy"]) if classify["manualAnnotation"] else None,
                         "annotation_confidence": float(classify["confidence"]),
                     }
+                    annotation_metric_extra[(du_hash, data_unit.frame, classification_hash)] = ({}, {})
                     data_classification_metrics.setdefault((du_hash, data_unit.frame), []).append(
                         annotation_metrics[(du_hash, data_unit.frame, classification_hash)]
                     )
@@ -256,6 +294,7 @@ def up(pfs: ProjectFileStructure) -> None:
                     "metric_aspect_ratio": float(data_unit.width) / float(data_unit.height),
                     "metric_object_count": len(objects),
                 }
+                data_metric_extra[(du_hash, data_unit.frame)] = ({}, {})
                 # Ensure relative uri paths remain correct!!
                 data_uri = data_unit.data_uri
                 if data_uri is not None and data_uri.startswith("relative://"):
@@ -348,6 +387,8 @@ def up(pfs: ProjectFileStructure) -> None:
                         metric_types=AnnotationMetrics,
                         metrics_derived=DERIVED_LABEL_METRICS,
                         error_identifier=metric_entry["identifier"],
+                        description_dict=annotation_metric_extra[(du_hash, frame, object_hash)],
+                        description=metric_entry.get("description", None),
                     )
             else:
                 _assign_metrics(
@@ -357,6 +398,8 @@ def up(pfs: ProjectFileStructure) -> None:
                     metric_types=DataMetrics,
                     metrics_derived=DERIVED_DATA_METRICS,
                     error_identifier=metric_entry["identifier"],
+                    description_dict=data_metric_extra[(du_hash, frame)],
+                    description=metric_entry.get("description", None)
                 )
                 if metric_column_name in DataAnnotationSharedMetrics:
                     for classification_dict in data_classification_metrics.get((du_hash, frame), []):
@@ -367,30 +410,16 @@ def up(pfs: ProjectFileStructure) -> None:
                             metric_types=AnnotationMetrics,
                             metrics_derived=DERIVED_LABEL_METRICS,
                             error_identifier=f"classify for: {metric_entry['identifier']}",
+                            description_dict=None,
+                            description=None,
                         )
 
     # Load embeddings
-    for embedding_type, embedding_name in [
-        (EmbeddingType.IMAGE, "embedding_clip"),
-        (EmbeddingType.OBJECT, "embedding_clip"),
-        (EmbeddingType.CLASSIFICATION, "embedding_clip"),
-        # FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu")
-    ]:
-        label_embeddings = load_label_embeddings(embedding_type, pfs)
-        for embedding in label_embeddings:
-            du_hash = uuid.UUID(embedding["data_unit"])
-            frame = int(embedding["frame"])
-            object_hash_emb_opt: Optional[str] = (
-                str(embedding["labelHash"]) if embedding.get("labelHash", None) is not None else None
-            )
-            embedding_bytes: bytes = embedding["embedding"].tobytes()
-            if object_hash_emb_opt is not None:
-                metrics_dict_emb: Dict[str, Union[int, float, bytes, str, AnnotationType, None]] = annotation_metrics[
-                    (du_hash, frame, object_hash_emb_opt)
-                ]
-            else:
-                metrics_dict_emb = data_metrics[(du_hash, frame)]  # type: ignore
-            metrics_dict_emb[embedding_name] = embedding_bytes
+    _load_embeddings(
+        pfs=pfs,
+        data_metric_extra=data_metric_extra,
+        annotation_metric_extra=annotation_metric_extra
+    )
 
     # Load 2d embeddings
     # FIXME: implement (reduction should be marked as separate)
@@ -419,13 +448,13 @@ def up(pfs: ProjectFileStructure) -> None:
 
         # Load all metadata for this prediction store.
         metrics_dir = pfs.metrics
-        predictions_metric_datas = reader.get_prediction_metric_data(predictions_dir, metrics_dir)
-        model_predictions = reader.get_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
-        class_idx_dict = reader.get_class_idx(predictions_dir)
-        gt_matched = reader.get_gt_matched(predictions_dir)
+        predictions_metric_datas = reader.read_prediction_metric_data(predictions_dir, metrics_dir)
+        model_predictions = reader.read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
+        class_idx_dict = reader.read_class_idx(predictions_dir)
+        gt_matched = reader.read_gt_matched(predictions_dir)
 
-        label_metric_datas = reader.get_label_metric_data(metrics_dir)
-        labels = reader.get_labels(predictions_dir, label_metric_datas, prediction_type)
+        label_metric_datas = reader.read_label_metric_data(metrics_dir)
+        labels = reader.read_labels(predictions_dir, label_metric_datas, prediction_type)
         if gt_matched is None or labels is None or model_predictions is None:
             raise ValueError("Missing prediction files for migration!")
 
@@ -483,6 +512,8 @@ def up(pfs: ProjectFileStructure) -> None:
                             metric_types=AnnotationMetrics,
                             metrics_derived=set(),
                             error_identifier=identifier,
+                            description_dict=None,
+                            description=None,
                         )
                     elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
                         pass  # FIXME: this p-metric should be stored somewhere.
@@ -543,6 +574,8 @@ def up(pfs: ProjectFileStructure) -> None:
                     feature_hash=feature_hash,
                     confidence=confidence,
                     iou=iou,
+                    annotation_type=AnnotationType.BITMASK,  # FIXME: encode prediction correctly!!
+                    annotation_bytes="".encode("utf-8"),
                     # FIXME: pbb (aim to support all prediction descriptors (bytes??)
                     # Ground truth match metadata
                     match_object_hash=match_object_hash,
@@ -615,13 +648,22 @@ def up(pfs: ProjectFileStructure) -> None:
             if len(matched_label_hashes) != 1:
                 raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
 
+            missing_du_hash = uuid.UUID(missing_du_hash_str)
+            missing_frame = int(missing_frame_str)
+            missing_annotation_hash = str(matched_label_hashes[0])
+            missing_annotation_metrics = annotation_metrics[(missing_du_hash, missing_frame, missing_annotation_hash)]
+            if str(missing_feature_hash) != missing_annotation_metrics["feature_hash"]:
+                raise ValueError(f"Inconsistent feature_hash for missed annotation!")
             predictions_missed_db.append(
                 ProjectPredictionUnmatchedResults(
                     prediction_hash=prediction_hash,
-                    du_hash=uuid.UUID(missing_du_hash_str),
-                    frame=int(missing_frame_str),
-                    object_hash=str(matched_label_hashes[0]),
-                    feature_hash=str(missing_feature_hash),
+                    du_hash=missing_du_hash,
+                    frame=missing_frame,
+                    object_hash=missing_annotation_hash,
+                    **assert_valid_args(
+                        ProjectPredictionUnmatchedResults,
+                        missing_annotation_metrics
+                    )
                 )
             )
 
@@ -647,11 +689,34 @@ def up(pfs: ProjectFileStructure) -> None:
         for (du_hash, frame, object_hash), metrics in annotation_metrics.items()
     ]
 
+    metrics_db_objects_extra = [
+        ProjectAnnotationAnalyticsExtra(
+            project_hash=project_hash,
+            du_hash=du_hash,
+            frame=frame,
+            object_hash=object_hash,
+            metric_metadata=metric_metadata,
+            **assert_valid_args(ProjectAnnotationAnalyticsExtra, embeddings),
+        )
+        for (du_hash, frame, object_hash), (embeddings, metric_metadata) in annotation_metric_extra.items()
+    ]
+
     metrics_db_data = [
         ProjectDataAnalytics(
             project_hash=project_hash, du_hash=du_hash, frame=frame, **assert_valid_args(ProjectDataAnalytics, metrics)
         )
         for (du_hash, frame), metrics in data_metrics.items()
+    ]
+
+    metrics_db_data_extra = [
+        ProjectDataAnalyticsExtra(
+            project_hash=project_hash,
+            du_hash=du_hash,
+            frame=frame,
+            metric_metadata=metric_metadata,
+            **assert_valid_args(ProjectDataAnalyticsExtra, embeddings),
+        )
+        for (du_hash, frame), (embeddings, metric_metadata) in data_metric_extra.items()
     ]
 
     path = database_dir / "encord-active.sqlite"
@@ -661,7 +726,9 @@ def up(pfs: ProjectFileStructure) -> None:
         sess.add_all(data_metas)
         sess.add_all(data_units_metas)
         sess.add_all(metrics_db_objects)
+        sess.add_all(metrics_db_objects_extra)
         sess.add_all(metrics_db_data)
+        sess.add_all(metrics_db_data_extra)
         sess.add_all(project_tag_definitions)
         sess.add_all(project_data_tags)
         sess.add_all(project_object_tags)
