@@ -35,9 +35,9 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]) -> None:
         )
 
 
-async def verify_token(token: Annotated[str, Depends(oauth2_scheme)], project_hash: str) -> None:
+async def verify_token_with_project_hash(token: Annotated[str, Depends(oauth2_scheme)], project_hash: str) -> None:
     # FIXME: tokens should give information about which project_hashes are allowed.
-    return verify_token(token)
+    return await verify_token(token)
 
 
 async def verify_premium():

@@ -1,9 +1,7 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Alembic needs all model types import to recognise them correctly.
 from encord_active.db.models import *
@@ -26,12 +24,11 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 target_metadata.naming_convention = {
-   "ix": "ix_%(column_0_label)s",
-   "uq": "uq_%(table_name)s_%(column_0_name)s",
-   "ck": "ck_%(table_name)s_%(constraint_name)s",
-   "fk": "fk_%(table_name)s_%(column_0_name)"
-         "s_%(referred_table_name)s",
-   "pk": "pk_%(table_name)s"
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)" "s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
 }
 
 
@@ -73,9 +70,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
