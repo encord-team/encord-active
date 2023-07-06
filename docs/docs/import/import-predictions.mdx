@@ -344,7 +344,7 @@ Importing COCO predictions is currently the easiest way to import predictions in
 You need to have a results JSON file following the [COCO results format](https://cocodataset.org/#format-results) and run the following command on it:
 
 :::info
-Ensure that the coordinates in the COCO result file are absolute (not scaled into [0-1]).
+Make sure that the annotation coordinates in the COCO result file are not normalized (not scaled into [0-1]).
 :::
 
 ```shell
