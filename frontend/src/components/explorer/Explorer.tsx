@@ -35,6 +35,7 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
+import { sift } from "radash";
 
 export type Props = {
   authToken?: string | null;
@@ -78,13 +79,13 @@ export const Explorer = ({
     { staleTime: Infinity }
   );
   const { data: hasSimilaritySearch } = useQuery(
-    ["hasSimilaritySearch"],
+    sift(["hasSimilaritySearch", selectedMetric?.embeddingType]),
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
     { enabled: !!selectedMetric, staleTime: Infinity }
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
-    ["similarities", similarityItem ?? ""],
+    sift([scope, "similarities", similarityItem]),
     () =>
       api.fetchSimilarItems(
         similarityItem!,
@@ -94,12 +95,17 @@ export const Explorer = ({
   );
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
-    ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
+    sift([
+      "item_ids",
+      selectedMetric?.name,
+      JSON.stringify(filters),
+      [...itemSet],
+    ]),
     () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
     { enabled: !!selectedMetric, staleTime: Infinity }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
-    ["metrics", scope],
+    [scope, "metrics", JSON.stringify(filters?.prediction_filters)],
     () =>
       api.fetchProjectMetrics(
         scope,

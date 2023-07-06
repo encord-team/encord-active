@@ -22,7 +22,7 @@ export const useSearch = (
   const [result, setResult] = useState<Result | undefined>();
 
   const { refetch, isFetching, data } = useQuery(
-    ["search", scope, search?.type, search?.query],
+    [scope, "search", search?.type, search?.query],
     ({ signal }) => {
       if (!search?.query) return null;
       client.cancelQueries(["search"]);

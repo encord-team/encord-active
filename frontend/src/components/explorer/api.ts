@@ -419,7 +419,7 @@ export const useApi = () => {
       filters: Filters
     ) =>
       useQuery(
-        ["2d_embeddings", embeddingType],
+        ["2d_embeddings", embeddingType, JSON.stringify(filters)],
         () => api.fetchProject2DEmbeddings(embeddingType, filters),
         { enabled: !!embeddingType, staleTime: Infinity }
       ),
