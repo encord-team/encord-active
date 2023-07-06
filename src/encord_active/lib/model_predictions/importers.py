@@ -17,6 +17,7 @@ from pandas.errors import EmptyDataError
 from PIL import Image
 from tqdm.auto import tqdm
 
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.predictions import (
     BoundingBox,
     Format,
@@ -30,7 +31,7 @@ from encord_active.lib.model_predictions.writer import (
     MainPredictionType,
     PredictionWriter,
 )
-from encord_active.lib.project import Project
+from encord_active.lib.project import Project, ProjectFileStructure
 
 logger = logging.getLogger(__name__)
 KITTI_COLUMNS = [
@@ -43,7 +44,7 @@ KITTI_COLUMNS = [
     ("ymin", float),  # [0, img_height]
     ("xmax", float),  # [0, img_width]
     ("ymax", float),  # [0, img_height]
-    # 3-D dimensions (in meters
+    # 3-D dimensions (in meters)
     ("height", float),
     ("width", float),
     ("length", float),
@@ -246,6 +247,76 @@ def import_KITTI_labels(
                     object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=class_name),
                 )
             )
+
+
+def migrate_kitti_predictions(
+    project_path: Path,
+    predictions_path: Path,
+    file_name_regex: str = KITTI_FILE_NAME_REGEX,
+):
+    # Obtain the files containing predictions
+    label_files = [f for f in (predictions_path / "labels").iterdir() if f.suffix.lower() in [".txt", ".csv"]]
+
+    # Retrieve the mapping of label names to ontology object hashes
+    ontology_label_map_path = predictions_path / "ontology_label_map.json"
+    ontology_obj_hash_to_class_name: dict[str, str] = json.loads(ontology_label_map_path.read_text(encoding="utf-8"))
+    class_name_to_ontology_obj_hash = {v: k for k, v in ontology_obj_hash_to_class_name.items()}
+
+    # Check that the input ontology object hashes are valid (exist and correspond to bboxes)
+    pfs = ProjectFileStructure(project_path)
+    all_relevant_ontology_obj_hashes = {
+        o.feature_node_hash
+        for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
+        if o.shape.value not in BoxShapes
+    }
+
+    invalid_hashes = [h for h in ontology_obj_hash_to_class_name.keys() if h not in all_relevant_ontology_obj_hashes]
+    if len(invalid_hashes) > 0:
+        raise ValueError(f"ontology_label_map.json contains ontology object hashes: {invalid_hashes}")
+
+    # Migrate predictions format to the Prediction class format
+    predictions = []
+    pattern = re.compile(file_name_regex)
+    with PrismaConnection(pfs) as conn:
+        for file in tqdm(label_files, desc="Migrating predictions"):
+            match = pattern.match(file.name)
+            if not match:
+                logger.info(f"Couldn't match file '{file.name}' to specified regex")
+                continue
+
+            data_hash = match.group("data_hash")
+            du = conn.dataunit.find_first(where={"data_hash": data_hash})
+            if du is None:
+                logger.info(f"Couldn't find data unit '{data_hash}' in the database")
+                continue
+
+            try:
+                df = pd.read_csv(file, sep=" ", header=None)
+            except EmptyDataError:
+                continue
+
+            # Include headers and account for additional "custom" columns
+            headers = list(map(lambda x: x[0], KITTI_COLUMNS))
+            headers += [f"undefined_{i}" for i in range(df.shape[1] - len(headers))]
+            df.columns = pd.Index(headers)
+
+            for row in df.to_dict("records"):
+                ontology_obj_hash = class_name_to_ontology_obj_hash[row["class_name"]]
+
+                x = row["xmin"] / du.width
+                y = row["ymin"] / du.height
+                w = (row["xmax"] - row["xmin"]) / du.width
+                h = (row["ymax"] - row["ymin"]) / du.height
+                bbox = BoundingBox(x=x, y=y, w=w, h=h)
+
+                predictions.append(
+                    Prediction(
+                        data_hash=data_hash,
+                        confidence=float(row["undefined_0"]),
+                        object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=ontology_obj_hash),
+                    )
+                )
+    return predictions
 
 
 def import_predictions(project: Project, predictions: List[Prediction]):
