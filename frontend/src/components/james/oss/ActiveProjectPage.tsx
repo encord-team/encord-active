@@ -4,6 +4,8 @@ import { Spin, Tabs } from "antd";
 import { ActiveQueryAPI } from "./ActiveTypes";
 import ActiveAnalysisDomainTab from "./tabs/ActiveAnalysisDomainTab";
 import ActivePredictionsTab from "./tabs/predictions/ActivePredictionsTab";
+import { ProjectSelector } from "../../ProjectSelector";
+import { IntegratedProjectMetadata } from "../IntegratedActiveAPI";
 
 function ActiveProjectPage(props: {
   queryAPI: ActiveQueryAPI;
@@ -11,8 +13,11 @@ function ActiveProjectPage(props: {
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
+  setSelectedProject: (projectHash?: string) => void;
+  projects: readonly IntegratedProjectMetadata[];
 }) {
-  const { queryAPI, projectHash, editUrl } = props;
+  const { queryAPI, projectHash, editUrl, projects, setSelectedProject } =
+    props;
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
 
@@ -40,6 +45,14 @@ function ActiveProjectPage(props: {
 
   return (
     <Tabs
+      tabBarExtraContent={
+        <ProjectSelector
+          projects={projects}
+          selectedProjectHash={projectHash}
+          onViewAllProjects={() => setSelectedProject(undefined)}
+          onSelectedProjectChange={setSelectedProject}
+        />
+      }
       items={[
         {
           label: "Data",
