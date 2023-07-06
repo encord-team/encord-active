@@ -7,6 +7,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 import numpy as np
 from fastapi import APIRouter
 from pynndescent import NNDescent
+from scipy.stats import ks_2samp
 from sqlalchemy import func
 from sqlalchemy.sql.operators import between_op, in_op, is_not, not_between_op
 from sqlmodel import Session, select
@@ -408,3 +409,36 @@ def search_similarity(
         )
         seen.add(i)
     return {"results": similarity_results}
+
+
+@router.get("/project_compare/metric_dissimilarity")
+def compare_metric_dissimilarity(
+        project_hash: uuid.UUID,
+        domain: AnalysisDomain,
+        compare_project_hash: uuid.UUID,
+):
+    # FIXME: try and convert to sql query for efficiency.
+    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    dissimilarity = {}
+    with Session(engine) as sess:
+        for metric_name in domain_metrics:
+            metric_attr: float = getattr(domain_ty, metric_name)
+            all_data_1 = sess.exec(select(
+                metric_attr,
+            ).where(
+                domain_ty.project_hash == project_hash,
+                is_not(metric_attr, None)
+            )).fetchall()
+            all_data_2 = sess.exec(select(
+                metric_attr,
+            ).where(
+                domain_ty.project_hash == compare_project_hash,
+                is_not(metric_attr, None)
+            )).fetchall()
+            if len(all_data_1) > 0 and len(all_data_2) > 0:
+                k_score, _ = ks_2samp(np.array(all_data_1), np.array(all_data_2))
+                dissimilarity[metric_name] = k_score
+
+    return {
+        "results": dissimilarity,
+    }
