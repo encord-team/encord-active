@@ -16,7 +16,7 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
-    ProjectTaggedDataUnit,
+    ProjectTaggedDataUnit, AnnotationType,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
@@ -90,7 +90,15 @@ def get_project_summary(project_hash: uuid.UUID):
         "annotations": {
             "metrics": _metric_summary(AnnotationMetrics),
             "enums": {
-                "feature_hash": None,
+                "feature_hash": {"type": "ontology"},
+                "annotation_type": {
+                    "type": "enum",
+                    "title": "Annotation Type",
+                    "values": {
+                        annotation_type.value: annotation_type.name
+                        for annotation_type in AnnotationType
+                    },
+                },
             },
         },
         "tags": {tag.tag_hash: tag.name for tag in tags},

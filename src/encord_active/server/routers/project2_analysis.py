@@ -223,7 +223,7 @@ def metric_search(
 
     if enum_filters_dict is not None:
         for enum_filter_name, enum_filter_list in enum_filters_dict.items():
-            if enum_filter_list not in ["feature_hash"]:
+            if enum_filter_name not in ["feature_hash", "annotation_type"]:
                 raise ValueError(f"Unsupported enum filter: {enum_filter_name}")
             enum_filter_col = getattr(domain_ty, enum_filter_name)
             query_filters.append(in_op(enum_filter_col, enum_filter_list))
