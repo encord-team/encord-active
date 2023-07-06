@@ -1,16 +1,23 @@
+import json
+import shutil
 from enum import Enum
 from functools import lru_cache
 from typing import Annotated, List, Optional, Union, cast
 
 import pandas as pd
+from encord.orm.project import CopyDatasetOptions, CopyDatasetAction, CopyLabelsOptions, ReviewApprovalState, Project
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
 from pydantic import BaseModel
 
+from encord_active.app.app_config import app_config
+from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters
-from encord_active.lib.db.connection import DBConnection
+from encord_active.lib.common.utils import DataHashMapping
+from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
     Tag,
@@ -21,6 +28,12 @@ from encord_active.lib.db.helpers.tags import (
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
+from encord_active.lib.encord.actions import replace_db_uids, DatasetUniquenessError, DatasetCreationResult, \
+    EncordActions
+from encord_active.lib.encord.project_sync import LabelRowDataUnit, create_filtered_db, copy_image_data_unit_json, \
+    copy_label_row_meta_json, copy_project_meta, create_filtered_metrics, create_filtered_embeddings, \
+    copy_filtered_data, replace_uids
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricScope,
@@ -43,6 +56,7 @@ from encord_active.lib.model_predictions.types import (
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
+from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.dependencies import (
     ProjectFileStructureDep,
@@ -342,3 +356,207 @@ def search(
 
     ids, snippet = _search(get_ids(merged_metrics.index, scope))
     return {"ids": ids, "snippet": snippet}
+
+
+@router.post("/{project}/create_subset")
+def create_subset(
+        curr_project_structure: ProjectFileStructureDep,
+        identifiers: List[str],
+        project_title: str,
+        project_description: str,
+        dataset_title: Optional[str] = None,
+        dataset_description: Optional[str] = None,
+):
+    filtered_df = pd.DataFrame(identifiers, columns=["identifier"])
+    target_project_dir = curr_project_structure.project_dir.parent / project_title
+    target_project_structure = ProjectFileStructure(target_project_dir)
+    current_project_meta = fetch_project_meta(curr_project_structure)
+    remote_copy = current_project_meta["has_remote"]
+
+    if target_project_dir.exists():
+        raise Exception("Subset with the same title already exists")
+    target_project_dir.mkdir()
+
+    try:
+        ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
+        filtered_lr_du = {
+            LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])
+        }
+        filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
+        filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
+        filtered_labels = {
+            (ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()
+        }
+
+        create_filtered_db(target_project_dir, filtered_df)
+
+        if curr_project_structure.image_data_unit.exists():
+            copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
+
+        filtered_label_row_meta = copy_label_row_meta_json(
+            curr_project_structure, target_project_structure, filtered_label_rows
+        )
+
+        label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
+
+        shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
+
+        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
+
+        create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
+
+        ensure_safe_project(target_project_structure.project_dir)
+        copy_filtered_data(
+            curr_project_structure,
+            target_project_structure,
+            filtered_label_rows,
+            filtered_data_hashes,
+            filtered_labels,
+        )
+
+        create_filtered_embeddings(
+            curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
+        )
+
+        if remote_copy:
+            original_project = get_encord_project(
+                current_project_meta["ssh_key_path"],
+                current_project_meta["project_hash"]
+            )
+            dataset_hash_map: dict[str, set[str]] = {}
+            for k, v in filtered_label_row_meta.items():
+                dataset_hash_map.setdefault(v["dataset_hash"], set()).add(v["data_hash"])
+
+            cloned_project_hash = original_project.copy_project(
+                new_title=project_title,
+                new_description=project_description,
+                copy_collaborators=True,
+                copy_datasets=CopyDatasetOptions(
+                    action=CopyDatasetAction.CLONE,
+                    dataset_title=dataset_title,
+                    dataset_description=dataset_description,
+                    datasets_to_data_hashes_map={k: list(v) for k, v in dataset_hash_map.items()},
+                ),
+                copy_labels=CopyLabelsOptions(
+                    accepted_label_statuses=[state for state in ReviewApprovalState],
+                    accepted_label_hashes=list(label_rows),
+                ),
+            )
+            cloned_project = get_encord_project(
+                current_project_meta["ssh_key_path"],
+                cloned_project_hash
+            )
+            cloned_project_label_rows = [
+                cloned_project.get_label_row(src_row.label_hash) for src_row in cloned_project.list_label_rows_v2()
+            ]
+            filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
+
+            def _get_one_data_unit(lr: dict, valid_data_units: dict) -> str:
+                data_units = lr["data_units"]
+                for data_unit_key in data_units.keys():
+                    if data_unit_key in valid_data_units:
+                        return data_unit_key
+                raise StopIteration(
+                    f"Cannot find data unit to lookup: {list(data_units.keys())}, {list(valid_data_units.keys())}"
+                )
+
+            lr_du_mapping = {
+                # We only use the label hash as the key for database migration. The data hashes are preserved anyway.
+                LabelRowDataUnit(
+                    filtered_du_lr_mapping[_get_one_data_unit(lr, filtered_du_lr_mapping)],
+                    lr["data_hash"],  # This value is the same
+                ): LabelRowDataUnit(lr["label_hash"], lr["data_hash"])
+                for lr in cloned_project_label_rows
+            }
+
+            with PrismaConnection(target_project_structure) as conn:
+                original_label_rows = conn.labelrow.find_many()
+            original_label_row_map = {
+                original_label_row.label_hash: json.loads(original_label_row.label_row_json or "")
+                for original_label_row in original_label_rows
+            }
+
+            new_label_row_map = {label_row["label_hash"]: label_row for label_row in cloned_project_label_rows}
+
+            label_row_json_map = {}
+            for (old_lr, old_du), (new_lr, new_du) in lr_du_mapping.items():
+                lr = dict(original_label_row_map[old_lr])
+                lr["label_hash"] = new_label_row_map[new_lr]["label_hash"]
+                lr["dataset_hash"] = new_label_row_map[new_lr]["dataset_hash"]
+                label_row_json_map[new_lr] = json.dumps(lr)
+
+            project_meta = fetch_project_meta(target_project_structure.project_dir)
+            project_meta["has_remote"] = True
+            project_meta["project_hash"] = cloned_project_hash
+            update_project_meta(target_project_structure.project_dir, project_meta)
+
+            du_hash_map = DataHashMapping()
+
+            replace_uids(
+                target_project_structure,
+                lr_du_mapping,
+                du_hash_map,
+                original_project.project_hash,
+                cloned_project_hash,
+                cloned_project.datasets[0]["dataset_hash"],
+            )
+
+            # Sync database identifiers
+            replace_db_uids(
+                target_project_structure,
+                du_hash_map=DataHashMapping(),  # Preserved and used as migration key
+                lr_du_mapping=lr_du_mapping,  # Update label hash and lr_dr hashes ( label hash)
+                label_row_json_map=label_row_json_map,  # Update label row jsons to correct value.
+            )
+
+    except Exception as e:
+        shutil.rmtree(target_project_dir.as_posix())
+        raise e
+
+    # On Success:
+    # Mirror to global sqlite database
+    migrate_disk_to_db(target_project_structure)
+
+
+@router.post("/{project}/upload_to_encord")
+def upload_to_encord(
+        pfs: ProjectFileStructureDep,
+        dataset_title: str,
+        dataset_description: str,
+        project_title: str,
+        project_description: str,
+        ontology_title: Optional[str],
+        ontology_description: str,
+        identifiers: List[str],
+):
+    df = pd.DataFrame(identifiers, columns=["identifier"])
+    # FIXME: don't fetch app_config from here.
+    encord_actions = EncordActions(pfs.project_dir, app_config.get_ssh_key())
+    try:
+        dataset_creation_result = encord_actions.create_dataset(
+            dataset_title=dataset_title, dataset_description=dataset_description,
+            dataset_df=df
+        )
+    except DatasetUniquenessError as e:
+        return None
+
+    # FIXME: existing logic re-uses 'ontology_hash'
+    ontology_hash = encord_actions.create_ontology(
+        title=ontology_title, description=ontology_description
+    ).ontology_hash
+
+    try:
+        new_project = encord_actions.create_project(
+            dataset_creation_result=dataset_creation_result,
+            project_title=project_title,
+            project_description=project_description,
+            ontology_hash=ontology_hash,
+        )
+        migrate_disk_to_db(encord_actions.project_file_structure)
+    except Exception as e:
+        print(str(e))
+        raise e
+    return {
+        "project_hash": new_project.project_hash,
+        "dataset_hash": dataset_creation_result.hash,
+    }
