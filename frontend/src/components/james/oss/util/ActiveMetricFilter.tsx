@@ -3,21 +3,35 @@ import { useEffect, useMemo } from "react";
 import { Button, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { ActiveProjectMetricSummary } from "../ActiveTypes";
+import { useAllTags } from "../../../explorer/Tagging";
+import { GroupedTags } from "../../../explorer/api";
+import { isEmpty, omit } from "radash";
 
-export type ActiveFilterState = {
-  readonly metricFilters: Readonly<Record<string, readonly [number, number]>>;
-  readonly enumFilters: Readonly<Record<string, ReadonlyArray<string>>>;
-  readonly ordering: ReadonlyArray<string>;
+export const defaultFilters: ActiveFilterOrderState = {
+  metricFilters: {},
+  enumFilters: {},
+  tagFilters: { data: [], label: [] },
+  ordering: [],
 };
 
-export type ActiveFilterModes = "metricFilters" | "enumFilters";
+export type Bounds = {
+  min: number;
+  max: number;
+};
 
-function getMetricBounds<
-  R extends {
-    min: number;
-    max: number;
-  }
->(
+export type ActiveFilterOrderState = {
+  readonly ordering: ReadonlyArray<string>;
+} & ActiveFilterState;
+
+export type ActiveFilterState = {
+  readonly metricFilters: Readonly<Record<string, Bounds>>;
+  readonly enumFilters: Readonly<Record<string, ReadonlyArray<string>>>;
+  readonly tagFilters: GroupedTags;
+};
+
+export type ActiveFilterModes = keyof ActiveFilterState;
+
+function getMetricBounds<R extends Bounds>(
   bounds: R,
   metric: ActiveProjectMetricSummary["metrics"][string]
 ): {
@@ -103,13 +117,29 @@ function getEnumName(
   throw Error("Unknown enum state");
 }
 
+type NoTagFilters = Omit<ActiveFilterState, "tagFilters">;
+
 function deleteKey(
   deleteKey: string,
   filterType: ActiveFilterModes
-): (old: ActiveFilterState) => ActiveFilterState {
+): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
   return (old) => {
-    const { [deleteKey]: deleted, ...newFilters } = old[filterType];
     const newOrdering = old.ordering.filter((elem) => elem !== deleteKey);
+
+    if (filterType === "tagFilters")
+      return {
+        ...old,
+        ordering: newOrdering,
+        [filterType]: {
+          ...old[filterType],
+          [deleteKey as keyof ActiveFilterState["tagFilters"]]: [],
+        },
+      };
+
+    const { [deleteKey]: deleted, ...newFilters } = old[
+      filterType
+    ] as NoTagFilters[keyof NoTagFilters];
+
     return {
       ...old,
       ordering: newOrdering,
@@ -120,9 +150,9 @@ function deleteKey(
 
 function updateValue<K extends ActiveFilterModes>(
   updateKey: string,
-  updateValue: ActiveFilterState[K][string],
+  updateValue: ActiveFilterState[K],
   filterType: K
-): (old: ActiveFilterState) => ActiveFilterState {
+): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
   return (old) => {
     const newFilters = {
       ...old[filterType],
@@ -142,20 +172,18 @@ function updateKey<
   }
 >(
   oldKey: string,
+  oldFilterMode: ActiveFilterModes,
   newKey: string,
-  metricsSummary: ActiveProjectMetricSummary,
+  /* metricsSummary: ActiveProjectMetricSummary, */
   metricRanges: Record<string, R>,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >
-): (old: ActiveFilterState) => ActiveFilterState {
+): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
   return (old) => {
-    const oldMetricSummary = metricsSummary.metrics[oldKey];
-    const oldFilterKey =
-      oldMetricSummary != null ? "metricFilters" : "enumFilters";
     const oldOrder = old.ordering.indexOf(oldKey);
-    if (oldOrder < 0 || !(oldKey in old[oldFilterKey])) {
+    if (oldOrder < 0 || !(oldKey in old[oldFilterMode])) {
       // Cannot be deleted.
       return old;
     }
@@ -169,48 +197,34 @@ function updateKey<
     // Generate intermediate state without new filter state inserted.
     const renamedOrdering = [...old.ordering];
     renamedOrdering[oldOrder] = newKey;
-    const { [oldKey]: deleted, ...renamedFilter } = old[oldFilterKey];
     const renamed = {
-      ...old,
+      ...deleteKey(oldKey, oldFilterMode)(old),
       ordering: renamedOrdering,
-      [oldFilterKey]: renamedFilter,
     };
 
     // Check if a metric
-    const newMetricSummary = metricsSummary.metrics[newKey];
-    if (newMetricSummary != null) {
-      const newMetricRanges = metricRanges[newKey];
-      if (newMetricRanges != null) {
-        const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
-        const newRange: readonly [number, number] = [
-          newBounds.min,
-          newBounds.max,
-        ];
-        return {
-          ...renamed,
-          metricFilters: {
-            ...renamed.metricFilters,
-            [newKey]: newRange,
-          },
-        };
-      }
-      return old;
-    }
+    const newMetricRanges = metricRanges[newKey];
 
-    // Check if an enum
-    const newEnumSummary = metricsSummary.enums[newKey];
-    if (newEnumSummary != null && !(newKey in old.enumFilters)) {
-      const newValues = getEnumList(newEnumSummary, featureHashMap);
+    if (newMetricRanges != null) {
       return {
         ...renamed,
-        enumFilters: {
-          ...renamed.enumFilters,
-          [newKey]: newValues,
+        metricFilters: {
+          ...renamed.metricFilters,
+          [newKey]: newMetricRanges,
         },
       };
     }
 
-    // Failed to rename key.
+    if (newKey in old.tagFilters) {
+      return {
+        ...renamed,
+        tagFilters: {
+          ...renamed.tagFilters,
+          [newKey]: [],
+        },
+      };
+    }
+
     return old;
   };
 }
@@ -221,59 +235,68 @@ function addNewEntry<
     max: number;
   }
 >(
-  metricsSummary: ActiveProjectMetricSummary,
   metricRanges: Record<string, R>,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >
-): (old: ActiveFilterState) => ActiveFilterState {
+): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
   return (old) => {
     // Try insert new 'metric' key.
-    const newMetricEntry = Object.entries(metricsSummary.metrics).find(
+    const newMetricEntry = Object.entries(metricRanges).find(
       ([candidate]) => !(candidate in old.metricFilters)
     );
     if (newMetricEntry != null) {
-      const [newMetricKey, newMetricSummary] = newMetricEntry;
-      const newMetricRanges = metricRanges[newMetricKey];
-      if (newMetricRanges != null && newMetricSummary != null) {
-        const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
-        const newRange: readonly [number, number] = [
-          newBounds.min,
-          newBounds.max,
-        ];
+      const [newMetricKey, newMetricRanges] = newMetricEntry;
+      if (newMetricRanges != null) {
         return {
           ...old,
           ordering: [...old.ordering, newMetricKey],
           metricFilters: {
             ...old.metricFilters,
-            [newMetricKey]: newRange,
+            [newMetricKey]: newMetricRanges,
           },
         };
       }
     }
 
-    // Try insert new 'enum' key.
-    const newEnumEntry = Object.entries(metricsSummary.enums).find(
-      ([candidate]) => !(candidate in old.enumFilters)
+    // Try insert new 'tag' key.
+    const newTagKey = Object.keys(defaultFilters.tagFilters).find((candidate) =>
+      isEmpty(
+        old.tagFilters[candidate as keyof typeof defaultFilters.tagFilters]
+      )
     );
-    if (newEnumEntry != null) {
-      const [newEnumKey, newEnumSummary] = newEnumEntry;
-      const enumValues = getEnumList(newEnumSummary, featureHashMap);
+    if (newTagKey != null) {
       return {
         ...old,
-        ordering: [...old.ordering, newEnumKey],
-        enumFilters: {
-          ...old.enumFilters,
-          [newEnumKey]: enumValues,
-        },
+        ordering: [...old.ordering, newTagKey],
+        tagFilters: { ...old.tagFilters, [newTagKey]: [] },
       };
     }
+
+    // Try insert new 'enum' key.
+    /* const newEnumEntry = Object.entries(metricsSummary.enums).find( */
+    /*   ([candidate]) => !(candidate in old.enumFilters) */
+    /* ); */
+    /* if (newEnumEntry != null) { */
+    /*   const [newEnumKey, newEnumSummary] = newEnumEntry; */
+    /*   const enumValues = getEnumList(newEnumSummary, featureHashMap); */
+    /*   return { */
+    /*     ...old, */
+    /*     ordering: [...old.ordering, newEnumKey], */
+    /*     enumFilters: { */
+    /*       ...old.enumFilters, */
+    /*       [newEnumKey]: enumValues, */
+    /*     }, */
+    /*   }; */
+    /* } */
 
     // Failed to insert correctly.
     return old;
   };
 }
+
+type TagKey = keyof GroupedTags;
 
 function ActiveMetricFilter<
   R extends {
@@ -281,9 +304,11 @@ function ActiveMetricFilter<
     max: number;
   }
 >(props: {
-  filters: ActiveFilterState;
+  filters: ActiveFilterOrderState;
   setFilters: (
-    arg: ActiveFilterState | ((old: ActiveFilterState) => ActiveFilterState)
+    arg:
+      | ActiveFilterOrderState
+      | ((old: ActiveFilterOrderState) => ActiveFilterOrderState)
   ) => void;
   metricsSummary: ActiveProjectMetricSummary;
   metricRanges: Record<string, R> | undefined;
@@ -292,62 +317,55 @@ function ActiveMetricFilter<
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    filters,
-    setFilters,
-    metricsSummary: rawMetricsSummary,
-    metricRanges,
-    featureHashMap,
-  } = props;
+  const { filters, setFilters, metricsSummary, metricRanges, featureHashMap } =
+    props;
+  const { allDataTags, allLabelTags } = useAllTags();
+  const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
-  // Remove any invalid filters.
-  useEffect(() => {
-    const entries = Object.entries(filters.metricFilters);
-    const filteredEntries = entries.filter(
-      ([key]) => rawMetricsSummary.metrics[key] !== undefined
-    );
-    if (filteredEntries.length !== entries.length) {
-      setFilters({
-        ...filters,
-        metricFilters: Object.fromEntries(filteredEntries),
-      });
-    }
-  }, [filters, rawMetricsSummary, setFilters]);
+  const metricKeys = new Set(Object.keys(metricRanges ?? {}));
 
-  const metricsSummary = useMemo(() => {
-    if (metricRanges == null) {
-      return undefined;
-    }
-    const metrics = Object.entries(rawMetricsSummary.metrics).filter(
-      ([k]) => k in metricRanges
-    );
-    return { ...rawMetricsSummary, metrics: Object.fromEntries(metrics) };
-  }, [metricRanges, rawMetricsSummary]);
+  /* const metrics = */
+  /*   // Remove any invalid filters. */
+  /*   useEffect(() => { */
+  /*     const entries = Object.entries(filters.metricFilters); */
+  /*     const filteredEntries = entries.filter( */
+  /*       ([key]) => metricRanges?.[key] !== undefined */
+  /*     ); */
+  /*     if (filteredEntries.length !== entries.length) { */
+  /*       setFilters({ */
+  /*         ...filters, */
+  /*         metricFilters: Object.fromEntries(filteredEntries), */
+  /*       }); */
+  /*     } */
+  /*   }, [filters, metricRanges, setFilters]); */
 
   // Render all active filters, skip metrics that cannot be selected.
   const filterOptions = useMemo(() => {
-    if (metricsSummary == null) {
+    if (metricRanges == null) {
       return [];
     }
     // Set of filters that 'exist'
     const exists = new Set<string>(filters.ordering);
-    const metricOptions = Object.entries(metricsSummary.metrics)
-      .filter(([metricKey]) => !exists.has(metricKey))
-      .map(([metricKey, metricState]) => ({
-        value: metricKey,
-        label: metricState.title,
-      }));
-    const enumOptions = Object.entries(metricsSummary.enums)
-      .filter(([enumKey]) => !exists.has(enumKey))
-      .map(([enumKey, enumState]) => ({
-        value: enumKey,
-        label: getEnumName(enumKey, enumState),
-      }));
-    return [...metricOptions, ...enumOptions];
-  }, [filters.ordering, metricsSummary]);
+    const metricOptions = Object.keys(metricRanges)
+      /* .filter((metricKey) => !exists.has(metricKey)) */
+      .map((metricKey) => ({ value: metricKey, label: metricKey }));
+
+    const tagOptions = [
+      { value: "data", label: "Data Tags" },
+      { value: "label", label: "Label Tags" },
+    ];
+    /* .filter(({ value }) => !exists.has(value)); */
+    /* const enumOptions = Object.entries(metricsSummary.enums) */
+    /*   .filter(([enumKey]) => !exists.has(enumKey)) */
+    /*   .map(([enumKey, enumState]) => ({ */
+    /*     value: enumKey, */
+    /*     label: getEnumName(enumKey, enumState), */
+    /*   })); */
+    return [...metricOptions, ...tagOptions];
+  }, [filters.ordering, metricRanges, allTags]);
 
   // We need range information.
-  if (metricRanges === undefined || metricsSummary === undefined) {
+  if (metricRanges === undefined) {
     return (
       <Button
         icon={<PlusOutlined />}
@@ -365,22 +383,27 @@ function ActiveMetricFilter<
         <Typography.Text strong>Filters:</Typography.Text>
       </Row>
       {filters.ordering.map((filterKey) => {
-        const metric = metricsSummary.metrics[filterKey];
         const metricRange = metricRanges[filterKey];
         const metricBounds =
-          metric !== undefined && metricRange !== undefined
-            ? getMetricBounds(metricRange, metric)
+          metricRange !== undefined
+            ? {
+                ...metricRange,
+                step: metricRange.max / 100,
+              }
             : undefined;
         const metricFilters = filters.metricFilters[filterKey];
-
         const enumValues = filters.enumFilters[filterKey];
-        const enumFilter = metricsSummary.enums[filterKey];
+        const tagValues = filters.tagFilters[filterKey as TagKey] || [];
 
-        const filterType = metric != null ? "metricFilters" : "enumFilters";
+        const filterType: ActiveFilterModes =
+          metricRange != null
+            ? "metricFilters"
+            : tagValues
+            ? "tagFilters"
+            : "enumFilters";
         const filterLabel =
-          metric != null
-            ? metric.title
-            : getEnumName(filterKey, enumFilter ?? { type: "ontology" });
+          filterOptions.find(({ value }) => value === filterKey)?.label ??
+          filterKey;
 
         return (
           <Row align="middle" key={`row_filter_${filterKey}`}>
@@ -393,7 +416,7 @@ function ActiveMetricFilter<
             />
             <Select
               showSearch
-              value={filterKey}
+              value={filterLabel}
               bordered={false}
               style={{
                 width: 200,
@@ -402,21 +425,19 @@ function ActiveMetricFilter<
                 marginTop: 5,
                 marginBottom: 5,
               }}
-              onChange={(new_metric_key) =>
+              onChange={(selectedOption) =>
                 setFilters(
                   updateKey(
                     filterKey,
-                    new_metric_key,
-                    metricsSummary,
+                    filterType,
+                    selectedOption,
+                    /* metricsSummary, */
                     metricRanges,
                     featureHashMap
                   )
                 )
               }
-              options={[
-                ...filterOptions,
-                { value: filterKey, label: filterLabel },
-              ]}
+              options={filterOptions}
             />
             {metricBounds != null ? (
               <Slider
@@ -425,30 +446,27 @@ function ActiveMetricFilter<
                 max={metricBounds.max}
                 style={{ width: 500 }}
                 step={metricBounds.step}
-                value={
+                defaultValue={
                   metricFilters != null
-                    ? [metricFilters[0], metricFilters[1]]
+                    ? [metricFilters.min, metricFilters.max]
                     : [metricBounds.min, metricBounds.max]
                 }
-                onChange={(newRange: [number, number]) =>
-                  setFilters(updateValue(filterKey, newRange, "metricFilters"))
+                onAfterChange={([min, max]: [number, number]) =>
+                  setFilters(updateValue(filterKey, { min, max }, filterType))
                 }
               />
             ) : (
               <Select
                 allowClear
                 mode="multiple"
-                value={[...(enumValues ?? [])]}
+                defaultValue={[...(enumValues ?? tagValues ?? [])]}
                 onChange={(newSelection: string[]) =>
-                  setFilters(
-                    updateValue(filterKey, newSelection, "enumFilters")
-                  )
+                  setFilters(updateValue(filterKey, newSelection, filterType))
                 }
-                options={
-                  enumFilter == null
-                    ? []
-                    : getEnumOptions(enumFilter, featureHashMap)
-                }
+                options={allTags[filterKey as TagKey].map((tag) => ({
+                  value: tag,
+                  label: tag,
+                }))}
                 style={{ width: 500 }}
               />
             )}
@@ -460,25 +478,9 @@ function ActiveMetricFilter<
         shape="circle"
         size="small"
         type="primary"
-        disabled={filterOptions.length === 0}
-        onClick={() =>
-          setFilters(addNewEntry(metricsSummary, metricRanges, featureHashMap))
-        }
+        disabled={metricKeys.size === 0}
+        onClick={() => setFilters(addNewEntry(metricRanges, featureHashMap))}
       />
-      <Row align="middle">
-        <Typography.Text strong>Order By:</Typography.Text>
-        <Select
-          showSearch
-          bordered={false}
-          style={{
-            width: 175,
-            marginLeft: 10,
-            marginRight: 10,
-            marginTop: 5,
-            marginBottom: 5,
-          }}
-        />
-      </Row>
     </>
   );
 }

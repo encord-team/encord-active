@@ -25,7 +25,7 @@ def metrics_panel() -> Tuple[List[MetricData], int]:
         seed (int): The seed for the random sampling.
     """
     # TODO - add label metrics
-    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA_QUALITY)
+    metrics = load_available_metrics(get_state().project_paths.metrics, MetricScope.DATA)
     metric_names = [metric.name for metric in metrics]
 
     col1, col2 = st.columns([6, 1])

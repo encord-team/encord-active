@@ -37,7 +37,7 @@ class ExplorerPage(Page):
         if not selected_metric:
             return
 
-        if metric_scope == MetricScope.LABEL_QUALITY:
+        if metric_scope == MetricScope.ANNOTATION:
             df = load_metric_dataframe(selected_metric)
 
             selected_classes = get_state().filtering_state.selected_classes

@@ -40,7 +40,7 @@ class Metadata(TypedDict):
 
 @lru_cache
 def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None) -> List[MetricData]:
-    if scope == MetricScope.MODEL_QUALITY:
+    if scope == MetricScope.PREDICTION:
         return load_available_metrics(project.predictions / "object" / "metrics")
     return load_available_metrics(project.metrics, scope)
 

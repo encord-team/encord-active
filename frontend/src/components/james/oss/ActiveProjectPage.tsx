@@ -2,18 +2,19 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import { Spin, Tabs } from "antd";
 import { ActiveQueryAPI } from "./ActiveTypes";
-import ActiveAnalysisDomainTab from "./tabs/ActiveAnalysisDomainTab";
 import ActivePredictionsTab from "./tabs/predictions/ActivePredictionsTab";
 import { ProjectSelector } from "../../ProjectSelector";
 import { IntegratedProjectMetadata } from "../IntegratedActiveAPI";
 import ActiveProjectComparisonTab from "./tabs/ActiveProjectComparisonTab";
+import { Explorer } from "../../explorer";
+import ActiveSummaryView from "./tabs/ActiveSummaryView";
 
 function ActiveProjectPage(props: {
   queryAPI: ActiveQueryAPI;
   projectHash: string;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   setSelectedProject: (projectHash?: string) => void;
   projects: readonly IntegratedProjectMetadata[];
 }) {
@@ -56,30 +57,29 @@ function ActiveProjectPage(props: {
       }
       items={[
         {
-          label: "Data",
+          label: "Summary",
           key: "1",
           children: (
-            <ActiveAnalysisDomainTab
+            <ActiveSummaryView
               projectHash={projectHash}
-              editUrl={editUrl}
               queryAPI={queryAPI}
-              metricsSummary={projectSummary.data}
-              analysisDomain="data"
+              projectSummary={projectSummary}
               featureHashMap={featureHashMap}
             />
           ),
         },
         {
-          label: "Annotations",
+          label: "Explorer",
           key: "2",
           children: (
-            <ActiveAnalysisDomainTab
+            <Explorer
+              baseUrl="http://localhost:8502"
               projectHash={projectHash}
-              editUrl={editUrl}
+              metricsSummary={projectSummary.data}
+              scope={"data"}
               queryAPI={queryAPI}
-              metricsSummary={projectSummary.annotations}
-              analysisDomain="annotation"
               featureHashMap={featureHashMap}
+            /* metricRanges={projectSummary.data?.metrics} */
             />
           ),
         },
@@ -99,14 +99,14 @@ function ActiveProjectPage(props: {
           label: "Project Comparison",
           key: "4",
           children: (
-              <ActiveProjectComparisonTab
-                projectHash={projectHash}
-                queryAPI={queryAPI}
-                dataMetricsSummary={projectSummary.data}
-                annotationMetricsSummary={projectSummary.annotations}
-              />
-          )
-        }
+            <ActiveProjectComparisonTab
+              projectHash={projectHash}
+              queryAPI={queryAPI}
+              dataMetricsSummary={projectSummary.data}
+              annotationMetricsSummary={projectSummary.annotations}
+            />
+          ),
+        },
       ]}
       activeKey={activeTab}
       onChange={setActiveTab}

@@ -85,9 +85,8 @@ export type GroupedTags = z.infer<typeof GroupedTagsSchema>;
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
-export type Scope = "data_quality" | "label_quality" | "model_quality";
 
-export type PredictionType = "object" | "classification";
+export const RangeSchema = z.object({ min: z.number(), max: z.number() });
 export const classificationsPredictionOutcomes = [
   "Correct Classifications",
   "Misclassifications",
@@ -99,22 +98,42 @@ export const objectPredictionOutcomes = [
   "False Positive",
   "False Negative",
 ] as const;
-export type ObjectPredictionOutcom = (typeof objectPredictionOutcomes)[number];
+export type ObjectPredictionOutcome = (typeof objectPredictionOutcomes)[number];
+
+const PredictionTypeSchema = z.enum(["object", "classification"]);
+
+export const FilterSchema = z.object({
+  tags: GroupedTagsSchema,
+  object_classes: z.string().array().optional(),
+  workflow_stages: z.string().array().optional(),
+  text: z.record(z.coerce.string(), z.string()).optional(),
+  categorical: z.record(z.coerce.string(), z.number().array()).optional(),
+  range: z.record(z.coerce.string(), RangeSchema),
+  datetime_range: z
+    .record(z.coerce.string(), z.object({ start: z.date(), end: z.date() }))
+    .optional(),
+  prediction_filters: z
+    .discriminatedUnion("type", [
+      z.object({
+        type: z.literal(PredictionTypeSchema.enum.object),
+        outcome: z.enum(objectPredictionOutcomes).optional(),
+        iou_threshold: z.number().optional(),
+      }),
+      z.object({
+        type: z.literal(PredictionTypeSchema.enum.classification),
+        outcome: z.enum(classificationsPredictionOutcomes).optional(),
+        iou_threshold: z.number().optional(),
+      }),
+    ])
+    .optional(),
+});
+
+export type Filters = z.infer<typeof FilterSchema>;
+export type PredictionType = z.infer<typeof PredictionTypeSchema>;
 
 export type PredictionOutcome =
-  | ObjectPredictionOutcom
+  | ObjectPredictionOutcome
   | ClassificationsPredictionOutcome;
-
-// TODO: add a proper type when filtering is done from the frontend. currently
-// we only get the filters form streamlit and pass them to the server so the
-// types aren't strictly necessary.
-export type Filters = unknown & {
-  prediction_filters?: unknown & {
-    type?: PredictionType;
-    outcome?: PredictionOutcome;
-    iou_threshold?: number;
-  };
-};
 
 const EmbeddingTypeSchema = z.union([
   z.literal("classification"),
@@ -125,9 +144,21 @@ const EmbeddingTypeSchema = z.union([
 
 export const MetricSchema = z.object({
   name: z.string(),
+  // filterKey: FilterSchema.keyof(),
   embeddingType: EmbeddingTypeSchema,
+  range: RangeSchema,
 });
+
+export const MetricDefinitionsSchema = z.object({
+  data: MetricSchema.array(),
+  annotation: MetricSchema.array(),
+  prediction: MetricSchema.array(),
+});
+
+const ScopeSchema = MetricDefinitionsSchema.keyof();
+
 export type Metric = z.infer<typeof MetricSchema>;
+export type Scope = z.infer<typeof ScopeSchema>;
 
 export const Item2DEmbeddingSchema = PointSchema.extend({
   id: z.string(),
@@ -176,6 +207,12 @@ export const getApi = (
       z
         .boolean()
         .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
+    fetchAvailablePredictionTypes: async () =>
+      PredictionTypeSchema.array().parse(
+        await (
+          await fetcher(`${baseUrl}/projects/${projectName}/prediction_types`)
+        ).json()
+      ),
     fetchProject2DEmbeddings: async (
       embedding_type: Metric["embeddingType"],
       filters: Filters
@@ -208,11 +245,12 @@ export const getApi = (
       });
       const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
-      return MetricSchema.array().parse(response);
+      return MetricDefinitionsSchema.parse(response);
     },
     fetchProjectItemIds: async (
+      scope: Scope,
       sort_by_metric: string,
-      filters: any,
+      filters: Filters,
       itemSet: Set<string>
     ) => {
       const result = await (
@@ -221,7 +259,12 @@ export const getApi = (
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ sort_by_metric, filters, ids: [...itemSet] }),
+          body: JSON.stringify({
+            scope,
+            sort_by_metric,
+            filters,
+            ids: [...itemSet],
+          }),
         })
       ).json();
       return IdValueSchema.array().parse(result);
@@ -425,6 +468,14 @@ export const useApi = () => {
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>
       api.searchInProject(...args),
+    fetchAvailablePredictionTypes: (
+      ...args: Parameters<API["fetchAvailablePredictionTypes"]>
+    ) =>
+      useQuery(
+        ["available_prediction_types"],
+        () => api.fetchAvailablePredictionTypes(...args),
+        { staleTime: Infinity }
+      ),
   };
 };
 
