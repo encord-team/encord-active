@@ -26,13 +26,14 @@ export const App = () => {
     <div className="p-12 bg-white">
       {selectedProject?.projectHash ? (
         <ActiveProjectPage
+          queryAPI={queryAPI}
+          projectHash={selectedProject?.projectHash}
+          projects={Object.values(projects)}
           setSelectedProject={(projectHash) =>
             setSelectedProject(
               projectHash === undefined ? undefined : projects[projectHash]
             )
           }
-          queryAPI={queryAPI}
-          projectHash={selectedProject?.projectHash}
         />
       ) : (
         <ProjectsPage
