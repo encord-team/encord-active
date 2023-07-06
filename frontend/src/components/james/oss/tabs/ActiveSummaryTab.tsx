@@ -1,6 +1,6 @@
 import * as React from "react";
-import { useMemo } from "react";
-import { Card, Space, Row, Typography, Statistic, Divider } from "antd";
+import { useMemo, useState } from "react";
+import { Card, Space, Row, Typography, Statistic, Divider, Tabs } from "antd";
 import isEmpty from "lodash/isEmpty";
 import {
   CheckCircleOutlined,

@@ -14,9 +14,34 @@ const TAG_GROUPS = [
 ] as const;
 
 const taggingDisabledReasons = {
-  predictions: "Tagging is not available for predictions",
+  prediction: "Tagging is not available for predictions",
   "missing-target": "Select items to tag first",
 } as const;
+
+export const useAllTags = (itemSet?: Set<string>) => {
+  const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
+
+  const defaultAllTags = {
+    allDataTags: new Set<string>(),
+    allLabelTags: new Set<string>(),
+    isLoading,
+    taggedItems,
+  };
+
+  if (isLoading) return defaultAllTags;
+
+  return [...taggedItems]
+    .filter(([id, _]) => (itemSet ? itemSet.has(id) : true))
+    .map(([_, tags]) => tags)
+    .reduce(
+      (allTags, { data, label }) => (
+        data.forEach(allTags.allDataTags.add, allTags.allDataTags),
+        label.forEach(allTags.allLabelTags.add, allTags.allLabelTags),
+        allTags
+      ),
+      defaultAllTags
+    );
+};
 
 export const TaggingDropdown = ({
   disabledReason,
@@ -50,21 +75,10 @@ export const TaggingDropdown = ({
 };
 
 export const BulkTaggingForm = ({ items }: { items: string[] }) => {
-  const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
+  const { allDataTags, allLabelTags, isLoading, taggedItems } = useAllTags(
+    new Set(items)
+  );
   const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
-
-  const itemSet = new Set(items);
-  const { data: allDataTags, label: allLabelTags } = [...taggedItems]
-    .filter(([id, _]) => itemSet.has(id))
-    .map(([_, tags]) => tags)
-    .reduce(
-      (allTags, { data, label }) => (
-        data.forEach(allTags.data.add, allTags.data),
-        label.forEach(allTags.label.add, allTags.label),
-        allTags
-      ),
-      { data: new Set<string>(), label: new Set<string>() }
-    );
 
   return (
     <TaggingForm

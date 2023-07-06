@@ -13,6 +13,7 @@ import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
 import {
   ApiContext,
+  ClassificationsPredictionOutcome,
   classificationsPredictionOutcomes,
   DEFAULT_BASE_URL,
   Filters,
@@ -20,8 +21,10 @@ import {
   IdValue,
   Item,
   Metric,
+  ObjectPredictionOutcome,
   objectPredictionOutcomes,
   PredictionOutcome,
+  PredictionType,
   Scope,
   useApi,
 } from "./api";
@@ -35,27 +38,36 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { sift } from "radash";
+import { capitalize, isEmpty, sift } from "radash";
+import ActiveMetricFilter, {
+  ActiveFilterOrderState,
+  defaultFilters,
+} from "../james/oss/util/ActiveMetricFilter";
+import { Popover, Button } from "antd";
+import {
+  ActiveProjectMetricSummary,
+  ActiveQueryAPI,
+} from "../james/oss/ActiveTypes";
 import ActiveCreateSubsetModal from "../james/oss/tabs/modals/ActiveCreateSubsetModal";
-import {ActiveQueryAPI} from "../james/oss/ActiveTypes";
-import {Button} from "antd";
 import ActiveUploadToEncordModal from "../james/oss/tabs/modals/ActiveUploadToEncordModal";
 
 export type Props = {
   authToken?: string | null;
   projectHash: string;
-  filters?: Filters;
+  metricsSummary: ActiveProjectMetricSummary;
   scope: Scope;
   queryAPI: ActiveQueryAPI;
   baseUrl: string;
+  featureHashMap: Parameters<typeof ActiveMetricFilter>[0]["featureHashMap"];
 };
 
 export const Explorer = ({
   authToken,
   projectHash,
-  filters = {},
   scope,
   queryAPI,
+  featureHashMap,
+  metricsSummary,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
   const [itemSet, setItemSet] = useState(new Set<string>());
@@ -65,19 +77,38 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
+  const [predictionType, setPredictionType] = useState<
+    PredictionType | undefined
+  >();
   const [predictionOutcome, setPredictionOutcome] = useState<
     PredictionOutcome | undefined
   >();
   const [iou, setIou] = useState<number | undefined>();
 
-  if (scope === "model_quality") {
-    filters.prediction_filters = {};
-    filters.prediction_filters.type = "object";
-    filters.prediction_filters.outcome = predictionOutcome;
-    filters.prediction_filters.iou_threshold = iou;
-  }
+  const [newFilters, setNewFilters] =
+    useState<ActiveFilterOrderState>(defaultFilters);
+
+  const filters = useMemo(
+    () =>
+      ({
+        range: newFilters.metricFilters,
+        tags: newFilters.tagFilters,
+        ...(scope === "prediction" && predictionType
+          ? {
+              prediction_filters: {
+                type: predictionType,
+                outcome: predictionOutcome,
+                iou_threshold: iou,
+              },
+            }
+          : {}),
+      } as Filters),
+    [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
+  );
 
   const api = getApi(projectHash, authToken, baseUrl);
+
+  const predictionTypeFound = scope !== "prediction" || predictionType != null;
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
@@ -95,7 +126,7 @@ export const Explorer = ({
     () =>
       api.fetchSimilarItems(
         similarityItem!,
-        scope === "model_quality" ? "image" : selectedMetric?.embeddingType!
+        scope === "prediction" ? "image" : selectedMetric?.embeddingType!
       ),
     { enabled: !!similarityItem && !!selectedMetric }
   );
@@ -103,22 +134,25 @@ export const Explorer = ({
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     sift([
       "item_ids",
+      scope,
       selectedMetric?.name,
       JSON.stringify(filters),
       [...itemSet],
     ]),
-    () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    () =>
+      api.fetchProjectItemIds(scope, selectedMetric?.name!, filters, itemSet),
+    {
+      enabled: !!selectedMetric && predictionTypeFound,
+      staleTime: Infinity,
+    }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     [scope, "metrics", JSON.stringify(filters?.prediction_filters)],
-    () =>
-      api.fetchProjectMetrics(
-        scope,
-        filters?.prediction_filters?.type,
-        filters?.prediction_filters?.outcome
-      ),
-    { staleTime: Infinity }
+    () => api.fetchProjectMetrics(scope, predictionType, predictionOutcome),
+    {
+      enabled: predictionTypeFound,
+      staleTime: Infinity,
+    }
   );
 
   const withSortOrder = useMemo(
@@ -135,9 +169,16 @@ export const Explorer = ({
   } = useSearch(scope, filters, api.searchInProject);
 
   const resetable =
-    itemSet.size || searchResults?.ids.length || similarItems?.length;
+    itemSet.size ||
+    searchResults?.ids.length ||
+    similarItems?.length ||
+    !isEmpty(filters.range) ||
+    !isEmpty([...filters.tags?.data, ...filters.tags?.label]);
   const reset = () => (
-    setItemSet(new Set()), setSearch(undefined), setSimilarityItem(null)
+    setItemSet(new Set()),
+    setSearch(undefined),
+    setSimilarityItem(null),
+    setNewFilters(defaultFilters)
   );
 
   const itemsToRender =
@@ -160,10 +201,12 @@ export const Explorer = ({
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
 
+  const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
+
   useEffect(() => {
-    if (!selectedMetric && metrics && metrics?.length > 0)
-      setSelectedMetric(metrics[0]);
-  }, [metrics?.length]);
+    if (!selectedMetric && metrics && totalMetricsCount > 0)
+      setSelectedMetric(metrics.data[0]);
+  }, [totalMetricsCount]);
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -198,24 +241,20 @@ export const Explorer = ({
   return (
     <ApiContext.Provider value={api}>
       <ActiveCreateSubsetModal
-          open={open =="subset"}
-          close={close}
-          projectHash={projectHash}
-          queryAPI={queryAPI}
-          identifiers={[...selectedItems]}
+        open={open == "subset"}
+        close={close}
+        projectHash={projectHash}
+        queryAPI={queryAPI}
+        identifiers={[...selectedItems]}
       />
       <ActiveUploadToEncordModal
-          open={open === "upload"}
-          close={close}
-          projectHash={projectHash}
-          queryAPI={queryAPI}
+        open={open === "upload"}
+        close={close}
+        projectHash={projectHash}
+        queryAPI={queryAPI}
       />
-      <Button onClick={() => setOpen("subset")}>
-        Create Project subset
-      </Button>
-       <Button onClick={() => setOpen("upload")}>
-       Upload project
-      </Button>
+      <Button onClick={() => setOpen("subset")}>Create Project subset</Button>
+      <Button onClick={() => setOpen("upload")}>Upload project</Button>
       <div className="w-full">
         {previewedItem && (
           <ItemPreview
@@ -240,7 +279,7 @@ export const Explorer = ({
             <Embeddings
               isloadingItems={isLoadingSortedItems}
               idValues={
-                (scope === "model_quality"
+                (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
                       ...item,
                       id: id.slice(0, id.lastIndexOf("_")),
@@ -249,9 +288,7 @@ export const Explorer = ({
               }
               filters={filters}
               embeddingType={
-                scope === "model_quality"
-                  ? "image"
-                  : selectedMetric.embeddingType
+                scope === "prediction" ? "image" : selectedMetric.embeddingType
               }
               onSelectionChange={(selection) => (
                 setPage(1),
@@ -271,8 +308,8 @@ export const Explorer = ({
             <div className="flex gap-2 flex-wrap">
               <TaggingDropdown
                 disabledReason={
-                  scope === "model_quality"
-                    ? "predictions"
+                  scope === "prediction"
+                    ? scope
                     : !selectedItems.size
                     ? "missing-target"
                     : undefined
@@ -280,22 +317,34 @@ export const Explorer = ({
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
-              {metrics && metrics?.length && (
+              {metrics && totalMetricsCount && (
                 <label className="input-group  w-auto">
                   <select
                     onChange={(event) =>
                       setSelectedMetric(
-                        metrics.find(
-                          (metric) => metric.name === event.target.value
-                        )
+                        JSON.parse(event.target.value) as Metric
                       )
                     }
                     className="select select-bordered focus:outline-none"
                     disabled={!!similarItems?.length}
                   >
-                    {metrics.map(({ name }) => (
-                      <option key={name}>{name}</option>
-                    ))}
+                    {Object.entries(metrics).map(
+                      ([scope, scopedMetrics]) =>
+                        scopedMetrics.length && (
+                          <optgroup label={`${capitalize(scope)} Metrics`}>
+                            {metrics[scope as keyof typeof metrics].map(
+                              (metric) => (
+                                <option
+                                  key={`${scope}-${metric.name}`}
+                                  value={JSON.stringify(metric)}
+                                >
+                                  {metric.name}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                        )
+                    )}
                   </select>
                   <label
                     className={classy("btn swap swap-rotate", {
@@ -313,15 +362,16 @@ export const Explorer = ({
                   </label>
                 </label>
               )}
-              {!similarityItem && scope !== "model_quality" && (
+              {!similarityItem && scope !== "prediction" && (
                 <MetricDistributionTiny
                   values={sortedItems || []}
                   setSeletedIds={(ids) => setItemSet(new Set(ids))}
                 />
               )}
-              {scope === "model_quality" && (
+              {scope === "prediction" && (
                 <PredictionFilters
-                  predictionType={filters.prediction_filters?.type}
+                  predictionType={predictionType}
+                  setPredictionType={setPredictionType}
                   onOutcomeChange={setPredictionOutcome}
                   onIouChange={setIou}
                   disabled={!!similarityItem}
@@ -337,6 +387,25 @@ export const Explorer = ({
                 disabled={!hasPremiumFeatures}
               />
               <div className="flex gap-2 flex-wrap">
+                <Popover
+                  placement="bottomLeft"
+                  content={
+                    <ActiveMetricFilter
+                      filters={newFilters}
+                      setFilters={setNewFilters}
+                      metricsSummary={metricsSummary}
+                      metricRanges={Object.fromEntries(
+                        Object.values(metrics || {})
+                          .flat()
+                          ?.map(({ name, range }) => [name, range]) ?? []
+                      )}
+                      featureHashMap={featureHashMap}
+                    />
+                  }
+                  trigger="click"
+                >
+                  <button className="btn btn-ghost">Filters</button>
+                </Popover>
                 <button
                   className={classy("btn btn-ghost gap-2", {
                     "btn-disabled": !resetable,
@@ -416,23 +485,34 @@ const ALL_PREDICTION_OUTCOMES = "All Prediction Outcomes";
 
 const PredictionFilters = ({
   predictionType,
+  setPredictionType,
   onOutcomeChange,
   onIouChange,
   disabled = false,
 }: {
-  predictionType: NonNullable<Filters["prediction_filters"]>["type"];
+  predictionType?: PredictionType;
+  setPredictionType: (type: PredictionType) => void;
   onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
   onIouChange?: (iou: number) => void;
   disabled?: boolean;
 }) => {
-  if (!predictionType) return null;
+  const { data: predictionTypes, isLoading } =
+    useApi().fetchAvailablePredictionTypes();
 
   const [iou, setIou] = useState(0.5);
   const [drag, setDrag] = useState(false);
 
   useEffect(() => {
+    if (!predictionType && predictionTypes?.length)
+      setPredictionType(predictionTypes[0]);
+  }, [predictionTypes]);
+
+  useEffect(() => {
     if (iou != null && !drag) onIouChange?.(iou);
   }, [iou, drag]);
+
+  if (isLoading) return <Spin />;
+  if (!predictionTypes) return;
 
   const outcomes =
     predictionType === "object"
@@ -441,6 +521,21 @@ const PredictionFilters = ({
 
   return (
     <div className="flex gap-2">
+      {predictionTypes?.length > 1 && (
+        <select
+          disabled={disabled}
+          className="select select-bordered w-full max-w-xs"
+          onChange={({ target: { value } }) =>
+            setPredictionType(value as PredictionType)
+          }
+        >
+          {predictionTypes.map((type) => (
+            <option key={type} value={type}>
+              {`${capitalize(type)} Predictions`}
+            </option>
+          ))}
+        </select>
+      )}
       <select
         disabled={disabled}
         className="select select-bordered w-full max-w-xs"
@@ -603,9 +698,7 @@ const ItemPreview = ({
             Edit
           </button>
           <TaggingDropdown
-            disabledReason={
-              scope === "model_quality" ? "predictions" : undefined
-            }
+            disabledReason={scope === "prediction" ? scope : undefined}
           >
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}

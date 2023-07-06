@@ -17,7 +17,7 @@ def summary(metric_type: MetricScope):
 
         available_metrics = load_available_metrics(get_state().project_paths.metrics, metric_type)
         if not available_metrics:
-            if metric_type == MetricScope.LABEL_QUALITY:
+            if metric_type == MetricScope.ANNOTATION:
                 return label_onboarding_page()
             else:
                 st.error("You don't seem to have any data in your project.")
@@ -37,7 +37,7 @@ def explorer(metric_type: MetricScope):
         available_metrics = load_available_metrics(get_state().project_paths.metrics, metric_type)
 
         if not available_metrics:
-            if metric_type == MetricScope.LABEL_QUALITY:
+            if metric_type == MetricScope.ANNOTATION:
                 return label_onboarding_page()
             else:
                 st.error("You don't seem to have any data in your project.")

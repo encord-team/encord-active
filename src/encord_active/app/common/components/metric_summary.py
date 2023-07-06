@@ -111,9 +111,9 @@ def render_2d_metric_plots(metrics_data_summary: MetricsSeverity):
 
 
 def render_issues_pane(metrics: DataFrame[AllMetricsOutlierSchema], st_col: DeltaGenerator, metric_scope: MetricScope):
-    if metric_scope == MetricScope.DATA_QUALITY:
+    if metric_scope == MetricScope.DATA:
         issue_context = "data"
-    elif metric_scope == MetricScope.LABEL_QUALITY:
+    elif metric_scope == MetricScope.ANNOTATION:
         issue_context = "labels"
     else:
         issue_context = "project"
@@ -187,7 +187,7 @@ def render_data_quality_dashboard(
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
     render_issues_pane(
-        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.DATA_QUALITY
+        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.DATA
     )
 
     render_2d_metric_plots(get_state().metrics_data_summary)
@@ -280,6 +280,6 @@ def render_label_quality_dashboard(
         all_metrics_outliers[AllMetricsOutlierSchema.total_severe_outliers] > 0
     ]
     render_issues_pane(
-        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.LABEL_QUALITY
+        cast(DataFrame[AllMetricsOutlierSchema], metrics_with_severe_outliers), issues_col, MetricScope.ANNOTATION
     )
     render_2d_metric_plots(get_state().metrics_label_summary)

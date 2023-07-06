@@ -19,8 +19,8 @@ from encord_active.app.views.model_quality import model_quality
 from encord_active.lib.metrics.utils import MetricScope
 
 PAGES = {
-    "Data Quality": {"Summary": summary(MetricScope.DATA_QUALITY), "Explorer": explorer(MetricScope.DATA_QUALITY)},
-    "Label Quality": {"Summary": summary(MetricScope.LABEL_QUALITY), "Explorer": explorer(MetricScope.LABEL_QUALITY)},
+    "Data Quality": {"Summary": summary(MetricScope.DATA), "Explorer": explorer(MetricScope.DATA)},
+    "Label Quality": {"Summary": summary(MetricScope.ANNOTATION), "Explorer": explorer(MetricScope.ANNOTATION)},
     "Model Quality": {
         "Metrics": model_quality(ModelQualityPage.METRICS),
         "Performance By Metric": model_quality(ModelQualityPage.PERFORMANCE_BY_METRIC),

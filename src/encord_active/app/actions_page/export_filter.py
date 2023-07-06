@@ -169,7 +169,7 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str], pfs: P
                 step=step,
                 key=key,
             )
-            filters.range[column] = Range(start=start, end=end)
+            filters.range[column] = Range(min=start, max=end)
         elif is_datetime64_any_dtype(df[column]):
             first = df[column].min()
             last = df[column].max()
@@ -178,7 +178,7 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str], pfs: P
             )
             if isinstance(res, tuple) and len(res) == 2:
                 start, end = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
-                filters.datetime_range[column] = DatetimeRange(start=start, end=end)
+                filters.datetime_range[column] = DatetimeRange(min=start, min=end)
         else:
             filters.text[column] = right.text_input(
                 f"Substring or regex in {column}",

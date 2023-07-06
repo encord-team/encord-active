@@ -4,7 +4,7 @@ from typing import List, Optional
 import pandas as pd
 from pydantic import BaseModel
 
-from encord_active.lib.db.helpers.tags import Tag
+from encord_active.lib.db.helpers.tags import GroupedTags, Tag, from_grouped_tags
 from encord_active.lib.db.tags import TagScope
 from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
@@ -14,17 +14,17 @@ NO_CLASS_LABEL = "No class"
 
 
 class DatetimeRange(BaseModel):
-    start: pd.Timestamp
-    end: pd.Timestamp
+    min: pd.Timestamp
+    max: pd.Timestamp
 
 
 class Range(BaseModel):
-    start: float
-    end: float
+    min: float
+    max: float
 
 
 class Filters(BaseModel):
-    tags: Optional[List[Tag]] = None
+    tags: Optional[GroupedTags] = None
     object_classes: Optional[List[str]] = None
     workflow_stages: Optional[List[str]] = None
     text: dict[str, str] = {}
@@ -42,7 +42,10 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure)
     filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
     filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
 
-    filtered = filter_tags(filtered, filters.tags or [])
+    if filters.tags is not None and "tags" in filtered:
+        data_tags, label_tags = from_grouped_tags(filters.tags)
+        filtered = filter_tags(filtered, [*data_tags, *label_tags])
+
     if filters.object_classes is not None:
         filtered = filter_object_classes(filtered, filters.object_classes)
 
@@ -50,17 +53,20 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure)
         filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
 
     for column, categorical_filter in filters.categorical.items():
-        non_applicable = filtered[pd.isna(filtered[column])]
-        filtered = filtered[filtered[column].isin(categorical_filter)]
-        filtered = add_non_applicable(filtered, non_applicable)
+        if column in filtered:
+            non_applicable = filtered[pd.isna(filtered[column])]
+            filtered = filtered[filtered[column].isin(categorical_filter)]
+            filtered = add_non_applicable(filtered, non_applicable)
 
     for column, range_filter in list(filters.range.items()) + list(filters.datetime_range.items()):
-        non_applicable = filtered[pd.isna(filtered[column])]
-        filtered = filtered.loc[filtered[column].between(range_filter.start, range_filter.end)]
-        filtered = add_non_applicable(filtered, non_applicable)
+        if column in filtered:
+            non_applicable = filtered[pd.isna(filtered[column])]
+            filtered = filtered.loc[filtered[column].between(range_filter.min, range_filter.max)]
+            filtered = add_non_applicable(filtered, non_applicable)
 
     for column, text_filter in filters.text.items():
-        filtered = filtered[filtered[column].astype(str).str.contains(text_filter)]
+        if column in filtered:
+            filtered = filtered[filtered[column].astype(str).str.contains(text_filter)]
 
     filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
 
