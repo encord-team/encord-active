@@ -1,6 +1,7 @@
+import json
 import math
 import uuid
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 from fastapi import APIRouter
@@ -24,6 +25,7 @@ router = APIRouter(
 
 @router.get("/summary")
 def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
+    # FIXME: performance improvements are possible
     guid = GUID()
     with Session(engine) as sess:
         # FIXME: check that feature_hash compare can be removed with changes to pre-calculation of match_iou condition.
@@ -279,6 +281,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
 
 @router.get("/metric_performance")
 def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str):
+    # FIXME: bucket behaviour needs improvement
     with Session(engine) as sess:
         metric = AnnotationMetrics[metric_name]
         metric_attr = getattr(ProjectPredictionObjectResults, metric_name)
@@ -361,3 +364,30 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
         "precision": precision,
         "fns": fns,
     }
+
+
+@router.get("/search")
+def prediction_search(
+    iou: float,
+    metric_filters: str,
+    enum_filters: str,
+    true_positives: bool,
+    false_positives: bool,
+    false_negatives: bool,
+):
+    # FIXME: IOU vs TP / FP / FN range query?? (as mutually depend on each other??)
+    # FIXME: should FN be contained within the search or not??
+    # FIXME: ????
+    metric_filters_dict = json.loads(metric_filters)
+    enum_filters_dict = json.loads(enum_filters)
+    return None
+
+
+@router.get("/preview/{du_hash/{frame}/{annotation_hash}")
+def get_prediction_item(
+    du_hash: uuid.UUID,
+    frame: int,
+    annotation_hash: Optional[str] = None,
+):
+    return None
+
