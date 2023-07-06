@@ -12,16 +12,19 @@ from encord.orm.project import (
     Project,
     ReviewApprovalState,
 )
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
 from pydantic import BaseModel
+from sqlmodel import Session, select
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.db.metrics import AnnotationMetrics, DataMetrics
+from encord_active.db.models import ProjectDataAnalytics, get_engine
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
-from encord_active.lib.common.filtering import Filters
+from encord_active.lib.common.filtering import Filters, Range, apply_filters
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.helpers.tags import (
@@ -62,6 +65,7 @@ from encord_active.lib.metrics.utils import (
     get_embedding_type,
 )
 from encord_active.lib.model_predictions.reader import (
+    check_model_prediction_availability,
     get_model_prediction_by_id,
     get_model_predictions,
     read_prediction_files,
@@ -104,6 +108,7 @@ router = APIRouter(
 @router.post("/{project}/item_ids_by_metric", response_class=ORJSONResponse)
 def read_item_ids(
     project: ProjectFileStructureDep,
+    scope: Annotated[MetricScope, Body()],
     sort_by_metric: Annotated[str, Body()],
     filters: Filters = Filters(),
     ascending: Annotated[bool, Body()] = True,
@@ -111,24 +116,22 @@ def read_item_ids(
 ):
     merged_metrics = filtered_merged_metrics(project, filters)
 
-    try:
+    if scope == MetricScope.PREDICTION:
+        if filters.prediction_filters is None:
+            raise
+        df, _ = get_model_predictions(project, filters.prediction_filters)
+        df = apply_filters(df, filters, project)
+
+        if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+            sort_by_metric = sort_by_metric.replace("(P)", "(O)")
+
+        column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
+        df = df[partial_column(df.index, 3).isin(partial_column(merged_metrics.index, 3).unique())]
+        if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
+            df = df[df.index.isin(merged_metrics.index)]
+    else:
         column = [col for col in merged_metrics.columns if col.lower() == sort_by_metric.lower()][0]
         df = merged_metrics
-    except:
-        try:
-            if filters.prediction_filters is None:
-                raise
-            df, _ = get_model_predictions(project, filters.prediction_filters)
-
-            if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
-                sort_by_metric = sort_by_metric.replace("(P)", "(O)")
-
-            column = [col for col in df.columns if col.lower() == sort_by_metric.lower()][0]
-            df = df[partial_column(df.index, 3).isin(partial_column(merged_metrics.index, 3).unique())]
-            if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
-                df = df[df.index.isin(merged_metrics.index)]
-        except:
-            raise Exception("Couldn't find the selected metric in the the project")
 
     res: pd.DataFrame = df[[column]].dropna().sort_values(by=[column], ascending=ascending)
     if ids:
@@ -231,17 +234,36 @@ def get_available_metrics(
     prediction_type: Optional[MainPredictionType] = None,
     prediction_outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None,
 ):
-    if scope == MetricScope.MODEL_QUALITY:
+    if scope == MetricScope.PREDICTION:
         prediction_metrics, label_metrics, *_ = read_prediction_files(project, prediction_type)
         metrics = (
             label_metrics if prediction_outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES else prediction_metrics
         )
     else:
-        metrics = load_project_metrics(project, scope)
-    return [
-        {"name": metric.name, "embeddingType": get_embedding_type(metric.meta.annotation_type)}
-        for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name)
-    ]
+        metrics = load_project_metrics(project)
+
+    results = {MetricScope.DATA: [], MetricScope.ANNOTATION: [], MetricScope.PREDICTION: []}
+    for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name):
+        metric_result = {
+            "name": metric.name,
+            "embeddingType": get_embedding_type(metric.meta.annotation_type),
+            "range": Range(min=metric.meta.stats.min_value, max=metric.meta.stats.max_value),
+        }
+
+        if metric.level == "F":
+            results[MetricScope.DATA].append(metric_result)
+        elif scope == MetricScope.PREDICTION:
+            results[MetricScope.PREDICTION].append(metric_result)
+        else:
+            results[MetricScope.ANNOTATION].append(metric_result)
+
+    return results
+
+@router.get("/{project}/prediction_types")
+def get_available_prediction_types(project: ProjectFileStructureDep):
+    return [prediction_type for prediction_type in MainPredictionType if check_model_prediction_availability(
+        project.predictions / prediction_type.value
+    )]
 
 
 @router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
@@ -329,9 +351,9 @@ class SearchType(str, Enum):
 
 
 def get_ids(ids_column: IndexOrSeries, scope: Optional[MetricScope] = None):
-    if scope == MetricScope.DATA_QUALITY or scope == MetricScope.MODEL_QUALITY:
+    if scope == MetricScope.DATA or scope == MetricScope.PREDICTION:
         return partial_column(ids_column, 3).unique().tolist()
-    elif scope == MetricScope.LABEL_QUALITY:
+    elif scope == MetricScope.ANNOTATION:
         data_ids = partial_column(ids_column, 3).unique().tolist()
         return ids_column[~ids_column.isin(data_ids)].tolist()
     return ids_column.tolist()
@@ -366,7 +388,7 @@ def search(
 
         return [item.identifier for item in result.result_identifiers], snippet
 
-    if scope == MetricScope.MODEL_QUALITY and filters.prediction_filters is not None:
+    if scope == MetricScope.PREDICTION and filters.prediction_filters is not None:
         _, _, predictions, _ = read_prediction_files(project, filters.prediction_filters.type)
         if predictions is not None:
             ids, snippet = _search(get_ids(predictions["identifier"], scope))
