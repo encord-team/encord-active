@@ -198,13 +198,13 @@ def import_mask_predictions_obsolete(
 
 
 def migrate_mask_predictions(
-    project_path: Path,
-    predictions_path: Path,
+    project_dir: Path,
+    predictions_dir: Path,
     ontology_mapping: dict[str, int],
     file_name_regex: str = PNG_FILE_NAME_REGEX,
     du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
 ):
-    label_rows = Project(project_path).load().label_rows
+    label_rows = Project(project_dir).load().label_rows
     du_hash_lookup: Dict[str, Tuple[str, int]] = {}
     ontology_hash_lookup: Dict[int, str] = {v: k for k, v in ontology_mapping.items()}
 
@@ -222,7 +222,7 @@ def migrate_mask_predictions(
     pattern = re.compile(file_name_regex)
     predictions = []
     with tqdm(total=None, desc="Migrating mask predictions", leave=False) as pbar:
-        for file_path in predictions_path.glob("**/*"):
+        for file_path in predictions_dir.glob("**/*"):
             if not file_path.is_file():
                 continue
 
@@ -272,13 +272,13 @@ def migrate_mask_predictions(
 
 def import_mask_predictions(
     project: Project,
-    predictions_path: Path,
+    predictions_dir: Path,
     ontology_mapping: dict[str, int],
     file_name_regex: str = PNG_FILE_NAME_REGEX,
     du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
 ):
     predictions = migrate_mask_predictions(
-        project.file_structure.project_dir, predictions_path, ontology_mapping, file_name_regex, du_hash_name_lookup
+        project.file_structure.project_dir, predictions_dir, ontology_mapping, file_name_regex, du_hash_name_lookup
     )
     return import_predictions(project, predictions)
 
@@ -337,7 +337,7 @@ def import_KITTI_labels(
 
 def migrate_kitti_predictions(
     project_path: Path,
-    predictions_path: Path,
+    predictions_dir: Path,
     ontology_mapping: dict[str, str],
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
@@ -345,7 +345,7 @@ def migrate_kitti_predictions(
     pattern = re.compile(file_name_regex)
     files = [
         (match.group("data_hash"), f)
-        for f in predictions_path.glob("**/*")
+        for f in predictions_dir.glob("**/*")
         if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and (match := pattern.match(f.name))
     ]
 
@@ -357,7 +357,7 @@ def migrate_kitti_predictions(
     relevant_ontology_hashes = {
         o.feature_node_hash
         for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
-        if o.shape.value not in BoxShapes
+        if o.shape.value in BoxShapes
     }
     bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
     if len(bad_hashes) > 0:
@@ -405,13 +405,13 @@ def migrate_kitti_predictions(
 
 def import_kitti_predictions(
     project: Project,
-    predictions_path: Path,
+    predictions_dir: Path,
     ontology_mapping: dict[str, str],
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     predictions = migrate_kitti_predictions(
         project.file_structure.project_dir,
-        predictions_path,
+        predictions_dir,
         ontology_mapping,
         file_name_regex,
     )
