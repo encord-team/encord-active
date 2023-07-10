@@ -11,17 +11,15 @@ import TOCInline from "@theme/TOCInline";
 
 :::note Requirements
 
-Active learning workflows in the Encord platform are specifically designed for workflow projects within the platform.
+Active learning workflows in the Encord platform are specifically designed for [workflow projects][workflow-project-tutorial].
 This requirement allows for seamless task movement between essential stages such as `label`, `review`, and `complete` when utilizing the SDK.
-
-Note that deviating from this requirement may require customizing certain steps to align with your specific needs.
 
 :::
 
 Active learning workflows in Encord Active share the following key stages:
 <TOCInline toc={toc.filter((node) => node.level === 2).map((node, index) => ({ ...node, value: `${index + 1}. ${node.value}` }))} />
 
-If you prefer to witness an active learning workflow in action please take a look at our end-to-end tutorial about [easy active learning on MNIST][easy-active-learning-in-mnist-tutorial].
+If you prefer to witness an active learning workflow in action, please take a look at the end-to-end tutorial for [MNIST][easy-active-learning-in-mnist-tutorial].
 
 ## Initialization
 To start an active learning workflow, you need an initial labeled dataset for training the machine learning model.
@@ -57,7 +55,7 @@ Check out the [quality metrics page][quality-metrics-page] for a comprehensive o
 For example, you can follow these steps to prioritize labeling for data with the lowest `Image Diversity` score using the UI:
 1. In the _Data Quality_ explorer page, navigate to the toolbox and click on the _Filter_ tab.
 2. Select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the unannotated data.
-3. Add the `Image Diversity` filter and adjust the slider to select the 5% of data with the lowest score.
+3. Add the `Image Diversity` filter and adjust the slider to select a subset of data with the lowest score.
 4. Access the _Action_ tab in the toolbox.
 5. Click on the <kbd>🖋 Relabel</kbd> button and follow the instructions to [prioritize labeling][relabeling-guide] for the selected data.
 
@@ -69,7 +67,7 @@ Task prioritization for labeling is currently a closed-beta feature in the Encor
 Nevertheless, to mimic the behavior of task prioritization in projects with only single images, you can follow these steps:
 1. In the _Filter_ tab, select the option that correspond to the first labeling stage (usually named `Annotate 1`) under the `Workflow Stage` metadata filter to pick the data ready to be labeled.
 2. Use the [bulk tagging][bulk-tagging-feature] feature to mark them with a data tag, such as `unlabeled`.
-3. Add the `Image Diversity` filter and adjust the slider to select the 5% of filtered data with the lowest score.
+3. Add the `Image Diversity` filter and adjust the slider to select a subset of filtered data with the lowest score.
 4. Use the bulk tagging feature to mark this further selection with a data tag, such as `to label next`.
 5. Reset the filters and choose the `unlabeled` tag option under `Tags`.
 6. Access the _Action tab_ in the toolbox and click on the <kbd>✅ Mark as Complete</kbd> button and follow the instructions to temporarily move all the selected data to the workflow's `Complete` stage.
@@ -102,4 +100,5 @@ Check more on this [hands-on section][model-training-in-easy-active-learning-in-
 [join-discord]: https://discord.gg/TU6yT7Uvx3
 [relabeling-guide]: ../user-guide/relabeling
 [standard-filter-feature]: ../user-guide/filtering#standard-filter-feature
-[workflow-project-tutorial]: https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
+[workflow-project-tutorial]: https://docs.encord.com/projects/workflows/workflows
+[workflow-project-tutorial-configuring]: https://docs.encord.com/projects/workflows/creating-and-configuring-workflows#workflows---tutorial
