@@ -16,6 +16,7 @@ import {
   ActiveProjectMetricSummary,
   ActiveQueryAPI,
 } from "../ActiveTypes";
+import { formatTooltip } from "../util/ActiveFormatter";
 
 function ActiveChartDistributionBar(props: {
   metricsSummary: ActiveProjectMetricSummary;
@@ -159,7 +160,7 @@ function ActiveChartDistributionBar(props: {
               position: "insideLeft",
             }}
           />
-          <Tooltip />
+          <Tooltip formatter={formatTooltip} />
           <Bar dataKey="count" isAnimationActive={false} />
           {metadata === undefined || !showQuartiles ? null : (
             <>

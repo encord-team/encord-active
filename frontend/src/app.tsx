@@ -10,7 +10,7 @@ import { ProjectsPage } from "./components/ProjectsPage";
 
 export const App = () => {
   const { data: projects, isLoading } = useLookupProjectsFromUrlList([
-    import.meta.env.VITE_API_URL,
+    import.meta.env.VITE_API_URL ?? "http://localhost:8502",
   ]);
   const [selectedProject, setSelectedProject] = useState<
     IntegratedProjectMetadata | undefined
@@ -24,10 +24,10 @@ export const App = () => {
 
   return (
     <div className="p-12 bg-white">
-      {selectedProject?.projectHash ? (
+      {selectedProject?.project_hash ? (
         <ActiveProjectPage
           queryAPI={queryAPI}
-          projectHash={selectedProject?.projectHash}
+          projectHash={selectedProject?.project_hash}
           projects={Object.values(projects)}
           setSelectedProject={(projectHash) =>
             setSelectedProject(

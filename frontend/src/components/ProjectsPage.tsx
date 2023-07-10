@@ -54,9 +54,9 @@ export const ProjectsPage = ({
         {userProjects.length ? (
           userProjects.map((project) => (
             <ProjectCard
-              key={project.projectHash}
+              key={project.project_hash}
               project={project}
-              onClick={() => onSelectLocalProject(project.projectHash)}
+              onClick={() => onSelectLocalProject(project.project_hash)}
             />
           ))
         ) : (
@@ -73,10 +73,10 @@ export const ProjectsPage = ({
               .sort((a, b) => -!!a.downloaded - -!!b.downloaded)
               .map((project) => (
                 <ProjectCard
-                  key={project.projectHash}
+                  key={project.project_hash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() => onSelectLocalProject(project.projectHash)}
+                  onClick={() => onSelectLocalProject(project.project_hash)}
                 />
               ))}
           </div>
@@ -155,22 +155,22 @@ const ProjectCard = ({
       <div className="flex flex-col">
         <ProjectStat
           title={"Dataset"}
-          value={project.stats.dataUnits}
+          value={project?.stats?.dataUnits}
           iconUrl={fileImageUrl}
         />
         <ProjectStat
           title={"Annotations"}
-          value={project.stats.labels}
+          value={project?.stats?.labels}
           iconUrl={annotationsUrl}
         />
         <ProjectStat
           title={"Classes"}
-          value={project.stats.classes}
+          value={project?.stats?.classes}
           iconUrl={classesUrl}
         />
       </div>
     </div>
-    {showDownloadedBadge && project.downloaded ? (
+    {showDownloadedBadge && project?.downloaded ? (
       <div className="badge absolute top-1">Downloaded</div>
     ) : null}
   </ButtonCard>

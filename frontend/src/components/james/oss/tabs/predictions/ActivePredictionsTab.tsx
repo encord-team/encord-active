@@ -5,7 +5,6 @@ import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../../ActiveTypes";
 import ActivePredictionSummaryTab from "./ActivePredictionSummaryTab";
 import ActivePredictionsMetricPerformanceTab from "./ActivePredictionsMetricPerformanceTab";
 import ActivePredictionsExplorerTab from "./ActivePredictionsExplorerTab";
-import { Explorer } from "../../../../explorer";
 
 function ActivePredictionsTab(props: {
   queryAPI: ActiveQueryAPI;
@@ -74,11 +73,7 @@ function ActivePredictionsTab(props: {
               label: "Explorer",
               key: "2",
               children: (
-                <Explorer
-                  baseUrl="http://localhost:8502"
-                  projectHash={projectHash}
-                  scope={"model_quality"}
-                />
+                <ActivePredictionsExplorerTab featureHashMap={featureHashMap} />
               ),
             },
           ]}

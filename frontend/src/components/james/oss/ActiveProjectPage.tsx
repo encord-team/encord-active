@@ -6,6 +6,7 @@ import ActiveAnalysisDomainTab from "./tabs/ActiveAnalysisDomainTab";
 import ActivePredictionsTab from "./tabs/predictions/ActivePredictionsTab";
 import { ProjectSelector } from "../../ProjectSelector";
 import { IntegratedProjectMetadata } from "../IntegratedActiveAPI";
+import ActiveProjectComparisonTab from "./tabs/ActiveProjectComparisonTab";
 
 function ActiveProjectPage(props: {
   queryAPI: ActiveQueryAPI;
@@ -94,6 +95,18 @@ function ActiveProjectPage(props: {
             />
           ),
         },
+        {
+          label: "Project Comparison",
+          key: "4",
+          children: (
+              <ActiveProjectComparisonTab
+                projectHash={projectHash}
+                queryAPI={queryAPI}
+                dataMetricsSummary={projectSummary.data}
+                annotationMetricsSummary={projectSummary.annotations}
+              />
+          )
+        }
       ]}
       activeKey={activeTab}
       onChange={setActiveTab}

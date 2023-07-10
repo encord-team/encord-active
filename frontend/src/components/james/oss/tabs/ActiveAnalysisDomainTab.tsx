@@ -73,21 +73,10 @@ function ActiveAnalysisDomainTab(props: {
               baseUrl="http://localhost:8502"
               projectHash={projectHash}
               filters={filters as any}
+              queryAPI={queryAPI}
               scope={
                 analysisDomain === "data" ? "data_quality" : "label_quality"
               }
-            />
-          ),
-        },
-        {
-          label: "Project Comparison",
-          key: "3",
-          children: (
-            <ActiveProjectComparisonTab
-              projectHash={projectHash}
-              queryAPI={queryAPI}
-              metricsSummary={metricsSummary}
-              analysisDomain={analysisDomain}
             />
           ),
         },

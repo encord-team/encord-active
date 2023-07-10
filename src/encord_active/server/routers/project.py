@@ -5,7 +5,13 @@ from functools import lru_cache
 from typing import Annotated, List, Optional, Union, cast
 
 import pandas as pd
-from encord.orm.project import CopyDatasetOptions, CopyDatasetAction, CopyLabelsOptions, ReviewApprovalState, Project
+from encord.orm.project import (
+    CopyDatasetAction,
+    CopyDatasetOptions,
+    CopyLabelsOptions,
+    Project,
+    ReviewApprovalState,
+)
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
@@ -25,14 +31,29 @@ from encord_active.lib.db.helpers.tags import (
     from_grouped_tags,
     to_grouped_tags,
 )
-from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.merged_metrics import (
+    MergedMetrics,
+    ensure_initialised_merged_metrics,
+)
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
-from encord_active.lib.encord.actions import replace_db_uids, DatasetUniquenessError, DatasetCreationResult, \
-    EncordActions
-from encord_active.lib.encord.project_sync import LabelRowDataUnit, create_filtered_db, copy_image_data_unit_json, \
-    copy_label_row_meta_json, copy_project_meta, create_filtered_metrics, create_filtered_embeddings, \
-    copy_filtered_data, replace_uids
+from encord_active.lib.encord.actions import (
+    DatasetCreationResult,
+    DatasetUniquenessError,
+    EncordActions,
+    replace_db_uids,
+)
+from encord_active.lib.encord.project_sync import (
+    LabelRowDataUnit,
+    copy_filtered_data,
+    copy_image_data_unit_json,
+    copy_label_row_meta_json,
+    copy_project_meta,
+    create_filtered_db,
+    create_filtered_embeddings,
+    create_filtered_metrics,
+    replace_uids,
+)
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
@@ -358,20 +379,26 @@ def search(
     return {"ids": ids, "snippet": snippet}
 
 
+class CreateSubsetJSON(BaseModel):
+    identifiers: List[str]
+    project_title: str
+    dataset_title: str
+    project_description: Optional[str] = None
+    dataset_description: Optional[str] = None
+
+
 @router.post("/{project}/create_subset")
-def create_subset(
-        curr_project_structure: ProjectFileStructureDep,
-        identifiers: List[str],
-        project_title: str,
-        project_description: str,
-        dataset_title: Optional[str] = None,
-        dataset_description: Optional[str] = None,
-):
+def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateSubsetJSON):
+    identifiers = item.identifiers
+    project_title = item.project_title
+    project_description = item.project_description
+    dataset_title = item.dataset_title
+    dataset_description = item.dataset_description
     filtered_df = pd.DataFrame(identifiers, columns=["identifier"])
     target_project_dir = curr_project_structure.project_dir.parent / project_title
     target_project_structure = ProjectFileStructure(target_project_dir)
-    current_project_meta = fetch_project_meta(curr_project_structure)
-    remote_copy = current_project_meta["has_remote"]
+    current_project_meta = curr_project_structure.load_project_meta()
+    remote_copy = current_project_meta.get("has_remote", False)
 
     if target_project_dir.exists():
         raise Exception("Subset with the same title already exists")
@@ -379,14 +406,10 @@ def create_subset(
 
     try:
         ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
-        filtered_lr_du = {
-            LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])
-        }
+        filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
         filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
         filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
-        filtered_labels = {
-            (ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()
-        }
+        filtered_labels = {(ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()}
 
         create_filtered_db(target_project_dir, filtered_df)
 
@@ -401,7 +424,7 @@ def create_subset(
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
-        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description)
+        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description or "")
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 
@@ -420,8 +443,7 @@ def create_subset(
 
         if remote_copy:
             original_project = get_encord_project(
-                current_project_meta["ssh_key_path"],
-                current_project_meta["project_hash"]
+                current_project_meta["ssh_key_path"], current_project_meta["project_hash"]
             )
             dataset_hash_map: dict[str, set[str]] = {}
             for k, v in filtered_label_row_meta.items():
@@ -442,10 +464,7 @@ def create_subset(
                     accepted_label_hashes=list(label_rows),
                 ),
             )
-            cloned_project = get_encord_project(
-                current_project_meta["ssh_key_path"],
-                cloned_project_hash
-            )
+            cloned_project = get_encord_project(current_project_meta["ssh_key_path"], cloned_project_hash)
             cloned_project_label_rows = [
                 cloned_project.get_label_row(src_row.label_hash) for src_row in cloned_project.list_label_rows_v2()
             ]
@@ -520,29 +539,28 @@ def create_subset(
 
 @router.post("/{project}/upload_to_encord")
 def upload_to_encord(
-        pfs: ProjectFileStructureDep,
-        dataset_title: str,
-        dataset_description: str,
-        project_title: str,
-        project_description: str,
-        ontology_title: Optional[str],
-        ontology_description: str,
-        identifiers: List[str],
+    pfs: ProjectFileStructureDep,
+    dataset_title: str,
+    dataset_description: str,
+    project_title: str,
+    project_description: str,
+    ontology_title: Optional[str],
+    ontology_description: str,
+    identifiers: List[str],
 ):
     df = pd.DataFrame(identifiers, columns=["identifier"])
     # FIXME: don't fetch app_config from here.
     encord_actions = EncordActions(pfs.project_dir, app_config.get_ssh_key())
     try:
         dataset_creation_result = encord_actions.create_dataset(
-            dataset_title=dataset_title, dataset_description=dataset_description,
-            dataset_df=df
+            dataset_title=dataset_title, dataset_description=dataset_description, dataset_df=df
         )
     except DatasetUniquenessError as e:
         return None
 
     # FIXME: existing logic re-uses 'ontology_hash'
     ontology_hash = encord_actions.create_ontology(
-        title=ontology_title, description=ontology_description
+        title=ontology_title or project_title, description=ontology_description or ""
     ).ontology_hash
 
     try:

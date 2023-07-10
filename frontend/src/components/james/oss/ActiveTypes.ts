@@ -1,4 +1,9 @@
-import { UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
+import {
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 export type ActiveProjectView = {
   readonly project_hash: string;
@@ -104,6 +109,10 @@ export type ActiveProjectAnalysisDistribution = {
       }>;
 };
 
+export type ActiveProjectAnalysisCompareMetricDissimilarity = {
+  readonly results: Readonly<Record<string, number>>;
+};
+
 export type ActiveProjectSearchResult = {
   readonly truncated: boolean;
   readonly results: ReadonlyArray<{
@@ -192,6 +201,24 @@ export type ActiveProjectSimilarityResult = {
   }>;
 };
 
+export type ActiveCreateSubsetMutationArguments = {
+  readonly project_title: string;
+  readonly project_description?: string | undefined;
+  readonly dataset_title: string;
+  readonly dataset_description?: string | undefined;
+  readonly du_hashes: string[];
+};
+
+export type ActiveCreateTagMutationArguments = {
+  readonly tag_title: string;
+  readonly tag_description?: string | undefined;
+  readonly objects: readonly {
+    readonly du_hash: string;
+    readonly frame: number;
+    readonly object_hash?: string | undefined;
+  }[];
+};
+
 export type ActivePredictionView = {
   readonly name: string;
   readonly prediction_hash: string;
@@ -276,6 +303,12 @@ export interface ActiveQueryAPI {
     metricOrEnum: string,
     options?: Pick<UseQueryOptions, "enabled">
   ): UseQueryResult<ActiveProjectAnalysisDistribution>;
+  useProjectAnalysisCompareMetricDissimilarity(
+    projectHash: string,
+    analysisDomain: ActiveProjectAnalysisDomain,
+    compareProjectHash: string,
+    options?: Pick<UseQueryOptions, "enabled">
+  ): UseQueryResult<ActiveProjectAnalysisCompareMetricDissimilarity>;
   useProjectAnalysisSearch(
     projectHash: string,
     analysisDomain: ActiveProjectAnalysisDomain,
@@ -310,6 +343,22 @@ export interface ActiveQueryAPI {
     objectHash?: string | undefined | null,
     options?: Pick<UseQueryOptions, "enabled">
   ): UseQueryResult<ActiveProjectSimilarityResult>;
+
+  // == Project actions ===
+  useProjectMutationCreateSubset(
+    projectHash: string,
+    options?: Pick<
+      UseMutationOptions<string, unknown, ActiveCreateSubsetMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    >
+  ): UseMutationResult<string, unknown, ActiveCreateSubsetMutationArguments>;
+  useProjectMutationCreateTag(
+    projectHash: string,
+    options?: Pick<
+      UseMutationOptions<string, unknown, ActiveCreateTagMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    >
+  ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments>;
 
   // == Project predictions ===
   useProjectListPredictions(
