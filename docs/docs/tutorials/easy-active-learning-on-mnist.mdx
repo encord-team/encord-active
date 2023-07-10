@@ -37,7 +37,7 @@ project_path = Path("/path/to/project/directory")
 project_fs = ProjectFileStructure(project_path)
 ```
 
-## 2. Train the model with labeled data from the project
+## 2. Train the model with labeled data from the project {#model-training}
 
 It's a common scenario to start spinning the active learning cycle using a model trained with some initial data.
 Let's select [sklearn.ensemble.RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) as the base model.
