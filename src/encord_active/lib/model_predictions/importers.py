@@ -60,7 +60,7 @@ KITTI_FILE_NAME_REGEX = r"^(?P<data_hash>[a-f0-9\-]*)__(?P<image_name>.*)$"
 PNG_FILE_NAME_REGEX = r"^(?P<stem>.*?)\.png$"
 
 
-def import_mask_predictions(
+def import_mask_predictions_obsolete(
     project: EncordProject,
     data_root: Path,
     cache_dir: Path,
@@ -270,6 +270,19 @@ def migrate_mask_predictions(
     return predictions
 
 
+def import_mask_predictions(
+    project: Project,
+    predictions_path: Path,
+    ontology_mapping: dict[str, int],
+    file_name_regex: str = PNG_FILE_NAME_REGEX,
+    du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
+):
+    predictions = migrate_mask_predictions(
+        project.file_structure.project_dir, predictions_path, ontology_mapping, file_name_regex, du_hash_name_lookup
+    )
+    return import_predictions(project, predictions)
+
+
 def import_KITTI_labels(
     project: EncordProject,
     data_root: Path,
@@ -390,6 +403,11 @@ def migrate_kitti_predictions(
                     )
                 )
     return predictions
+
+
+def import_kitti_predictions(project: Project, predictions_path: Path, file_name_regex: str = KITTI_FILE_NAME_REGEX):
+    predictions = migrate_kitti_predictions(project.file_structure.project_dir, predictions_path, file_name_regex)
+    return import_predictions(project, predictions)
 
 
 def import_predictions(project: Project, predictions: List[Prediction]):
