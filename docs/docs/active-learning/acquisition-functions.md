@@ -31,6 +31,11 @@ We include the following uncertainty-based acquisition functions:
 
   $U(x) = \mathcal{H}(P_\theta(y|x)) = -\underset{y \in \mathcal{Y}}{\sum} P_\theta(y|x) \log P_\theta(y|x)$
 
+- [Mean Object Confidence][ea-acquisition-function-mean-object-confidence]
+  
+  $U(x) = \frac{1}{N} \sum_{i=1}^{N} {\max} P_\theta^i(y|x)$
+    
+
 :::tip
 
 By following the links provided for each acquisition function mentioned above, you will find detailed explanations of what each acquisition function represents, alternative formulas, guidance on interpreting the output scores, and also its implementation in GitHub.
@@ -58,11 +63,6 @@ ontology file. Then, it chooses samples from each cluster one-by-one to form an 
 each cluster. Samples are chosen according to their proximity to cluster centroids (closer samples will be 
 chosen first).
 
-:::tip
-Diversity-based acquisition functions are generally easier to use compared to the uncertainty-based functions because 
-they may not require any ML model. See [diversity-sampling-on-unlabeled-data example][diversity-sampling-on-unlabeled-data-example] to 
-learn how to use them in you project easily.
-:::
 
 ## Which acquisition function should I use?
 
@@ -80,12 +80,19 @@ If you’d like to talk to an expert on the topic, the Encord ML team can be fou
 
 ## How can I utilize the chosen acquisition function?
 
-Explore the [Easy Active Learning on MNIST][easy-active-learning-in-mnist] tutorial for a quick overview using a well-known example dataset.
+### Tutorials
+
+[Easy Active Learning on MNIST][easy-active-learning-in-mnist]: A quick overview of the acquisition functions using a well-known example dataset.  
+[Diversity sampling without an ML model][diversity-sampling-on-unlabeled-data-example]: Using diversity sampling to rank images without training any model.  
+[Selecting hard samples for object detection][selecting-hard-samples-for-object-detection]: A jupyter notebook to run acquisition functions using an object detector.
+
 
 [ea-acquisition-function-least-confidence]: ../metrics/model-quality-metrics/#least-confidence
 [ea-acquisition-function-margin]: ../metrics/model-quality-metrics/#margin
 [ea-acquisition-function-variance]: ../metrics/model-quality-metrics/#variance
 [ea-acquisition-function-entropy]: ../metrics/model-quality-metrics/#entropy
+[ea-acquisition-function-mean-object-confidence]: ../metrics/model-quality-metrics.md/#mean-object-score
 [easy-active-learning-in-mnist]: ../tutorials/easy-active-learning-on-mnist
 [ea-acquisition-function-image-diversity]: ../metrics/data-quality-metrics.md#image-diversity
 [diversity-sampling-on-unlabeled-data-example]: ../tutorials/diversity-sampling-on-unlabeled-data.mdx
+[selecting-hard-samples-for-object-detection]: https://github.com/encord-team/encord-active/blob/main/examples/active%20learning/object-detection/select-hard-samples-to-annotate.ipynb
