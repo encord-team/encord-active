@@ -336,24 +336,25 @@ def import_KITTI_labels(
 
 
 def migrate_kitti_predictions(
-    project_path: Path,
+    project_dir: Path,
     predictions_dir: Path,
     ontology_mapping: dict[str, str],
+    file_path_to_data_unit_func: Callable[[Path], tuple[str, int]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     # Obtain the files containing predictions
     pattern = re.compile(file_name_regex)
     files = [
-        (match.group("data_hash"), f)
+        f
         for f in predictions_dir.glob("**/*")
-        if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and (match := pattern.match(f.name))
+        if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and pattern.match(f.name) is not None
     ]
 
     # Invert the ontology mapping (now it's from object class names to ontology object hashes)
     class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
 
     # Check that the input ontology object hashes are valid (exist and represent bounding boxes)
-    pfs = ProjectFileStructure(project_path)
+    pfs = ProjectFileStructure(project_dir)
     relevant_ontology_hashes = {
         o.feature_node_hash
         for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
@@ -363,11 +364,27 @@ def migrate_kitti_predictions(
     if len(bad_hashes) > 0:
         raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
 
+    # If the 'file_path_to_data_unit_func' function is missing, file stems will be used as references to the data units
+    file_stem_to_data_unit_dict = {}
+    if file_path_to_data_unit_func is None:
+        for du in pfs.data_units(include_label_row=True):
+            if du.label_row.data_type == "video":
+                file_stem = f"{Path(du.data_title).stem}__{du.frame}"
+            else:
+                file_stem = Path(du.data_title).stem
+            file_stem_to_data_unit_dict[file_stem] = (du.data_hash, du.frame)
+
     # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
     with PrismaConnection(pfs) as conn:
-        for data_hash, file in tqdm(files, desc="Migrating KITTI predictions"):
-            du = conn.dataunit.find_first(where={"data_hash": data_hash})
+        for file in tqdm(files, desc="Migrating KITTI predictions"):
+            # Identify the data unit that corresponds to the given file
+            if file_path_to_data_unit_func is None:
+                data_hash, frame = file_stem_to_data_unit_dict[file.stem]
+            else:
+                data_hash, frame = file_path_to_data_unit_func(file)
+
+            du = conn.dataunit.find_unique(where={"data_hash_frame": {"data_hash": data_hash, "frame": frame}})
             if du is None:
                 logger.info(f"Couldn't find data unit '{data_hash}' in the database")
                 continue
@@ -407,12 +424,14 @@ def import_kitti_predictions(
     project: Project,
     predictions_dir: Path,
     ontology_mapping: dict[str, str],
+    file_path_to_data_unit_func: Callable[[Path], tuple[str, int]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     predictions = migrate_kitti_predictions(
         project.file_structure.project_dir,
         predictions_dir,
         ontology_mapping,
+        file_path_to_data_unit_func,
         file_name_regex,
     )
     return import_predictions(project, predictions)
