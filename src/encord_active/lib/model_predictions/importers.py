@@ -367,12 +367,12 @@ def migrate_kitti_predictions(
     # If the 'file_path_to_data_unit_func' function is missing, file stems will be used as references to the data units
     file_stem_to_data_unit_dict = {}
     if file_path_to_data_unit_func is None:
-        for du in pfs.data_units(include_label_row=True):
-            if du.label_row.data_type == "video":
-                file_stem = f"{Path(du.data_title).stem}__{du.frame}"
+        for _du in pfs.data_units(include_label_row=True):
+            if _du.label_row.data_type == "video":  # type: ignore
+                _file_stem = f"{Path(_du.data_title).stem}__{_du.frame}"
             else:
-                file_stem = Path(du.data_title).stem
-            file_stem_to_data_unit_dict[file_stem] = (du.data_hash, du.frame)
+                _file_stem = Path(_du.data_title).stem
+            file_stem_to_data_unit_dict[_file_stem] = (_du.data_hash, _du.frame)
 
     # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
