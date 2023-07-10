@@ -197,6 +197,79 @@ def import_mask_predictions(
                 pbar.update(1)
 
 
+def migrate_mask_predictions(
+    project_path: Path,
+    predictions_path: Path,
+    ontology_mapping: dict[str, int],
+    file_name_regex: str = PNG_FILE_NAME_REGEX,
+    du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
+):
+    label_rows = Project(project_path).load().label_rows
+    du_hash_lookup: Dict[str, Tuple[str, int]] = {}
+    ontology_hash_lookup: Dict[int, str] = {v: k for k, v in ontology_mapping.items()}
+
+    if du_hash_name_lookup is None:
+        du_hash_lookup = {}
+        for label_row in label_rows.values():
+            for du in label_row["data_units"].values():
+                fname = du["data_title"].rsplit(".", 1)[0]  # File name without the extension
+                if isinstance(du["labels"], list):  # Videos
+                    for frame_num in du["labels"]:
+                        du_hash_lookup[f"{fname}__{frame_num:05d}"] = (du["data_hash"], int(frame_num))
+                else:  # Images
+                    du_hash_lookup[fname] = (du["data_hash"], 0)
+
+    pattern = re.compile(file_name_regex)
+    predictions = []
+    with tqdm(total=None, desc="Migrating mask predictions", leave=False) as pbar:
+        for file_path in predictions_path.glob("**/*"):
+            if not file_path.is_file():
+                continue
+
+            match = pattern.match(file_path.name)
+            if not match:
+                continue
+
+            if du_hash_name_lookup:
+                du_hash, frame = du_hash_name_lookup(file_path)
+            else:
+                du_hash, frame = du_hash_lookup.get(file_path.stem, ("", -1))
+
+            if not du_hash:
+                logger.warning(f"Couldn't match file {file_path} to any data unit.")
+                continue
+
+            try:
+                input_mask = np.asarray(Image.open(file_path))
+            except Exception:
+                continue
+            for cls in np.unique(input_mask):
+                if cls == 0:  # background
+                    continue
+
+                class_hash = ontology_hash_lookup[cls]
+                mask = np.zeros_like(input_mask)
+                mask[input_mask == cls] = 1
+
+                contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+                for contour in contours:
+                    if len(contour) < 3 or cv2.contourArea(contour) < 4:
+                        continue
+                    _mask = np.zeros_like(mask)
+                    _mask = cv2.fillPoly(_mask, [contour], 1)
+
+                    predictions.append(
+                        Prediction(
+                            data_hash=du_hash,
+                            confidence=1.0,
+                            object=ObjectDetection(format=Format.POLYGON, data=_mask, feature_hash=class_hash),
+                        )
+                    )
+            pbar.update(1)
+    return predictions
+
+
 def import_KITTI_labels(
     project: EncordProject,
     data_root: Path,
