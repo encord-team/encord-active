@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import * as React from "react";
 import { useMemo, useState } from "react";
+import { formatTooltip, formatTooltipLabel } from "../util/ActiveFormatter";
 
 /**
  * Returns data for the average over the input data.
@@ -90,8 +91,15 @@ function ActiveChartPredictionMetricPerformanceChart(props: {
     string,
     { readonly color: string; readonly name: string }
   >;
+  scoreLabel: string;
 }) {
-  const { data, selectedClass, classDecomposition, featureHashMap } = props;
+  const {
+    data,
+    scoreLabel,
+    selectedClass,
+    classDecomposition,
+    featureHashMap,
+  } = props;
   const [barCharts, barRefs, barGroups]: [
     ({ m: number } & Record<string, number>)[],
     Record<string, null | number>,
@@ -126,7 +134,7 @@ function ActiveChartPredictionMetricPerformanceChart(props: {
           state[`${featureHash}a`] = entry.a;
         });
       });
-      filteredEntries.forEach((featureHash) =>
+      filteredEntries.forEach(([featureHash]) =>
         Object.values(lookup).forEach((entry) => {
           if (!(`${featureHash}n` in entry)) {
             entry[`${featureHash}n`] = 0;
@@ -191,9 +199,12 @@ function ActiveChartPredictionMetricPerformanceChart(props: {
           type="category"
           domain={[0.0, 1.0]}
           label="Bucket"
-          tickFormatter={(value) => value.toFixed(2)}
+          tickFormatter={(value: number) => value.toFixed(2)}
         />
-        <YAxis type="number" tickFormatter={(value) => value.toFixed(3)} />
+        <YAxis
+          type="number"
+          tickFormatter={(value: number) => value.toFixed(3)}
+        />
         {barGroups.map((feature) => {
           const referenceY = barRefs[feature];
           const groupName =
@@ -246,7 +257,10 @@ function ActiveChartPredictionMetricPerformanceChart(props: {
           onMouseEnter={(e) => setHoverKeyword(e.dataKey)}
           onMouseLeave={() => setHoverKeyword(undefined)}
         />
-        <Tooltip />
+        <Tooltip
+          formatter={formatTooltip}
+          labelFormatter={formatTooltipLabel(`${scoreLabel}: `)}
+        />
       </ComposedChart>
     </ResponsiveContainer>
   );

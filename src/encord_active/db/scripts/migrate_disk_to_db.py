@@ -16,7 +16,9 @@ from encord_active.db.models import (
     AnnotationType,
     Project,
     ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
     ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectPrediction,
@@ -25,7 +27,7 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra,
+    get_engine,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.db.connection import PrismaConnection
@@ -95,14 +97,14 @@ def assert_valid_args(cls, dct: dict) -> dict:
 
 
 def _assign_metrics(
-        metric_column_name: str,
-        metrics_dict: dict,
-        score: float,
-        metric_types: Dict[str, MetricDefinition],
-        metrics_derived: Set[str],
-        error_identifier: str,
-        description_dict: Optional[Tuple[Dict[str, bytes], Dict[str, str]]],
-        description: Optional[str],
+    metric_column_name: str,
+    metrics_dict: dict,
+    score: float,
+    metric_types: Dict[str, MetricDefinition],
+    metrics_derived: Set[str],
+    error_identifier: str,
+    description_dict: Optional[Tuple[Dict[str, bytes], Dict[str, str]]],
+    description: Optional[str],
 ):
     if metric_column_name not in metrics_dict:
         if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
@@ -145,25 +147,31 @@ def _assign_metrics(
                     f"{metric_column_name}, {existing_score}, {score}"
                 )
     # Assign description
-    if description_dict is not None and description is not None \
-            and isinstance(description, str) and len(description) > 0:
+    if (
+        description_dict is not None
+        and description is not None
+        and isinstance(description, str)
+        and len(description) > 0
+    ):
         _, metric_description_map = description_dict
         if metric_column_name not in metric_description_map:
             metric_description_map[metric_column_name] = description
         elif description not in metric_description_map[metric_column_name]:
-            metric_description_map[metric_column_name] = str(metric_description_map[metric_column_name] + ", " + description)
+            metric_description_map[metric_column_name] = str(
+                metric_description_map[metric_column_name] + ", " + description
+            )
 
 
 def _load_embeddings(
-        pfs: ProjectFileStructure,
-        data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]],
-        annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]],
+    pfs: ProjectFileStructure,
+    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]],
+    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]],
 ) -> None:
     for embedding_type, embedding_name in [
         (EmbeddingType.IMAGE, "embedding_clip"),
         (EmbeddingType.OBJECT, "embedding_clip"),
         (EmbeddingType.CLASSIFICATION, "embedding_clip"),
-        #FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu"),
+        # FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu"),
     ]:
         label_embeddings = load_label_embeddings(embedding_type, pfs)
         for embedding in label_embeddings:
@@ -399,7 +407,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     metrics_derived=DERIVED_DATA_METRICS,
                     error_identifier=metric_entry["identifier"],
                     description_dict=data_metric_extra[(du_hash, frame)],
-                    description=metric_entry.get("description", None)
+                    description=metric_entry.get("description", None),
                 )
                 if metric_column_name in DataAnnotationSharedMetrics:
                     for classification_dict in data_classification_metrics.get((du_hash, frame), []):
@@ -415,11 +423,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                         )
 
     # Load embeddings
-    _load_embeddings(
-        pfs=pfs,
-        data_metric_extra=data_metric_extra,
-        annotation_metric_extra=annotation_metric_extra
-    )
+    _load_embeddings(pfs=pfs, data_metric_extra=data_metric_extra, annotation_metric_extra=annotation_metric_extra)
 
     # Load 2d embeddings
     # FIXME: implement (reduction should be marked as separate)
@@ -660,10 +664,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     du_hash=missing_du_hash,
                     frame=missing_frame,
                     object_hash=missing_annotation_hash,
-                    **assert_valid_args(
-                        ProjectPredictionUnmatchedResults,
-                        missing_annotation_metrics
-                    )
+                    **assert_valid_args(ProjectPredictionUnmatchedResults, missing_annotation_metrics),
                 )
             )
 

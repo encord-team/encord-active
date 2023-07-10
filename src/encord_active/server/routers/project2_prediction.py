@@ -1,7 +1,7 @@
 import json
 import math
 import uuid
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter
@@ -12,7 +12,10 @@ from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
 from encord_active.db.metrics import AnnotationMetrics, MetricType
-from encord_active.db.models import ProjectPredictionObjectResults, ProjectPredictionUnmatchedResults
+from encord_active.db.models import (
+    ProjectPredictionObjectResults,
+    ProjectPredictionUnmatchedResults,
+)
 from encord_active.server.routers.project2_engine import engine
 
 router = APIRouter(
@@ -318,7 +321,8 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             .group_by(
                 ProjectPredictionObjectResults.feature_hash,
                 func.floor((metric_attr - metric_min) / metric_bucket_size),
-            ).order_by(
+            )
+            .order_by(
                 func.floor((metric_attr - metric_min) / metric_bucket_size),
             )
         ).fetchall()
@@ -345,19 +349,20 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             .group_by(
                 ProjectPredictionObjectResults.feature_hash,
                 func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
-            ).order_by(
+            )
+            .order_by(
                 func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
             )
         ).fetchall()
         fns: Dict[str, List[dict]] = {}
         for feature, bucket_m, fn_num in metric_fn_buckets:
             fp_tp_num = tp_count.get((feature, bucket_m), 0)
-            label_num = (fn_num + fp_tp_num)
+            label_num = fn_num + fp_tp_num
             fns.setdefault(feature, []).append(
                 {
                     "m": metric_min + (bucket_m * metric_bucket_size),
                     "a": 0 if label_num == 0 else fn_num / label_num,
-                    "n": label_num
+                    "n": label_num,
                 }
             )
     return {
@@ -390,4 +395,3 @@ def get_prediction_item(
     annotation_hash: Optional[str] = None,
 ):
     return None
-

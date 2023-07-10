@@ -21,7 +21,9 @@ from encord_active.db.metrics import (
 from encord_active.db.models import (
     AnnotationType,
     ProjectAnnotationAnalytics,
-    ProjectDataAnalytics, ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
 )
 from encord_active.server.routers.project2_engine import engine
 
@@ -45,7 +47,7 @@ def _get_metric_domain(
     Dict[str, MetricDefinition],
     Optional[str],
     Dict[str, dict],
-    Union[Type[ProjectDataAnalyticsExtra], Type[ProjectAnnotationAnalyticsExtra]]
+    Union[Type[ProjectDataAnalyticsExtra], Type[ProjectAnnotationAnalyticsExtra]],
 ]:
     if domain == AnalysisDomain.Data:
         return ProjectDataAnalytics, DataMetrics, None, {}, ProjectDataAnalyticsExtra
@@ -370,8 +372,12 @@ def _get_nn_descent(
 @router.get("/similarity/{du_hash}/{frame}/{object_hash}")
 @router.get("/similarity/{du_hash}/{frame}/")
 def search_similarity(
-        project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int,
-        embedding: str, object_hash: Optional[str] = None
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    du_hash: uuid.UUID,
+    frame: int,
+    embedding: str,
+    object_hash: Optional[str] = None,
 ):
     domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     if embedding != "embedding_clip":
@@ -382,7 +388,7 @@ def search_similarity(
                 domain_ty_extra.project_hash == project_hash,
                 domain_ty_extra.du_hash == du_hash,
                 domain_ty_extra.frame == frame,
-                *([] if object_key is None else (getattr(domain_ty_extra, object_key) == object_hash))
+                *([] if object_key is None else (getattr(domain_ty_extra, object_key) == object_hash)),
             )
         ).first()
         if src_embedding is None:
@@ -413,9 +419,9 @@ def search_similarity(
 
 @router.get("/project_compare/metric_dissimilarity")
 def compare_metric_dissimilarity(
-        project_hash: uuid.UUID,
-        domain: AnalysisDomain,
-        compare_project_hash: uuid.UUID,
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    compare_project_hash: uuid.UUID,
 ):
     # FIXME: try and convert to sql query for efficiency.
     domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
@@ -423,18 +429,16 @@ def compare_metric_dissimilarity(
     with Session(engine) as sess:
         for metric_name in domain_metrics:
             metric_attr: float = getattr(domain_ty, metric_name)
-            all_data_1 = sess.exec(select(
-                metric_attr,
-            ).where(
-                domain_ty.project_hash == project_hash,
-                is_not(metric_attr, None)
-            )).fetchall()
-            all_data_2 = sess.exec(select(
-                metric_attr,
-            ).where(
-                domain_ty.project_hash == compare_project_hash,
-                is_not(metric_attr, None)
-            )).fetchall()
+            all_data_1 = sess.exec(
+                select(
+                    metric_attr,
+                ).where(domain_ty.project_hash == project_hash, is_not(metric_attr, None))
+            ).fetchall()
+            all_data_2 = sess.exec(
+                select(
+                    metric_attr,
+                ).where(domain_ty.project_hash == compare_project_hash, is_not(metric_attr, None))
+            ).fetchall()
             if len(all_data_1) > 0 and len(all_data_2) > 0:
                 k_score, _ = ks_2samp(np.array(all_data_1), np.array(all_data_2))
                 dissimilarity[metric_name] = k_score

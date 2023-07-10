@@ -1,13 +1,5 @@
 import * as React from "react";
-import {
-  Button,
-  Input,
-  Modal,
-  Pagination,
-  Select,
-  Space,
-  Typography,
-} from "antd";
+import { Button, Pagination, Space } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import { Actions } from "usehooks-ts/dist/esm/useMap/useMap";
 import {
@@ -19,22 +11,8 @@ import {
 } from "@ant-design/icons";
 import ActiveViewImageCard from "../view/ActiveViewImageCard";
 import { ActiveQueryAPI } from "../ActiveTypes";
-
-function getModalTitle(
-  actionModelOpen: "subset" | "tag" | "workflow" | "download" | undefined
-): string {
-  if (actionModelOpen === "subset") {
-    return "Create Project Subset";
-  } else if (actionModelOpen === "tag") {
-    return "Create Tag";
-  } else if (actionModelOpen === "workflow") {
-    return "Update Workflow State";
-  } else if (actionModelOpen === "download") {
-    return "Download Selection";
-  } else {
-    return "";
-  }
-}
+import ActiveCreateSubsetModal from "./modals/ActiveCreateSubsetModal";
+import ActiveCreateTagModal from "./modals/ActiveCreateTagModal";
 
 function ActiveSelectedTab(props: {
   projectHash: string;
@@ -86,68 +64,26 @@ function ActiveSelectedTab(props: {
     (selectedKey: string) => selectedItems.has(selectedKey),
     [selectedItems]
   );
-  const [actionModelOpen, setActionModelOpen] = useState<
+  const [actionModalOpen, setActionModalOpen] = useState<
     "subset" | "tag" | "workflow" | "download" | undefined
   >();
 
-  const [modalName, setModalName] = useState("");
-  const [modalDescription, setModalDescription] = useState("");
-
-  const getModalContent = () => {
-    if (actionModelOpen === "subset" || actionModelOpen === "tag") {
-      return (
-        <>
-          <Typography.Text strong>
-            {actionModelOpen === "subset" ? "Project" : "Tag"} Name:
-          </Typography.Text>
-          <Input value={modalName} />
-          <Typography.Text strong>
-            {actionModelOpen === "subset" ? "Project" : "Tag"} Description:
-          </Typography.Text>
-          <Input />
-          {actionModelOpen === "subset" ? (
-            <>
-              <Typography.Text strong>Dataset Name:</Typography.Text>
-              <Input />
-              <Typography.Text strong>Dataset Description:</Typography.Text>
-              <Input />
-            </>
-          ) : null}
-        </>
-      );
-    } else if (actionModelOpen === "workflow") {
-      return null;
-    } else if (actionModelOpen === "download") {
-      return (
-        <>
-          <Typography.Text strong>Format:</Typography.Text>
-          <Select
-            options={[
-              { label: "CSV", value: "csv" },
-              { label: "COCO", value: "coco" },
-            ]}
-            style={{ width: 100 }}
-          />
-        </>
-      );
-    } else {
-      return null;
-    }
-  };
+  const close = () => setActionModalOpen(undefined);
 
   return (
     <>
-      <Modal
-        open={actionModelOpen != null}
-        title={getModalTitle(actionModelOpen)}
-        onCancel={() => setActionModelOpen(undefined)}
-        onOk={() => {
-          // setActionModelOpen(undefined);
-          // FIXME: actually do something.
-        }}
-      >
-        {getModalContent()}
-      </Modal>
+      <ActiveCreateSubsetModal
+        open={actionModalOpen === "subset"}
+        close={close}
+        projectHash={projectHash}
+        queryAPI={queryAPI}
+      />
+      <ActiveCreateTagModal
+        open={actionModalOpen === "tag"}
+        close={close}
+        projectHash={projectHash}
+        queryAPI={queryAPI}
+      />
       <Space.Compact block style={{ marginBottom: 15 }}>
         <Button
           onClick={() => setSelectedItems.reset()}
@@ -158,7 +94,7 @@ function ActiveSelectedTab(props: {
           Deselect all
         </Button>
         <Button
-          onClick={() => setActionModelOpen("subset")}
+          onClick={() => setActionModalOpen("subset")}
           type="primary"
           icon={<PartitionOutlined />}
           disabled={selectedItems.size === 0}
@@ -166,7 +102,7 @@ function ActiveSelectedTab(props: {
           Create project subset
         </Button>
         <Button
-          onClick={() => setActionModelOpen("tag")}
+          onClick={() => setActionModalOpen("tag")}
           type="primary"
           icon={<SaveOutlined />}
           disabled={selectedItems.size === 0}
@@ -174,7 +110,7 @@ function ActiveSelectedTab(props: {
           Save as tag
         </Button>
         <Button
-          onClick={() => setActionModelOpen("workflow")}
+          onClick={() => setActionModalOpen("workflow")}
           type="primary"
           icon={<NodeIndexOutlined />}
           disabled={selectedItems.size === 0}
@@ -182,7 +118,7 @@ function ActiveSelectedTab(props: {
           Update workflow
         </Button>
         <Button
-          onClick={() => setActionModelOpen("download")}
+          onClick={() => setActionModalOpen("download")}
           type="primary"
           icon={<DownloadOutlined />}
           disabled={selectedItems.size === 0}

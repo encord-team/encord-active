@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
 from encord_active.db.models import (
+    AnnotationType,
     Project,
     ProjectAnnotationAnalytics,
     ProjectDataAnalytics,
@@ -17,7 +18,7 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
-    ProjectTaggedDataUnit, AnnotationType,
+    ProjectTaggedDataUnit,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
@@ -53,11 +54,12 @@ class ProjectReturn(TypedDict):
     stats: Optional[ProjectStats]
 
 
-def _get_first_image_with_polygons_url(project_hash: UUID):
+def _get_first_image_with_polygons_url(project_hash: UUID) -> Optional[str]:
     with Session(engine) as sess:
-        offset = 0
-        while offset >= 0:
-            data_unit = sess.exec(select(ProjectDataUnitMetadata).offset(offset).limit(1)).one()
+        data_units = sess.exec(
+            select(ProjectDataUnitMetadata).where(ProjectDataUnitMetadata.project_hash == project_hash).limit(100)
+        ).fetchall()
+        for data_unit in data_units:
             if not data_unit:
                 break
             if len(data_unit.objects) and not data_unit.data_uri_is_video and data_unit.data_uri is not None:
@@ -67,14 +69,15 @@ def _get_first_image_with_polygons_url(project_hash: UUID):
                 if url_path is not None:
                     relative_path = url_path.relative_to(root_path)
                     return f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+    return None
 
 
 @router.get("/list")
-def get_all_projects():
+def get_all_projects() -> Dict[str, ProjectReturn]:
     sandbox_projects = {}
     for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
         hash = UUID(data["hash"])
-        sandbox_projects[hash] = ProjectReturn(
+        sandbox_projects[str(uuid.UUID)] = ProjectReturn(
             title=name,
             description="",
             projectHash=hash,
@@ -88,14 +91,12 @@ def get_all_projects():
         db_projects = sess.exec(
             select(Project.project_hash, Project.project_name, Project.project_description)
         ).fetchall()
-
     projects = {}
     for project_hash, title, description in db_projects:
-        if project_hash in sandbox_projects:
-            sandbox_projects[project_hash]["downloaded"] = True
+        if str(project_hash) in sandbox_projects:
+            sandbox_projects[str(project_hash)]["downloaded"] = True
             continue
-
-        projects[project_hash] = ProjectReturn(
+        projects[str(project_hash)] = ProjectReturn(
             title=title,
             description=description,
             projectHash=project_hash,
@@ -104,7 +105,6 @@ def get_all_projects():
             imageUrl=_get_first_image_with_polygons_url(project_hash) or "",
             sandbox=False,
         )
-
     return {**projects, **sandbox_projects}
 
 
@@ -156,10 +156,7 @@ def get_project_summary(project_hash: UUID):
                 "annotation_type": {
                     "type": "enum",
                     "title": "Annotation Type",
-                    "values": {
-                        annotation_type.value: annotation_type.name
-                        for annotation_type in AnnotationType
-                    },
+                    "values": {annotation_type.value: annotation_type.name for annotation_type in AnnotationType},
                 },
             },
         },
@@ -170,7 +167,7 @@ def get_project_summary(project_hash: UUID):
 
 @router.get("/get/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
 def display_preview(project_hash: UUID, du_hash: UUID, frame: int, object_hash: Optional[str] = None):
-    objects = []
+    objects: List[dict] = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         query = select(

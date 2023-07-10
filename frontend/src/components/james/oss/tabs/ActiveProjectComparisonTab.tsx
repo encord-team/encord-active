@@ -1,40 +1,62 @@
 import * as React from "react";
-import { Divider, Row, Select, Space, Typography } from "antd";
+import { Col, Divider, Row, Select, Typography } from "antd";
 import { useState } from "react";
-import {
-  ActiveProjectAnalysisDomain,
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../ActiveTypes";
+import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../ActiveTypes";
 import ActiveChartMetricCompareScatter from "../charts/ActiveChartMetricCompareScatter";
+import ActiveChartMetricDissimilarity from "../charts/ActiveChartMetricDissimilarity";
 
 function ActiveProjectComparisonTab(props: {
   projectHash: string;
   queryAPI: ActiveQueryAPI;
-  metricsSummary: ActiveProjectMetricSummary;
-  analysisDomain: ActiveProjectAnalysisDomain;
+  dataMetricsSummary: ActiveProjectMetricSummary;
+  annotationMetricsSummary: ActiveProjectMetricSummary;
 }) {
-  const { projectHash, queryAPI, metricsSummary, analysisDomain } = props;
+  const {
+    projectHash,
+    queryAPI,
+    dataMetricsSummary,
+    annotationMetricsSummary,
+  } = props;
   const allProjects = queryAPI.useListProjectViews("", 0, 100000);
   const [compareProjectHash, setCompareProjectHash] = useState<
     undefined | string
   >();
+
+  const [domain, setDomain] = useState<"annotation" | "data">("data");
+  const metricsSummary =
+    domain === "data" ? dataMetricsSummary : annotationMetricsSummary;
+
   return (
     <>
-      <Row>
-        <Space align="center" wrap>
-          <Typography.Text strong>Comparison Project: </Typography.Text>
+      <Row align="middle">
+        <Col span={12}>
+          <Row align="middle">
+            <Typography.Text strong>Comparison Project: </Typography.Text>
+            <Select
+              onChange={setCompareProjectHash}
+              value={compareProjectHash}
+              style={{ width: 300 }}
+              options={
+                allProjects.data?.results?.map((project) => ({
+                  label: project.title,
+                  value: project.project_hash,
+                })) ?? []
+              }
+            />
+          </Row>
+        </Col>
+        <Col span={12}>
+          <Typography.Text strong>Domain: </Typography.Text>
           <Select
-            onChange={setCompareProjectHash}
-            value={compareProjectHash}
-            options={
-              allProjects.data?.results?.map((project) => ({
-                label: project.title,
-                value: project.project_hash,
-              })) ?? []
-            }
+            onChange={setDomain}
+            value={domain}
+            style={{ width: 200 }}
+            options={[
+              { value: "data", label: "Data" },
+              { value: "annotation", label: "Annotation" },
+            ]}
           />
-        </Space>
+        </Col>
       </Row>
       {compareProjectHash === undefined ? null : (
         <>
@@ -43,7 +65,7 @@ function ActiveProjectComparisonTab(props: {
           </Divider>
           <ActiveChartMetricCompareScatter
             metricsSummary={metricsSummary}
-            analysisDomain={analysisDomain}
+            analysisDomain={domain}
             projectHash={projectHash}
             queryAPI={queryAPI}
             compareProjectHash={compareProjectHash}
@@ -51,7 +73,13 @@ function ActiveProjectComparisonTab(props: {
           <Divider>
             <Typography.Title level={3}>Metric Dissimilarity</Typography.Title>
           </Divider>
-          TODO: implement this!!!!
+          <ActiveChartMetricDissimilarity
+            projectHash={projectHash}
+            analysisDomain={domain}
+            queryAPI={queryAPI}
+            metricsSummary={metricsSummary}
+            compareProjectHash={compareProjectHash}
+          />
         </>
       )}
     </>

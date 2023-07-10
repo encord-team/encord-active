@@ -10,6 +10,7 @@ import {
   Scatter,
 } from "recharts";
 import { useMemo, useState } from "react";
+import { formatTooltip } from "../util/ActiveFormatter";
 
 function ActiveChartPredictionRecallCurve(props: {
   data:
@@ -80,9 +81,9 @@ function ActiveChartPredictionRecallCurve(props: {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="r" name="Recall" type="number" domain={[0.0, 1.0]} />
         <YAxis dataKey="p" name="Precision" type="number" domain={[0.0, 1.0]} />
-        <Tooltip />
+        <Tooltip formatter={formatTooltip} labelFormatter={() => null} />
         <Legend
-          onMouseEnter={(e) => setHoverKeyword(e.value)}
+          onMouseEnter={(e: { value: string }) => setHoverKeyword(e.value)}
           onMouseLeave={() => setHoverKeyword(undefined)}
         />
         {processedData == null
@@ -95,6 +96,7 @@ function ActiveChartPredictionRecallCurve(props: {
               return (
                 <Scatter
                   name={name}
+                  id={name}
                   key={featureHash}
                   data={prCurve}
                   fill={

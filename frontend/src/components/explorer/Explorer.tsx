@@ -36,12 +36,16 @@ import {
   TagList,
 } from "./Tagging";
 import { sift } from "radash";
+import ActiveCreateSubsetModal from "../james/oss/tabs/modals/ActiveCreateSubsetModal";
+import {ActiveQueryAPI} from "../james/oss/ActiveTypes";
+import {Button} from "antd";
 
 export type Props = {
   authToken?: string | null;
   projectHash: string;
   filters?: Filters;
   scope: Scope;
+  queryAPI: ActiveQueryAPI;
   baseUrl: string;
 };
 
@@ -50,6 +54,7 @@ export const Explorer = ({
   projectHash,
   filters = {},
   scope,
+  queryAPI,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
   const [itemSet, setItemSet] = useState(new Set<string>());
@@ -187,9 +192,20 @@ export const Explorer = ({
     isLoadingSimilarItems,
     searching,
   ]);
-
+  const [open, setOpen] = useState<boolean>(false);
+  const close = () => setOpen(false);
   return (
     <ApiContext.Provider value={api}>
+      <ActiveCreateSubsetModal
+          open={open}
+          close={close}
+          projectHash={projectHash}
+          queryAPI={queryAPI}
+          identifiers={[...selectedItems]}
+      />
+      <Button onClick={() => setOpen(true)}>
+        Create Project subset
+      </Button>
       <div className="w-full">
         {previewedItem && (
           <ItemPreview

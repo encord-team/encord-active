@@ -83,6 +83,9 @@ function ActivePredictionsMetricPerformanceTab(props: {
     [featureHashMap]
   );
 
+  const scoreLabel =
+    metricsSummary.metrics[selectedMetric ?? ""]?.title ?? "Unknown";
+
   return (
     <>
       <Row align="middle">
@@ -140,6 +143,7 @@ function ActivePredictionsMetricPerformanceTab(props: {
         selectedClass={classList}
         classDecomposition="auto"
         featureHashMap={featureHashMap}
+        scoreLabel={scoreLabel}
       />
       <Divider orientation="left">
         <Typography.Title level={3}>False Negative Rate</Typography.Title>
@@ -149,6 +153,7 @@ function ActivePredictionsMetricPerformanceTab(props: {
         selectedClass={classList}
         classDecomposition="auto"
         featureHashMap={featureHashMap}
+        scoreLabel={scoreLabel}
       />
     </>
   );
