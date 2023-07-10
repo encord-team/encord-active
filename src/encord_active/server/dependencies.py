@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -21,7 +22,7 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
         return ProjectFileStructure(get_settings().SERVER_START_PATH / project)
 
     with Session(engine) as sess:
-        db_project = sess.exec(select(Project).where(Project.project_hash == project)).first()
+        db_project = sess.exec(select(Project).where(Project.project_hash == uuid.UUID(project))).first()
         if not db_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Project: {project} wasn't found in the DB"

@@ -86,9 +86,9 @@ function ActivePredictionsExplorerTab(props: {
           setPageIdx(page);
           setPageSize(pageSize);
         }}
-        showTotal={(total, range) =>
-          `${total} results ${1 === 1 ? " (Truncated)" : ""}`
-        }
+        // showTotal={(total, range) =>
+        // `${total} results ${7 === 1 ? " (Truncated)" : ""}`
+        // }
       />
     </>
   );

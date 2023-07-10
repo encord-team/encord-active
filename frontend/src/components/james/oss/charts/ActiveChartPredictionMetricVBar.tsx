@@ -12,6 +12,7 @@ import * as React from "react";
 import { scaleLinear } from "d3-scale";
 import { useMemo } from "react";
 import { ActiveProjectMetricSummary } from "../ActiveTypes";
+import { formatTooltip } from "../util/ActiveFormatter";
 
 function ActiveChartPredictionMetricVBar(props: {
   data: Readonly<Record<string, number>> | undefined;
@@ -82,7 +83,7 @@ function ActiveChartPredictionMetricVBar(props: {
             predictionMetric === "correlations" ? [-1.0, 1.0] : [0.0, 1.0]
           }
         />
-        <Tooltip />
+        <Tooltip formatter={formatTooltip} />
         <Legend />
         <Bar
           dataKey="score"

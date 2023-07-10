@@ -1,13 +1,19 @@
 import { useMemo } from "react";
 import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
   useQuery,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 import axios from "axios";
 import {
+  ActiveCreateSubsetMutationArguments,
+  ActiveCreateTagMutationArguments,
   ActivePaginationResult,
   ActivePredictionView,
+  ActiveProjectAnalysisCompareMetricDissimilarity,
   ActiveProjectAnalysisDistribution,
   ActiveProjectAnalysisDomain,
   ActiveProjectAnalysisScatter,
@@ -26,16 +32,8 @@ import {
 export type IntegratedProjectMetadata = {
   readonly title: string;
   readonly description: string;
-  readonly projectHash: string;
+  readonly project_hash: string;
   readonly baseProjectUrl: string;
-  readonly sandbox: boolean;
-  readonly downloaded: boolean;
-  readonly imageUrl: string;
-  readonly stats: {
-    readonly dataUnits: number;
-    readonly labels: number;
-    readonly classes: number;
-  };
 };
 
 const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
@@ -76,22 +74,21 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   // === Project Summary ===
   useListProjectViews = (
-    search?: string,
-    offset?: number,
-    limit?: number
+    search: string,
+    offset: number,
+    limit: number
   ): UseQueryResult<ActivePaginationResult<ActiveProjectView>> => {
     const { projects } = this;
     const [results, total] = useMemo(() => {
-      const results = Object.values(projects).filter(
-        ({ downloaded }) => downloaded
-      );
+      const results = Object.values(projects)
+        // .filter((project) => project.title.toLowerCase().startsWith(search.toLowerCase()))
+        .map((project) => ({
+          project_hash: project.project_hash,
+          title: project.title,
+          description: project.description,
+        }));
       results.sort((a, b) => (a.title < b.title ? -1 : 1));
-      return [
-        offset == null || limit == null
-          ? results
-          : results.slice(offset, offset + limit),
-        results.length,
-      ];
+      return [results.slice(offset, offset + limit), results.length];
     }, [projects, offset, limit]);
     return useQuery(
       [this.projects, "ACTIVE:useListProjectViews", results, total],
@@ -109,6 +106,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectSummary", projectHash],
+      // eslint-disable-next-line
       () => axios.get(`${baseURL}/summary`).then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -125,6 +123,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       () =>
         axios
           .get(`${baseURL}/analysis/${analysisDomain}/summary`)
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -154,6 +153,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
               y_metric: yMetric,
             },
           })
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...StatisticQueryOptions }
     );
@@ -180,8 +180,42 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
               group: metricOrEnum,
             },
           })
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...StatisticQueryOptions }
+    );
+  };
+
+  useProjectAnalysisCompareMetricDissimilarity = (
+    projectHash: string,
+    analysisDomain: ActiveProjectAnalysisDomain,
+    compareProjectHash: string,
+    options: Pick<UseQueryOptions, "enabled"> = {}
+  ): UseQueryResult<ActiveProjectAnalysisCompareMetricDissimilarity> => {
+    const baseURL = this.getBaseUrl(projectHash, options.enabled);
+    return useQuery(
+      [
+        "ACTIVE:useProjectAnalysisCompareMetricDissimilarity",
+        projectHash,
+        analysisDomain,
+        compareProjectHash,
+      ],
+      () =>
+        axios
+          .get(
+            `${baseURL}/analysis/${analysisDomain}/project_compare/metric_dissimilarity`,
+            {
+              params: {
+                compare_project_hash: compareProjectHash,
+              },
+            }
+          )
+          // eslint-disable-next-line
+          .then((res) => res.data as any),
+      {
+        ...options,
+        staleTime: 15 * 60 * 1000, // 15 minutes, do not refetch.
+      }
     );
   };
 
@@ -218,6 +252,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
               desc,
             },
           })
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       {
         ...options,
@@ -240,6 +275,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       () =>
         axios
           .get(`${baseURL}/preview/${duHash}/${frame}/${objectHash ?? ""}`)
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       {
         ...options,
@@ -261,6 +297,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       () =>
         axios
           .get(`${baseURL}/item/${duHash}/${frame}/`)
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       options
     );
@@ -291,10 +328,60 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
               objectHash == null ? "" : objectHash
             }?embedding=embedding_clip`
           )
+          // eslint-disable-next-line
           .then((res) => res.data as any),
       options
     );
   };
+
+  // == Project actions ===
+  useProjectMutationCreateSubset = (
+    projectHash: string,
+    options: Pick<
+      UseMutationOptions<string, unknown, ActiveCreateSubsetMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    > = {}
+  ): UseMutationResult<string, unknown, ActiveCreateSubsetMutationArguments> => {
+      const baseURL = this.getBaseUrl(projectHash, true).replace(
+          "/projects_v2/get/","/projects/"
+      );
+
+      return useMutation(
+          [projectHash],
+          async (args: ActiveCreateSubsetMutationArguments) => {
+                const params = {
+                    identifiers: args.du_hashes ?? [],
+                    project_title: args.project_title,
+                    project_description: args.project_description ?? "",
+                    dataset_title: args.dataset_title,
+                    dataset_description: args.dataset_description ?? "",
+                }
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+              return await axios.post(
+                  `${baseURL}/create_subset`,
+                  JSON.stringify(params),
+                  { headers }
+              )
+          },
+          options
+      );
+  }
+
+  useProjectMutationCreateTag = (
+    projectHash: string,
+    options: Pick<
+      UseMutationOptions<string, unknown, ActiveCreateTagMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    > = {}
+  ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments> =>
+    useMutation(
+      [projectHash],
+      async (args: ActiveCreateTagMutationArguments) => "FIXME: impl",
+      options
+    );
 
   // == Project predictions ===
   useProjectListPredictions = (
@@ -305,6 +392,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     return useQuery(
       ["ACTIVE:useProjectListPredictions", projectHash],
       () =>
+        // eslint-disable-next-line
         axios.get(`${baseURL}/predictions/list`).then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -323,7 +411,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
         axios
           .get(`${baseURL}/predictions/get/${predictionHash}/summary`, {
             params: { iou },
-          })
+          }) // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -354,7 +442,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
             {
               params: { iou, buckets, metric_name: metric },
             }
-          )
+          ) // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -371,19 +459,17 @@ export function useLookupProjectsFromUrlList(
       for (const url of urls) {
         // eslint-disable-next-line no-await-in-loop
         const res = await axios.get(`${url}/projects_v2/list`);
+        // eslint-disable-next-line
         const data: Record<
           string,
-          Omit<IntegratedProjectMetadata, "baseProjectUrl" | "projectHash">
+          { title: string; description: string; project_hash: string } // eslint-disable-next-line
         > = res.data as any;
-
-        Object.entries(data).forEach(([projectHash, projectMeta]) => {
-          allData[projectHash] = {
-            ...projectMeta,
-            projectHash,
-            imageUrl: projectMeta.imageUrl.startsWith("http")
-              ? projectMeta.imageUrl
-              : `${url}/${projectMeta.imageUrl}`,
-            baseProjectUrl: `${url}/projects_v2/get/${projectHash}`,
+        Object.entries(data).forEach(([project_hash, projectMeta]) => {
+          allData[project_hash] = {
+            title: projectMeta.title,
+            description: projectMeta.description,
+            project_hash,
+            baseProjectUrl: `${url}/projects_v2/get/${project_hash}`,
           };
         });
       }

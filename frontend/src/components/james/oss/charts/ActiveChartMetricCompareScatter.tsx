@@ -16,6 +16,7 @@ import {
   ActiveProjectMetricSummary,
   ActiveQueryAPI,
 } from "../ActiveTypes";
+import { formatTooltip } from "../util/ActiveFormatter";
 
 function ActiveChartMetricCompareScatter(props: {
   metricsSummary: ActiveProjectMetricSummary;
@@ -135,7 +136,10 @@ function ActiveChartMetricCompareScatter(props: {
             }}
             name={metricsSummary.metrics[yMetric ?? ""]?.title ?? "y"}
           />
-          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+          <Tooltip
+            cursor={{ strokeDasharray: "3 3" }}
+            formatter={formatTooltip}
+          />
           {data != null ? (
             <Scatter
               data={data}
