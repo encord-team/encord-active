@@ -1,3 +1,7 @@
+---
+sidebar_position: 1
+---
+
 # Acquisition Functions
 
 We want you to select the data samples that will be the most informative to your model, so a natural approach would be to score each sample based on its predicted usefulness for training.
