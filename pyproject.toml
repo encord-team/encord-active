@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "encord-active"
-version = "v0.1.63"
+version = "v0.1.65"
 description = "Enable users to improve machine learning models in an active learning fashion via data, label, and model quality."
 authors = ["Cord Technologies Limited <hello@encord.com>"]
 classifiers = [
@@ -70,7 +70,7 @@ toml = "^0.10.2"
 pydantic = "^1.10.2"
 pycocotools = { version = "^2.0.6", optional = true }
 psutil = "^5.9.4"
-pandera = "^0.13.4"
+pandera = {extras = ["mypy"], version = "^0.15.1"}
 jupyterlab = { version = "^3.5.2", optional = true }
 ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
@@ -78,7 +78,7 @@ statsmodels = "^0.14.0" # TDOD: remove me when we don't use plotly on the stream
 umap-learn = "^0.5.3"
 streamlit-plotly-events = "^0.0.6"
 llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
-encord-active-components = "0.0.24"
+encord-active-components = "^0.0.26"
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.0"
@@ -114,6 +114,7 @@ ipdb = "^0.13.9"
 types-toml = "^0.10.8"
 tuna = "^0.5.11"
 jupyter = "^1.0.0"
+pyinstrument = "^4.5.0"
 
 [tool.poe.tasks]
 importtime = { shell = "python -X importtime -c 'import encord_active.cli.main' 2> imports.prof && python -m tuna imports.prof" }
@@ -135,6 +136,7 @@ include = '.*\/.*\.i?py(nb)?$'
 profile = "black"
 
 [tool.mypy]
+plugins = "pandera.mypy"
 ignore_missing_imports = true
 enable_recursive_aliases = true
 exclude = ['examples/']

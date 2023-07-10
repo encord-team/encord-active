@@ -25,13 +25,36 @@ export const LabelRowObjectSchema = z.object({
   manualAnnotation: z.boolean(),
   name: z.string(),
   objectHash: z.string(),
-  points: z.record(PointSchema),
+  points: z.record(PointSchema).nullish(),
+  boundingBoxPoints: z.record(PointSchema).nullish(),
   shape: LabelRowObjectShapeSchema,
+});
+
+export const ObjectPredictionSchema = z.object({
+  color: z.string(),
+  confidence: z.number(),
+  featureHash: z.string(),
+  name: z.string(),
+  objectHash: z.string(),
+  points: z.record(PointSchema).nullish(),
+  boundingBoxPoints: z.record(PointSchema).nullish(),
+  shape: LabelRowObjectShapeSchema,
+});
+
+export const ClassificationPredictionSchema = z.object({
+  confidence: z.number(),
+  featureHash: z.string(),
+  name: z.string(),
 });
 
 export const LabelsSchema = z.object({
   classification: z.any().array().nullish(),
   objects: LabelRowObjectSchema.array(),
+});
+
+export const PredictionSchema = z.object({
+  classification: ClassificationPredictionSchema.array().nullish(),
+  objects: ObjectPredictionSchema.array(),
 });
 
 export const GroupedTagsSchema = z.object({
@@ -52,6 +75,7 @@ export const ItemSchema = z.object({
   }),
   tags: GroupedTagsSchema,
   labels: LabelsSchema,
+  predictions: PredictionSchema,
 });
 
 const IdValueSchema = z.object({ id: z.string(), value: z.number() });
@@ -63,10 +87,34 @@ export type ItemMetadata = Item["metadata"];
 export type Point = z.infer<typeof PointSchema>;
 export type Scope = "data_quality" | "label_quality" | "model_quality";
 
+export type PredictionType = "object" | "classification";
+export const classificationsPredictionOutcomes = [
+  "Correct Classifications",
+  "Misclassifications",
+] as const;
+export type ClassificationsPredictionOutcome =
+  (typeof classificationsPredictionOutcomes)[number];
+export const objectPredictionOutcomes = [
+  "True Positive",
+  "False Positive",
+  "False Negative",
+] as const;
+export type ObjectPredictionOutcom = (typeof objectPredictionOutcomes)[number];
+
+export type PredictionOutcome =
+  | ObjectPredictionOutcom
+  | ClassificationsPredictionOutcome;
+
 // TODO: add a proper type when filtering is done from the frontend. currently
 // we only get the filters form streamlit and pass them to the server so the
 // types aren't strictly necessary.
-export type Filters = unknown;
+export type Filters = unknown & {
+  prediction_filters?: unknown & {
+    type?: PredictionType;
+    outcome?: PredictionOutcome;
+    iou_threshold?: number;
+  };
+};
 
 const EmbeddingTypeSchema = z.union([
   z.literal("classification"),
@@ -84,6 +132,7 @@ export type Metric = z.infer<typeof MetricSchema>;
 export const Item2DEmbeddingSchema = PointSchema.extend({
   id: z.string(),
   label: z.string(),
+  score: z.number().optional(),
 });
 
 export type Item2DEmbedding = z.infer<typeof Item2DEmbeddingSchema>;
@@ -147,9 +196,15 @@ export const getApi = (
         return [];
       }
     },
-    fetchProjectMetrics: async (scope: Scope) => {
+    fetchProjectMetrics: async (
+      scope: Scope,
+      prediction_type?: PredictionType,
+      prediction_outcome?: PredictionOutcome
+    ) => {
       const queryParams = new URLSearchParams({
         ...(scope ? { scope } : {}),
+        ...(prediction_type ? { prediction_type } : {}),
+        ...(prediction_outcome ? { prediction_outcome } : {}),
       });
       const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
@@ -171,10 +226,16 @@ export const getApi = (
       ).json();
       return IdValueSchema.array().parse(result);
     },
-    fetchProjectItem: async (id: string) => {
+    fetchProjectItem: async (id: string, iou?: number) => {
+      const queryParams = new URLSearchParams({
+        ...(iou != null ? { iou: iou.toString() } : {}),
+      });
+
       const item = await (
         await fetcher(
-          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(id)}`
+          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(
+            id
+          )}?${queryParams}`
         )
       ).json();
       return ItemSchema.parse(item) as Item;
@@ -200,7 +261,7 @@ export const getApi = (
 
       const url = `${baseUrl}/projects/${projectName}/similarities/${encodeURIComponent(
         id
-      )}?${queryParams} `;
+      )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
       return z.string().array().parse(response);
     },
@@ -236,14 +297,22 @@ export const getApi = (
       });
     },
     searchInProject: async (
-      { scope, query, type }: { scope: Scope; query: string; type: SearchType },
+      {
+        scope,
+        query,
+        type,
+        filters,
+      }: { scope: Scope; query: string; type: SearchType; filters: Filters },
       signal?: AbortSignal
     ) => {
-      const queryParams = new URLSearchParams({ query, scope, type });
-
       const response = await fetcher(
-        `${baseUrl}/projects/${projectName}/search?${queryParams}`,
+        `${baseUrl}/projects/${projectName}/search`,
         {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query, scope, type, filters }),
           signal,
         }
       );

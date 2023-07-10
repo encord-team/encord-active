@@ -6,10 +6,11 @@ import {
   Tooltip,
 } from "@ant-design/plots";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { IdValue, Item2DEmbedding } from "./api";
-import { bin } from "d3-array";
+import { IdValue, Item2DEmbedding, PredictionType } from "./api";
+import { bin, group } from "d3-array";
 import { hexbin } from "d3-hexbin";
-import { counting, max } from "radash";
+import { scaleLinear } from "d3-scale";
+import { counting, fork, max } from "radash";
 
 const BINS = 20;
 
@@ -32,11 +33,11 @@ export const MetricDistributionTiny = ({
 
   useEffect(() => {
     if (!values.length) return;
-    setSeletedIds(
-      selectedBins.length
-        ? selectedBins.flatMap((bin) => bins[bin].map(({ id }) => id))
-        : values.map(({ id }) => id)
-    );
+    const selectedIds = selectedBins.length
+      ? selectedBins.flatMap((bin) => bins[bin].map(({ id }) => id))
+      : values.map(({ id }) => id);
+
+    if (values.length !== selectedIds.length) setSeletedIds(selectedIds);
   }, [selectedBins]);
 
   const onEvent = useCallback<NonNullable<ColumnConfig["onEvent"]>>(
@@ -71,7 +72,7 @@ export const MetricDistributionTiny = ({
 
   return (
     <Column
-      className="w-full max-w-xs"
+      className="w-64 max-h-12"
       autoFit={true}
       data={columns}
       columnWidthRatio={1}
@@ -82,13 +83,13 @@ export const MetricDistributionTiny = ({
       brush={
         bins.length > 1
           ? {
-            enabled: true,
-            type: "x-rect",
-            action: "filter",
-            mask: {
-              style: { fill: "rgba(255,0,0,0.15)" },
-            },
-          }
+              enabled: true,
+              type: "x-rect",
+              action: "filter",
+              mask: {
+                style: { fill: "rgba(255,0,0,0.15)" },
+              },
+            }
           : {}
       }
       onEvent={onEvent}
@@ -99,18 +100,22 @@ export const MetricDistributionTiny = ({
   );
 };
 
-const fixedFormatter = (value: number) => value.toFixed(2);
+const fixedFormatter = (value: string | number | null) =>
+  value != null ? parseFloat(value.toString()).toFixed(2) : "Missing";
 
 const HEX_BINS = 1000;
+const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export const ScatteredEmbeddings = ({
   embeddings,
   onSelectionChange,
   onReset,
+  predictionType,
 }: {
   embeddings: Item2DEmbedding[];
   onSelectionChange: (ids: Item2DEmbedding[]) => void;
   onReset: () => void;
+  predictionType?: PredictionType;
 }) => {
   const binnedItems = useMemo(() => {
     if (embeddings.length < HEX_BINS)
@@ -138,9 +143,20 @@ export const ScatteredEmbeddings = ({
         items[0].label,
         1,
       ];
-      return { ...items, size: items.length, label, items };
+
+      const bin = { ...items, size: items.length, label, items };
+
+      if (!predictionType) return bin;
+
+      const [correct, inccorect] = fork(items, ({ score }) => !!score);
+      const score =
+        inccorect.length > 0
+          ? correct.length / (correct.length + inccorect.length)
+          : 1;
+
+      return { ...bin, score };
     });
-  }, [embeddings]);
+  }, [JSON.stringify(embeddings)]);
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
@@ -151,18 +167,39 @@ export const ScatteredEmbeddings = ({
         );
       else if (type === "brush-reset-button:click") onReset();
     },
-    [binnedItems]
+    [JSON.stringify(binnedItems)]
   );
+
+  const colorConfig = useMemo<{
+    colorField: string;
+    color?: Parameters<typeof Scatter>[0]["color"];
+  }>(() => {
+    if (predictionType)
+      return {
+        colorField: "score",
+        color: (datum) => getColor(datum.score ?? 0),
+      };
+
+    return { colorField: "label" };
+  }, [predictionType]);
 
   return (
     <Scatter
+      {...colorConfig}
       data={binnedItems}
       xField="x"
       yField="y"
-      colorField="label"
       sizeField="size"
       size={[5, 30]}
       shape="circle"
+      legend={{
+        layout: "vertical",
+        position: "right",
+        rail: { size: 20, defaultLength: 200 },
+        label: {
+          formatter: fixedFormatter,
+        },
+      }}
       pointStyle={{ fillOpacity: 1 }}
       interactions={[{ type: "reset-button", enable: false }]}
       brush={{

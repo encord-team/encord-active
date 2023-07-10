@@ -38,6 +38,7 @@ from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.metrics.utils import load_metric_dataframe
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import ProjectNotFound, fetch_project_meta
+from encord_active.lib.project.project_file_structure import is_workflow_project
 from encord_active.server.settings import Env, get_settings
 
 
@@ -80,10 +81,14 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     with st.container():
         filterable_columns = df.columns.to_list()
+        if is_workflow_project(get_state().project_paths):  # include 'workflow stage' filter in workflow projects
+            filterable_columns.append("workflow_stage")
         if "url" in filterable_columns:
             filterable_columns.remove("url")
         # Move some columns to the beginning
-        filterable_columns.sort(key=lambda column: column in ["object_class", "tags", "annotator"], reverse=True)
+        filterable_columns.sort(
+            key=lambda column: column in ["object_class", "tags", "annotator", "workflow_stage"], reverse=True
+        )
 
         columns_to_filter = st.multiselect(
             "Filter by", filterable_columns, format_func=lambda name: name.replace("_", " ").title()
@@ -92,12 +97,12 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if not columns_to_filter:
             return df
 
-        filters = render_column_filters(df, columns_to_filter)
+        filters = render_column_filters(df, columns_to_filter, get_state().project_paths)
         get_state().filtering_state.filters = filters
-        return apply_filters(df, filters)
+        return apply_filters(df, filters, get_state().project_paths)
 
 
-def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
+def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str], pfs: ProjectFileStructure):
     filters = Filters()
 
     for column in columns_to_filter:
@@ -124,6 +129,20 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str]):
                 "Values for object class",
                 options=class_options,
                 default=class_options,
+                key=key,
+            )
+
+        elif column == "workflow_stage":
+            lr_metadata = json.loads(pfs.label_row_meta.read_text(encoding="utf-8"))
+            lr_to_workflow_stage = {
+                lr_hash: metadata.get("workflow_graph_node", dict()).get("title", None)
+                for lr_hash, metadata in lr_metadata.items()
+            }
+            workflow_stage_available_options = sorted(set(lr_to_workflow_stage.values()))
+            filters.workflow_stages = right.multiselect(
+                "Values for workflow stage",
+                options=workflow_stage_available_options,
+                default=workflow_stage_available_options,
                 key=key,
             )
 
@@ -618,8 +637,28 @@ def render_workflow_action_button(
     elif len(label_row_meta) == 0 or next(iter(label_row_meta.values())).get("workflow_graph_node") is None:
         is_disabled = True
         disabled_explanation_text = (
-            " Relabeling is only supported on workflow projects."
+            " Task status updates are only supported on workflow projects."
             " Please, first upgrade your project to use workflows."
+        )
+
+    # Obtain the label rows whose task status is going to be updated
+    all_identifiers = filtered_df["identifier"].to_list()
+    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
+
+    # Only allow support native images
+    # Context: Moving individual data units through the workflow stages is not feasible, only at task level, so
+    # if a frame is moved then the whole label row will too. This unexpected behaviour only doesn't occur in
+    # native images (1 data unit per label row) so we are blocking the action if we find any other data type.
+    # TODO Enable for all data types when the Encord SDK allows to move individual data units
+    includes_unsupported_data_types = any(
+        label_row_meta[lr_hash]["data_type"] != "IMAGE" for lr_hash in unique_lr_hashes
+    )
+    if not is_disabled and includes_unsupported_data_types:
+        is_disabled = True
+        disabled_explanation_text = (
+            " Currently, task status updates are only supported for individual images."
+            " To enable this button, remove non-individual images from the filtered data."
+            " For more information, please contact our support team."
         )
 
     # Display workflow action button
@@ -632,10 +671,6 @@ def render_workflow_action_button(
     )
     if current_form.value not in [workflow_action_confirm_form, workflow_action_success_form]:
         return
-
-    # Obtain the label rows whose task status is going to be updated
-    all_identifiers = filtered_df["identifier"].to_list()
-    unique_lr_hashes = list(set(str(_id).split("_", maxsplit=1)[0] for _id in all_identifiers))
 
     # Show the confirmation form
     if current_form.value == workflow_action_confirm_form:

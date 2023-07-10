@@ -13,28 +13,41 @@ const TAG_GROUPS = [
   { value: "label", label: "Label", Icon: TbPolygon },
 ] as const;
 
+const taggingDisabledReasons = {
+  predictions: "Tagging is not available for predictions",
+  "missing-target": "Select items to tag first",
+} as const;
+
 export const TaggingDropdown = ({
-  disabled = false,
+  disabledReason,
   children,
   className,
   ...rest
-}: { disabled?: boolean } & JSX.IntrinsicElements["div"]) => (
-  <div
-    {...rest}
-    className={classy("dropdown dropdown-bottom  min-w-fit", className)}
-  >
-    <label
-      tabIndex={0}
-      className={classy("btn btn-ghost gap-2", {
-        "btn-disabled": disabled,
-      })}
+}: {
+  disabledReason?: keyof typeof taggingDisabledReasons;
+} & JSX.IntrinsicElements["div"]) => {
+  return (
+    <div
+      {...rest}
+      className={classy(
+        "dropdown dropdown-bottom min-w-fit tooltip tooltip-right",
+        className
+      )}
+      data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
     >
-      <HiOutlineTag />
-      Tag
-    </label>
-    {children}
-  </div>
-);
+      <label
+        tabIndex={0}
+        className={classy("btn btn-ghost gap-2", {
+          "btn-disabled": disabledReason,
+        })}
+      >
+        <HiOutlineTag />
+        Tag
+      </label>
+      {children}
+    </div>
+  );
+};
 
 export const BulkTaggingForm = ({ items }: { items: string[] }) => {
   const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
@@ -119,7 +132,7 @@ export const TaggingForm = ({
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
   const { data: allTags } = useApi().fetchProjectTags();
 
-  const [selectedTab, setTab] = useState<typeof TAG_GROUPS[number]>(
+  const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
     TAG_GROUPS[0]
   );
 

@@ -1,3 +1,5 @@
+from typing import cast
+
 import plotly.graph_objects as go
 from pandera.typing import DataFrame
 from plotly.subplots import make_subplots
@@ -7,7 +9,6 @@ from encord_active.lib.model_predictions.map_mar import (
     PrecisionRecallSchema,
 )
 
-_PR_COLS = PrecisionRecallSchema
 _M_COLS = PerformanceMetricSchema
 
 
@@ -16,11 +17,11 @@ def create_pr_chart_plotly(
     precisions: DataFrame[PrecisionRecallSchema],
     annotation_colors: list[dict],
 ):
-    _metrics: DataFrame[PerformanceMetricSchema] = metrics[~metrics[_M_COLS.metric].isin({"mAR", "mAP"})].copy()
+    _metrics = cast(DataFrame[PerformanceMetricSchema], metrics[~metrics[_M_COLS.metric].isin({"mAR", "mAP"})].copy())
 
     tmp = "m" + _metrics["metric"].str.split("_", n=1, expand=True)
-    tmp.columns = ["group", "_"]
-    _metrics["group"] = tmp["group"]
+    tmp.columns = ["group", "_"]  # type:ignore
+    _metrics["group"] = tmp["group"]  # type:ignore
     _metrics["average"] = "average"  # Legend title
 
     _metrics.sort_values(by=["group", _M_COLS.value], ascending=[False, True], inplace=True)

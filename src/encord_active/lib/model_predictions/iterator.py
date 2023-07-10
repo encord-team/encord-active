@@ -1,5 +1,6 @@
 import json
 import logging
+import typing
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
@@ -18,6 +19,7 @@ from tqdm.auto import tqdm
 from encord_active.lib.common.iterator import Iterator
 from encord_active.lib.common.time import get_timestamp
 from encord_active.lib.common.utils import rle_to_binary_mask
+from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.predictions import FrameClassification
 from encord_active.lib.encord.utils import lower_snake_case
 from encord_active.lib.labels.classification import LabelClassification
@@ -27,6 +29,9 @@ from encord_active.lib.model_predictions.writer import (
     ClassificationAttributeOption,
     iterate_classification_attribute_options,
 )
+
+if typing.TYPE_CHECKING:
+    import prisma
 
 logger = logging.getLogger(__name__)
 GMT_TIMEZONE = pytz.timezone("GMT")
@@ -46,7 +51,7 @@ class PredictionIterator(Iterator):
         self.length = predictions["img_id"].nunique()
 
         identifiers = predictions["identifier"].str.split("_", expand=True)
-        identifiers.columns = ["label_hash", "du_hash", "frame", "object_hash"][: len(identifiers.columns)]
+        identifiers.columns = ["label_hash", "du_hash", "frame", "object_hash"][: len(identifiers.columns)]  # type: ignore
         identifiers["frame"] = pd.to_numeric(identifiers["frame"])
 
         predictions = pd.concat([predictions, identifiers], axis=1)
@@ -77,13 +82,15 @@ class PredictionIterator(Iterator):
                 )
                 self.ontology_classifications[class_id] = classification_lookup[key]
 
-    def get_image(self, pred: Series) -> Optional[Image.Image]:
+    def get_image(self, pred: Series, cache_db: "prisma.Prisma") -> Optional[Image.Image]:
         label_row_structure = self.project.file_structure.label_row_structure(pred["label_hash"])
-        frame = pred.get("frame", None)
+        frame = pred.to_dict().get("frame", None)
         if frame is not None:
             frame = int(frame)
         data_unit, image = next(
-            label_row_structure.iter_data_unit_with_image(data_unit_hash=pred["du_hash"], frame=frame)
+            label_row_structure.iter_data_unit_with_image(
+                data_unit_hash=pred["du_hash"], frame=frame, cache_db=cache_db
+            )
         )
         return image
 
@@ -160,45 +167,47 @@ class PredictionIterator(Iterator):
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
+        with PrismaConnection(self.project_file_structure) as cache_db:
+            for label_hash, lh_group in self.predictions.groupby("label_hash"):
+                if label_hash not in self.label_rows:
+                    continue
 
-        for label_hash, lh_group in self.predictions.groupby("label_hash"):
-            if label_hash not in self.label_rows:
-                continue
+                self.label_hash = str(label_hash)
+                label_row = self.label_rows[self.label_hash]
+                self.dataset_title = label_row["dataset_title"]
 
-            self.label_hash = label_hash
-            label_row = self.label_rows[label_hash]
-            self.dataset_title = label_row["dataset_title"]
+                for frame, fr_preds in lh_group.groupby("frame"):
+                    self.du_hash = fr_preds.iloc[0]["du_hash"]
+                    self.frame = int(str(frame))
 
-            for frame, fr_preds in lh_group.groupby("frame"):
-                self.du_hash = fr_preds.iloc[0]["du_hash"]
-                self.frame = frame
+                    du = deepcopy(label_row["data_units"][self.du_hash])
+                    width = int(du["width"])
+                    height = int(du["height"])
 
-                du = deepcopy(label_row["data_units"][self.du_hash])
-                width = int(du["width"])
-                height = int(du["height"])
+                    objects = []
+                    classifications = []
 
-                objects = []
-                classifications = []
+                    for _, prediction in fr_preds.iterrows():
+                        class_id = prediction.class_id
+                        if class_id in self.ontology_objects:
+                            objects.append(
+                                self.get_encord_object(prediction, width, height, self.ontology_objects[class_id])
+                            )
+                        elif class_id in self.ontology_classifications:
+                            classifications.append(
+                                asdict(
+                                    self.get_encord_classification(prediction, self.ontology_classifications[class_id])
+                                )
+                            )
+                        else:
+                            logger.error("The prediction is not in the ontology objects or classifications")
 
-                for _, prediction in fr_preds.iterrows():
-                    class_id = prediction.class_id
-                    if class_id in self.ontology_objects:
-                        objects.append(
-                            self.get_encord_object(prediction, width, height, self.ontology_objects[class_id])
-                        )
-                    elif class_id in self.ontology_classifications:
-                        classifications.append(
-                            asdict(self.get_encord_classification(prediction, self.ontology_classifications[class_id]))
-                        )
-                    else:
-                        logger.error("The prediction is not in the ontology objects or classifications")
-
-                du["labels"] = {"objects": objects, "classifications": classifications}
-                image = self.get_image(fr_preds.iloc[0])
-                if image is None:
-                    logger.error(f"Failed to open Image at frame: {self.du_hash}/{fr_preds.iloc[0]}")
-                yield du, image
-                pbar.update(1)
+                    du["labels"] = {"objects": objects, "classifications": classifications}
+                    image = self.get_image(fr_preds.iloc[0], cache_db=cache_db)
+                    if image is None:
+                        logger.error(f"Failed to open Image at frame: {self.du_hash}/{fr_preds.iloc[0]}")
+                    yield du, image
+                    pbar.update(1)
 
     def __len__(self):
         return self.length

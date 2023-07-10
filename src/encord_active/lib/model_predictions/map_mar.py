@@ -5,7 +5,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import DataFrame, Series
 
-from encord_active.lib.model_predictions.reader import (
+from encord_active.lib.model_predictions.types import (
     LabelMatchSchema,
     LabelSchema,
     PredictionMatchSchema,
@@ -54,7 +54,7 @@ def compute_mAP_and_mAR(
     labels: DataFrame[LabelSchema],
     gt_matched: GtMatchCollection,
     class_map: Dict[str, ClassMapEntry],
-    iou_threshold: float,
+    iou_threshold: Optional[float] = None,
     rec_thresholds: Optional[np.ndarray] = None,
     ignore_unmatched_frames: bool = False,
 ) -> Tuple[
@@ -124,8 +124,8 @@ def compute_mAP_and_mAR(
         - fns: An indicator array for which `fns[j] == True` if `_labels.iloc[j]`
             was not matched by any prediction.
     """
-    model_predictions = model_predictions.copy()
-    labels = labels.copy()
+    model_predictions = model_predictions.copy()  # type: ignore
+    labels = labels.copy()  # type: ignore
 
     rec_thresholds = rec_thresholds or np.linspace(0.0, 1.00, round(1.00 / 0.01) + 1)
 
@@ -170,7 +170,7 @@ def compute_mAP_and_mAR(
         full_list_to_class_level_idx: Dict[int, int] = {v.item(): i for i, v in enumerate(class_level_to_full_list_idx)}
 
         _ious = ious[pred_select]
-        TP_candidates = set(class_level_to_full_list_idx[_ious >= iou_threshold].astype(int).tolist())
+        TP_candidates = set(class_level_to_full_list_idx[_ious >= (iou_threshold or 0.5)].astype(int).tolist())
         TP = np.zeros(_ious.shape[0])
 
         for img_label_matches in gt_matched[class_id].values():

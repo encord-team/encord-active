@@ -16,21 +16,20 @@ from encord_active.lib.metrics.writer import CSVMetricWriter
 logger = logger.opt(colors=True)
 
 
-class ImageDifficulty(Metric):
+class ImageDiversity(Metric):
     def __init__(self):
-        super(ImageDifficulty, self).__init__(
-            title="Image Difficulty",
+        super(ImageDiversity, self).__init__(
+            title="Image Diversity",
             short_description="Ranks images according to their proximity to class prototypes (lower values = closer to "
             "class prototypes = easy samples)",
-            long_description=r"""
-This metric gives each image a ranking value that shows the image's difficulty (higher values = more difficult).  
+            long_description=r"""  
 It clusters images according to the number of classes in the ontology (if there are both object and frame level 
 classifications in the ontology, the number of object classes is taken into account) 
 and rank images inside each cluster by assigning lower 
 score to the ones which are closer to the cluster center. Finally, ranked images in different clusters are 
 merged by keeping the samples of classes the same for the first _N_ samples.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-difficulty",
+            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-diversity",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.IMAGE,

@@ -16,7 +16,7 @@ from encord_active.lib.common.data_utils import convert_image_bgr, download_imag
 from encord_active.lib.common.utils import get_du_size, rle_to_binary_mask
 from encord_active.lib.db.predictions import BoundingBox
 from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.model_predictions.reader import PredictionMatchSchema
+from encord_active.lib.model_predictions.types import PredictionMatchSchema
 from encord_active.lib.project import (
     DataUnitStructure,
     LabelRowStructure,

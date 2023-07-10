@@ -21,6 +21,7 @@ from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm.auto import tqdm
 
 from encord_active.app.common.state import get_state
+from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.lib.common.data_utils import download_file, try_execute
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import PrismaConnection
@@ -414,6 +415,7 @@ class EncordActions:
 
             create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 
+            ensure_safe_project(target_project_structure.project_dir)
             copy_filtered_data(
                 curr_project_structure,
                 target_project_structure,

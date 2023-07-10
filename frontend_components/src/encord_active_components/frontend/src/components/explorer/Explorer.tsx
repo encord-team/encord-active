@@ -1,33 +1,35 @@
-import { Spin } from "./Spinner";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaExpand, FaEdit } from "react-icons/fa";
-import { TbMoodSad2 } from "react-icons/tb";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
-import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
-import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { BsCardText } from "react-icons/bs";
+import { FaEdit, FaExpand } from "react-icons/fa";
+import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
 import { RiUserLine } from "react-icons/ri";
+import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
+import { Spin } from "./Spinner";
 
 import { Streamlit } from "streamlit-component-lib";
 
+import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
-import { useQuery } from "@tanstack/react-query";
-import { splitId } from "./id";
 import {
+  ApiContext,
+  classificationsPredictionOutcomes,
   DEFAULT_BASE_URL,
+  Filters,
   getApi,
   IdValue,
   Item,
-  Point,
-  ApiContext,
+  Metric,
+  objectPredictionOutcomes,
+  PredictionOutcome,
   Scope,
   useApi,
-  Metric,
-  Filters,
 } from "./api";
+import { Assistant, useSearch } from "./Assistant";
 import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
+import { splitId } from "./id";
 import { Pagination, usePagination } from "./Pagination";
 import {
   BulkTaggingForm,
@@ -35,7 +37,6 @@ import {
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { Assistant, useSearch } from "./Assistant";
 
 export type Props = {
   authToken: string | null;
@@ -64,6 +65,15 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
+  const [predictionOutcome, setPredictionOutcome] = useState<
+    PredictionOutcome | undefined
+  >();
+  const [iou, setIou] = useState<number | undefined>();
+
+  if (scope === "model_quality" && filters.prediction_filters) {
+    filters.prediction_filters.outcome = predictionOutcome;
+    filters.prediction_filters.iou_threshold = iou;
+  }
 
   const api = getApi(projectName, authToken, baseUrl);
 
@@ -75,24 +85,32 @@ export const Explorer = ({
   const { data: hasSimilaritySearch } = useQuery(
     ["hasSimilaritySearch"],
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric }
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
 
-  const { data: similarItems, isLoading: isLoadingSimilarItems } = useQuery(
+  const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
     ["similarities", similarityItem ?? ""],
     () =>
-      api.fetchSimilarItems(similarityItem!, selectedMetric?.embeddingType!),
+      api.fetchSimilarItems(
+        similarityItem!,
+        scope === "model_quality" ? "image" : selectedMetric?.embeddingType!
+      ),
     { enabled: !!similarityItem && !!selectedMetric }
   );
 
-  const { data: sortedItems, isLoading: isLoadingSortedItems } = useQuery(
+  const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
     () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
-    { enabled: !!selectedMetric }
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
-    () => api.fetchProjectMetrics(scope),
+    () =>
+      api.fetchProjectMetrics(
+        scope,
+        filters?.prediction_filters?.type,
+        filters?.prediction_filters?.outcome
+      ),
     { staleTime: Infinity }
   );
 
@@ -107,7 +125,7 @@ export const Explorer = ({
     setSearch,
     result: searchResults,
     loading: searching,
-  } = useSearch(scope, api.searchInProject);
+  } = useSearch(scope, filters, api.searchInProject);
 
   const resetable =
     itemSet.size || searchResults?.ids.length || similarItems?.length;
@@ -176,6 +194,8 @@ export const Explorer = ({
           <ItemPreview
             id={previewedItem}
             similaritySearchDisabled={!hasSimilaritySearch}
+            scope={scope}
+            iou={iou}
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
           />
@@ -188,14 +208,28 @@ export const Explorer = ({
             }
           )}
         >
+          {/* TODO: move model predictions embeddings plot to FE */}
           {selectedMetric && (
             <Embeddings
               isloadingItems={isLoadingSortedItems}
-              idValues={sortedItems || []}
+              idValues={
+                (scope === "model_quality"
+                  ? sortedItems?.map(({ id, ...item }) => ({
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
+                  : sortedItems) || []
+              }
               filters={filters}
-              embeddingType={selectedMetric.embeddingType}
+              embeddingType={
+                scope === "model_quality"
+                  ? "image"
+                  : selectedMetric.embeddingType
+              }
               onSelectionChange={(selection) => (
-                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
+                setPage(1),
+                console.log("embeddings"),
+                setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}
             />
@@ -206,91 +240,110 @@ export const Explorer = ({
               onClose={() => setSimilarityItem(null)}
             />
           )}
-          <div className="flex w-full justify-between gap-5 flex-wrap">
-            <div className="flex gap-2 max-w-[50%]">
+          <div className="flex w-full gap-2 flex-col flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               <TaggingDropdown
-                className={classy({ "btn-disabled": !selectedItems.size })}
+                disabledReason={
+                  scope === "model_quality"
+                    ? "predictions"
+                    : !selectedItems.size
+                      ? "missing-target"
+                      : undefined
+                }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
               {metrics && metrics?.length && (
-                <>
-                  <label className="input-group">
-                    <select
-                      onChange={(event) =>
-                        setSelectedMetric(
-                          metrics.find(
-                            (metric) => metric.name === event.target.value
-                          )
+                <label className="input-group  w-auto">
+                  <select
+                    onChange={(event) =>
+                      setSelectedMetric(
+                        metrics.find(
+                          (metric) => metric.name === event.target.value
                         )
-                      }
-                      className="select select-bordered focus:outline-none"
+                      )
+                    }
+                    className="select select-bordered focus:outline-none"
+                    disabled={!!similarItems?.length}
+                  >
+                    {metrics.map(({ name }) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </select>
+                  <label
+                    className={classy("btn swap swap-rotate", {
+                      "btn-disabled": !!similarItems?.length,
+                    })}
+                  >
+                    <input
+                      onChange={() => setIsAscending((prev) => !prev)}
+                      type="checkbox"
                       disabled={!!similarItems?.length}
-                    >
-                      {metrics.map(({ name }) => (
-                        <option key={name}>{name}</option>
-                      ))}
-                    </select>
-                    <label
-                      className={classy("btn swap swap-rotate", {
-                        "btn-disabled": !!similarItems?.length,
-                      })}
-                    >
-                      <input
-                        onChange={() => setIsAscending((prev) => !prev)}
-                        type="checkbox"
-                        disabled={!!similarItems?.length}
-                        defaultChecked={true}
-                      />
-                      <TbSortAscending className="swap-on text-base" />
-                      <TbSortDescending className="swap-off text-base" />
-                    </label>
-                  </label>
-                  {!similarityItem && (
-                    <MetricDistributionTiny
-                      values={sortedItems || []}
-                      setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                      defaultChecked={true}
                     />
-                  )}
-                </>
+                    <TbSortAscending className="swap-on text-base" />
+                    <TbSortDescending className="swap-off text-base" />
+                  </label>
+                </label>
+              )}
+              {!similarityItem && scope !== "model_quality" && (
+                <MetricDistributionTiny
+                  values={sortedItems || []}
+                  setSeletedIds={(ids) => setItemSet(new Set(ids))}
+                />
+              )}
+              {scope === "model_quality" && (
+                <PredictionFilters
+                  predictionType={filters.prediction_filters?.type}
+                  onOutcomeChange={setPredictionOutcome}
+                  onIouChange={setIou}
+                  disabled={!!similarityItem}
+                />
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": !resetable,
-                })}
-                onClick={reset}
-              >
-                <MdFilterAltOff />
-                Reset filters
-              </button>
-              <button
-                className={classy("btn btn-ghost gap-2", {
-                  "btn-disabled": !selectedItems.size,
-                })}
-                onClick={() => setSelectedItems(new Set())}
-              >
-                <VscClearAll />
-                Clear selection ({selectedItems.size})
-              </button>
-              <button
-                className="btn btn-ghost gap-2"
-                onClick={() => setSelectedItems(new Set(itemsToRender))}
-              >
-                <BiSelectMultiple />
-                Select all ({itemsToRender.length})
-              </button>
+            <div className="flex justify-between gap-2 flex-wrap">
+              <Assistant
+                defaultSearch={search}
+                isFetching={searching}
+                setSearch={setSearch}
+                snippet={searchResults?.snippet}
+                disabled={!hasPremiumFeatures}
+              />
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !resetable,
+                  })}
+                  onClick={reset}
+                >
+                  <MdFilterAltOff />
+                  Reset filters
+                </button>
+                <button
+                  className={classy("btn btn-ghost gap-2", {
+                    "btn-disabled": !selectedItems.size,
+                  })}
+                  onClick={() => setSelectedItems(new Set())}
+                >
+                  <VscClearAll />
+                  Clear selection ({selectedItems.size})
+                </button>
+                <button
+                  className="btn btn-ghost gap-2"
+                  onClick={() => setSelectedItems(new Set(itemsToRender))}
+                >
+                  <BiSelectMultiple />
+                  Select all ({itemsToRender.length})
+                </button>
+              </div>
             </div>
           </div>
-          <Assistant
-            defaultSearch={search}
-            isFetching={searching}
-            setSearch={setSearch}
-            snippet={searchResults?.snippet}
-            disabled={!hasPremiumFeatures}
-          />
-          {itemsToRender.length ? (
+          {!!loadingDescription ? (
+            <div className="h-32 flex items-center gap-2">
+              <Spin />
+              <span className="text-xl">{loadingDescription}</span>
+            </div>
+          ) : itemsToRender.length ? (
             <>
               <form
                 onChange={({ target }) =>
@@ -308,6 +361,7 @@ export const Explorer = ({
                     similaritySearchDisabled={!hasSimilaritySearch}
                     onShowSimilar={() => showSimilarItems(id)}
                     selected={selectedItems.has(id)}
+                    iou={iou}
                   />
                 ))}
               </form>
@@ -319,11 +373,6 @@ export const Explorer = ({
                 onChangePageSize={setPageSize}
               />
             </>
-          ) : !!loadingDescription ? (
-            <div className="h-32 flex items-center gap-2">
-              <Spin />
-              <span className="text-xl">{loadingDescription}</span>
-            </div>
           ) : (
             <div className="h-32 flex items-center gap-2">
               <TbMoodSad2 className="text-3xl" />
@@ -333,6 +382,73 @@ export const Explorer = ({
         </div>
       </div>
     </ApiContext.Provider>
+  );
+};
+
+const ALL_PREDICTION_OUTCOMES = "All Prediction Outcomes";
+
+const PredictionFilters = ({
+  predictionType,
+  onOutcomeChange,
+  onIouChange,
+  disabled = false,
+}: {
+  predictionType: NonNullable<Filters["prediction_filters"]>["type"];
+  onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
+  onIouChange?: (iou: number) => void;
+  disabled?: boolean;
+}) => {
+  if (!predictionType) return null;
+
+  const [iou, setIou] = useState(0.5);
+  const [drag, setDrag] = useState(false);
+
+  useEffect(() => {
+    if (iou != null && !drag) onIouChange?.(iou);
+  }, [iou, drag]);
+
+  const outcomes =
+    predictionType === "object"
+      ? objectPredictionOutcomes
+      : classificationsPredictionOutcomes;
+
+  return (
+    <div className="flex gap-2">
+      <select
+        disabled={disabled}
+        className="select select-bordered w-full max-w-xs"
+        onChange={({ target: { value } }) =>
+          onOutcomeChange(
+            value === ALL_PREDICTION_OUTCOMES
+              ? undefined
+              : (value as PredictionOutcome)
+          )
+        }
+      >
+        {[ALL_PREDICTION_OUTCOMES, ...outcomes].map((outcome) => (
+          <option key={outcome}>{outcome}</option>
+        ))}
+      </select>
+      {predictionType === "object" && (
+        <div className="form-control w-full max-w-xs min-w-[256px]">
+          <label>
+            <span>IOU: {iou}</span>
+          </label>
+          <input
+            disabled={disabled}
+            type="range"
+            min={0.01}
+            max={1}
+            step={0.01}
+            defaultValue={iou}
+            onMouseUp={() => setDrag(false)}
+            onMouseDown={() => setDrag(true)}
+            onChange={({ target: { value } }) => setIou(parseFloat(value))}
+            className="range range-xs"
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -363,7 +479,7 @@ const Embeddings = ({
     return scatteredEmbeddings?.filter(
       ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_")))
     );
-  }, [idValues, scatteredEmbeddings]);
+  }, [JSON.stringify(idValues), JSON.stringify(scatteredEmbeddings)]);
 
   return !isLoading && !isloadingItems && !scatteredEmbeddings?.length ? (
     <div className="alert shadow-lg h-fit">
@@ -381,6 +497,7 @@ const Embeddings = ({
           embeddings={filtered || []}
           onSelectionChange={onSelectionChange}
           onReset={onReset}
+          predictionType={filters.prediction_filters?.type}
         />
       )}
     </div>
@@ -417,15 +534,19 @@ const SimilarityItem = ({
 const ItemPreview = ({
   id,
   similaritySearchDisabled,
+  scope,
+  iou,
   onClose,
   onShowSimilar,
 }: {
   id: string;
   similaritySearchDisabled: boolean;
+  scope: Scope;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  iou?: number;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(id);
+  const { data, isLoading } = useApi().fetchItem(id, iou);
   const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spin />;
@@ -454,7 +575,11 @@ const ItemPreview = ({
             <FaEdit />
             Edit
           </button>
-          <TaggingDropdown>
+          <TaggingDropdown
+            disabledReason={
+              scope === "model_quality" ? "predictions" : undefined
+            }
+          >
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
               seletedTags={data.tags}
@@ -498,6 +623,7 @@ const GalleryItem = ({
   similaritySearchDisabled,
   onExpand,
   onShowSimilar,
+  iou,
 }: {
   itemId: string;
   selected: boolean;
@@ -505,8 +631,9 @@ const GalleryItem = ({
   similaritySearchDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  iou?: number;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(itemId);
+  const { data, isLoading } = useApi().fetchItem(itemId, iou);
 
   if (isLoading || !data)
     return (
@@ -609,6 +736,33 @@ const GalleryItem = ({
   );
 };
 
+const getObjects = (item: Item) => {
+  const { objectHash } = splitId(item.id);
+  const object = item.labels.objects.find(
+    (object) => object.objectHash === objectHash
+  );
+  const prediction = item.predictions.objects.find(
+    (object) => object.objectHash === objectHash
+  );
+
+  if (object) return [object];
+
+  return prediction
+    ? [...item.labels.objects, prediction]
+    : item.labels.objects;
+};
+
+type ItemLabelObject = Item["labels"]["objects"][0];
+
+const pointsRecordToPolygonPoints = (
+  points: NonNullable<ItemLabelObject["points"]>,
+  width: number,
+  height: number
+) =>
+  Object.values(points)
+    .map(({ x, y }) => `${x * width},${y * height}`)
+    .join(" ");
+
 const ImageWithPolygons = ({
   item,
   className,
@@ -627,28 +781,23 @@ const ImageWithPolygons = ({
   const width = item.videoTimestamp != null ? videoWidth : imageWidth;
   const height = item.videoTimestamp != null ? videoHeight : imageHeight;
   const [polygons, setPolygons] = useState<
-    { points: Point[]; color: string; shape: string }[]
+    Pick<ItemLabelObject, "points" | "boundingBoxPoints" | "shape" | "color">[]
   >([]);
 
   useEffect(() => {
     if (width == null || height == null) return;
-
-    const { objectHash } = splitId(item.id);
-    const objects = objectHash
-      ? item.labels.objects.filter((object) => object.objectHash === objectHash)
-      : item.labels.objects;
+    const objects = getObjects(item);
 
     setPolygons(
-      objects.map(({ points, color, shape }) => ({
+      objects.map(({ points, color, shape, boundingBoxPoints }) => ({
         color,
-        points: Object.values(points).map(({ x, y }) => ({
-          x: x * width,
-          y: y * height,
-        })),
+        points,
         shape,
+        boundingBoxPoints,
       }))
     );
   }, [width, height, item.id]);
+
   return (
     <figure {...rest} className={classy("relative", className)}>
       {item.videoTimestamp != null ? (
@@ -673,39 +822,67 @@ const ImageWithPolygons = ({
           src={item.url}
         />
       )}
-      {polygons.length > 0 && (
+      {width && height && polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
-          {polygons.map(({ points, color, shape }, index) =>
-            shape === "point" ? (
+          {polygons.map(
+            ({ points, boundingBoxPoints, color, shape }, index) => (
               <>
-                <circle
-                  key={index + "_inner"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="5px"
-                  fill={color}
-                />
-                <circle
-                  key={index + "_outer"}
-                  cx={points[0].x}
-                  cy={points[0].y}
-                  r="7px"
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="1px"
-                />
+                {shape === "point" && points ? (
+                  <>
+                    <circle
+                      key={index + "_inner"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="5px"
+                      fill={color}
+                    />
+                    <circle
+                      key={index + "_outer"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="7px"
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1px"
+                    />
+                  </>
+                ) : (
+                  <>
+                    {points && (
+                      <polygon
+                        key={index + "_polygon"}
+                        style={{
+                          fill: shape === "polyline" ? "none" : color,
+                          fillOpacity: ".20",
+                          stroke: color,
+                          strokeWidth: "2px",
+                        }}
+                        points={pointsRecordToPolygonPoints(
+                          points,
+                          width,
+                          height
+                        )}
+                      />
+                    )}
+                    {boundingBoxPoints && (
+                      <polygon
+                        key={index + "_box"}
+                        style={{
+                          fill: shape === "polyline" ? "none" : color,
+                          fillOpacity: ".40",
+                          stroke: color,
+                          strokeWidth: "4px",
+                        }}
+                        points={pointsRecordToPolygonPoints(
+                          boundingBoxPoints,
+                          width,
+                          height
+                        )}
+                      />
+                    )}
+                  </>
+                )}
               </>
-            ) : (
-              <polygon
-                key={index}
-                style={{
-                  fill: shape === "polyline" ? "none" : color,
-                  fillOpacity: ".20",
-                  stroke: color,
-                  strokeWidth: "2px",
-                }}
-                points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
-              />
             )
           )}
         </svg>

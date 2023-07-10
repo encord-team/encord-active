@@ -28,7 +28,7 @@ The standard filter feature provides several options to refine your search:
    This allows you to focus on specific classes or annotations created by specific annotators.
 2. User-defined tag filters: You can apply filters based on user-defined tags.
    This enables you to categorize and filter data according to custom tags that you have assigned.
-3. Metric filters: You can utilize metrics, including built-in metrics like `Image Difficulty` and `Annotation Duplicates`, as well user-defined metrics, to filter data.
+3. Metric filters: You can utilize metrics, including built-in metrics like `Image Diversity` and `Annotation Duplicates`, as well user-defined metrics, to filter data.
    This helps in selecting data points based on potentially complex properties. 
 
 
