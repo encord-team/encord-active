@@ -108,7 +108,7 @@ def crop_box_to_image_size(x, y, w, h, img_w: int, img_h: int) -> Tuple[int, int
     return x, y, w, h
 
 
-def upload_annotation(
+def import_annotations(
     project: LocalProject,
     annotations: Dict[int, List[CocoAnnotation]],
     data_row: LocalDataRow,
@@ -267,8 +267,8 @@ class CocoImporter:
 
         image_to_du = {}
 
-        for data_unit in tqdm(dataset.data_rows, desc="Uploading annotations"):
-            data_hash = upload_annotation(project, self.annotations, data_unit, id_shape_to_obj, self.category_shapes)
+        for data_unit in tqdm(dataset.data_rows, desc="Importing annotations"):
+            data_hash = import_annotations(project, self.annotations, data_unit, id_shape_to_obj, self.category_shapes)
             image_id = self.data_hash_to_image_id[data_hash]
             image = self.images[str(image_id)]
             image_to_du[image_id] = {"data_hash": data_hash, "height": image.height, "width": image.width}
