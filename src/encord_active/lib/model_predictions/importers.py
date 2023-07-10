@@ -338,39 +338,35 @@ def import_KITTI_labels(
 def migrate_kitti_predictions(
     project_path: Path,
     predictions_path: Path,
+    ontology_mapping: dict[str, str],
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     # Obtain the files containing predictions
-    label_files = [f for f in (predictions_path / "labels").iterdir() if f.suffix.lower() in [".txt", ".csv"]]
+    pattern = re.compile(file_name_regex)
+    files = [
+        (match.group("data_hash"), f)
+        for f in predictions_path.glob("**/*")
+        if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and (match := pattern.match(f.name))
+    ]
 
-    # Retrieve the mapping of label names to ontology object hashes
-    ontology_label_map_path = predictions_path / "ontology_label_map.json"
-    ontology_obj_hash_to_class_name: dict[str, str] = json.loads(ontology_label_map_path.read_text(encoding="utf-8"))
-    class_name_to_ontology_obj_hash = {v: k for k, v in ontology_obj_hash_to_class_name.items()}
+    # Invert the ontology mapping (now it's from object class names to ontology object hashes)
+    class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
 
-    # Check that the input ontology object hashes are valid (exist and correspond to bboxes)
+    # Check that the input ontology object hashes are valid (exist and represent bounding boxes)
     pfs = ProjectFileStructure(project_path)
-    all_relevant_ontology_obj_hashes = {
+    relevant_ontology_hashes = {
         o.feature_node_hash
         for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
         if o.shape.value not in BoxShapes
     }
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    if len(bad_hashes) > 0:
+        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
 
-    invalid_hashes = [h for h in ontology_obj_hash_to_class_name.keys() if h not in all_relevant_ontology_obj_hashes]
-    if len(invalid_hashes) > 0:
-        raise ValueError(f"ontology_label_map.json contains ontology object hashes: {invalid_hashes}")
-
-    # Migrate predictions format to the Prediction class format
+    # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
-    pattern = re.compile(file_name_regex)
     with PrismaConnection(pfs) as conn:
-        for file in tqdm(label_files, desc="Migrating predictions"):
-            match = pattern.match(file.name)
-            if not match:
-                logger.info(f"Couldn't match file '{file.name}' to specified regex")
-                continue
-
-            data_hash = match.group("data_hash")
+        for data_hash, file in tqdm(files, desc="Migrating KITTI predictions"):
             du = conn.dataunit.find_first(where={"data_hash": data_hash})
             if du is None:
                 logger.info(f"Couldn't find data unit '{data_hash}' in the database")
@@ -386,9 +382,11 @@ def migrate_kitti_predictions(
             headers += [f"undefined_{i}" for i in range(df.shape[1] - len(headers))]
             df.columns = pd.Index(headers)
 
+            # Add KITTI bounding boxes predictions
             for row in df.to_dict("records"):
-                ontology_obj_hash = class_name_to_ontology_obj_hash[row["class_name"]]
+                ontology_obj_hash = class_name_to_ontology_hash[row["class_name"]]
 
+                # Normalize bounding box dimensions by their image size to match the Encord format
                 x = row["xmin"] / du.width
                 y = row["ymin"] / du.height
                 w = (row["xmax"] - row["xmin"]) / du.width
@@ -405,8 +403,18 @@ def migrate_kitti_predictions(
     return predictions
 
 
-def import_kitti_predictions(project: Project, predictions_path: Path, file_name_regex: str = KITTI_FILE_NAME_REGEX):
-    predictions = migrate_kitti_predictions(project.file_structure.project_dir, predictions_path, file_name_regex)
+def import_kitti_predictions(
+    project: Project,
+    predictions_path: Path,
+    ontology_mapping: dict[str, str],
+    file_name_regex: str = KITTI_FILE_NAME_REGEX,
+):
+    predictions = migrate_kitti_predictions(
+        project.file_structure.project_dir,
+        predictions_path,
+        ontology_mapping,
+        file_name_regex,
+    )
     return import_predictions(project, predictions)
 
 
