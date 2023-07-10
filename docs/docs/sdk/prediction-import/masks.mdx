@@ -1,22 +1,18 @@
 ---
 title: Instance Segmentation Masks
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 :::caution
 
-This works for segmentation/polygons only.
+The following approach **only works for segmentation and polygons**.
+
+When running an importer, any previously imported predictions will be overwritten!
+To ensure the ability to revert to previous model iterations, it is important to [version your projects][project-versioning]. 
 
 :::
 
-:::caution
-
-Every time you run any of these importers, previously imported predictions will be overwritten!
-Make sure to [version your projects][project-versioning] if you want to be able to go back to previous model iterations.
-
-:::
-
-If you have your predictions stored as png masks of shape `[height, width]`, where each pixel value correspond to a class,
+If you have predictions stored as `.png` masks of shape $height \times width$, where each pixel value correspond to a class,
 then you can use the `import_mask_predictions` function from `encord_active.model_predictions.importers`.
 It requires that you can provide a mapping between file name and data hashes.
 

@@ -1,15 +1,15 @@
 import DocCardList from "@theme/DocCardList";
 
-# Model Predictions
+# Importing model predictions
 
 :::caution
 
-Every time you run any of these importers, previously imported predictions will be overwritten!
-Make sure to [version your projects][project-versioning] if you want to be able to go back to previous model iterations.
+When running an importer, any previously imported predictions will be overwritten!
+To ensure the ability to revert to previous model iterations, it is important to [version your projects][project-versioning]. 
 
 :::
 
-If you aren't familiar with how to build lists of `Prediction` objects, please have a look at [this](../../import/import-predictions) workflow tutorial first.
+If you aren't familiar with how to build lists of `Prediction` objects, please have a look at the [Import model predictions][import-predictions-guide] guide first.
 It will show you how to construct predictions for bounding boxes, polygons, masks, and classifications.
 
 With these predictions in hand, importing them is done as follows:
@@ -30,8 +30,11 @@ import_predictions(Project(project_path), predictions)
 
 ## Other Options
 
-There are also a couple of other options for importing predictions that are stored in common file formats already. They can be found here:
+There are a couple of additional ways to import predictions that are stored in common file formats.
+You can find them here:
 
 <DocCardList />
 
+
+[import-predictions-guide]: ../../import/import-predictions
 [project-versioning]: ../../user-guide/versioning
