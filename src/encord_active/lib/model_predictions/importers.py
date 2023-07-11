@@ -370,29 +370,8 @@ def migrate_kitti_predictions(
     predictions = []
     for file in tqdm(files, desc="Migrating KITTI predictions"):
         # Identify the data unit that corresponds to the given file
-        where_arg: DataUnitWhereInput
-        if file_path_to_data_unit_func is None:
-            # If the 'file_path_to_data_unit_func' function is missing, find data unit title
-            # and optional frame indicator within the file name as specified in 'KITTI_FILE_NAME_REGEX'
-            data_title, frame = get_data_unit_identifier(file, KITTI_FILE_NAME_REGEX)
-            if data_title is None:  # Skip file if its name doesn't match the regex
-                continue
-            where_arg = (
-                DataUnitWhereInput(data_title=data_title)
-                if frame is None
-                else DataUnitWhereInput(data_title=data_title, frame=frame)
-            )
-        else:
-            data_hash, frame = file_path_to_data_unit_func(file)
-            where_arg = (
-                DataUnitWhereInput(data_hash=data_hash)
-                if frame is None
-                else DataUnitWhereInput(data_hash=data_hash, frame=frame)
-            )
-
-        du = get_unique_data_unit(pfs, where=where_arg)
+        du = _get_matching_data_unit(pfs, file, file_path_to_data_unit_func, file_name_regex)
         if du is None:
-            logger.info(f"Couldn't match exactly one data unit with the following specs: {where_arg}")
             continue
 
         try:
@@ -466,7 +445,47 @@ def import_predictions(project: Project, predictions: List[Prediction]):
     )
 
 
-def get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Optional[str], Optional[int]]:
+def _get_matching_data_unit(
+    pfs: ProjectFileStructure,
+    file_path: Path,
+    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]],
+    file_name_regex: str,
+) -> Optional[DataUnit]:
+    where_arg: DataUnitWhereInput
+    if file_path_to_data_unit_func is None:
+        # If the 'file_path_to_data_unit_func' function is missing, find data unit title
+        # and optional frame indicator within the file name as specified in the regex param
+        data_title, frame = _get_data_unit_identifier(file_path, file_name_regex)
+        if data_title is None:  # Skip file if its name doesn't match the regex
+            return None
+        where_arg = (
+            DataUnitWhereInput(data_title=data_title)
+            if frame is None
+            else DataUnitWhereInput(data_title=data_title, frame=frame)
+        )
+    else:
+        data_hash, frame = file_path_to_data_unit_func(file_path)
+        where_arg = (
+            DataUnitWhereInput(data_hash=data_hash)
+            if frame is None
+            else DataUnitWhereInput(data_hash=data_hash, frame=frame)
+        )
+
+    # Search for the only data unit that matches the input field values, return 'None' in case of nonexistence/ambiguity
+    with PrismaConnection(pfs) as conn:
+        data_units = conn.dataunit.find_many(where=where_arg, take=2)
+    if len(data_units) == 1:
+        return data_units[0]
+    if len(data_units) == 0:
+        logger.info(f'No data unit found for file "{file_path.as_posix()}". Expected exactly one match. Skipping.')
+    else:
+        logger.info(
+            f'Multiple data units found for file "{file_path.as_posix()}". Expected exactly one match. Skipping.'
+        )
+    return None
+
+
+def _get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Optional[str], Optional[int]]:
     match = re.match(file_name_regex, file_path.name)
     if match is None:
         return None, None
@@ -477,12 +496,3 @@ def get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Opt
     frame = groups.get("frame")
 
     return data_title, frame
-
-
-def get_unique_data_unit(pfs: ProjectFileStructure, where: DataUnitWhereInput) -> Optional[DataUnit]:
-    with PrismaConnection(pfs) as conn:
-        data_units = conn.dataunit.find_many(where=where, take=2)
-
-    if len(data_units) == 1:
-        return data_units[0]
-    return None
