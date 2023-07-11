@@ -438,6 +438,9 @@ def import_kitti_predictions(
 
 
 def import_predictions(project: Project, predictions: List[Prediction]):
+    if len(predictions) == 0:
+        return
+
     with PredictionWriter(project) as writer:
         for pred in predictions:
             writer.add_prediction(pred)
