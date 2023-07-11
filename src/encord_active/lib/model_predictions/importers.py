@@ -15,6 +15,8 @@ from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
 from pandas.errors import EmptyDataError
 from PIL import Image
+from prisma.models import DataUnit
+from prisma.types import DataUnitWhereInput
 from tqdm.auto import tqdm
 
 from encord_active.lib.db.connection import PrismaConnection
@@ -56,7 +58,7 @@ KITTI_COLUMNS = [
     ("rotation_y", float),  # [-pi, pi]
 ]
 
-KITTI_FILE_NAME_REGEX = r"^(?P<data_hash>[a-f0-9\-]*)__(?P<image_name>.*)$"
+KITTI_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.(?:txt|csv)$"
 PNG_FILE_NAME_REGEX = r"^(?P<stem>.*?)\.png$"
 
 
@@ -339,7 +341,7 @@ def migrate_kitti_predictions(
     project_dir: Path,
     predictions_dir: Path,
     ontology_mapping: dict[str, str],
-    file_path_to_data_unit_func: Callable[[Path], tuple[str, int]] = None,
+    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     # Obtain the files containing predictions
@@ -364,59 +366,63 @@ def migrate_kitti_predictions(
     if len(bad_hashes) > 0:
         raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
 
-    # If the 'file_path_to_data_unit_func' function is missing, file stems will be used as references to the data units
-    file_stem_to_data_unit_dict = {}
-    if file_path_to_data_unit_func is None:
-        for _du in pfs.data_units(include_label_row=True):
-            if _du.label_row.data_type == "video":  # type: ignore
-                _file_stem = f"{Path(_du.data_title).stem}__{_du.frame}"
-            else:
-                _file_stem = Path(_du.data_title).stem
-            file_stem_to_data_unit_dict[_file_stem] = (_du.data_hash, _du.frame)
-
     # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
-    with PrismaConnection(pfs) as conn:
-        for file in tqdm(files, desc="Migrating KITTI predictions"):
-            # Identify the data unit that corresponds to the given file
-            if file_path_to_data_unit_func is None:
-                data_hash, frame = file_stem_to_data_unit_dict[file.stem]
-            else:
-                data_hash, frame = file_path_to_data_unit_func(file)
-
-            du = conn.dataunit.find_unique(where={"data_hash_frame": {"data_hash": data_hash, "frame": frame}})
-            if du is None:
-                logger.info(f"Couldn't find data unit '{data_hash}' in the database")
+    for file in tqdm(files, desc="Migrating KITTI predictions"):
+        # Identify the data unit that corresponds to the given file
+        where_arg: DataUnitWhereInput
+        if file_path_to_data_unit_func is None:
+            # If the 'file_path_to_data_unit_func' function is missing, find data unit title
+            # and optional frame indicator within the file name as specified in 'KITTI_FILE_NAME_REGEX'
+            data_title, frame = get_data_unit_identifier(file, KITTI_FILE_NAME_REGEX)
+            if data_title is None:  # Skip file if its name doesn't match the regex
                 continue
+            where_arg = (
+                DataUnitWhereInput(data_title=data_title)
+                if frame is None
+                else DataUnitWhereInput(data_title=data_title, frame=frame)
+            )
+        else:
+            data_hash, frame = file_path_to_data_unit_func(file)
+            where_arg = (
+                DataUnitWhereInput(data_hash=data_hash)
+                if frame is None
+                else DataUnitWhereInput(data_hash=data_hash, frame=frame)
+            )
 
-            try:
-                df = pd.read_csv(file, sep=" ", header=None)
-            except EmptyDataError:
-                continue
+        du = get_unique_data_unit(pfs, where=where_arg)
+        if du is None:
+            logger.info(f"Couldn't match exactly one data unit with the following specs: {where_arg}")
+            continue
 
-            # Include headers and account for additional "custom" columns
-            headers = list(map(lambda x: x[0], KITTI_COLUMNS))
-            headers += [f"undefined_{i}" for i in range(df.shape[1] - len(headers))]
-            df.columns = pd.Index(headers)
+        try:
+            df = pd.read_csv(file, sep=" ", header=None)
+        except EmptyDataError:
+            continue
 
-            # Add KITTI bounding boxes predictions
-            for row in df.to_dict("records"):
-                ontology_obj_hash = class_name_to_ontology_hash[row["class_name"]]
+        # Include headers and account for additional "custom" columns
+        headers = list(map(lambda _tuple: _tuple[0], KITTI_COLUMNS))
+        headers += [f"undefined_{i}" for i in range(df.shape[1] - len(headers))]
+        df.columns = pd.Index(headers)
 
-                # Normalize bounding box dimensions by their image size to match the Encord format
-                x = row["xmin"] / du.width
-                y = row["ymin"] / du.height
-                w = (row["xmax"] - row["xmin"]) / du.width
-                h = (row["ymax"] - row["ymin"]) / du.height
-                bbox = BoundingBox(x=x, y=y, w=w, h=h)
+        # Add KITTI bounding boxes predictions
+        for row in df.to_dict("records"):
+            ontology_obj_hash = class_name_to_ontology_hash[row["class_name"]]
 
-                predictions.append(
-                    Prediction(
-                        data_hash=data_hash,
-                        confidence=float(row["undefined_0"]),
-                        object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=ontology_obj_hash),
-                    )
+            # Normalize bounding box dimensions by their image size to match the Encord format
+            x = row["xmin"] / du.width
+            y = row["ymin"] / du.height
+            w = (row["xmax"] - row["xmin"]) / du.width
+            h = (row["ymax"] - row["ymin"]) / du.height
+            bbox = BoundingBox(x=x, y=y, w=w, h=h)
+
+            predictions.append(
+                Prediction(
+                    data_hash=du.data_hash,
+                    confidence=float(row["undefined_0"]),
+                    object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=ontology_obj_hash),
                 )
+            )
     return predictions
 
 
@@ -424,7 +430,7 @@ def import_kitti_predictions(
     project: Project,
     predictions_dir: Path,
     ontology_mapping: dict[str, str],
-    file_path_to_data_unit_func: Callable[[Path], tuple[str, int]] = None,
+    file_path_to_data_unit_func: Callable[[Path], tuple[str, Optional[int]]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
     predictions = migrate_kitti_predictions(
@@ -458,3 +464,25 @@ def import_predictions(project: Project, predictions: List[Prediction]):
         use_cache_only=True,
         prediction_type=prediction_type,
     )
+
+
+def get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Optional[str], Optional[int]]:
+    match = re.match(file_name_regex, file_path.name)
+    if match is None:
+        return None, None
+
+    # Obtain 'data_unit_title' and 'frame' named groups to identify the proper data unit
+    groups = match.groupdict()
+    data_title = groups.get("data_unit_title")
+    frame = groups.get("frame")
+
+    return data_title, frame
+
+
+def get_unique_data_unit(pfs: ProjectFileStructure, where: DataUnitWhereInput) -> Optional[DataUnit]:
+    with PrismaConnection(pfs) as conn:
+        data_units = conn.dataunit.find_many(where=where, take=2)
+
+    if len(data_units) == 1:
+        return data_units[0]
+    return None
