@@ -381,7 +381,7 @@ class ProjectFileStructure(BaseProjectFileStructure):
 
         to_include = DataUnitInclude(label_row=True) if include_label_row else None
         with PrismaConnection(self, cache_db=cache_db) as conn:
-            return conn.dataunit.find_many(where=where, include=to_include)
+            return conn.dataunit.find_many(where=where, include=to_include, take=1)
 
     def label_rows(self, cache_db: Optional[prisma.Prisma] = None) -> List["prisma.models.LabelRow"]:
         with PrismaConnection(self, cache_db=cache_db) as conn:
