@@ -280,9 +280,13 @@ def import_mask_predictions(
     du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
 ):
     predictions = migrate_mask_predictions(
-        project.file_structure.project_dir, predictions_dir, ontology_mapping, file_name_regex, du_hash_name_lookup
+        project.file_structure.project_dir,
+        predictions_dir,
+        ontology_mapping,
+        file_name_regex,
+        du_hash_name_lookup,
     )
-    return import_predictions(project, predictions)
+    import_predictions(project, predictions)
 
 
 def import_KITTI_labels(
@@ -426,7 +430,7 @@ def import_kitti_predictions(
         file_path_to_data_unit_func,
         file_name_regex,
     )
-    return import_predictions(project, predictions)
+    import_predictions(project, predictions)
 
 
 def import_predictions(project: Project, predictions: List[Prediction]):
