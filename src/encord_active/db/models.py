@@ -104,7 +104,6 @@ def define_metric_indices(
     values: List[Union[Index, ForeignKeyConstraint]] = [
         Index(f"{metric_prefix}_project_hash_{metric_name}_index", "project_hash", metric_name)
         for metric_name, metric_metadata in metrics.items()
-        if metric_metadata.virtual is None
     ]
     values = values + list(extra)
     return tuple(values)

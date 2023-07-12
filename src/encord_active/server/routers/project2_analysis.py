@@ -26,7 +26,7 @@ from encord_active.db.models import (
 from encord_active.server.routers.project2_engine import engine
 
 router = APIRouter(
-    prefix="/get/{project_hash}/analysis/{domain}",
+    prefix="/{project_hash}/analysis/{domain}",
 )
 
 MODERATE_IQR_SCALE = 1.5
@@ -64,17 +64,13 @@ def _get_metric_domain(
 
 def _where_metric_not_null(cls, metric_name: str, metrics: Dict[str, MetricDefinition]):
     metric = metrics[metric_name]
-    if metric.virtual is not None:
-        metric_name = metric.virtual.src
     return is_not(getattr(cls, metric_name), None)
 
 
 def _get_metric(
     cls, metric_name: str, metrics: Dict[str, MetricDefinition], buckets: Optional[int] = None
 ) -> Union[int, float]:
-    metric = metrics[metric_name]
-    if metric.virtual is not None:
-        return metric.virtual.map(getattr(cls, metric.virtual.src))  # type: ignore
+    metric = metrics[metric_name]# type: ignore
     raw_metric = getattr(cls, metric_name)
     if buckets is not None:
         if metric.type == MetricType.NORMAL:
@@ -100,10 +96,7 @@ def _load_metric(
     cls: Type[Union[ProjectDataAnalytics, ProjectAnnotationAnalytics]],
     iqr_only: bool = False,
 ) -> Optional[dict]:
-    if metric.virtual is not None:
-        metric_attr = getattr(cls, metric.virtual.src)
-    else:
-        metric_attr = getattr(cls, metric_name)
+    metric_attr = getattr(cls, metric_name)
     where = [cls.project_hash == project_hash, is_not(metric_attr, None)]
     count: int = sess.exec(select(func.count()).where(*where)).first() or 0  # type: ignore
     if count == 0:
@@ -145,17 +138,6 @@ def _load_metric(
                 between_op(metric_attr, severe_lb, severe_ub),
             )
         ).first()
-
-    # Apply virtual metric transformations
-    if metric.virtual is not None:
-        metric_min = metric.virtual.map(metric_min)  # type: ignore
-        q1 = metric.virtual.map(q1)  # type: ignore
-        median = metric.virtual.map(median)  # type: ignore
-        q3 = metric.virtual.map(q3)  # type: ignore
-        metric_max = metric.virtual.map(metric_max)  # type: ignore
-        if metric.virtual.flip_ord:
-            metric_min, metric_max = metric_max, metric_min
-            q1, q3 = q3, q1
 
     return {
         "min": metric_min,
@@ -210,12 +192,6 @@ def metric_search(
         for metric_name, (range_start, range_end) in metric_filters_dict.items():
             metric_meta = domain_metrics[metric_name]
             metric_filter = getattr(domain_ty, metric_name)
-            if metric_meta.virtual is not None:
-                range_start = metric_meta.virtual.map(range_start)  # type: ignore
-                range_end = metric_meta.virtual.map(range_end)  # type: ignore
-                if metric_meta.virtual.flip_ord:
-                    range_start, range_end = range_end, range_start
-                metric_filter = getattr(domain_ty, metric_meta.virtual.src)
             if range_start == range_end:
                 query_filters.append(metric_filter == range_start)
             else:
@@ -232,16 +208,11 @@ def metric_search(
     with Session(engine) as sess:
         if metric_outliers_dict is not None:
             for metric, outlier_type in metric_outliers_dict.items():
-                metric_info = domain_metrics[metric]
-                if metric_info.virtual is not None:
-                    raw_metric = metric_info.virtual.src
-                else:
-                    raw_metric = metric
                 summary = (
-                    _load_metric(sess, project_hash, raw_metric, domain_metrics[raw_metric], domain_ty, iqr_only=True)
+                    _load_metric(sess, project_hash, metric, domain_metrics[raw_metric], domain_ty, iqr_only=True)
                     or {}
                 )
-                metric_attr = getattr(domain_ty, raw_metric)
+                metric_attr = getattr(domain_ty, metric)
                 q1 = summary["q1"]
                 q3 = summary["q3"]
                 iqr = q3 - q1
@@ -313,12 +284,8 @@ def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, gro
     domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     if group in domain_metrics:
         metric = domain_metrics[group]
-        if metric.virtual is not None:
-            filter_attr = getattr(domain_ty, metric.virtual.src)
-            metric_attr = metric.virtual.map(filter_attr)
-        else:
-            metric_attr = getattr(domain_ty, group)
-            filter_attr = metric_attr
+        metric_attr = getattr(domain_ty, group)
+        filter_attr = metric_attr
         if metric.type == MetricType.NORMAL:
             bucket_float = float(buckets)
             group_by_attr = func.floor(metric_attr * bucket_float) / bucket_float
