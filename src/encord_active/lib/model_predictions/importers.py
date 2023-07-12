@@ -499,7 +499,7 @@ def _get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Op
 
     # Obtain 'data_unit_title' and 'frame' named groups to identify the proper data unit
     groups = match.groupdict()
-    data_title = groups.get("data_unit_title")
-    frame = groups.get("frame")
+    data_title: Optional[str] = groups.get("data_unit_title")
+    frame: Optional[int] = int(groups["frame"]) if "frame" in groups else None
 
     return data_title, frame
