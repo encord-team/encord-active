@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, cast
+from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -293,9 +293,33 @@ def migrate_kitti_predictions(
     project_dir: Path,
     predictions_dir: Path,
     ontology_mapping: Optional[dict[str, str]] = None,
-    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
-):
+    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
+) -> list[Prediction]:
+    """
+    Migrate predictions from the KITTI label format to Encord's Prediction class format.
+
+    :param project_dir: The Encord Active project directory.
+    :param predictions_dir: The directory containing the predictions, including subfolders.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the names of the label classes.
+        This mapping allows for the conversion of label classes to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding names of the label classes.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
+        Only the files whose names match the pattern will be considered for migration.
+        Defaults to KITTI_FILE_NAME_REGEX.
+    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
+        from the file name in order to uniquely identify the data unit.
+        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
+        and optional frame number from the file name using the pattern specified in KITTI_FILE_NAME_REGEX.
+        For example, the data unit corresponding to a file with the name `example_image.jpg__5.txt` would have
+        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    :return: The migrated predictions in Encord's Prediction class format.
+    """
+
     # Obtain the files containing predictions
     pattern = re.compile(file_name_regex)
     files = [
@@ -367,16 +391,38 @@ def migrate_kitti_predictions(
 def import_kitti_predictions(
     project: Project,
     predictions_dir: Path,
-    ontology_mapping: dict[str, str],
-    file_path_to_data_unit_func: Callable[[Path], tuple[str, Optional[int]]] = None,
+    ontology_mapping: Optional[dict[str, str]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
+    file_path_to_data_unit_func: Callable[[Path], tuple[str, Optional[int]]] = None,
 ):
+    """
+    Import predictions from the KITTI label format into the specified Encord Active project.
+
+    :param project: The project to import the predictions into.
+    :param predictions_dir: The directory containing the predictions, including subfolders.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the names of the label classes.
+        This mapping allows for the conversion of label classes to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding names of the label classes.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
+        Only the files whose names match the pattern will be considered for import.
+        Defaults to KITTI_FILE_NAME_REGEX.
+    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
+        from the file name in order to uniquely identify the data unit.
+        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
+        and optional frame number from the file name using the pattern specified in KITTI_FILE_NAME_REGEX.
+        For example, the data unit corresponding to a file with the name `example_image.jpg__5.txt` would have
+        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    """
     predictions = migrate_kitti_predictions(
         project.file_structure.project_dir,
         predictions_dir,
         ontology_mapping,
-        file_path_to_data_unit_func,
         file_name_regex,
+        file_path_to_data_unit_func,
     )
     import_predictions(project, predictions)
 
