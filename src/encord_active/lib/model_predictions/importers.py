@@ -289,58 +289,6 @@ def import_mask_predictions(
     import_predictions(project, predictions)
 
 
-def import_KITTI_labels(
-    project: EncordProject,
-    data_root: Path,
-    prediction_writer: PredictionWriter,
-    file_name_regex: str = KITTI_FILE_NAME_REGEX,
-):
-
-    label_files = [f for f in (data_root / "labels").iterdir() if f.suffix.lower() in [".txt", ".csv"]]
-
-    # === Prepare ontology lookup === #
-    with (data_root / "ontology_label_map.json").open("r", encoding="utf-8") as f:
-        label_name_map = json.load(f)
-
-    object_name_to_hash = {
-        o["name"]: o["featureNodeHash"] for o in project.ontology["objects"] if o["shape"] in BoxShapes
-    }
-    hash_lookup: Dict[str, Optional[str]] = {v: object_name_to_hash.get(k) for k, v in label_name_map.items()}
-
-    for file in tqdm(label_files, desc="Importing label files"):
-        match = re.match(file_name_regex, file.name)
-        if not match:
-            logger.info(f"Couldn't match file {file.name} to specified regex")
-            continue
-
-        data_hash, image_name = match.groups()
-        try:
-            df = pd.read_csv(file, sep=" ", header=None)
-        except EmptyDataError:
-            continue
-
-        headers = list(map(lambda x: x[0], KITTI_COLUMNS))
-        # Hack to account for additional "custom" columns
-        headers += [f"undefined{i}" for i in range(df.shape[1] - len(headers))]
-        df.columns = pd.Index(headers)
-
-        for _, row in df.iterrows():
-            class_name = cast(str, hash_lookup[row["class_name"]])
-            bbox = BoundingBox(
-                x=float(row["xmin"]),
-                y=float(row["ymin"]),
-                w=float(row["xmax"] - row["xmin"]),
-                h=float(row["ymax"] - row["ymin"]),
-            )
-            prediction_writer.add_prediction(
-                Prediction(
-                    data_hash=data_hash,
-                    confidence=float(row["undefined0"]),
-                    object=ObjectDetection(format=Format.BOUNDING_BOX, data=bbox, feature_hash=class_name),
-                )
-            )
-
-
 def migrate_kitti_predictions(
     project_dir: Path,
     predictions_dir: Path,
