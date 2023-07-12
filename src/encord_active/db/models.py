@@ -159,6 +159,10 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
+    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
+    embedding_clip_2d_x: Optional[float]
+    embedding_clip_2d_y: Optional[float]
+
 
 @assert_cls_metrics_match(AnnotationMetrics)
 class ProjectAnnotationAnalytics(SQLModel, table=True):
@@ -171,8 +175,8 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     # Extra properties
     feature_hash: str = Field(min_length=8, max_length=8)
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
-    annotation_creator: Optional[str]
-    annotation_confidence: float
+    annotation_email: str
+    annotation_manual: bool
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
@@ -201,6 +205,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
     metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
+    metric_label_confidence: float = MetricFieldTypeNormal
 
     __table_args__ = define_metric_indices(
         "active_label",
@@ -221,6 +226,10 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     embedding_hu: Optional[bytes]
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
+
+    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
+    embedding_clip_2d_x: Optional[float]
+    embedding_clip_2d_y: Optional[float]
 
 
 class ProjectTag(SQLModel, table=True):
@@ -275,20 +284,19 @@ class ProjectPrediction(SQLModel, table=True):
 
 
 @assert_cls_metrics_match(AnnotationMetrics)
-class ProjectPredictionObjectResults(SQLModel, table=True):
-    __tablename__ = "active_project_prediction_results"
+class ProjectPredictionAnalytics(SQLModel, table=True):
+    __tablename__ = "active_project_prediction_analytics"
     prediction_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     feature_hash: str = Field(min_length=8, max_length=8)
+    project_hash: UUID
 
     # Prediction data for display.
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
-    annotation_bytes: bytes
 
-    # Prediction metadata
-    confidence: float = Field(ge=0, le=1)
+    # Prediction metadata: (for iou dependent TP vs FP split & feature hash grouping)
     match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_feature_hash: Optional[str] = Field(min_length=8, max_length=8)
     match_duplicate_iou: float = Field(ge=-1, le=1)  # 0 -> 1, -1 is special case always match.
@@ -320,21 +328,48 @@ class ProjectPredictionObjectResults(SQLModel, table=True):
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
     metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
+    metric_label_confidence: float = MetricFieldTypeNormal
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
-        Index("active_project_prediction_objects_confidence_index", "prediction_hash", "confidence"),
+        Index(
+            "active_project_prediction_objects_confidence_index",
+            "prediction_hash",
+            "metric_label_confidence",
+        ),
         Index(
             "active_project_prediction_objects_feature_confidence_index",
             "prediction_hash",
             "feature_hash",
-            "confidence",
+            "metric_label_confidence",
         ),
     )
 
 
-class ProjectPredictionUnmatchedResults(SQLModel, table=True):
-    __tablename__ = "active_project_prediction_unmatched"
+class ProjectPredictionAnnotationExtra(SQLModel, table=True):
+    __tablename__ = "active_project_prediction_analytics_extra"
+    prediction_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+
+    # Packed prediction bytes, format depends on annotation_type on associated
+    # non-extra table.
+    # BB = [x1, y1, x2, y2] (np.float)
+    # BITMASK = count array (np.int)
+    # Polygon = [[x, y], [x,y]] (np.float)
+    annotation_bytes: bytes
+
+    # Embeddings
+    embedding_clip: Optional[bytes]
+
+    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
+    embedding_clip_2d_x: Optional[float]
+    embedding_clip_2d_y: Optional[float]
+
+
+class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
+    __tablename__ = "active_project_prediction_analytics_false_negatives"
     prediction_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
@@ -343,8 +378,8 @@ class ProjectPredictionUnmatchedResults(SQLModel, table=True):
     # Unmatched annotation properties
     feature_hash: str = Field(min_length=8, max_length=8)
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
-    annotation_creator: Optional[str]
-    annotation_confidence: float
+    annotation_email: str
+    annotation_manual: bool
 
     # Unmatched annotation metrics.
     # Metrics - Absolute Size
@@ -372,6 +407,7 @@ class ProjectPredictionUnmatchedResults(SQLModel, table=True):
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
     metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
+    metric_label_confidence: float = MetricFieldTypeNormal
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_unmatched_prediction_fk"),

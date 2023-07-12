@@ -3,6 +3,7 @@ import math
 import uuid
 from typing import Dict, List, Optional, Set, Tuple, Union
 
+import numpy as np
 from sqlmodel import Session
 
 from encord_active.db.metrics import (
@@ -20,15 +21,17 @@ from encord_active.db.models import (
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectPrediction,
-    ProjectPredictionObjectResults,
-    ProjectPredictionUnmatchedResults,
+    ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsFalseNegatives,
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra,
+    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra, ProjectPredictionAnnotationExtra,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
+from encord_active.lib.common.utils import rle_to_binary_mask, mask_to_polygon
 from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import load_label_embeddings
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
@@ -155,9 +158,9 @@ def _assign_metrics(
 
 
 def _load_embeddings(
-        pfs: ProjectFileStructure,
-        data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]],
-        annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]],
+    pfs: ProjectFileStructure,
+    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
+    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
 ) -> None:
     for embedding_type, embedding_name in [
         (EmbeddingType.IMAGE, "embedding_clip"),
@@ -180,6 +183,36 @@ def _load_embeddings(
             embedding_dict[embedding_name] = embedding_bytes
 
 
+def _load_embeddings_2d(
+    pfs: ProjectFileStructure,
+    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
+    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
+) -> None:
+    for embedding_type, embedding_name in [
+        (EmbeddingType.IMAGE, "embedding_clip"),
+        (EmbeddingType.OBJECT, "embedding_clip"),
+        (EmbeddingType.CLASSIFICATION, "embedding_clip"),
+    ]:
+        reduced_embedding = get_2d_embedding_data(pfs, embedding_type)
+        if reduced_embedding is not None:
+            for entry in reduced_embedding.to_dict("records"):
+                identifier = entry.pop("identifier")
+                x = float(entry.pop("x"))
+                y = float(entry.pop("y"))
+                label = str(entry.pop("label"))
+                label_hash, du_hash_str, frame_str, *annotation_hash_list = identifier.split("_")
+                du_hash = uuid.UUID(du_hash_str)
+                frame = int(frame_str)
+                if len(annotation_hash_list) == 0:
+                    extra_dict, _ = data_metric_extra[(du_hash, frame)]
+                    extra_dict[f"{embedding_name}_2d_x"] = x
+                    extra_dict[f"{embedding_name}_2d_y"] = y
+                for annotation_hash in annotation_hash_list:
+                    extra_dict, _ = annotation_metric_extra[(du_hash, frame, annotation_hash)]
+                    extra_dict[f"{embedding_name}_2d_x"] = x
+                    extra_dict[f"{embedding_name}_2d_y"] = y
+
+
 def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
@@ -190,8 +223,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     data_classification_metrics: Dict[
         Tuple[uuid.UUID, int], List[Dict[str, Union[int, float, bytes, str, AnnotationType, None]]]
     ] = {}
-    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, bytes], Dict[str, str]]] = {}
-    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, bytes], Dict[str, str]]] = {}
+    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]] = {}
+    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]] = {}
 
     database_dir = pfs.project_dir.parent.expanduser().resolve()
 
@@ -263,8 +296,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,
-                        "annotation_creator": str(obj["createdBy"]) if obj["manualAnnotation"] else None,
-                        "annotation_confidence": float(obj["confidence"]),
+                        "annotation_email": str(obj["createdBy"]),
+                        "annotation_manual": bool(obj["manualAnnotation"]),
+                        "metric_label_confidence": float(obj["confidence"]),
                     }
                     annotation_metric_extra[(du_hash, data_unit.frame, object_hash)] = ({}, {})
                 classifications = labels_json.get("classifications", [])
@@ -279,8 +313,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
                         "feature_hash": str(classify["featureHash"]),
                         "annotation_type": AnnotationType.CLASSIFICATION,
-                        "annotation_creator": str(classify["createdBy"]) if classify["manualAnnotation"] else None,
-                        "annotation_confidence": float(classify["confidence"]),
+                        "annotation_email": str(classify["createdBy"]),
+                        "annotation_manual": bool(classify["manualAnnotation"]),
+                        "metric_label_confidence": float(classify["confidence"]),
                     }
                     annotation_metric_extra[(du_hash, data_unit.frame, classification_hash)] = ({}, {})
                     data_classification_metrics.setdefault((du_hash, data_unit.frame), []).append(
@@ -422,12 +457,17 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     )
 
     # Load 2d embeddings
-    # FIXME: implement (reduction should be marked as separate)
+    _load_embeddings_2d(
+        pfs=pfs,
+        data_metric_extra=data_metric_extra,
+        annotation_metric_extra=annotation_metric_extra
+    )
 
     # Load predictions
     predictions_run_db: List[ProjectPrediction] = []
-    predictions_objects_db: List[ProjectPredictionObjectResults] = []
-    predictions_missed_db: List[ProjectPredictionUnmatchedResults] = []
+    predictions_annotations_db: List[ProjectPredictionAnalytics] = []
+    predictions_annotations_db_extra: List[ProjectPredictionAnnotationExtra] = []
+    predictions_missed_db: List[ProjectPredictionAnalyticsFalseNegatives] = []
     for prediction_type in [MainPredictionType.OBJECT, MainPredictionType.CLASSIFICATION]:
         prediction_hash = uuid.uuid4()
         predictions_dir = pfs.predictions
@@ -475,7 +515,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
 
         # Tracking for applying associated metadata to the query.
         model_prediction_best_match_candidates: Dict[
-            Tuple[uuid.UUID, int, str], List[ProjectPredictionObjectResults]
+            Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]
         ] = {}
         model_prediction_unmatched_indices = set(range(len(labels)))
 
@@ -520,6 +560,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     else:
                         print(f"DEBUG, Extra p_metric: {metric_key}")
                 elif metric_target == " (F)":
+                    # FIXME: needed (or are these all from data frame and hence trivial to materialize via join)
                     f_metrics[metric_key] = metric_value
                 else:
                     raise ValueError(f"Unknown metric target: '{metric_target}'")
@@ -562,21 +603,52 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 match_object_hash = matched_label_hashes[0]
                 match_feature_hash = class_idx_dict[str(matched_label_class_id)]["featureHash"]
 
+            # Select annotation side tables for prediction
+            frame_metrics = data_metrics[(du_hash, frame)]
+            img_w: int = int(frame_metrics["metric_width"])
+            img_h: int = int(frame_metrics["metric_height"])
+            if rle is None or rle == "nan":
+                annotation_type = AnnotationType.BOUNDING_BOX
+                annotation_array = np.array([
+                    pb / (img_w if i % 2 == 0 else img_h)
+                    for i, pb in enumerate(pbb)
+                ], dtype=np.float)
+            else:
+                try:
+                    rle_json = json.loads(rle.replace("'", '"'))
+                except Exception:
+                    print(f"Invalid rle clause = {rle}")
+                    raise
+                if rle_json["size"] != [img_h, img_w]:
+                    raise ValueError(f"Bad rle size: {rle_json['size']} != [{img_h},{img_w}]")
+                mask = rle_to_binary_mask(rle_json)
+                polygon, bbox = mask_to_polygon(mask)
+                if polygon is None:
+                    annotation_type = AnnotationType.BITMASK
+                    annotation_array = np.array(
+                        rle_json["counts"], dtype=np.int
+                    )
+                else:
+                    annotation_type = AnnotationType.POLYGON
+                    annotation_array = np.array([
+                        [float(x) / img_w, float(y) / img_h]
+                        for x, y in polygon
+                    ], dtype=np.float)
+
             # Add the new prediction to the database!!!
             for object_hash in object_hashes:
-                new_predictions_object_db = ProjectPredictionObjectResults(
+                new_predictions_object_db = ProjectPredictionAnalytics(
                     # Identifier
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
                     object_hash=object_hash,
                     # Prediction metadata
+                    project_hash=project_hash,
                     feature_hash=feature_hash,
-                    confidence=confidence,
+                    metric_label_confidence=confidence,
                     iou=iou,
-                    annotation_type=AnnotationType.BITMASK,  # FIXME: encode prediction correctly!!
-                    annotation_bytes="".encode("utf-8"),
-                    # FIXME: pbb (aim to support all prediction descriptors (bytes??)
+                    annotation_type=annotation_type,
                     # Ground truth match metadata
                     match_object_hash=match_object_hash,
                     match_feature_hash=match_feature_hash,
@@ -584,9 +656,20 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     if match_feature_hash is not None and match_feature_hash == feature_hash
                     else 1.0,  # 1.0 = always duplicate, -1.0 = never duplicate.
                     # Metrics
-                    **assert_valid_args(ProjectPredictionObjectResults, p_metrics),
+                    **assert_valid_args(ProjectPredictionAnalytics, p_metrics),
                 )
-                predictions_objects_db.append(new_predictions_object_db)
+                predictions_annotations_db.append(new_predictions_object_db)
+                predictions_annotations_db_extra.append(
+                    ProjectPredictionAnnotationExtra(
+                        # Identifier
+                        prediction_hash=prediction_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        object_hash=object_hash,
+                        # Extra annotation
+                        annotation_bytes=annotation_array.tobytes(),
+                    )
+                )
                 if match_object_hash is not None:
                     # Assign all duplicate matches to match with non-highest iou
                     match_key = (du_hash, frame, match_object_hash)
@@ -602,11 +685,11 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 # No post-processing needed (feature hash mismatches are by default excluded anyway).
                 continue
             model_prediction_group.sort(
-                key=lambda m_obj: (m_obj.iou, m_obj.confidence, m_obj.object_hash), reverse=True
+                key=lambda m_obj: (m_obj.iou, m_obj.metric_label_confidence, m_obj.object_hash), reverse=True
             )
 
             def confidence_compare_key(m_obj):
-                return m_obj.confidence, m_obj.iou, m_obj.object_hash
+                return m_obj.metric_label_confidence, m_obj.iou, m_obj.object_hash
 
             # Currently ordered by maximum iou, (first entry is trivially correct as it is the only one with
             #  the desired iou).
@@ -655,13 +738,13 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             if str(missing_feature_hash) != missing_annotation_metrics["feature_hash"]:
                 raise ValueError(f"Inconsistent feature_hash for missed annotation!")
             predictions_missed_db.append(
-                ProjectPredictionUnmatchedResults(
+                ProjectPredictionAnalyticsFalseNegatives(
                     prediction_hash=prediction_hash,
                     du_hash=missing_du_hash,
                     frame=missing_frame,
                     object_hash=missing_annotation_hash,
                     **assert_valid_args(
-                        ProjectPredictionUnmatchedResults,
+                        ProjectPredictionAnalyticsFalseNegatives,
                         missing_annotation_metrics
                     )
                 )
@@ -733,7 +816,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         sess.add_all(project_data_tags)
         sess.add_all(project_object_tags)
         sess.add_all(predictions_run_db)
-        sess.add_all(predictions_objects_db)
+        sess.add_all(predictions_annotations_db)
+        sess.add_all(predictions_annotations_db_extra)
         sess.add_all(predictions_missed_db)
         sess.commit()
 
