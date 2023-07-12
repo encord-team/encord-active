@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
 from encord_active.db.metrics import AnnotationMetrics, MetricType
-from encord_active.db.models import ProjectPredictionObjectResults, ProjectPredictionUnmatchedResults
+from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictionAnalyticsFalseNegatives
 from encord_active.server.routers.project2_engine import engine
 
 router = APIRouter(
@@ -37,14 +37,14 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                         coalesce(cast(ap_positives as real) / ap_total, 0.0)
                     ) / (
                         count(*) + (
-                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                            SELECT COUNT(*) FROM active_project_prediction_analytics_false_negatives UM
                             WHERE UM.prediction_hash = FG.prediction_hash
                             AND UM.feature_hash == FG.feature_hash
                         )
                     ) as ap FROM (
                         SELECT
                             row_number() OVER (
-                                ORDER BY AP.confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_total,
                             sum(cast(
                                 (
@@ -52,12 +52,12 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                                     AP.match_duplicate_iou < :iou
                                 ) as integer
                             )) OVER (
-                                ORDER BY AP.confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_positives
-                        FROM active_project_prediction_results AP
+                        FROM active_project_prediction_analytics AP
                         WHERE AP.prediction_hash = FG.prediction_hash
                         AND AP.feature_hash == FG.feature_hash
-                        ORDER BY AP.confidence DESC
+                        ORDER BY AP.metric_label_confidence DESC
                     )
                 ) as ap,
                 (
@@ -65,7 +65,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                         coalesce(cast(ar_positives as real) / ar_total, 0.0)
                     ) / (
                         count(*) + (
-                            SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                            SELECT COUNT(*) FROM active_project_prediction_analytics_false_negatives UM
                             WHERE UM.prediction_hash = FG.prediction_hash
                             AND UM.feature_hash == FG.feature_hash
                         )
@@ -82,13 +82,13 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                             )) OVER (
                                 ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
                             ) AS ar_positives
-                        FROM active_project_prediction_results AR
+                        FROM active_project_prediction_analytics AR
                         WHERE AR.prediction_hash = FG.prediction_hash
                         AND AR.feature_hash = FG.feature_hash
                         ORDER BY AR.iou
                     )
                 ) as ar
-                FROM active_project_prediction_results FG
+                FROM active_project_prediction_analytics FG
                 WHERE FG.prediction_hash = :prediction_hash
                 GROUP BY FG.feature_hash
             )
@@ -122,7 +122,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                     f"as var_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                FROM active_project_prediction_results, (
+                FROM active_project_prediction_analytics, (
                     SELECT
                         avg(
                             iou >= :iou and
@@ -132,7 +132,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                     f"avg({metric_name}) as e_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                     FROM active_project_prediction_results
+                     FROM active_project_prediction_analytics
                      WHERE prediction_hash = :prediction_hash
                 )
                 WHERE prediction_hash = :prediction_hash
@@ -174,7 +174,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                         '''
                     for metric_name in valid_metric_stat_names
                 ])}
-                FROM active_project_prediction_results
+                FROM active_project_prediction_analytics
                 WHERE prediction_hash = :prediction_hash
                 """
             ),
@@ -200,13 +200,13 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                         cast(tp_count as real) / tp_and_fp_count as p,
                         cast(tp_count as real) / (
                             (
-                                SELECT COUNT(*) FROM active_project_prediction_results PM
+                                SELECT COUNT(*) FROM active_project_prediction_analytics PM
                                 WHERE PM.prediction_hash = :prediction_hash
                                 AND PM.feature_hash = :feature_hash
                                 AND PM.iou >= :iou
                                 AND PM.match_duplicate_iou < :iou
                             ) + (
-                                SELECT COUNT(*) FROM active_project_prediction_unmatched UM
+                                SELECT COUNT(*) FROM active_project_prediction_analytics UM
                                 WHERE UM.prediction_hash = :prediction_hash
                                 AND UM.feature_hash == :feature_hash
                             )
@@ -214,7 +214,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                     FROM (
                         SELECT
                             row_number() OVER (
-                                ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS tp_and_fp_count,
                             sum(cast(
                                 (
@@ -222,12 +222,12 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                                     PR.match_duplicate_iou < :iou
                                 ) as integer
                             )) OVER (
-                                ORDER BY PR.confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS tp_count
-                        FROM active_project_prediction_results PR
+                        FROM active_project_prediction_analytics PR
                         WHERE PR.prediction_hash = :prediction_hash
                         AND PR.feature_hash = :feature_hash
-                        ORDER BY confidence DESC
+                        ORDER BY metric_label_confidence DESC
                     )
                     GROUP BY tp_count
                 )
@@ -248,15 +248,15 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
             importance = {}
             for metric_name in AnnotationMetrics.keys():
                 importance_data_query = select(
-                    ProjectPredictionObjectResults.iou
+                    ProjectPredictionAnalytics.iou
                     * (
-                        (ProjectPredictionObjectResults.iou >= iou)
-                        & (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                        (ProjectPredictionAnalytics.iou >= iou)
+                        & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
                     ),
-                    getattr(ProjectPredictionObjectResults, metric_name),
+                    getattr(ProjectPredictionAnalytics, metric_name),
                 ).where(
-                    ProjectPredictionObjectResults.prediction_hash == prediction_hash,
-                    is_not(getattr(ProjectPredictionObjectResults, metric_name), None),
+                    ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                    is_not(getattr(ProjectPredictionAnalytics, metric_name), None),
                 )
                 importance_data = sess.exec(importance_data_query).fetchall()
                 if len(importance_data) == 0:
@@ -284,8 +284,8 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
     # FIXME: bucket behaviour needs improvement
     with Session(engine) as sess:
         metric = AnnotationMetrics[metric_name]
-        metric_attr = getattr(ProjectPredictionObjectResults, metric_name)
-        where = [ProjectPredictionObjectResults.prediction_hash == prediction_hash, is_not(metric_attr, None)]
+        metric_attr = getattr(ProjectPredictionAnalytics, metric_name)
+        where = [ProjectPredictionAnalytics.prediction_hash == prediction_hash, is_not(metric_attr, None)]
         if metric.type == MetricType.NORMAL:
             metric_min = 0.0
             metric_max = 1.0
@@ -304,11 +304,11 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             metric_bucket_size = 1.0
         metric_buckets = sess.exec(
             select(  # type: ignore
-                ProjectPredictionObjectResults.feature_hash,
+                ProjectPredictionAnalytics.feature_hash,
                 func.floor((metric_attr - metric_min) / metric_bucket_size),
                 func.sum(
-                    (ProjectPredictionObjectResults.iou >= iou)
-                    & (ProjectPredictionObjectResults.match_duplicate_iou < iou)
+                    (ProjectPredictionAnalytics.iou >= iou)
+                    & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
                 ),
                 func.count(),
             )
@@ -316,7 +316,7 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
                 *where,
             )
             .group_by(
-                ProjectPredictionObjectResults.feature_hash,
+                ProjectPredictionAnalytics.feature_hash,
                 func.floor((metric_attr - metric_min) / metric_bucket_size),
             ).order_by(
                 func.floor((metric_attr - metric_min) / metric_bucket_size),
@@ -331,11 +331,11 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             )
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
-        metric_attr_fn = getattr(ProjectPredictionUnmatchedResults, metric_name)
-        where_fn = [ProjectPredictionUnmatchedResults.prediction_hash == prediction_hash, is_not(metric_attr, None)]
+        metric_attr_fn = getattr(ProjectPredictionAnalyticsFalseNegatives, metric_name)
+        where_fn = [ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash, is_not(metric_attr, None)]
         metric_fn_buckets = sess.exec(
             select(  # type: ignore
-                ProjectPredictionUnmatchedResults.feature_hash,
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
                 func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
                 func.count(),
             )
@@ -343,7 +343,7 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
                 *where_fn,
             )
             .group_by(
-                ProjectPredictionObjectResults.feature_hash,
+                ProjectPredictionAnalytics.feature_hash,
                 func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
             ).order_by(
                 func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
@@ -371,15 +371,22 @@ def prediction_search(
     iou: float,
     metric_filters: str,
     enum_filters: str,
-    true_positives: bool,
-    false_positives: bool,
-    false_negatives: bool,
 ):
-    # FIXME: IOU vs TP / FP / FN range query?? (as mutually depend on each other??)
-    # FIXME: should FN be contained within the search or not??
-    # FIXME: ????
     metric_filters_dict = json.loads(metric_filters)
     enum_filters_dict = json.loads(enum_filters)
+    # Some enums have special meaning.
+    include_prediction_tp = True
+    include_prediction_fp = True
+    include_prediction_fn = True
+    if "prediction_type" in enum_filters_dict:
+        filters = set(enum_filters_dict.pop("prediction_type"))
+        include_prediction_tp = "tp" in filters
+        include_prediction_fp = "fp" in filters
+        include_prediction_fn = "fn" in filters
+    include_prediction_hashes = enum_filters_dict.pop("prediction_hash", None)
+    include_data = True
+    include_annotations = True
+
     return None
 
 
