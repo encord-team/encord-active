@@ -67,6 +67,8 @@ def get_project_summary(project_hash: uuid.UUID):
 
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
+        predictions = sess.exec(select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)).fetchall()
+
         preview = sess.exec(
             select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
             .where(ProjectAnnotationAnalytics.project_hash == project_hash)
@@ -101,7 +103,38 @@ def get_project_summary(project_hash: uuid.UUID):
                 },
             },
         },
+        "global": {
+            "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
+            "enums": {
+                "feature_hash": {"type": "ontology"},
+                "annotation_type": {
+                    "type": "enum",
+                    "title": "Annotation Type",
+                    "values": {
+                        annotation_type.value: annotation_type.name
+                        for annotation_type in AnnotationType
+                    },
+                },
+                "tag": {
+                    "type": "enum",
+                    "title": "Tags",
+                    "values": {tag.tag_hash: tag.name for tag in tags},
+                },
+                "prediction": {
+                    "type": "enum",
+                    "title": "Predictions",
+                    "values": {
+                        prediction.prediction_hash: prediction.name
+                        for prediction in predictions
+                    }
+                },
+            }
+        },
         "tags": {tag.tag_hash: tag.name for tag in tags},
+        "predictions": {
+            prediction.prediction_hash: prediction.name
+            for prediction in predictions
+        },
         "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
     }
 
