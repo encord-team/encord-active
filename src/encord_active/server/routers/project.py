@@ -396,8 +396,10 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     dataset_description = item.dataset_description
     with DBConnection(curr_project_structure) as conn:
         df = MergedMetrics(conn).all()
-        # FIXME: this filtering function is incorrect and doesn't work properly.
-        filtered_df = df[df.index.isin(identifiers)]
+        df.reset_index(inplace=True)
+        if len(identifiers) == 0:
+            return None
+        filtered_df = df[df["identifier"].isin(identifiers)]
     target_project_dir = curr_project_structure.project_dir.parent / project_title
     target_project_structure = ProjectFileStructure(target_project_dir)
     current_project_meta = curr_project_structure.load_project_meta()
