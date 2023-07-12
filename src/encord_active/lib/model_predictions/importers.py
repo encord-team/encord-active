@@ -322,18 +322,15 @@ def migrate_kitti_predictions(
 
     # Obtain the files containing predictions
     pattern = re.compile(file_name_regex)
-    files = [
-        f
-        for f in predictions_dir.glob("**/*")
-        if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and pattern.match(f.name) is not None
+    file_paths = [
+        path
+        for path in predictions_dir.glob("**/*")
+        if path.is_file() and path.suffix.lower() in [".txt", ".csv"] and pattern.match(path.name) is not None
     ]
 
     # Retrieve the mapping from ontology object hashes to label names
     if ontology_mapping is None:
-        ontology_mapping_file = predictions_dir / "ontology_mapping.json"
-        if not ontology_mapping_file.exists():
-            raise FileNotFoundError(f'Expected "ontology_mapping.json" file in "{predictions_dir}".')
-        ontology_mapping = json.loads(ontology_mapping_file.read_text(encoding="utf-8"))
+        ontology_mapping = _retrieve_ontology_mapping(predictions_dir)
 
     # Invert the ontology mapping (now it's from object class names to ontology object hashes)
     class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
@@ -351,14 +348,14 @@ def migrate_kitti_predictions(
 
     # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
-    for file in tqdm(files, desc="Migrating KITTI predictions"):
+    for file_path in tqdm(file_paths, desc="Migrating KITTI predictions"):
         # Identify the data unit that corresponds to the given file
-        du = _get_matching_data_unit(pfs, file, file_path_to_data_unit_func, file_name_regex)
+        du = _get_matching_data_unit(pfs, file_path, file_path_to_data_unit_func, file_name_regex)
         if du is None:
             continue
 
         try:
-            df = pd.read_csv(file, sep=" ", header=None)
+            df = pd.read_csv(file_path, sep=" ", header=None)
         except EmptyDataError:
             continue
 
@@ -501,3 +498,11 @@ def _get_data_unit_identifier(file_path: Path, file_name_regex: str) -> tuple[Op
     frame: Optional[int] = int(groups["frame"]) if "frame" in groups else None
 
     return data_title, frame
+
+
+def _retrieve_ontology_mapping(predictions_dir: Path):
+    ontology_mapping_file = predictions_dir / "ontology_mapping.json"
+    if not ontology_mapping_file.exists():
+        raise FileNotFoundError(f'Expected "ontology_mapping.json" file in "{predictions_dir}".')
+    ontology_mapping = json.loads(ontology_mapping_file.read_text(encoding="utf-8"))
+    return ontology_mapping
