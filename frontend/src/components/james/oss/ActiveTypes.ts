@@ -219,6 +219,15 @@ export type ActiveCreateTagMutationArguments = {
   }[];
 };
 
+export type ActiveUploadToEncordMutationArguments = {
+    readonly dataset_title: string;
+    readonly dataset_description?: string | undefined;
+    readonly project_title: string;
+    readonly project_description?: string | undefined;
+    readonly ontology_title: string;
+    readonly ontology_description?: string | undefined;
+}
+
 export type ActivePredictionView = {
   readonly name: string;
   readonly prediction_hash: string;
@@ -359,6 +368,13 @@ export interface ActiveQueryAPI {
       "onError" | "onSuccess" | "onSettled"
     >
   ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments>;
+  useProjectMutationUploadToEncord(
+      projectHash: string,
+    options?: Pick<
+      UseMutationOptions<string, unknown, ActiveUploadToEncordMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    >
+  ): UseMutationResult<string, unknown, ActiveUploadToEncordMutationArguments>;
 
   // == Project predictions ===
   useProjectListPredictions(
