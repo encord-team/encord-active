@@ -16,7 +16,7 @@ from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictio
 from encord_active.server.routers.project2_engine import engine
 
 router = APIRouter(
-    prefix="/get/{project_hash}/predictions/get/{prediction_hash}",
+    prefix="/{project_hash}/predictions/{prediction_hash}",
 )
 
 
