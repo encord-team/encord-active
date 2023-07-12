@@ -81,7 +81,7 @@ llvmlite = "^0.40.0"                                     # Pinning, as lower ver
 encord-active-components = "^0.0.26"
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
-fastapi = "^0.95.0"
+fastapi = "^0.95.2"
 uvicorn = { extras = ["standard"], version = "^0.21.1" }
 nodejs-bin = "^16.15.1a4"
 pyjwt = "^2.7.0"

@@ -5292,4 +5292,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "27ef7768bad6ca7c8a3540f48360b47765258974114246fdd5a88c05fa456770"
+content-hash = "e1714ed372b654ed52e90841b5557dac8392496aa1e4e52a6507ab4857b2874f"
