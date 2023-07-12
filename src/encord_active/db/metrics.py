@@ -20,19 +20,11 @@ class MetricType(Enum):
 
 
 @dataclass
-class MetricVirtualDefinition:
-    src: str
-    flip_ord: bool
-    map: Callable[[Union[float, int, column]], Union[float, int, column]]
-
-
-@dataclass
 class MetricDefinition:
     title: str
     short_desc: str
     long_desc: str
     type: MetricType
-    virtual: Optional[MetricVirtualDefinition] = None
 
 
 DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
@@ -78,17 +70,6 @@ DataAnnotationSharedMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    # "metric_blur": MetricDefinition(
-    #    title="Blur",
-    #    short_desc="",
-    #    long_desc="",
-    #    type=MetricType.NORMAL,
-    #    virtual=MetricVirtualDefinition(
-    #        src="metric_sharpness",
-    #        flip_ord=True,
-    #        map=lambda x: 1.0 - x,
-    #    )
-    # ),
     "metric_red": MetricDefinition(
         title="Red",
         short_desc="Redness of the image data",
@@ -217,8 +198,6 @@ def assert_cls_metrics_match(metrics: Dict[str, MetricDefinition]) -> Callable[[
         fields: Dict[str, None] = cls.__fields__  # type: ignore
         # No missing metrics
         for metric_name, metric_definition in metrics.items():
-            if metric_definition.virtual is not None:
-                continue
             field = fields.get(metric_name, None)
             if field is None:
                 raise ValueError(f"Class: {cls.__name__} is missing metric field: {metric_name}")  # type: ignore
@@ -227,7 +206,7 @@ def assert_cls_metrics_match(metrics: Dict[str, MetricDefinition]) -> Callable[[
         for field in fields:
             if field.startswith("metric_"):
                 metric = metrics.get(field, None)
-                if metric is None or metric.virtual is not None:
+                if metric is None:
                     raise ValueError(f"Class: {cls.__name__} has extra metric: {field}")  # type: ignore
         return cls
 
