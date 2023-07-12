@@ -1,8 +1,9 @@
 import uuid
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter
+from sqlalchemy import func
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
 
@@ -33,7 +34,7 @@ router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
 
 
-@router.get("/list")
+@router.get("/")
 def get_all_projects():
     with Session(engine) as sess:
         projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
@@ -58,7 +59,7 @@ def _metric_summary(metrics: Dict[str, MetricDefinition]):
     }
 
 
-@router.get("/get/{project_hash}/summary")
+@router.get("/{project_hash}/summary")
 def get_project_summary(project_hash: uuid.UUID):
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
@@ -80,6 +81,21 @@ def get_project_summary(project_hash: uuid.UUID):
                 .where(ProjectDataUnitMetadata.project_hash == project_hash)
                 .limit(1)
             ).first()
+
+        du_count = sess.exec(
+            select(func.count())
+            .where(ProjectDataAnalytics.project_hash == project_hash)
+            .group_by(ProjectDataAnalytics.du_hash)
+        ).first()
+        frame_count = sess.exec(
+            select(func.count())
+            .where(ProjectDataAnalytics.project_hash == project_hash)
+            .group_by(ProjectDataAnalytics.du_hash)
+        ).first()
+        annotation_count = sess.exec(
+            select(func.count())
+            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+        ).first()
 
     return {
         "name": project.project_name,
@@ -103,6 +119,9 @@ def get_project_summary(project_hash: uuid.UUID):
                 },
             },
         },
+        "du_count": du_count,
+        "frame_count": frame_count,
+        "annotation_count": annotation_count,
         "global": {
             "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
             "enums": {
@@ -139,7 +158,7 @@ def get_project_summary(project_hash: uuid.UUID):
     }
 
 
-@router.get("/get/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
+@router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
 def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):
     objects: List[dict] = []
     with Session(engine) as sess:
@@ -225,12 +244,12 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
     return {"url": uri, "timestamp": timestamp, "objects": objects, "tags": [tag.tag_hash for tag in result_tags]}
 
 
-@router.get("/get/{project_hash}/preview/{du_hash}/{frame}/")
+@router.get("/{project_hash}/preview/{du_hash}/{frame}/")
 def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     return display_preview(project_hash, du_hash, frame)
 
 
-@router.get("/get/{project_hash}/item/{du_hash}/{frame}/")
+@router.get("/{project_hash}/item/{du_hash}/{frame}/")
 def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     with Session(engine) as sess:
         du_meta = sess.exec(
@@ -288,8 +307,13 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     }
 
 
-@router.get("/get/{project_hash}/predictions/list")
-def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = None, limit: Optional[int] = None):
+@router.get("/{project_hash}/predictions")
+def list_project_predictions(
+    project_hash: uuid.UUID,
+    offset: Optional[int] = None,
+    limit: Optional[int] = None,
+    order_by: Optional[Literal[""]] = None,
+):
     with Session(engine) as sess:
         predictions = sess.exec(
             select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)
@@ -302,7 +326,7 @@ def list_project_predictions(project_hash: uuid.UUID, offset: Optional[int] = No
     }
 
 
-@router.post("/create/tag/data")
+@router.post("/{project_hash}/create/tag/data")
 def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], name: str):
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
@@ -315,7 +339,7 @@ def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], 
         sess.commit()
 
 
-@router.post("/create/tag/annotation")
+@router.post("/{project_hash}/create/tag/annotation")
 def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.UUID, int, str]], name: str):
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
@@ -330,7 +354,7 @@ def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.
         sess.commit()
 
 
-@router.post("/create/project/subset")
+@router.post("/{project_hash}/create/project/subset")
 def create_active_subset(project_hash: uuid.UUID, du_hashes: List[uuid.UUID], name: str, description: str):
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
