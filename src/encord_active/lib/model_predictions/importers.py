@@ -340,7 +340,7 @@ def import_KITTI_labels(
 def migrate_kitti_predictions(
     project_dir: Path,
     predictions_dir: Path,
-    ontology_mapping: dict[str, str],
+    ontology_mapping: Optional[dict[str, str]] = None,
     file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
     file_name_regex: str = KITTI_FILE_NAME_REGEX,
 ):
@@ -351,6 +351,13 @@ def migrate_kitti_predictions(
         for f in predictions_dir.glob("**/*")
         if f.is_file() and f.suffix.lower() in [".txt", ".csv"] and pattern.match(f.name) is not None
     ]
+
+    # Retrieve the mapping from ontology object hashes to label names
+    if ontology_mapping is None:
+        ontology_mapping_file = predictions_dir / "ontology_mapping.json"
+        if not ontology_mapping_file.exists():
+            raise FileNotFoundError(f'Expected "ontology_mapping.json" file in "{predictions_dir}".')
+        ontology_mapping = json.loads(ontology_mapping_file.read_text(encoding="utf-8"))
 
     # Invert the ontology mapping (now it's from object class names to ontology object hashes)
     class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
