@@ -9,24 +9,24 @@ import {
 } from "@tanstack/react-query";
 import axios from "axios";
 import {
-  ActiveCreateSubsetMutationArguments,
-  ActiveCreateTagMutationArguments,
-  ActivePaginationResult,
-  ActivePredictionView,
-  ActiveProjectAnalysisCompareMetricDissimilarity,
-  ActiveProjectAnalysisDistribution,
-  ActiveProjectAnalysisDomain,
-  ActiveProjectAnalysisScatter,
-  ActiveProjectAnalysisSummary,
-  ActiveProjectItemDetailedSummary,
-  ActiveProjectMetricPerformance,
-  ActiveProjectPredictionSummary,
-  ActiveProjectPreviewItemResult,
-  ActiveProjectSearchResult,
-  ActiveProjectSimilarityResult,
-  ActiveProjectSummary,
-  ActiveProjectView,
-  ActiveQueryAPI,
+    ActiveCreateSubsetMutationArguments,
+    ActiveCreateTagMutationArguments,
+    ActivePaginationResult,
+    ActivePredictionView,
+    ActiveProjectAnalysisCompareMetricDissimilarity,
+    ActiveProjectAnalysisDistribution,
+    ActiveProjectAnalysisDomain,
+    ActiveProjectAnalysisScatter,
+    ActiveProjectAnalysisSummary,
+    ActiveProjectItemDetailedSummary,
+    ActiveProjectMetricPerformance,
+    ActiveProjectPredictionSummary,
+    ActiveProjectPreviewItemResult,
+    ActiveProjectSearchResult,
+    ActiveProjectSimilarityResult,
+    ActiveProjectSummary,
+    ActiveProjectView,
+    ActiveQueryAPI, ActiveUploadToEncordMutationArguments,
 } from "./oss/ActiveTypes";
 
 export type IntegratedProjectMetadata = {
@@ -347,7 +347,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       );
 
       return useMutation(
-          [projectHash],
+          ["ACTIVE:useProjectMutationCreateTag", projectHash],
           async (args: ActiveCreateSubsetMutationArguments) => {
                 const params = {
                     identifiers: args.du_hashes ?? [],
@@ -378,10 +378,46 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     > = {}
   ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments> =>
     useMutation(
-      [projectHash],
+      ["ACTIVE:useProjectMutationCreateTag", projectHash],
       async (args: ActiveCreateTagMutationArguments) => "FIXME: impl",
       options
     );
+
+  useProjectMutationUploadToEncord =(
+    projectHash: string,
+    options?: Pick<
+      UseMutationOptions<string, unknown, ActiveUploadToEncordMutationArguments>,
+      "onError" | "onSuccess" | "onSettled"
+    >
+  ): UseMutationResult<string, unknown, ActiveUploadToEncordMutationArguments> => {
+    const baseURL = this.getBaseUrl(projectHash, true).replace(
+    "/projects_v2/get/","/projects/"
+    );
+
+    return useMutation(
+          ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
+          async (args: ActiveUploadToEncordMutationArguments) => {
+                const params = {
+                    project_title: args.project_title,
+                    project_description: args.project_description ?? "",
+                    dataset_title: args.dataset_title,
+                    dataset_description: args.dataset_description ?? "",
+                    ontology_title: args.ontology_title,
+                    ontology_description: args.ontology_description ?? "",
+                }
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+              return await axios.post(
+                  `${baseURL}/upload_to_encord`,
+                  JSON.stringify(params),
+                  { headers }
+              )
+          },
+        { ...options,  }
+      );
+  }
 
   // == Project predictions ===
   useProjectListPredictions = (

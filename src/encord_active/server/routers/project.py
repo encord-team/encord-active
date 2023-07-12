@@ -394,7 +394,10 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     project_description = item.project_description
     dataset_title = item.dataset_title
     dataset_description = item.dataset_description
-    filtered_df = pd.DataFrame(identifiers, columns=["identifier"])
+    with DBConnection(curr_project_structure) as conn:
+        df = MergedMetrics(conn).all()
+        # FIXME: this filtering function is incorrect and doesn't work properly.
+        filtered_df = df[df.index.isin(identifiers)]
     target_project_dir = curr_project_structure.project_dir.parent / project_title
     target_project_structure = ProjectFileStructure(target_project_dir)
     current_project_meta = curr_project_structure.load_project_meta()
@@ -537,37 +540,41 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     migrate_disk_to_db(target_project_structure)
 
 
+class UploadToEncordModel(BaseModel):
+    dataset_title: str
+    dataset_description: str
+    project_title: str
+    project_description: str
+    ontology_title: Optional[str]
+    ontology_description: str
+
+
 @router.post("/{project}/upload_to_encord")
 def upload_to_encord(
     pfs: ProjectFileStructureDep,
-    dataset_title: str,
-    dataset_description: str,
-    project_title: str,
-    project_description: str,
-    ontology_title: Optional[str],
-    ontology_description: str,
-    identifiers: List[str],
+    item: UploadToEncordModel,
 ):
-    df = pd.DataFrame(identifiers, columns=["identifier"])
+    with DBConnection(pfs) as conn:
+        df = MergedMetrics(conn).all()
     # FIXME: don't fetch app_config from here.
     encord_actions = EncordActions(pfs.project_dir, app_config.get_ssh_key())
     try:
         dataset_creation_result = encord_actions.create_dataset(
-            dataset_title=dataset_title, dataset_description=dataset_description, dataset_df=df
+            dataset_title=item.dataset_title, dataset_description=item.dataset_description, dataset_df=df
         )
     except DatasetUniquenessError as e:
         return None
 
     # FIXME: existing logic re-uses 'ontology_hash'
     ontology_hash = encord_actions.create_ontology(
-        title=ontology_title or project_title, description=ontology_description or ""
+        title=item.ontology_title or item.project_title, description=item.ontology_description or ""
     ).ontology_hash
 
     try:
         new_project = encord_actions.create_project(
             dataset_creation_result=dataset_creation_result,
-            project_title=project_title,
-            project_description=project_description,
+            project_title=item.project_title,
+            project_description=item.project_description,
             ontology_hash=ontology_hash,
         )
         migrate_disk_to_db(encord_actions.project_file_structure)

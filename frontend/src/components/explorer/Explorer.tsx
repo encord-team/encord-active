@@ -39,6 +39,7 @@ import { sift } from "radash";
 import ActiveCreateSubsetModal from "../james/oss/tabs/modals/ActiveCreateSubsetModal";
 import {ActiveQueryAPI} from "../james/oss/ActiveTypes";
 import {Button} from "antd";
+import ActiveUploadToEncordModal from "../james/oss/tabs/modals/ActiveUploadToEncordModal";
 
 export type Props = {
   authToken?: string | null;
@@ -192,19 +193,28 @@ export const Explorer = ({
     isLoadingSimilarItems,
     searching,
   ]);
-  const [open, setOpen] = useState<boolean>(false);
-  const close = () => setOpen(false);
+  const [open, setOpen] = useState<undefined | "subset" | "upload">();
+  const close = () => setOpen(undefined);
   return (
     <ApiContext.Provider value={api}>
       <ActiveCreateSubsetModal
-          open={open}
+          open={open =="subset"}
           close={close}
           projectHash={projectHash}
           queryAPI={queryAPI}
           identifiers={[...selectedItems]}
       />
-      <Button onClick={() => setOpen(true)}>
+      <ActiveUploadToEncordModal
+          open={open === "upload"}
+          close={close}
+          projectHash={projectHash}
+          queryAPI={queryAPI}
+      />
+      <Button onClick={() => setOpen("subset")}>
         Create Project subset
+      </Button>
+       <Button onClick={() => setOpen("upload")}>
+       Upload project
       </Button>
       <div className="w-full">
         {previewedItem && (
