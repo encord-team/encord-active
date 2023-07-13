@@ -1,6 +1,7 @@
 import json
 import math
 import uuid
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -26,7 +27,9 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra, ProjectPredictionAnnotationExtra,
+    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra, ProjectPredictionAnalyticsExtra,
+    ProjectEmbeddingReduction, ProjectPredictionAnalyticsReduced, ProjectDataAnalyticsReduced,
+    ProjectAnnotationAnalyticsReduced, EmbeddingReductionType,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.common.utils import rle_to_binary_mask, mask_to_polygon
@@ -128,9 +131,8 @@ def _assign_metrics(
                         f"Percentage = {score_p1}, {score_p2}"
                         f"identifier={error_identifier}"
                     )
-        if metric_def.virtual is None:
-            # Virtual attributes should not be stored!!
-            metrics_dict[metric_column_name] = score
+
+        metrics_dict[metric_column_name] = score
     elif metric_column_name not in metrics_derived:
         raise ValueError(
             f"Duplicate metric assignment for, column={metric_column_name}," f"identifier={error_identifier}"
@@ -185,9 +187,12 @@ def _load_embeddings(
 
 def _load_embeddings_2d(
     pfs: ProjectFileStructure,
-    data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
-    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
+    project_hash: uuid.UUID,
+    reduced_embeddings: List[ProjectEmbeddingReduction],
+    data_reduced_embeddings: List[ProjectDataAnalyticsReduced],
+    annotation_reduced_embeddings: List[ProjectAnnotationAnalyticsReduced]
 ) -> None:
+    reduction_hash_map = {}
     for embedding_type, embedding_name in [
         (EmbeddingType.IMAGE, "embedding_clip"),
         (EmbeddingType.OBJECT, "embedding_clip"),
@@ -195,22 +200,460 @@ def _load_embeddings_2d(
     ]:
         reduced_embedding = get_2d_embedding_data(pfs, embedding_type)
         if reduced_embedding is not None:
+            reduction_hash = reduction_hash_map.setdefault(embedding_name, uuid.uuid4())
             for entry in reduced_embedding.to_dict("records"):
                 identifier = entry.pop("identifier")
                 x = float(entry.pop("x"))
                 y = float(entry.pop("y"))
-                label = str(entry.pop("label"))
+                label = str(entry.pop("label"))  # FIXME: ignore?
                 label_hash, du_hash_str, frame_str, *annotation_hash_list = identifier.split("_")
                 du_hash = uuid.UUID(du_hash_str)
                 frame = int(frame_str)
                 if len(annotation_hash_list) == 0:
-                    extra_dict, _ = data_metric_extra[(du_hash, frame)]
-                    extra_dict[f"{embedding_name}_2d_x"] = x
-                    extra_dict[f"{embedding_name}_2d_y"] = y
+                    data_reduced_embeddings.append(ProjectDataAnalyticsReduced(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        reduction_hash=reduction_hash,
+                        x=x,
+                        y=y,
+                    ))
                 for annotation_hash in annotation_hash_list:
-                    extra_dict, _ = annotation_metric_extra[(du_hash, frame, annotation_hash)]
-                    extra_dict[f"{embedding_name}_2d_x"] = x
-                    extra_dict[f"{embedding_name}_2d_y"] = y
+                    annotation_reduced_embeddings.append(ProjectAnnotationAnalyticsReduced(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        object_hash=annotation_hash,
+                        reduction_hash=reduction_hash,
+                        x=x,
+                        y=y,
+                    ))
+    for k, v in reduction_hash_map.items():
+        reduced_embeddings.append(ProjectEmbeddingReduction(
+            reduction_hash=v,
+            project_hash=project_hash,
+            reduction_name=f"Migrated ({k})",
+            reduction_description="",
+            reduction_type=EmbeddingReductionType.UMAP,
+            reduction_bytes="".encode("utf-8")
+        ))
+
+# TP condition: E.iou >= :iou && E.match_iou < :iou (calculated via post-processing in function below)
+
+
+_PREDICTION_MATCH_IOU_ALWAYS_FP: float = 1.0
+_PREDICTION_MATCH_IOU_ALWAYS_TP: float = -1.0
+
+
+def __prediction_iou_range_post_process(
+    model_prediction_group: List[ProjectPredictionAnalytics]
+) -> None:
+    if len(model_prediction_group) <= 1:
+        single_model = model_prediction_group[0]
+        if single_model.feature_hash != single_model.match_feature_hash:
+            raise ValueError(f"Bug: should be filtered out earlier")
+
+        # Unconditionally match as no clashes to have higher confidence.
+        single_model.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
+    else:
+        def confidence_compare_key(m_obj: ProjectPredictionAnalytics):
+            return m_obj.metric_label_confidence, m_obj.iou, m_obj.object_hash
+
+        def iou_compare_key(m_obj: ProjectPredictionAnalytics) -> Tuple[float, float, str]:
+            return m_obj.iou, m_obj.metric_label_confidence, m_obj.object_hash
+
+        # Consider each candidate in confidence order:
+        # max-confidence: always the TP if it matches (if iou is valid and hence not null)
+        # next-max-confidence:
+        #  if n.iou > iou => NEVER match as:
+        #    either BOTH >= :iou OR (iou >= :iou AND n.iou < :iou)
+        #    for that case max-confidence is TP always hence next-max-confidence is always FP or null
+        #  else:
+        #    either BOTH >= :iou OR (n.iou >= :iou AND iou < :iou)
+        #    for that case if iou < :iou:
+        #       max-confidence = null
+        #       next-max-confidence = TP
+        #    else:
+        #       max-confidence = TP
+        #       next-max-confidence = FP
+        # Therefore it follows:
+        #  next-max-confidence is TP iff:
+        #    n.iou >= :iou && iou < :iou
+        #
+        #
+        # which generalizes (C -> N) where C.iou > N.iou and C.confidence > N.confidence:
+        #   N is TP iff:
+        #     N.iou >= :iou && C.iou < :iou
+        #
+        #
+        # TP = { E where E.iou >= :iou AND E.confidence = max }
+        #
+        # case 1:
+        #   A = {iou = 0.5, conf=0.5}
+        #   B = {iou = 0.7, conf=0.5}
+        #  => 2 resolutions: A = TP always, B = FP always OR (B = TP always, A = TP if iou < 0.5)
+        #
+        # case 2:
+        #  A = {iou = 0.5, conf=0.3}
+        #  B = {iou = 0.5, conf=0.7}
+        #  => resolution B = TP always, B = FP always (required)
+
+        model_prediction_group.sort(
+            key=iou_compare_key, reverse=True
+        )
+
+        # Iterate over each model prediction group in order of decreasing confidence.
+        # Each candidate will remain the TP for some iou range until a newer
+        # the maximum iou value will be tracked to determine the iou range that the given entry is a true-positive.
+        # The max confidence candidate is the TP until an entry with smaller iou is found.
+        current_true_positive: ProjectPredictionAnalytics = model_prediction_group[0]
+        current_true_positive.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
+        current_true_positive_confidence: float = current_true_positive.metric_label_confidence
+
+        for model_prediction_entry in model_prediction_group[1:]:
+            if model_prediction_entry.feature_hash != model_prediction_entry.match_feature_hash:
+                raise ValueError(f"Bug: should be filtered out earlier")
+            model_confidence: float = model_prediction_entry.metric_label_confidence
+            if model_confidence > current_true_positive_confidence:
+                # This model is considered the true positive whenever it matches, as it has a higher confidence
+                # and smaller iou. The boundary on the parent remaining a true-positive is defined.
+                model_prediction_entry.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
+                current_true_positive.match_duplicate_iou = model_prediction_entry.iou
+
+                # Set the new true-positive for the new smaller iou value.
+                current_true_positive = model_prediction_entry
+                current_true_positive_confidence = model_confidence
+            else:
+                # This model is always a false postive, as there exists a prediction with higher confidence
+                # that for the whole iou range this is valid that is the new true positive.
+                model_prediction_entry.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_FP
+
+        """
+        # Verify query behaviour is as-expected. (FIXME: slow - remove this before release, this just ensures no bugs)
+        for test_iou_S in range(101):
+            test_iou = float(test_iou_S) / 100.0
+            db_query = [
+                m
+                for m in model_prediction_group
+                if m.iou >= test_iou > m.match_duplicate_iou
+            ]
+            correct_filter_verification = [
+                m
+                for m in model_prediction_group
+                if m.iou >= test_iou
+            ]
+            correct_filter_verification.sort(key=confidence_compare_key, reverse=True)
+            correct_filter_verification = correct_filter_verification[:1]
+            if correct_filter_verification != db_query:
+                raise ValueError(
+                    f"Prediction calculation bug, iou={test_iou}:\n"
+                    f"Correct result: {correct_filter_verification}\n"
+                    f"DB Query result: {db_query}\n"
+                    f"Debugging: {model_prediction_group}\n"
+                )
+        """
+
+
+def __prediction_iou_bound_false_negative(
+    key: Tuple[uuid.UUID, int, str],
+    model_prediction_group: List[ProjectPredictionAnalytics],
+    annotation_metrics: Dict[
+        Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str, AnnotationType, None]]
+    ],
+    prediction_hash,
+) -> ProjectPredictionAnalyticsFalseNegatives:
+    du_hash, frame, annotation_hash = key
+    iou_threshold = max(
+        (
+            model.iou for model in model_prediction_group
+        ),
+        default=2.0  # Always a false negative
+    )
+
+    if len(model_prediction_group) == 0:
+        raise ValueError("Bugged Model Prediction Group")
+
+    # iou: 0.1, 0.4, 0.6, 0.7 (filtered to valid iou)
+    #  -> 0.1
+    # hence iou < 0.1 : this is a FN
+    # 2.0 for unconditional as 1.0 would otherwise return bad value at iou = 1.0
+    missing_annotation_metrics = annotation_metrics[(du_hash, frame, annotation_hash)]
+    return ProjectPredictionAnalyticsFalseNegatives(
+        prediction_hash=prediction_hash,
+        du_hash=du_hash,
+        frame=frame,
+        object_hash=annotation_hash,
+        iou_threshold=iou_threshold,
+        **assert_valid_args(
+            ProjectPredictionAnalyticsFalseNegatives,
+            missing_annotation_metrics
+        )
+    )
+
+
+def __migrate_predictions(
+    predictions_dir: Path,
+    metrics_dir: Path,
+    prediction_type: MainPredictionType,
+    annotation_metrics: Dict[
+        Tuple[uuid.UUID, int, str], Dict[str, Union[int, float, bytes, str, AnnotationType, None]]
+    ],
+    data_metrics: Dict[Tuple[uuid.UUID, int], Dict[str, Union[int, float, bytes]]],
+    prediction_hash: uuid.UUID,
+    project_hash: uuid.UUID,
+    predictions_annotations_db: List[ProjectPredictionAnalytics],
+    predictions_annotations_db_extra: List[ProjectPredictionAnalyticsExtra],
+) -> List[ProjectPredictionAnalyticsFalseNegatives]:
+    # Used for validation
+    predictions_missed_db = []
+
+    # Load all metadata for this prediction store.
+    predictions_metric_datas = reader.read_prediction_metric_data(predictions_dir, metrics_dir)
+    model_predictions = reader.read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
+    class_idx_dict = reader.read_class_idx(predictions_dir)
+    gt_matched = reader.read_gt_matched(predictions_dir)
+
+    label_metric_datas = reader.read_label_metric_data(metrics_dir)
+    labels = reader.read_labels(predictions_dir, label_metric_datas, prediction_type)
+    if gt_matched is None or labels is None or model_predictions is None:
+        raise ValueError("Missing prediction files for migration!")
+
+    # Setup inverse matching dictionary for calculating the label being matched against the
+    gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
+        ((int(class_id), int(img_id), int(pidx)), int(mapping["lidx"]))
+        for class_id, rest in gt_matched.items()
+        for img_id, mapping_list in rest.items()
+        for mapping in mapping_list
+        for pidx in mapping["pidxs"]
+    ]
+    gt_matched_inverted_map = dict(gt_matched_inverted_list)
+    if len(gt_matched_inverted_list) != len(gt_matched_inverted_map):
+        raise ValueError(
+            f"Inconsistency in prediction mapping lookup: "
+            f"{len(gt_matched_inverted_list)} / {len(gt_matched_inverted_map)}"
+        )
+
+    # Tracking for applying associated metadata to the query.
+    model_prediction_best_match_candidates: Dict[
+        Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]
+    ] = {}
+    model_prediction_unmatched_indices = set(range(len(labels)))
+
+    for model_prediction in model_predictions.to_dict(orient="records"):
+        identifier: str = model_prediction.pop("identifier")
+        model_prediction.pop("url")
+        pidx = int(model_prediction.pop("Unnamed: 0"))
+        img_id = int(model_prediction.pop("img_id"))
+        class_id = int(model_prediction.pop("class_id"))
+        feature_hash = class_idx_dict[str(class_id)]["featureHash"]
+        confidence = float(model_prediction.pop("confidence"))
+        theta = model_prediction.pop("theta", None)
+        rle = str(model_prediction.pop("rle"))
+        iou = float(model_prediction.pop("iou"))
+        pbb: List[float] = [
+            float(model_prediction.pop("x1")),
+            float(model_prediction.pop("y1")),
+            float(model_prediction.pop("x2")),
+            float(model_prediction.pop("y2")),
+        ]
+        p_metrics: dict = {}
+        f_metrics: dict = {}
+        for metric_name, metric_value in model_prediction.items():
+            metric_target = metric_name[-4:]
+            metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
+            if metric_key == "$SKIP":
+                continue
+            if metric_target == " (P)":
+                if metric_key in AnnotationMetrics:
+                    _assign_metrics(
+                        metric_column_name=metric_key,
+                        metrics_dict=p_metrics,
+                        score=metric_value,
+                        metric_types=AnnotationMetrics,
+                        metrics_derived=set(),
+                        error_identifier=identifier,
+                        description_dict=None,
+                        description=None,
+                    )
+                elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
+                    pass  # FIXME: this p-metric should be stored somewhere.
+                else:
+                    print(f"DEBUG, Extra p_metric: {metric_key}")
+            elif metric_target == " (F)":
+                # FIXME: needed (or are these all from data frame and hence trivial to materialize via join)
+                f_metrics[metric_key] = metric_value
+            else:
+                raise ValueError(f"Unknown metric target: '{metric_target}'")
+
+        # Decompose identifier
+        label_hash, du_hash_str, frame_str, *object_hashes = identifier.split("_")
+        if len(object_hashes) == 0:
+            raise ValueError(f"Missing label hash: {identifier}")
+        du_hash = uuid.UUID(du_hash_str)
+        frame = int(frame_str)
+
+        # label_match_id => match_properties
+        label_match_id = gt_matched_inverted_map.get((class_id, img_id, pidx), None)
+        match_object_hash = None
+        match_feature_hash = None
+        if label_match_id is not None:
+            matched_label = labels.iloc[label_match_id].to_dict()
+            if int(matched_label.pop("Unnamed: 0")) != label_match_id:
+                raise ValueError(f"Inconsistent lookup: {label_match_id}")
+            if label_match_id in model_prediction_unmatched_indices:
+                model_prediction_unmatched_indices.remove(label_match_id)
+            matched_label_class_id = matched_label.pop("class_id")
+            matched_label_img_id = matched_label.pop("img_id")
+            matched_label_identifier = matched_label.pop("identifier")
+            (
+                matched_label_label_hash,
+                matched_label_du_hash_str,
+                matched_label_frame_str,
+                *matched_label_hashes,
+            ) = matched_label_identifier.split("_")
+            if len(matched_label_hashes) != 1:
+                raise ValueError(f"Matched against multiple labels, this is invalid: {matched_label_identifier}")
+            if uuid.UUID(matched_label_du_hash_str) != du_hash:
+                raise ValueError(f"Matched against different du_hash: {du_hash}")
+            if int(matched_label_frame_str) != frame:
+                raise ValueError(f"Matched against different frame: {frame}")
+            # FIXME: this has metrics - should they be used anywhere??
+
+            # Set new values
+            match_object_hash = matched_label_hashes[0]
+            match_feature_hash = class_idx_dict[str(matched_label_class_id)]["featureHash"]
+
+        # Select annotation side tables for prediction
+        frame_metrics = data_metrics[(du_hash, frame)]
+        img_w: int = int(frame_metrics["metric_width"])
+        img_h: int = int(frame_metrics["metric_height"])
+        if rle is None or rle == "nan":
+            annotation_type = AnnotationType.BOUNDING_BOX
+            annotation_array = np.array([
+                pb / (img_w if i % 2 == 0 else img_h)
+                for i, pb in enumerate(pbb)
+            ], dtype=np.float)
+        else:
+            try:
+                rle_json = json.loads(rle.replace("'", '"'))
+            except Exception:
+                print(f"Invalid rle clause = {rle}")
+                raise
+            if rle_json["size"] != [img_h, img_w]:
+                raise ValueError(f"Bad rle size: {rle_json['size']} != [{img_h},{img_w}]")
+            mask = rle_to_binary_mask(rle_json)
+            polygon, bbox = mask_to_polygon(mask)
+            if polygon is None:
+                annotation_type = AnnotationType.BITMASK
+                annotation_array = np.array(
+                    rle_json["counts"], dtype=np.int
+                )
+            else:
+                annotation_type = AnnotationType.POLYGON
+                annotation_array = np.array([
+                    [float(x) / img_w, float(y) / img_h]
+                    for x, y in polygon
+                ], dtype=np.float)
+
+        # Add the new prediction to the database!!!
+        if len(object_hashes) == 0:
+            raise ValueError(f"Missing object hash: {identifier}")
+
+        for object_hash in object_hashes:
+            new_predictions_object_db = ProjectPredictionAnalytics(
+                # Identifier
+                prediction_hash=prediction_hash,
+                du_hash=du_hash,
+                frame=frame,
+                object_hash=object_hash,
+                # Prediction metadata
+                project_hash=project_hash,
+                feature_hash=feature_hash,
+                metric_label_confidence=confidence,
+                iou=iou,
+                annotation_type=annotation_type,
+                # Ground truth match metadata
+                match_object_hash=match_object_hash,
+                match_feature_hash=match_feature_hash,
+                match_duplicate_iou=_PREDICTION_MATCH_IOU_ALWAYS_FP,  # Never match, overriden if match_object_hash is set.
+                # Metrics
+                **assert_valid_args(ProjectPredictionAnalytics, p_metrics),
+            )
+            predictions_annotations_db.append(new_predictions_object_db)
+            predictions_annotations_db_extra.append(
+                ProjectPredictionAnalyticsExtra(
+                    # Identifier
+                    prediction_hash=prediction_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    object_hash=object_hash,
+                    # Extra annotation
+                    annotation_bytes=annotation_array.tobytes(),
+                )
+            )
+            if match_object_hash is not None and match_feature_hash is not None and match_feature_hash == feature_hash:
+                # Assign all duplicate matches to match with non-highest iou
+                match_key = (du_hash, frame, match_object_hash)
+                all_match_candidates = model_prediction_best_match_candidates.setdefault(match_key, [])
+                all_match_candidates.append(new_predictions_object_db)
+            else:
+                # Never return TP, always consider this false-positive
+                new_predictions_object_db.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_FP
+
+    # Post-process, determine metadata for dynamic duplicate detection.
+    # A duplicate is a valid (feature hash match & iou >= THRESHOLD)
+    # match with the highest confidence.
+    # So we sort and detect the threshold where the result changes.
+    for model_prediction_group in model_prediction_best_match_candidates.values():
+        __prediction_iou_range_post_process(model_prediction_group)
+
+    for key, model_prediction_group in model_prediction_best_match_candidates.items():
+        predictions_missed_db.append(
+            __prediction_iou_bound_false_negative(key, model_prediction_group, annotation_metrics, prediction_hash)
+        )
+
+    # Add match failures to side table.
+    for missing_label_idx in model_prediction_unmatched_indices:
+        missing_label = labels.iloc[missing_label_idx].to_dict()
+        if int(missing_label.pop("Unnamed: 0")) != missing_label_idx:
+            raise ValueError(f"Inconsistent lookup: {missing_label}")
+        missing_label_class_id = int(missing_label.pop("class_id"))
+        missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
+        missing_label_identifier = missing_label.pop("identifier")
+        _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split(
+            "_"
+        )
+        if len(matched_label_hashes) != 1:
+            raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
+
+        missing_du_hash = uuid.UUID(missing_du_hash_str)
+        missing_frame = int(missing_frame_str)
+        missing_annotation_hash = str(matched_label_hashes[0])
+        missing_annotation_metrics = annotation_metrics[(missing_du_hash, missing_frame, missing_annotation_hash)]
+        if str(missing_feature_hash) != missing_annotation_metrics["feature_hash"]:
+            raise ValueError(f"Inconsistent feature_hash for missed annotation!")
+        predictions_missed_db.append(
+            ProjectPredictionAnalyticsFalseNegatives(
+                prediction_hash=prediction_hash,
+                du_hash=missing_du_hash,
+                frame=missing_frame,
+                object_hash=missing_annotation_hash,
+                iou_threshold=2.0,  # Always a false negative
+                **assert_valid_args(
+                    ProjectPredictionAnalyticsFalseNegatives,
+                    missing_annotation_metrics
+                )
+            )
+        )
+
+    # Ensure the same number of predictions are defined
+    if len(predictions_missed_db) != len(labels):
+        raise ValueError(
+            f"Bug while generating missed prediction array: "
+            f"{len(predictions_missed_db)} != {len(gt_matched_inverted_list)}"
+        )
+
+    return predictions_missed_db
 
 
 def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
@@ -457,16 +900,21 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     )
 
     # Load 2d embeddings
+    data_reduced_embeddings = []
+    annotation_reduced_embeddings = []
+    reduced_embeddings = []
     _load_embeddings_2d(
         pfs=pfs,
-        data_metric_extra=data_metric_extra,
-        annotation_metric_extra=annotation_metric_extra
+        project_hash=project_hash,
+        reduced_embeddings=reduced_embeddings,
+        data_reduced_embeddings=data_reduced_embeddings,
+        annotation_reduced_embeddings=annotation_reduced_embeddings,
     )
 
     # Load predictions
     predictions_run_db: List[ProjectPrediction] = []
     predictions_annotations_db: List[ProjectPredictionAnalytics] = []
-    predictions_annotations_db_extra: List[ProjectPredictionAnnotationExtra] = []
+    predictions_annotations_db_extra: List[ProjectPredictionAnalyticsExtra] = []
     predictions_missed_db: List[ProjectPredictionAnalyticsFalseNegatives] = []
     for prediction_type in [MainPredictionType.OBJECT, MainPredictionType.CLASSIFICATION]:
         prediction_hash = uuid.uuid4()
@@ -486,270 +934,18 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             # SKIP, will already be loaded by object classification type
             continue
 
-        # Load all metadata for this prediction store.
-        metrics_dir = pfs.metrics
-        predictions_metric_datas = reader.read_prediction_metric_data(predictions_dir, metrics_dir)
-        model_predictions = reader.read_model_predictions(predictions_dir, predictions_metric_datas, prediction_type)
-        class_idx_dict = reader.read_class_idx(predictions_dir)
-        gt_matched = reader.read_gt_matched(predictions_dir)
-
-        label_metric_datas = reader.read_label_metric_data(metrics_dir)
-        labels = reader.read_labels(predictions_dir, label_metric_datas, prediction_type)
-        if gt_matched is None or labels is None or model_predictions is None:
-            raise ValueError("Missing prediction files for migration!")
-
-        # Setup inverse matching dictionary for calculating the label being matched against the
-        gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
-            ((int(class_id), int(img_id), int(pidx)), int(mapping["lidx"]))
-            for class_id, rest in gt_matched.items()
-            for img_id, mapping_list in rest.items()
-            for mapping in mapping_list
-            for pidx in mapping["pidxs"]
-        ]
-        gt_matched_inverted_map = dict(gt_matched_inverted_list)
-        if len(gt_matched_inverted_list) != len(gt_matched_inverted_map):
-            raise ValueError(
-                f"Inconsistency in prediction mapping lookup: "
-                f"{len(gt_matched_inverted_list)} / {len(gt_matched_inverted_map)}"
-            )
-
-        # Tracking for applying associated metadata to the query.
-        model_prediction_best_match_candidates: Dict[
-            Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]
-        ] = {}
-        model_prediction_unmatched_indices = set(range(len(labels)))
-
-        for model_prediction in model_predictions.to_dict(orient="records"):
-            identifier: str = model_prediction.pop("identifier")
-            model_prediction.pop("url")
-            pidx = int(model_prediction.pop("Unnamed: 0"))
-            img_id = int(model_prediction.pop("img_id"))
-            class_id = int(model_prediction.pop("class_id"))
-            feature_hash = class_idx_dict[str(class_id)]["featureHash"]
-            confidence = float(model_prediction.pop("confidence"))
-            theta = model_prediction.pop("theta", None)
-            rle = str(model_prediction.pop("rle"))
-            iou = float(model_prediction.pop("iou"))
-            pbb: List[float] = [
-                float(model_prediction.pop("x1")),
-                float(model_prediction.pop("y1")),
-                float(model_prediction.pop("x2")),
-                float(model_prediction.pop("y2")),
-            ]
-            p_metrics: dict = {}
-            f_metrics: dict = {}
-            for metric_name, metric_value in model_prediction.items():
-                metric_target = metric_name[-4:]
-                metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
-                if metric_key == "$SKIP":
-                    continue
-                if metric_target == " (P)":
-                    if metric_key in AnnotationMetrics:
-                        _assign_metrics(
-                            metric_column_name=metric_key,
-                            metrics_dict=p_metrics,
-                            score=metric_value,
-                            metric_types=AnnotationMetrics,
-                            metrics_derived=set(),
-                            error_identifier=identifier,
-                            description_dict=None,
-                            description=None,
-                        )
-                    elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
-                        pass  # FIXME: this p-metric should be stored somewhere.
-                    else:
-                        print(f"DEBUG, Extra p_metric: {metric_key}")
-                elif metric_target == " (F)":
-                    # FIXME: needed (or are these all from data frame and hence trivial to materialize via join)
-                    f_metrics[metric_key] = metric_value
-                else:
-                    raise ValueError(f"Unknown metric target: '{metric_target}'")
-
-            # Decompose identifier
-            label_hash, du_hash_str, frame_str, *object_hashes = identifier.split("_")
-            if len(object_hashes) == 0:
-                raise ValueError(f"Missing label hash: {identifier}")
-            du_hash = uuid.UUID(du_hash_str)
-            frame = int(frame_str)
-
-            # label_match_id => match_properties
-            label_match_id = gt_matched_inverted_map.get((class_id, img_id, pidx), None)
-            match_object_hash = None
-            match_feature_hash = None
-            if label_match_id is not None:
-                matched_label = labels.iloc[label_match_id].to_dict()
-                if int(matched_label.pop("Unnamed: 0")) != label_match_id:
-                    raise ValueError(f"Inconsistent lookup: {label_match_id}")
-                if label_match_id in model_prediction_unmatched_indices:
-                    model_prediction_unmatched_indices.remove(label_match_id)
-                matched_label_class_id = matched_label.pop("class_id")
-                matched_label_img_id = matched_label.pop("img_id")
-                matched_label_identifier = matched_label.pop("identifier")
-                (
-                    matched_label_label_hash,
-                    matched_label_du_hash_str,
-                    matched_label_frame_str,
-                    *matched_label_hashes,
-                ) = matched_label_identifier.split("_")
-                if len(matched_label_hashes) != 1:
-                    raise ValueError(f"Matched against multiple labels, this is invalid: {matched_label_identifier}")
-                if uuid.UUID(matched_label_du_hash_str) != du_hash:
-                    raise ValueError(f"Matched against different du_hash: {du_hash}")
-                if int(matched_label_frame_str) != frame:
-                    raise ValueError(f"Matched against different frame: {frame}")
-                # FIXME: this has metrics - should they be used anywhere??
-
-                # Set new values
-                match_object_hash = matched_label_hashes[0]
-                match_feature_hash = class_idx_dict[str(matched_label_class_id)]["featureHash"]
-
-            # Select annotation side tables for prediction
-            frame_metrics = data_metrics[(du_hash, frame)]
-            img_w: int = int(frame_metrics["metric_width"])
-            img_h: int = int(frame_metrics["metric_height"])
-            if rle is None or rle == "nan":
-                annotation_type = AnnotationType.BOUNDING_BOX
-                annotation_array = np.array([
-                    pb / (img_w if i % 2 == 0 else img_h)
-                    for i, pb in enumerate(pbb)
-                ], dtype=np.float)
-            else:
-                try:
-                    rle_json = json.loads(rle.replace("'", '"'))
-                except Exception:
-                    print(f"Invalid rle clause = {rle}")
-                    raise
-                if rle_json["size"] != [img_h, img_w]:
-                    raise ValueError(f"Bad rle size: {rle_json['size']} != [{img_h},{img_w}]")
-                mask = rle_to_binary_mask(rle_json)
-                polygon, bbox = mask_to_polygon(mask)
-                if polygon is None:
-                    annotation_type = AnnotationType.BITMASK
-                    annotation_array = np.array(
-                        rle_json["counts"], dtype=np.int
-                    )
-                else:
-                    annotation_type = AnnotationType.POLYGON
-                    annotation_array = np.array([
-                        [float(x) / img_w, float(y) / img_h]
-                        for x, y in polygon
-                    ], dtype=np.float)
-
-            # Add the new prediction to the database!!!
-            for object_hash in object_hashes:
-                new_predictions_object_db = ProjectPredictionAnalytics(
-                    # Identifier
-                    prediction_hash=prediction_hash,
-                    du_hash=du_hash,
-                    frame=frame,
-                    object_hash=object_hash,
-                    # Prediction metadata
-                    project_hash=project_hash,
-                    feature_hash=feature_hash,
-                    metric_label_confidence=confidence,
-                    iou=iou,
-                    annotation_type=annotation_type,
-                    # Ground truth match metadata
-                    match_object_hash=match_object_hash,
-                    match_feature_hash=match_feature_hash,
-                    match_duplicate_iou=-1.0
-                    if match_feature_hash is not None and match_feature_hash == feature_hash
-                    else 1.0,  # 1.0 = always duplicate, -1.0 = never duplicate.
-                    # Metrics
-                    **assert_valid_args(ProjectPredictionAnalytics, p_metrics),
-                )
-                predictions_annotations_db.append(new_predictions_object_db)
-                predictions_annotations_db_extra.append(
-                    ProjectPredictionAnnotationExtra(
-                        # Identifier
-                        prediction_hash=prediction_hash,
-                        du_hash=du_hash,
-                        frame=frame,
-                        object_hash=object_hash,
-                        # Extra annotation
-                        annotation_bytes=annotation_array.tobytes(),
-                    )
-                )
-                if match_object_hash is not None:
-                    # Assign all duplicate matches to match with non-highest iou
-                    match_key = (du_hash, frame, match_object_hash)
-                    all_match_candidates = model_prediction_best_match_candidates.setdefault(match_key, [])
-                    all_match_candidates.append(new_predictions_object_db)
-
-        # Post-process, determine metadata for dynamic duplicate detection.
-        # A duplicate is a valid (feature hash match & iou >= THRESHOLD)
-        # match with the highest confidence.
-        # So we sort and detect the threshold where the result changes.
-        for model_prediction_group in model_prediction_best_match_candidates.values():
-            if len(model_prediction_group) <= 1:
-                # No post-processing needed (feature hash mismatches are by default excluded anyway).
-                continue
-            model_prediction_group.sort(
-                key=lambda m_obj: (m_obj.iou, m_obj.metric_label_confidence, m_obj.object_hash), reverse=True
-            )
-
-            def confidence_compare_key(m_obj):
-                return m_obj.metric_label_confidence, m_obj.iou, m_obj.object_hash
-
-            # Currently ordered by maximum iou, (first entry is trivially correct as it is the only one with
-            #  the desired iou).
-            current_best_confidence = None
-            current_best_compare_key = None
-            for model_prediction_entry in model_prediction_group:
-                if model_prediction_entry.feature_hash == model_prediction_entry.match_feature_hash:
-                    model_compare_key = confidence_compare_key(model_prediction_entry)
-                    if current_best_confidence is None:
-                        current_best_confidence = model_prediction_entry
-                        current_best_compare_key = model_compare_key
-                    elif current_best_compare_key is None:
-                        raise ValueError(f"Correctness violation for sorted order: {model_prediction_group}")
-                    elif model_compare_key > current_best_compare_key:
-                        # IOU decrease has changed the maximum, assign thresholds.
-                        current_best_confidence.match_duplicate_iou = model_prediction_entry.iou
-                        current_best_confidence = model_prediction_entry
-                        current_best_compare_key = model_compare_key
-                    elif model_compare_key < current_best_compare_key:
-                        # This model is always a duplicate
-                        model_prediction_entry.match_duplicate_iou = model_prediction_entry.iou
-                    else:
-                        raise ValueError(f"Failed to generate deterministic ordering for iou: {model_prediction_group}")
-                else:
-                    # Never match as feature hash comparison is incorrect.
-                    model_prediction_entry.match_duplicate_iou = 1.0
-
-        # Add match failures to side table.
-        for missing_label_idx in model_prediction_unmatched_indices:
-            missing_label = labels.iloc[missing_label_idx].to_dict()
-            if int(missing_label.pop("Unnamed: 0")) != missing_label_idx:
-                raise ValueError(f"Inconsistent lookup: {missing_label}")
-            missing_label_class_id = int(missing_label.pop("class_id"))
-            missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
-            missing_label_identifier = missing_label.pop("identifier")
-            _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split(
-                "_"
-            )
-            if len(matched_label_hashes) != 1:
-                raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
-
-            missing_du_hash = uuid.UUID(missing_du_hash_str)
-            missing_frame = int(missing_frame_str)
-            missing_annotation_hash = str(matched_label_hashes[0])
-            missing_annotation_metrics = annotation_metrics[(missing_du_hash, missing_frame, missing_annotation_hash)]
-            if str(missing_feature_hash) != missing_annotation_metrics["feature_hash"]:
-                raise ValueError(f"Inconsistent feature_hash for missed annotation!")
-            predictions_missed_db.append(
-                ProjectPredictionAnalyticsFalseNegatives(
-                    prediction_hash=prediction_hash,
-                    du_hash=missing_du_hash,
-                    frame=missing_frame,
-                    object_hash=missing_annotation_hash,
-                    **assert_valid_args(
-                        ProjectPredictionAnalyticsFalseNegatives,
-                        missing_annotation_metrics
-                    )
-                )
-            )
-
+        extend_missed_db = __migrate_predictions(
+            predictions_dir=predictions_dir,
+            metrics_dir=pfs.metrics,
+            prediction_type=prediction_type,
+            data_metrics=data_metrics,
+            annotation_metrics=annotation_metrics,
+            prediction_hash=prediction_hash,
+            project_hash=project_hash,
+            predictions_annotations_db=predictions_annotations_db,
+            predictions_annotations_db_extra=predictions_annotations_db_extra,
+        )
+        predictions_missed_db.extend(extend_missed_db)
         # Ensure prediction currently stored actually exists.
         # FIXME: store prediction metadata for the prediction run.
         if len(predictions_run_db) == 0:
@@ -812,6 +1008,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         sess.add_all(metrics_db_objects_extra)
         sess.add_all(metrics_db_data)
         sess.add_all(metrics_db_data_extra)
+        #sess.add_all(reduced_embeddings)
+        #sess.add_all(data_reduced_embeddings)
+        #sess.add_all(annotation_reduced_embeddings)
         sess.add_all(project_tag_definitions)
         sess.add_all(project_data_tags)
         sess.add_all(project_object_tags)

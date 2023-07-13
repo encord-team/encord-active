@@ -21,7 +21,7 @@ from encord_active.db.models import (
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
-from encord_active.server.routers import project2_analysis, project2_prediction
+from encord_active.server.routers import project2_analysis, project2_prediction, project2_actions
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
 
@@ -32,6 +32,7 @@ router = APIRouter(
 )
 router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
+router.include_router(project2_actions.router)
 
 
 @router.get("/")
@@ -354,35 +355,3 @@ def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.
         sess.commit()
 
 
-@router.post("/{project_hash}/create/project/subset")
-def create_active_subset(project_hash: uuid.UUID, du_hashes: List[uuid.UUID], name: str, description: str):
-    with Session(engine) as sess:
-        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
-        if project is None:
-            raise ValueError("Unknown project")
-        if project.project_remote_ssh_key_path is None:
-            # Run for local project
-            subset_hash = uuid.uuid4()
-            sess.add(
-                Project(
-                    project_hash=subset_hash,
-                    project_name=name,
-                    project_description=description,
-                    project_remote_ssh_key_path=None,
-                    project_ontology=project.project_ontology,
-                )
-            )
-            # FIXME: if partial du_hash is requested for image group, what is correct behaviour??
-            # FIXME: allow partial frame selection??
-            data_list = select(ProjectDataUnitMetadata.data_hash, ProjectDataUnitMetadata.du_hash,).where(
-                ProjectDataUnitMetadata.project_hash == project_hash, in_op(ProjectDataUnitMetadata.du_hash, du_hashes)
-            )
-            # TODO: data_hashes => (du_hash, frame) pairs
-            # populate metadata tables
-            # populate analytics tables
-            # populate tag tables
-            # ???? populate prediction tables ????
-            raise ValueError("Not fully implemented FIXME: do the rest")
-        else:
-            # Run for remote project
-            pass
