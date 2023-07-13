@@ -64,13 +64,14 @@ def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[str]
         for data_unit in data_units:
             if not data_unit:
                 break
-            if len(data_unit.objects) and not data_unit.data_uri_is_video and data_unit.data_uri is not None:
+            # TODO: filter for images with objects and draw polygons
+            if not data_unit.data_uri_is_video and data_unit.data_uri is not None:
                 settings = get_settings()
                 root_path = settings.SERVER_START_PATH.expanduser().resolve()
                 url_path = url_to_file_path(data_unit.data_uri, root_path)
                 if url_path is not None:
                     relative_path = url_path.relative_to(root_path)
-                    return f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+                    return f"ea-static/{quote(relative_path.as_posix())}"
     return None
 
 
