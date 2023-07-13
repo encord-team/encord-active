@@ -134,7 +134,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         title="Relative Area",
         short_desc="Relative area compared to the data source",
         long_desc="",
-        type=MetricType.UINT,
+        type=MetricType.NORMAL,
     ),
     "metric_label_duplicates": MetricDefinition(
         title="Label Duplicates",
@@ -193,18 +193,26 @@ AnnotationMetrics = DataAnnotationSharedMetrics | AnnotationOnlyMetrics
 TSQLClass = TypeVar("TSQLClass", bound=BaseModel)
 
 
-def assert_cls_metrics_match(metrics: Dict[str, MetricDefinition]) -> Callable[[Type[TSQLClass]], Type[TSQLClass]]:
+def assert_cls_metrics_match(
+    metrics: Dict[str, MetricDefinition], custom: int = 0
+) -> Callable[[Type[TSQLClass]], Type[TSQLClass]]:
     def wrapper(cls: Type[TSQLClass]) -> Type[TSQLClass]:
         fields: Dict[str, None] = cls.__fields__  # type: ignore
         # No missing metrics
         for metric_name, metric_definition in metrics.items():
+            if metric_name.startswith("metric_custom"):
+                raise ValueError(f"Class: {cls.__name__} has explicit custom metric: {metric_name}")  # type: ignore
             field = fields.get(metric_name, None)
             if field is None:
                 raise ValueError(f"Class: {cls.__name__} is missing metric field: {metric_name}")  # type: ignore
 
         # No extra metrics
         for field in fields:
-            if field.startswith("metric_"):
+            if field.startswith("metric_custom"):
+                custom_id = int(field[len("metric_custom"):])
+                if custom_id >= custom or custom_id < 0:
+                    raise ValueError(f"Class: {cls.__name__} has wrong custom metric count: {field}")  # type: ignore
+            elif field.startswith("metric_"):
                 metric = metrics.get(field, None)
                 if metric is None:
                     raise ValueError(f"Class: {cls.__name__} has extra metric: {field}")  # type: ignore

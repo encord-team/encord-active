@@ -1,12 +1,12 @@
 import json
 import math
 import uuid
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Literal
 
 import numpy as np
 from fastapi import APIRouter
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import Float, bindparam, func, text
+from sqlalchemy import Float, bindparam, func, text, Integer
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
@@ -14,6 +14,7 @@ from sqlmodel.sql.sqltypes import GUID
 from encord_active.db.metrics import AnnotationMetrics, MetricType
 from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictionAnalyticsFalseNegatives
 from encord_active.server.routers.project2_engine import engine
+from encord_active.server.routers.queries import metric_query
 
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
@@ -28,19 +29,64 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
     # FIXME: performance improvements are possible
     guid = GUID()
     with Session(engine) as sess:
+        # Select summary count of TP / FP / FN
+        false_negative_counts_raw = sess.exec(
+            select(
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
+                func.count(),
+            )
+            .where(
+                ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
+                ProjectPredictionAnalyticsFalseNegatives.iou_threshold < iou,
+            )
+            .group_by(
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
+            )
+        ).fetchall()
+        false_negative_count_map = {}
+        total_false_negative_count = 0
+        for feature_hash, false_negative_count in false_negative_counts_raw:
+            total_false_negative_count += false_negative_count
+            false_negative_count_map[feature_hash] = false_negative_count
+        positive_counts_raw = sess.exec(
+            select(
+                ProjectPredictionAnalytics.feature_hash,
+                func.sum(
+                    (
+                        (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+                    ).cast(Integer)
+                ),
+                func.count(),
+            ).where(
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                ProjectPredictionAnalytics.iou >= iou
+            ).group_by(
+                ProjectPredictionAnalytics.feature_hash,
+            )
+        )
+        true_positive_count_map = {}
+        false_positive_count_map = {}
+        total_true_positive_count = 0
+        total_false_positive_count = 0
+        for feature_hash, tp_count, tp_fp_count in positive_counts_raw:
+            fp_count = tp_fp_count - tp_count
+            true_positive_count_map[feature_hash] = tp_count
+            false_positive_count_map[feature_hash] = fp_count
+            total_true_positive_count += tp_count
+            total_false_positive_count += fp_count
+
+        all_feature_hashes = set(true_positive_count_map.keys()) | set(false_negative_count_map.keys())
+
         # FIXME: check that feature_hash compare can be removed with changes to pre-calculation of match_iou condition.
-        sql = text(
-            """
-            SELECT feature_hash, coalesce(ap, 0.0) as ap, coalesce(ar, 0.0) as ar FROM (
-                SELECT FG.feature_hash, (
+        precision_recall = {}
+        for feature_hash in all_feature_hashes:
+            sql = text(
+                """
+                SELECT (
                     SELECT sum(
                         coalesce(cast(ap_positives as real) / ap_total, 0.0)
                     ) / (
-                        count(*) + (
-                            SELECT COUNT(*) FROM active_project_prediction_analytics_false_negatives UM
-                            WHERE UM.prediction_hash = FG.prediction_hash
-                            AND UM.feature_hash == FG.feature_hash
-                        )
+                        count(*)
                     ) as ap FROM (
                         SELECT
                             row_number() OVER (
@@ -55,8 +101,8 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                                 ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_positives
                         FROM active_project_prediction_analytics AP
-                        WHERE AP.prediction_hash = FG.prediction_hash
-                        AND AP.feature_hash == FG.feature_hash
+                        WHERE AP.prediction_hash = :prediction_hash
+                        AND AP.feature_hash == :feature_hash
                         ORDER BY AP.metric_label_confidence DESC
                     )
                 ) as ap,
@@ -64,11 +110,7 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                     SELECT sum(
                         coalesce(cast(ar_positives as real) / ar_total, 0.0)
                     ) / (
-                        count(*) + (
-                            SELECT COUNT(*) FROM active_project_prediction_analytics_false_negatives UM
-                            WHERE UM.prediction_hash = FG.prediction_hash
-                            AND UM.feature_hash == FG.feature_hash
-                        )
+                        count(*) + :false_negatives
                     ) FROM (
                         SELECT
                             row_number() OVER (
@@ -83,80 +125,86 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
                                 ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
                             ) AS ar_positives
                         FROM active_project_prediction_analytics AR
-                        WHERE AR.prediction_hash = FG.prediction_hash
-                        AND AR.feature_hash = FG.feature_hash
+                        WHERE AR.prediction_hash = :prediction_hash
+                        AND AR.feature_hash = :feature_hash
                         ORDER BY AR.iou
                     )
-                ) as ar
-                FROM active_project_prediction_analytics FG
-                WHERE FG.prediction_hash = :prediction_hash
-                GROUP BY FG.feature_hash
-            )
-            """
-        ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float))
-        precision_recall = sess.execute(
-            sql,
-            params={"prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect), "iou": iou},
-        ).fetchall()
-
-        # Calculate correlation for metrics
-        # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
-        metric_names = [key for key, value in AnnotationMetrics.items() if value.virtual is None]
-        metric_stats = sess.execute(
-            text(
-                f"""
-                SELECT 
-                    e_score,
-                    avg(
-                        ((
-                            iou >= :iou and
-                            match_duplicate_iou < :iou
-                        ) - e_score) * ((
-                            iou >= :iou and
-                            match_duplicate_iou < :iou
-                        ) - e_score)
-                    ) as var_score,
-                    {",".join([
-                    f"e_{metric_name},"
-                    f"avg(({metric_name} - e_{metric_name}) * ({metric_name} - e_{metric_name})) "
-                    f"as var_{metric_name}"
-                    for metric_name in metric_names
-                ])}
-                FROM active_project_prediction_analytics, (
-                    SELECT
-                        avg(
-                            iou >= :iou and
-                            match_duplicate_iou < :iou
-                        ) as e_score,
-                        {",".join([
-                    f"avg({metric_name}) as e_{metric_name}"
-                    for metric_name in metric_names
-                ])}
-                     FROM active_project_prediction_analytics
-                     WHERE prediction_hash = :prediction_hash
                 )
-                WHERE prediction_hash = :prediction_hash
                 """
-            ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float)),
-            params={
-                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
-                "iou": iou,
-            },
-        ).first()
-        metric_stat_names = [f"{ty}_{name}" for name in ["score"] + metric_names for ty in ["e", "var"]]
-        valid_metric_stats = {}
-        valid_metric_stat_name_set = set(metric_names)
-        for stat_name, stat_value in zip(metric_stat_names, metric_stats or []):
-            if stat_value is None:
-                stat = stat_name[len(stat_name.split("_")[0]) + 1 :]
-                if stat in valid_metric_stat_name_set:
-                    valid_metric_stat_name_set.remove(stat)
+            ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float))
+            pr_result = sess.execute(
+                sql,
+                params={
+                    "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                    "iou": iou,
+                    "feature_hash": feature_hash,
+                    "false_negatives": false_negative_count_map.get(feature_hash, 0),
+                },
+            ).first()
+            precision_recall[feature_hash] = {
+                "ap": pr_result[0],
+                "ar": pr_result[1],
+            }
+
+    # Calculate correlation for metrics
+    # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
+    metric_names = [key for key, value in AnnotationMetrics.items()]
+    metric_stats = sess.execute(
+        text(
+            f"""
+            SELECT 
+                e_score,
+                avg(
+                    ((
+                        iou >= :iou and
+                        match_duplicate_iou < :iou
+                    ) - e_score) * ((
+                        iou >= :iou and
+                        match_duplicate_iou < :iou
+                    ) - e_score)
+                ) as var_score,
+                {",".join([
+                f"e_{metric_name},"
+                f"avg(({metric_name} - e_{metric_name}) * ({metric_name} - e_{metric_name})) "
+                f"as var_{metric_name}"
+                for metric_name in metric_names
+            ])}
+            FROM active_project_prediction_analytics, (
+                SELECT
+                    avg(
+                        iou >= :iou and
+                        match_duplicate_iou < :iou
+                    ) as e_score,
+                    {",".join([
+                f"avg({metric_name}) as e_{metric_name}"
+                for metric_name in metric_names
+            ])}
+                 FROM active_project_prediction_analytics
+                 WHERE prediction_hash = :prediction_hash
+            )
+            WHERE prediction_hash = :prediction_hash
+            """
+        ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float)),
+        params={
+            "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+            "iou": iou,
+        },
+    ).first()
+    metric_stat_names = [f"{ty}_{name}" for name in ["score"] + metric_names for ty in ["e", "var"]]
+    valid_metric_stats = {}
+    valid_metric_stat_name_set = set(metric_names)
+    for stat_name, stat_value in zip(metric_stat_names, metric_stats or []):
+        if stat_value is None:
+            stat = stat_name[len(stat_name.split("_")[0]) + 1 :]
+            if stat in valid_metric_stat_name_set:
+                valid_metric_stat_name_set.remove(stat)
+        else:
+            if stat_name.startswith("var_"):
+                valid_metric_stats[stat_name.replace("var_", "std_")] = math.sqrt(stat_value)
             else:
-                if stat_name.startswith("var_"):
-                    valid_metric_stats[stat_name.replace("var_", "std_")] = math.sqrt(stat_value)
-                else:
-                    valid_metric_stats[stat_name] = stat_value
-        valid_metric_stat_names = list(valid_metric_stat_name_set)
+                valid_metric_stats[stat_name] = stat_value
+    valid_metric_stat_names = list(valid_metric_stat_name_set)
+    if len(valid_metric_stat_names) > 0:
         correlation_result = sess.execute(
             text(
                 f"""
@@ -185,103 +233,135 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
             },
         ).first()
         correlations = {name: value for name, value in zip(valid_metric_stat_names, correlation_result)}  # type: ignore
+    else:
+        correlations = {}
 
-        # Precision recall curves
-        prs = {}
-        for pr_summary in precision_recall:
-            feature_hash = pr_summary["feature_hash"]
-            sql = text(
-                """
+    # Precision recall curves
+    prs = {}
+    for feature_hash in all_feature_hashes:
+        sql = text(
+            """
+            SELECT
+                max(p) as p,
+                round(r, 2) as r
+            FROM (
                 SELECT
-                    max(p) as p,
-                    floor(r * 50) / 50 as r
+                    cast(tp_count as real) / tp_and_fp_count as p,
+                    cast(tp_count as real) / :r_divisor as r
                 FROM (
                     SELECT
-                        cast(tp_count as real) / tp_and_fp_count as p,
-                        cast(tp_count as real) / (
+                        row_number() OVER (
+                            ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                        ) AS tp_and_fp_count,
+                        sum(cast(
                             (
-                                SELECT COUNT(*) FROM active_project_prediction_analytics PM
-                                WHERE PM.prediction_hash = :prediction_hash
-                                AND PM.feature_hash = :feature_hash
-                                AND PM.iou >= :iou
-                                AND PM.match_duplicate_iou < :iou
-                            ) + (
-                                SELECT COUNT(*) FROM active_project_prediction_analytics UM
-                                WHERE UM.prediction_hash = :prediction_hash
-                                AND UM.feature_hash == :feature_hash
-                            )
-                        ) as r
-                    FROM (
-                        SELECT
-                            row_number() OVER (
-                                ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
-                            ) AS tp_and_fp_count,
-                            sum(cast(
-                                (
-                                    PR.iou >= :iou and
-                                    PR.match_duplicate_iou < :iou
-                                ) as integer
-                            )) OVER (
-                                ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
-                            ) AS tp_count
-                        FROM active_project_prediction_analytics PR
-                        WHERE PR.prediction_hash = :prediction_hash
-                        AND PR.feature_hash = :feature_hash
-                        ORDER BY metric_label_confidence DESC
-                    )
-                    GROUP BY tp_count
+                                PR.iou >= :iou and
+                                PR.match_duplicate_iou < :iou
+                            ) as integer
+                        )) OVER (
+                            ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                        ) AS tp_count
+                    FROM active_project_prediction_analytics PR
+                    WHERE PR.prediction_hash = :prediction_hash
+                    AND PR.feature_hash = :feature_hash
+                    ORDER BY metric_label_confidence DESC
                 )
-                GROUP BY floor(r * 50) / 50
-                ORDER BY floor(r * 50) / 50 DESC
-                """
-            ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float))
-            pr_result = sess.execute(
-                sql,
-                params={
-                    "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
-                    "iou": iou,
-                    "feature_hash": feature_hash,
-                },
-            ).fetchall()
-            prs[feature_hash] = pr_result
+                GROUP BY tp_count
+            )
+            GROUP BY round(r, 2)
+            ORDER BY round(r, 2) DESC
+            """
+        ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float), bindparam("r_divisor", Float))
+        pr_result = sess.execute(
+            sql,
+            params={
+                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                "iou": iou,
+                "feature_hash": feature_hash,
+                "r_divisor": true_positive_count_map.get(feature_hash, 0) + false_negative_count_map.get(feature_hash, 0)
+            },
+        ).fetchall()
+        prs[feature_hash] = pr_result
 
-            importance = {}
-            for metric_name in AnnotationMetrics.keys():
-                importance_data_query = select(
-                    ProjectPredictionAnalytics.iou
-                    * (
-                        (ProjectPredictionAnalytics.iou >= iou)
-                        & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
-                    ),
-                    getattr(ProjectPredictionAnalytics, metric_name),
-                ).where(
-                    ProjectPredictionAnalytics.prediction_hash == prediction_hash,
-                    is_not(getattr(ProjectPredictionAnalytics, metric_name), None),
-                )
-                importance_data = sess.exec(importance_data_query).fetchall()
-                if len(importance_data) == 0:
-                    continue
-                importance_regression = mutual_info_regression(
-                    np.array([float(d[1]) for d in importance_data]).reshape(-1, 1),
-                    np.array([float(d[0]) for d in importance_data]),
-                    random_state=42,
-                )
-                importance[metric_name] = float(importance_regression[0])
+    importance = {}
+    for metric_name in AnnotationMetrics.keys():
+        importance_data_query = select(
+            ProjectPredictionAnalytics.iou
+            * (
+                (ProjectPredictionAnalytics.iou >= iou)
+                & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+            ),
+            getattr(ProjectPredictionAnalytics, metric_name),
+        ).where(
+            ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+            is_not(getattr(ProjectPredictionAnalytics, metric_name), None),
+        )
+        importance_data = sess.exec(importance_data_query).fetchall()
+        if len(importance_data) == 0:
+            continue
+        importance_regression = mutual_info_regression(
+            np.array([float(d[1]) for d in importance_data]).reshape(-1, 1),
+            np.array([float(d[0]) for d in importance_data]),
+            random_state=42,
+        )
+        importance[metric_name] = float(importance_regression[0])
 
+    print(precision_recall)
     return {
-        "mAP": sum(pr["ap"] for pr in precision_recall) / max(len(precision_recall), 1),
-        "mAR": sum(pr["ar"] for pr in precision_recall) / max(len(precision_recall), 1),
-        "precisions": {pr["feature_hash"]: pr["ap"] for pr in precision_recall},
-        "recalls": {pr["feature_hash"]: pr["ar"] for pr in precision_recall},
+        "mAP": sum(pr["ap"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
+        "mAR": sum(pr["ar"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
+        "precisions": {feature_hash: pr["ap"] for feature_hash, pr in precision_recall.items()},
+        "recalls": {feature_hash: pr["ar"] for feature_hash, pr in precision_recall.items()},
         "correlation": correlations,
         "importance": importance,
         "prs": prs,
+        "tTP": total_true_positive_count,
+        "tFP": total_false_positive_count,
+        "tFN": total_false_negative_count,
+        "tp": true_positive_count_map,
+        "fp": false_positive_count_map,
+        "fn": false_negative_count_map,
     }
+
+
+@router.get("/analytics/{prediction_domain}/distribution")
+def prediction_metric_distribution(prediction_hash: uuid.UUID, group: str, buckets: Literal[10, 100, 1000] = 10):
+    with Session(engine) as sess:
+        return metric_query.query_attr_distribution(
+            sess=sess,
+            table=ProjectPredictionAnalytics,
+            extra=[],
+            where=[
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+            ],
+            attr_name=group,
+            metrics=AnnotationMetrics,
+            enums={},
+            buckets=buckets,
+        )
+
+
+@router.get("/analytics/{prediction_domain}/scatter")
+def prediction_metric_scatter(prediction_hash: uuid.UUID, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10):
+    with Session(engine) as sess:
+        return metric_query.query_attr_scatter(
+            sess=sess,
+            table=ProjectPredictionAnalytics,
+            extra=[],
+            where=[
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash
+            ],
+            x_metric_name=x_metric,
+            y_metric_name=y_metric,
+            metrics=AnnotationMetrics,
+            enums={},
+            buckets=buckets
+        )
 
 
 @router.get("/metric_performance")
 def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str):
-    # FIXME: bucket behaviour needs improvement
+    # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
     with Session(engine) as sess:
         metric = AnnotationMetrics[metric_name]
         metric_attr = getattr(ProjectPredictionAnalytics, metric_name)
@@ -332,7 +412,6 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr_fn = getattr(ProjectPredictionAnalyticsFalseNegatives, metric_name)
-        where_fn = [ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash, is_not(metric_attr, None)]
         metric_fn_buckets = sess.exec(
             select(  # type: ignore
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
@@ -340,7 +419,9 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
                 func.count(),
             )
             .where(
-                *where_fn,
+                ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
+                ProjectPredictionAnalyticsFalseNegatives.iou_threshold > iou,
+                is_not(metric_attr, None),
             )
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
