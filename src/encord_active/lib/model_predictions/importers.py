@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 import cv2
 import numpy as np
@@ -59,7 +59,7 @@ KITTI_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.(?:txt
 PNG_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.png$"
 
 
-def import_predictions(project: Project, predictions: List[Prediction]):
+def import_predictions(project: Project, predictions: list[Prediction]):
     """
     Import predictions from Encord's Prediction class format into the specified Encord Active project.
 
