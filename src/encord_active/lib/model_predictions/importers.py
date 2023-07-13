@@ -206,6 +206,30 @@ def migrate_mask_predictions(
     file_name_regex: str = PNG_FILE_NAME_REGEX,
     file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
 ) -> list[Prediction]:
+    """
+    Migrate predictions from segmentation masks into the specified Encord Active project.
+
+    :param project_dir: The Encord Active project directory.
+    :param predictions_dir: The directory containing the predictions, including subfolders.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the positive integer ids
+        of the label classes.
+        This mapping allows for the conversion of label classes to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding ids of the label classes.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
+        Only the files whose names match the pattern will be considered for migration.
+        Defaults to PNG_FILE_NAME_REGEX.
+    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
+        from the file name in order to uniquely identify the data unit.
+        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
+        and optional frame number from the file name using the pattern specified in PNG_FILE_NAME_REGEX.
+        For example, the data unit corresponding to a file with the name ``example_image.jpg__5.png`` would have
+        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    :return: The migrated predictions in Encord's Prediction class format.
+    """
     # Obtain the files containing predictions
     pattern = re.compile(file_name_regex)
     file_paths = [
@@ -452,6 +476,12 @@ def import_kitti_predictions(
 
 
 def import_predictions(project: Project, predictions: List[Prediction]):
+    """
+    Import predictions from Encord's Prediction class format into the specified Encord Active project.
+
+    :param project: The project to import the predictions into.
+    :param predictions: The predictions in Encord's Prediction class format to be imported.
+    """
     if len(predictions) == 0:
         return
 
@@ -472,6 +502,9 @@ def import_predictions(project: Project, predictions: List[Prediction]):
         use_cache_only=True,
         prediction_type=prediction_type,
     )
+
+
+# ================================= UTILITY FUNCTIONS =================================
 
 
 def _get_matching_data_unit(
