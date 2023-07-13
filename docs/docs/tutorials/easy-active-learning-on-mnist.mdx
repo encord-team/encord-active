@@ -37,7 +37,7 @@ project_path = Path("/path/to/project/directory")
 project_fs = ProjectFileStructure(project_path)
 ```
 
-## 2. Train the model with labeled data from the project
+## 2. Train the model with labeled data from the project {#model-training}
 
 It's a common scenario to start spinning the active learning cycle using a model trained with some initial data.
 Let's select [sklearn.ensemble.RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) as the base model.
@@ -57,13 +57,20 @@ The two main functionalities wrapped around the model are:
 Encord Active has a built-in wrapper for _scikit-learn_ classifiers (`SKLearnModelWrapper`), so let's use it.
 
 ```python
+from typing import List
+import numpy as np
+from PIL import Image
 from encord_active.lib.common.active_learning import get_data, get_data_hashes_from_project
 from encord_active.lib.metrics.acquisition_functions import SKLearnModelWrapper
+
+def transform_image_data(images: List[Image]) -> List[np.ndarray]:
+    return [np.asarray(image).flatten() / 255 for image in images]
 
 w_model = SKLearnModelWrapper(forest)
 
 data_hashes = get_data_hashes_from_project(project_fs, subset_size=5000)
-X, y = get_data(project_fs, w_model, data_hashes, class_name="digit")
+X, y = get_data(project_fs, data_hashes, class_name="digit")
+X = transform_image_data(X)
 
 w_model._model.fit(X, y)
 ```
