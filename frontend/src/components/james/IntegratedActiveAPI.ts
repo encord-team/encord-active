@@ -9,31 +9,40 @@ import {
 } from "@tanstack/react-query";
 import axios from "axios";
 import {
-    ActiveCreateSubsetMutationArguments,
-    ActiveCreateTagMutationArguments,
-    ActivePaginationResult,
-    ActivePredictionView,
-    ActiveProjectAnalysisCompareMetricDissimilarity,
-    ActiveProjectAnalysisDistribution,
-    ActiveProjectAnalysisDomain,
-    ActiveProjectAnalysisScatter,
-    ActiveProjectAnalysisSummary,
-    ActiveProjectItemDetailedSummary,
-    ActiveProjectMetricPerformance,
-    ActiveProjectPredictionSummary,
-    ActiveProjectPreviewItemResult,
-    ActiveProjectSearchResult,
-    ActiveProjectSimilarityResult,
-    ActiveProjectSummary,
-    ActiveProjectView,
-    ActiveQueryAPI, ActiveUploadToEncordMutationArguments,
+  ActiveCreateSubsetMutationArguments,
+  ActiveCreateTagMutationArguments,
+  ActivePaginationResult,
+  ActivePredictionView,
+  ActiveProjectAnalysisCompareMetricDissimilarity,
+  ActiveProjectAnalysisDistribution,
+  ActiveProjectAnalysisDomain,
+  ActiveProjectAnalysisScatter,
+  ActiveProjectAnalysisSummary,
+  ActiveProjectItemDetailedSummary,
+  ActiveProjectMetricPerformance,
+  ActiveProjectPredictionSummary,
+  ActiveProjectPreviewItemResult,
+  ActiveProjectSearchResult,
+  ActiveProjectSimilarityResult,
+  ActiveProjectSummary,
+  ActiveProjectView,
+  ActiveQueryAPI,
+  ActiveUploadToEncordMutationArguments,
 } from "./oss/ActiveTypes";
 
 export type IntegratedProjectMetadata = {
   readonly title: string;
   readonly description: string;
-  readonly project_hash: string;
+  readonly projectHash: string;
   readonly baseProjectUrl: string;
+  readonly imageUrl: string;
+  readonly downloaded: boolean;
+  readonly sandbox: boolean;
+  readonly stats: {
+    readonly dataUnits: number;
+    readonly labels: number;
+    readonly classes: number;
+  };
 };
 
 const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
@@ -83,7 +92,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       const results = Object.values(projects)
         // .filter((project) => project.title.toLowerCase().startsWith(search.toLowerCase()))
         .map((project) => ({
-          project_hash: project.project_hash,
+          project_hash: project.projectHash,
           title: project.title,
           description: project.description,
         }));
@@ -341,34 +350,39 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       UseMutationOptions<string, unknown, ActiveCreateSubsetMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     > = {}
-  ): UseMutationResult<string, unknown, ActiveCreateSubsetMutationArguments> => {
-      const baseURL = this.getBaseUrl(projectHash, true).replace(
-          "/projects_v2/get/","/projects/"
-      );
+  ): UseMutationResult<
+    string,
+    unknown,
+    ActiveCreateSubsetMutationArguments
+  > => {
+    const baseURL = this.getBaseUrl(projectHash, true).replace(
+      "/projects_v2/get/",
+      "/projects/"
+    );
 
-      return useMutation(
-          ["ACTIVE:useProjectMutationCreateTag", projectHash],
-          async (args: ActiveCreateSubsetMutationArguments) => {
-                const params = {
-                    identifiers: args.du_hashes ?? [],
-                    project_title: args.project_title,
-                    project_description: args.project_description ?? "",
-                    dataset_title: args.dataset_title,
-                    dataset_description: args.dataset_description ?? "",
-                }
-                const headers = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-              return await axios.post(
-                  `${baseURL}/create_subset`,
-                  JSON.stringify(params),
-                  { headers }
-              )
-          },
-          options
-      );
-  }
+    return useMutation(
+      ["ACTIVE:useProjectMutationCreateTag", projectHash],
+      async (args: ActiveCreateSubsetMutationArguments) => {
+        const params = {
+          identifiers: args.du_hashes ?? [],
+          project_title: args.project_title,
+          project_description: args.project_description ?? "",
+          dataset_title: args.dataset_title,
+          dataset_description: args.dataset_description ?? "",
+        };
+        const headers = {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        };
+        return await axios.post(
+          `${baseURL}/create_subset`,
+          JSON.stringify(params),
+          { headers }
+        );
+      },
+      options
+    );
+  };
 
   useProjectMutationCreateTag = (
     projectHash: string,
@@ -383,41 +397,50 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       options
     );
 
-  useProjectMutationUploadToEncord =(
+  useProjectMutationUploadToEncord = (
     projectHash: string,
     options?: Pick<
-      UseMutationOptions<string, unknown, ActiveUploadToEncordMutationArguments>,
+      UseMutationOptions<
+        string,
+        unknown,
+        ActiveUploadToEncordMutationArguments
+      >,
       "onError" | "onSuccess" | "onSettled"
     >
-  ): UseMutationResult<string, unknown, ActiveUploadToEncordMutationArguments> => {
+  ): UseMutationResult<
+    string,
+    unknown,
+    ActiveUploadToEncordMutationArguments
+  > => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
-    "/projects_v2/get/","/projects/"
+      "/projects_v2/get/",
+      "/projects/"
     );
 
     return useMutation(
-          ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
-          async (args: ActiveUploadToEncordMutationArguments) => {
-                const params = {
-                    project_title: args.project_title,
-                    project_description: args.project_description ?? "",
-                    dataset_title: args.dataset_title,
-                    dataset_description: args.dataset_description ?? "",
-                    ontology_title: args.ontology_title,
-                    ontology_description: args.ontology_description ?? "",
-                }
-                const headers = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-              return await axios.post(
-                  `${baseURL}/upload_to_encord`,
-                  JSON.stringify(params),
-                  { headers }
-              )
-          },
-        { ...options,  }
-      );
-  }
+      ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
+      async (args: ActiveUploadToEncordMutationArguments) => {
+        const params = {
+          project_title: args.project_title,
+          project_description: args.project_description ?? "",
+          dataset_title: args.dataset_title,
+          dataset_description: args.dataset_description ?? "",
+          ontology_title: args.ontology_title,
+          ontology_description: args.ontology_description ?? "",
+        };
+        const headers = {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        };
+        return await axios.post(
+          `${baseURL}/upload_to_encord`,
+          JSON.stringify(params),
+          { headers }
+        );
+      },
+      { ...options }
+    );
+  };
 
   // == Project predictions ===
   useProjectListPredictions = (
@@ -498,14 +521,13 @@ export function useLookupProjectsFromUrlList(
         // eslint-disable-next-line
         const data: Record<
           string,
-          { title: string; description: string; project_hash: string } // eslint-disable-next-line
+          Omit<IntegratedProjectMetadata, "baseProjectUrl">
         > = res.data as any;
-        Object.entries(data).forEach(([project_hash, projectMeta]) => {
-          allData[project_hash] = {
-            title: projectMeta.title,
-            description: projectMeta.description,
-            project_hash,
-            baseProjectUrl: `${url}/projects_v2/get/${project_hash}`,
+        Object.entries(data).forEach(([projectHash, projectMeta]) => {
+          allData[projectHash] = {
+            ...projectMeta,
+            imageUrl: `${url}/${projectMeta.imageUrl}`,
+            baseProjectUrl: `${url}/projects_v2/get/${projectHash}`,
           };
         });
       }

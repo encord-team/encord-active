@@ -54,9 +54,9 @@ export const ProjectsPage = ({
         {userProjects.length ? (
           userProjects.map((project) => (
             <ProjectCard
-              key={project.project_hash}
+              key={project.projectHash}
               project={project}
-              onClick={() => onSelectLocalProject(project.project_hash)}
+              onClick={() => onSelectLocalProject(project.projectHash)}
             />
           ))
         ) : (
@@ -70,13 +70,13 @@ export const ProjectsPage = ({
           </h2>
           <div className="flex flex-wrap gap-5">
             {sandboxProjects
-              .sort((a, b) => -!!a.downloaded - -!!b.downloaded)
+              .sort((a, b) => -a.downloaded - -b.downloaded)
               .map((project) => (
                 <ProjectCard
-                  key={project.project_hash}
+                  key={project.projectHash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() => onSelectLocalProject(project.project_hash)}
+                  onClick={() => onSelectLocalProject(project.projectHash)}
                 />
               ))}
           </div>
