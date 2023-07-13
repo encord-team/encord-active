@@ -291,9 +291,7 @@ export const Explorer = ({
                 scope === "prediction" ? "image" : selectedMetric.embeddingType
               }
               onSelectionChange={(selection) => (
-                setPage(1),
-                console.log("embeddings"),
-                setItemSet(new Set(selection.map(({ id }) => id)))
+                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}
             />
