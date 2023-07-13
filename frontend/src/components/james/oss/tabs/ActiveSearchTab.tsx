@@ -12,7 +12,7 @@ import {
   ActiveQueryAPI,
 } from "../ActiveTypes";
 import ActiveMetricFilter, {
-  ActiveFilterState,
+  ActiveFilterOrderState,
 } from "../util/ActiveMetricFilter";
 
 function hasTaggedRange(
@@ -26,8 +26,7 @@ function hasTaggedRange(
     newResults.find(
       (resultItem) =>
         !selectedItems.has(
-          `${resultItem.du_hash}/${resultItem.frame}/${
-            resultItem.object_hash ?? ""
+          `${resultItem.du_hash}/${resultItem.frame}/${resultItem.object_hash ?? ""
           }`
         )
     ) == null
@@ -37,17 +36,17 @@ function hasTaggedRange(
 export function ActiveSearchTab(props: {
   projectHash: string;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   queryAPI: ActiveQueryAPI;
   analysisDomain: ActiveProjectAnalysisDomain;
   metricsSummary: ActiveProjectMetricSummary;
   itemWidth: number;
-  filters: ActiveFilterState;
+  filters: ActiveFilterOrderState;
   setFilters: (
     newState:
-      | ActiveFilterState
-      | ((old: ActiveFilterState) => ActiveFilterState)
+      | ActiveFilterOrderState
+      | ((old: ActiveFilterOrderState) => ActiveFilterOrderState)
   ) => void;
   selectedItems: Omit<Map<string, null>, "set" | "clear" | "delete">;
   setSelectedItems: Actions<string, null>;
@@ -139,9 +138,8 @@ export function ActiveSearchTab(props: {
     }
     const currentMap = new Map(selectedItems);
     newResults.forEach((resultItem) => {
-      const key = `${resultItem.du_hash}/${resultItem.frame}/${
-        resultItem.object_hash ?? ""
-      }`;
+      const key = `${resultItem.du_hash}/${resultItem.frame}/${resultItem.object_hash ?? ""
+        }`;
       if (set) {
         currentMap.set(key, null);
       } else {
@@ -194,9 +192,8 @@ export function ActiveSearchTab(props: {
           <Spin />
         ) : (
           explorerItems.results.map((exploreItem) => {
-            const key = `${exploreItem.du_hash}/${exploreItem.frame}/${
-              exploreItem.object_hash ?? ""
-            }`;
+            const key = `${exploreItem.du_hash}/${exploreItem.frame}/${exploreItem.object_hash ?? ""
+              }`;
             return (
               <ActiveViewImageCard
                 key={key}
