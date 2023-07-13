@@ -9,12 +9,12 @@ from typing import Callable, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 import pandas as pd
+import PIL
 from encord import Project as EncordProject
 from encord.objects.common import Shape
 from encord.objects.ontology_object import Object
 from encord.objects.ontology_structure import OntologyStructure
 from pandas.errors import EmptyDataError
-from PIL import Image
 from prisma.models import DataUnit
 from prisma.types import DataUnitWhereInput
 from tqdm.auto import tqdm
@@ -26,7 +26,7 @@ from encord_active.lib.db.predictions import (
     ObjectDetection,
     Prediction,
 )
-from encord_active.lib.labels.object import BoxShapes
+from encord_active.lib.labels.object import BoxShapes, ObjectShape
 from encord_active.lib.metrics.execute import run_all_prediction_metrics
 from encord_active.lib.model_predictions.iterator import PredictionIterator
 from encord_active.lib.model_predictions.writer import (
@@ -59,7 +59,7 @@ KITTI_COLUMNS = [
 ]
 
 KITTI_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.(?:txt|csv)$"
-PNG_FILE_NAME_REGEX = r"^(?P<stem>.*?)\.png$"
+PNG_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.png$"
 
 
 def import_mask_predictions_obsolete(
@@ -164,7 +164,7 @@ def import_mask_predictions_obsolete(
                     continue
 
                 try:
-                    input_mask = np.array(Image.open(pth))
+                    input_mask = np.array(PIL.Image.open(pth))
                 except Exception:
                     continue
                 for cls in np.unique(input_mask):
@@ -202,89 +202,115 @@ def import_mask_predictions_obsolete(
 def migrate_mask_predictions(
     project_dir: Path,
     predictions_dir: Path,
-    ontology_mapping: dict[str, int],
+    ontology_mapping: Optional[dict[str, int]] = None,
     file_name_regex: str = PNG_FILE_NAME_REGEX,
-    du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
-):
-    label_rows = Project(project_dir).load().label_rows
-    du_hash_lookup: Dict[str, Tuple[str, int]] = {}
-    ontology_hash_lookup: Dict[int, str] = {v: k for k, v in ontology_mapping.items()}
-
-    if du_hash_name_lookup is None:
-        du_hash_lookup = {}
-        for label_row in label_rows.values():
-            for du in label_row["data_units"].values():
-                fname = du["data_title"].rsplit(".", 1)[0]  # File name without the extension
-                if isinstance(du["labels"], list):  # Videos
-                    for frame_num in du["labels"]:
-                        du_hash_lookup[f"{fname}__{frame_num:05d}"] = (du["data_hash"], int(frame_num))
-                else:  # Images
-                    du_hash_lookup[fname] = (du["data_hash"], 0)
-
+    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
+) -> list[Prediction]:
+    # Obtain the files containing predictions
     pattern = re.compile(file_name_regex)
+    file_paths = [
+        path
+        for path in predictions_dir.glob("**/*")
+        if path.is_file() and path.suffix.lower() in [".json"] and pattern.match(path.name) is not None
+    ]
+
+    # Retrieve the mapping from ontology object hashes to label ids
+    if ontology_mapping is None:
+        ontology_mapping = _retrieve_ontology_mapping(predictions_dir)
+
+    # Invert the ontology mapping (now it's from object class ids to ontology object hashes)
+    class_id_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
+
+    # Verify the validity of the ontology object hashes, ensuring they exist and represent polygons
+    pfs = ProjectFileStructure(project_dir)
+    relevant_ontology_hashes = {
+        o.feature_node_hash
+        for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
+        if o.shape.value == ObjectShape.POLYGON
+    }
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    if len(bad_hashes) > 0:
+        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
+
+    # Migrate predictions from segmentation masks to the Prediction class format
     predictions = []
-    with tqdm(total=None, desc="Migrating mask predictions", leave=False) as pbar:
-        for file_path in predictions_dir.glob("**/*"):
-            if not file_path.is_file():
+    for file_path in tqdm(file_paths, desc="Migrating mask predictions", leave=False):
+        # Identify the data unit that corresponds to the given file
+        du = _get_matching_data_unit(pfs, file_path, file_path_to_data_unit_func, file_name_regex)
+        if du is None:
+            continue
+
+        # Read the predictions
+        try:
+            input_mask = np.asarray(PIL.Image.open(file_path))
+        except PIL.UnidentifiedImageError:
+            continue
+
+        # Ensure that the sizes of the mask and the original image are identical
+        pass
+
+        # Include predictions for each class identified in the mask
+        for cls in np.unique(input_mask):
+            if cls == 0:  # Ignore background
                 continue
 
-            match = pattern.match(file_path.name)
-            if not match:
-                continue
+            ontology_obj_hash = class_id_to_ontology_hash[cls]
+            mask = np.zeros_like(input_mask)
+            mask[input_mask == cls] = 1
+            contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
 
-            if du_hash_name_lookup:
-                du_hash, frame = du_hash_name_lookup(file_path)
-            else:
-                du_hash, frame = du_hash_lookup.get(file_path.stem, ("", -1))
-
-            if not du_hash:
-                logger.warning(f"Couldn't match file {file_path} to any data unit.")
-                continue
-
-            try:
-                input_mask = np.asarray(Image.open(file_path))
-            except Exception:
-                continue
-            for cls in np.unique(input_mask):
-                if cls == 0:  # background
+            for contour in contours:
+                if len(contour) < 3 or cv2.contourArea(contour) < 4:
                     continue
+                _mask = np.zeros_like(mask)
+                _mask = cv2.fillPoly(_mask, [contour], 1)
 
-                class_hash = ontology_hash_lookup[cls]
-                mask = np.zeros_like(input_mask)
-                mask[input_mask == cls] = 1
-
-                contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-
-                for contour in contours:
-                    if len(contour) < 3 or cv2.contourArea(contour) < 4:
-                        continue
-                    _mask = np.zeros_like(mask)
-                    _mask = cv2.fillPoly(_mask, [contour], 1)
-
-                    predictions.append(
-                        Prediction(
-                            data_hash=du_hash,
-                            confidence=1.0,
-                            object=ObjectDetection(format=Format.POLYGON, data=_mask, feature_hash=class_hash),
-                        )
+                predictions.append(
+                    Prediction(
+                        data_hash=du.data_hash,
+                        confidence=1.0,
+                        object=ObjectDetection(format=Format.POLYGON, data=_mask, feature_hash=ontology_obj_hash),
                     )
-            pbar.update(1)
+                )
     return predictions
 
 
 def import_mask_predictions(
     project: Project,
     predictions_dir: Path,
-    ontology_mapping: dict[str, int],
+    ontology_mapping: Optional[dict[str, int]] = None,
     file_name_regex: str = PNG_FILE_NAME_REGEX,
-    du_hash_name_lookup: Callable[[Path], Tuple[str, int]] = None,
+    file_path_to_data_unit_func: Optional[Callable[[Path], tuple[str, Optional[int]]]] = None,
 ):
+    """
+    Import predictions from segmentation masks into the specified Encord Active project.
+
+    :param project: The project to import the predictions into.
+    :param predictions_dir: The directory containing the predictions, including subfolders.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the positive integer ids
+        of the label classes.
+        This mapping allows for the conversion of label classes to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding ids of the label classes.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
+        Only the files whose names match the pattern will be considered for import.
+        Defaults to PNG_FILE_NAME_REGEX.
+    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
+        from the file name in order to uniquely identify the data unit.
+        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
+        and optional frame number from the file name using the pattern specified in PNG_FILE_NAME_REGEX.
+        For example, the data unit corresponding to a file with the name `example_image.jpg__5.png` would have
+        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    """
     predictions = migrate_mask_predictions(
         project.file_structure.project_dir,
         predictions_dir,
         ontology_mapping,
         file_name_regex,
-        du_hash_name_lookup,
+        file_path_to_data_unit_func,
     )
     import_predictions(project, predictions)
 
@@ -335,7 +361,7 @@ def migrate_kitti_predictions(
     # Invert the ontology mapping (now it's from object class names to ontology object hashes)
     class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
 
-    # Check that the input ontology object hashes are valid (exist and represent bounding boxes)
+    # Verify the validity of the ontology object hashes, ensuring they exist and represent bounding boxes
     pfs = ProjectFileStructure(project_dir)
     relevant_ontology_hashes = {
         o.feature_node_hash
@@ -354,6 +380,7 @@ def migrate_kitti_predictions(
         if du is None:
             continue
 
+        # Read the predictions
         try:
             df = pd.read_csv(file_path, sep=" ", header=None)
         except EmptyDataError:
