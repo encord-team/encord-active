@@ -116,13 +116,13 @@ export const Explorer = ({
     { staleTime: Infinity }
   );
   const { data: hasSimilaritySearch } = useQuery(
-    sift(["hasSimilaritySearch", selectedMetric?.embeddingType]),
+    sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
     { enabled: !!selectedMetric, staleTime: Infinity }
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
-    sift([scope, "similarities", similarityItem]),
+    sift([projectHash, scope, "similarities", similarityItem]),
     () =>
       api.fetchSimilarItems(
         similarityItem!,
@@ -133,6 +133,7 @@ export const Explorer = ({
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     sift([
+      projectHash,
       "item_ids",
       scope,
       selectedMetric?.name,
@@ -147,7 +148,12 @@ export const Explorer = ({
     }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
-    [scope, "metrics", JSON.stringify(filters?.prediction_filters)],
+    [
+      projectHash,
+      scope,
+      "metrics",
+      JSON.stringify(filters?.prediction_filters),
+    ],
     () => api.fetchProjectMetrics(scope, predictionType, predictionOutcome),
     {
       enabled: predictionTypeFound,

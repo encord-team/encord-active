@@ -183,7 +183,7 @@ export type SeachResult = z.infer<typeof searchResultSchema>;
 export const defaultTags = { data: [], label: [] };
 
 export const getApi = (
-  projectName: string,
+  projectHash: string,
   authToken?: string | null,
   baseUrl = DEFAULT_BASE_URL
 ) => {
@@ -203,6 +203,7 @@ export const getApi = (
     fetch(url, updateOptions(options));
 
   return {
+    projectHash,
     fetchHasPremiumFeatures: async () =>
       z
         .boolean()
@@ -210,14 +211,14 @@ export const getApi = (
     fetchAvailablePredictionTypes: async () =>
       PredictionTypeSchema.array().parse(
         await (
-          await fetcher(`${baseUrl}/projects/${projectName}/prediction_types`)
+          await fetcher(`${baseUrl}/projects/${projectHash}/prediction_types`)
         ).json()
       ),
     fetchProject2DEmbeddings: async (
       embedding_type: Metric["embeddingType"],
       filters: Filters
     ) => {
-      const url = `${baseUrl}/projects/${projectName}/2d_embeddings`;
+      const url = `${baseUrl}/projects/${projectHash}/2d_embeddings`;
       try {
         const response = await (
           await fetcher(url, {
@@ -243,7 +244,7 @@ export const getApi = (
         ...(prediction_type ? { prediction_type } : {}),
         ...(prediction_outcome ? { prediction_outcome } : {}),
       });
-      const url = `${baseUrl}/projects/${projectName}/metrics?${queryParams}`;
+      const url = `${baseUrl}/projects/${projectHash}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
       return MetricDefinitionsSchema.parse(response);
     },
@@ -254,7 +255,7 @@ export const getApi = (
       itemSet: Set<string>
     ) => {
       const result = await (
-        await fetcher(`${baseUrl}/projects/${projectName}/item_ids_by_metric`, {
+        await fetcher(`${baseUrl}/projects/${projectHash}/item_ids_by_metric`, {
           method: "post",
           headers: {
             "Content-Type": "application/json",
@@ -276,7 +277,7 @@ export const getApi = (
 
       const item = await (
         await fetcher(
-          `${baseUrl}/projects/${projectName}/items/${encodeURIComponent(
+          `${baseUrl}/projects/${projectHash}/items/${encodeURIComponent(
             id
           )}?${queryParams}`
         )
@@ -289,7 +290,7 @@ export const getApi = (
         .transform((record) => new Map(Object.entries(record)))
         .parse(
           await (
-            await fetcher(`${baseUrl}/projects/${projectName}/tagged_items`)
+            await fetcher(`${baseUrl}/projects/${projectHash}/tagged_items`)
           ).json()
         ),
     fetchSimilarItems: async (
@@ -302,7 +303,7 @@ export const getApi = (
         ...(pageSize ? { page_size: pageSize.toString() } : {}),
       });
 
-      const url = `${baseUrl}/projects/${projectName}/similarities/${encodeURIComponent(
+      const url = `${baseUrl}/projects/${projectHash}/similarities/${encodeURIComponent(
         id
       )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
@@ -314,18 +315,18 @@ export const getApi = (
       const queryParams = new URLSearchParams({
         embedding_type: embeddingType,
       });
-      const url = `${baseUrl}/projects/${projectName}/has_similarity_search?${queryParams} `;
+      const url = `${baseUrl}/projects/${projectHash}/has_similarity_search?${queryParams} `;
       const response = await fetcher(url).then((res) => res.json());
       return z.boolean().parse(response);
     },
     fetchProjectTags: async () =>
       GroupedTagsSchema.parse(
-        await (await fetcher(`${baseUrl}/projects/${projectName}/tags`)).json()
+        await (await fetcher(`${baseUrl}/projects/${projectHash}/tags`)).json()
       ),
     updateItemTags: async (
       itemTags: { id: string; groupedTags: GroupedTags }[]
     ) => {
-      const url = `${baseUrl}/projects/${projectName}/item_tags`;
+      const url = `${baseUrl}/projects/${projectHash}/item_tags`;
       const data = itemTags.map(({ id, groupedTags }) => ({
         id,
         grouped_tags: groupedTags,
@@ -349,7 +350,7 @@ export const getApi = (
       signal?: AbortSignal
     ) => {
       const response = await fetcher(
-        `${baseUrl}/projects/${projectName}/search`,
+        `${baseUrl}/projects/${projectHash}/search`,
         {
           method: "post",
           headers: {
@@ -366,10 +367,12 @@ export const getApi = (
 };
 
 export const useApi = () => {
-  const api = useContext(ApiContext);
+  const apiContext = useContext(ApiContext);
 
-  if (!api)
+  if (!apiContext)
     throw new Error("useApi has to be used within <ProjectContext.Provider>");
+
+  const { projectHash, ...api } = apiContext;
 
   const queryClient = useQueryClient();
 
@@ -448,21 +451,23 @@ export const useApi = () => {
       }
     ),
     fetchProjectTags: () =>
-      useQuery(["tags"], api.fetchProjectTags, {
+      useQuery([projectHash, "tags"], api.fetchProjectTags, {
         initialData: defaultTags,
       }),
     fetchTaggedItems: () =>
-      useQuery(["tagged_items"], api.fetchedTaggedItems, {
+      useQuery([projectHash, "tagged_items"], api.fetchedTaggedItems, {
         initialData: new Map<string, GroupedTags>(),
       }),
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
-      useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
+      useQuery([projectHash, "item", ...args], () =>
+        api.fetchProjectItem(...args)
+      ),
     fetch2DEmbeddings: (
       embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
       filters: Filters
     ) =>
       useQuery(
-        ["2d_embeddings", embeddingType, JSON.stringify(filters)],
+        [projectHash, "2d_embeddings", embeddingType, JSON.stringify(filters)],
         () => api.fetchProject2DEmbeddings(embeddingType, filters),
         { enabled: !!embeddingType, staleTime: Infinity }
       ),
@@ -472,7 +477,7 @@ export const useApi = () => {
       ...args: Parameters<API["fetchAvailablePredictionTypes"]>
     ) =>
       useQuery(
-        ["available_prediction_types"],
+        [projectHash, "available_prediction_types"],
         () => api.fetchAvailablePredictionTypes(...args),
         { staleTime: Infinity }
       ),
