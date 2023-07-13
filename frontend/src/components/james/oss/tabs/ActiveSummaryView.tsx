@@ -12,7 +12,7 @@ import { ActiveSearchTab } from "./ActiveSearchTab";
 import ActiveSelectedTab from "./ActiveSelectedTab";
 import ActiveSummaryTab from "./ActiveSummaryTab";
 import ActiveProjectComparisonTab from "./ActiveProjectComparisonTab";
-import { ActiveFilterState } from "../util/ActiveMetricFilter";
+import { ActiveFilterOrderState } from "../util/ActiveMetricFilter";
 import { Explorer } from "../../../explorer";
 
 function ActiveSummaryView(props: {

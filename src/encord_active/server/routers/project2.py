@@ -76,11 +76,10 @@ def _get_first_image_with_polygons_url(project_hash: UUID) -> Optional[str]:
 def get_all_projects() -> Dict[str, ProjectReturn]:
     sandbox_projects = {}
     for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
-        hash = UUID(data["hash"])
-        sandbox_projects[str(uuid.UUID)] = ProjectReturn(
+        sandbox_projects[data["hash"]] = ProjectReturn(
             title=name,
             description="",
-            projectHash=hash,
+            projectHash=UUID(data["hash"]),
             stats=data["stats"],
             downloaded=False,
             imageUrl=f"ea-sandbox-static/{data['image_filename']}",
