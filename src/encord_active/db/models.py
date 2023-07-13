@@ -31,6 +31,12 @@ def fk_constraint(
     )
 
 
+"""
+Number of custom metrics supported for each table
+"""
+CUSTOM_METRIC_COUNT: int = 4
+
+
 class AnnotationType(enum.Enum):
     CLASSIFICATION = "classification"
     BOUNDING_BOX = "bounding_box"
@@ -42,6 +48,10 @@ class AnnotationType(enum.Enum):
     BITMASK = "bitmask"
 
 
+class EmbeddingReductionType(enum.Enum):
+    UMAP = "umap"
+
+
 class Project(SQLModel, table=True):
     __tablename__ = "active_project"
     project_hash: UUID = Field(primary_key=True)
@@ -49,6 +59,23 @@ class Project(SQLModel, table=True):
     project_description: str
     project_remote_ssh_key_path: Optional[str] = Field(nullable=True)
     project_ontology: dict = Field(sa_column=Column(JSON))
+
+    # Custom metadata, list of all metadata for custom metrics
+    custom_metrics: list = Field(sa_column=Column(JSON), default=[])
+
+
+class ProjectEmbeddingReduction(SQLModel, table=True):
+    __tablename__ = "active_project_embedding_reduction"
+    reduction_hash: UUID = Field(primary_key=True)
+    reduction_name: str
+    reduction_description: str
+    project_hash: UUID
+
+    # Binary encoded information on the 2d reduction implementation.
+    reduction_type: EmbeddingReductionType
+    reduction_bytes: bytes
+
+    __table_args__ = (fk_constraint(["project_hash"], Project, "active_project_embedding_reduction_project_fk"),)
 
 
 class ProjectDataMetadata(SQLModel, table=True):
@@ -76,16 +103,19 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     data_hash: UUID
+
+    # Optionally set to support local data (video can be stored as decoded frames or as a video object)
+    data_uri: Optional[str] = Field(default=None)
+    data_uri_is_video: bool = Field(default=False)
+
+    # Per-frame information about the root cause.
+    objects: list = Field(sa_column=Column(JSON))
+    classifications: list = Field(sa_column=Column(JSON))
+
     __table_args__ = (
         Index("active_project_data_units_unique_du_hash_frame", "du_hash", "frame", unique=True),
         fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "active_data_unit_data_fk"),
     )
-    # Optionally set to support local data (video can be stored as decoded frames or as a video object)
-    data_uri: Optional[str] = Field(default=None)
-    data_uri_is_video: bool = Field(default=False)
-    # Per-frame information about the root cause.
-    objects: list = Field(sa_column=Column(JSON))
-    classifications: list = Field(sa_column=Column(JSON))
 
 
 # MetricFieldTypeNormal = Field(ge=0, le=0)
@@ -109,7 +139,7 @@ def define_metric_indices(
     return tuple(values)
 
 
-@assert_cls_metrics_match(DataMetrics)
+@assert_cls_metrics_match(DataMetrics, CUSTOM_METRIC_COUNT)
 class ProjectDataAnalytics(SQLModel, table=True):
     __tablename__ = "active_project_analytics_data"
     # Base primary key
@@ -139,10 +169,17 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
     metric_image_singularity: Optional[float] = MetricFieldTypeNormal
 
+    # 4x custom normal metrics
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
+    metric_custom1: Optional[float] = MetricFieldTypeNormal
+    metric_custom2: Optional[float] = MetricFieldTypeNormal
+    metric_custom3: Optional[float] = MetricFieldTypeNormal
+
     __table_args__ = define_metric_indices(
         "active_data",
         DataMetrics,
-        [fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "active_data_project_data_fk")],
+        [fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata,
+                       "active_data_project_analytics_data_fk")],
     )
 
 
@@ -162,8 +199,33 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     embedding_clip_2d_x: Optional[float]
     embedding_clip_2d_y: Optional[float]
 
+    __table_args__ = (
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,
+                      "active_data_project_data_analytics_extra_fk"),
+    )
 
-@assert_cls_metrics_match(AnnotationMetrics)
+
+class ProjectDataAnalyticsReduced(SQLModel, table=True):
+    __tablename__ = "active_project_analytics_data_reduced"
+    # Base primary key
+    reduction_hash: UUID = Field(primary_key=True)
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    x: Optional[float]
+    y: Optional[float]
+
+    __table_args__ = (
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,
+                      "active_data_project_data_analytics_reduced_fk"),
+        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
+                      "active_data_project_data_analytics_reduced_reduction_fk"),
+        Index("active_project_analytics_data_reduced_x", "reduction_hash", "project_hash", "x", "y"),
+        Index("active_project_analytics_data_reduced_y", "reduction_hash", "project_hash", "y", "x"),
+    )
+
+
+@assert_cls_metrics_match(AnnotationMetrics, CUSTOM_METRIC_COUNT)
 class ProjectAnnotationAnalytics(SQLModel, table=True):
     __tablename__ = "active_project_analytics_annotation"
     # Base primary key
@@ -206,6 +268,12 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
     metric_label_confidence: float = MetricFieldTypeNormal
 
+    # 4x custom normal metrics
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
+    metric_custom1: Optional[float] = MetricFieldTypeNormal
+    metric_custom2: Optional[float] = MetricFieldTypeNormal
+    metric_custom3: Optional[float] = MetricFieldTypeNormal
+
     __table_args__ = define_metric_indices(
         "active_label",
         AnnotationMetrics,
@@ -226,9 +294,32 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
-    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
-    embedding_clip_2d_x: Optional[float]
-    embedding_clip_2d_y: Optional[float]
+    __table_args__ = (
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectAnnotationAnalytics,
+                      "active_data_project_annotation_analytics_extra_fk"),
+    )
+
+
+class ProjectAnnotationAnalyticsReduced(SQLModel, table=True):
+    __tablename__ = "active_project_analytics_annotation_reduced"
+    # Base primary key
+    reduction_hash: UUID = Field(primary_key=True)
+    project_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    # 2D embedding
+    x: Optional[float]
+    y: Optional[float]
+
+    __table_args__ = (
+        fk_constraint(["project_hash", "du_hash", "frame", "object_hash"], ProjectAnnotationAnalytics,
+                      "active_data_project_annotation_analytics_reduced_fk"),
+        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
+                      "active_data_project_annotation_analytics_reduced_reduction_fk"),
+        Index("active_project_analytics_annotation_reduced_x", "reduction_hash", "project_hash", "x", "y"),
+        Index("active_project_analytics_annotation_reduced_y", "reduction_hash", "project_hash", "y", "x"),
+    )
 
 
 class ProjectTag(SQLModel, table=True):
@@ -282,7 +373,7 @@ class ProjectPrediction(SQLModel, table=True):
     __table_args__ = (fk_constraint(["project_hash"], Project, "active_project_prediction_project_hash_fk"),)
 
 
-@assert_cls_metrics_match(AnnotationMetrics)
+@assert_cls_metrics_match(AnnotationMetrics, CUSTOM_METRIC_COUNT)
 class ProjectPredictionAnalytics(SQLModel, table=True):
     __tablename__ = "active_project_prediction_analytics"
     prediction_hash: UUID = Field(primary_key=True)
@@ -329,6 +420,12 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
     metric_label_confidence: float = MetricFieldTypeNormal
 
+    # 4x custom normal metrics
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
+    metric_custom1: Optional[float] = MetricFieldTypeNormal
+    metric_custom2: Optional[float] = MetricFieldTypeNormal
+    metric_custom3: Optional[float] = MetricFieldTypeNormal
+
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
         Index(
@@ -345,7 +442,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     )
 
 
-class ProjectPredictionAnnotationExtra(SQLModel, table=True):
+class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
     __tablename__ = "active_project_prediction_analytics_extra"
     prediction_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
@@ -355,6 +452,7 @@ class ProjectPredictionAnnotationExtra(SQLModel, table=True):
     # Packed prediction bytes, format depends on annotation_type on associated
     # non-extra table.
     # BB = [x1, y1, x2, y2] (np.float)
+    # RBB = [x1, y1, x2, y2, theta] (np.float)
     # BITMASK = count array (np.int)
     # Polygon = [[x, y], [x,y]] (np.float)
     annotation_bytes: bytes
@@ -362,17 +460,46 @@ class ProjectPredictionAnnotationExtra(SQLModel, table=True):
     # Embeddings
     embedding_clip: Optional[bytes]
 
-    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
-    embedding_clip_2d_x: Optional[float]
-    embedding_clip_2d_y: Optional[float]
+    __table_args__ = (
+        fk_constraint(["prediction_hash", "du_hash", "frame"], ProjectPredictionAnalytics,
+                      "active_project_prediction_analytics_extra_fk"),
+    )
 
 
+class ProjectPredictionAnalyticsReduced(SQLModel, table=True):
+    __tablename__ = "active_project_prediction_analytics_reduced"
+    # Base primary key
+    reduction_hash: UUID = Field(primary_key=True)
+    prediction_hash: UUID = Field(primary_key=True)
+    du_hash: UUID = Field(primary_key=True)
+    frame: int = Field(primary_key=True, ge=0)
+    object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+    # 2D embedding
+    x: Optional[float]
+    y: Optional[float]
+
+    __table_args__ = (
+        fk_constraint(["prediction_hash", "du_hash", "frame", "object_hash"], ProjectPredictionAnalytics,
+                      "active_data_project_prediction_analytics_reduced_fk"),
+        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
+                      "active_data_project_prediction_analytics_reduced_reduction_fk"),
+        Index("active_project_analytics_prediction_reduced_x", "reduction_hash", "prediction_hash", "x", "y"),
+        Index("active_project_analytics_prediction_reduced_y", "reduction_hash", "prediction_hash", "y", "x"),
+    )
+
+
+@assert_cls_metrics_match(AnnotationMetrics, CUSTOM_METRIC_COUNT)
 class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     __tablename__ = "active_project_prediction_analytics_false_negatives"
     prediction_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
+
+    # IOU threshold for missed prediction
+    # this entry is a false negative IFF (iou < iou_threshold)
+    # 2.0 is used for unconditional
+    iou_threshold: float = Field(ge=0, le=2.0)
 
     # Unmatched annotation properties
     feature_hash: str = Field(min_length=8, max_length=8)
@@ -407,6 +534,12 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
     metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
     metric_label_confidence: float = MetricFieldTypeNormal
+
+    # 4x custom normal metrics
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
+    metric_custom1: Optional[float] = MetricFieldTypeNormal
+    metric_custom2: Optional[float] = MetricFieldTypeNormal
+    metric_custom3: Optional[float] = MetricFieldTypeNormal
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_unmatched_prediction_fk"),

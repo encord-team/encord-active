@@ -1,11 +1,22 @@
 import dataclasses
-from typing import Dict, Type, Union, List, Tuple, Optional
+import math
+from typing import Dict, Type, Union, List, Tuple, Optional, Literal, TypeVar
 
-from sqlalchemy import func
-from sqlalchemy.sql.operators import is_not
-from sqlmodel import Session, SQLModel, select
+from sqlalchemy.sql.operators import is_not, not_between_op, between_op, in_op
+from sqlalchemy.sql.functions import count as sql_count, max as sql_max, min as sql_min
+from sqlmodel import Session, SQLModel, select, func
 
 from encord_active.db.metrics import MetricDefinition, MetricType
+
+"""
+Severe IQR Scale factor for iqr range
+"""
+MODERATE_IQR_SCALE = 1.5
+
+"""
+Severe IQR Scale factor for iqr range
+"""
+SEVERE_IQR_SCALE = 2.5
 
 
 @dataclasses.dataclass
@@ -20,29 +31,38 @@ def get_metric_or_enum(
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
     enums: Dict[str, dict],
+    buckets: Optional[Literal[10, 100, 1000]] = None,
 ) -> AttrMetadata:
     metric = metrics.get(attr_name, None)
+    round_digits = None if buckets is None else int(math.log10(buckets))
     if metric is not None:
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
             return AttrMetadata(
-                group_attr=func.round(raw_metric_attr, 3),
+                group_attr=raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits),
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.UFLOAT:
+            # FIXME: work for different distributions (currently ONLY aspect ratio)
+            #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
             return AttrMetadata(
-                group_attr=func.round(raw_metric_attr, 2),
+                group_attr=raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits),
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.UINT:
+            # FIXME: width / height / area / object_count
+            #  we currently assume that this will naturally group into sane values
+            #  so no post-processing is done here.
+            #  may be worth considering rounding to nearest 10 or 100 or selecting 0 -> max to dynamically select?
             return AttrMetadata(
                 group_attr=raw_metric_attr,
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.RANK:
+            # FIXME: currently image difficulty - try and see if this metric type can be removed.
             rank_attr = func.row_number().over(
                 order_by=raw_metric_attr,
             )
@@ -65,6 +85,105 @@ def get_metric_or_enum(
     raise ValueError(f"Attribute: {attr_name} is invalid")
 
 
+def query_metric_attr_summary(
+    sess: Session,
+    table: Type[SQLModel],
+    where: list,
+    metric_name: str,
+    metrics: Dict[str, MetricDefinition],
+) -> dict:
+    metric = metrics[metric_name]
+    metric_attr: Union[int, float] = getattr(table, metric_name)
+    metric_count, metric_min, metric_max = sess.exec(
+        select(
+            sql_count(),
+            sql_min(metric_attr),
+            sql_max(metric_attr)
+        ).where(
+            *where,
+            is_not(metric_attr, None)
+        )
+    ).first() or (0, 0, 0)
+    if metric.type == MetricType.RANK:
+        return {
+            "min": 0,
+            "q1": metric_count // 4,
+            "median": metric_count // 2,
+            "q3": (metric_count * 3) // 4,
+            "max": metric_count,
+            "count": metric_count,
+            "moderate": 0,
+            "severe": 0,
+        }
+    metric_q1 = sess.exec(
+        select(metric_attr).where(
+            *where,
+            is_not(metric_attr, None)
+        ).offset(metric_count // 4).limit(1)
+    ).first() or 0
+    metric_q2 = sess.exec(
+        select(metric_attr).where(
+            *where,
+            is_not(metric_attr, None)
+        ).offset(metric_count // 2).limit(1)
+    ).first() or 0
+    metric_q3 = sess.exec(
+        select(metric_attr).where(
+            *where,
+            is_not(metric_attr, None)
+        ).offset((metric_count*3) // 4).limit(1)
+    ).first() or 0
+
+    metric_iqr = metric_q3 - metric_q1
+    moderate_lb, moderate_ub = metric_q1 - MODERATE_IQR_SCALE * metric_iqr, metric_q3 + MODERATE_IQR_SCALE * metric_iqr
+    severe_lb, severe_ub = metric_q1 - SEVERE_IQR_SCALE * metric_iqr, metric_q3 + SEVERE_IQR_SCALE * metric_iqr
+    metric_severe = sess.exec(
+        select(func.count()).where(*where, not_between_op(metric_attr, severe_lb, severe_ub))  # type: ignore
+    ).first() or 0
+    metric_moderate = sess.exec(
+        select(func.count()).where(  # type: ignore
+            *where,
+            not_between_op(metric_attr, moderate_lb, moderate_ub),
+            between_op(metric_attr, severe_lb, severe_ub),
+        )
+    ).first() or 0
+    return {
+        "min": metric_min,
+        "q1": metric_q1,
+        "median": metric_q2,
+        "q3": metric_q3,
+        "max": metric_max,
+        "count": metric_count,
+        "moderate": metric_moderate,
+        "severe": metric_severe,
+    }
+
+
+def query_attr_summary(
+    sess: Session,
+    table: Type[SQLModel],
+    where: list,
+    metrics: Dict[str, MetricDefinition],
+    enums: Dict[str, dict]
+) -> dict:
+    count: int = sess.exec(select(sql_count()).where(*where)).first() or 0
+    metrics = {
+        metric_name: query_metric_attr_summary(
+            sess=sess,
+            table=table,
+            where=where,
+            metric_name=metric_name,
+            metrics=metrics,
+        )
+        for metric_name, metric in metrics.items()
+    }
+    return {
+        "count": count,
+        "metrics": {k: v for k, v in metrics.items() if v is not None},
+        "enums": enums,
+    }
+
+
 def query_attr_distribution(
     sess: Session,
     table: Type[SQLModel],
@@ -73,12 +192,13 @@ def query_attr_distribution(
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
     enums: Dict[str, dict],
+    buckets: Literal[10, 100, 1000],
 ) -> dict:
-    attr = get_metric_or_enum(table, attr_name, metrics, enums)
+    attr = get_metric_or_enum(table, attr_name, metrics, enums, buckets=buckets)
     grouping_query = select(
         attr.group_attr,
-        func.count(),
-        *(query, for key, query in extra),
+        sql_count(),
+        *(query for key, query in extra),
     ).where(
         *where,
         is_not(attr.filter_attr, None)
@@ -106,14 +226,15 @@ def query_attr_scatter(
     y_metric_name: str,
     metrics: Dict[str, MetricDefinition],
     enums: Dict[str, dict],
+    buckets: Literal[10, 100, 1000],
 ) -> dict:
-    x_attr = get_metric_or_enum(table, x_metric_name, metrics, enums)
-    y_attr = get_metric_or_enum(table, y_metric_name, metrics, enums)
+    x_attr = get_metric_or_enum(table, x_metric_name, metrics, enums, buckets=buckets)
+    y_attr = get_metric_or_enum(table, y_metric_name, metrics, enums, buckets=buckets)
     scatter_query = select(
         x_attr.group_attr,
         y_attr.group_attr,
-        func.count(),
-        *(query, for key, query in extra),
+        sql_count(),
+        *(query for key, query in extra),
     ).where(
         *where,
         is_not(x_attr.filter_attr, None),
@@ -132,3 +253,39 @@ def query_attr_scatter(
             } for x, y, n, *rest in scatter_results
         ],
     }
+
+
+TSearch = TypeVar('TSearch', bound=Tuple)
+
+
+def query_attr_search(
+    sess: Session,
+    table: Type[SQLModel],
+    args: TSearch,
+    where: list,
+    metric_ranges: Dict[str, Tuple[Union[int, float], Union[int, float]]],
+    enum_filters: Dict[str, List[str]],
+    order_by: Optional[str],
+    metrics: Dict[str, MetricDefinition],
+    enums: Dict[str, dict],
+) -> List[TSearch]:
+    filters = list(where)
+    for metric_name, (filter_start, filter_end) in metric_ranges.items():
+        if metric_name not in metrics:
+            raise ValueError(f"Invalid metric filter: {metric_name}")
+        metric_attr = getattr(table, metric_name)
+        filters.append(between_op(metric_attr, filter_start, filter_end))
+    for enum_name, enum_list in enum_filters.items():
+        if enum_name not in enums:
+            raise ValueError(f"Invalid enum filter: {enum_name}")
+        enum_attr = getattr(table, enum_name)
+        filters.append(in_op(enum_attr, enum_list))
+
+    if order_by is not None and order_by not in metrics and order_by not in enums:
+        raise ValueError(f"Invalid ordering: {order_by}")
+
+    return sess.exec(
+        select(args)
+        .where(*filters)
+        .order_by(order_by)
+    ).fetchall()

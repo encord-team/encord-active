@@ -24,6 +24,7 @@ from encord_active.db.models import (
     ProjectDataAnalytics, ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra,
 )
 from encord_active.server.routers.project2_engine import engine
+from encord_active.server.routers.queries import metric_query
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
@@ -60,32 +61,6 @@ def _get_metric_domain(
         return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props, ProjectAnnotationAnalyticsExtra
     else:
         raise ValueError(f"Bad domain: {domain}")
-
-
-def _where_metric_not_null(cls, metric_name: str, metrics: Dict[str, MetricDefinition]):
-    metric = metrics[metric_name]
-    return is_not(getattr(cls, metric_name), None)
-
-
-def _get_metric(
-    cls, metric_name: str, metrics: Dict[str, MetricDefinition], buckets: Optional[int] = None
-) -> Union[int, float]:
-    metric = metrics[metric_name]# type: ignore
-    raw_metric = getattr(cls, metric_name)
-    if buckets is not None:
-        if metric.type == MetricType.NORMAL:
-            buckets_float = float(buckets)
-            return func.floor(raw_metric * buckets_float) / buckets_float  # type: ignore
-        elif metric.type == MetricType.UFLOAT:
-            # FIXME: something smart with log?
-            return func.floor(raw_metric * 10.0) / 10.0  # type: ignore
-        elif metric.type == MetricType.UINT:
-            # FIXME: something smart again
-            return raw_metric
-        else:
-            return raw_metric
-    else:
-        return raw_metric
 
 
 def _load_metric(
@@ -253,67 +228,43 @@ def metric_search(
 
 @router.get("/scatter")
 def scatter_2d_data_metric(
-    project_hash: uuid.UUID, domain: AnalysisDomain, x_metric: str, y_metric: str, buckets: int = 500
+    project_hash: uuid.UUID, domain: AnalysisDomain, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10
 ):
     domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
     with Session(engine) as sess:
-        x_metric_fn = _get_metric(domain_ty, x_metric, domain_metrics, buckets=buckets)
-        y_metric_fn = _get_metric(domain_ty, y_metric, domain_metrics, buckets=buckets)
-        scatter_query = (
-            select(domain_ty.du_hash, domain_ty.frame, x_metric_fn, y_metric_fn, func.count())  # type: ignore
-            .where(
-                domain_ty.project_hash == project_hash,
-                _where_metric_not_null(domain_ty, x_metric, domain_metrics),
-                _where_metric_not_null(domain_ty, y_metric, domain_metrics),
-            )
-            .group_by(x_metric_fn, y_metric_fn)
+        return metric_query.query_attr_scatter(
+            sess=sess,
+            table=domain_ty,
+            extra=[],  # FIXME: define extra for scatter plot visualization
+            where=[
+                domain_ty.project_hash == project_hash
+            ],
+            x_metric_name=x_metric,
+            y_metric_name=y_metric,
+            metrics=domain_metrics,
+            enums=domain_enums,
+            buckets=buckets,
         )
-        scatter_results = sess.exec(scatter_query).fetchall()
-    samples = [
-        {"x": x, "y": y, "n": n, "du_hash": du_hash, "frame": frame} for du_hash, frame, x, y, n in scatter_results
-    ]
-
-    return {
-        "sampling": 1.0,
-        "samples": samples,
-    }
 
 
-@router.get("/dist")
-def get_metric_distribution(project_hash: uuid.UUID, domain: AnalysisDomain, group: str, buckets: int = 100):
+@router.get("/distribution")
+def get_metric_distribution(
+    project_hash: uuid.UUID, domain: AnalysisDomain, group: str, buckets: Literal[10, 100, 1000] = 10
+):
     domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
-    if group in domain_metrics:
-        metric = domain_metrics[group]
-        metric_attr = getattr(domain_ty, group)
-        filter_attr = metric_attr
-        if metric.type == MetricType.NORMAL:
-            bucket_float = float(buckets)
-            group_by_attr = func.floor(metric_attr * bucket_float) / bucket_float
-        else:
-            group_by_attr = metric_attr  # type: ignore
-    elif group in domain_enums:
-        group_by_attr = getattr(domain_ty, group)
-        filter_attr = group_by_attr
-    else:
-        raise ValueError(f"{group} is not a valid distribution key")
-
     with Session(engine) as sess:
-        grouping_query = (
-            select(group_by_attr, func.count())  # type: ignore
-            .where(domain_ty.project_hash == project_hash, is_not(filter_attr, None))
-            .group_by(group_by_attr)
+        return metric_query.query_attr_distribution(
+            sess=sess,
+            table=domain_ty,
+            extra=[],
+            where=[
+                domain_ty.project_hash == project_hash
+            ],
+            attr_name=group,
+            metrics=domain_metrics,
+            enums=domain_enums,
+            buckets=buckets,
         )
-        grouping_results = sess.exec(grouping_query).fetchall()
-
-    return {
-        "results": [
-            {
-                "group": grouping,
-                "count": count,
-            }
-            for grouping, count in grouping_results
-        ]
-    }
 
 
 @functools.lru_cache(maxsize=2)
