@@ -79,9 +79,7 @@ export const Explorer = ({
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-      () => {
-          return api.fetchHasPremiumFeatures
-      },
+      api.fetchHasPremiumFeatures,
     { staleTime: Infinity, networkMode: "always" }
   );
   const { data: hasSimilaritySearch } = useQuery(
