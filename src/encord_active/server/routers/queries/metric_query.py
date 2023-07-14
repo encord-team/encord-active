@@ -6,9 +6,10 @@ from sqlalchemy.sql.operators import is_not, not_between_op, between_op
 from sqlalchemy.sql.functions import count as sql_count, max as sql_max, min as sql_min
 from sqlmodel import Session, SQLModel, select, func
 
+from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType
 from encord_active.server.routers.queries import search_query
-from encord_active.server.routers.queries.domain_query import Tables, AnalyticsTable
+from encord_active.server.routers.queries.domain_query import Tables, AnalyticsTable, ProjectFilters
 
 """
 Severe IQR Scale factor for iqr range
@@ -32,7 +33,7 @@ def get_metric_or_enum(
     table: AnalyticsTable,
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
-    enums: Dict[str, dict],
+    enums: Dict[str, EnumDefinition],
     buckets: Optional[Literal[10, 100, 1000]] = None,
 ) -> AttrMetadata:
     metric = metrics.get(attr_name, None)
@@ -164,16 +165,16 @@ def query_metric_attr_summary(
 def query_attr_summary(
     sess: Session,
     tables: Tables,
-    where: list,
+    project_filters: ProjectFilters,
     filters: Optional[search_query.SearchFilters],
 ) -> dict:
     domain_tables = tables.annotation or tables.data
-    if filters is not None:
-        where = where + search_query.search_filters(
-            tables=tables,
-            base="analytics",
-            search=filters,
-        )
+    where = search_query.search_filters(
+        tables=tables,
+        base="analytics",
+        search=filters,
+        project_filters=project_filters,
+    )
     count: int = sess.exec(select(sql_count()).where(*where)).first() or 0
     metrics = {
         metric_name: query_metric_attr_summary(
@@ -188,15 +189,17 @@ def query_attr_summary(
     return {
         "count": count,
         "metrics": {k: v for k, v in metrics.items() if v is not None},
-        "enums": domain_tables.enums,
+        "enums": {
+            k: {}  # FIXME: implement properly
+            for k, e in domain_tables.enums
+        },
     }
 
 
 def query_attr_distribution(
     sess: Session,
     tables: Tables,
-    extra: List[Tuple[str, Union[int, float, str]]],
-    where: list,
+    project_filters: ProjectFilters,
     attr_name: str,
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
@@ -205,16 +208,15 @@ def query_attr_distribution(
     attr = get_metric_or_enum(
         domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
     )
-    if filters is not None:
-        where = where + search_query.search_filters(
-            tables=tables,
-            base="analytics",
-            search=filters,
-        )
+    where = search_query.search_filters(
+        tables=tables,
+        base="analytics",
+        search=filters,
+        project_filters=project_filters,
+    )
     grouping_query = select(
         attr.group_attr,
         sql_count(),
-        *(query for key, query in extra),
     ).where(
         *where,
         is_not(attr.filter_attr, None)
@@ -225,7 +227,6 @@ def query_attr_distribution(
             {
                 "group": grouping,
                 "count": count,
-                **{k: v for (k,), v in zip(extra, rest)}
             }
             for grouping, count, *rest in grouping_results
         ],
@@ -236,8 +237,7 @@ def query_attr_distribution(
 def query_attr_scatter(
     sess: Session,
     tables: Tables,
-    extra: List[Tuple[str, Union[int, float, str]]],
-    where: list,
+    project_filters: ProjectFilters,
     x_metric_name: str,
     y_metric_name: str,
     buckets: Literal[10, 100, 1000],
@@ -250,17 +250,16 @@ def query_attr_scatter(
     y_attr = get_metric_or_enum(
         domain_tables.analytics, y_metric_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
     )
-    if filters is not None:
-        where = where + search_query.search_filters(
-            tables=tables,
-            base="analytics",
-            search=filters,
-        )
+    where = search_query.search_filters(
+        tables=tables,
+        base="analytics",
+        search=filters,
+        project_filters=project_filters,
+    )
     scatter_query = select(
         x_attr.group_attr,
         y_attr.group_attr,
         sql_count(),
-        *(query for key, query in extra),
     ).where(
         *where,
         is_not(x_attr.filter_attr, None),
@@ -275,7 +274,6 @@ def query_attr_scatter(
                 "x": x,
                 "y": y,
                 "n": n,
-                **{k: v for (k,), v in zip(extra, rest)}
             } for x, y, n, *rest in scatter_results
         ],
     }
