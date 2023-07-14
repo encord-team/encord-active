@@ -1,9 +1,32 @@
-from typing import Union, Literal, Optional
+import uuid
+from typing import Dict, Tuple, Union, List, Optional, Literal
 
+from pydantic import BaseModel
 from sqlalchemy.sql.operators import between_op, in_op
 
-from encord_active.server.routers.queries.domain_query import Tables, SearchFilters, DomainTables, DomainSearchFilters, \
-    AnalyticsTable, ReductionTable, ProjectFilters
+from encord_active.server.routers.queries.domain_query import Tables, DomainTables, AnalyticsTable, ReductionTable, \
+    ProjectFilters
+
+
+class Embedding2DFilter(BaseModel):
+    reduction_hash: uuid.UUID
+    min: Tuple[float, float]
+    max: Tuple[float, float]
+
+
+class DomainSearchFilters(BaseModel):
+    metrics: Dict[str, Tuple[Union[int, float], Union[int, float]]]
+    enums: Dict[str, List[str]]
+    reduction: Optional[Embedding2DFilter]
+    tags: Optional[List[str]]
+
+
+class SearchFilters(BaseModel):
+    data: Optional[DomainSearchFilters]
+    annotation: Optional[DomainSearchFilters]
+
+
+SearchFiltersFastAPI = Optional[SearchFilters]  # FIXME: make url?
 
 
 def search_filters(
@@ -75,7 +98,6 @@ def _append_filters(
     base_table: Union[AnalyticsTable, ReductionTable],
     filters: list
 ) -> None:
-
     # Metric filters
     analytics_join = False
     if len(search.enums) > 0:

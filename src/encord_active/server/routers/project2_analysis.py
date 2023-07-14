@@ -15,7 +15,7 @@ from sqlmodel import Session, select
 
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
-from encord_active.server.routers.queries.domain_query import Tables, TABLES_DATA, TABLES_ANNOTATION, SearchFilters
+from encord_active.server.routers.queries.domain_query import Tables, TABLES_DATA, TABLES_ANNOTATION
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
@@ -38,7 +38,7 @@ def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
 
 
 @router.get("/summary")
-def metric_summary(project_hash: uuid.UUID, domain: AnalysisDomain, filters: Optional[SearchFilters] = None):
+def metric_summary(project_hash: uuid.UUID, domain: AnalysisDomain, filters: search_query.SearchFiltersFastAPI = None):
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
         return metric_query.query_attr_summary(
@@ -55,7 +55,7 @@ def metric_summary(project_hash: uuid.UUID, domain: AnalysisDomain, filters: Opt
 def metric_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
-    filters: Optional[SearchFilters] = None,
+    filters: search_query.SearchFiltersFastAPI = None,
     order_by: Optional[str] = None,
     desc: bool = False,
     offset: int = 0,
@@ -112,7 +112,7 @@ def scatter_2d_data_metric(
     x_metric: str,
     y_metric: str,
     buckets: Literal[10, 100, 1000] = 10,
-    filters: Optional[SearchFilters] = None,
+    filters: search_query.SearchFiltersFastAPI = None,
 ):
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -135,7 +135,7 @@ def get_metric_distribution(
     domain: AnalysisDomain,
     group: str,
     buckets: Literal[10, 100, 1000] = 10,
-    filters: Optional[SearchFilters] = None,
+    filters: search_query.SearchFiltersFastAPI = None,
 ):
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -157,7 +157,7 @@ def get_2d_embedding_summary(
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = 10,
-    filters: Optional[SearchFilters] = None,
+    filters: search_query.SearchFiltersFastAPI = None,
 ):
     tables = _get_metric_domain_tables(domain)
     domain_tables = tables.annotation or tables.data
