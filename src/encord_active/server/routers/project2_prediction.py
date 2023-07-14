@@ -360,46 +360,40 @@ def prediction_metric_scatter(prediction_hash: uuid.UUID, x_metric: str, y_metri
 
 
 @router.get("/metric_performance")
-def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou: float, metric_name: str):
+def prediction_metric_performance(
+    prediction_hash: uuid.UUID,
+    iou: float,
+    metric_name: str,
+    buckets: Literal[10, 100, 1000] = 100,
+):
     # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
     with Session(engine) as sess:
-        metric = AnnotationMetrics[metric_name]
-        metric_attr = getattr(ProjectPredictionAnalytics, metric_name)
-        where = [ProjectPredictionAnalytics.prediction_hash == prediction_hash, is_not(metric_attr, None)]
-        if metric.type == MetricType.NORMAL:
-            metric_min = 0.0
-            metric_max = 1.0
-        else:
-            metric_min = sess.exec(select(func.min(metric_attr)).where(*where)).first()  # type: ignore
-            metric_max = sess.exec(select(func.max(metric_attr)).where(*where)).first()  # type: ignore
-            if metric_min is None or metric_max is None:
-                return {
-                    "precision": {},
-                    "fns": {},
-                }
-            metric_min = float(metric_min)
-            metric_max = float(metric_max)
-        metric_bucket_size = (metric_max - metric_min) / float(buckets)
-        if metric_bucket_size == 0.0:
-            metric_bucket_size = 1.0
+        metric_attr = metric_query.get_metric_or_enum(
+            table=ProjectPredictionAnalytics,
+            attr_name=metric_name,
+            metrics=AnnotationMetrics,
+            enums={},
+            buckets=buckets,
+        )
         metric_buckets = sess.exec(
-            select(  # type: ignore
+            select(
                 ProjectPredictionAnalytics.feature_hash,
-                func.floor((metric_attr - metric_min) / metric_bucket_size),
+                metric_attr.group_attr,
                 func.sum(
-                    (ProjectPredictionAnalytics.iou >= iou)
-                    & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+                    (ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)
                 ),
                 func.count(),
             )
             .where(
-                *where,
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                ProjectPredictionAnalytics.iou >= iou,
+                is_not(metric_attr.filter_attr, None)
             )
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
-                func.floor((metric_attr - metric_min) / metric_bucket_size),
+                metric_attr.group_attr,
             ).order_by(
-                func.floor((metric_attr - metric_min) / metric_bucket_size),
+                metric_attr.group_attr,
             )
         ).fetchall()
         precision: Dict[str, List[dict]] = {}
@@ -407,27 +401,33 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
         for feature, bucket_m, bucket_tp, bucket_tp_fp in metric_buckets:
             bucket_avg = float(bucket_tp) / float(bucket_tp_fp)
             precision.setdefault(feature, []).append(
-                {"m": metric_min + (bucket_m * metric_bucket_size), "a": bucket_avg, "n": bucket_tp_fp}
+                {"m": bucket_m, "a": bucket_avg, "n": bucket_tp_fp}
             )
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
-        metric_attr_fn = getattr(ProjectPredictionAnalyticsFalseNegatives, metric_name)
+        metric_attr = metric_query.get_metric_or_enum(
+            table=ProjectPredictionAnalyticsFalseNegatives,
+            attr_name=metric_name,
+            metrics=AnnotationMetrics,
+            enums={},
+            buckets=buckets,
+        )
         metric_fn_buckets = sess.exec(
             select(  # type: ignore
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
-                func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
+                metric_attr.group_attr,
                 func.count(),
             )
             .where(
                 ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
                 ProjectPredictionAnalyticsFalseNegatives.iou_threshold > iou,
-                is_not(metric_attr, None),
+                is_not(metric_attr.filter_attr, None),
             )
             .group_by(
-                ProjectPredictionAnalytics.feature_hash,
-                func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
+                metric_attr.group_attr,
             ).order_by(
-                func.floor((metric_attr_fn - metric_min) / metric_bucket_size),
+                metric_attr.group_attr,
             )
         ).fetchall()
         fns: Dict[str, List[dict]] = {}
@@ -436,7 +436,7 @@ def prediction_metric_performance(prediction_hash: uuid.UUID, buckets: int, iou:
             label_num = (fn_num + fp_tp_num)
             fns.setdefault(feature, []).append(
                 {
-                    "m": metric_min + (bucket_m * metric_bucket_size),
+                    "m": bucket_m,
                     "a": 0 if label_num == 0 else fn_num / label_num,
                     "n": label_num
                 }
