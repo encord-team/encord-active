@@ -21,6 +21,8 @@ RUN apt-get -y clean  \
 
 RUN pip install ".[coco]"
 
+RUN prisma generate --schema=./src/encord_active/lib/db/schema.prisma
+
 WORKDIR /data
 
 RUN git config --global --add safe.directory '*'
