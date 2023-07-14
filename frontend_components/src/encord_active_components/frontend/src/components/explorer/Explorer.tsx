@@ -53,6 +53,7 @@ export const Explorer = ({
   scope,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
+  console.log('debug explorer load', {authToken, projectName, filters, scope, baseUrl });
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -77,15 +78,19 @@ export const Explorer = ({
 
   const api = getApi(projectName, authToken, baseUrl);
 
+  console.log('api', api);
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-    api.fetchHasPremiumFeatures,
-    { staleTime: Infinity }
+      () => {
+          console.log('fetch premium request', );
+          return api.fetchHasPremiumFeatures
+      },
+    { staleTime: Infinity, networkMode: "always" }
   );
   const { data: hasSimilaritySearch } = useQuery(
     ["hasSimilaritySearch"],
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    { enabled: !!selectedMetric, staleTime: Infinity, networkMode: "always" }
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
@@ -95,13 +100,13 @@ export const Explorer = ({
         similarityItem!,
         scope === "model_quality" ? "image" : selectedMetric?.embeddingType!
       ),
-    { enabled: !!similarityItem && !!selectedMetric }
+    { enabled: !!similarityItem && !!selectedMetric, networkMode: "always" }
   );
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
     () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    { enabled: !!selectedMetric, staleTime: Infinity, networkMode: "always" }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
@@ -111,7 +116,7 @@ export const Explorer = ({
         filters?.prediction_filters?.type,
         filters?.prediction_filters?.outcome
       ),
-    { staleTime: Infinity }
+    { staleTime: Infinity, networkMode: "always" }
   );
 
   const withSortOrder = useMemo(
