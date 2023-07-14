@@ -1,7 +1,8 @@
 import uuid
 from typing import Dict, Tuple, Union, List, Optional, Literal
 
-from pydantic import BaseModel
+from fastapi import Depends, Query, HTTPException
+from pydantic import BaseModel, Json, ValidationError, parse_obj_as
 from sqlalchemy.sql.operators import between_op, in_op
 
 from encord_active.server.routers.queries.domain_query import Tables, DomainTables, AnalyticsTable, ReductionTable, \
@@ -15,7 +16,7 @@ class Embedding2DFilter(BaseModel):
 
 
 class DomainSearchFilters(BaseModel):
-    metrics: Dict[str, Tuple[Union[int, float], Union[int, float]]]
+    metrics: Dict[str, Tuple[float, float]]
     enums: Dict[str, List[str]]
     reduction: Optional[Embedding2DFilter]
     tags: Optional[List[str]]
@@ -26,7 +27,22 @@ class SearchFilters(BaseModel):
     annotation: Optional[DomainSearchFilters]
 
 
-SearchFiltersFastAPI = Optional[SearchFilters]  # FIXME: make url?
+SearchFiltersFastAPI = Optional[SearchFilters]
+
+
+def parse_search_filters_fast_api(
+    value: Optional[Json] = Query(None, alias="filters", description="Search Filters")
+) -> SearchFiltersFastAPI:
+    try:
+        if value is None:
+            return None
+        else:
+            return parse_obj_as(SearchFilters, value)
+    except ValidationError as err:
+        raise HTTPException(400, detail=err.errors())
+
+
+SearchFiltersFastAPIDepends = Depends(parse_search_filters_fast_api, use_cache=False)
 
 
 def search_filters(
@@ -47,12 +63,13 @@ def search_filters(
         if search is not None:
             if search.annotation is not None:
                 raise ValueError(f"Annotation queries are not supported in the raw data domain")
-            _append_filters(
-                tables=tables.data,
-                search=search.data,
-                base_table=base_table,
-                filters=filters,
-            )
+            if search.data is not None:
+                _append_filters(
+                    tables=tables.data,
+                    search=search.data,
+                    base_table=base_table,
+                    filters=filters,
+                )
     else:
         base_table = tables.annotation.analytics if base == "analytics" else tables.annotation.reduction
         _project_filters(
@@ -62,18 +79,20 @@ def search_filters(
         )
         # Data & Annotation
         if search is not None:
-            _append_filters(
-                tables=tables.annotation,
-                search=search.annotation,
-                base_table=base_table,
-                filters=filters,
-            )
-            _append_filters(
-                tables=tables.data,
-                search=search.data,
-                base_table=base_table,
-                filters=filters,
-            )
+            if search.annotation is not None:
+                _append_filters(
+                    tables=tables.annotation,
+                    search=search.annotation,
+                    base_table=base_table,
+                    filters=filters,
+                )
+            if search.data is not None:
+                _append_filters(
+                    tables=tables.data,
+                    search=search.data,
+                    base_table=base_table,
+                    filters=filters,
+                )
 
     return filters
 
@@ -100,7 +119,7 @@ def _append_filters(
 ) -> None:
     # Metric filters
     analytics_join = False
-    if len(search.enums) > 0:
+    if len(search.metrics) > 0:
         if base_table != tables.analytics:
             for j in tables.join:
                 filters.append(
