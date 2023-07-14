@@ -2,11 +2,13 @@ import dataclasses
 import math
 from typing import Dict, Type, Union, List, Tuple, Optional, Literal, TypeVar
 
-from sqlalchemy.sql.operators import is_not, not_between_op, between_op, in_op
+from sqlalchemy.sql.operators import is_not, not_between_op, between_op
 from sqlalchemy.sql.functions import count as sql_count, max as sql_max, min as sql_min
 from sqlmodel import Session, SQLModel, select, func
 
 from encord_active.db.metrics import MetricDefinition, MetricType
+from encord_active.server.routers.queries import search_query
+from encord_active.server.routers.queries.domain_query import Tables, AnalyticsTable
 
 """
 Severe IQR Scale factor for iqr range
@@ -27,7 +29,7 @@ class AttrMetadata:
 
 
 def get_metric_or_enum(
-    table: Type[SQLModel],
+    table: AnalyticsTable,
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
     enums: Dict[str, dict],
@@ -161,40 +163,54 @@ def query_metric_attr_summary(
 
 def query_attr_summary(
     sess: Session,
-    table: Type[SQLModel],
+    tables: Tables,
     where: list,
-    metrics: Dict[str, MetricDefinition],
-    enums: Dict[str, dict]
+    filters: Optional[search_query.SearchFilters],
 ) -> dict:
+    domain_tables = tables.annotation or tables.data
+    if filters is not None:
+        where = where + search_query.search_filters(
+            tables=tables,
+            base="analytics",
+            search=filters,
+        )
     count: int = sess.exec(select(sql_count()).where(*where)).first() or 0
     metrics = {
         metric_name: query_metric_attr_summary(
             sess=sess,
-            table=table,
+            table=domain_tables.analytics,
             where=where,
             metric_name=metric_name,
-            metrics=metrics,
+            metrics=domain_tables.metrics,
         )
-        for metric_name, metric in metrics.items()
+        for metric_name, metric in domain_tables.metrics.items()
     }
     return {
         "count": count,
         "metrics": {k: v for k, v in metrics.items() if v is not None},
-        "enums": enums,
+        "enums": domain_tables.enums,
     }
 
 
 def query_attr_distribution(
     sess: Session,
-    table: Type[SQLModel],
+    tables: Tables,
     extra: List[Tuple[str, Union[int, float, str]]],
     where: list,
     attr_name: str,
-    metrics: Dict[str, MetricDefinition],
-    enums: Dict[str, dict],
     buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
 ) -> dict:
-    attr = get_metric_or_enum(table, attr_name, metrics, enums, buckets=buckets)
+    domain_tables = tables.annotation or tables.data
+    attr = get_metric_or_enum(
+        domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+    )
+    if filters is not None:
+        where = where + search_query.search_filters(
+            tables=tables,
+            base="analytics",
+            search=filters,
+        )
     grouping_query = select(
         attr.group_attr,
         sql_count(),
@@ -219,17 +235,27 @@ def query_attr_distribution(
 
 def query_attr_scatter(
     sess: Session,
-    table: Type[SQLModel],
+    tables: Tables,
     extra: List[Tuple[str, Union[int, float, str]]],
     where: list,
     x_metric_name: str,
     y_metric_name: str,
-    metrics: Dict[str, MetricDefinition],
-    enums: Dict[str, dict],
     buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
 ) -> dict:
-    x_attr = get_metric_or_enum(table, x_metric_name, metrics, enums, buckets=buckets)
-    y_attr = get_metric_or_enum(table, y_metric_name, metrics, enums, buckets=buckets)
+    domain_tables = tables.annotation or tables.data
+    x_attr = get_metric_or_enum(
+        domain_tables.analytics, x_metric_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+    )
+    y_attr = get_metric_or_enum(
+        domain_tables.analytics, y_metric_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+    )
+    if filters is not None:
+        where = where + search_query.search_filters(
+            tables=tables,
+            base="analytics",
+            search=filters,
+        )
     scatter_query = select(
         x_attr.group_attr,
         y_attr.group_attr,
@@ -256,36 +282,3 @@ def query_attr_scatter(
 
 
 TSearch = TypeVar('TSearch', bound=Tuple)
-
-
-def query_attr_search(
-    sess: Session,
-    table: Type[SQLModel],
-    args: TSearch,
-    where: list,
-    metric_ranges: Dict[str, Tuple[Union[int, float], Union[int, float]]],
-    enum_filters: Dict[str, List[str]],
-    order_by: Optional[str],
-    metrics: Dict[str, MetricDefinition],
-    enums: Dict[str, dict],
-) -> List[TSearch]:
-    filters = list(where)
-    for metric_name, (filter_start, filter_end) in metric_ranges.items():
-        if metric_name not in metrics:
-            raise ValueError(f"Invalid metric filter: {metric_name}")
-        metric_attr = getattr(table, metric_name)
-        filters.append(between_op(metric_attr, filter_start, filter_end))
-    for enum_name, enum_list in enum_filters.items():
-        if enum_name not in enums:
-            raise ValueError(f"Invalid enum filter: {enum_name}")
-        enum_attr = getattr(table, enum_name)
-        filters.append(in_op(enum_attr, enum_list))
-
-    if order_by is not None and order_by not in metrics and order_by not in enums:
-        raise ValueError(f"Invalid ordering: {order_by}")
-
-    return sess.exec(
-        select(args)
-        .where(*filters)
-        .order_by(order_by)
-    ).fetchall()

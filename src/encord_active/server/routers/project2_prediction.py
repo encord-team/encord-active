@@ -11,7 +11,7 @@ from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.metrics import AnnotationMetrics, MetricType
+from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictionAnalyticsFalseNegatives
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query
