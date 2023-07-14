@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import Dict, Type, Union, List, Tuple, Optional, Literal, TypeVar
+from typing import Dict, Type, Union, Tuple, Optional, Literal, TypeVar
 
 from sqlalchemy.sql.operators import is_not, not_between_op, between_op
 from sqlalchemy.sql.functions import count as sql_count, max as sql_max, min as sql_min
@@ -191,7 +191,7 @@ def query_attr_summary(
         "metrics": {k: v for k, v in metrics.items() if v is not None},
         "enums": {
             k: {}  # FIXME: implement properly
-            for k, e in domain_tables.enums
+            for k, e in domain_tables.enums.items()
         },
     }
 
