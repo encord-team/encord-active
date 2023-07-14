@@ -1,5 +1,6 @@
 import functools
 import json
+import math
 import uuid
 from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple, Type, Union
@@ -16,15 +17,16 @@ from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
     MetricDefinition,
-    MetricType,
 )
 from encord_active.db.models import (
     AnnotationType,
     ProjectAnnotationAnalytics,
-    ProjectDataAnalytics, ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra,
+    ProjectDataAnalytics, ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsReduced,
+    ProjectAnnotationAnalyticsReduced,
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query
+from encord_active.server.routers.queries.domain_query import Tables, TABLES_DATA, TABLES_ANNOTATION, SearchFilters
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
@@ -39,6 +41,12 @@ class AnalysisDomain(Enum):
     Annotation = "annotation"
 
 
+def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
+    if domain == AnalysisDomain.Data:
+        return TABLES_DATA
+    else:
+        return TABLES_ANNOTATION
+
 def _get_metric_domain(
     domain: AnalysisDomain,
 ) -> Tuple[
@@ -46,10 +54,11 @@ def _get_metric_domain(
     Dict[str, MetricDefinition],
     Optional[str],
     Dict[str, dict],
-    Union[Type[ProjectDataAnalyticsExtra], Type[ProjectAnnotationAnalyticsExtra]]
+    Union[Type[ProjectDataAnalyticsExtra], Type[ProjectAnnotationAnalyticsExtra]],
+    Union[Type[ProjectDataAnalyticsReduced], Type[ProjectAnnotationAnalyticsReduced]],
 ]:
     if domain == AnalysisDomain.Data:
-        return ProjectDataAnalytics, DataMetrics, None, {}, ProjectDataAnalyticsExtra
+        return ProjectDataAnalytics, DataMetrics, None, {}, ProjectDataAnalyticsExtra, ProjectDataAnalyticsReduced
     elif domain == AnalysisDomain.Annotation:
         enum_props: Dict[str, dict] = {
             "feature_hash": {"type": "ontology"},
@@ -58,7 +67,8 @@ def _get_metric_domain(
                 "values": {annotation_type.value: annotation_type.name for annotation_type in AnnotationType},
             },
         }
-        return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props, ProjectAnnotationAnalyticsExtra
+        return ProjectAnnotationAnalytics, AnnotationMetrics, "object_hash", enum_props, \
+            ProjectAnnotationAnalyticsExtra, ProjectAnnotationAnalyticsReduced
     else:
         raise ValueError(f"Bad domain: {domain}")
 
@@ -128,7 +138,7 @@ def _load_metric(
 
 @router.get("/summary")
 def metric_summary(project_hash: uuid.UUID, domain: AnalysisDomain):
-    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra, domain_ty_2d = _get_metric_domain(domain)
     with Session(engine) as sess:
         count: int = sess.exec(select(func.count()).where(domain_ty.project_hash == project_hash)).first()  # type: ignore
     metrics = {
@@ -159,7 +169,7 @@ def metric_search(
         None if metric_outliers is None else json.loads(metric_outliers)
     )
     enum_filters_dict: Optional[Dict[str, List[str]]] = None if enum_filters is None else json.loads(enum_filters)
-    domain_ty, domain_metrics, domain_grouping, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    domain_ty, domain_metrics, domain_grouping, domain_enums, domain_ty_extra, domain_ty_2d = _get_metric_domain(domain)
 
     # Add metric filtering.
     query_filters = []
@@ -228,50 +238,95 @@ def metric_search(
 
 @router.get("/scatter")
 def scatter_2d_data_metric(
-    project_hash: uuid.UUID, domain: AnalysisDomain, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    x_metric: str,
+    y_metric: str,
+    buckets: Literal[10, 100, 1000] = 10,
+    filters: Optional[SearchFilters] = None,
 ):
-    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    tables = _get_metric_domain_tables(domain)
+    domain_tables = tables.annotation or tables.data
     with Session(engine) as sess:
         return metric_query.query_attr_scatter(
             sess=sess,
-            table=domain_ty,
+            tables=tables,
             extra=[],  # FIXME: define extra for scatter plot visualization
             where=[
-                domain_ty.project_hash == project_hash
+                # FIXME: make project_hash filter easier to define (hardcode!).
+                domain_tables.analytics.project_hash == project_hash
             ],
             x_metric_name=x_metric,
             y_metric_name=y_metric,
-            metrics=domain_metrics,
-            enums=domain_enums,
             buckets=buckets,
+            filters=filters,
         )
 
 
 @router.get("/distribution")
 def get_metric_distribution(
-    project_hash: uuid.UUID, domain: AnalysisDomain, group: str, buckets: Literal[10, 100, 1000] = 10
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    group: str,
+    buckets: Literal[10, 100, 1000] = 10,
+    filters: Optional[SearchFilters] = None,
 ):
-    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    tables = _get_metric_domain_tables(domain)
+    domain_tables = tables.annotation or tables.data
     with Session(engine) as sess:
         return metric_query.query_attr_distribution(
             sess=sess,
-            table=domain_ty,
+            tables=tables,
             extra=[],
             where=[
-                domain_ty.project_hash == project_hash
+                domain_tables.analytics.project_hash == project_hash
             ],
             attr_name=group,
-            metrics=domain_metrics,
-            enums=domain_enums,
             buckets=buckets,
+            filters=filters,
         )
+
+
+@router.get("/2d_embeddings/{reduction_hash}/summary")
+def get_2d_embedding_summary(
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    reduction_hash: uuid.UUID,
+    buckets: Literal[10, 100, 1000] = 10,
+    filters: Optional[SearchFilters] = None,
+):
+    tables = _get_metric_domain_tables(domain)
+    domain_tables = tables.annotation or tables.data
+
+    with Session(engine) as sess:
+        round_digits = None if buckets is None else int(math.log10(buckets))
+        query = select(
+            func.round(domain_tables.reduction.x, round_digits),
+            func.round(domain_tables.reduction.y, round_digits),
+            func.count(),
+        ).where(
+            domain_tables.reduction.project_hash == project_hash,
+            domain_tables.reduction.reduction_hash == reduction_hash,
+            # FIXME:
+        ).group_by(
+            func.round(domain_tables.reduction.x, round_digits),
+            func.round(domain_tables.reduction.y, round_digits),
+        )
+        results = sess.exec(query)
+    return {
+        "count": sum(n for x, y, n in results),
+        "2d_embedding": [
+            {"x": x, "y": y, "n": n}
+            for x, y, n in results
+        ]
+    }
 
 
 @functools.lru_cache(maxsize=2)
 def _get_nn_descent(
     project_hash: uuid.UUID, domain: AnalysisDomain
 ) -> Tuple[NNDescent, List[Tuple[Optional[bytes], uuid.UUID, int, Optional[str]]]]:
-    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra, domain_ty_2d = _get_metric_domain(domain)
     with Session(engine) as sess:
         query = select(
             domain_ty_extra.embedding_clip,
@@ -291,7 +346,7 @@ def search_similarity(
         project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int,
         embedding: str, object_hash: Optional[str] = None
 ):
-    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    domain_ty, domain_metrics, object_key, domain_enums, domain_ty_extra, domain_ty_2d = _get_metric_domain(domain)
     if embedding != "embedding_clip":
         raise ValueError("Unsupported embedding")
     with Session(engine) as sess:
@@ -336,7 +391,7 @@ def compare_metric_dissimilarity(
         compare_project_hash: uuid.UUID,
 ):
     # FIXME: try and convert to sql query for efficiency.
-    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra = _get_metric_domain(domain)
+    domain_ty, domain_metrics, extra_key, domain_enums, domain_ty_extra, domain_ty_2d = _get_metric_domain(domain)
     dissimilarity = {}
     with Session(engine) as sess:
         for metric_name in domain_metrics:
