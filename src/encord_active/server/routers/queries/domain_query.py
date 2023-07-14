@@ -3,10 +3,12 @@ from typing import Dict, Tuple, Union, List, Optional, Type, Literal
 
 from pydantic import BaseModel
 
+from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
 from encord_active.db.metrics import MetricDefinition, DataMetrics, AnnotationMetrics
 from encord_active.db.models import ProjectDataAnalyticsReduced, ProjectAnnotationAnalyticsReduced, \
     ProjectTaggedDataUnit, ProjectTaggedAnnotation, ProjectDataAnalytics, ProjectPredictionAnalytics, \
-    ProjectAnnotationAnalytics
+    ProjectAnnotationAnalytics, ProjectDataAnalyticsExtra, ProjectPredictionAnalyticsExtra, \
+    ProjectAnnotationAnalyticsExtra
 
 
 class Embedding2DFilter(BaseModel):
@@ -29,17 +31,21 @@ class SearchFilters(BaseModel):
 
 AnalyticsTable = Type[Union[ProjectDataAnalytics, ProjectAnnotationAnalytics, ProjectPredictionAnalytics]]
 ReductionTable = Type[Union[ProjectDataAnalyticsReduced, ProjectAnnotationAnalyticsReduced]]
+MetadataTable = Type[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectPredictionAnalyticsExtra]]
 TagTable = Type[Union[ProjectTaggedDataUnit, ProjectTaggedAnnotation]]
-TableJoinLiterals = List[Literal["project_hash", "prediction_hash", "du_hash", "frame", "object_hash"]]
+TableJoinLiterals = List[Literal["du_hash", "frame", "object_hash"]]
+
+ProjectFilters = Dict[Literal["project_hash", "prediction_hash"], List[uuid.UUID]]
 
 
 class DomainTables(BaseModel):
     analytics: AnalyticsTable
+    metadata: MetadataTable
     reduction: ReductionTable
     tag: TagTable
     join: TableJoinLiterals
     metrics: Dict[str, MetricDefinition]
-    enums: Dict[str, dict]
+    enums: Dict[str, EnumDefinition]
 
 
 class Tables(BaseModel):
@@ -49,19 +55,21 @@ class Tables(BaseModel):
 
 _DOMAIN_ANNOTATION = DomainTables(
     analytics=ProjectAnnotationAnalytics,
+    metadata=ProjectAnnotationAnalyticsExtra,
     reduction=ProjectAnnotationAnalyticsReduced,
     tag=ProjectTaggedAnnotation,
-    join=["project_hash", "du_hash", "frame", "object_hash"],
+    join=["du_hash", "frame", "object_hash"],
     metrics=AnnotationMetrics,
-    enums={}, # FIXME:
+    enums=AnnotationEnums,
 )
 _DOMAIN_DATA = DomainTables(
     analytics=ProjectDataAnalytics,
+    metadata=ProjectDataAnalyticsExtra,
     reduction=ProjectDataAnalyticsReduced,
     tag=ProjectTaggedDataUnit,
-    join=["project_hash", "du_hash", "frame"],
+    join=["du_hash", "frame"],
     metrics=DataMetrics,
-    enums={}, # FIXME:
+    enums=DataEnums,
 )
 
 TABLES_DATA = Tables(
