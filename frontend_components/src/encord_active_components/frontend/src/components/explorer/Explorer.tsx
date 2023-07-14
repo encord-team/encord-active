@@ -53,7 +53,6 @@ export const Explorer = ({
   scope,
   baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
-  console.log('debug explorer load', {authToken, projectName, filters, scope, baseUrl });
   const { ref, height = 0 } = useResizeObserver<HTMLDivElement>();
   useEffect(() => {
     Streamlit.setFrameHeight(height);
@@ -78,11 +77,9 @@ export const Explorer = ({
 
   const api = getApi(projectName, authToken, baseUrl);
 
-  console.log('api', api);
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
       () => {
-          console.log('fetch premium request', );
           return api.fetchHasPremiumFeatures
       },
     { staleTime: Infinity, networkMode: "always" }
@@ -233,7 +230,6 @@ export const Explorer = ({
               }
               onSelectionChange={(selection) => (
                 setPage(1),
-                console.log("embeddings"),
                 setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}
