@@ -17,7 +17,7 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
-    ProjectTaggedDataUnit, AnnotationType,
+    ProjectTaggedDataUnit, AnnotationType, ProjectEmbeddingReduction,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
@@ -69,8 +69,6 @@ def get_project_summary(project_hash: uuid.UUID):
 
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
-        predictions = sess.exec(select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)).fetchall()
-
         preview = sess.exec(
             select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
             .where(ProjectAnnotationAnalytics.project_hash == project_hash)
@@ -96,6 +94,13 @@ def get_project_summary(project_hash: uuid.UUID):
         annotation_count = sess.exec(
             select(func.count())
             .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+        ).first()
+        classification_count = sess.exec(
+            select(func.count())
+            .where(
+                ProjectAnnotationAnalytics.project_hash == project_hash,
+                ProjectAnnotationAnalytics.annotation_type == AnnotationType.CLASSIFICATION,
+            )
         ).first()
 
     return {
@@ -123,39 +128,39 @@ def get_project_summary(project_hash: uuid.UUID):
         "du_count": du_count,
         "frame_count": frame_count,
         "annotation_count": annotation_count,
-        "global": {
-            "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
-            "enums": {
-                "feature_hash": {"type": "ontology"},
-                "annotation_type": {
-                    "type": "enum",
-                    "title": "Annotation Type",
-                    "values": {
-                        annotation_type.value: annotation_type.name
-                        for annotation_type in AnnotationType
-                    },
-                },
-                "tag": {
-                    "type": "enum",
-                    "title": "Tags",
-                    "values": {tag.tag_hash: tag.name for tag in tags},
-                },
-                "prediction": {
-                    "type": "enum",
-                    "title": "Predictions",
-                    "values": {
-                        prediction.prediction_hash: prediction.name
-                        for prediction in predictions
-                    }
-                },
-            }
-        },
+        "classification_count": classification_count,
+        # "global": {
+        #    "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
+        #    "enums": {
+        #        "feature_hash": {"type": "ontology"},
+        #        "annotation_type": {
+        #            "type": "enum",
+        #            "title": "Annotation Type",
+        #            "values": {
+        #                annotation_type.value: annotation_type.name
+        #                for annotation_type in AnnotationType
+        #            },
+        #        },
+        #    }
+        # },
         "tags": {tag.tag_hash: tag.name for tag in tags},
-        "predictions": {
-            prediction.prediction_hash: prediction.name
-            for prediction in predictions
-        },
         "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
+    }
+
+
+@router.get("/{project_hash}/reductions")
+def list_supported_2d_embedding_reductions(project_hash: uuid.UUID):
+    with Session(engine) as sess:
+        r = sess.exec(select(ProjectEmbeddingReduction).where(ProjectEmbeddingReduction.project_hash == project_hash))
+    return {
+        "results": {
+            e.reduction_hash: {
+                "name": e.reduction_name,
+                "description": e.reduction_description,
+                "type": e.reduction_type.value,
+            }
+            for e in r
+        }
     }
 
 
