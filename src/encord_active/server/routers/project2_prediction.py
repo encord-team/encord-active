@@ -14,7 +14,8 @@ from sqlmodel.sql.sqltypes import GUID
 from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictionAnalyticsFalseNegatives
 from encord_active.server.routers.project2_engine import engine
-from encord_active.server.routers.queries import metric_query
+from encord_active.server.routers.queries import metric_query, search_query
+from encord_active.server.routers.queries.domain_query import TABLES_PREDICTION_TP_FP, TABLES_PREDICTION_FN
 
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
@@ -23,9 +24,26 @@ router = APIRouter(
 
 # FIXME: verify project_hash <=> prediction hash is allowed to access
 
+# FIXME: for group by filter_hash queries, what is the correct behaviour r.e case where no value exists for that feature
+#  hash
 
 @router.get("/summary")
-def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
+def get_project_prediction_summary(
+    prediction_hash: uuid.UUID,
+    iou: float,
+    filters: search_query.SearchFiltersFastAPI = None,
+):
+    # FIXME: this command will return the wrong answers when filters are applied!!!
+    tp_fp_where = search_query.search_filters(
+        tables=TABLES_PREDICTION_TP_FP,
+        base="analytics",
+        search=filters,
+        project_filters={
+            "prediction_hash": [prediction_hash],
+            # FIXME: project_hash
+        }
+    )
+    # FIXME: fn_where needs separate set of queries as this is implemented as a side table join.
     # FIXME: performance improvements are possible
     guid = GUID()
     with Session(engine) as sess:
@@ -325,37 +343,45 @@ def get_project_prediction_summary(prediction_hash: uuid.UUID, iou: float):
 
 
 @router.get("/analytics/{prediction_domain}/distribution")
-def prediction_metric_distribution(prediction_hash: uuid.UUID, group: str, buckets: Literal[10, 100, 1000] = 10):
+def prediction_metric_distribution(
+    prediction_hash: uuid.UUID,
+    group: str, buckets: Literal[10, 100, 1000] = 10,
+    filters: search_query.SearchFiltersFastAPI = None,
+):
+    # FIXME: prediction_domain!!! (this & scatter) both need it implemented
+    # FIXME: how to do we want to support fp-tp-fn split (2-group, 3-group)?
+    # FIXME:  or try to support unified?
     with Session(engine) as sess:
         return metric_query.query_attr_distribution(
             sess=sess,
-            table=ProjectPredictionAnalytics,
-            extra=[],
-            where=[
-                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
-            ],
+            tables=TABLES_PREDICTION_TP_FP,
+            project_filters={
+                "prediction_hash": [prediction_hash],
+                # FIXME: needs project_hash
+            },
             attr_name=group,
-            metrics=AnnotationMetrics,
-            enums={},
             buckets=buckets,
+            filters=filters,
         )
 
 
 @router.get("/analytics/{prediction_domain}/scatter")
-def prediction_metric_scatter(prediction_hash: uuid.UUID, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10):
+def prediction_metric_scatter(
+    prediction_hash: uuid.UUID, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10,
+    filters: search_query.SearchFiltersFastAPI = None,
+):
     with Session(engine) as sess:
         return metric_query.query_attr_scatter(
             sess=sess,
-            table=ProjectPredictionAnalytics,
-            extra=[],
-            where=[
-                ProjectPredictionAnalytics.prediction_hash == prediction_hash
-            ],
+            tables=TABLES_PREDICTION_TP_FP,
+            project_filters={
+                "prediction_hash": [prediction_hash],
+                # FIXME: needs project_hash
+            },
             x_metric_name=x_metric,
             y_metric_name=y_metric,
-            metrics=AnnotationMetrics,
-            enums={},
-            buckets=buckets
+            buckets=buckets,
+            filters=filters,
         )
 
 
@@ -365,15 +391,32 @@ def prediction_metric_performance(
     iou: float,
     metric_name: str,
     buckets: Literal[10, 100, 1000] = 100,
+    filters: search_query.SearchFiltersFastAPI = None,
 ):
-    # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
+    where_tp_fp = search_query.search_filters(
+        tables=TABLES_PREDICTION_TP_FP,
+        base="analytics",
+        search=filters,
+        project_filters={
+            "prediction_hash": [prediction_hash],
+            # FIXME: needs project hash for correct data join behaviour!!
+        }
+    )
+    where_fn = search_query.search_filters(
+        tables=TABLES_PREDICTION_FN,
+        base="analytics",
+        search=filters,
+        project_filters={
+            "prediction_hash": [prediction_hash],
+        }
+    )
     with Session(engine) as sess:
         metric_attr = metric_query.get_metric_or_enum(
             table=ProjectPredictionAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
             enums={},
-            buckets=buckets,
+            buckets=buckets, # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
         )
         metric_buckets = sess.exec(
             select(
@@ -385,9 +428,9 @@ def prediction_metric_performance(
                 func.count(),
             )
             .where(
-                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
                 ProjectPredictionAnalytics.iou >= iou,
-                is_not(metric_attr.filter_attr, None)
+                is_not(metric_attr.filter_attr, None),
+                *where_tp_fp
             )
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
@@ -419,9 +462,9 @@ def prediction_metric_performance(
                 func.count(),
             )
             .where(
-                ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
                 ProjectPredictionAnalyticsFalseNegatives.iou_threshold > iou,
                 is_not(metric_attr.filter_attr, None),
+                *where_fn,
             )
             .group_by(
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
@@ -477,5 +520,6 @@ def get_prediction_item(
     frame: int,
     annotation_hash: Optional[str] = None,
 ):
+    # FIXME: return required metadata to correctly view the associated value.
     return None
 

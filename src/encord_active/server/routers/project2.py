@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
 
+from encord_active.db.enums import EnumDefinition, DataEnums, AnnotationEnums
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
 from encord_active.db.models import (
     Project,
@@ -60,6 +61,17 @@ def _metric_summary(metrics: Dict[str, MetricDefinition]):
     }
 
 
+def _enum_summary(enums: Dict[str, EnumDefinition]):
+    return {
+        enum_name: {
+            "title": enum.title,
+            "values": enum.values,
+            "type": enum.enum_type.value,
+        }
+        for enum_name, enum in enums.items()
+    }
+
+
 @router.get("/{project_hash}/summary")
 def get_project_summary(project_hash: uuid.UUID):
     with Session(engine) as sess:
@@ -109,21 +121,11 @@ def get_project_summary(project_hash: uuid.UUID):
         "ontology": project.project_ontology,
         "data": {
             "metrics": _metric_summary(DataMetrics),
-            "enums": {},
+            "enums": _enum_summary(DataEnums),
         },
         "annotations": {
             "metrics": _metric_summary(AnnotationMetrics),
-            "enums": {
-                "feature_hash": {"type": "ontology"},
-                "annotation_type": {
-                    "type": "enum",
-                    "title": "Annotation Type",
-                    "values": {
-                        annotation_type.value: annotation_type.name
-                        for annotation_type in AnnotationType
-                    },
-                },
-            },
+            "enums": _enum_summary(AnnotationEnums),
         },
         "du_count": du_count,
         "frame_count": frame_count,
@@ -131,17 +133,7 @@ def get_project_summary(project_hash: uuid.UUID):
         "classification_count": classification_count,
         # "global": {
         #    "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
-        #    "enums": {
-        #        "feature_hash": {"type": "ontology"},
-        #        "annotation_type": {
-        #            "type": "enum",
-        #            "title": "Annotation Type",
-        #            "values": {
-        #                annotation_type.value: annotation_type.name
-        #                for annotation_type in AnnotationType
-        #            },
-        #        },
-        #    }
+        #    "enums": _enum_summary(AnnotationEnums | DataEnums),
         # },
         "tags": {tag.tag_hash: tag.name for tag in tags},
         "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,

@@ -9,6 +9,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 
+from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
@@ -35,17 +36,6 @@ def fk_constraint(
 Number of custom metrics supported for each table
 """
 CUSTOM_METRIC_COUNT: int = 4
-
-
-class AnnotationType(enum.Enum):
-    CLASSIFICATION = "classification"
-    BOUNDING_BOX = "bounding_box"
-    ROT_BOUNDING_BOX = "rot_bounding_box"
-    POINT = "point"
-    POLYLINE = "polyline"
-    POLYGON = "polygon"
-    SKELETON = "skeleton"
-    BITMASK = "bitmask"
 
 
 class EmbeddingReductionType(enum.Enum):
