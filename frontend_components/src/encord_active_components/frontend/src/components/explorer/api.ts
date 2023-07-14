@@ -407,13 +407,15 @@ export const useApi = () => {
     fetchProjectTags: () =>
       useQuery(["tags"], api.fetchProjectTags, {
         initialData: defaultTags,
+        networkMode: "always",
       }),
     fetchTaggedItems: () =>
       useQuery(["tagged_items"], api.fetchedTaggedItems, {
         initialData: new Map<string, GroupedTags>(),
+        networkMode: "always",
       }),
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
-      useQuery(["item", ...args], () => api.fetchProjectItem(...args)),
+      useQuery(["item", ...args], () => api.fetchProjectItem(...args), { networkMode: "always" }),
     fetch2DEmbeddings: (
       embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
       filters: Filters
@@ -421,7 +423,7 @@ export const useApi = () => {
       useQuery(
         ["2d_embeddings", embeddingType],
         () => api.fetchProject2DEmbeddings(embeddingType, filters),
-        { enabled: !!embeddingType, staleTime: Infinity }
+        { enabled: !!embeddingType, staleTime: Infinity, networkMode: "always" }
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>
       api.searchInProject(...args),

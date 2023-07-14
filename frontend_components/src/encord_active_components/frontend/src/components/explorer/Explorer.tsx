@@ -79,13 +79,13 @@ export const Explorer = ({
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-    api.fetchHasPremiumFeatures,
-    { staleTime: Infinity }
+      api.fetchHasPremiumFeatures,
+    { staleTime: Infinity, networkMode: "always" }
   );
   const { data: hasSimilaritySearch } = useQuery(
     ["hasSimilaritySearch"],
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    { enabled: !!selectedMetric, staleTime: Infinity, networkMode: "always" }
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
@@ -95,13 +95,13 @@ export const Explorer = ({
         similarityItem!,
         scope === "model_quality" ? "image" : selectedMetric?.embeddingType!
       ),
-    { enabled: !!similarityItem && !!selectedMetric }
+    { enabled: !!similarityItem && !!selectedMetric, networkMode: "always" }
   );
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
     ["item_ids", selectedMetric, JSON.stringify(filters), [...itemSet]],
     () => api.fetchProjectItemIds(selectedMetric?.name!, filters, itemSet),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    { enabled: !!selectedMetric, staleTime: Infinity, networkMode: "always" }
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     ["metrics"],
@@ -111,7 +111,7 @@ export const Explorer = ({
         filters?.prediction_filters?.type,
         filters?.prediction_filters?.outcome
       ),
-    { staleTime: Infinity }
+    { staleTime: Infinity, networkMode: "always" }
   );
 
   const withSortOrder = useMemo(
@@ -228,7 +228,6 @@ export const Explorer = ({
               }
               onSelectionChange={(selection) => (
                 setPage(1),
-                console.log("embeddings"),
                 setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}

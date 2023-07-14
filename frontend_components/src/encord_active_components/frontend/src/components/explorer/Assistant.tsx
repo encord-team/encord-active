@@ -32,7 +32,7 @@ export const useSearch = (
       );
       return res;
     },
-    { enabled: false }
+    { enabled: false, networkMode: "always" }
   );
 
   useEffect(() => {
