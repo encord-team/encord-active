@@ -118,7 +118,7 @@ def scatter_2d_data_metric(
     domain: AnalysisDomain,
     x_metric: str,
     y_metric: str,
-    buckets: Literal[10, 100, 1000] = 10,
+    buckets: Literal[10, 100, 1000] = 1000,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)
