@@ -1,8 +1,10 @@
+from typing import Union
+
 from encord_active.analysis.conversion import BaseConverter
 from encord_active.analysis.types import HSVTensor, ImageTensor
 from encord_active.analysis.util import rgb_to_hsv
 
-HSVRange = tuple[int, int] | list[tuple[int, int]]
+HSVRange = Union[tuple[int, int], list[tuple[int, int]]]
 
 
 class RGBToHSV(BaseConverter):

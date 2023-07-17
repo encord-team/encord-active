@@ -16,7 +16,7 @@ class HSVColorMetric(OneImageMetric):
             hue_query:
         """
         super().__init__(
-            ident=color_name,
+            ident=f"metric_{color_name.lower()}",
             dependencies=set("hsv_image"),
             long_name=f"{color_name} Values".title(),
             desc=f"Ranks images by how {color_name.lower()} the average value of the image is.",

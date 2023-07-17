@@ -1,21 +1,12 @@
 from __future__ import annotations
 
-from typing import Annotated, NamedTuple
+from typing import Annotated, NamedTuple, Optional
 
 import torch
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from torch import Tensor
 
-
-class MetricKey(NamedTuple):
-    project_hash: str
-    label_hash: str
-    data_unit_hash: str
-    frame: int | None
-    annotation: str | None
-
-    def with_annotation(self, annotation: str):
-        return MetricKey(self.project_hash, self.label_hash, self.data_unit_hash, self.frame, annotation)
+from encord_active.db.models import AnnotationType
 
 
 class Point(NamedTuple):
@@ -27,35 +18,11 @@ class OntologyIdentifier(BaseModel):
     feature_hash: str
 
 
-class ObjectMetadata(OntologyIdentifier):
-    key: MetricKey
+class AnnotationMetadata(BaseModel):
     feature_hash: str
-    points: PointTensor
-    mask: MaskTensor
-
-    def torch_points(self) -> PointTensor:
-        return torch.tensor(self.points, dtype=torch.float)
-
-
-class ClassificationMetadata(OntologyIdentifier):
-    key: MetricKey
-    feature_hash: str
-
-
-class ObjectAndClassifications(BaseModel):
-    objects: list[ObjectMetadata] = Field(default_factory=list)
-    classifications: list[ClassificationMetadata] = Field(default_factory=list)
-
-
-class LabelMetadata(BaseModel):
-    id: int
-    label_hash: str
-    user_hash: str
-    data_hash: str
-    project_hash: str
-    label_status: int
-    labels: ObjectAndClassifications
-    # labels: Dict[str, ObjectAndClassifications]  -- Not clear what the key would be here?
+    annotation_type: AnnotationType
+    points: Optional[PointTensor]
+    mask: Optional[MaskTensor]
 
 
 class NearestNeighbors(NamedTuple):
@@ -98,7 +65,6 @@ One floating point or integer value.
 `None` means not applicable.
 """
 MetricDependencies = dict[str, MetricResult | EmbeddingTensor | NearestNeighbors]
-AnnotationsMetricDependencies = dict[MetricKey, MetricDependencies] | None  # TODO this needs to be fixed
 """
 Results for all objects in a frame
 `None` means not applicable.

@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-
-from torch import FloatTensor
 from torch.types import Device
 
 from encord_active.analysis.metrics.object.nearest_neighbor_agreement import (
@@ -45,34 +42,6 @@ Operations to support tracking for:
     - cascade delete data
     - invalidate nearby embeddings
 """
-
-
-@dataclass(frozen=True)
-class InvalidatedKey:
-    data_hash: str
-    frame: int
-    object_hash: str | None
-
-
-Invalidations = set[InvalidatedKey]
-
-
-@dataclass(frozen=True)
-class MetricResult:
-    value: float
-    message: str | None
-
-
-@dataclass
-class AnalysisResult:
-    metrics: dict[str, MetricResult]
-    embeddings: dict[str, FloatTensor]
-
-
-@dataclass
-class AnalysisResultWithObjects:
-    image: AnalysisResult
-    objects: dict[str, AnalysisResult]
 
 
 class AnalysisConfig:

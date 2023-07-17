@@ -7,7 +7,7 @@ from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
 class BrightnessMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="brightness",
+            ident="metric_brightness",
             dependencies={"area"},
             long_name="Brightness",
             desc="",

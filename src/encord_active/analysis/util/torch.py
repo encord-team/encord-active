@@ -9,8 +9,6 @@ from encord_active.analysis.types import (
     ImageTensor,
     LaplacianTensor,
     MaskTensor,
-    MetricKey,
-    ObjectMetadata,
     Point,
     PointTensor,
 )
@@ -30,12 +28,12 @@ def pillow_to_tensor(image: Image.Image) -> ImageTensor:
     return pil_to_tensor(image)
 
 
-def _obj_to_points(obj: dict, img_w: int, img_h: int) -> PointTensor:
+def obj_to_points(obj: dict, img_w: int, img_h: int) -> PointTensor:
     # TODO fix me
     return torch.zeros((10, 2), dtype=torch.float)
 
 
-def _obj_to_mask(obj: dict, img_w: int, img_h) -> MaskTensor:
+def obj_to_mask(obj: dict, img_w: int, img_h) -> MaskTensor:
     # TODO fix me
     shape = obj.get("shape")
     if not shape:
@@ -55,6 +53,7 @@ def _obj_to_mask(obj: dict, img_w: int, img_h) -> MaskTensor:
     return torch.zeros((img_h, img_w), dtype=torch.uint8)
 
 
+"""
 def obj_to_object_meta(obj: dict, img_w: int, img_h: int) -> ObjectMetadata:
     points = _obj_to_points(obj, img_w=img_w, img_h=img_h)
     mask = _obj_to_mask(obj, img_w=img_w, img_h=img_h)
@@ -73,6 +72,7 @@ def data_unit_to_object_meta(data_unit: dict, partial_key: MetricKey) -> dict[Me
     return {
         partial_key.with_annotation(o["objectHash"]): obj_to_object_meta(o, img_w=img_w, img_h=img_h) for o in obj_list
     }
+"""
 
 
 def tensor_to_pillow(tensor: ImageTensor) -> Image.Image:
