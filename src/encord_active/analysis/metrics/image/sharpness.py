@@ -7,7 +7,7 @@ from encord_active.analysis.util.torch import mask_to_box_extremes
 class SharpnessMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="sharpness",
+            ident="metric_sharpness",
             dependencies=set(),
             long_name="Sharpness",
             desc="",

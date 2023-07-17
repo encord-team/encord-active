@@ -7,7 +7,7 @@ from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
 class ContrastMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="contrast",
+            ident="metric_contrast",
             dependencies={"brightness", "area"},
             long_name="Contrast",
             desc="",

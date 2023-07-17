@@ -7,7 +7,7 @@ from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
 class RandomMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="random",
+            ident="metric_random",
             dependencies=set(),
             long_name="Random Value",
             desc="Assigns random float value in the range [0; 1].",

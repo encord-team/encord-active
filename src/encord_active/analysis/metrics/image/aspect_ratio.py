@@ -1,12 +1,12 @@
 from encord_active.analysis.metric import MetricDependencies, OneImageMetric
-from encord_active.analysis.types import ImageTensor, MaskTensor
+from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
 from encord_active.analysis.util import image_height, image_width, mask_to_box_extremes
 
 
 class AspectRatioMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="aspect-ratio",
+            ident="metric_aspect_ratio",
             dependencies=set(),
             long_name="Aspect Ratio",
             desc="",

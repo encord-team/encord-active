@@ -3,15 +3,13 @@ from typing import cast
 
 import torch
 from pynndescent import NNDescent
-from torch import BoolTensor, FloatTensor, IntTensor
 
-from encord_active.analysis.base import BaseAnalysis, BaseEvaluation
+from encord_active.analysis.base import BaseEvaluation
 from encord_active.analysis.metric import MetricDependencies
 from encord_active.analysis.types import (
     EmbeddingTensor,
     ImageTensor,
     MaskTensor,
-    MetricKey,
     MetricResult,
     NearestNeighbors,
     PointTensor,
@@ -62,11 +60,12 @@ class NearestImageEmbeddingQuery(BaseEvaluation):
     """
 
     def __init__(self, ident: str, embedding_source: str, max_neighbors: int = 11) -> None:
-        super().__init__(ident=ident, dependencies={embedding_source, "feature-hash"})
+        super().__init__(ident=ident, dependencies=set())
+        # NOTE: as this-is implemented externally by the executor.
+        # dependencies is not set. This returns a reference for up to 'max_neighbours' nearby
+        # values and all associated stage 1 metric results. (ONLY stage 1 metric results!)
         self.embedding_source = embedding_source
-        self.feature_hashes = []
-        self.keys: list[MetricKey] = []
-        self.index: NNDescent | None = None
+        self.max_neighbours = max_neighbors
 
     def setup_embedding_index(self, metric_results: dict[MetricKey, dict[str, MetricResult | EmbeddingTensor]]):
         # TODO split on images and objects

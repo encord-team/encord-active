@@ -8,7 +8,7 @@ from encord_active.analysis.util import image_height, image_width
 class AreaMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="img-area",
+            ident="metric_area",
             dependencies=set(),
             long_name="Area",
             desc="Area in pixels",

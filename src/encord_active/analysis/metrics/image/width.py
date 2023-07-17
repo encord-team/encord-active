@@ -7,12 +7,10 @@ from encord_active.analysis.util.torch import mask_to_box_extremes
 class WidthMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="width",
+            ident="metric_width",
             dependencies=set(),
             long_name="Width",
             desc="Width in pixels.",
-            apply_to_objects=False,
-            apply_to_classifications=False,
         )
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
