@@ -10,12 +10,14 @@ import cv2
 import numpy as np
 import pandas as pd
 import PIL
+from encord.objects.common import Shape
 from encord.objects.ontology_structure import OntologyStructure
 from pandas.errors import EmptyDataError
 from prisma.models import DataUnit
 from prisma.types import DataUnitWhereInput
 from tqdm.auto import tqdm
 
+from encord_active.lib.coco.parsers import parse_results
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.db.predictions import (
     BoundingBox,
@@ -86,6 +88,43 @@ def import_predictions(project: Project, predictions: list[Prediction]):
         use_cache_only=True,
         prediction_type=prediction_type,
     )
+
+
+def import_coco_predictions(
+    project: Project,
+    predictions_json: Path,
+    ontology_mapping: Optional[dict[str, str]] = None,
+    image_mapping: Optional[dict[int, str]] = None,
+):
+    """
+    Import predictions from the COCO Results format into the specified Encord Active project.
+
+    :param project: The project to import the predictions into.
+    :param predictions_json: The JSON file containing the predictions.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the ids of the COCO categories.
+        This mapping allows for the conversion of COCO categories to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding names of the label classes.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
+        Only the files whose names match the pattern will be considered for import.
+        Defaults to KITTI_FILE_NAME_REGEX.
+    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
+        from the file name in order to uniquely identify the data unit.
+        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
+        and optional frame number from the file name using the pattern specified in KITTI_FILE_NAME_REGEX.
+        For example, the data unit corresponding to a file with the name `example_image.jpg__5.txt` would have
+        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    """
+    predictions = migrate_coco_predictions(
+        project.file_structure.project_dir,
+        predictions_json,
+        ontology_mapping,
+        image_mapping,
+    )
+    import_predictions(project, predictions)
 
 
 def import_kitti_predictions(
@@ -167,6 +206,96 @@ def import_mask_predictions(
     import_predictions(project, predictions)
 
 
+def migrate_coco_predictions(
+    project_dir: Path,
+    predictions_json: Path,
+    ontology_mapping: Optional[dict[str, int]] = None,
+    image_mapping: Optional[dict[int, str]] = None,
+):
+    # Obtain the predictions contained in the file
+    coco_results = parse_results(_json_load(predictions_json))
+
+    # Retrieve the mapping from ontology object hashes to object class ids
+    if ontology_mapping is None:
+        ontology_mapping = _json_load(predictions_json.parent / "ontology_mapping.json")
+
+    # Retrieve the mapping from COCO image ids to data unit hashes
+    if image_mapping is None:
+        image_mapping = _json_load(predictions_json.parent / "image_mapping.json")
+
+    # Verify the validity of the ontology object hashes, ensuring they exist and represent bounding boxes
+    pfs = ProjectFileStructure(project_dir)
+    relevant_ontology_hashes = {
+        o.feature_node_hash: o.shape for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
+    }
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    if len(bad_hashes) > 0:
+        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
+
+    # Invert the ontology mapping keeping the target shapes (from object class id + shape to ontology object hash)
+    class_id_and_shape_to_ontology_hash = {(v, relevant_ontology_hashes[k]): k for k, v in ontology_mapping.items()}
+
+    # To be used in the docs as a prior step to migrate the COCO predictions (used to fill the image_mapping param)
+    # image_data_unit = json.loads(pfs.image_data_unit.read_text(encoding="utf-8"))
+    # ontology = json.loads(pfs.ontology.read_text(encoding="utf-8"))
+    # # NOTE: when we import a coco project, we change the category id to support
+    # # categories with multiple shapes. Here we iterate the ontology objects
+    # # and the ids are in the following format:
+    # # obj["id"] == `10` ->
+    # #   1 - original category_id
+    # #   0 - index of the shape -- we can discard and use the actual shape
+    # # NOTE: we subtract 1 from the id to match the original id since we don't
+    # # support 0 index when the project is created
+    # category_to_hash = {
+    #     (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
+    # }
+
+    # Migrate predictions from COCO Results format to the Prediction class format
+    predictions = []
+    for res in coco_results:
+        # Identify the data unit that corresponds to the given file
+        du_hash = image_mapping[res.image_id]
+        dus = pfs.data_units(DataUnitWhereInput(data_hash=du_hash))
+        if len(dus) == 0:
+            logger.info(f'No data unit found for data_hash "{du_hash}". Skipping.')
+            continue
+        du = dus[0]
+
+        # Normalize the prediction's points by their image size to match the Encord format
+        if res.segmentation:
+            format, shape = Format.POLYGON, Shape.POLYGON
+            data = res.segmentation / np.array([[du.width, du.height]])
+        elif res.bbox:
+            format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
+            orig_x, orig_y, orig_w, orig_h = res.bbox
+            x = orig_x / du.width
+            y = orig_y / du.height
+            w = orig_w / du.width
+            h = orig_h / du.height
+            data = BoundingBox(x=x, y=y, w=w, h=h)
+        else:
+            raise Exception("Unsupported result format")
+
+        ontology_obj_hash = class_id_and_shape_to_ontology_hash.get((res.category_id, shape))
+        if ontology_obj_hash is None:
+            logger.info(f'No ontology object found for category id "{res.category_id}" and shape "{shape}". Skipping.')
+            continue
+
+        predictions.append(
+            Prediction(
+                data_hash=du.data_hash,
+                confidence=res.score,
+                object=ObjectDetection(
+                    feature_hash=ontology_obj_hash,
+                    format=format,
+                    data=data,
+                ),
+            )
+        )
+
+    return predictions
+
+
 def migrate_kitti_predictions(
     project_dir: Path,
     predictions_dir: Path,
@@ -208,8 +337,7 @@ def migrate_kitti_predictions(
 
     # Retrieve the mapping from ontology object hashes to label names
     if ontology_mapping is None:
-        ontology_mapping = _retrieve_ontology_mapping(predictions_dir)
-
+        ontology_mapping = _json_load(predictions_dir / "ontology_mapping.json")
     # Invert the ontology mapping (now it's from object class names to ontology object hashes)
     class_name_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
 
@@ -303,10 +431,9 @@ def migrate_mask_predictions(
         if path.is_file() and path.suffix.lower() in [".json"] and pattern.match(path.name) is not None
     ]
 
-    # Retrieve the mapping from ontology object hashes to label ids
+    # Retrieve the mapping from ontology object hashes to object class ids
     if ontology_mapping is None:
-        ontology_mapping = _retrieve_ontology_mapping(predictions_dir)
-
+        ontology_mapping = _json_load(predictions_dir / "ontology_mapping.json")
     # Invert the ontology mapping (now it's from object class ids to ontology object hashes)
     class_id_to_ontology_hash = {v: k for k, v in ontology_mapping.items()}
 
@@ -412,17 +539,14 @@ def _get_matching_data_unit(
     if len(data_units) == 1:
         return data_units[0]
     if len(data_units) == 0:
-        logger.info(f'No data unit found for file "{file_path.as_posix()}". Expected exactly one match. Skipping.')
+        logger.info(f'No data unit found for file "{file_path}". Expected exactly one match. Skipping.')
     else:
-        logger.info(
-            f'Multiple data units found for file "{file_path.as_posix()}". Expected exactly one match. Skipping.'
-        )
+        logger.info(f'Multiple data units found for file "{file_path}". Expected exactly one match. Skipping.')
     return None
 
 
-def _retrieve_ontology_mapping(predictions_dir: Path):
-    ontology_mapping_file = predictions_dir / "ontology_mapping.json"
-    if not ontology_mapping_file.exists():
-        raise FileNotFoundError(f'Expected "ontology_mapping.json" file in "{predictions_dir}".')
-    ontology_mapping = json.loads(ontology_mapping_file.read_text(encoding="utf-8"))
-    return ontology_mapping
+def _json_load(mapping_file: Path):
+    if not mapping_file.exists() or not mapping_file.is_file() or mapping_file.suffix != ".json":
+        raise FileNotFoundError(f'JSON file with expected path "{mapping_file}" was not found.')
+    mapping = json.loads(mapping_file.read_text(encoding="utf-8"))
+    return mapping
