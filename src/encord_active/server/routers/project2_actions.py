@@ -194,3 +194,30 @@ def upload_project_to_encord(project_hash: uuid.UUID, item: UploadProjectToEncor
             raise ValueError("Unknown project")
         if project.project_remote_ssh_key_path is not None:
             raise ValueError("Project already is bound to a remote")
+
+        # Select all hashes present in the project
+        hashes_query = select(
+            ProjectDataUnitMetadata.data_hash,
+            ProjectDataUnitMetadata.du_hash,
+            ProjectDataMetadata.label_hash,
+            ProjectDataMetadata.dataset_hash,
+        ).where(
+            ProjectDataUnitMetadata.project_hash == project_hash,
+            ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
+        )
+        hashes = sess.exec(hashes_query).fetchall()
+        du_hashes = [
+            du_hash
+            for data_hash, du_hash, label_hash, dataset_hash in hashes
+        ]
+
+        # Create new encord-project
+
+        # Create new dataset.
+
+        # Create new encord ontology
+
+        # Upload all data
+
+
+        # Insert new
