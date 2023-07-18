@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Dict
 
 import numpy as np
 from encord.objects.common import Shape
@@ -37,7 +38,7 @@ def import_coco_predictions(
         (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
     }
 
-    category_types = {}
+    category_types: Dict[int, list] = {}
     for obj in ontology["objects"]:
         category_types.setdefault(int(obj["id"][:-1]) - 1, []).append(obj["shape"])
 
