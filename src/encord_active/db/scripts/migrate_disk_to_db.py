@@ -56,6 +56,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Frame object density": "metric_object_density",
     "Green Values": "metric_green",
     "Image Difficulty": "metric_image_difficulty",
+    "Image Diversity": "metric_image_difficulty", # NOTE: Renamed
     "Image Singularity": "metric_image_singularity",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
@@ -145,9 +146,9 @@ def _assign_metrics(
             score_p2 = score_delta if existing_score == 0.0 else abs((score_delta / float(existing_score)) * 100.0)
             if score_p1 >= 0.5 or score_p2 >= 0.5:
                 print(
-                    f"WARNING: different derived and calculated scores: "
-                    f"Percentage = {score_p1}, {score_p2}"
-                    f"{metric_column_name}, {existing_score}, {score}"
+                    f"WARNING: different derived and calculated scores: \n"
+                    f"Percentage = {score_p1}, {score_p2}\n"
+                    f"{metric_column_name}: existing={existing_score}, new={score}"
                 )
     # Assign description
     if description_dict is not None and description is not None \
@@ -458,9 +459,25 @@ def __migrate_predictions(
         ]
         p_metrics: dict = {}
         f_metrics: dict = {}
+        metric_name: str
         for metric_name, metric_value in model_prediction.items():
-            metric_target = metric_name[-4:]
-            metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
+            if metric_name.endswith(")"):
+                metric_target = metric_name[-4:]
+                metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
+            else:
+                # Non-annotated metrics (new version - harder to process)
+                # attempt to guess what the metric should be associated with.
+                metric_target = " (P)"
+                if metric_name in [
+                    "Random Values on Images",
+                    "Aspect Ratio",
+                    "Area",
+                    "Image Difficulty",
+                    "Image Diversity",
+                    "Image Singularity",
+                ]:
+                    metric_target = " (F)"
+                metric_key = WELL_KNOWN_METRICS[metric_name]
             if metric_key == "$SKIP":
                 continue
             if metric_target == " (P)":
@@ -478,9 +495,11 @@ def __migrate_predictions(
                 elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
                     pass  # FIXME: this p-metric should be stored somewhere.
                 else:
-                    print(f"DEBUG, Extra p_metric: {metric_key}")
+                    raise ValueError(f"Unknown prediction metric: {metric_key}")
             elif metric_target == " (F)":
-                # FIXME: needed (or are these all from data frame and hence trivial to materialize via join)
+                # Frame metrics (we have them saved already)
+                if metric_key in f_metrics:
+                    raise ValueError(f"Duplicate frame metric on prediction")
                 f_metrics[metric_key] = metric_value
             else:
                 raise ValueError(f"Unknown metric target: '{metric_target}'")
