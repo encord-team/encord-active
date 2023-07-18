@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Dict
 
 import numpy as np
 from encord.objects.common import Shape
@@ -36,6 +37,11 @@ def import_coco_predictions(
     category_to_hash = {
         (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
     }
+
+    category_types: Dict[int, list] = {}
+    for obj in ontology["objects"]:
+        category_types.setdefault(int(obj["id"][:-1]) - 1, []).append(obj["shape"])
+
     predictions = []
     results = json.loads(predictions_path.read_text(encoding="utf-8"))
 
@@ -61,6 +67,12 @@ def import_coco_predictions(
             data = BoundingBox(x=x, y=y, w=w, h=h)
         else:
             raise Exception("Unsupported result format")
+
+        if shape.value not in category_types[res.category_id]:
+            raise TypeError(
+                f"Found a prediction with shape '{shape}' for the category '{res.category_id}',"
+                f"however there is no category with that shape in the ontology."
+            )
 
         predictions.append(
             Prediction(
