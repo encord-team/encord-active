@@ -18,6 +18,7 @@ import {
   ActiveProjectAnalysisDomain,
   ActiveProjectAnalysisScatter,
   ActiveProjectAnalysisSummary,
+  ActiveProjectEmbeddingReductions,
   ActiveProjectItemDetailedSummary,
   ActiveProjectMetricPerformance,
   ActiveProjectPredictionSummary,
@@ -27,6 +28,7 @@ import {
   ActiveProjectSummary,
   ActiveProjectView,
   ActiveQueryAPI,
+  ActiveSearchFilters,
   ActiveUploadToEncordMutationArguments,
 } from "./oss/ActiveTypes";
 
@@ -44,6 +46,8 @@ export type IntegratedProjectMetadata = {
     readonly classes: number;
   };
 };
+
+const LONG_RUNNING_TIMEOUT: number = 1000 * 60 * 60; // 1 hour timeout!!
 
 const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
   staleTime: 1000 * 60 * 10, // 10 minutes
@@ -121,6 +125,19 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     );
   };
 
+  useProjectListEmbeddingReductions = (
+    projectHash: string,
+    options: Pick<UseQueryOptions, "enabled"> = {}
+  ): UseQueryResult<ActiveProjectEmbeddingReductions> => {
+    const baseURL = this.getBaseUrl(projectHash, options.enabled);
+    return useQuery(
+      ["ACTIVE:useProjectListEmbeddingReductions", projectHash],
+      // eslint-disable-next-line
+      () => axios.get(`${baseURL}/reductions`).then((res) => res.data as any),
+      { ...options, ...SummaryQueryOptions }
+    );
+  };
+
   useProjectAnalysisSummary = (
     projectHash: string,
     analysisDomain: ActiveProjectAnalysisDomain,
@@ -184,7 +201,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       ],
       () =>
         axios
-          .get(`${baseURL}/analysis/${analysisDomain}/dist`, {
+          .get(`${baseURL}/analysis/${analysisDomain}/distribution`, {
             params: {
               group: metricOrEnum,
             },
@@ -231,9 +248,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectAnalysisSearch = (
     projectHash: string,
     analysisDomain: ActiveProjectAnalysisDomain,
-    metricFilters: null | Readonly<Record<string, [number, number]>>,
-    metricOutliers: null | Readonly<Record<string, "warning" | "severe">>,
-    enumFilters: null | Readonly<Record<string, ReadonlyArray<string>>>,
+    filters: ActiveSearchFilters,
     orderBy: null | string,
     desc: boolean,
     options: Pick<UseQueryOptions, "enabled"> = {}
@@ -244,9 +259,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
         "ACTIVE:useProjectAnalysisSearch",
         projectHash,
         analysisDomain,
-        metricFilters,
-        metricOutliers,
-        enumFilters,
+        filters,
         orderBy,
         desc,
       ],
@@ -254,9 +267,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
         axios
           .get(`${baseURL}/analysis/${analysisDomain}/search`, {
             params: {
-              metric_filters: metricFilters,
-              metric_outliers: metricOutliers,
-              enum_filters: enumFilters,
+              filters,
               order_by: orderBy,
               desc,
             },
@@ -356,7 +367,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     ActiveCreateSubsetMutationArguments
   > => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
-      "/projects_v2/get/",
+      "/projects_v2/",
       "/projects/"
     );
 
@@ -377,7 +388,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
         return await axios.post(
           `${baseURL}/create_subset`,
           JSON.stringify(params),
-          { headers }
+          { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
       },
       options
@@ -413,7 +424,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     ActiveUploadToEncordMutationArguments
   > => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
-      "/projects_v2/get/",
+      "/projects_v2/",
       "/projects/"
     );
 
@@ -435,7 +446,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
         return await axios.post(
           `${baseURL}/upload_to_encord`,
           JSON.stringify(params),
-          { headers }
+          { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
       },
       { ...options }
@@ -452,7 +463,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       ["ACTIVE:useProjectListPredictions", projectHash],
       () =>
         // eslint-disable-next-line
-        axios.get(`${baseURL}/predictions/list`).then((res) => res.data as any),
+        axios.get(`${baseURL}/predictions`).then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
   };
@@ -468,7 +479,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       ["ACTIVE:useProjectPredictionSummary", projectHash, predictionHash, iou],
       () =>
         axios
-          .get(`${baseURL}/predictions/get/${predictionHash}/summary`, {
+          .get(`${baseURL}/predictions/${predictionHash}/summary`, {
             params: { iou },
           }) // eslint-disable-next-line
           .then((res) => res.data as any),
@@ -496,12 +507,9 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       ],
       () =>
         axios
-          .get(
-            `${baseURL}/predictions/get/${predictionHash}/metric_performance`,
-            {
-              params: { iou, buckets, metric_name: metric },
-            }
-          ) // eslint-disable-next-line
+          .get(`${baseURL}/predictions/${predictionHash}/metric_performance`, {
+            params: { iou, metric_name: metric }, // FIXME: buckets
+          }) // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }
     );
@@ -517,7 +525,7 @@ export function useLookupProjectsFromUrlList(
       const allData: Record<string, IntegratedProjectMetadata> = {};
       for (const url of urls) {
         // eslint-disable-next-line no-await-in-loop
-        const res = await axios.get(`${url}/projects_v2/list`);
+        const res = await axios.get(`${url}/projects_v2`);
         // eslint-disable-next-line
         const data: Record<
           string,
@@ -527,7 +535,7 @@ export function useLookupProjectsFromUrlList(
           allData[projectHash] = {
             ...projectMeta,
             imageUrl: `${url}/${projectMeta.imageUrl}`,
-            baseProjectUrl: `${url}/projects_v2/get/${projectHash}`,
+            baseProjectUrl: `${url}/projects_v2/${projectHash}`,
           };
         });
       }

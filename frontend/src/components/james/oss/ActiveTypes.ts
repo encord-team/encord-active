@@ -5,6 +5,22 @@ import {
   UseQueryResult,
 } from "@tanstack/react-query";
 
+export type ActiveDomainSearchFilters = {
+  readonly metrics: Readonly<Record<string, readonly [number, number]>>;
+  readonly enums: Readonly<Record<string, ReadonlyArray<string>>>;
+  readonly reduction: null | {
+    readonly reduction_hash: string;
+    readonly min: [number, number];
+    readonly max: [number, number];
+  };
+  readonly tags: null | ReadonlyArray<string>;
+};
+
+export type ActiveSearchFilters = {
+  readonly data: null | ActiveDomainSearchFilters;
+  readonly annotation: null | ActiveDomainSearchFilters;
+};
+
 export type ActiveProjectView = {
   readonly project_hash: string;
   readonly title: string;
@@ -54,6 +70,11 @@ export type ActiveProjectSummary = {
   };
   readonly data: ActiveProjectMetricSummary;
   readonly annotations: ActiveProjectMetricSummary;
+  // readonly global: ActiveProjectMetricSummary;
+  readonly du_count: number;
+  readonly frame_count: number;
+  readonly annotation_count: number;
+  readonly classification_count: number;
   readonly tags: {
     readonly [tag_hash: string]: string;
   };
@@ -61,6 +82,19 @@ export type ActiveProjectSummary = {
     readonly du_hash: string;
     readonly frame: number;
   };
+};
+
+export type ActiveProjectEmbeddingReductions = {
+  results: Readonly<
+    Record<
+      string,
+      {
+        readonly name: string;
+        readonly description: string;
+        readonly type: "umap";
+      }
+    >
+  >;
 };
 
 export type ActiveProjectAnalysisDomain = "data" | "annotation";
@@ -220,13 +254,13 @@ export type ActiveCreateTagMutationArguments = {
 };
 
 export type ActiveUploadToEncordMutationArguments = {
-    readonly dataset_title: string;
-    readonly dataset_description?: string | undefined;
-    readonly project_title: string;
-    readonly project_description?: string | undefined;
-    readonly ontology_title: string;
-    readonly ontology_description?: string | undefined;
-}
+  readonly dataset_title: string;
+  readonly dataset_description?: string | undefined;
+  readonly project_title: string;
+  readonly project_description?: string | undefined;
+  readonly ontology_title: string;
+  readonly ontology_description?: string | undefined;
+};
 
 export type ActivePredictionView = {
   readonly name: string;
@@ -241,6 +275,9 @@ export type ActivePaginationResult<T> = {
 export type ActiveProjectPredictionSummary = {
   readonly mAP: number;
   readonly mAR: number;
+  readonly tTP: number;
+  readonly tFP: number;
+  readonly tFN: number;
   readonly precisions: Readonly<Record<string, number>>;
   readonly recalls: Readonly<Record<string, number>>;
   readonly correlation: Readonly<Record<string, number>>;
@@ -292,6 +329,10 @@ export interface ActiveQueryAPI {
     projectHash: string,
     options?: Pick<UseQueryOptions, "enabled">
   ): UseQueryResult<ActiveProjectSummary>;
+  useProjectListEmbeddingReductions(
+    projectHash: string,
+    options?: Pick<UseQueryOptions, "enabled">
+  ): UseQueryResult<ActiveProjectEmbeddingReductions>;
 
   // === Project analytics ===
   useProjectAnalysisSummary(
@@ -321,11 +362,7 @@ export interface ActiveQueryAPI {
   useProjectAnalysisSearch(
     projectHash: string,
     analysisDomain: ActiveProjectAnalysisDomain,
-    metricFilters: null | Readonly<Record<string, readonly [number, number]>>,
-    metricOutliers: null | Readonly<Record<string, "warning" | "severe">>,
-    enumFilters: null | Readonly<
-      Partial<Record<string, ReadonlyArray<string>>>
-    >,
+    filters: ActiveSearchFilters,
     orderBy: null | string,
     desc: boolean,
     options?: Pick<UseQueryOptions, "enabled">
@@ -369,9 +406,13 @@ export interface ActiveQueryAPI {
     >
   ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments>;
   useProjectMutationUploadToEncord(
-      projectHash: string,
+    projectHash: string,
     options?: Pick<
-      UseMutationOptions<string, unknown, ActiveUploadToEncordMutationArguments>,
+      UseMutationOptions<
+        string,
+        unknown,
+        ActiveUploadToEncordMutationArguments
+      >,
       "onError" | "onSuccess" | "onSettled"
     >
   ): UseMutationResult<string, unknown, ActiveUploadToEncordMutationArguments>;

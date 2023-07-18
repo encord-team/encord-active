@@ -1,47 +1,98 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs } from "antd";
 import * as React from "react";
-import { ActiveQueryAPI, ActiveProjectSummary } from "../ActiveTypes";
+import { useMap } from "usehooks-ts";
+import {
+  ActiveQueryAPI,
+  ActiveProjectMetricSummary,
+  ActiveProjectAnalysisDomain,
+} from "../ActiveTypes";
+import { ActiveSearchTab } from "./ActiveSearchTab";
+import ActiveSelectedTab from "./ActiveSelectedTab";
 import ActiveSummaryTab from "./ActiveSummaryTab";
+import { ActiveFilterState } from "../util/ActiveMetricFilter";
 
-function ActiveSummaryView(props: {
+function ActiveAnalysisDomainTab(props: {
   projectHash: string;
+  editUrl?:
+    | undefined
+    | ((dataHash: string, projectHash: string, frame: number) => string);
   queryAPI: ActiveQueryAPI;
-  projectSummary: ActiveProjectSummary;
+  metricsSummary: ActiveProjectMetricSummary;
+  analysisDomain: ActiveProjectAnalysisDomain;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const { queryAPI, projectSummary, projectHash, featureHashMap } = props;
+  const {
+    editUrl,
+    projectHash,
+    queryAPI,
+    metricsSummary,
+    analysisDomain,
+    featureHashMap,
+  } = props;
+  const [filters, setFilters] = useState<ActiveFilterState>({
+    metricFilters: {},
+    enumFilters: {},
+    ordering: [],
+  });
+  const [selectedItems, setSelectedItems] = useMap<string, null>();
   const [currentTab, setCurrentTab] = useState<string>("0");
+
+  // When projectHash changes, reset selected item array.
+  useEffect(
+    () => setSelectedItems.reset(),
+    [projectHash] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   return (
     <Tabs
       items={[
         {
-          label: "Data",
+          label: "Summary",
           key: "0",
           children: (
             <ActiveSummaryTab
               projectHash={projectHash}
               queryAPI={queryAPI}
-              metricsSummary={projectSummary.data}
-              analysisDomain={"data"}
+              metricsSummary={metricsSummary}
+              analysisDomain={analysisDomain}
               featureHashMap={featureHashMap}
             />
           ),
         },
         {
-          label: "Annotations",
+          label: "Search",
           key: "1",
           children: (
-            <ActiveSummaryTab
+            <ActiveSearchTab
               projectHash={projectHash}
+              editUrl={editUrl}
               queryAPI={queryAPI}
-              metricsSummary={projectSummary.annotations}
-              analysisDomain={"annotation"}
+              analysisDomain={analysisDomain}
+              metricsSummary={metricsSummary}
+              itemWidth={200}
+              filters={filters}
+              setFilters={setFilters}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
               featureHashMap={featureHashMap}
+            />
+          ),
+        },
+        {
+          label: `${selectedItems.size} Tagged Items`,
+          key: "2",
+          children: (
+            <ActiveSelectedTab
+              projectHash={projectHash}
+              editUrl={editUrl}
+              itemWidth={200}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+              queryAPI={queryAPI}
             />
           ),
         },
@@ -52,4 +103,4 @@ function ActiveSummaryView(props: {
   );
 }
 
-export default ActiveSummaryView;
+export default ActiveAnalysisDomainTab;

@@ -12,7 +12,7 @@ import * as React from "react";
 import { useState } from "react";
 import { FilterOutlined } from "@ant-design/icons";
 import ActiveMetricFilter, {
-  ActiveFilterOrderState,
+  ActiveFilterState,
 } from "../../util/ActiveMetricFilter";
 
 function ActivePredictionsExplorerTab(props: {
@@ -27,7 +27,7 @@ function ActivePredictionsExplorerTab(props: {
   const [showTruePositive, setShowTruePositive] = useState(true);
   const [showFalsePositive, setShowFalsePositive] = useState(true);
   const [showFalseNegative, setShowFalseNegative] = useState(false);
-  const [filters, setFilters] = useState<ActiveFilterOrderState>({
+  const [filters, setFilters] = useState<ActiveFilterState>({
     metricFilters: {},
     enumFilters: {},
     ordering: [],

@@ -6,13 +6,15 @@ import { useDebounce } from "usehooks-ts";
 import { FilterOutlined, TagOutlined, TagsOutlined } from "@ant-design/icons";
 import ActiveViewImageCard from "../view/ActiveViewImageCard";
 import {
+  ActiveDomainSearchFilters,
   ActiveProjectAnalysisDomain,
   ActiveProjectMetricSummary,
   ActiveProjectSearchResult,
   ActiveQueryAPI,
+  ActiveSearchFilters,
 } from "../ActiveTypes";
 import ActiveMetricFilter, {
-  ActiveFilterOrderState,
+  ActiveFilterState,
 } from "../util/ActiveMetricFilter";
 
 function hasTaggedRange(
@@ -26,7 +28,8 @@ function hasTaggedRange(
     newResults.find(
       (resultItem) =>
         !selectedItems.has(
-          `${resultItem.du_hash}/${resultItem.frame}/${resultItem.object_hash ?? ""
+          `${resultItem.du_hash}/${resultItem.frame}/${
+            resultItem.object_hash ?? ""
           }`
         )
     ) == null
@@ -36,17 +39,17 @@ function hasTaggedRange(
 export function ActiveSearchTab(props: {
   projectHash: string;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   queryAPI: ActiveQueryAPI;
   analysisDomain: ActiveProjectAnalysisDomain;
   metricsSummary: ActiveProjectMetricSummary;
   itemWidth: number;
-  filters: ActiveFilterOrderState;
+  filters: ActiveFilterState;
   setFilters: (
     newState:
-      | ActiveFilterOrderState
-      | ((old: ActiveFilterOrderState) => ActiveFilterOrderState)
+      | ActiveFilterState
+      | ((old: ActiveFilterState) => ActiveFilterState)
   ) => void;
   selectedItems: Omit<Map<string, null>, "set" | "clear" | "delete">;
   setSelectedItems: Actions<string, null>;
@@ -78,12 +81,22 @@ export function ActiveSearchTab(props: {
   const metricRanges = summary.data?.metrics;
 
   const debouncedFilters = useDebounce(filters, 500);
+  const memoSearchFilters = useMemo((): ActiveSearchFilters => {
+    const domainFilters: ActiveDomainSearchFilters = {
+      metrics: debouncedFilters.metricFilters,
+      enums: debouncedFilters.enumFilters,
+      reduction: null,
+      tags: null,
+    };
+    return {
+      data: analysisDomain === "data" ? domainFilters : null,
+      annotation: analysisDomain === "annotation" ? domainFilters : null,
+    };
+  }, [debouncedFilters, analysisDomain]);
   const searchQueryResult = queryAPI.useProjectAnalysisSearch(
     projectHash,
     analysisDomain,
-    debouncedFilters.metricFilters,
-    null,
-    debouncedFilters.enumFilters,
+    memoSearchFilters,
     null,
     false
   );
@@ -138,8 +151,9 @@ export function ActiveSearchTab(props: {
     }
     const currentMap = new Map(selectedItems);
     newResults.forEach((resultItem) => {
-      const key = `${resultItem.du_hash}/${resultItem.frame}/${resultItem.object_hash ?? ""
-        }`;
+      const key = `${resultItem.du_hash}/${resultItem.frame}/${
+        resultItem.object_hash ?? ""
+      }`;
       if (set) {
         currentMap.set(key, null);
       } else {
@@ -192,8 +206,9 @@ export function ActiveSearchTab(props: {
           <Spin />
         ) : (
           explorerItems.results.map((exploreItem) => {
-            const key = `${exploreItem.du_hash}/${exploreItem.frame}/${exploreItem.object_hash ?? ""
-              }`;
+            const key = `${exploreItem.du_hash}/${exploreItem.frame}/${
+              exploreItem.object_hash ?? ""
+            }`;
             return (
               <ActiveViewImageCard
                 key={key}

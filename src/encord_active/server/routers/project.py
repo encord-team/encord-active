@@ -455,7 +455,8 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 
-        ensure_safe_project(target_project_structure.project_dir)
+        # Only run data-migrations up-to just before global db migration script
+        ensure_safe_project(target_project_structure.project_dir, final_data_version=202306141750)
         copy_filtered_data(
             curr_project_structure,
             target_project_structure,
@@ -561,7 +562,10 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
 
     # On Success:
     # Mirror to global sqlite database
-    migrate_disk_to_db(target_project_structure)
+    # migrate_disk_to_db(target_project_structure)
+    # run all migration scripts
+    # FIXME: hacky
+    ensure_safe_project(target_project_structure.project_dir)
 
 
 class UploadToEncordModel(BaseModel):
