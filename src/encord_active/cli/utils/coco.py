@@ -70,8 +70,8 @@ def import_coco_predictions(
 
         if shape.value not in category_types[res.category_id]:
             raise TypeError(
-                f"Found a prediction type for category '{res.category_id}' in '{shape}' shape, "
-                f"however there is no category like this in the COCO annotation file."
+                f"Found a prediction with shape '{shape}' for the category '{res.category_id}',"
+                f"however there is no category with that shape in the ontology."
             )
 
         predictions.append(
