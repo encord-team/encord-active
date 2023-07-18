@@ -104,19 +104,19 @@ def import_coco_predictions(
     :param ontology_mapping: The mapping from Encord's ontology object hashes to the ids of the COCO categories.
         This mapping allows for the conversion of COCO categories to their corresponding Encord ontology objects.
         It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
-        and the values are the corresponding names of the label classes.
+        and the values are the corresponding names of the label classes. It's possible for two ontology objects
+        to match the same category if they respectively cover the annotations with polygon or bounding box shape
+        of that class.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
         from the `ontology_mapping.json` file located in the predictions directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
-    :param file_name_regex: A regular expression pattern used to filter the files based on their names.
-        Only the files whose names match the pattern will be considered for import.
-        Defaults to KITTI_FILE_NAME_REGEX.
-    :param file_path_to_data_unit_func: A function to retrieve the data unit hash and optional frame number
-        from the file name in order to uniquely identify the data unit.
-        If `file_path_to_data_unit_func` is not specified, the function will attempt to retrieve the data unit title
-        and optional frame number from the file name using the pattern specified in KITTI_FILE_NAME_REGEX.
-        For example, the data unit corresponding to a file with the name `example_image.jpg__5.txt` would have
-        the title `example_image.jpg` and it would represent the fifth frame of the image sequence.
+    :param image_mapping: The mapping from the ids of the images in the COCO file to Encord's data unit hashes.
+        This mapping allows to accurately match each image mentioned in the COCO results file with its corresponding
+        data unit in Encord. It is a dictionary where the keys are the ids of the images in the COCO file, and the
+        values are the hashes of the corresponding data units.
+        If `image_mapping` is not specified, the function will attempt to load the mapping
+        from the `image_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
     """
     predictions = migrate_coco_predictions(
         project.file_structure.project_dir,
@@ -212,6 +212,29 @@ def migrate_coco_predictions(
     ontology_mapping: Optional[dict[str, int]] = None,
     image_mapping: Optional[dict[int, str]] = None,
 ):
+    """
+    Migrate predictions from the COCO Results format into the specified Encord Active project.
+
+    :param project_dir: The Encord Active project directory.
+    :param predictions_json: The JSON file containing the predictions.
+    :param ontology_mapping: The mapping from Encord's ontology object hashes to the ids of the COCO categories.
+        This mapping allows for the conversion of COCO categories to their corresponding Encord ontology objects.
+        It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
+        and the values are the corresponding names of the label classes. It's possible for two ontology objects
+        to match the same category if they respectively cover the annotations with polygon or bounding box shape
+        of that class.
+        If `ontology_mapping` is not specified, the function will attempt to load the mapping
+        from the `ontology_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :param image_mapping: The mapping from the ids of the images in the COCO file to Encord's data unit hashes.
+        This mapping allows to accurately match each image mentioned in the COCO results file with its corresponding
+        data unit in Encord. It is a dictionary where the keys are the ids of the images in the COCO file, and the
+        values are the hashes of the corresponding data units.
+        If `image_mapping` is not specified, the function will attempt to load the mapping
+        from the `image_mapping.json` file located in the predictions directory.
+        If such file doesn't exist, a `FileNotFoundError` will be raised.
+    :return: The migrated predictions in Encord's Prediction class format.
+    """
     # Obtain the predictions contained in the file
     coco_results = parse_results(_json_load(predictions_json))
 
@@ -234,21 +257,6 @@ def migrate_coco_predictions(
 
     # Invert the ontology mapping keeping the target shapes (from object class id + shape to ontology object hash)
     class_id_and_shape_to_ontology_hash = {(v, relevant_ontology_hashes[k]): k for k, v in ontology_mapping.items()}
-
-    # To be used in the docs as a prior step to migrate the COCO predictions (used to fill the image_mapping param)
-    # image_data_unit = json.loads(pfs.image_data_unit.read_text(encoding="utf-8"))
-    # ontology = json.loads(pfs.ontology.read_text(encoding="utf-8"))
-    # # NOTE: when we import a coco project, we change the category id to support
-    # # categories with multiple shapes. Here we iterate the ontology objects
-    # # and the ids are in the following format:
-    # # obj["id"] == `10` ->
-    # #   1 - original category_id
-    # #   0 - index of the shape -- we can discard and use the actual shape
-    # # NOTE: we subtract 1 from the id to match the original id since we don't
-    # # support 0 index when the project is created
-    # category_to_hash = {
-    #     (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
-    # }
 
     # Migrate predictions from COCO Results format to the Prediction class format
     predictions = []
@@ -274,7 +282,7 @@ def migrate_coco_predictions(
             h = orig_h / du.height
             data = BoundingBox(x=x, y=y, w=w, h=h)
         else:
-            raise Exception("Unsupported result format")
+            raise Exception(f'Unsupported format found in the prediction "{res}". Expected a bounding box or polygon.')
 
         ontology_obj_hash = class_id_and_shape_to_ontology_hash.get((res.category_id, shape))
         if ontology_obj_hash is None:
