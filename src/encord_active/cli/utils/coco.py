@@ -36,6 +36,11 @@ def import_coco_predictions(
     category_to_hash = {
         (str(int(obj["id"][:-1]) - 1), obj["shape"]): obj["featureNodeHash"] for obj in ontology["objects"]
     }
+
+    category_types = {}
+    for obj in ontology["objects"]:
+        category_types.setdefault(int(obj["id"][:-1]) - 1, []).append(obj["shape"])
+
     predictions = []
     results = json.loads(predictions_path.read_text(encoding="utf-8"))
 
@@ -61,6 +66,11 @@ def import_coco_predictions(
             data = BoundingBox(x=x, y=y, w=w, h=h)
         else:
             raise Exception("Unsupported result format")
+
+        if shape.value not in category_types[res.category_id]:
+            raise TypeError(
+                f"Prediction type for is in '{shape}' shape, however there is no class like this in the COCO annotations file."
+            )
 
         predictions.append(
             Prediction(
