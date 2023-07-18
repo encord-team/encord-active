@@ -68,11 +68,11 @@ class SimpleExecutor(Executor):
                     # Run assertions
                     if du_metadata_list[0].du_hash != du_metadata_list[-1].du_hash:
                         raise ValueError(f"Video has different du_hash")
-                    if du_metadata_list[-1].frame + 1 != len(du_metadata_list):
+                    if du_metadata_list[-1].frame + 1 != len(du_metadata_list) or du_metadata_list[0].frame != 0:
                         raise ValueError(f"Video has skipped frames")
                     if len({x.frame for x in du_metadata_list}) != len(du_metadata_list):
                         raise ValueError(f"Video has frame duplicates")
-                    video_start
+                    video_start = du_metadata_list[0]
                     raise ValueError(f"Video is not supported")
                 else:
                     for du_metadata in du_metadata_list:
@@ -90,10 +90,10 @@ class SimpleExecutor(Executor):
                             frame=du_metadata.frame,
                         )
 
-        # Post-processing stages
-        self._stage_2()
-        self._stage_3()
-        return self._pack_output()
+            # Post-processing stages
+            self._stage_2()
+            self._stage_3()
+            return self._pack_output()
 
     def _execute_stage_1_metrics(
         self,
