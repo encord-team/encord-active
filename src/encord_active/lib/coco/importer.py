@@ -208,13 +208,13 @@ class CocoImporter:
     def create_ontology(self) -> LocalOntology:
         print(f"Creating a new ontology: {self.title}")
         ontology_structure = OntologyStructure()
-        default_category_info = CocoCategoryInfo(shapes={Shape.POLYGON})
+        # NOTE: create both polygon and bbox ontology objects when there is no way to infer the shape
+        default_category_info = CocoCategoryInfo(shapes={Shape.POLYGON, Shape.BOUNDING_BOX})
         for cat in self.categories:
-            # NOTE: default to polygon when there is no way to infer the shape
             category_info = self.category_shapes.get(cat.id_, default_category_info)
             shapes = category_info.shapes
             for i, shape in enumerate(shapes):
-                # NOTE: add one the the category id to avoid index 0
+                # NOTE: add one to the category id to avoid index 0
                 new_id = (cat.id_ + 1) * 10 + i
                 self.id_mappings[(cat.id_, shape)] = new_id
                 name = f"{cat.name}-{shape.value}" if len(shapes) > 1 else cat.name
