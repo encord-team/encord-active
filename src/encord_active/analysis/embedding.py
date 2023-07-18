@@ -1,17 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from typing import cast
-
-import torch
-from pynndescent import NNDescent
-
-from encord_active.analysis.base import BaseEvaluation
-from encord_active.analysis.metric import MetricDependencies
+from typing import Optional, Set
+from encord_active.analysis.base import BaseEvaluation, BaseFrameInput, BaseFrameOutput
 from encord_active.analysis.types import (
     EmbeddingTensor,
     ImageTensor,
     MaskTensor,
-    MetricResult,
-    NearestNeighbors,
     PointTensor,
 )
 
@@ -22,25 +15,41 @@ class PureImageEmbedding(BaseEvaluation, metaclass=ABCMeta):
     """
 
     def __init__(
-        self, ident: str, dependencies: set[str], allow_object_embedding: bool = True, allow_queries: bool = False
+        self, ident: str, dependencies: Set[str], allow_object_embedding: bool = True, allow_queries: bool = False
     ) -> None:
         super().__init__(ident, dependencies)
         self.allow_object_embedding = allow_object_embedding
         self.allow_queries = allow_queries
 
-    @abstractmethod
-    def evaluate_embedding(self, image: ImageTensor, mask: MaskTensor | None) -> EmbeddingTensor:
-        ...
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        annotations = {}
+        image = self.evaluate_embedding(frame.image, mask=None)
+        if self.allow_object_embedding:
+            for annotation_hash, annotation in frame.annotations.items():
+                if annotation.mask is None:
+                    annotations[annotation_hash] = image
+                else:
+                    annotations[annotation_hash] = self.evaluate_embedding(
+                        image=frame.image,
+                        mask=annotation.mask,
+                    )
+        return BaseFrameOutput(
+            image=image,
+            annotations=annotations,
+        )
 
-    def evaluate_object_embedding(
-        self, image: ImageTensor, mask: MaskTensor, coordinates: PointTensor
-    ) -> EmbeddingTensor:
-        _coordinates = coordinates  # Only used in override logic for special case shortcuts
-        return self.evaluate_embedding(image, mask)
+    @abstractmethod
+    def evaluate_embedding(self, image: ImageTensor, mask: Optional[MaskTensor]) -> EmbeddingTensor:
+        ...
 
 
 class PureObjectEmbedding(BaseEvaluation, metaclass=ABCMeta):
-    def __init__(self, ident: str, dependencies: set[str], allow_queries: bool = False) -> None:
+    def __init__(self, ident: str, dependencies: Set[str], allow_queries: bool = False) -> None:
         super().__init__(ident, dependencies)
         self.allow_queries = allow_queries
 
@@ -48,25 +57,35 @@ class PureObjectEmbedding(BaseEvaluation, metaclass=ABCMeta):
     Pure object based embedding, only depends on object metadata
     """
 
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        # FIXME: implement
+        return BaseFrameOutput(image=None, annotations={})
+
     @abstractmethod
-    def evaluate_embedding(self, mask: MaskTensor, coordinates: PointTensor) -> EmbeddingTensor:
+    def evaluate_embedding(self, mask: MaskTensor, points: PointTensor) -> EmbeddingTensor:
         ...
 
 
-class NearestImageEmbeddingQuery(BaseEvaluation):
+class NearestImageEmbeddingQuery:
     """
     Pseudo embedding, returns the embedding for the nearest image embedding (in the same category).
     Extra dependency tracking is automatically added whenever this is used.
     """
 
     def __init__(self, ident: str, embedding_source: str, max_neighbors: int = 11) -> None:
-        super().__init__(ident=ident, dependencies=set())
+        self.ident = ident
         # NOTE: as this-is implemented externally by the executor.
         # dependencies is not set. This returns a reference for up to 'max_neighbours' nearby
         # values and all associated stage 1 metric results. (ONLY stage 1 metric results!)
         self.embedding_source = embedding_source
         self.max_neighbours = max_neighbors
 
+    """
     def setup_embedding_index(self, metric_results: dict[MetricKey, dict[str, MetricResult | EmbeddingTensor]]):
         # TODO split on images and objects
         self.keys = list(metric_results.keys())
@@ -88,3 +107,4 @@ class NearestImageEmbeddingQuery(BaseEvaluation):
         distances = distances.reshape(-1)
         keys = [self.keys[k].annotation for k in neighbor_indices]
         return NearestNeighbors(keys[1:], distances[1:])
+    """

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from encord_active.analysis.metric import MetricDependencies, OneImageMetric
@@ -14,7 +16,7 @@ class AreaMetric(OneImageMetric):
             desc="Area in pixels",
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         if mask is None:
             return float(image_width(image)) * float(image_height(image))
         else:

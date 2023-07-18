@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import numpy as np
 from sqlmodel import Session
 
+from encord_active.analysis.config import create_analysis, default_torch_device
+from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataAnnotationSharedMetrics,
@@ -997,6 +999,22 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         )
         for (du_hash, frame), (embeddings, metric_metadata) in data_metric_extra.items()
     ]
+
+    # FIXME: run for testing the metric computation engine
+    print("=== Running Computation Engine ===")
+    metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
+    try:
+        metric_engine.execute_from_db(
+            data_metas,
+            data_units_metas,
+            database_dir,
+        )
+    except Exception as e:
+        import traceback
+        print(f"Caught exception: {e}")
+        print(f"Stack trace: {traceback.format_exc()}")
+    print("=== Finished Computation Engine ===")
+
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)

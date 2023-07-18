@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated, NamedTuple, Optional
-
+from typing import Annotated, NamedTuple, Optional, Union
+from dataclasses import dataclass
 import torch
-from pydantic import BaseModel
 from torch import Tensor
 
 from encord_active.db.models import AnnotationType
@@ -14,13 +13,13 @@ class Point(NamedTuple):
     y: int
 
 
-class OntologyIdentifier(BaseModel):
-    feature_hash: str
-
-
-class AnnotationMetadata(BaseModel):
+@dataclass(frozen=True)
+class AnnotationMetadata:
     feature_hash: str
     annotation_type: AnnotationType
+    annotation_email: str
+    annotation_manual: bool
+    annotation_confidence: float
     points: Optional[PointTensor]
     mask: Optional[MaskTensor]
 
@@ -59,12 +58,12 @@ PointTensor = Annotated[Tensor, torch.float, "num_points 2"]
 """
 Tensor of Points (float) within the size of an image (unnormalized)  # TODO verify this
 """
-MetricResult = Annotated[Tensor | float | int | str | None, None, ""]
+MetricResult = Annotated[Union[Tensor, float, int, str, None], None, ""]
 """
 One floating point or integer value. 
 `None` means not applicable.
 """
-MetricDependencies = dict[str, MetricResult | EmbeddingTensor | NearestNeighbors]
+MetricDependencies = dict[str, Union[MetricResult, EmbeddingTensor, NearestNeighbors]]
 """
 Results for all objects in a frame
 `None` means not applicable.

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from encord_active.analysis.metric import MetricDependencies, OneImageMetric
@@ -23,7 +25,7 @@ class HSVColorMetric(OneImageMetric):
         )
         self.hue_query = hue_query * 2 * torch.pi
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         hsv_image = deps["hsv_image"]
         if not isinstance(hsv_image, torch.Tensor):
             raise ValueError("missing hsv image")

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from pydantic import BaseModel
@@ -11,7 +12,8 @@ from encord_active.analysis.types import (
 )
 
 
-class BaseFrameInput(BaseModel):
+@dataclass(frozen=True)
+class BaseFrameInput:
     image: ImageTensor
     image_deps: MetricDependencies
     # key is object_hash | classification_hash
@@ -22,7 +24,8 @@ class BaseFrameInput(BaseModel):
     hash_collision: bool
 
 
-class BaseFrameOutput(BaseModel):
+@dataclass
+class BaseFrameOutput:
     image: Optional[MetricResult]
     annotations: Dict[str, MetricResult]
 

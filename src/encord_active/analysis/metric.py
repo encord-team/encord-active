@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
 from typing import Optional, Set, Dict
 
 from encord_active.analysis.base import BaseAnalysis, BaseFrameInput, BaseFrameOutput
@@ -8,10 +7,10 @@ from encord_active.analysis.types import (
     ImageTensor,
     MaskTensor,
     MetricDependencies,
-    MetricKey,
     MetricResult,
 )
 from encord_active.db.models import AnnotationType
+
 
 class BaseAnalysisWithAnnotationFilter(BaseAnalysis, metaclass=ABCMeta):
     """
@@ -63,7 +62,7 @@ class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         ...
 
 
@@ -136,13 +135,23 @@ class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
         return BaseFrameOutput(
-            image=self.calculate(),
+            image=self.calculate(
+                frame.image,
+                frame.image_deps,
+                frame.annotations,
+                frame.annotations_deps,
+            ),
             annotations={},
         )
 
     @abstractmethod
     def calculate(
-        self, img_deps: MetricDependencies, obj_deps: dict[str, MetricDependencies], objs: dict[str, ObjectMetadata]
+        self,
+        image: ImageTensor,
+        image_deps: MetricDependencies,
+        # key is object_hash | classification_hash
+        annotations: Dict[str, AnnotationMetadata],
+        annotations_deps: Dict[str, MetricDependencies],
     ) -> MetricResult:
         """
         TODO: This is currently only used by object count which doesn't require all these arguments.
@@ -162,7 +171,24 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
         if prev_frame is None or next_frame is None:
-            return None
+            return BaseFrameOutput(
+                image=self.calculate_default(),
+                annotations={}
+            )
+        return BaseFrameOutput(
+            image=self.calculate(
+                deps=frame.image_deps,
+                image=frame.image,
+                mask=None,
+                prev_deps=prev_frame.image_deps,
+                prev_image=prev_frame.image,
+                prev_mask=None,
+                next_deps=next_frame.image_deps,
+                next_image=next_frame.image,
+                next_mask=None,
+            ),
+            annotations={},
+        )
 
     @abstractmethod
     def calculate_default(self) -> MetricResult:
@@ -174,8 +200,10 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
         deps: MetricDependencies,
         image: ImageTensor,
         mask: Optional[MaskTensor],
+        prev_deps: MetricDependencies,
         prev_image: ImageTensor,
         prev_mask: Optional[MaskTensor],
+        next_deps: MetricDependencies,
         next_image: ImageTensor,
         next_mask: Optional[MaskTensor],
     ) -> MetricResult:
@@ -187,26 +215,34 @@ class TemporalOneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
     Temporal variant of [OneObjectMetric].
     """
 
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        return BaseFrameOutput(image=None, annotations={})
+
     @abstractmethod
     def calculate(
         self,
-        deps: MetricDependencies,
-        obj: ObjectMetadata,
-        prev_frames: list[tuple[MetricDependencies, ObjectMetadata]],
-        next_frames: list[tuple[MetricDependencies, ObjectMetadata]],
     ) -> MetricResult:
         ...
 
 
-class TemporalObjectByFrameMetric(TemporalBaseAnalysis, metaclass=ABCMeta):
+class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
+
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        return BaseFrameOutput(image=None, annotations={})
+
     @abstractmethod
     def calculate(
         self,
-        img_deps: MetricDependencies,
-        obj_deps: dict[str, MetricDependencies],
-        objs: dict[str, ObjectMetadata],
-        prev_frames: list[tuple[MetricDependencies, dict[str, MetricDependencies], dict[str, ObjectMetadata]]],
-        next_frames: list[tuple[MetricDependencies, dict[str, MetricDependencies], dict[str, ObjectMetadata]]],
     ) -> dict[str, MetricResult]:
         ...
 
@@ -216,6 +252,14 @@ class DerivedMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     Simple metric that only depends on the pixels, if enabled the mask argument allows this metric to
     also apply to objects by only considering the subset of the image the object is present in.
     """
+
+    def raw_calculate( # FIXME: inputs are wrong, this should use separate calculate logic.
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        return BaseFrameOutput(image=None, annotations={})
 
     @abstractmethod
     def calculate(self, deps: MetricDependencies) -> MetricResult:

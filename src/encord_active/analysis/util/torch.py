@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import torch
+from typing import Union, Optional
 from PIL import Image
 from torch.nn.functional import conv2d
 from torchvision.transforms.functional import pil_to_tensor, to_pil_image
@@ -12,7 +13,7 @@ from encord_active.analysis.types import (
     Point,
     PointTensor,
 )
-from encord_active.lib.labels.object import ObjectShape
+from encord_active.db.enums import AnnotationType
 
 _laplacian_kernel = (
     torch.tensor([0.0, 1.0, 0.0, 1.0, -4.0, 1.0, 0.0, 1.0, 0.0], requires_grad=False).reshape(1, 1, 3, 3).float()
@@ -28,51 +29,74 @@ def pillow_to_tensor(image: Image.Image) -> ImageTensor:
     return pil_to_tensor(image)
 
 
-def obj_to_points(obj: dict, img_w: int, img_h: int) -> PointTensor:
+def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h: int) -> Optional[PointTensor]:
+    width = float(img_w) # FIXME: normalise or not to normalise??
+    height = float(img_h)
+    if annotation_type == AnnotationType.CLASSIFICATION:
+        return None
+    if annotation_type == AnnotationType.POLYGON:
+        points = obj["polygon"]
+        data = [
+            [points[str(i)]["x"] * width, points[str(i)]["y"] * height]
+            for i in range(len(points))
+        ]
+        return torch.tensor(data, dtype=torch.float32)
+    elif annotation_type == AnnotationType.POLYLINE:
+        raise ValueError(f"Poly-line shape is not supported")
+    elif annotation_type == AnnotationType.BOUNDING_BOX:
+        bb = obj.get("bounding_box", None) or obj.get("boundingBox", None)
+        if bb is None:
+            raise ValueError(f"Bounding box dict missing dimensions: {obj}")
+        x = bb["x"]
+        y = bb["y"]
+        w = bb["w"]
+        h = bb["h"]
+        x2 = x + w
+        y2 = y + h
+        data = [
+            [x * width, y * height],
+            [x2 * width, y * height],
+            [x2 * width, y2 * height],
+            [x * width, y2 * height],
+        ]
+        return torch.tensor(data, dtype=torch.float32)
+    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+        raise ValueError(f"Unsupported annotation type rot bounding box")
+    elif annotation_type == AnnotationType.POINT:
+        point = obj["point"]["0"]
+        x = point["x"]
+        y = point["y"]
+        data = [[x * width, y * height]]
+        return torch.tensor(data, dtype=torch.float32)
+    elif annotation_type == AnnotationType.SKELETON:
+        raise ValueError(f"Skeleton object type is not supported")
+    raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
+
+
+def obj_to_mask(
+    annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
+) -> Optional[MaskTensor]:
     # TODO fix me
-    return torch.zeros((10, 2), dtype=torch.float)
-
-
-def obj_to_mask(obj: dict, img_w: int, img_h) -> MaskTensor:
-    # TODO fix me
-    shape = obj.get("shape")
-    if not shape:
-        raise ValueError("Object has no `shape` property")
-    if shape == ObjectShape.POLYGON:
-        ...
-    elif shape == ObjectShape.POLYLINE:
-        ...
-    elif shape == ObjectShape.BOUNDING_BOX:
-        ...
-    elif shape == ObjectShape.ROTATABLE_BOUNDING_BOX:
-        ...
-    elif shape == ObjectShape.KEY_POINT:
-        ...
-    elif shape == ObjectShape.SKELETON:
-        ...
-    return torch.zeros((img_h, img_w), dtype=torch.uint8)
-
-
-"""
-def obj_to_object_meta(obj: dict, img_w: int, img_h: int) -> ObjectMetadata:
-    points = _obj_to_points(obj, img_w=img_w, img_h=img_h)
-    mask = _obj_to_mask(obj, img_w=img_w, img_h=img_h)
-    return ObjectMetadata(feature_hash=obj["featureHash"], object_hash=obj["objectHash"], points=points, mask=mask)
-
-
-def data_unit_to_object_meta(data_unit: dict, partial_key: MetricKey) -> dict[MetricKey, ObjectMetadata]:
-    img_w, img_h = data_unit.get("width"), data_unit.get("height")
-    if img_w is None or img_h is None:
-        raise ValueError("The data unit does not provide image shape so can't construct object metadata")
-
-    obj_list = data_unit.get("labels", {}).get("objects", [])
-    if not obj_list:
-        return {}
-
-    return {
-        partial_key.with_annotation(o["objectHash"]): obj_to_object_meta(o, img_w=img_w, img_h=img_h) for o in obj_list
-    }
-"""
+    if annotation_type == AnnotationType.CLASSIFICATION or points is None:
+        return None
+    if annotation_type == AnnotationType.POLYGON:
+        return polygon_mask(points, img_w, img_h)
+    elif annotation_type == AnnotationType.POLYLINE:
+        raise ValueError(f"Poly-line shape is not supported")
+    elif annotation_type == AnnotationType.BOUNDING_BOX:
+        # FIXME: cleanup and keep in gpu memory
+        array = points.cpu().numpy().tolist()
+        return bounding_box_mask(
+            Point(*array[0]), Point(*array[2]), img_w, img_h
+        )
+    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+        raise ValueError(f"Rotated bounding box shape is not supported")
+    elif annotation_type == AnnotationType.POINT:
+        x, y = points.cpu().numpy.tolist()
+        return point_mask(x, y, img_w, img_h)
+    elif annotation_type == AnnotationType.SKELETON:
+        raise ValueError(f"Skeleton object shape is not supported")
+    raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
 
 
 def tensor_to_pillow(tensor: ImageTensor) -> Image.Image:
@@ -90,14 +114,14 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
     # TODO: Implement the winding algorithm in torch instead for performance
     mask = np.zeros((width, height), dtype=np.uint8)
-    points = coordinates.numpy().round(0).astype(np.uint8).reshape(-1, 1, 2)
+    points = coordinates.cpu().numpy().round(0).astype(np.uint8).reshape(-1, 1, 2)
     mask = cv2.fillPoly(mask, points, 1)
     return torch.tensor(mask).bool()
 
 
 def bounding_box_mask(top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
     mask = torch.zeros(width, height, dtype=torch.bool).bool()
-    mask[top_left.y : bottom_right.y, top_left.x : bottom_right.x] = True
+    mask[top_left.y: bottom_right.y, top_left.x: bottom_right.x] = True
     return mask
 
 
@@ -127,7 +151,7 @@ def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
     return Point(x_min, y_min), Point(x_max, y_max)
 
 
-def image_width(image: ImageTensor | MaskTensor) -> int:
+def image_width(image: Union[ImageTensor, MaskTensor]) -> int:
     return image.shape[-1]
 
 

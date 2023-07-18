@@ -11,7 +11,6 @@ class NearestNeighborAgreement(DerivedMetric):
             dependencies={"nn-search"},  # TODO this needs to be correct
             long_name="Nearest Neighbor Agreement",
             desc="Proportion of the nearest neighbors that share the same classification.",
-            apply_to_images=False,
         )
 
     def calculate(self, deps: MetricDependencies) -> MetricResult:
