@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import streamlit as st
-from encord_active_components.components.active import active
 from encord_active_components.components.projects_page import Project
 
 from encord_active.app.auth.jwt import auth
