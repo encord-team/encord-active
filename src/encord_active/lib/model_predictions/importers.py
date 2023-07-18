@@ -93,7 +93,7 @@ def import_predictions(project: Project, predictions: list[Prediction]):
 def import_coco_predictions(
     project: Project,
     predictions_json: Path,
-    ontology_mapping: Optional[dict[str, str]] = None,
+    ontology_mapping: Optional[dict[str, int]] = None,
     image_mapping: Optional[dict[int, str]] = None,
 ):
     """
