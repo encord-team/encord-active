@@ -251,7 +251,7 @@ export const Explorer = ({
         close={close}
         projectHash={projectHash}
         queryAPI={queryAPI}
-        identifiers={[...selectedItems]}
+        identifiers={itemsToRender}
       />
       <ActiveUploadToEncordModal
         open={open === "upload"}
@@ -259,8 +259,6 @@ export const Explorer = ({
         projectHash={projectHash}
         queryAPI={queryAPI}
       />
-      <Button onClick={() => setOpen("subset")}>Create Project subset</Button>
-      <Button onClick={() => setOpen("upload")}>Upload project</Button>
       <div className="w-full">
         {previewedItem && (
           <ItemPreview
@@ -435,6 +433,8 @@ export const Explorer = ({
                   <BiSelectMultiple />
                   Select all ({itemsToRender.length})
                 </button>
+                  <Button onClick={() => setOpen("subset")} type="text">Create Project subset</Button>
+                  <Button onClick={() => setOpen("upload")} type="text">Upload project</Button>
               </div>
             </div>
           </div>
@@ -516,7 +516,7 @@ const PredictionFilters = ({
   }, [iou, drag]);
 
   if (isLoading) return <Spin />;
-  if (!predictionTypes) return;
+  if (!predictionTypes) return null;
 
   const outcomes =
     predictionType === "object"

@@ -59,6 +59,33 @@ function ActivePredictionSummaryTab(props: {
             value={(predictionSummaryData?.mAR ?? 0).toFixed(3)}
           />
         </Card>
+        <Card bordered={false} loading={predictionSummaryData == null}>
+          <Statistic
+            title="True Positives"
+            value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
+          />
+        </Card>
+        <Card bordered={false} loading={predictionSummaryData == null}>
+          <Statistic
+            title="False Positives"
+            value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
+          />
+        </Card>
+        <Card bordered={false} loading={predictionSummaryData == null}>
+          <Statistic
+            title="False Negatives"
+            value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
+          />
+        </Card>
+        <Card bordered={false} loading={predictionSummaryData == null}>
+          <Statistic
+            title="Labels"
+            value={(
+              (predictionSummaryData?.tTP ?? 0) +
+              (predictionSummaryData?.tFN ?? 0)
+            ).toFixed(0)}
+          />
+        </Card>
       </Row>
       <Divider orientation="left">
         <Typography.Title level={3}>Metric Importance</Typography.Title>
