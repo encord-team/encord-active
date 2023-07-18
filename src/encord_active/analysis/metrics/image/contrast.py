@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from encord_active.analysis.metric import MetricDependencies, OneImageMetric
@@ -13,7 +15,7 @@ class ContrastMetric(OneImageMetric):
             desc="",
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: MaskTensor | None) -> MetricResult:
+    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         if mask is None:
             return torch.std(image).item() / 255.0
         else:

@@ -1,3 +1,4 @@
+import torch
 from torch.types import Device
 
 from encord_active.analysis.metrics.object.nearest_neighbor_agreement import (
@@ -92,6 +93,11 @@ class AnalysisConfig:
             Exported features missing
         """
         ...
+
+
+def default_torch_device() -> Device:
+    """Default torch device to use for the analysis config"""
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def create_analysis(device: Device) -> AnalysisConfig:

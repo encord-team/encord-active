@@ -3,9 +3,8 @@ from typing import Dict
 from encord_active.analysis.metric import (
     ImageObjectsMetric,
     MetricDependencies,
-    ObjectMetadata,
 )
-from encord_active.analysis.types import MetricResult
+from encord_active.analysis.types import MetricResult, AnnotationMetadata, ImageTensor
 
 
 class ObjectCountMetric(ImageObjectsMetric):
@@ -18,6 +17,11 @@ class ObjectCountMetric(ImageObjectsMetric):
         )
 
     def calculate(
-        self, img_deps: MetricDependencies, obj_deps: Dict[str, MetricDependencies], objs: Dict[str, ObjectMetadata]
+        self,
+        image: ImageTensor,
+        image_deps: MetricDependencies,
+        # key is object_hash | classification_hash
+        annotations: Dict[str, AnnotationMetadata],
+        annotations_deps: Dict[str, MetricDependencies],
     ) -> MetricResult:
-        return len(objs)
+        return len(annotations)

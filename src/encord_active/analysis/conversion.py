@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional
+from typing import Optional, Union
 
 from encord_active.analysis.base import BaseEvaluation, BaseFrameOutput, BaseFrameInput
 from encord_active.analysis.types import HSVTensor, ImageTensor
@@ -29,5 +29,5 @@ class BaseConverter(BaseEvaluation, metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def convert(self, image: ImageTensor) -> ImageTensor | HSVTensor:
+    def convert(self, image: ImageTensor) -> Union[ImageTensor, HSVTensor]:
         ...
