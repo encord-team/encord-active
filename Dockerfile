@@ -29,8 +29,6 @@ RUN git config --global --add safe.directory '*'
 EXPOSE 8501
 EXPOSE 8502
 
-ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
-
 HEALTHCHECK CMD ecord-active --version
 ENTRYPOINT ["encord-active"]
 
