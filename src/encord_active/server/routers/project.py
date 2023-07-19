@@ -86,7 +86,6 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 from encord_active.server.dependencies import (
     ProjectFileStructureDep,
     verify_premium,
-    verify_token,
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
@@ -101,7 +100,6 @@ from encord_active.server.utils import (
 router = APIRouter(
     prefix="/projects",
     tags=["projects"],
-    dependencies=[Depends(verify_token)],
 )
 
 

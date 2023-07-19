@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -8,13 +8,13 @@ from encord_active.lib.model_predictions.reader import read_prediction_files
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.project.sandbox_projects.sandbox_projects import IMAGES_PATH
-from encord_active.server.dependencies import verify_premium
+from encord_active.server.dependencies import verify_premium, verify_token
 from encord_active.server.utils import get_similarity_finder
 
 from .routers import project, project2
 from .settings import get_settings
 
-app = FastAPI()
+app = FastAPI(dependencies=[Depends(verify_token)])
 
 app.include_router(project.router)
 app.include_router(project2.router)
@@ -33,7 +33,7 @@ app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH, 
 app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=True), name="sandbox-static")
 
 
-@app.on_event("startup")
+# @app.on_event("startup")
 async def on_startup():
     root_path = get_settings().SERVER_START_PATH
     paths = [root_path] if is_project(root_path) else find_child_projects(root_path)

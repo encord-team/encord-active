@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { z } from "zod";
-
-export const DEFAULT_BASE_URL = "http://localhost:8502";
+import { apiUrl } from "../../constants";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
@@ -182,11 +181,7 @@ export type SeachResult = z.infer<typeof searchResultSchema>;
 
 export const defaultTags = { data: [], label: [] };
 
-export const getApi = (
-  projectHash: string,
-  authToken?: string | null,
-  baseUrl = DEFAULT_BASE_URL
-) => {
+export const getApi = (projectHash: string, authToken?: string) => {
   const updateOptions = (options: Parameters<typeof fetch>[1]) => {
     if (!authToken) return options;
 
@@ -207,18 +202,18 @@ export const getApi = (
     fetchHasPremiumFeatures: async () =>
       z
         .boolean()
-        .parse(await (await fetcher(`${baseUrl}/premium_available`)).json()),
+        .parse(await (await fetcher(`${apiUrl}/premium_available`)).json()),
     fetchAvailablePredictionTypes: async () =>
       PredictionTypeSchema.array().parse(
         await (
-          await fetcher(`${baseUrl}/projects/${projectHash}/prediction_types`)
+          await fetcher(`${apiUrl}/projects/${projectHash}/prediction_types`)
         ).json()
       ),
     fetchProject2DEmbeddings: async (
       embedding_type: Metric["embeddingType"],
       filters: Filters
     ) => {
-      const url = `${baseUrl}/projects/${projectHash}/2d_embeddings`;
+      const url = `${apiUrl}/projects/${projectHash}/2d_embeddings`;
       try {
         const response = await (
           await fetcher(url, {
@@ -244,7 +239,7 @@ export const getApi = (
         ...(prediction_type ? { prediction_type } : {}),
         ...(prediction_outcome ? { prediction_outcome } : {}),
       });
-      const url = `${baseUrl}/projects/${projectHash}/metrics?${queryParams}`;
+      const url = `${apiUrl}/projects/${projectHash}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
       return MetricDefinitionsSchema.parse(response);
     },
@@ -255,7 +250,7 @@ export const getApi = (
       itemSet: Set<string>
     ) => {
       const result = await (
-        await fetcher(`${baseUrl}/projects/${projectHash}/item_ids_by_metric`, {
+        await fetcher(`${apiUrl}/projects/${projectHash}/item_ids_by_metric`, {
           method: "post",
           headers: {
             "Content-Type": "application/json",
@@ -277,7 +272,7 @@ export const getApi = (
 
       const item = await (
         await fetcher(
-          `${baseUrl}/projects/${projectHash}/items/${encodeURIComponent(
+          `${apiUrl}/projects/${projectHash}/items/${encodeURIComponent(
             id
           )}?${queryParams}`
         )
@@ -290,7 +285,7 @@ export const getApi = (
         .transform((record) => new Map(Object.entries(record)))
         .parse(
           await (
-            await fetcher(`${baseUrl}/projects/${projectHash}/tagged_items`)
+            await fetcher(`${apiUrl}/projects/${projectHash}/tagged_items`)
           ).json()
         ),
     fetchSimilarItems: async (
@@ -303,7 +298,7 @@ export const getApi = (
         ...(pageSize ? { page_size: pageSize.toString() } : {}),
       });
 
-      const url = `${baseUrl}/projects/${projectHash}/similarities/${encodeURIComponent(
+      const url = `${apiUrl}/projects/${projectHash}/similarities/${encodeURIComponent(
         id
       )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
@@ -315,18 +310,18 @@ export const getApi = (
       const queryParams = new URLSearchParams({
         embedding_type: embeddingType,
       });
-      const url = `${baseUrl}/projects/${projectHash}/has_similarity_search?${queryParams} `;
+      const url = `${apiUrl}/projects/${projectHash}/has_similarity_search?${queryParams} `;
       const response = await fetcher(url).then((res) => res.json());
       return z.boolean().parse(response);
     },
     fetchProjectTags: async () =>
       GroupedTagsSchema.parse(
-        await (await fetcher(`${baseUrl}/projects/${projectHash}/tags`)).json()
+        await (await fetcher(`${apiUrl}/projects/${projectHash}/tags`)).json()
       ),
     updateItemTags: async (
       itemTags: { id: string; groupedTags: GroupedTags }[]
     ) => {
-      const url = `${baseUrl}/projects/${projectHash}/item_tags`;
+      const url = `${apiUrl}/projects/${projectHash}/item_tags`;
       const data = itemTags.map(({ id, groupedTags }) => ({
         id,
         grouped_tags: groupedTags,
@@ -350,7 +345,7 @@ export const getApi = (
       signal?: AbortSignal
     ) => {
       const response = await fetcher(
-        `${baseUrl}/projects/${projectHash}/search`,
+        `${apiUrl}/projects/${projectHash}/search`,
         {
           method: "post",
           headers: {

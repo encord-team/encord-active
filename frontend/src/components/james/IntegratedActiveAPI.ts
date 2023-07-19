@@ -7,7 +7,7 @@ import {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import {
   ActiveCreateSubsetMutationArguments,
   ActiveCreateTagMutationArguments,
@@ -31,6 +31,7 @@ import {
   ActiveSearchFilters,
   ActiveUploadToEncordMutationArguments,
 } from "./oss/ActiveTypes";
+import { apiUrl } from "../../constants";
 
 export type IntegratedProjectMetadata = {
   readonly title: string;
@@ -65,8 +66,13 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     Record<string, IntegratedProjectMetadata>
   >;
 
-  constructor(projects: Readonly<Record<string, IntegratedProjectMetadata>>) {
+  constructor(
+    token: string | null,
+    projects: Readonly<Record<string, IntegratedProjectMetadata>>
+  ) {
     this.projects = projects;
+    if (token)
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   }
 
   private getBaseUrl(
@@ -516,32 +522,32 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   };
 }
 
-export function useLookupProjectsFromUrlList(
-  urls: string[]
-): UseQueryResult<Readonly<Record<string, IntegratedProjectMetadata>>> {
+export function useProjectsList(): UseQueryResult<
+  Readonly<Record<string, IntegratedProjectMetadata>>,
+  AxiosError<{ details: string }>
+> {
   return useQuery(
-    ["IntegratedActiveAPI:useLookupProjectsFromUrlList", urls],
+    ["IntegratedActiveAPI:useLookupProjectsFromUrlList", apiUrl],
     async () => {
       const allData: Record<string, IntegratedProjectMetadata> = {};
-      for (const url of urls) {
-        // eslint-disable-next-line no-await-in-loop
-        const res = await axios.get(`${url}/projects_v2`);
-        // eslint-disable-next-line
-        const data: Record<
-          string,
-          Omit<IntegratedProjectMetadata, "baseProjectUrl">
-        > = res.data as any;
-        Object.entries(data).forEach(([projectHash, projectMeta]) => {
-          allData[projectHash] = {
-            ...projectMeta,
-            imageUrl: `${url}/${projectMeta.imageUrl}`,
-            baseProjectUrl: `${url}/projects_v2/${projectHash}`,
-          };
-        });
-      }
+      // eslint-disable-next-line no-await-in-loop
+      const res = await axios.get(`${apiUrl}/projects_v2`);
+      // eslint-disable-next-line
+      const data: Record<
+        string,
+        Omit<IntegratedProjectMetadata, "baseProjectUrl">
+      > = res.data as any;
+      Object.entries(data).forEach(([projectHash, projectMeta]) => {
+        allData[projectHash] = {
+          ...projectMeta,
+          imageUrl: `${apiUrl}/${projectMeta.imageUrl}`,
+          baseProjectUrl: `${apiUrl}/projects_v2/${projectHash}`,
+        };
+      });
       return allData;
     },
     {
+      retry: 0,
       // 30 minutes
       staleTime: 1000 * 60 * 30,
       cacheTime: 1000 * 60 * 30,
@@ -550,7 +556,11 @@ export function useLookupProjectsFromUrlList(
 }
 
 export function useIntegratedActiveAPI(
+  token: string | null,
   projects: Readonly<Record<string, IntegratedProjectMetadata>>
 ): ActiveQueryAPI {
-  return useMemo(() => new IntegratedActiveAPI(projects), [projects]);
+  return useMemo(
+    () => new IntegratedActiveAPI(token, projects),
+    [token, projects]
+  );
 }

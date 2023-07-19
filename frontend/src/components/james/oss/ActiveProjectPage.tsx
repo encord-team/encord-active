@@ -8,13 +8,14 @@ import { IntegratedProjectMetadata } from "../IntegratedActiveAPI";
 import ActiveProjectComparisonTab from "./tabs/ActiveProjectComparisonTab";
 import { Explorer } from "../../explorer";
 import ActiveSummaryView from "./tabs/ActiveSummaryView";
+import { apiUrl } from "../../../constants";
 
 function ActiveProjectPage(props: {
   queryAPI: ActiveQueryAPI;
   projectHash: string;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   setSelectedProject: (projectHash?: string) => void;
   projects: readonly IntegratedProjectMetadata[];
 }) {
@@ -73,13 +74,12 @@ function ActiveProjectPage(props: {
           key: "2",
           children: (
             <Explorer
-              baseUrl="http://localhost:8502"
               projectHash={projectHash}
               metricsSummary={projectSummary.data}
               scope={"data"}
               queryAPI={queryAPI}
               featureHashMap={featureHashMap}
-            /* metricRanges={projectSummary.data?.metrics} */
+              /* metricRanges={projectSummary.data?.metrics} */
             />
           ),
         },

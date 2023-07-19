@@ -9,6 +9,29 @@ import DEFAUL_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 import { classy } from "../helpers/classy";
 import { fork } from "radash";
 import { IntegratedProjectMetadata } from "./james/IntegratedActiveAPI";
+import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { env } from "../constants";
+
+const useDownloadProject = (
+  projectHash: string,
+  options: UseMutationOptions = {}
+) =>
+  useMutation(
+    ["useDownloadProject", projectHash],
+    async (args: ActiveUploadToEncordMutationArguments) => {
+      const headers = {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      };
+      return await axios.post(
+        `${baseURL}/upload_to_encord`,
+        JSON.stringify(params),
+        { headers }
+      );
+    },
+
+    options
+  );
 
 export type Props = {
   projects: IntegratedProjectMetadata[];
@@ -22,8 +45,6 @@ export const ProjectsPage = ({
     projects,
     ({ sandbox }) => !!sandbox
   );
-
-  const env = import.meta.env.VITE_ENV;
 
   return (
     <div className="h-max p-5 flex flex-col gap-5">
@@ -76,7 +97,7 @@ export const ProjectsPage = ({
                   key={project.projectHash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() => onSelectLocalProject(project.projectHash)}
+                  onClick={() => console.log(project)}
                 />
               ))}
           </div>
