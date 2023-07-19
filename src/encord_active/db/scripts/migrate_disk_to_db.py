@@ -33,7 +33,9 @@ from encord_active.db.models import (
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.common.utils import rle_to_binary_mask, mask_to_polygon
-from encord_active.lib.db.connection import PrismaConnection
+from encord_active.lib.db.connection import PrismaConnection, DBConnection
+from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.utils import load_label_embeddings
 from encord_active.lib.metrics.types import EmbeddingType
@@ -815,11 +817,14 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             project_data_meta.frames_per_second = fps
             data_metas.append(project_data_meta)
 
+        # Migrate prisma db tag definitions.
         tag_id_map: Dict[int, uuid.UUID] = {}
+        tag_name_map: Dict[str, uuid.UUID] = {}
         project_tag_definitions = []
         for tag in conn.tag.find_many():
             tag_uuid = uuid.uuid4()
             tag_id_map[tag.id] = tag_uuid
+            tag_name_map[tag.name] = tag_uuid
             project_tag_definitions.append(
                 ProjectTag(
                     tag_uuid=tag_uuid,
@@ -856,6 +861,47 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                         tag_hash=tag_uuid,
                     )
                 )
+
+    # Migrate merged metric tag definitions.
+    with DBConnection(pfs) as metric_conn:
+        all_metrics = MergedMetrics(metric_conn).all()
+        for merged_metric in all_metrics.to_dict('records'):
+            _, du_hash_str, frame_str, *annotation_hashes = merged_metric["identifier"]
+            du_hash = uuid.UUID(du_hash_str)
+            frame = int(frame_str)
+            tags: List[Tag] = merged_metric["tags"]
+            for tag in tags:
+                if tag.name in tag_name_map:
+                    tag_uuid = tag_name_map[tag.name]
+                else:
+                    tag_uuid = uuid.uuid4()
+                    project_tag_definitions.append(
+                        ProjectTag(
+                            tag_uuid=tag_uuid,
+                            project_hash=project_hash,
+                            name=tag.name,
+                        )
+                    )
+                if len(annotation_hashes) == 0 or tag.scope == TagScope.DATA:
+                    project_data_tags.append(
+                        ProjectTaggedDataUnit(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
+                            frame=frame,
+                            tag_hash=tag_uuid,
+                        )
+                    )
+                else:
+                    for annotation_hash in annotation_hashes:
+                        project_object_tags.append(
+                            ProjectTaggedAnnotation(
+                                project_hash=project_hash,
+                                du_hash=du_hash,
+                                frame=frame,
+                                object_hash=annotation_hash,
+                                tag_hash=tag_uuid,
+                            )
+                        )
 
     # Load metrics
     metrics = load_available_metrics(pfs.metrics)
