@@ -543,18 +543,39 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
 _init_metadata: Set[str] = set()
 
 
-def get_engine(path: Path, concurrent: bool = False) -> Engine:
+def get_engine(
+    path: Path,
+    concurrent: bool = False,
+    use_alembic: bool = True,
+) -> Engine:
     override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
     create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
     connect_args = {"check_same_thread": False} if concurrent else {}
     path = path.expanduser().resolve()
-    print(f"Connection to database: {path}")
-    engine = create_engine(override_db if override_db is not None else f"sqlite:///{path}", connect_args=connect_args)
+    engine_url = override_db if override_db is not None else f"sqlite:///{path}"
+    print(f"Connection to database: {engine_url}")
+    engine = create_engine(engine_url, connect_args=connect_args)
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
-        # import encord_active.db.migrations.env as migrate_env
-        # FIXME: use alembic to auto-run migrations instead of SQLModel!!
-        SQLModel.metadata.create_all(engine)
+        if use_alembic:
+            # Execute alembic config
+            current_cwd = os.getcwd()
+            try:
+                import encord_active.db as alembic_file
+                path = Path(alembic_file.__file__).expanduser().resolve()
+                os.chdir(path.parent)
+                import alembic.config
+                alembic_args = [
+                    '--raiseerr',
+                    '-x',
+                    f'dbPath={engine_url}',
+                    'upgrade', 'head',
+                ]
+                alembic.config.main(argv=alembic_args)
+            finally:
+                os.chdir(current_cwd)
+        else:
+            SQLModel.metadata.create_all(engine)
         _init_metadata.add(path_key)
     return engine
