@@ -5,7 +5,7 @@ import useResizeObserver from "use-resize-observer";
 import {
   IntegratedProjectMetadata,
   useIntegratedActiveAPI,
-  useLookupProjectsFromUrlList,
+  useProjectsList,
 } from "./IntegratedActiveAPI";
 import ActiveProjectPage from "./oss/ActiveProjectPage";
 import ActiveAnalysisDomainTab from "./oss/tabs/ActiveAnalysisDomainTab";
@@ -17,7 +17,7 @@ export type Props = {
 };
 
 export function ActiveProject({ projectHash, baseUrl, page }: Props) {
-  const { data: projects, isLoading } = useLookupProjectsFromUrlList([baseUrl]);
+  const { data: projects, isLoading } = useProjectsList([baseUrl]);
   const queryAPI = useIntegratedActiveAPI(projects ?? {});
   const { data: projectSummary } = queryAPI.useProjectSummary(projectHash, {
     enabled: !!projects,

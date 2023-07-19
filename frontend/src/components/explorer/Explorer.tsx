@@ -52,23 +52,19 @@ import ActiveCreateSubsetModal from "../james/oss/tabs/modals/ActiveCreateSubset
 import ActiveUploadToEncordModal from "../james/oss/tabs/modals/ActiveUploadToEncordModal";
 
 export type Props = {
-  authToken?: string | null;
   projectHash: string;
   metricsSummary: ActiveProjectMetricSummary;
   scope: Scope;
   queryAPI: ActiveQueryAPI;
-  baseUrl: string;
   featureHashMap: Parameters<typeof ActiveMetricFilter>[0]["featureHashMap"];
 };
 
 export const Explorer = ({
-  authToken,
   projectHash,
   scope,
   queryAPI,
   featureHashMap,
   metricsSummary,
-  baseUrl = DEFAULT_BASE_URL,
 }: Props) => {
   const [itemSet, setItemSet] = useState(new Set<string>());
   const [isAscending, setIsAscending] = useState(true);
@@ -106,7 +102,7 @@ export const Explorer = ({
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
 
-  const api = getApi(projectHash, authToken, baseUrl);
+  const api = getApi(projectHash);
 
   const predictionTypeFound = scope !== "prediction" || predictionType != null;
 
