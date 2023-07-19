@@ -1008,6 +1008,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             data_metas,
             data_units_metas,
             database_dir,
+            project_hash,
+            project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None
         )
     except Exception as e:
         import traceback

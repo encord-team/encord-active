@@ -114,7 +114,7 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
             annotations=self.calculate(
                 frame.annotations,
                 frame.annotations_deps,
-            )
+            ) if len(frame.annotations) > 0 else {}
         )
 
     @abstractmethod

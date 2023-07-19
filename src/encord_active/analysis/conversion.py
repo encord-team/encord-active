@@ -23,9 +23,13 @@ class BaseConverter(BaseEvaluation, metaclass=ABCMeta):
         Base implementation of the raw_calculate method, this api should
         be considered unstable.
         """
+        image = self.convert(frame.image)
         return BaseFrameOutput(
-            image=self.convert(frame.image),
-            annotations={},
+            image=image,
+            annotations={
+                k: image
+                for k in frame.annotations.keys()
+            },
         )
 
     @abstractmethod

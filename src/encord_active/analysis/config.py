@@ -57,6 +57,7 @@ class AnalysisConfig:
         analysis: list[BaseEvaluation],
         derived_embeddings: list[NearestImageEmbeddingQuery],
         derived_metrics: list[DerivedMetric],
+        device: Device,
     ) -> None:
         """
         Args:
@@ -76,6 +77,7 @@ class AnalysisConfig:
         self.analysis = analysis
         self.derived_embeddings = derived_embeddings
         self.derived_metrics = derived_metrics
+        self.device = device
 
     def validate(self) -> None:
         """
@@ -97,15 +99,20 @@ class AnalysisConfig:
 
 def default_torch_device() -> Device:
     """Default torch device to use for the analysis config"""
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch_device_str = "cpu"
+    if torch.cuda.is_available():
+        torch_device_str = "cuda"
+    elif torch.backends.mps.is_available():
+        torch_device_str = "mps"
+    return torch.device(torch_device_str)
 
 
 def create_analysis(device: Device) -> AnalysisConfig:
     """List of all analysis passes to be executed by encord active"""
     analysis: list[BaseEvaluation] = [
         # Generate embeddings
-        ClipImgEmbedding(device, "clip", "ViT-B/32"),
-        HuMomentEmbeddings("hu-moments"),
+        ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
+        HuMomentEmbeddings("embedding_hu_moments"),
         # Data conversions
         RGBToHSV(),
         # Image+object hybrid feature metrics
@@ -113,7 +120,7 @@ def create_analysis(device: Device) -> AnalysisConfig:
         AreaMetric(),
         BrightnessMetric(),
         ContrastMetric(),
-        SharpnessMetric(),
+        # FIXME: re-enable SharpnessMetric(),
         HSVColorMetric("red", hue_query=0.0),
         HSVColorMetric("green", hue_query=1 / 3.0),
         HSVColorMetric("blue", hue_query=2 / 3.0),
@@ -129,13 +136,16 @@ def create_analysis(device: Device) -> AnalysisConfig:
     derived_embeddings: list[NearestImageEmbeddingQuery] = [
         # Derive properties from embedding
         # TODO ☝️  The typing needs to be more general eventually
-        NearestImageEmbeddingQuery("clip-nearest", "clip"),
+        NearestImageEmbeddingQuery("derived_clip_nearest", "embedding_clip"),
     ]
     derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY
         NearestNeighborAgreement()
     ]
-    return AnalysisConfig(analysis=analysis, derived_embeddings=derived_embeddings, derived_metrics=derived_metrics)
+    return AnalysisConfig(
+        analysis=analysis, derived_embeddings=derived_embeddings, derived_metrics=derived_metrics,
+        device=device,
+    )
 
 
 def verify_analysis(analysis_list: list[BaseEvaluation]) -> set[str]:

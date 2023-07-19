@@ -13,6 +13,9 @@ class DistanceToBorderMetric(OneObjectMetric):
 
     def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResult:
         points = annotation.points
-        xmin, ymin = points.min(0).values
-        xmax, ymax = 1 - points.max(0).values
-        return min(xmin, xmax, ymin, ymax)
+        if points is not None:
+            x_min, y_min = points.min(0).values.cpu()
+            x_max, y_max = 1 - points.max(0).values.cpu()
+            return min(x_min, x_max, y_min, y_max)
+        else:
+            raise ValueError(f"Border closeness not supported for bitmasks yet!")
