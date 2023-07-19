@@ -4,6 +4,7 @@ import torch
 from typing import Union, Optional
 from PIL import Image
 from torch.nn.functional import conv2d
+from torch.types import Device
 from torchvision.transforms.functional import pil_to_tensor, to_pil_image
 
 from encord_active.analysis.types import (
@@ -70,11 +71,13 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
         return torch.tensor(data, dtype=torch.float32)
     elif annotation_type == AnnotationType.SKELETON:
         raise ValueError(f"Skeleton object type is not supported")
+    elif annotation_type == AnnotationType.BITMASK:
+        return None
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
 
 
 def obj_to_mask(
-    annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
+    device: Device, annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
 ) -> Optional[MaskTensor]:
     # TODO fix me
     if annotation_type == AnnotationType.CLASSIFICATION or points is None:
@@ -87,13 +90,16 @@ def obj_to_mask(
         # FIXME: cleanup and keep in gpu memory
         array = points.cpu().numpy().tolist()
         return bounding_box_mask(
-            Point(*array[0]), Point(*array[2]), img_w, img_h
+            device,
+            Point(*[int(round(x)) for x in array[0]]),
+            Point(*[int(round(x)) for x in array[2]]),
+            img_w, img_h
         )
     elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
         raise ValueError(f"Rotated bounding box shape is not supported")
     elif annotation_type == AnnotationType.POINT:
-        x, y = points.cpu().numpy.tolist()
-        return point_mask(x, y, img_w, img_h)
+        x, y = points.cpu().numpy().tolist()
+        return point_mask(device, x, y, img_w, img_h)
     elif annotation_type == AnnotationType.SKELETON:
         raise ValueError(f"Skeleton object shape is not supported")
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
@@ -113,20 +119,24 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
     # TODO: Implement the winding algorithm in torch instead for performance
-    mask = np.zeros((width, height), dtype=np.uint8)
-    points = coordinates.cpu().numpy().round(0).astype(np.uint8).reshape(-1, 1, 2)
-    mask = cv2.fillPoly(mask, points, 1)
+    mask = np.zeros((height, width), dtype=np.uint8)
+    points = coordinates.cpu().numpy().round(0).astype(np.uint8)
+    # FIXME: broken!!! cv2.fillPoly(mask, [points], 1)
+    for x, y in points:
+        mask[y, x] = 1
+    # mask = cv2.fillPoly(mask, points, 1)
+    # FIXME: this is broken!!
     return torch.tensor(mask).bool()
 
 
-def bounding_box_mask(top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
-    mask = torch.zeros(width, height, dtype=torch.bool).bool()
+def bounding_box_mask(device: Device, top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
+    mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
     mask[top_left.y: bottom_right.y, top_left.x: bottom_right.x] = True
     return mask
 
 
-def point_mask(x: float, y: float, width: int, height: int) -> MaskTensor:
-    mask = torch.zeros(width, height, dtype=torch.bool).bool()
+def point_mask(device: Device, x: float, y: float, width: int, height: int) -> MaskTensor:
+    mask = torch.zeros(width, height, dtype=torch.bool, device=device).bool()
     x_i = round(x * width)
     y_i = round(y * height)
     mask[x_i, y_i] = True
@@ -144,9 +154,10 @@ def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
     ```
     """
     yx_coords = torch.stack(torch.where(mask)).T  # [n, 2]
-
-    y_min, x_min = torch.min(yx_coords, 0)[0]
-    y_max, x_max = torch.max(yx_coords, 0)[0]
+    # FIXME: cast to support mps backend - check perf & maybe remove in future
+    yx_coords = yx_coords.type(torch.int32)
+    y_min, x_min = torch.min(yx_coords, 0).values
+    y_max, x_max = torch.max(yx_coords, 0).values
 
     return Point(x_min, y_min), Point(x_max, y_max)
 

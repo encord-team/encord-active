@@ -24,9 +24,9 @@ class AnnotationMetadata:
     mask: Optional[MaskTensor]
 
 
+@dataclass(frozen=True)
 class NearestNeighbors(NamedTuple):
-    feature_hashes: list[str]
-    annotation_hashes: list[str]
+    metric_deps: list[MetricDependencies]
     similarities: list[float]
 
 

@@ -1,5 +1,7 @@
 from typing import Optional
 
+import torch
+
 from encord_active.analysis.metric import MetricDependencies, OneImageMetric
 from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
 from encord_active.analysis.util import laplacian2d

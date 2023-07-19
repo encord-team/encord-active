@@ -15,8 +15,9 @@ class BrightnessMetric(OneImageMetric):
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         if mask is None:
-            return torch.mean(image).item() / 255
+            return torch.mean(image, dtype=torch.float) / 255.0
         else:
-            mask_count = float(deps["img-area"])
-            mask_total = torch.sum(torch.masked_fill(image.long(), ~mask, 0)).item()
-            return float(mask_total) / mask_count
+            mask_count = float(deps["metric_area"])
+            image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
+            mask_total = torch.sum(torch.masked_fill(image_reduced, ~mask, 0), dtype=torch.float32).item()
+            return float(mask_total) / (255.0 * mask_count)

@@ -27,10 +27,16 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
             if annotation.mask is not None
         ]
         b = len(objs)
+        if b == 1:
+            # skip 1 label case.
+            return {
+                obj_hash: 0.0
+                for obj_hash, obj_mask in objs
+            }
         masks = torch.stack([obj_mask for obj_hash, obj_mask in objs])
         intersections = (masks.unsqueeze(0) & masks.unsqueeze(1)).view(b, b, -1).sum(-1)
         unions = (masks.unsqueeze(0) | masks.unsqueeze(1)).view(b, b, -1).sum()
         ious = intersections / unions
         ious[np.diag_indices_from(ious)] = -1  # don't consider self against self
-        max_ious = ious.max(1).values
-        return dict(zip([obj_hash for obj_hash, in objs], max_ious))
+        max_ious = ious.max(1).values.cpu()
+        return dict(zip([obj_hash for obj_hash, obj_mask in objs], max_ious))
