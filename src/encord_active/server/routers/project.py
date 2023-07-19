@@ -1,5 +1,6 @@
 import json
 import shutil
+import uuid
 from enum import Enum
 from functools import lru_cache
 from typing import Annotated, List, Optional, Union, cast
@@ -22,7 +23,8 @@ from sqlmodel import Session, select
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics
-from encord_active.db.models import ProjectDataAnalytics, get_engine
+from encord_active.db.models import ProjectDataAnalytics, get_engine, ProjectTag, ProjectTaggedDataUnit, \
+    ProjectTaggedAnnotation
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
 from encord_active.lib.common.utils import DataHashMapping
@@ -85,7 +87,7 @@ from encord_active.lib.project.metadata import fetch_project_meta, update_projec
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.dependencies import (
     ProjectFileStructureDep,
-    verify_premium,
+    verify_premium, engine,
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
@@ -207,6 +209,80 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
             # Update the label tags associated with the labels (if they exist)
             if item.id != data_row_id:
                 MergedMetrics(conn).update_tags(item.id, label_tags)
+
+    # Ensure that tags stay in sync between the two sources of truth.
+    with Session(engine) as sess:
+        project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
+
+        def _tag_hash(name: str) -> uuid.UUID:
+            tag_hash_candidate = sess.exec(
+                select(ProjectTag.tag_hash).where(
+                    ProjectTag.project_hash == project_hash,
+                    ProjectTag.name == name
+                )
+            ).first()
+            if tag_hash_candidate is not None:
+                return tag_hash_candidate
+            else:
+                new_tag_hash = uuid.uuid4()
+                sess.add(ProjectTag(
+                    tag_hash=new_tag_hash,
+                    project_hash=project_hash,
+                    name=name,
+                    description="",
+                ))
+                return new_tag_hash
+
+        data_exists = set()
+        label_exists = set()
+        for item in payload:
+            data_tag_list = item.grouped_tags["data"]
+            annotation_tag_list = item.grouped_tags["label"]
+            _, du_hash_str, frame_str, *annotation_hashes = item.id.split("_")
+            du_hash = uuid.UUID(du_hash_str)
+            frame = int(frame_str)
+            for data_tag in data_tag_list:
+                tag_hash = _tag_hash(data_tag)
+                dup_key = (project_hash, du_hash, frame, tag_hash)
+                if dup_key in data_exists:
+                    continue
+                data_exists.add(dup_key)
+                if sess.exec(select(ProjectTaggedDataUnit).where(
+                    ProjectTaggedDataUnit.project_hash == project_hash,
+                    ProjectTaggedDataUnit.du_hash == du_hash,
+                    ProjectTaggedDataUnit.frame == frame,
+                    ProjectTaggedDataUnit.tag_hash == tag_hash,
+                )).first() is not None:
+                    continue
+                sess.add(ProjectTaggedDataUnit(
+                    project_hash=project_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    tag_hash=tag_hash,
+                ))
+            for annotation_hash in annotation_hashes:
+                for annotation_tag in annotation_tag_list:
+                    tag_hash = _tag_hash(annotation_tag)
+                    dup_key = (project_hash, du_hash, frame, annotation_hash, tag_hash)
+                    if dup_key in label_exists:
+                        continue
+                    label_exists.add(dup_key)
+                    if sess.exec(select(ProjectTaggedAnnotation).where(
+                        ProjectTaggedAnnotation.project_hash == project_hash,
+                        ProjectTaggedAnnotation.du_hash == du_hash,
+                        ProjectTaggedAnnotation.frame == frame,
+                        ProjectTaggedAnnotation.object_hash == annotation_hash,
+                        ProjectTaggedAnnotation.tag_hash == tag_hash,
+                    )).first() is not None:
+                        continue
+                    sess.add(ProjectTaggedAnnotation(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=frame,
+                        object_hash=annotation_hash,
+                        tag_hash=tag_hash,
+                    ))
+        sess.commit()
 
 
 @router.get("/{project}/has_similarity_search")

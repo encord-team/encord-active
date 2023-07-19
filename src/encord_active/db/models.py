@@ -1,4 +1,5 @@
 import enum
+import logging
 import os
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
@@ -560,19 +561,30 @@ def get_engine(
     if path_key not in _init_metadata and create_db_schema == "1":
         if use_alembic:
             # Execute alembic config
+            import encord_active.db as alembic_file
+            alembic_cwd = Path(alembic_file.__file__).expanduser().resolve().parent
+            alembic_args = [
+                'alembic',
+                '--raiseerr',
+                '-x',
+                f'dbPath={engine_url}',
+                'upgrade', 'head',
+            ]
+            # How to run alembic via subprocess if running locally with temp cwd change
+            # ends up causing issues:
+            # res_code = -1
+            # if os.environ.get('ENCORD_ACTIVE_USE_SUBPROC_ALEMBIC', '0') == '1':
+            #     # optional mode that doesn't change the cwd.
+            #     # not used by default.
+            #     import subprocess
+            #     res_code = subprocess.Popen(alembic_args, cwd=alembic_cwd).wait()
+            # if res_code != 0:
+            # Run via CWD switch.
             current_cwd = os.getcwd()
             try:
-                import encord_active.db as alembic_file
-                path = Path(alembic_file.__file__).expanduser().resolve()
-                os.chdir(path.parent)
+                os.chdir(alembic_cwd)
                 import alembic.config
-                alembic_args = [
-                    '--raiseerr',
-                    '-x',
-                    f'dbPath={engine_url}',
-                    'upgrade', 'head',
-                ]
-                alembic.config.main(argv=alembic_args)
+                alembic.config.main(argv=alembic_args[1:])
             finally:
                 os.chdir(current_cwd)
         else:

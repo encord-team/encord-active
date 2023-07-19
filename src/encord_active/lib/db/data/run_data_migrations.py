@@ -1,10 +1,11 @@
 import importlib.util
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Optional
 
-from encord_active.lib.project.metadata import fetch_project_meta
+from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logging.getLogger("Data Migrations")
@@ -42,6 +43,7 @@ def run_data_migrations(pfs: ProjectFileStructure, final_data_version: Optional[
             spec.loader.exec_module(migration)
             migration.up(pfs)
 
-    # FIXME: re-enable this before merging (just makes debugging much easier)
-    # project_meta["data_version"] = get_timestamp_of_migration_file(migrations_to_run[-1])
-    # update_project_meta(pfs.project_dir, project_meta)
+    # This can be conditionally disabled for ease of debugging variations in the project version.
+    if os.environ.get("ENCORD_ACTIVE_DEBUGGING_DISABLE_MIGRATION_TIMESTAMPS", "0") != "1":
+        project_meta["data_version"] = get_timestamp_of_migration_file(migrations_to_run[-1])
+        update_project_meta(pfs.project_dir, project_meta)
