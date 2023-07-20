@@ -11,6 +11,7 @@ from rich.panel import Panel
 from typer.core import TyperGroup
 
 from encord_active.cli.project import project_cli
+from encord_active.cli.utils.streamlit import ensure_safe_project
 
 load_dotenv()
 
@@ -132,6 +133,7 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
+    ensure_safe_project(project_path)
     success_with_vizualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
 

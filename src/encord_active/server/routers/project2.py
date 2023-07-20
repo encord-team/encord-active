@@ -1,12 +1,12 @@
 import uuid
-from typing import Dict, List, Optional, Tuple, Literal, TypedDict
+from typing import Dict, List, Literal, Optional, Tuple, TypedDict
 from urllib.parse import quote
 
 from fastapi import APIRouter
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from encord_active.db.enums import EnumDefinition, DataEnums, AnnotationEnums
+from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
 from encord_active.db.models import (
     AnnotationType,
@@ -15,17 +15,21 @@ from encord_active.db.models import (
     ProjectDataAnalytics,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectEmbeddingReduction,
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    ProjectEmbeddingReduction,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
-from encord_active.server.routers import project2_analysis, project2_prediction, project2_actions
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
+)
+from encord_active.server.routers import (
+    project2_actions,
+    project2_analysis,
+    project2_prediction,
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
@@ -108,6 +112,8 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
     for project_hash, title, description in db_projects:
         if str(project_hash) in sandbox_projects:
             sandbox_projects[str(project_hash)]["downloaded"] = True
+            # TODO: remove me when we can download sandbox projects from the UI
+            sandbox_projects[str(project_hash)]["sandbox"] = False
             continue
         projects[str(project_hash)] = ProjectReturn(
             title=title,
@@ -176,12 +182,10 @@ def get_project_summary(project_hash: uuid.UUID):
             .group_by(ProjectDataAnalytics.du_hash)
         ).first()
         annotation_count = sess.exec(
-            select(func.count())
-            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+            select(func.count()).where(ProjectAnnotationAnalytics.project_hash == project_hash)
         ).first()
         classification_count = sess.exec(
-            select(func.count())
-            .where(
+            select(func.count()).where(
                 ProjectAnnotationAnalytics.project_hash == project_hash,
                 ProjectAnnotationAnalytics.annotation_type == AnnotationType.CLASSIFICATION,
             )
@@ -422,5 +426,3 @@ def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.
         ]
         sess.add_all(tags)
         sess.commit()
-
-
