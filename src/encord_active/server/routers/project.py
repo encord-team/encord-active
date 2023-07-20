@@ -726,7 +726,7 @@ def upload_to_encord(
     pfs: ProjectFileStructureDep,
     item: UploadToEncordModel,
 ):
-    old_project_hash = pfs.load_project_meta()["project_hash"]
+    old_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
     # FIXME: don't fetch app_config from here.
@@ -750,7 +750,13 @@ def upload_to_encord(
             project_description=item.project_description,
             ontology_hash=ontology_hash,
         )
-        migrate_disk_to_db(encord_actions.project_file_structure)
+
+        # Regenerate new database instance
+        pfs.cache_clear()
+        new_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
+        if new_project_hash == old_project_hash:
+            raise ValueError(f"BUG: Upload to encord hasn't changed project hash")
+        migrate_disk_to_db(pfs)
         with Session(engine) as sess:
             # Now that the new project hash has been synced to the database
             # delete the old (out-of-date) value.
@@ -761,6 +767,9 @@ def upload_to_encord(
                 raise ValueError(f"BUG: Could not find old project")
             sess.delete(old_db)
             sess.commit()
+        # Move folder so uuid lookup will work correctly.
+        new_project_name = pfs.load_project_meta()["project_title"]
+        shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
     except Exception as e:
         print(str(e))
         raise e
