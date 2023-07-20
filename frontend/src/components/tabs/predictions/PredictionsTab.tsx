@@ -3,18 +3,27 @@ import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
 import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
-import { Explorer } from "../../explorer";
+import { Explorer, Props as ExplorerProps } from "../../explorer";
 
-export function PredictionsTab(props: {
-  queryAPI: QueryAPI;
-  projectHash: string;
-  metricsSummary: ProjectMetricSummary;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
-}) {
-  const { queryAPI, projectHash, metricsSummary, featureHashMap } = props;
+export function PredictionsTab(
+  props: {
+    queryAPI: QueryAPI;
+    projectHash: string;
+    metricsSummary: ProjectMetricSummary;
+    featureHashMap: Record<
+      string,
+      { readonly color: string; readonly name: string }
+    >;
+  } & Pick<ExplorerProps, "remoteProject" | "setSelectedProjectHash">
+) {
+  const {
+    queryAPI,
+    projectHash,
+    metricsSummary,
+    featureHashMap,
+    remoteProject,
+    setSelectedProjectHash,
+  } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
   const { data: allPredictions } =
     queryAPI.useProjectListPredictions(projectHash);
@@ -78,6 +87,8 @@ export function PredictionsTab(props: {
                   featureHashMap={featureHashMap}
                   metricsSummary={metricsSummary}
                   queryAPI={queryAPI}
+                  setSelectedProjectHash={setSelectedProjectHash}
+                  remoteProject={remoteProject}
                 />
               ),
             },

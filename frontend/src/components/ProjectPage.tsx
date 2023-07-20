@@ -14,10 +14,15 @@ export function ProjectPage(props: {
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
-  setSelectedProject: (projectHash?: string) => void;
+  setSelectedProjectHash: (projectHash?: string) => void;
   projects: readonly IntegratedProjectMetadata[];
 }) {
-  const { queryAPI, projectHash, projects, setSelectedProject } = props;
+  const {
+    queryAPI,
+    projectHash,
+    projects,
+    setSelectedProjectHash: setSelectedProject,
+  } = props;
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
 
@@ -93,6 +98,8 @@ export function ProjectPage(props: {
               queryAPI={queryAPI}
               metricsSummary={projectSummary.annotations}
               featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProject}
+              remoteProject={remoteProject}
             />
           ),
         },

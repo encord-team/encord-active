@@ -36,7 +36,7 @@ export const App = () => {
           queryAPI={queryAPI}
           projectHash={selectedProjectHash}
           projects={Object.values(projects)}
-          setSelectedProject={setSelectedProjectHash}
+          setSelectedProjectHash={setSelectedProjectHash}
         />
       ) : (
         <ProjectsPage
