@@ -10,26 +10,14 @@ import { classy } from "../helpers/classy";
 import { fork } from "radash";
 import { IntegratedProjectMetadata } from "./james/IntegratedActiveAPI";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import { env } from "../constants";
+import { apiUrl, env } from "../constants";
+import axios from "axios";
 
-const useDownloadProject = (
-  projectHash: string,
-  options: UseMutationOptions = {}
-) =>
+const useDownloadProject = (options?: Parameters<typeof useMutation>[2]) =>
   useMutation(
-    ["useDownloadProject", projectHash],
-    async (args: ActiveUploadToEncordMutationArguments) => {
-      const headers = {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      };
-      return await axios.post(
-        `${baseURL}/upload_to_encord`,
-        JSON.stringify(params),
-        { headers }
-      );
-    },
-
+    ["useDownloadProject"],
+    async (projectHash: string) =>
+      await axios.get(`${apiUrl}/projects/${projectHash}/download_sandbox`),
     options
   );
 
@@ -45,6 +33,7 @@ export const ProjectsPage = ({
     projects,
     ({ sandbox }) => !!sandbox
   );
+  const { mutate: download, isLoading } = useDownloadProject();
 
   return (
     <div className="h-max p-5 flex flex-col gap-5">
@@ -84,7 +73,8 @@ export const ProjectsPage = ({
           <ProjectNotFoundCard />
         )}
       </div>
-      {env !== "prod" && sandboxProjects.length && (
+      {/* TODO: temporarily hide sandbox projects  */}
+      {false && env !== "prod" && sandboxProjects.length && (
         <>
           <h2 className="font-light text-xl text-neutral-700">
             View a sandbox project
@@ -97,7 +87,11 @@ export const ProjectsPage = ({
                   key={project.projectHash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() => console.log(project)}
+                  onClick={() =>
+                    (project.downloaded ? onSelectLocalProject : download)(
+                      project["projectHash"]
+                    )
+                  }
                 />
               ))}
           </div>

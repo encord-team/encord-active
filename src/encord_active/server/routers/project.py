@@ -1,9 +1,11 @@
+import asyncio
 import json
 import shutil
 import uuid
 from enum import Enum
 from functools import lru_cache
 from typing import Annotated, List, Optional, Union, cast
+from uuid import UUID
 
 import pandas as pd
 from encord.orm.project import (
@@ -12,7 +14,7 @@ from encord.orm.project import (
     CopyLabelsOptions,
     ReviewApprovalState,
 )
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
@@ -21,8 +23,15 @@ from sqlmodel import Session, select
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
-from encord_active.db.models import ProjectTag, ProjectTaggedDataUnit, \
-    ProjectTaggedAnnotation
+from encord_active.db.metrics import AnnotationMetrics, DataMetrics
+from encord_active.db.models import (
+    Project,
+    ProjectDataAnalytics,
+    ProjectTag,
+    ProjectTaggedAnnotation,
+    ProjectTaggedDataUnit,
+    get_engine,
+)
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
 from encord_active.lib.common.utils import DataHashMapping
@@ -34,9 +43,8 @@ from encord_active.lib.db.helpers.tags import (
     from_grouped_tags,
     to_grouped_tags,
 )
-from encord_active.lib.db.merged_metrics import (
-    MergedMetrics,
-)
+
+from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.encord.actions import (
@@ -81,9 +89,14 @@ from encord_active.lib.premium.model import TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
+from encord_active.lib.project.sandbox_projects.sandbox_projects import (
+    available_prebuilt_projects,
+    fetch_prebuilt_project,
+)
 from encord_active.server.dependencies import (
     ProjectFileStructureDep,
-    verify_premium, engine,
+    engine,
+    verify_premium,
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
@@ -329,11 +342,14 @@ def get_available_metrics(
 
     return results
 
+
 @router.get("/{project}/prediction_types")
 def get_available_prediction_types(project: ProjectFileStructureDep):
-    return [prediction_type for prediction_type in MainPredictionType if check_model_prediction_availability(
-        project.predictions / prediction_type.value
-    )]
+    return [
+        prediction_type
+        for prediction_type in MainPredictionType
+        if check_model_prediction_availability(project.predictions / prediction_type.value)
+    ]
 
 
 @router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
@@ -727,3 +743,40 @@ def upload_to_encord(
         "project_hash": new_project.project_hash,
         "dataset_hash": dataset_creation_result.hash,
     }
+
+
+def _download_task(pfs: ProjectFileStructure, project_name: str):
+    pfs.project_dir.mkdir(exist_ok=True)
+    project_dir = fetch_prebuilt_project(project_name, pfs.project_dir)
+    ensure_safe_project(project_dir)
+    migrate_disk_to_db(pfs)
+
+
+@router.get("/{project}/download_sandbox")
+def download_sandbox_project(
+    project: str,
+    background_tasks: BackgroundTasks
+):
+    sandbox_projects = available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS)
+    sandbox_project = next(
+        (sandbox_project for sandbox_project in sandbox_projects.values() if sandbox_project["hash"] == project), None
+    )
+    if not sandbox_project:
+        raise HTTPException(status_code=404, detail=f"Sandbox project with hash: '{project}' was not found")
+
+    pfs = ProjectFileStructure(get_settings().SERVER_START_PATH / sandbox_project["name"])
+
+    with Session(engine) as sess:
+        sess.add(
+            Project(
+                project_hash=UUID(project),
+                project_name="temp",
+                project_description="",
+                project_remote_ssh_key_path=None,
+                project_ontology={},
+            )
+        )
+        sess.commit()
+
+    background_tasks.add_task(_download_task, pfs, sandbox_project["name"])
+    return "Downloding in background"
