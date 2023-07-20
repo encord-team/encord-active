@@ -865,8 +865,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     # Migrate merged metric tag definitions.
     with DBConnection(pfs) as metric_conn:
         all_metrics = MergedMetrics(metric_conn).all()
-        for merged_metric in all_metrics.to_dict('records'):
-            _, du_hash_str, frame_str, *annotation_hashes = merged_metric["identifier"]
+        for merged_metric in all_metrics.reset_index().to_dict('records'):
+            _, du_hash_str, frame_str, *annotation_hashes = merged_metric["identifier"].split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             tags: List[Tag] = merged_metric["tags"]
