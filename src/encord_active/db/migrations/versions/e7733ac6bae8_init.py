@@ -122,7 +122,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame"),
     )
     op.create_index(
-        "active_project_data_units_unique_du_hash_frame", "active_project_data_units", ["du_hash", "frame"], unique=True
+        "active_project_data_units_unique_du_hash_frame",
+        "active_project_data_units",
+        ["project_hash", "du_hash", "frame"],
+        unique=True,
     )
     op.create_table(
         "active_project_prediction_analytics",

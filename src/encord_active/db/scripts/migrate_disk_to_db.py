@@ -827,9 +827,10 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             tag_name_map[tag.name] = tag_uuid
             project_tag_definitions.append(
                 ProjectTag(
-                    tag_uuid=tag_uuid,
+                    tag_hash=tag_uuid,
                     project_hash=project_hash,
                     name=tag.name,
+                    description="",
                 )
             )
 
@@ -865,7 +866,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     # Migrate merged metric tag definitions.
     with DBConnection(pfs) as metric_conn:
         all_metrics = MergedMetrics(metric_conn).all()
-        for merged_metric in all_metrics.reset_index().to_dict('records'):
+        all_metrics = all_metrics.reset_index()
+        all_metrics_records = all_metrics.to_dict('records')
+        for merged_metric in all_metrics_records:
             _, du_hash_str, frame_str, *annotation_hashes = merged_metric["identifier"].split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
@@ -875,11 +878,13 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     tag_uuid = tag_name_map[tag.name]
                 else:
                     tag_uuid = uuid.uuid4()
+                    tag_name_map[tag.name] = tag_uuid
                     project_tag_definitions.append(
                         ProjectTag(
-                            tag_uuid=tag_uuid,
+                            tag_hash=tag_uuid,
                             project_hash=project_hash,
                             name=tag.name,
+                            description="",
                         )
                     )
                 if len(annotation_hashes) == 0 or tag.scope == TagScope.DATA:

@@ -580,6 +580,7 @@ def replace_db_uids(
     du_hash_map: DataHashMapping,
     lr_du_mapping: dict[LabelRowDataUnit, LabelRowDataUnit],
     label_row_json_map: dict[str, str],
+    refresh: bool = True,
 ):
     # Lazy import to support prisma reload
     from prisma.types import (
@@ -603,4 +604,5 @@ def replace_db_uids(
                         data_hash=new_du, label_hash=new_lr, label_row_json=label_row_json_map[new_lr]
                     ),
                 )
-    Project(project_file_structure.project_dir).refresh()
+    if refresh:
+        Project(project_file_structure.project_dir).refresh()

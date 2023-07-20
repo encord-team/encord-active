@@ -629,6 +629,50 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
                 lr_du_mapping=lr_du_mapping,  # Update label hash and lr_dr hashes ( label hash)
                 label_row_json_map=label_row_json_map,  # Update label row jsons to correct value.
             )
+        else:
+            # Replace all label hashes with different values, to bypass the label_hash unique constraint bug
+            # this will regenerate a unique label hash and dataset hash for the subset project.
+            new_project_hash = target_project_structure.load_project_meta()["project_hash"]
+            dataset_hash = str(uuid.uuid4())
+            with PrismaConnection(target_project_structure) as prisma_conn:
+                prisma_label_rows = prisma_conn.labelrow.find_many()
+                lh_map = {
+                    label_row.label_hash: str(uuid.uuid4())
+                    for label_row in prisma_label_rows
+                }
+                lr_du_mapping = {
+                    LabelRowDataUnit(
+                        label_row.label_hash, label_row.data_hash
+                    ): LabelRowDataUnit(
+                        lh_map[label_row.label_hash], label_row.data_hash
+                    )
+                    for label_row in prisma_label_rows
+                }
+                label_row_json_map = {
+                    lh_map[label_row.label_hash]: json.loads(label_row.label_row_json)
+                    for label_row in prisma_label_rows
+                }
+                for label_hash, label_row_json in label_row_json_map.items():
+                    label_row_json["dataset_hash"] = dataset_hash
+                    label_row_json["label_hash"] = label_hash
+            replace_uids(
+                target_project_structure,
+                lr_du_mapping,
+                DataHashMapping(),
+                new_project_hash,
+                new_project_hash,
+                dataset_hash,
+            )
+            replace_db_uids(
+                target_project_structure,
+                du_hash_map=DataHashMapping(),
+                lr_du_mapping=lr_du_mapping,
+                label_row_json_map={
+                    k: json.dumps(v)
+                    for k, v in label_row_json_map.items()
+                },
+                refresh=False,  # Not a remote project running the migration
+            )
 
     except Exception as e:
         shutil.rmtree(target_project_dir.as_posix())
