@@ -123,7 +123,13 @@ export const Explorer = ({
     },
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
-  const api = useContext(ApiContext);
+  const apiContext = useContext(ApiContext);
+  let api: any;
+  if (apiContext == null) {
+    api = getApi(projectHash);
+  } else {
+    api = apiContext;
+  }
 
   const predictionTypeFound = scope !== "prediction" || predictionType != null;
 
