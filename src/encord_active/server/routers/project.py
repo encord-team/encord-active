@@ -20,6 +20,7 @@ from natsort import natsorted
 from pandera.typing import DataFrame
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from starlette.responses import FileResponse
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
@@ -33,6 +34,7 @@ from encord_active.db.models import (
     get_engine,
 )
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
+from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
@@ -172,6 +174,24 @@ def tagged_items(project: ProjectFileStructureDep):
             selected_tags.extend(data_row_id_to_data_tags.get(data_row_id, []))
 
     return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
+
+
+@router.get("/{project}/local-fs/{lr_hash}/{du_hash}/{frame}")
+def server_local_fs_file(project: ProjectFileStructureDep, lr_hash: str, du_hash: str, frame: int):
+    label_row_structure = project.label_row_structure(lr_hash)
+    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit(du_hash, None), None
+    )
+    if data_opt:
+        signed_url = data_opt.signed_url
+        file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
+        return FileResponse(file_path)
+    else:
+        debug_id = f"{lr_hash}_{du_hash}_{frame}"
+        raise HTTPException(
+            status_code=404,
+            detail=f"Local resource with id={debug_id} was not found for project: {project}"
+        )
 
 
 @router.get("/{project}/items/{id:path}")
@@ -712,6 +732,7 @@ def upload_to_encord(
     pfs: ProjectFileStructureDep,
     item: UploadToEncordModel,
 ):
+    old_project_hash = pfs.load_project_meta()["project_hash"]
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
     # FIXME: don't fetch app_config from here.
@@ -736,6 +757,14 @@ def upload_to_encord(
             ontology_hash=ontology_hash,
         )
         migrate_disk_to_db(encord_actions.project_file_structure)
+        with Session(engine) as sess:
+            # Now that the new project hash has been synced to the database
+            # delete the old (out-of-date) value.
+            old_db = sess.exec(
+                select(Project).where(Project.project_hash == old_project_hash)
+            )
+            sess.delete(old_db)
+            sess.commit()
     except Exception as e:
         print(str(e))
         raise e

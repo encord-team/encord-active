@@ -35,8 +35,7 @@ app.add_middleware(
 # FIXME: change to reference of a build python module or save locally somehow.
 frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "build"
 
-app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH, follow_symlink=True), name="static")
-app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=True), name="sandbox-static")
+app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=False), name="sandbox-static")
 app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
 
 
