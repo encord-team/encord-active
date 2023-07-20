@@ -98,14 +98,16 @@ export function ProjectPage(props: {
           label: "Predictions",
           key: "3",
           children: (
-            <PredictionsTab
-              projectHash={projectHash}
-              queryAPI={queryAPI}
-              metricsSummary={projectSummary.annotations}
-              featureHashMap={featureHashMap}
-              setSelectedProjectHash={setSelectedProject}
-              remoteProject={remoteProject}
-            />
+            <ApiContext.Provider value={api}>
+              <PredictionsTab
+                projectHash={projectHash}
+                queryAPI={queryAPI}
+                metricsSummary={projectSummary.annotations}
+                featureHashMap={featureHashMap}
+                setSelectedProjectHash={setSelectedProject}
+                remoteProject={remoteProject}
+              />
+            </ApiContext.Provider>
           ),
         },
         {

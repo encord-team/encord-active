@@ -167,9 +167,6 @@ export function SummaryTab(props: {
           featureHashMap={featureHashMap}
         />
       </Card>
-      <Divider orientation="left">
-        <Typography.Title level={3}>Metric Outliers</Typography.Title>
-      </Divider>
     </Space>
   );
 }
