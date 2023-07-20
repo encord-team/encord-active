@@ -29,7 +29,6 @@ from encord_active.lib.project.project_file_structure import (
     ProjectFileStructure,
 )
 from encord_active.server.dependencies import ProjectFileStructureDep
-from encord_active.server.settings import get_settings
 
 
 class Metadata(TypedDict):
@@ -51,23 +50,16 @@ def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStr
 
 
 @lru_cache
-def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
+def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all()
 
-    return apply_filters(merged_metrics, filters, project)
+    return apply_filters(merged_metrics, filters, project, scope)
 
 
 @lru_cache
 def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
-
-
-IndexOrSeries = TypeVar("IndexOrSeries", pd.Index, pd.Series)
-
-
-def partial_column(column: IndexOrSeries, parts: int) -> IndexOrSeries:
-    return column.str.split("_", n=parts).str[0:parts].str.join("_")
 
 
 def _get_url(

@@ -87,7 +87,7 @@ export const Explorer = ({
   const filters = useMemo(
     () => {
       const range = Object.fromEntries(
-          Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [k, {min ,max}])
+        Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [k, { min, max }])
       );
       let tagData: string[] = [];
       let tagLabel: string[] = [];
@@ -106,18 +106,18 @@ export const Explorer = ({
       return ({
         range: range,
         tags: {
-            data: tagData,
-            label: tagLabel,
+          data: tagData,
+          label: tagLabel,
         },
         object_classes: labelClass,
         ...(scope === "prediction" && predictionType
           ? {
-              prediction_filters: {
-                type: predictionType,
-                outcome: predictionOutcome,
-                iou_threshold: iou,
-              },
-            }
+            prediction_filters: {
+              type: predictionType,
+              outcome: predictionOutcome,
+              iou_threshold: iou,
+            },
+          }
           : {}),
       } as Filters);
     },
@@ -188,7 +188,7 @@ export const Explorer = ({
   const filterMetricSummary = useMemo((): ProjectMetricSummary => {
     const metricSummary: Record<string, ProjectMetricSummary['metrics'][string]> = {};
     if (metrics != null) {
-      metrics.data.forEach(({name}) => {
+      metrics.data.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
@@ -196,7 +196,7 @@ export const Explorer = ({
           type: "ufloat"
         }
       });
-      metrics.annotation.forEach(({name}) => {
+      metrics.annotation.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
@@ -204,7 +204,7 @@ export const Explorer = ({
           type: "ufloat"
         }
       });
-      metrics.prediction.forEach(({name}) => {
+      metrics.prediction.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
@@ -218,9 +218,9 @@ export const Explorer = ({
     return {
       metrics: metricSummary,
       enums: {
-        "label_tags": {type: "enum", title: "Label Tags", values: labelValues},
-        "data_tags": {type: "enum", title: "Data Tags", values: dataValues},
-        "feature_hash": {type: "ontology"}
+        "label_tags": { type: "enum", title: "Label Tags", values: labelValues },
+        "data_tags": { type: "enum", title: "Data Tags", values: dataValues },
+        "feature_hash": { type: "ontology" }
       }
     }
   }, [metricsSummary, metrics, allDataTags, allLabelTags]);
@@ -358,9 +358,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -386,8 +386,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -1011,7 +1011,7 @@ const ImageWithPolygons = ({
     );
   }, [width, height, item.id]);
   const itemUrl = (
-      item.url.startsWith("https://") || item.url.startsWith("https://")
+    item.url.startsWith("https://") || item.url.startsWith("https://")
   ) ? item.url : `${apiUrl}${item.url}`;
   return (
     <figure {...rest} className={classy("relative", className)}>

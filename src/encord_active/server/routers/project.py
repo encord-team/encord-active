@@ -24,19 +24,16 @@ from starlette.responses import FileResponse
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
-from encord_active.db.metrics import AnnotationMetrics, DataMetrics
 from encord_active.db.models import (
     Project,
-    ProjectDataAnalytics,
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine,
 )
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
-from encord_active.lib.common.utils import DataHashMapping
+from encord_active.lib.common.utils import DataHashMapping, partial_column, IndexOrSeries
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
@@ -102,11 +99,9 @@ from encord_active.server.dependencies import (
 )
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
-    IndexOrSeries,
     filtered_merged_metrics,
     get_similarity_finder,
     load_project_metrics,
-    partial_column,
     to_item,
 )
 
@@ -125,13 +120,13 @@ def read_item_ids(
     ascending: Annotated[bool, Body()] = True,
     ids: Annotated[Optional[list[str]], Body()] = None,
 ):
-    merged_metrics = filtered_merged_metrics(project, filters)
+    merged_metrics = filtered_merged_metrics(project, filters, scope)
 
     if scope == MetricScope.PREDICTION:
         if filters.prediction_filters is None:
             raise
         df, _ = get_model_predictions(project, filters.prediction_filters)
-        df = apply_filters(df, filters, project)
+        df = apply_filters(df, filters, project, scope)
 
         if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
             sort_by_metric = sort_by_metric.replace("(P)", "(O)")
