@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y \
     git \
     ffmpeg
 
+RUN curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output ViT-B-32.pt
+RUN mkdir /root/.cache/clip -p
+COPY ViT-B-32.pt /root/.cache/clip/
+
 RUN apt-get -y clean  \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,4 +35,3 @@ EXPOSE 8502
 
 HEALTHCHECK CMD ecord-active --version
 ENTRYPOINT ["encord-active"]
-
