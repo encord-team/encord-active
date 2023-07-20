@@ -72,7 +72,7 @@ export type ProjectSummary = {
   readonly local_project: boolean;
   readonly data: ProjectMetricSummary;
   readonly annotations: ProjectMetricSummary;
-  // readonly global: ProjectMetricSummary;
+  readonly global: ProjectMetricSummary;
   readonly du_count: number;
   readonly frame_count: number;
   readonly annotation_count: number;

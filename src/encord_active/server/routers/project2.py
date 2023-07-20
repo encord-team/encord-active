@@ -207,10 +207,10 @@ def get_project_summary(project_hash: uuid.UUID):
         "frame_count": frame_count,
         "annotation_count": annotation_count,
         "classification_count": classification_count,
-        # "global": {
-        #    "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
-        #    "enums": _enum_summary(AnnotationEnums | DataEnums),
-        # },
+        "global": {
+            "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
+            "enums": _enum_summary(AnnotationEnums | DataEnums),
+         },
         "tags": {tag.tag_hash: tag.name for tag in tags},
         "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
     }

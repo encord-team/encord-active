@@ -233,7 +233,7 @@ export const getApi = (projectHash: string, authToken?: string) => {
       scope: Scope,
       prediction_type?: PredictionType,
       prediction_outcome?: PredictionOutcome
-    ) => {
+    ): Promise<z.infer<typeof MetricDefinitionsSchema>> => {
       const queryParams = new URLSearchParams({
         ...(scope ? { scope } : {}),
         ...(prediction_type ? { prediction_type } : {}),
