@@ -4,6 +4,7 @@ import {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
+import { Filters } from "../../explorer/api";
 
 export type ActiveDomainSearchFilters = {
   readonly metrics: Readonly<Record<string, readonly [number, number]>>;
@@ -240,7 +241,7 @@ export type ActiveCreateSubsetMutationArguments = {
   readonly project_description?: string | undefined;
   readonly dataset_title: string;
   readonly dataset_description?: string | undefined;
-  readonly du_hashes: string[];
+  readonly filters: Filters;
 };
 
 export type ActiveCreateTagMutationArguments = {

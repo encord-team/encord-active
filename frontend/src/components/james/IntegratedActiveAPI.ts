@@ -382,7 +382,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
       async (args: ActiveCreateSubsetMutationArguments) => {
         const params = {
-          identifiers: args.du_hashes ?? [],
+          filters: args.filters ?? {},
           project_title: args.project_title,
           project_description: args.project_description ?? "",
           dataset_title: args.dataset_title,

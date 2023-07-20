@@ -247,7 +247,7 @@ export const Explorer = ({
         close={close}
         projectHash={projectHash}
         queryAPI={queryAPI}
-        identifiers={itemsToRender}
+        filters={filters}
       />
       <ActiveUploadToEncordModal
         open={open === "upload"}

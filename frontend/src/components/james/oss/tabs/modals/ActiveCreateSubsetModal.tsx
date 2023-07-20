@@ -1,15 +1,16 @@
 import * as React from "react";
 import { Form, Input, Modal } from "antd";
 import { ActiveQueryAPI } from "../../ActiveTypes";
+import { Filters } from "../../../../explorer/api";
 
 function ActiveCreateSubsetModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
   queryAPI: ActiveQueryAPI;
-  identifiers: string[],
+  filters: Filters,
 }) {
-  const { open, close, projectHash, queryAPI, identifiers } = props;
+  const { open, close, projectHash, queryAPI, filters } = props;
   const [form] = Form.useForm<{
     project_title: string;
     project_description?: string | undefined;
@@ -35,7 +36,7 @@ function ActiveCreateSubsetModal(props: {
           .then((fields) =>
             mutateCreateSubset.mutate({
               ...fields,
-              du_hashes: identifiers,
+              filters,
             })
           )
           .catch(() => undefined);
