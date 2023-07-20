@@ -1,10 +1,10 @@
 import uuid
 from typing import Dict, List, Literal, Optional, Tuple, TypedDict
-from urllib.parse import quote
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import func
 from sqlmodel import Session, select
+from starlette.responses import FileResponse
 
 from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
@@ -33,6 +33,7 @@ from encord_active.server.routers import (
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
+from encord_active.server.utils import _get_url
 
 router = APIRouter(
     prefix="/projects_v2",
@@ -55,12 +56,13 @@ class ProjectReturn(TypedDict):
     description: str
     projectHash: uuid.UUID
     imageUrl: str
+    imageUrlTimestamp: Optional[float]
     downloaded: bool
     sandbox: bool
     stats: Optional[ProjectStats]
 
 
-def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[str]:
+def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[Tuple[str, float]]:
     with Session(engine) as sess:
         data_units = sess.exec(
             select(ProjectDataUnitMetadata).where(ProjectDataUnitMetadata.project_hash == project_hash).limit(100)
@@ -68,14 +70,8 @@ def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[str]
         for data_unit in data_units:
             if not data_unit:
                 break
-            # TODO: filter for images with objects and draw polygons
-            if not data_unit.data_uri_is_video and data_unit.data_uri is not None:
-                settings = get_settings()
-                root_path = settings.SERVER_START_PATH.expanduser().resolve()
-                url_path = url_to_file_path(data_unit.data_uri, root_path)
-                if url_path is not None:
-                    relative_path = url_path.relative_to(root_path)
-                    return f"ea-static/{quote(relative_path.as_posix())}"
+            preview = display_preview(project_hash=project_hash, du_hash=data_unit.du_hash, frame=data_unit.frame)
+            return preview["url"], preview["timestamp"]
     return None
 
 
@@ -100,7 +96,8 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
             projectHash=project_hash_uuid,
             stats=data["stats"],
             downloaded=False,
-            imageUrl=f"ea-sandbox-static/{data['image_filename']}",
+            imageUrl=f"/ea-sandbox-static/{data['image_filename']}",
+            imageUrlTimestamp=None,
             sandbox=True,
         )
 
@@ -115,13 +112,15 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
             # TODO: remove me when we can download sandbox projects from the UI
             sandbox_projects[str(project_hash)]["sandbox"] = False
             continue
+        url, timestamp = _get_first_image_with_polygons_url(project_hash)
         projects[str(project_hash)] = ProjectReturn(
             title=title,
             description=description,
             projectHash=project_hash,
             stats=None,  # TODO: fix me
             downloaded=True,
-            imageUrl=_get_first_image_with_polygons_url(project_hash) or "",
+            imageUrl=url or "",
+            imageUrlTimestamp=timestamp,
             sandbox=False,
         )
     return {**projects, **sandbox_projects}
@@ -233,6 +232,29 @@ def list_supported_2d_embedding_reductions(project_hash: uuid.UUID):
     }
 
 
+@router.get("/{project_hash}/files/{du_hash}/{frame}")
+def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+    with Session(engine) as sess:
+        query = select(
+            ProjectDataUnitMetadata.data_uri,
+        ).where(
+            ProjectDataUnitMetadata.project_hash == project_hash,
+            ProjectDataUnitMetadata.du_hash == du_hash,
+            ProjectDataUnitMetadata.frame == frame,
+        )
+        data_uri = sess.exec(query).first()
+        if data_uri is not None:
+            settings = get_settings()
+            root_path = settings.SERVER_START_PATH.expanduser().resolve()
+            url_path = url_to_file_path(data_uri, root_path)
+            if url_path is not None:
+                return FileResponse(url_path)
+        raise HTTPException(
+            status_code=404,
+            detail=f"Project local file not found"
+        )
+
+
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
 def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):
     objects: List[dict] = []
@@ -298,8 +320,7 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
         root_path = settings.SERVER_START_PATH.expanduser().resolve()
         url_path = url_to_file_path(uri, root_path)
         if url_path is not None:
-            relative_path = url_path.relative_to(root_path)
-            uri = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
+            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
     elif project is not None and project.project_remote_ssh_key_path is not None:
         encord_project = get_encord_project(
             ssh_key_path=project.project_remote_ssh_key_path, project_hash=str(project_hash)

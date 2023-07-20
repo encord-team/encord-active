@@ -40,6 +40,7 @@ export type IntegratedProjectMetadata = {
   readonly projectHash: string;
   readonly baseProjectUrl: string;
   readonly imageUrl: string;
+  readonly imageUrlTimestamp: null | number;
   readonly downloaded: boolean;
   readonly sandbox: boolean;
   readonly stats: {
@@ -535,7 +536,9 @@ export function useProjectsList(): UseQueryResult<
       Object.entries(data).forEach(([projectHash, projectMeta]) => {
         allData[projectHash] = {
           ...projectMeta,
-          imageUrl: `${apiUrl}/${projectMeta.imageUrl}`,
+          imageUrl: (
+              projectMeta.imageUrl.startsWith("https://") || projectMeta.imageUrl.startsWith("https://")
+          ) ? projectMeta.imageUrl : `${apiUrl}${projectMeta.imageUrl}`,
           baseProjectUrl: `${apiUrl}/projects_v2/${projectHash}`,
         };
       });
