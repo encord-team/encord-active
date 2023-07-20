@@ -43,7 +43,7 @@ import ActiveMetricFilter, {
   ActiveFilterOrderState,
   defaultFilters,
 } from "../james/oss/util/ActiveMetricFilter";
-import { Popover, Button } from "antd";
+import { Popover, Button, Typography } from "antd";
 import {
   ActiveProjectMetricSummary,
   ActiveQueryAPI,
@@ -57,6 +57,8 @@ export type Props = {
   scope: Scope;
   queryAPI: ActiveQueryAPI;
   featureHashMap: Parameters<typeof ActiveMetricFilter>[0]["featureHashMap"];
+  setSelectedProjectHash: (projectHash: string | undefined) => void;
+  remoteProject: boolean;
 };
 
 export const Explorer = ({
@@ -65,6 +67,8 @@ export const Explorer = ({
   queryAPI,
   featureHashMap,
   metricsSummary,
+  setSelectedProjectHash,
+  remoteProject,
 }: Props) => {
   const [itemSet, setItemSet] = useState(new Set<string>());
   const [isAscending, setIsAscending] = useState(true);
@@ -254,6 +258,7 @@ export const Explorer = ({
         close={close}
         projectHash={projectHash}
         queryAPI={queryAPI}
+        setSelectedProjectHash={setSelectedProjectHash}
       />
       <div className="w-full">
         {previewedItem && (
@@ -429,8 +434,14 @@ export const Explorer = ({
                   <BiSelectMultiple />
                   Select all ({itemsToRender.length})
                 </button>
-                  <Button onClick={() => setOpen("subset")} type="text">Create Project subset</Button>
-                  <Button onClick={() => setOpen("upload")} type="text" disabled={!!resetable}>Upload project</Button>
+                  <Button onClick={() => setOpen("subset")} type="text" size="large" disabled={!resetable}>
+                    Create Project subset
+                  </Button>
+                  {remoteProject ? null : (
+                      <Button onClick={() => setOpen("upload")} type="text" size="large"  disabled={!!resetable}>
+                        Upload project
+                      </Button>
+                  )}
               </div>
             </div>
           </div>

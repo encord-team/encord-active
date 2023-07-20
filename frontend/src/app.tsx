@@ -11,8 +11,8 @@ import { ProjectsPage } from "./components/ProjectsPage";
 
 export const App = () => {
   const { data: projects, isLoading, error } = useProjectsList();
-  const [selectedProject, setSelectedProject] = useState<
-    IntegratedProjectMetadata | undefined
+  const [selectedProjectHash, setSelectedProjectHash] = useState<
+    string | undefined
   >();
   const { token } = useAuth();
   const queryAPI = useIntegratedActiveAPI(token, projects ?? {});
@@ -35,23 +35,17 @@ export const App = () => {
 
   return (
     <div className="p-12 bg-white">
-      {selectedProject?.projectHash ? (
+      {selectedProjectHash ? (
         <ActiveProjectPage
           queryAPI={queryAPI}
-          projectHash={selectedProject?.projectHash}
+          projectHash={selectedProjectHash}
           projects={Object.values(projects)}
-          setSelectedProject={(projectHash) =>
-            setSelectedProject(
-              projectHash === undefined ? undefined : projects[projectHash]
-            )
-          }
+          setSelectedProject={setSelectedProjectHash}
         />
       ) : (
         <ProjectsPage
           projects={projectList}
-          onSelectLocalProject={(projectHash) =>
-            setSelectedProject(projects[projectHash])
-          }
+          onSelectLocalProject={setSelectedProjectHash}
         />
       )}
     </div>

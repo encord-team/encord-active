@@ -46,6 +46,8 @@ function ActiveProjectPage(props: {
     return <Spin />;
   }
 
+  const remoteProject = !projectSummary.local_project;
+
   return (
     <Tabs
       tabBarExtraContent={
@@ -79,6 +81,8 @@ function ActiveProjectPage(props: {
               scope={"data"}
               queryAPI={queryAPI}
               featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProject}
+              remoteProject={remoteProject}
               /* metricRanges={projectSummary.data?.metrics} */
             />
           ),
