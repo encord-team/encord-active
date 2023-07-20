@@ -736,9 +736,11 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 label_row_json=label_row_json,
             )
             fps: Optional[float] = None
+            expected_data_units: Set[str] = set(data_units_json.keys())
             for data_unit in label_row.data_units or []:
                 du_hash = uuid.UUID(data_unit.data_hash)
                 du_json = data_units_json[data_unit.data_hash]
+                expected_data_units.remove(data_unit.data_hash)
                 if data_type == "image" or data_type == "img_group":
                     labels_json = du_json["labels"]
                 elif data_type == "video":
@@ -814,6 +816,13 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 )
                 data_units_metas.append(project_data_unit_meta)
             # Apply to parent
+            if len(expected_data_units) > 0:
+                raise ValueError(
+                    f"Validation failure: prisma db missed data units for label row: \n"
+                    f"For: {project_data_meta.label_hash}/{expected_data_units}\n"
+                    f"Label row JSON: {project_data_meta.label_row_json}\n"
+                    f"Prisma DB State: {label_row}\n"
+                )
             project_data_meta.frames_per_second = fps
             data_metas.append(project_data_meta)
 
