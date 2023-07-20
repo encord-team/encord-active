@@ -38,7 +38,7 @@ class OrderedPanelGroup(TyperGroup):
     COMMAND_ORDER = [
         "quickstart",
         "download",
-        "visualize",
+        "start",
         "init",
         "import",
         "refresh",
@@ -410,13 +410,11 @@ def refresh(
         rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
-@cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
-@cli.command(name="visualize", hidden=True)
 @cli.command(name="start")
 @bypass_streamlit_question
-def visualize(
+def start(
     target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualize", file_okay=False
+        Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
     ),
 ):
     """

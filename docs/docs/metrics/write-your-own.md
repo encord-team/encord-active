@@ -105,7 +105,7 @@ When you have run your metric, you can visualize your results by running:
 
 ```shell
 # within venv
-encord-active visualize
+encord-active start
 ```
 
 Now, you can improve your data/labels/model by choosing your own custom metric in the app.

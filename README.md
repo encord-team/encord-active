@@ -104,7 +104,7 @@ The download command will ask which pre-built dataset to use and will download i
 ```shell
 encord-active download
 cd /path/of/downloaded/project
-encord-active visualize
+encord-active start
 ```
 
 The app should then open in the browser.
@@ -124,11 +124,11 @@ encord-active init /path/to/data/directory
 
 A project will be created using the data in the directory.
 
-To visualize the project run:
+To start the project run:
 
 ```shell
 cd /path/to/project
-encord-active visualize
+encord-active start
 ```
 
 You can find more details on the `init` command in the [documentation][encord-active-docs-init].
