@@ -124,7 +124,7 @@ export const Explorer = ({
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
   const apiContext = useContext(ApiContext);
-  let api: any;
+  let api: ReturnType<typeof getApi>;
   if (apiContext == null) {
     api = getApi(projectHash);
   } else {
@@ -225,8 +225,11 @@ export const Explorer = ({
     }
   }, [metricsSummary, metrics, allDataTags, allLabelTags]);
   const filterLabelClassMap = useMemo(() => {
-    const res = Object.fromEntries(Object.values(featureHashMap).map(({name}) => [name, name]));
-    res["No class"] = "No class";
+    const res = Object.fromEntries(Object.values(featureHashMap).map((v) => [v.name, v]));
+    res["No class"] = {
+      name: "No class",
+      color: "",
+    };
     return res;
   }, [featureHashMap]);
 
