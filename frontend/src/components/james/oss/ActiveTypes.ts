@@ -69,6 +69,7 @@ export type ActiveProjectSummary = {
       readonly featureNodeHash: string;
     }[];
   };
+  readonly local_project: boolean;
   readonly data: ActiveProjectMetricSummary;
   readonly annotations: ActiveProjectMetricSummary;
   // readonly global: ActiveProjectMetricSummary;

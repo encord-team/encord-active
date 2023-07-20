@@ -457,7 +457,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
           JSON.stringify(params),
           { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
-        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]})
+        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]});
         return r.data.project_hash;
       },
       { ...options }

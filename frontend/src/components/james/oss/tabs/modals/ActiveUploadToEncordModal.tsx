@@ -7,8 +7,9 @@ function ActiveCreateSubsetModal(props: {
   close: () => void;
   projectHash: string;
   queryAPI: ActiveQueryAPI;
+  setSelectedProjectHash: (key: string | undefined) => void;
 }) {
-  const { open, close, projectHash, queryAPI } = props;
+  const { open, close, projectHash, queryAPI, setSelectedProjectHash } = props;
   const [form] = Form.useForm<{
     dataset_title: string;
     dataset_description?: string | undefined;
@@ -20,7 +21,7 @@ function ActiveCreateSubsetModal(props: {
 
   const mutateCreateSubset = queryAPI.useProjectMutationUploadToEncord(
     projectHash,
-    { onSuccess: close }
+    { onSuccess: close, onSettled: setSelectedProjectHash }
   );
 
   return (

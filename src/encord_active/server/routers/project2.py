@@ -195,6 +195,7 @@ def get_project_summary(project_hash: uuid.UUID):
         "name": project.project_name,
         "description": project.project_description,
         "ontology": project.project_ontology,
+        "local_project": project.project_remote_ssh_key_path is None,
         "data": {
             "metrics": _metric_summary(DataMetrics),
             "enums": _enum_summary(DataEnums),

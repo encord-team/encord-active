@@ -756,7 +756,9 @@ def upload_to_encord(
             # delete the old (out-of-date) value.
             old_db = sess.exec(
                 select(Project).where(Project.project_hash == old_project_hash)
-            )
+            ).first()
+            if old_db is None:
+                raise ValueError(f"BUG: Could not find old project")
             sess.delete(old_db)
             sess.commit()
     except Exception as e:

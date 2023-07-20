@@ -929,6 +929,12 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
+            if (du_hash, frame) not in data_metrics:
+                raise ValueError(
+                    f"Metric references invalid frame!:\n"
+                    f"du_hash={du_hash}, frame={frame}, objects?={object_hash_list}\n"
+                    f"identifier={metric_entry['identifier']} metric={metric}\n"
+                )
             if len(object_hash_list) >= 1:
                 for object_hash in object_hash_list:
                     if (du_hash, frame, object_hash) not in annotation_metrics:
