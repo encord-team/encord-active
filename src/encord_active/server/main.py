@@ -53,7 +53,10 @@ async def on_startup():
     for path in paths:
         project_file_structure = ProjectFileStructure(path)
         for prediction_type in MainPredictionType:
-            read_prediction_files(project_file_structure, prediction_type)
+            try:
+                read_prediction_files(project_file_structure, prediction_type)
+            except:
+                pass
         for embedding_type in EmbeddingType:
             try:
                 get_similarity_finder(embedding_type, project_file_structure)

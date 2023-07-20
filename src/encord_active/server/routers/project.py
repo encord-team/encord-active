@@ -721,6 +721,10 @@ def upload_to_encord(
     pfs: ProjectFileStructureDep,
     item: UploadToEncordModel,
 ):
+    if (pfs.project_dir.parent / item.project_title).exists():
+        raise ValueError(
+            f"Project Title already used locally - cannot rename project to this while uploading to encord!"
+        )
     old_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
