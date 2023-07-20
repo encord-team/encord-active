@@ -1,8 +1,8 @@
 import json
+import uuid
 from functools import lru_cache, partial
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict, TypeVar
-from urllib.parse import quote
 
 import pandas as pd
 from shapely.affinity import rotate
@@ -70,7 +70,9 @@ def partial_column(column: IndexOrSeries, parts: int) -> IndexOrSeries:
     return column.str.split("_", n=parts).str[0:parts].str.join("_")
 
 
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
+def _get_url(
+    project_hash: uuid.UUID, label_row_structure: LabelRowStructure, du_hash: str, frame: str
+) -> Optional[Tuple[str, Optional[float]]]:
     data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
         label_row_structure.iter_data_unit(du_hash, None), None
     )
@@ -81,23 +83,8 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
         signed_url = data_opt.signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
-            file_path = file_path.absolute()
-            settings = get_settings()
-            root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
-            try:
-                relative_path = file_path.relative_to(root_path)
-                signed_url = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
-            except ValueError as ex:
-                # Use hacky fallback
-                approx_relative_path = file_path.as_posix().removeprefix(root_path.as_posix())
-                if root_path.as_posix() != approx_relative_path:
-                    if approx_relative_path.startswith("/"):
-                        approx_relative_path = approx_relative_path[1:]
-                    signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
-                else:
-                    # Give up, hope that file paths are allowed in the users browser
-                    print("WARNING: failed to resolve path to relative")
-                    signed_url = file_path.absolute().as_uri()
+            url_frame = 0 if data_opt.data_type == "video" else frame
+            signed_url = f"/projects/{project_hash}/local-fs/{label_row_structure.label_hash}/{du_hash}/{url_frame}"
 
         return signed_url, timestamp
     return None
@@ -168,7 +155,7 @@ def to_item(
     )
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(label_row_structure, du_hash, frame)
+    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame)
 
     label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]

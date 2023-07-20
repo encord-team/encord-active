@@ -4,6 +4,7 @@ import {
   UseMutationOptions,
   UseMutationResult,
   useQuery,
+  useQueryClient,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
@@ -376,7 +377,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       "/projects_v2/",
       "/projects/"
     );
-
+    const queryClient = useQueryClient();
     return useMutation(
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
       async (args: ActiveCreateSubsetMutationArguments) => {
@@ -391,11 +392,13 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
           Accept: "application/json",
           "Content-Type": "application/json",
         };
-        return await axios.post(
+        const r = await axios.post(
           `${baseURL}/create_subset`,
           JSON.stringify(params),
           { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
+        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]})
+        return r.data;
       },
       options
     );
@@ -433,7 +436,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       "/projects_v2/",
       "/projects/"
     );
-
+    const queryClient = useQueryClient();
     return useMutation(
       ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
       async (args: ActiveUploadToEncordMutationArguments) => {
@@ -449,11 +452,13 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
           Accept: "application/json",
           "Content-Type": "application/json",
         };
-        return await axios.post(
+        const r = await axios.post(
           `${baseURL}/upload_to_encord`,
           JSON.stringify(params),
           { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
+        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]})
+        return r.data.project_hash;
       },
       { ...options }
     );
