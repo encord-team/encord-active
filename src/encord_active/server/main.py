@@ -45,7 +45,7 @@ def _index():
     return FileResponse(frontend_build_path / "index.html")
 
 
-# @app.on_event("startup")
+@app.on_event("startup")
 async def on_startup():
     root_path = get_settings().SERVER_START_PATH
     paths = [root_path] if is_project(root_path) else find_child_projects(root_path)
