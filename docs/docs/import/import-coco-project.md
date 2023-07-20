@@ -54,7 +54,7 @@ to tell Encord Active to use symlinks instead of copying files. But be aware tha
 
 The whole flow might take a while depending on the size of the original dataset.
 
-When the process is done, follow the printed instructions to launch the app with the [visualize](../cli#visualize) command.
+When the process is done, follow the printed instructions to launch the app with the [start](../cli#start) command.
 
 :::info
 
