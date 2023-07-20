@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -12,17 +11,17 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ActiveProjectAnalysisDomain,
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../ActiveTypes";
-import { formatTooltip } from "../util/ActiveFormatter";
+  ProjectAnalysisDomain,
+  ProjectMetricSummary,
+  QueryAPI,
+} from "../Types";
+import { formatTooltip } from "../util/Formatter";
 
-function ActiveChartDistributionBar(props: {
-  metricsSummary: ActiveProjectMetricSummary;
-  analysisDomain: ActiveProjectAnalysisDomain;
+export function ChartDistributionBar(props: {
+  metricsSummary: ProjectMetricSummary;
+  analysisDomain: ProjectAnalysisDomain;
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
+  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -189,5 +188,3 @@ function ActiveChartDistributionBar(props: {
     </>
   );
 }
-
-export default ActiveChartDistributionBar;

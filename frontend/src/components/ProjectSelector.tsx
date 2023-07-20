@@ -1,5 +1,5 @@
 import { fork } from "radash";
-import { IntegratedProjectMetadata } from "./james/IntegratedActiveAPI";
+import { IntegratedProjectMetadata } from "./IntegratedAPI";
 
 export type Props = {
   projects: readonly IntegratedProjectMetadata[];

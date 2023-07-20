@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import {
@@ -12,18 +11,18 @@ import {
 } from "recharts";
 import { scaleLinear } from "d3-scale";
 import {
-  ActiveProjectAnalysisDomain,
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../ActiveTypes";
-import { formatTooltip } from "../util/ActiveFormatter";
+  ProjectAnalysisDomain,
+  ProjectMetricSummary,
+  QueryAPI,
+} from "../Types";
+import { formatTooltip } from "../util/Formatter";
 
-function ActiveChartMetricCompareScatter(props: {
-  metricsSummary: ActiveProjectMetricSummary;
-  analysisDomain: ActiveProjectAnalysisDomain;
+export function ChartMetricCompareScatter(props: {
+  metricsSummary: ProjectMetricSummary;
+  analysisDomain: ProjectAnalysisDomain;
   projectHash: string;
   compareProjectHash?: string | undefined;
-  queryAPI: ActiveQueryAPI;
+  queryAPI: QueryAPI;
   allowTrend?: boolean;
 }) {
   const {
@@ -163,5 +162,3 @@ function ActiveChartMetricCompareScatter(props: {
     </>
   );
 }
-
-export default ActiveChartMetricCompareScatter;

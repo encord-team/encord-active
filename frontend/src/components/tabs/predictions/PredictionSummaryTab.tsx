@@ -1,16 +1,15 @@
 import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
-import * as React from "react";
 import { useState } from "react";
 import { useDebounce } from "usehooks-ts";
-import ActiveChartPredictionMetricVBar from "../../charts/ActiveChartPredictionMetricVBar";
-import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../../ActiveTypes";
-import ActiveChartPredictionRecallCurve from "../../charts/ActiveChartPredictionRecallCurve";
+import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBar";
+import { ProjectMetricSummary, QueryAPI } from "../../Types";
+import { ChartPredictionRecallCurve } from "../../charts/ChartPredictionRecallCurve";
 
-function ActivePredictionSummaryTab(props: {
-  metricsSummary: ActiveProjectMetricSummary;
+export function PredictionSummaryTab(props: {
+  metricsSummary: ProjectMetricSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
+  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -90,7 +89,7 @@ function ActivePredictionSummaryTab(props: {
       <Divider orientation="left">
         <Typography.Title level={3}>Metric Importance</Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricVBar
+      <ChartPredictionMetricVBar
         metricsSummary={metricsSummary}
         predictionMetric="importance"
         data={predictionSummaryData?.importance}
@@ -98,7 +97,7 @@ function ActivePredictionSummaryTab(props: {
       <Divider orientation="left">
         <Typography.Title level={3}>Metric Correlation</Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricVBar
+      <ChartPredictionMetricVBar
         metricsSummary={metricsSummary}
         predictionMetric="correlations"
         data={predictionSummaryData?.correlation}
@@ -108,7 +107,7 @@ function ActivePredictionSummaryTab(props: {
           Per Class Average Precision
         </Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricVBar
+      <ChartPredictionMetricVBar
         predictionMetric="feature-precision"
         data={predictionSummaryData?.precisions}
         featureHashMap={featureHashMap}
@@ -116,7 +115,7 @@ function ActivePredictionSummaryTab(props: {
       <Divider orientation="left">
         <Typography.Title level={3}>Per Class Average Recall</Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricVBar
+      <ChartPredictionMetricVBar
         predictionMetric="feature-recall"
         data={predictionSummaryData?.recalls}
         featureHashMap={featureHashMap}
@@ -126,12 +125,10 @@ function ActivePredictionSummaryTab(props: {
           Per Class Precision-Recall Curve
         </Typography.Title>
       </Divider>
-      <ActiveChartPredictionRecallCurve
+      <ChartPredictionRecallCurve
         data={predictionSummaryData?.prs ?? {}}
         featureHashMap={featureHashMap}
       />
     </>
   );
 }
-
-export default ActivePredictionSummaryTab;

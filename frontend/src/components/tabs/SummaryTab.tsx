@@ -1,32 +1,31 @@
-import * as React from "react";
 import { useMemo } from "react";
 import { Card, Space, Row, Typography, Statistic, Divider } from "antd";
-import isEmpty from "lodash/isEmpty";
 import {
   CheckCircleOutlined,
   DatabaseOutlined,
   FullscreenOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import ActiveChartMetricCompareScatter from "../charts/ActiveChartMetricCompareScatter";
+import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
 import {
-  ActiveProjectAnalysisDomain,
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../ActiveTypes";
-import ActiveChartDistributionBar from "../charts/ActiveChartDistributionBar";
-import ActiveChartOutlierSummaryBar from "../charts/ActiveChartOutlierSummaryBar";
+  ProjectAnalysisDomain,
+  ProjectMetricSummary,
+  QueryAPI,
+} from "../Types";
+import { ChartDistributionBar } from "../charts/ChartDistributionBar";
+import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
+import { isEmpty } from "radash";
 
-const AnalysisDomainToName: Record<ActiveProjectAnalysisDomain, string> = {
+const AnalysisDomainToName: Record<ProjectAnalysisDomain, string> = {
   data: "Frames",
   annotation: "Annotations",
 };
 
-function ActiveSummaryTab(props: {
+export function SummaryTab(props: {
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
-  metricsSummary: ActiveProjectMetricSummary;
-  analysisDomain: ActiveProjectAnalysisDomain;
+  queryAPI: QueryAPI;
+  metricsSummary: ProjectMetricSummary;
+  analysisDomain: ProjectAnalysisDomain;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -137,7 +136,7 @@ function ActiveSummaryTab(props: {
             </Typography.Title>
           </Divider>
           <Card type="inner" bordered={false} loading={data == null}>
-            <ActiveChartOutlierSummaryBar
+            <ChartOutlierSummaryBar
               summaryData={data}
               metricsSummary={metricsSummary}
             />
@@ -148,7 +147,7 @@ function ActiveSummaryTab(props: {
         <Typography.Title level={3}>2D Metrics view</Typography.Title>
       </Divider>
       <Card type="inner" bordered={false}>
-        <ActiveChartMetricCompareScatter
+        <ChartMetricCompareScatter
           metricsSummary={metricsSummary}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
@@ -160,7 +159,7 @@ function ActiveSummaryTab(props: {
         <Typography.Title level={3}>Metric Distribution</Typography.Title>
       </Divider>
       <Card type="inner" bordered={false}>
-        <ActiveChartDistributionBar
+        <ChartDistributionBar
           metricsSummary={metricsSummary}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
@@ -174,5 +173,3 @@ function ActiveSummaryTab(props: {
     </Space>
   );
 }
-
-export default ActiveSummaryTab;

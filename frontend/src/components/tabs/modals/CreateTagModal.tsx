@@ -1,12 +1,11 @@
-import * as React from "react";
 import { Form, Input, Modal } from "antd";
-import { ActiveQueryAPI } from "../../ActiveTypes";
+import { QueryAPI } from "../../Types";
 
-function ActiveCreateTagModal(props: {
+export function CreateTagModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
+  queryAPI: QueryAPI;
 }) {
   const { open, close, projectHash, queryAPI } = props;
   const [form] = Form.useForm<{
@@ -57,5 +56,3 @@ function ActiveCreateTagModal(props: {
     </Modal>
   );
 }
-
-export default ActiveCreateTagModal;

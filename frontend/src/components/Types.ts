@@ -4,9 +4,9 @@ import {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { Filters } from "../../explorer/api";
+import { Filters } from "./explorer/api";
 
-export type ActiveDomainSearchFilters = {
+export type DomainSearchFilters = {
   readonly metrics: Readonly<Record<string, readonly [number, number]>>;
   readonly enums: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly reduction: null | {
@@ -17,18 +17,18 @@ export type ActiveDomainSearchFilters = {
   readonly tags: null | ReadonlyArray<string>;
 };
 
-export type ActiveSearchFilters = {
-  readonly data: null | ActiveDomainSearchFilters;
-  readonly annotation: null | ActiveDomainSearchFilters;
+export type SearchFilters = {
+  readonly data: null | DomainSearchFilters;
+  readonly annotation: null | DomainSearchFilters;
 };
 
-export type ActiveProjectView = {
+export type ProjectView = {
   readonly project_hash: string;
   readonly title: string;
   readonly description: string;
 };
 
-export type ActiveProjectMetricSummary = {
+export type ProjectMetricSummary = {
   readonly metrics: {
     readonly [metric_key: string]: {
       readonly title: string;
@@ -39,18 +39,18 @@ export type ActiveProjectMetricSummary = {
   };
   readonly enums: {
     readonly [enum_key: string]:
-      | {
-          readonly type: "ontology";
-        }
-      | {
-          readonly type: "enum";
-          readonly title: string;
-          readonly values: Readonly<Record<string, string>>;
-        };
+    | {
+      readonly type: "ontology";
+    }
+    | {
+      readonly type: "enum";
+      readonly title: string;
+      readonly values: Readonly<Record<string, string>>;
+    };
   };
 };
 
-export type ActiveProjectSummary = {
+export type ProjectSummary = {
   readonly name: string;
   readonly description: string;
   readonly ontology: {
@@ -70,9 +70,9 @@ export type ActiveProjectSummary = {
     }[];
   };
   readonly local_project: boolean;
-  readonly data: ActiveProjectMetricSummary;
-  readonly annotations: ActiveProjectMetricSummary;
-  // readonly global: ActiveProjectMetricSummary;
+  readonly data: ProjectMetricSummary;
+  readonly annotations: ProjectMetricSummary;
+  // readonly global: ProjectMetricSummary;
   readonly du_count: number;
   readonly frame_count: number;
   readonly annotation_count: number;
@@ -86,7 +86,7 @@ export type ActiveProjectSummary = {
   };
 };
 
-export type ActiveProjectEmbeddingReductions = {
+export type ProjectEmbeddingReductions = {
   results: Readonly<
     Record<
       string,
@@ -99,9 +99,9 @@ export type ActiveProjectEmbeddingReductions = {
   >;
 };
 
-export type ActiveProjectAnalysisDomain = "data" | "annotation";
+export type ProjectAnalysisDomain = "data" | "annotation";
 
-export type ActiveProjectAnalysisSummary = {
+export type ProjectAnalysisSummary = {
   readonly count: number;
   readonly metrics: {
     [metric_key: string]: {
@@ -122,7 +122,7 @@ export type ActiveProjectAnalysisSummary = {
   };
 };
 
-export type ActiveProjectAnalysisScatter = {
+export type ProjectAnalysisScatter = {
   readonly sampling: number;
   readonly samples: Array<{
     readonly x: number;
@@ -133,23 +133,23 @@ export type ActiveProjectAnalysisScatter = {
   }>;
 };
 
-export type ActiveProjectAnalysisDistribution = {
+export type ProjectAnalysisDistribution = {
   readonly results:
-    | ReadonlyArray<{
-        readonly count: number;
-        readonly group: number;
-      }>
-    | ReadonlyArray<{
-        readonly count: number;
-        readonly group: string;
-      }>;
+  | ReadonlyArray<{
+    readonly count: number;
+    readonly group: number;
+  }>
+  | ReadonlyArray<{
+    readonly count: number;
+    readonly group: string;
+  }>;
 };
 
-export type ActiveProjectAnalysisCompareMetricDissimilarity = {
+export type ProjectAnalysisCompareMetricDissimilarity = {
   readonly results: Readonly<Record<string, number>>;
 };
 
-export type ActiveProjectSearchResult = {
+export type ProjectSearchResult = {
   readonly truncated: boolean;
   readonly results: ReadonlyArray<{
     readonly du_hash: string;
@@ -163,7 +163,7 @@ type Point = {
   readonly y: number;
 };
 
-export type ActiveProjectPreviewItemResult = {
+export type ProjectPreviewItemResult = {
   readonly url: string;
 
   // timestamp if video preview is needed.
@@ -185,27 +185,27 @@ export type ActiveProjectPreviewItemResult = {
       readonly manualAnnotation?: boolean;
     } & (
       | {
-          readonly shape: "bounding_box";
-          readonly boundingBox: Readonly<Record<"x" | "y" | "w" | "h", number>>;
-        }
+        readonly shape: "bounding_box";
+        readonly boundingBox: Readonly<Record<"x" | "y" | "w" | "h", number>>;
+      }
       | {
-          readonly shape: "polygon";
-          readonly polygon: Readonly<Record<number, Point>>;
-        }
+        readonly shape: "polygon";
+        readonly polygon: Readonly<Record<number, Point>>;
+      }
       | {
-          readonly shape: "polyline";
-          readonly polyline: Readonly<Record<number, Point>>;
-        }
+        readonly shape: "polyline";
+        readonly polyline: Readonly<Record<number, Point>>;
+      }
       | {
-          readonly shape: "rotatable_bounding_box";
-          readonly rotatableBoundingBox: Readonly<
-            Record<"x" | "y" | "w" | "h" | "theta", number>
-          >;
-        }
+        readonly shape: "rotatable_bounding_box";
+        readonly rotatableBoundingBox: Readonly<
+          Record<"x" | "y" | "w" | "h" | "theta", number>
+        >;
+      }
       | {
-          readonly shape: "point";
-          readonly point: { "0": Point };
-        }
+        readonly shape: "point";
+        readonly point: { "0": Point };
+      }
     )
   >;
 
@@ -213,7 +213,7 @@ export type ActiveProjectPreviewItemResult = {
   readonly tags: ReadonlyArray<string>;
 };
 
-export type ActiveProjectItemDetailedSummary = {
+export type ProjectItemDetailedSummary = {
   readonly metrics: Readonly<Record<string, number>>;
   readonly annotations: ReadonlyArray<{
     readonly metrics: Readonly<Record<string, number>>;
@@ -228,7 +228,7 @@ export type ActiveProjectItemDetailedSummary = {
   readonly data_type: "image" | "video" | "img_group" | "img_sequence";
 };
 
-export type ActiveProjectSimilarityResult = {
+export type ProjectSimilarityResult = {
   readonly results: ReadonlyArray<{
     readonly du_hash: string;
     readonly frame: number;
@@ -237,7 +237,7 @@ export type ActiveProjectSimilarityResult = {
   }>;
 };
 
-export type ActiveCreateSubsetMutationArguments = {
+export type CreateSubsetMutationArguments = {
   readonly project_title: string;
   readonly project_description?: string | undefined;
   readonly dataset_title: string;
@@ -245,7 +245,7 @@ export type ActiveCreateSubsetMutationArguments = {
   readonly filters: Filters;
 };
 
-export type ActiveCreateTagMutationArguments = {
+export type CreateTagMutationArguments = {
   readonly tag_title: string;
   readonly tag_description?: string | undefined;
   readonly objects: readonly {
@@ -255,7 +255,7 @@ export type ActiveCreateTagMutationArguments = {
   }[];
 };
 
-export type ActiveUploadToEncordMutationArguments = {
+export type UploadToEncordMutationArguments = {
   readonly dataset_title: string;
   readonly dataset_description?: string | undefined;
   readonly project_title: string;
@@ -264,17 +264,17 @@ export type ActiveUploadToEncordMutationArguments = {
   readonly ontology_description?: string | undefined;
 };
 
-export type ActivePredictionView = {
+export type PredictionView = {
   readonly name: string;
   readonly prediction_hash: string;
 };
 
-export type ActivePaginationResult<T> = {
+export type PaginationResult<T> = {
   readonly total: number;
   readonly results: ReadonlyArray<T>;
 };
 
-export type ActiveProjectPredictionSummary = {
+export type ProjectPredictionSummary = {
   readonly mAP: number;
   readonly mAR: number;
   readonly tTP: number;
@@ -295,7 +295,7 @@ export type ActiveProjectPredictionSummary = {
   >;
 };
 
-export type ActiveProjectMetricPerformance = {
+export type ProjectMetricPerformance = {
   readonly precision: Readonly<
     Record<
       string,
@@ -318,57 +318,57 @@ export type ActiveProjectMetricPerformance = {
   >;
 };
 
-export interface ActiveQueryAPI {
+export interface QueryAPI {
   // === Project search ===
   useListProjectViews(
     search: string,
     offset: number,
     limit: number
-  ): UseQueryResult<ActivePaginationResult<ActiveProjectView>>;
+  ): UseQueryResult<PaginationResult<ProjectView>>;
 
   // === Project summary ===
   useProjectSummary(
     projectHash: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectSummary>;
+  ): UseQueryResult<ProjectSummary>;
   useProjectListEmbeddingReductions(
     projectHash: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectEmbeddingReductions>;
+  ): UseQueryResult<ProjectEmbeddingReductions>;
 
   // === Project analytics ===
   useProjectAnalysisSummary(
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectAnalysisSummary>;
+  ): UseQueryResult<ProjectAnalysisSummary>;
   useProjectAnalysisMetricScatter(
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     xMetric: string,
     yMetric: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectAnalysisScatter>;
+  ): UseQueryResult<ProjectAnalysisScatter>;
   useProjectAnalysisDistribution(
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     metricOrEnum: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectAnalysisDistribution>;
+  ): UseQueryResult<ProjectAnalysisDistribution>;
   useProjectAnalysisCompareMetricDissimilarity(
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     compareProjectHash: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectAnalysisCompareMetricDissimilarity>;
+  ): UseQueryResult<ProjectAnalysisCompareMetricDissimilarity>;
   useProjectAnalysisSearch(
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
-    filters: ActiveSearchFilters,
+    analysisDomain: ProjectAnalysisDomain,
+    filters: SearchFilters,
     orderBy: null | string,
     desc: boolean,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectSearchResult>;
+  ): UseQueryResult<ProjectSearchResult>;
 
   // == Project visualisation ===
   useProjectItemPreview(
@@ -377,59 +377,55 @@ export interface ActiveQueryAPI {
     frame: number,
     objectHash?: string | undefined | null,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectPreviewItemResult>;
+  ): UseQueryResult<ProjectPreviewItemResult>;
   useProjectItemDetails(
     projectHash: string,
     duHash: string,
     frame: number,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectItemDetailedSummary>;
+  ): UseQueryResult<ProjectItemDetailedSummary>;
   useProjectItemSimilarity(
     projectHash: string,
     duHash: string,
     frame: number,
     objectHash?: string | undefined | null,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectSimilarityResult>;
+  ): UseQueryResult<ProjectSimilarityResult>;
 
   // == Project actions ===
   useProjectMutationCreateSubset(
     projectHash: string,
     options?: Pick<
-      UseMutationOptions<string, unknown, ActiveCreateSubsetMutationArguments>,
+      UseMutationOptions<string, unknown, CreateSubsetMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     >
-  ): UseMutationResult<string, unknown, ActiveCreateSubsetMutationArguments>;
+  ): UseMutationResult<string, unknown, CreateSubsetMutationArguments>;
   useProjectMutationCreateTag(
     projectHash: string,
     options?: Pick<
-      UseMutationOptions<string, unknown, ActiveCreateTagMutationArguments>,
+      UseMutationOptions<string, unknown, CreateTagMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     >
-  ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments>;
+  ): UseMutationResult<string, unknown, CreateTagMutationArguments>;
   useProjectMutationUploadToEncord(
     projectHash: string,
     options?: Pick<
-      UseMutationOptions<
-        string,
-        unknown,
-        ActiveUploadToEncordMutationArguments
-      >,
+      UseMutationOptions<string, unknown, UploadToEncordMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     >
-  ): UseMutationResult<string, unknown, ActiveUploadToEncordMutationArguments>;
+  ): UseMutationResult<string, unknown, UploadToEncordMutationArguments>;
 
   // == Project predictions ===
   useProjectListPredictions(
     projectHash: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActivePaginationResult<ActivePredictionView>>;
+  ): UseQueryResult<PaginationResult<PredictionView>>;
   useProjectPredictionSummary(
     projectHash: string,
     predictionHash: string,
     iou: number,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectPredictionSummary>;
+  ): UseQueryResult<ProjectPredictionSummary>;
   useProjectPredictionMetricPerformance(
     projectHash: string,
     predictionHash: string,
@@ -437,5 +433,5 @@ export interface ActiveQueryAPI {
     iou: number,
     metric: string,
     options?: Pick<UseQueryOptions, "enabled">
-  ): UseQueryResult<ActiveProjectMetricPerformance>;
+  ): UseQueryResult<ProjectMetricPerformance>;
 }

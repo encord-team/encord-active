@@ -1,17 +1,15 @@
-import * as React from "react";
 import { useMemo, useState } from "react";
 import { Spin, Tabs } from "antd";
-import { ActiveQueryAPI } from "./ActiveTypes";
-import ActivePredictionsTab from "./tabs/predictions/ActivePredictionsTab";
-import { ProjectSelector } from "../../ProjectSelector";
-import { IntegratedProjectMetadata } from "../IntegratedActiveAPI";
-import ActiveProjectComparisonTab from "./tabs/ActiveProjectComparisonTab";
-import { Explorer } from "../../explorer";
-import ActiveSummaryView from "./tabs/ActiveSummaryView";
-import { apiUrl } from "../../../constants";
+import { QueryAPI } from "./Types";
+import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
+import { ProjectSelector } from "./ProjectSelector";
+import { IntegratedProjectMetadata } from "./IntegratedAPI";
+import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
+import { Explorer } from "./explorer";
+import { SummaryView } from "./tabs/SummaryView";
 
-function ActiveProjectPage(props: {
-  queryAPI: ActiveQueryAPI;
+export function ProjectPage(props: {
+  queryAPI: QueryAPI;
   projectHash: string;
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
@@ -19,8 +17,7 @@ function ActiveProjectPage(props: {
   setSelectedProject: (projectHash?: string) => void;
   projects: readonly IntegratedProjectMetadata[];
 }) {
-  const { queryAPI, projectHash, editUrl, projects, setSelectedProject } =
-    props;
+  const { queryAPI, projectHash, projects, setSelectedProject } = props;
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
 
@@ -63,7 +60,7 @@ function ActiveProjectPage(props: {
           label: "Summary",
           key: "1",
           children: (
-            <ActiveSummaryView
+            <SummaryView
               projectHash={projectHash}
               queryAPI={queryAPI}
               projectSummary={projectSummary}
@@ -91,7 +88,7 @@ function ActiveProjectPage(props: {
           label: "Predictions",
           key: "3",
           children: (
-            <ActivePredictionsTab
+            <PredictionsTab
               projectHash={projectHash}
               queryAPI={queryAPI}
               metricsSummary={projectSummary.annotations}
@@ -103,7 +100,7 @@ function ActiveProjectPage(props: {
           label: "Project Comparison",
           key: "4",
           children: (
-            <ActiveProjectComparisonTab
+            <ProjectComparisonTab
               projectHash={projectHash}
               queryAPI={queryAPI}
               dataMetricsSummary={projectSummary.data}
@@ -117,5 +114,3 @@ function ActiveProjectPage(props: {
     />
   );
 }
-
-export default ActiveProjectPage;

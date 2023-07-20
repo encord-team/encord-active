@@ -1,8 +1,7 @@
 import { Col, Divider, Row, Select, Slider, Typography } from "antd";
-import * as React from "react";
 import { useMemo, useState } from "react";
-import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../../ActiveTypes";
-import ActiveChartPredictionMetricPerformanceChart from "../../charts/ActiveChartPredictionMetricPerformanceChart";
+import { ProjectMetricSummary, QueryAPI } from "../../Types";
+import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -35,11 +34,11 @@ const bucketOptions: { label: number; value: number }[] = [
   },
 ];
 
-function ActivePredictionsMetricPerformanceTab(props: {
-  metricsSummary: ActiveProjectMetricSummary;
+export function PredictionsMetricPerformanceTab(props: {
+  metricsSummary: ProjectMetricSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
+  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -138,7 +137,7 @@ function ActivePredictionsMetricPerformanceTab(props: {
       <Divider orientation="left">
         <Typography.Title level={3}>Precision</Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricPerformanceChart
+      <ChartPredictionMetricPerformanceChart
         data={queryPerformance.data?.precision ?? {}}
         selectedClass={classList}
         classDecomposition="auto"
@@ -148,7 +147,7 @@ function ActivePredictionsMetricPerformanceTab(props: {
       <Divider orientation="left">
         <Typography.Title level={3}>False Negative Rate</Typography.Title>
       </Divider>
-      <ActiveChartPredictionMetricPerformanceChart
+      <ChartPredictionMetricPerformanceChart
         data={queryPerformance.data?.fns ?? {}}
         selectedClass={classList}
         classDecomposition="auto"
@@ -158,5 +157,3 @@ function ActivePredictionsMetricPerformanceTab(props: {
     </>
   );
 }
-
-export default ActivePredictionsMetricPerformanceTab;

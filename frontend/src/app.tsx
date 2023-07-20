@@ -1,12 +1,8 @@
 import { Alert, Spin } from "antd";
 import { useState } from "react";
-import { createAuthContext, useAuth } from "./authContext";
-import {
-  IntegratedProjectMetadata,
-  useIntegratedActiveAPI,
-  useProjectsList,
-} from "./components/james/IntegratedActiveAPI";
-import ActiveProjectPage from "./components/james/oss/ActiveProjectPage";
+import { useAuth } from "./authContext";
+import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
+import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
 
 export const App = () => {
@@ -15,7 +11,7 @@ export const App = () => {
     string | undefined
   >();
   const { token } = useAuth();
-  const queryAPI = useIntegratedActiveAPI(token, projects ?? {});
+  const queryAPI = useIntegratedAPI(token, projects ?? {});
 
   if (isLoading)
     return (
@@ -36,7 +32,7 @@ export const App = () => {
   return (
     <div className="p-12 bg-white">
       {selectedProjectHash ? (
-        <ActiveProjectPage
+        <ProjectPage
           queryAPI={queryAPI}
           projectHash={selectedProjectHash}
           projects={Object.values(projects)}
