@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useContext } from "react";
 import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
 import { BsCardText } from "react-icons/bs";
 import { FaEdit, FaExpand } from "react-icons/fa";
@@ -7,7 +7,7 @@ import { RiUserLine } from "react-icons/ri";
 import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 import { Spin } from "./Spinner";
-
+import { useAllTags } from "../explorer/Tagging";
 import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
@@ -37,9 +37,9 @@ import {
 } from "./Tagging";
 import { capitalize, isEmpty, sift } from "radash";
 import {
-  FilterOrderState,
+  FilterState,
   MetricFilter,
-  defaultFilters,
+  DefaultFilters,
 } from "../util/MetricFilter";
 import { Popover, Button } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
@@ -81,13 +81,34 @@ export const Explorer = ({
   const [iou, setIou] = useState<number | undefined>();
 
   const [newFilters, setNewFilters] =
-    useState<FilterOrderState>(defaultFilters);
+    useState<FilterState>(DefaultFilters);
 
   const filters = useMemo(
-    () =>
-      ({
-        range: newFilters.metricFilters,
-        tags: newFilters.tagFilters,
+    () => {
+      const range = Object.fromEntries(
+          Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [k, {min ,max}])
+      );
+      let tagData: string[] = [];
+      let tagLabel: string[] = [];
+      let labelClass = undefined;
+      Object.entries(newFilters.enumFilters).forEach(([kEnum, kValues]) => {
+        if (kEnum == "label_tags") {
+          tagLabel = [...kValues];
+        } else if (kEnum == "data_tags") {
+          tagData = [...kValues];
+        } else if (kEnum == "feature_hash") {
+          labelClass = [...kValues];
+        } else {
+          throw Error("Unknown Enum Filter")
+        }
+      })
+      return ({
+        range: range,
+        tags: {
+            data: tagData,
+            label: tagLabel,
+        },
+        object_classes: labelClass,
         ...(scope === "prediction" && predictionType
           ? {
               prediction_filters: {
@@ -97,11 +118,11 @@ export const Explorer = ({
               },
             }
           : {}),
-      } as Filters),
+      } as Filters);
+    },
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
-
-  const api = getApi(projectHash);
+  const api = useContext(ApiContext);
 
   const predictionTypeFound = scope !== "prediction" || predictionType != null;
 
@@ -156,6 +177,52 @@ export const Explorer = ({
     }
   );
 
+  const { allDataTags, allLabelTags } = useAllTags()
+  const filterMetricSummary = useMemo((): ProjectMetricSummary => {
+    const metricSummary: Record<string, ProjectMetricSummary['metrics'][string]> = {};
+    if (metrics != null) {
+      metrics.data.forEach(({name}) => {
+        metricSummary[name] = {
+          title: name,
+          short_desc: "",
+          long_desc: "",
+          type: "ufloat"
+        }
+      });
+      metrics.annotation.forEach(({name}) => {
+        metricSummary[name] = {
+          title: name,
+          short_desc: "",
+          long_desc: "",
+          type: "ufloat"
+        }
+      });
+      metrics.prediction.forEach(({name}) => {
+        metricSummary[name] = {
+          title: name,
+          short_desc: "",
+          long_desc: "",
+          type: "ufloat"
+        }
+      });
+    }
+    const labelValues = Object.fromEntries(([...allLabelTags]).map((v) => [v, v]));
+    const dataValues = Object.fromEntries(([...allDataTags]).map((v) => [v, v]));
+    return {
+      metrics: metricSummary,
+      enums: {
+        "label_tags": {type: "enum", title: "Label Tags", values: labelValues},
+        "data_tags": {type: "enum", title: "Data Tags", values: dataValues},
+        "feature_hash": {type: "ontology"}
+      }
+    }
+  }, [metricsSummary, metrics, allDataTags, allLabelTags]);
+  const filterLabelClassMap = useMemo(() => {
+    const res = Object.fromEntries(Object.values(featureHashMap).map(({name}) => [name, name]));
+    res["No class"] = "No class";
+    return res;
+  }, [featureHashMap]);
+
   const withSortOrder = useMemo(
     () =>
       isAscending ? sortedItems || [] : [...(sortedItems || [])].reverse(),
@@ -179,7 +246,7 @@ export const Explorer = ({
     setItemSet(new Set()),
     setSearch(undefined),
     setSimilarityItem(null),
-    setNewFilters(defaultFilters)
+    setNewFilters(DefaultFilters)
   );
 
   const itemsToRender =
@@ -240,7 +307,7 @@ export const Explorer = ({
   const [open, setOpen] = useState<undefined | "subset" | "upload">();
   const close = () => setOpen(undefined);
   return (
-    <ApiContext.Provider value={api}>
+    <>
       <CreateSubsetModal
         open={open == "subset"}
         close={close}
@@ -391,13 +458,13 @@ export const Explorer = ({
                     <MetricFilter
                       filters={newFilters}
                       setFilters={setNewFilters}
-                      metricsSummary={metricsSummary}
+                      metricsSummary={filterMetricSummary}
                       metricRanges={Object.fromEntries(
                         Object.values(metrics || {})
                           .flat()
                           ?.map(({ name, range }) => [name, range]) ?? []
                       )}
-                      featureHashMap={featureHashMap}
+                      featureHashMap={filterLabelClassMap}
                     />
                   }
                   trigger="click"
@@ -493,7 +560,7 @@ export const Explorer = ({
           )}
         </div>
       </div>
-    </ApiContext.Provider>
+    </>
   );
 };
 

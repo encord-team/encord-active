@@ -7,6 +7,7 @@ import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
+import { getApi, ApiContext } from "./explorer/api";
 
 export function ProjectPage(props: {
   queryAPI: QueryAPI;
@@ -50,6 +51,8 @@ export function ProjectPage(props: {
 
   const remoteProject = !projectSummary.local_project;
 
+  const api = getApi(projectHash);
+
   return (
     <Tabs
       tabBarExtraContent={
@@ -77,16 +80,18 @@ export function ProjectPage(props: {
           label: "Explorer",
           key: "2",
           children: (
-            <Explorer
-              projectHash={projectHash}
-              metricsSummary={projectSummary.data}
-              scope={"data"}
-              queryAPI={queryAPI}
-              featureHashMap={featureHashMap}
-              setSelectedProjectHash={setSelectedProject}
-              remoteProject={remoteProject}
-              /* metricRanges={projectSummary.data?.metrics} */
-            />
+            <ApiContext.Provider value={api}>
+              <Explorer
+                projectHash={projectHash}
+                metricsSummary={projectSummary.global}
+                scope={"data"}
+                queryAPI={queryAPI}
+                featureHashMap={featureHashMap}
+                setSelectedProjectHash={setSelectedProject}
+                remoteProject={remoteProject}
+                /* metricRanges={projectSummary.data?.metrics} */
+              />
+            </ApiContext.Provider>
           ),
         },
         {
