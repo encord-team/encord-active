@@ -8,7 +8,7 @@ import DEFAUL_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 
 import { classy } from "../helpers/classy";
 import { fork } from "radash";
-import { IntegratedProjectMetadata } from "./james/IntegratedActiveAPI";
+import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import { apiUrl, env } from "../constants";
 import axios from "axios";

@@ -1,13 +1,12 @@
-import * as React from "react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Button, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
-import { ActiveProjectMetricSummary } from "../ActiveTypes";
-import { useAllTags } from "../../../explorer/Tagging";
-import { GroupedTags } from "../../../explorer/api";
-import { isEmpty, omit } from "radash";
+import { ProjectMetricSummary } from "../Types";
+import { useAllTags } from "../explorer/Tagging";
+import { GroupedTags } from "../explorer/api";
+import { isEmpty } from "radash";
 
-export const defaultFilters: ActiveFilterOrderState = {
+export const defaultFilters: FilterOrderState = {
   metricFilters: {},
   enumFilters: {},
   tagFilters: { data: [], label: [] },
@@ -19,21 +18,21 @@ export type Bounds = {
   max: number;
 };
 
-export type ActiveFilterOrderState = {
+export type FilterOrderState = {
   readonly ordering: ReadonlyArray<string>;
-} & ActiveFilterState;
+} & FilterState;
 
-export type ActiveFilterState = {
+export type FilterState = {
   readonly metricFilters: Readonly<Record<string, Bounds>>;
   readonly enumFilters: Readonly<Record<string, ReadonlyArray<string>>>;
-  readonly tagFilters: GroupedTags;
+  readonly tagFilters: Partial<GroupedTags>;
 };
 
-export type ActiveFilterModes = keyof ActiveFilterState;
+export type FilterModes = keyof FilterState;
 
 function getMetricBounds<R extends Bounds>(
   bounds: R,
-  metric: ActiveProjectMetricSummary["metrics"][string]
+  metric: ProjectMetricSummary["metrics"][string]
 ): {
   min: number;
   max: number;
@@ -69,7 +68,7 @@ function getMetricBounds<R extends Bounds>(
 }
 
 function getEnumList(
-  enumSummary: ActiveProjectMetricSummary["enums"][string],
+  enumSummary: ProjectMetricSummary["enums"][string],
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -85,7 +84,7 @@ function getEnumList(
 }
 
 function getEnumOptions(
-  enumSummary: ActiveProjectMetricSummary["enums"][string],
+  enumSummary: ProjectMetricSummary["enums"][string],
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -107,7 +106,7 @@ function getEnumOptions(
 
 function getEnumName(
   enumKey: string,
-  enumSummary: ActiveProjectMetricSummary["enums"][string]
+  enumSummary: ProjectMetricSummary["enums"][string]
 ): string {
   if (enumKey === "feature_hash") {
     return "Label Class";
@@ -117,12 +116,12 @@ function getEnumName(
   throw Error("Unknown enum state");
 }
 
-type NoTagFilters = Omit<ActiveFilterState, "tagFilters">;
+type NoTagFilters = Omit<FilterState, "tagFilters">;
 
 function deleteKey(
   deleteKey: string,
-  filterType: ActiveFilterModes
-): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
+  filterType: FilterModes
+): (old: FilterOrderState) => FilterOrderState {
   return (old) => {
     const newOrdering = old.ordering.filter((elem) => elem !== deleteKey);
 
@@ -132,7 +131,7 @@ function deleteKey(
         ordering: newOrdering,
         [filterType]: {
           ...old[filterType],
-          [deleteKey as keyof ActiveFilterState["tagFilters"]]: [],
+          [deleteKey as keyof FilterState["tagFilters"]]: [],
         },
       };
 
@@ -148,15 +147,14 @@ function deleteKey(
   };
 }
 
-function updateValue<K extends ActiveFilterModes>(
-  updateKey: string,
-  updateValue: ActiveFilterState[K],
+function updateValue<K extends FilterModes>(
+  updateKeyValue: FilterState[K],
   filterType: K
-): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
+): (old: FilterOrderState) => FilterOrderState {
   return (old) => {
     const newFilters = {
       ...old[filterType],
-      [updateKey]: updateValue,
+      ...updateKeyValue,
     };
     return {
       ...old,
@@ -172,15 +170,15 @@ function updateKey<
   }
 >(
   oldKey: string,
-  oldFilterMode: ActiveFilterModes,
+  oldFilterMode: FilterModes,
   newKey: string,
-  /* metricsSummary: ActiveProjectMetricSummary, */
+  /* metricsSummary: ProjectMetricSummary, */
   metricRanges: Record<string, R>,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >
-): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
+): (old: FilterOrderState) => FilterOrderState {
   return (old) => {
     const oldOrder = old.ordering.indexOf(oldKey);
     if (oldOrder < 0 || !(oldKey in old[oldFilterMode])) {
@@ -240,7 +238,7 @@ function addNewEntry<
     string,
     { readonly color: string; readonly name: string }
   >
-): (old: ActiveFilterOrderState) => ActiveFilterOrderState {
+): (old: FilterOrderState) => FilterOrderState {
   return (old) => {
     // Try insert new 'metric' key.
     const newMetricEntry = Object.entries(metricRanges).find(
@@ -298,19 +296,17 @@ function addNewEntry<
 
 type TagKey = keyof GroupedTags;
 
-function ActiveMetricFilter<
+export function MetricFilter<
   R extends {
     min: number;
     max: number;
   }
 >(props: {
-  filters: ActiveFilterOrderState;
+  filters: FilterOrderState;
   setFilters: (
-    arg:
-      | ActiveFilterOrderState
-      | ((old: ActiveFilterOrderState) => ActiveFilterOrderState)
+    arg: FilterOrderState | ((old: FilterOrderState) => FilterOrderState)
   ) => void;
-  metricsSummary: ActiveProjectMetricSummary;
+  metricsSummary: ProjectMetricSummary;
   metricRanges: Record<string, R> | undefined;
   featureHashMap: Record<
     string,
@@ -395,7 +391,7 @@ function ActiveMetricFilter<
         const enumValues = filters.enumFilters[filterKey];
         const tagValues = filters.tagFilters[filterKey as TagKey] || [];
 
-        const filterType: ActiveFilterModes =
+        const filterType: FilterModes =
           metricRange != null
             ? "metricFilters"
             : tagValues
@@ -452,7 +448,9 @@ function ActiveMetricFilter<
                     : [metricBounds.min, metricBounds.max]
                 }
                 onAfterChange={([min, max]: [number, number]) =>
-                  setFilters(updateValue(filterKey, { min, max }, filterType))
+                  setFilters(
+                    updateValue({ [filterKey]: { min, max } }, filterType)
+                  )
                 }
               />
             ) : (
@@ -460,8 +458,10 @@ function ActiveMetricFilter<
                 allowClear
                 mode="multiple"
                 defaultValue={[...(enumValues ?? tagValues ?? [])]}
-                onChange={(newSelection: string[]) =>
-                  setFilters(updateValue(filterKey, newSelection, filterType))
+                onChange={(newSelection) =>
+                  setFilters(
+                    updateValue({ [filterKey]: newSelection }, filterType)
+                  )
                 }
                 options={allTags[filterKey as TagKey].map((tag) => ({
                   value: tag,
@@ -484,5 +484,3 @@ function ActiveMetricFilter<
     </>
   );
 }
-
-export default ActiveMetricFilter;

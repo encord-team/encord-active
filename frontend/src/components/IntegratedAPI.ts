@@ -10,29 +10,29 @@ import {
 } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
 import {
-  ActiveCreateSubsetMutationArguments,
-  ActiveCreateTagMutationArguments,
-  ActivePaginationResult,
-  ActivePredictionView,
-  ActiveProjectAnalysisCompareMetricDissimilarity,
-  ActiveProjectAnalysisDistribution,
-  ActiveProjectAnalysisDomain,
-  ActiveProjectAnalysisScatter,
-  ActiveProjectAnalysisSummary,
-  ActiveProjectEmbeddingReductions,
-  ActiveProjectItemDetailedSummary,
-  ActiveProjectMetricPerformance,
-  ActiveProjectPredictionSummary,
-  ActiveProjectPreviewItemResult,
-  ActiveProjectSearchResult,
-  ActiveProjectSimilarityResult,
-  ActiveProjectSummary,
-  ActiveProjectView,
-  ActiveQueryAPI,
-  ActiveSearchFilters,
-  ActiveUploadToEncordMutationArguments,
-} from "./oss/ActiveTypes";
-import { apiUrl } from "../../constants";
+  CreateSubsetMutationArguments,
+  CreateTagMutationArguments,
+  PaginationResult,
+  PredictionView,
+  ProjectAnalysisCompareMetricDissimilarity,
+  ProjectAnalysisDistribution,
+  ProjectAnalysisDomain,
+  ProjectAnalysisScatter,
+  ProjectAnalysisSummary,
+  ProjectEmbeddingReductions,
+  ProjectItemDetailedSummary,
+  ProjectMetricPerformance,
+  ProjectPredictionSummary,
+  ProjectPreviewItemResult,
+  ProjectSearchResult,
+  ProjectSimilarityResult,
+  ProjectSummary,
+  ProjectView,
+  QueryAPI,
+  SearchFilters,
+  UploadToEncordMutationArguments,
+} from "./Types";
+import { apiUrl } from "../constants";
 
 export type IntegratedProjectMetadata = {
   readonly title: string;
@@ -57,12 +57,12 @@ const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
 };
 
 const StatisticQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> =
-  {
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    cacheTime: 1000 * 60 * 5, // 5 minutes
-  };
+{
+  staleTime: 1000 * 60 * 5, // 5 minutes
+  cacheTime: 1000 * 60 * 5, // 5 minutes
+};
 
-class IntegratedActiveAPI implements ActiveQueryAPI {
+class IntegratedAPI implements QueryAPI {
   private readonly projects: Readonly<
     Record<string, IntegratedProjectMetadata>
   >;
@@ -85,7 +85,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     }
     const base = this.projects[project_hash];
     if (base == null) {
-      throw Error(`Active - cannot find project with hash: "${project_hash}"`);
+      throw Error(` - cannot find project with hash: "${project_hash}"`);
     }
     return base.baseProjectUrl;
   }
@@ -97,7 +97,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     search: string,
     offset: number,
     limit: number
-  ): UseQueryResult<ActivePaginationResult<ActiveProjectView>> => {
+  ): UseQueryResult<PaginationResult<ProjectView>> => {
     const { projects } = this;
     const [results, total] = useMemo(() => {
       const results = Object.values(projects)
@@ -122,7 +122,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectSummary = (
     projectHash: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectSummary> => {
+  ): UseQueryResult<ProjectSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectSummary", projectHash],
@@ -135,7 +135,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectListEmbeddingReductions = (
     projectHash: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectEmbeddingReductions> => {
+  ): UseQueryResult<ProjectEmbeddingReductions> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectListEmbeddingReductions", projectHash],
@@ -147,9 +147,9 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   useProjectAnalysisSummary = (
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectAnalysisSummary> => {
+  ): UseQueryResult<ProjectAnalysisSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectAnalysisSummary", projectHash, analysisDomain],
@@ -164,11 +164,11 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   useProjectAnalysisMetricScatter = (
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     xMetric: string,
     yMetric: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectAnalysisScatter> => {
+  ): UseQueryResult<ProjectAnalysisScatter> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -194,10 +194,10 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   useProjectAnalysisDistribution = (
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     metricOrEnum: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectAnalysisDistribution> => {
+  ): UseQueryResult<ProjectAnalysisDistribution> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -221,10 +221,10 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   useProjectAnalysisCompareMetricDissimilarity = (
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
+    analysisDomain: ProjectAnalysisDomain,
     compareProjectHash: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectAnalysisCompareMetricDissimilarity> => {
+  ): UseQueryResult<ProjectAnalysisCompareMetricDissimilarity> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -254,12 +254,12 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
 
   useProjectAnalysisSearch = (
     projectHash: string,
-    analysisDomain: ActiveProjectAnalysisDomain,
-    filters: ActiveSearchFilters,
+    analysisDomain: ProjectAnalysisDomain,
+    filters: SearchFilters,
     orderBy: null | string,
     desc: boolean,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectSearchResult> => {
+  ): UseQueryResult<ProjectSearchResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -295,7 +295,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     frame: number,
     objectHash?: string | undefined | null,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectPreviewItemResult> => {
+  ): UseQueryResult<ProjectPreviewItemResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectItemPreview", projectHash, duHash, frame, objectHash],
@@ -317,7 +317,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     duHash: string,
     frame: number,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectItemDetailedSummary> => {
+  ): UseQueryResult<ProjectItemDetailedSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectItemDetails", projectHash, duHash, frame],
@@ -336,7 +336,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     frame: number,
     objectHash: string | undefined | null = null,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectSimilarityResult> => {
+  ): UseQueryResult<ProjectSimilarityResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -349,10 +349,8 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
       () =>
         axios
           .get(
-            `${baseURL}/analysis/${
-              objectHash == null ? "data" : "annotations"
-            }/similarity/${duHash}/${frame}/${
-              objectHash == null ? "" : objectHash
+            `${baseURL}/analysis/${objectHash == null ? "data" : "annotations"
+            }/similarity/${duHash}/${frame}/${objectHash == null ? "" : objectHash
             }?embedding=embedding_clip`
           )
           // eslint-disable-next-line
@@ -365,14 +363,10 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectMutationCreateSubset = (
     projectHash: string,
     options: Pick<
-      UseMutationOptions<string, unknown, ActiveCreateSubsetMutationArguments>,
+      UseMutationOptions<string, unknown, CreateSubsetMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     > = {}
-  ): UseMutationResult<
-    string,
-    unknown,
-    ActiveCreateSubsetMutationArguments
-  > => {
+  ): UseMutationResult<string, unknown, CreateSubsetMutationArguments> => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
       "/projects_v2/",
       "/projects/"
@@ -380,7 +374,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     const queryClient = useQueryClient();
     return useMutation(
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
-      async (args: ActiveCreateSubsetMutationArguments) => {
+      async (args: CreateSubsetMutationArguments) => {
         const params = {
           filters: args.filters ?? {},
           project_title: args.project_title,
@@ -397,7 +391,9 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
           JSON.stringify(params),
           { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
-        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]})
+        await queryClient.invalidateQueries({
+          queryKey: ["IntegratedAPI:useLookupProjectsFromUrlList"],
+        });
         return r.data;
       },
       options
@@ -407,31 +403,23 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectMutationCreateTag = (
     projectHash: string,
     options: Pick<
-      UseMutationOptions<string, unknown, ActiveCreateTagMutationArguments>,
+      UseMutationOptions<string, unknown, CreateTagMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     > = {}
-  ): UseMutationResult<string, unknown, ActiveCreateTagMutationArguments> =>
+  ): UseMutationResult<string, unknown, CreateTagMutationArguments> =>
     useMutation(
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
-      async (args: ActiveCreateTagMutationArguments) => "FIXME: impl",
+      async (args: CreateTagMutationArguments) => "FIXME: impl",
       options
     );
 
   useProjectMutationUploadToEncord = (
     projectHash: string,
     options?: Pick<
-      UseMutationOptions<
-        string,
-        unknown,
-        ActiveUploadToEncordMutationArguments
-      >,
+      UseMutationOptions<string, unknown, UploadToEncordMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
     >
-  ): UseMutationResult<
-    string,
-    unknown,
-    ActiveUploadToEncordMutationArguments
-  > => {
+  ): UseMutationResult<string, unknown, UploadToEncordMutationArguments> => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
       "/projects_v2/",
       "/projects/"
@@ -439,7 +427,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     const queryClient = useQueryClient();
     return useMutation(
       ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
-      async (args: ActiveUploadToEncordMutationArguments) => {
+      async (args: UploadToEncordMutationArguments) => {
         const params = {
           project_title: args.project_title,
           project_description: args.project_description ?? "",
@@ -457,7 +445,9 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
           JSON.stringify(params),
           { headers, timeout: LONG_RUNNING_TIMEOUT }
         );
-        await queryClient.invalidateQueries({ queryKey: ["IntegratedActiveAPI:useLookupProjectsFromUrlList"]});
+        await queryClient.invalidateQueries({
+          queryKey: ["IntegratedAPI:useLookupProjectsFromUrlList"],
+        });
         return r.data.project_hash;
       },
       { ...options }
@@ -468,7 +458,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
   useProjectListPredictions = (
     projectHash: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActivePaginationResult<ActivePredictionView>> => {
+  ): UseQueryResult<PaginationResult<PredictionView>> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectListPredictions", projectHash],
@@ -484,7 +474,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     predictionHash: string,
     iou: number,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectPredictionSummary> => {
+  ): UseQueryResult<ProjectPredictionSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectPredictionSummary", projectHash, predictionHash, iou],
@@ -505,7 +495,7 @@ class IntegratedActiveAPI implements ActiveQueryAPI {
     iou: number,
     metric: string,
     options: Pick<UseQueryOptions, "enabled"> = {}
-  ): UseQueryResult<ActiveProjectMetricPerformance> => {
+  ): UseQueryResult<ProjectMetricPerformance> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       [
@@ -532,7 +522,7 @@ export function useProjectsList(): UseQueryResult<
   AxiosError<{ details: string }>
 > {
   return useQuery(
-    ["IntegratedActiveAPI:useLookupProjectsFromUrlList", apiUrl],
+    ["IntegratedAPI:useLookupProjectsFromUrlList", apiUrl],
     async () => {
       const allData: Record<string, IntegratedProjectMetadata> = {};
       // eslint-disable-next-line no-await-in-loop
@@ -560,12 +550,9 @@ export function useProjectsList(): UseQueryResult<
   );
 }
 
-export function useIntegratedActiveAPI(
+export function useIntegratedAPI(
   token: string | null,
   projects: Readonly<Record<string, IntegratedProjectMetadata>>
-): ActiveQueryAPI {
-  return useMemo(
-    () => new IntegratedActiveAPI(token, projects),
-    [token, projects]
-  );
+): QueryAPI {
+  return useMemo(() => new IntegratedAPI(token, projects), [token, projects]);
 }

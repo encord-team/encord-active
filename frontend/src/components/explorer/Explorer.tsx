@@ -13,15 +13,12 @@ import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
 import {
   ApiContext,
-  ClassificationsPredictionOutcome,
   classificationsPredictionOutcomes,
-  DEFAULT_BASE_URL,
   Filters,
   getApi,
   IdValue,
   Item,
   Metric,
-  ObjectPredictionOutcome,
   objectPredictionOutcomes,
   PredictionOutcome,
   PredictionType,
@@ -39,24 +36,22 @@ import {
   TagList,
 } from "./Tagging";
 import { capitalize, isEmpty, sift } from "radash";
-import ActiveMetricFilter, {
-  ActiveFilterOrderState,
-  defaultFilters,
-} from "../james/oss/util/ActiveMetricFilter";
-import { Popover, Button, Typography } from "antd";
 import {
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../james/oss/ActiveTypes";
-import ActiveCreateSubsetModal from "../james/oss/tabs/modals/ActiveCreateSubsetModal";
-import ActiveUploadToEncordModal from "../james/oss/tabs/modals/ActiveUploadToEncordModal";
+  FilterOrderState,
+  MetricFilter,
+  defaultFilters,
+} from "../util/MetricFilter";
+import { Popover, Button } from "antd";
+import { ProjectMetricSummary, QueryAPI } from "../Types";
+import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
+import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 
 export type Props = {
   projectHash: string;
-  metricsSummary: ActiveProjectMetricSummary;
+  metricsSummary: ProjectMetricSummary;
   scope: Scope;
-  queryAPI: ActiveQueryAPI;
-  featureHashMap: Parameters<typeof ActiveMetricFilter>[0]["featureHashMap"];
+  queryAPI: QueryAPI;
+  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
 };
@@ -86,23 +81,23 @@ export const Explorer = ({
   const [iou, setIou] = useState<number | undefined>();
 
   const [newFilters, setNewFilters] =
-    useState<ActiveFilterOrderState>(defaultFilters);
+    useState<FilterOrderState>(defaultFilters);
 
   const filters = useMemo(
     () =>
-      ({
-        range: newFilters.metricFilters,
-        tags: newFilters.tagFilters,
-        ...(scope === "prediction" && predictionType
-          ? {
-              prediction_filters: {
-                type: predictionType,
-                outcome: predictionOutcome,
-                iou_threshold: iou,
-              },
-            }
-          : {}),
-      } as Filters),
+    ({
+      range: newFilters.metricFilters,
+      tags: newFilters.tagFilters,
+      ...(scope === "prediction" && predictionType
+        ? {
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
+        : {}),
+    } as Filters),
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
 
@@ -246,14 +241,14 @@ export const Explorer = ({
   const close = () => setOpen(undefined);
   return (
     <ApiContext.Provider value={api}>
-      <ActiveCreateSubsetModal
+      <CreateSubsetModal
         open={open == "subset"}
         close={close}
         projectHash={projectHash}
         queryAPI={queryAPI}
         filters={filters}
       />
-      <ActiveUploadToEncordModal
+      <UploadToEncordModal
         open={open === "upload"}
         close={close}
         projectHash={projectHash}
@@ -286,9 +281,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -314,8 +309,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -393,7 +388,7 @@ export const Explorer = ({
                 <Popover
                   placement="bottomLeft"
                   content={
-                    <ActiveMetricFilter
+                    <MetricFilter
                       filters={newFilters}
                       setFilters={setNewFilters}
                       metricsSummary={metricsSummary}
@@ -434,14 +429,24 @@ export const Explorer = ({
                   <BiSelectMultiple />
                   Select all ({itemsToRender.length})
                 </button>
-                  <Button onClick={() => setOpen("subset")} type="text" size="large" disabled={!resetable}>
-                    Create Project subset
+                <Button
+                  onClick={() => setOpen("subset")}
+                  type="text"
+                  size="large"
+                  disabled={!resetable}
+                >
+                  Create Project subset
+                </Button>
+                {remoteProject ? null : (
+                  <Button
+                    onClick={() => setOpen("upload")}
+                    type="text"
+                    size="large"
+                    disabled={!!resetable}
+                  >
+                    Upload project
                   </Button>
-                  {remoteProject ? null : (
-                      <Button onClick={() => setOpen("upload")} type="text" size="large"  disabled={!!resetable}>
-                        Upload project
-                      </Button>
-                  )}
+                )}
               </div>
             </div>
           </div>

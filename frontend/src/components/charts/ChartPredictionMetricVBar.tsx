@@ -8,20 +8,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import * as React from "react";
 import { scaleLinear } from "d3-scale";
 import { useMemo } from "react";
-import { ActiveProjectMetricSummary } from "../ActiveTypes";
-import { formatTooltip } from "../util/ActiveFormatter";
+import { ProjectMetricSummary } from "../Types";
+import { formatTooltip } from "../util/Formatter";
 
-function ActiveChartPredictionMetricVBar(props: {
+export function ChartPredictionMetricVBar(props: {
   data: Readonly<Record<string, number>> | undefined;
   predictionMetric:
     | "importance"
     | "correlations"
     | "feature-precision"
     | "feature-recall";
-  metricsSummary?: ActiveProjectMetricSummary;
+  metricsSummary?: ProjectMetricSummary;
   featureHashMap?: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -96,5 +95,3 @@ function ActiveChartPredictionMetricVBar(props: {
     </ResponsiveContainer>
   );
 }
-
-export default ActiveChartPredictionMetricVBar;

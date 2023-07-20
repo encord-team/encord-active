@@ -1,33 +1,33 @@
-import * as React from "react";
 import { Form, Input, Modal } from "antd";
-import { ActiveQueryAPI } from "../../ActiveTypes";
-import { Filters } from "../../../../explorer/api";
+import { QueryAPI } from "../../Types";
 
-function ActiveCreateSubsetModal(props: {
+export function UploadToEncordModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
-  filters: Filters,
+  setSelectedProjectHash: (key: string | undefined) => void;
+  queryAPI: QueryAPI;
 }) {
-  const { open, close, projectHash, queryAPI, filters } = props;
+  const { open, close, projectHash, queryAPI, setSelectedProjectHash } = props;
   const [form] = Form.useForm<{
-    project_title: string;
-    project_description?: string | undefined;
     dataset_title: string;
     dataset_description?: string | undefined;
+    project_title: string;
+    project_description?: string | undefined;
+    ontology_title: string;
+    ontology_description?: string | undefined;
   }>();
 
-  const mutateCreateSubset = queryAPI.useProjectMutationCreateSubset(
+  const mutateCreateSubset = queryAPI.useProjectMutationUploadToEncord(
     projectHash,
-    { onSuccess: close }
+    { onSuccess: close, onSettled: setSelectedProjectHash }
   );
 
   return (
     <Modal
       open={open}
-      title="Create Subset Project"
-      okText="Create"
+      title="Upload Project to Encord"
+      okText="Upload"
       onCancel={close}
       okButtonProps={{ loading: mutateCreateSubset.isLoading }}
       onOk={() => {
@@ -36,7 +36,6 @@ function ActiveCreateSubsetModal(props: {
           .then((fields) =>
             mutateCreateSubset.mutate({
               ...fields,
-              filters,
             })
           )
           .catch(() => undefined);
@@ -68,9 +67,17 @@ function ActiveCreateSubsetModal(props: {
         <Form.Item name="dataset_description" label="Dataset Description">
           <Input type="textarea" />
         </Form.Item>
+        <Form.Item
+          name="ontology_title"
+          label="Ontology Title"
+          rules={[{ required: true }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item name="ontology_description" label="Ontology Description">
+          <Input type="textarea" />
+        </Form.Item>
       </Form>
     </Modal>
   );
 }
-
-export default ActiveCreateSubsetModal;

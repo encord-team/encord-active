@@ -1,16 +1,14 @@
-import * as React from "react";
 import { useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
-import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../../ActiveTypes";
-import ActivePredictionSummaryTab from "./ActivePredictionSummaryTab";
-import ActivePredictionsMetricPerformanceTab from "./ActivePredictionsMetricPerformanceTab";
-import ActivePredictionsExplorerTab from "./ActivePredictionsExplorerTab";
-import { Explorer } from "../../../../explorer";
+import { ProjectMetricSummary, QueryAPI } from "../../Types";
+import { PredictionSummaryTab } from "./PredictionSummaryTab";
+import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
+import { Explorer } from "../../explorer";
 
-function ActivePredictionsTab(props: {
-  queryAPI: ActiveQueryAPI;
+export function PredictionsTab(props: {
+  queryAPI: QueryAPI;
   projectHash: string;
-  metricsSummary: ActiveProjectMetricSummary;
+  metricsSummary: ProjectMetricSummary;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -48,7 +46,7 @@ function ActivePredictionsTab(props: {
               label: "Summary",
               key: "0",
               children: (
-                <ActivePredictionSummaryTab
+                <PredictionSummaryTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
                   queryAPI={queryAPI}
@@ -61,7 +59,7 @@ function ActivePredictionsTab(props: {
               label: "Metric Performance",
               key: "1",
               children: (
-                <ActivePredictionsMetricPerformanceTab
+                <PredictionsMetricPerformanceTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
                   queryAPI={queryAPI}
@@ -75,7 +73,6 @@ function ActivePredictionsTab(props: {
               key: "2",
               children: (
                 <Explorer
-                  baseUrl="http://localhost:8502"
                   projectHash={projectHash}
                   scope={"prediction"}
                   featureHashMap={featureHashMap}
@@ -92,5 +89,3 @@ function ActivePredictionsTab(props: {
     </>
   );
 }
-
-export default ActivePredictionsTab;

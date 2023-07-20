@@ -1,15 +1,14 @@
-import * as React from "react";
 import { Col, Divider, Row, Select, Typography } from "antd";
 import { useState } from "react";
-import { ActiveProjectMetricSummary, ActiveQueryAPI } from "../ActiveTypes";
-import ActiveChartMetricCompareScatter from "../charts/ActiveChartMetricCompareScatter";
-import ActiveChartMetricDissimilarity from "../charts/ActiveChartMetricDissimilarity";
+import { ProjectMetricSummary, QueryAPI } from "../Types";
+import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
+import { ChartMetricDissimilarity } from "../charts/ChartMetricDissimilarity";
 
-function ActiveProjectComparisonTab(props: {
+export function ProjectComparisonTab(props: {
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
-  dataMetricsSummary: ActiveProjectMetricSummary;
-  annotationMetricsSummary: ActiveProjectMetricSummary;
+  queryAPI: QueryAPI;
+  dataMetricsSummary: ProjectMetricSummary;
+  annotationMetricsSummary: ProjectMetricSummary;
 }) {
   const {
     projectHash,
@@ -63,7 +62,7 @@ function ActiveProjectComparisonTab(props: {
           <Divider>
             <Typography.Title level={3}>Metric Comparison</Typography.Title>
           </Divider>
-          <ActiveChartMetricCompareScatter
+          <ChartMetricCompareScatter
             metricsSummary={metricsSummary}
             analysisDomain={domain}
             projectHash={projectHash}
@@ -73,7 +72,7 @@ function ActiveProjectComparisonTab(props: {
           <Divider>
             <Typography.Title level={3}>Metric Dissimilarity</Typography.Title>
           </Divider>
-          <ActiveChartMetricDissimilarity
+          <ChartMetricDissimilarity
             projectHash={projectHash}
             analysisDomain={domain}
             queryAPI={queryAPI}
@@ -85,5 +84,3 @@ function ActiveProjectComparisonTab(props: {
     </>
   );
 }
-
-export default ActiveProjectComparisonTab;

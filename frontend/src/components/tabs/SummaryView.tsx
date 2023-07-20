@@ -1,24 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Tabs } from "antd";
-import * as React from "react";
-import { useMap } from "usehooks-ts";
-import {
-  ActiveQueryAPI,
-  ActiveProjectMetricSummary,
-  ActiveProjectAnalysisDomain,
-  ActiveProjectSummary,
-} from "../ActiveTypes";
-import { ActiveSearchTab } from "./ActiveSearchTab";
-import ActiveSelectedTab from "./ActiveSelectedTab";
-import ActiveSummaryTab from "./ActiveSummaryTab";
-import ActiveProjectComparisonTab from "./ActiveProjectComparisonTab";
-import { ActiveFilterOrderState } from "../util/ActiveMetricFilter";
-import { Explorer } from "../../../explorer";
+import { QueryAPI, ProjectSummary } from "../Types";
+import { SummaryTab } from "./SummaryTab";
 
-function ActiveSummaryView(props: {
+export function SummaryView(props: {
   projectHash: string;
-  queryAPI: ActiveQueryAPI;
-  projectSummary: ActiveProjectSummary;
+  queryAPI: QueryAPI;
+  projectSummary: ProjectSummary;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -34,7 +22,7 @@ function ActiveSummaryView(props: {
           label: "Data",
           key: "0",
           children: (
-            <ActiveSummaryTab
+            <SummaryTab
               projectHash={projectHash}
               queryAPI={queryAPI}
               metricsSummary={projectSummary.data}
@@ -47,7 +35,7 @@ function ActiveSummaryView(props: {
           label: "Annotations",
           key: "1",
           children: (
-            <ActiveSummaryTab
+            <SummaryTab
               projectHash={projectHash}
               queryAPI={queryAPI}
               metricsSummary={projectSummary.annotations}
@@ -62,5 +50,3 @@ function ActiveSummaryView(props: {
     />
   );
 }
-
-export default ActiveSummaryView;

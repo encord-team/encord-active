@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   CartesianGrid,
   Legend,
@@ -10,9 +9,9 @@ import {
   Scatter,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { formatTooltip } from "../util/ActiveFormatter";
+import { formatTooltip } from "../util/Formatter";
 
-function ActiveChartPredictionRecallCurve(props: {
+export function ChartPredictionRecallCurve(props: {
   data:
     | undefined
     | Record<
@@ -134,5 +133,3 @@ function ActiveChartPredictionRecallCurve(props: {
     </ResponsiveContainer>
   );
 }
-
-export default ActiveChartPredictionRecallCurve;

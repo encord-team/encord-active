@@ -8,16 +8,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import * as React from "react";
 import { useMemo } from "react";
-import {
-  ActiveProjectAnalysisSummary,
-  ActiveProjectMetricSummary,
-} from "../ActiveTypes";
+import { ProjectAnalysisSummary, ProjectMetricSummary } from "../Types";
 
-function ActiveChartOutlierSummaryBar(props: {
-  summaryData: ActiveProjectAnalysisSummary | undefined;
-  metricsSummary: ActiveProjectMetricSummary;
+export function ChartOutlierSummaryBar(props: {
+  summaryData: ProjectAnalysisSummary | undefined;
+  metricsSummary: ProjectMetricSummary;
 }) {
   const { metricsSummary, summaryData } = props;
 
@@ -93,5 +89,3 @@ function ActiveChartOutlierSummaryBar(props: {
     </ResponsiveContainer>
   );
 }
-
-export default ActiveChartOutlierSummaryBar;

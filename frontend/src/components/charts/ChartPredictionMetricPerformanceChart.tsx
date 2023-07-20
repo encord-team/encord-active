@@ -9,9 +9,8 @@ import {
   Tooltip,
   ReferenceLine,
 } from "recharts";
-import * as React from "react";
 import { useMemo, useState } from "react";
-import { formatTooltip, formatTooltipLabel } from "../util/ActiveFormatter";
+import { formatTooltip, formatTooltipLabel } from "../util/Formatter";
 
 /**
  * Returns data for the average over the input data.
@@ -74,7 +73,7 @@ function tidyData(
   return [scaled, referenceY];
 }
 
-function ActiveChartPredictionMetricPerformanceChart(props: {
+export function ChartPredictionMetricPerformanceChart(props: {
   data: Readonly<
     Record<
       string,
@@ -265,5 +264,3 @@ function ActiveChartPredictionMetricPerformanceChart(props: {
     </ResponsiveContainer>
   );
 }
-
-export default ActiveChartPredictionMetricPerformanceChart;

@@ -8,21 +8,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import * as React from "react";
 import { useMemo } from "react";
 import { scaleLinear } from "d3-scale";
 import {
-  ActiveProjectAnalysisDomain,
-  ActiveProjectMetricSummary,
-  ActiveQueryAPI,
-} from "../ActiveTypes";
+  ProjectAnalysisDomain,
+  ProjectMetricSummary,
+  QueryAPI,
+} from "../Types";
 
-function ActiveChartMetricDissimilarity(props: {
+export function ChartMetricDissimilarity(props: {
   projectHash: string;
   compareProjectHash: string;
-  analysisDomain: ActiveProjectAnalysisDomain;
-  metricsSummary: ActiveProjectMetricSummary;
-  queryAPI: ActiveQueryAPI;
+  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectMetricSummary;
+  queryAPI: QueryAPI;
 }) {
   const {
     projectHash,
@@ -76,5 +75,3 @@ function ActiveChartMetricDissimilarity(props: {
     </ResponsiveContainer>
   );
 }
-
-export default ActiveChartMetricDissimilarity;
