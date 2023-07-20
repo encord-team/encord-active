@@ -8,6 +8,7 @@ import DEFAUL_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 
 import { classy } from "../helpers/classy";
 import { fork } from "radash";
+import { useRef } from "react";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import { apiUrl, env } from "../constants";
@@ -160,36 +161,53 @@ const ProjectCard = ({
   project: IntegratedProjectMetadata;
   showDownloadedBadge?: boolean;
   onClick: ButtonCardProps["onClick"];
-}) => (
-  <ButtonCard onClick={onClick}>
-    <figure className="max-h-36 rounded">
-      <img src={project.imageUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
-    </figure>
-    <div className="card-body w-full p-0 justify-between gap-1">
-      <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
-      <div className="flex flex-col">
-        <ProjectStat
-          title={"Dataset"}
-          value={project?.stats?.dataUnits}
-          iconUrl={fileImageUrl}
-        />
-        <ProjectStat
-          title={"Annotations"}
-          value={project?.stats?.labels}
-          iconUrl={annotationsUrl}
-        />
-        <ProjectStat
-          title={"Classes"}
-          value={project?.stats?.classes}
-          iconUrl={classesUrl}
-        />
-      </div>
-    </div>
-    {showDownloadedBadge && project?.downloaded ? (
-      <div className="badge absolute top-1">Downloaded</div>
-    ) : null}
-  </ButtonCard>
-);
+}) => {
+    const video = useRef<HTMLVideoElement>(null);
+    return (
+      <ButtonCard onClick={onClick}>
+        <figure className="max-h-36 rounded">
+            {project.imageUrlTimestamp != null && project.imageUrl ? (
+                <video
+                  src={project.imageUrl}
+                  muted
+                  controls={false}
+                  onLoadedMetadata={() => {
+                    const videoRef = video.current;
+                    if (videoRef != null) {
+                      videoRef.currentTime = project.imageUrlTimestamp || 0;
+                    }
+                  }}
+                />
+            ) : (
+                <img src={project.imageUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
+            )}
+        </figure>
+        <div className="card-body w-full p-0 justify-between gap-1">
+          <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
+          <div className="flex flex-col">
+            <ProjectStat
+              title={"Dataset"}
+              value={project?.stats?.dataUnits}
+              iconUrl={fileImageUrl}
+            />
+            <ProjectStat
+              title={"Annotations"}
+              value={project?.stats?.labels}
+              iconUrl={annotationsUrl}
+            />
+            <ProjectStat
+              title={"Classes"}
+              value={project?.stats?.classes}
+              iconUrl={classesUrl}
+            />
+          </div>
+        </div>
+        {showDownloadedBadge && project?.downloaded ? (
+          <div className="badge absolute top-1">Downloaded</div>
+        ) : null}
+      </ButtonCard>
+    );
+};
 const ProjectStat = ({
   title,
   value,
