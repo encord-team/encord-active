@@ -10,10 +10,9 @@ from encord.orm.project import (
     CopyDatasetAction,
     CopyDatasetOptions,
     CopyLabelsOptions,
-    Project,
     ReviewApprovalState,
 )
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
@@ -22,8 +21,7 @@ from sqlmodel import Session, select
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
-from encord_active.db.metrics import AnnotationMetrics, DataMetrics
-from encord_active.db.models import ProjectDataAnalytics, get_engine, ProjectTag, ProjectTaggedDataUnit, \
+from encord_active.db.models import ProjectTag, ProjectTaggedDataUnit, \
     ProjectTaggedAnnotation
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
@@ -38,12 +36,10 @@ from encord_active.lib.db.helpers.tags import (
 )
 from encord_active.lib.db.merged_metrics import (
     MergedMetrics,
-    ensure_initialised_merged_metrics,
 )
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.encord.actions import (
-    DatasetCreationResult,
     DatasetUniquenessError,
     EncordActions,
     replace_db_uids,

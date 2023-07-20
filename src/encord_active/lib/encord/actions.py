@@ -20,7 +20,6 @@ from encord.orm.project import (
 from encord.utilities.label_utilities import construct_answer_dictionaries
 from tqdm.auto import tqdm
 
-from encord_active.app.common.state import get_state
 from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.lib.common.data_utils import download_file, try_execute
 from encord_active.lib.common.utils import DataHashMapping
@@ -372,6 +371,7 @@ class EncordActions:
 
     def create_subset(
         self,
+        curr_project_structure: ProjectFileStructure,
         filtered_df: pd.DataFrame,
         project_title: str,
         project_description: str,
@@ -379,7 +379,6 @@ class EncordActions:
         dataset_description: Optional[str] = None,
         remote_copy: bool = False,
     ) -> Path:
-        curr_project_structure = get_state().project_paths
         target_project_dir = curr_project_structure.project_dir.parent / project_title
         target_project_structure = ProjectFileStructure(target_project_dir)
 

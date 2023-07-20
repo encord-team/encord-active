@@ -1,11 +1,7 @@
-import subprocess
-import sys
-from os import environ
 from pathlib import Path
 from typing import Optional
 
 import rich
-from streamlit.web import cli as stcli
 
 from encord_active.app.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
@@ -18,6 +14,7 @@ from encord_active.lib.db.prisma_init import (
 )
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.versioning.git import GitVersioner
+from encord_active.server.start_server import start
 
 
 def ensure_safe_project(root_path: Path, final_data_version: Optional[int] = None):
@@ -41,8 +38,8 @@ def is_port_in_use(port: int) -> bool:
         return s.connect_ex(("localhost", port)) == 0
 
 
-def launch_streamlit_app(target: Path):
-    if is_port_in_use(8501):
+def launch_server_app(target: Path):
+    if is_port_in_use(8502):
         import typer
 
         rich.print("[red]Port already in use...")
@@ -53,21 +50,6 @@ def launch_streamlit_app(target: Path):
     if did_schema_change():
         generate_prisma_client()
     ensure_safe_project(target)
-    streamlit_page = (Path(__file__).parents[2] / "app" / "streamlit_entrypoint.py").expanduser().absolute()
-    data_dir = target.expanduser().absolute().as_posix()
-    sys.argv = ["streamlit", "run", streamlit_page.as_posix(), data_dir]
-
-    # NOTE: we need to set PYTHONPATH for file watching
-    python_path = Path(__file__).parents[2]
-    environ["PYTHONPATH"] = (python_path).as_posix()
-
-    server_args = [(python_path / "server" / "start_server.py").as_posix(), target.as_posix()]
-
-    if app_config.is_dev:
-        sys.argv.insert(3, "--server.fileWatcherType")
-        sys.argv.insert(4, "auto")
-        server_args.append("--reload")
-
-    subprocess.Popen([sys.executable, *server_args])
-
-    stcli.main()  # pylint: disable=no-value-for-parameter
+    data_dir = target.expanduser().absolute()
+    rich.print("[green] Server starting on localhost:8502")
+    start(data_dir, app_config.is_dev)

@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 
 from encord_active.cli.utils.decorators import find_child_projects, is_project
 from encord_active.lib.metrics.types import EmbeddingType
@@ -29,8 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# FIXME: change to reference of a build python module or save locally somehow.
+frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "build"
+
 app.mount("/ea-static", StaticFiles(directory=get_settings().SERVER_START_PATH, follow_symlink=True), name="static")
 app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=True), name="sandbox-static")
+app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
+
+
+@app.get("/")
+@app.get("/index.html")
+def _index():
+    return FileResponse(frontend_build_path / "index.html")
 
 
 # @app.on_event("startup")
