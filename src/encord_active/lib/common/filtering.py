@@ -4,8 +4,10 @@ from typing import List, Optional
 import pandas as pd
 from pydantic import BaseModel
 
+from encord_active.lib.common.utils import partial_column
 from encord_active.lib.db.helpers.tags import GroupedTags, Tag, from_grouped_tags
 from encord_active.lib.db.tags import TagScope
+from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -37,7 +39,7 @@ class Filters(BaseModel):
         return hash(json.dumps(self.dict(exclude_defaults=True)))
 
 
-def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure):
+def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure, scope: Optional[MetricScope] = None):
     filtered = df.copy()
     filtered["data_row_id"] = filtered.index.str.split("_", n=3).str[0:3].str.join("_")
     filtered["is_label_metric"] = filtered.index.str.split("_", n=3).str.len() > 3
@@ -47,7 +49,7 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure)
         filtered = filter_tags(filtered, [*data_tags, *label_tags])
 
     if filters.object_classes is not None:
-        filtered = filter_object_classes(filtered, filters.object_classes)
+        filtered = filter_object_classes(filtered, filters.object_classes, scope)
 
     if filters.workflow_stages is not None:
         filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
@@ -99,7 +101,7 @@ def filter_tags(to_filter: pd.DataFrame, tags: List[Tag]):
     return df
 
 
-def filter_object_classes(to_filter: pd.DataFrame, classes: List[str]):
+def filter_object_classes(to_filter: pd.DataFrame, classes: List[str], scope: Optional[MetricScope] = None):
     # Include all frames that match the user input, excluding frames without annotations
     filtered_user_input = to_filter[to_filter["object_class"].isin(classes)]
 
@@ -111,6 +113,8 @@ def filter_object_classes(to_filter: pd.DataFrame, classes: List[str]):
             (~to_filter.data_row_id.isin(filtered_labels_df["data_row_id"])) & (pd.isna(to_filter["object_class"]))
         ]
         return pd.concat([filtered_user_input, filtered_no_annotations])
+    elif scope == MetricScope.DATA:
+        return to_filter[to_filter.index.isin(partial_column(filtered_user_input.index, 3))]
     else:
         return filtered_user_input
 
