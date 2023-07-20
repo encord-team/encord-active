@@ -45,6 +45,7 @@ import { Popover, Button } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
+import { apiUrl } from "../../constants";
 
 export type Props = {
   projectHash: string;
@@ -1000,14 +1001,16 @@ const ImageWithPolygons = ({
       }))
     );
   }, [width, height, item.id]);
-
+  const itemUrl = (
+      item.url.startsWith("https://") || item.url.startsWith("https://")
+  ) ? item.url : `${apiUrl}${item.url}`;
   return (
     <figure {...rest} className={classy("relative", className)}>
       {item.videoTimestamp != null ? (
         <video
           ref={video}
           className="object-contain rounded transition-opacity"
-          src={item.url}
+          src={itemUrl}
           muted
           controls={false}
           onLoadedMetadata={() => {
@@ -1022,7 +1025,7 @@ const ImageWithPolygons = ({
           ref={image}
           className="object-contain rounded transition-opacity"
           alt=""
-          src={item.url}
+          src={itemUrl}
         />
       )}
       {width && height && polygons.length > 0 && (
