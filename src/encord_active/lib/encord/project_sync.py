@@ -20,8 +20,12 @@ from encord_active.lib.embeddings.utils import (
 )
 from encord_active.lib.metrics.metric import MetricMetadata
 from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.utils import load_metric_dataframe
+from encord_active.lib.model_predictions.reader import get_model_predictions, read_prediction_files
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
+from encord_active.server.utils import load_project_metrics, get_similarity_finder, filtered_merged_metrics, \
+    read_class_idx
 
 
 class LabelRowDataUnit(NamedTuple):
@@ -89,6 +93,7 @@ def replace_uids(
     for old_dh, new_dh in data_hash_mapping.items():
         renaming_map[old_dh] = new_dh
 
+    print(f"DEBUG: renaming map for execution", renaming_map)
     try:
         _replace_uids(project_file_structure, renaming_map)
     except Exception as e:
@@ -117,6 +122,23 @@ def _replace_uids(
     else:
         new_mappings = {v: k for k, v in renaming_map.items()}
     project_file_structure.mappings.write_text(json.dumps(new_mappings))
+
+    # Invalidate caches - all caches to do with this project are out of date!
+    caches = [
+        load_metric_dataframe,
+        load_project_metrics,
+        get_similarity_finder,
+        filtered_merged_metrics,
+        read_class_idx,
+        get_model_predictions,
+        read_prediction_files,
+    ]
+    for cache in caches:
+        try:
+            cache.clear_cache()
+        except AttributeError:
+            # lru_cache has not been initialized yet
+            pass
 
 
 def create_filtered_embeddings(
