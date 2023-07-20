@@ -430,7 +430,7 @@ export const Explorer = ({
                   Select all ({itemsToRender.length})
                 </button>
                   <Button onClick={() => setOpen("subset")} type="text">Create Project subset</Button>
-                  <Button onClick={() => setOpen("upload")} type="text">Upload project</Button>
+                  <Button onClick={() => setOpen("upload")} type="text" disabled={!!resetable}>Upload project</Button>
               </div>
             </div>
           </div>
