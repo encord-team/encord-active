@@ -178,7 +178,7 @@ def render_column_filters(df: pd.DataFrame, columns_to_filter: List[str], pfs: P
             )
             if isinstance(res, tuple) and len(res) == 2:
                 start, end = cast(Tuple[pd.Timestamp, pd.Timestamp], map(pd.to_datetime, res))  # type: ignore
-                filters.datetime_range[column] = DatetimeRange(min=start, min=end)
+                filters.datetime_range[column] = DatetimeRange(min=start, max=end)
         else:
             filters.text[column] = right.text_input(
                 f"Substring or regex in {column}",
@@ -454,6 +454,7 @@ def render_subset_button(
         with st.spinner("Creating Project Subset..."):
             try:
                 created_dir = action_utils.create_subset(
+                    curr_project_structure=get_state().project_paths,
                     filtered_df=subset_df,
                     remote_copy=bool(project_has_remote),
                     project_title=cols.project.title,
