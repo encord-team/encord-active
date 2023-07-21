@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
-from encord_active.app.app_config import app_config
+from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.streamlit import ensure_safe_project
 from encord_active.db.models import (
     Project,
@@ -731,7 +731,6 @@ def upload_to_encord(
     old_project_hash = uuid.UUID(old_project_meta["project_hash"])
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
-    # FIXME: don't fetch app_config from here.
     encord_actions = EncordActions(pfs.project_dir, app_config.get_ssh_key())
     try:
         dataset_creation_result = encord_actions.create_dataset(

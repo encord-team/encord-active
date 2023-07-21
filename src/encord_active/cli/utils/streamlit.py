@@ -3,7 +3,7 @@ from typing import Optional
 
 import rich
 
-from encord_active.app.app_config import app_config
+from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
 from encord_active.lib.db.data.run_data_migrations import run_data_migrations
 from encord_active.lib.db.merged_metrics import ensure_initialised_merged_metrics
