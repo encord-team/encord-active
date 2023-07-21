@@ -1,10 +1,10 @@
 import json
 import uuid
-from functools import lru_cache, partial
+from functools import partial
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TypedDict, TypeVar
+from typing import Dict, List, Optional, Tuple, TypedDict
 
-import pandas as pd
+from cachetools import cached, LRUCache
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -37,19 +37,19 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None) -> List[MetricData]:
     if scope == MetricScope.PREDICTION:
         return load_available_metrics(project.predictions / "object" / "metrics")
     return load_available_metrics(project.metrics, scope)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
     return SimilaritiesFinder(embedding_type, project)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all()
@@ -57,7 +57,7 @@ def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, sco
     return apply_filters(merged_metrics, filters, project, scope)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
 

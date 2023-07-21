@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from functools import lru_cache
+from cachetools import cached, LRUCache
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 
@@ -46,7 +46,7 @@ class MetricSchema(IdentifierSchema):
     url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def load_metric_dataframe(
     metric: MetricData, normalize: bool = False, *, sorting_key="score"
 ) -> DataFrame[MetricSchema]:

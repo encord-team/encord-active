@@ -134,11 +134,8 @@ def _replace_uids(
         read_prediction_files,
     ]
     for cache in caches:
-        try:
-            cache.clear_cache()
-        except AttributeError:
-            # lru_cache has not been initialized yet
-            pass
+        cache.cache_clear()
+    project_file_structure.cache_clear()
 
 
 def create_filtered_embeddings(

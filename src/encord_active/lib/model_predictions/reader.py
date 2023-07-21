@@ -1,4 +1,4 @@
-from functools import lru_cache
+from cachetools import cached, LRUCache
 from pathlib import Path
 from typing import Iterable, List, Optional, Union, cast
 
@@ -195,7 +195,7 @@ def match_predictions_and_labels(
     return _model_predictions.pipe(DataFrame[ClassificationPredictionMatchSchema])
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def read_prediction_files(project_file_structure: ProjectFileStructure, prediction_type: MainPredictionType):
     metrics_dir = project_file_structure.metrics
     predictions_dir = project_file_structure.predictions / prediction_type.value
@@ -224,7 +224,7 @@ def get_model_prediction_by_id(project_file_structure: ProjectFileStructure, id:
                 pass
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def get_model_predictions(
     project_file_structure: ProjectFileStructure,
     predictions_filters: PredictionsFilters,
