@@ -1,16 +1,18 @@
+import math
 import uuid
-from io import BytesIO
+import encord
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Set, Union, Type
 
 import av
+import numpy as np
 import torch
 from PIL import Image
 from pynndescent import NNDescent
 from torch import Tensor
 from tqdm import tqdm
 
-from encord_active.analysis.types import MetricResult, AnnotationMetadata, MetricDependencies, NearestNeighbors
+from encord_active.analysis.types import AnnotationMetadata, MetricDependencies, NearestNeighbors
 from encord_active.analysis.util.torch import pillow_to_tensor, obj_to_points, obj_to_mask
 from .base import BaseFrameInput, BaseAnalysis
 
@@ -18,7 +20,7 @@ from encord_active.analysis.config import AnalysisConfig
 from encord_active.db.models import ProjectDataMetadata, ProjectDataUnitMetadata, AnnotationType, \
     ProjectAnnotationAnalytics, ProjectAnnotationAnalyticsExtra, ProjectDataAnalytics, ProjectDataAnalyticsExtra
 from encord_active.lib.common.data_utils import download_image, url_to_file_path
-from .embedding import NearestImageEmbeddingQuery
+from .embedding import BaseEmbedding
 from ..lib.encord.utils import get_encord_project
 
 
@@ -32,9 +34,7 @@ class SimpleExecutor(Executor):
         super().__init__(config=config)
         self.data_metrics: Dict[Tuple[uuid.UUID, int], MetricDependencies] = {}
         self.annotation_metrics: Dict[Tuple[uuid.UUID, int, str], MetricDependencies] = {}
-        self.data_nn_descent: Dict[str, NNDescent] = {}
-        self.annotation_nn_descent: Dict[str, NNDescent] = {}
-        self.encord_projects: Dict[uuid.UUID,] = {}
+        self.encord_projects: Dict[uuid.UUID, encord.Project] = {}
 
     def execute_from_db(
         self,
@@ -240,7 +240,7 @@ class SimpleExecutor(Executor):
                 frame=current_frame,
                 next_frame=next_frame,
             )
-            non_ephemeral = isinstance(evaluation, BaseAnalysis)
+            non_ephemeral = isinstance(evaluation, BaseAnalysis) or isinstance(evaluation, BaseEmbedding)
             if metric_result.image is not None:
                 current_frame.image_deps[evaluation.ident] = metric_result.image
                 if non_ephemeral:
@@ -325,45 +325,65 @@ class SimpleExecutor(Executor):
         # Stage 2 evaluation will always be very closely bound to the executor
         # and the associated storage and indexing strategy.
         for metric in tqdm(self.config.derived_embeddings, desc="Metric Stage 2: Building indices"):
-            for metrics in [self.data_metrics, self.annotation_metrics]:
+            for metrics in tqdm(
+                [self.data_metrics, self.annotation_metrics],
+                desc=f"              : Generating indices for {metric.ident}"
+            ):
                 max_neighbours = int(metric.max_neighbours)
                 if max_neighbours > 50:
                     raise ValueError(f"Too many embedding nn-query results")
                 data_keys = list(metrics.keys())
-                data = [
-                    metrics[k][metric.embedding_source].cpu().detach().numpy()
+                data_list = [
+                    metrics[k][metric.embedding_source].cpu().numpy()
                     for k in data_keys
                 ]
+                data = np.stack(data_list)
                 nn_descent = NNDescent(
                     data=data,
+                    parallel_batch_queries=True,
+                    n_jobs=-1,
                 )
                 nn_descent.prepare()
+                data_indices, data_distances = nn_descent.query(
+                    query_data=data,
+                    k=max_neighbours,
+                )
                 for i, k in enumerate(data_keys):
-                    distances, indices = nn_descent.query(
-                        query_data=metrics[k][metric.ident],
-                        k=max_neighbours,
-                    )
+                    indices = data_indices[i]
+                    distances = data_distances[i]
+
+                    # Post-process query result:
                     if len(indices) > 0 and indices[0] == i:
                         indices = indices[1:]
                         distances = distances[1:]
-                    metrics[k][metric.ident] = NearestNeighbors(
-                        similarities=distances,
+                    while math.isinf(distances[-1]):
+                        indices = distances[:-1]
+                        distances = distances[:-1]
+
+                    # Transform value to result.
+                    nearest_neighbor_result = NearestNeighbors(
+                        similarities=distances.tolist(),
                         metric_deps=[
-                            dict(metrics[data_keys[i]])
-                            for i in indices
+                            dict(metrics[data_keys[int(j)]])
+                            for j in indices.tolist()
+                        ],
+                        metric_keys=[
+                            data_keys[int(j)]
+                            for j in indices.tolist()
                         ]
                     )
+                    metrics[k][metric.ident] = nearest_neighbor_result
 
     def _stage_3(self) -> None:
         # Stage 3: Derived metrics from stage 1 & stage 2 metrics
         # dependencies must be pure.
         for data_metric in self.data_metrics.values():
             for metric in self.config.derived_metrics:
-                derived_metric = metric.calculate(dict(data_metric))
+                derived_metric = metric.calculate(dict(data_metric), None)
                 data_metric[metric.ident] = derived_metric
         for annotation_metric in self.annotation_metrics.values():
             for metric in self.config.derived_metrics:
-                derived_metric = metric.calculate(dict(annotation_metric))
+                derived_metric = metric.calculate(dict(annotation_metric), annotation_metric["annotation_type"])
                 annotation_metric[metric.ident] = derived_metric
 
     @staticmethod
@@ -403,11 +423,21 @@ class SimpleExecutor(Executor):
                 return v.item()
             return v
 
-        def _extra(k: str, v: Union[Tensor, float, int, str, None]) -> Union[bytes, float, int, str, None]:
+        def _extra(
+            k: str, v: Union[Tensor, float, int, str, None, NearestNeighbors]
+        ) -> Union[bytes, float, int, str, None, dict]:
             if isinstance(v, Tensor):
                 if k.startswith("embedding_"):
                     return v.cpu().numpy().tobytes()
                 return v.item()
+            elif isinstance(v, NearestNeighbors):
+                return {
+                    "similarities": v.similarities,
+                    "keys": [
+                        list(k)
+                        for k in v.metric_keys
+                    ]
+                }
             return v
 
         for (du_hash, frame), data_deps in self.data_metrics.items():
@@ -422,7 +452,7 @@ class SimpleExecutor(Executor):
                     frame=frame,
                     **{
                         k: _metric(v)
-                        for k, v in data_deps if k in analysis_values
+                        for k, v in data_deps.items() if k in analysis_values
                     },
                 )
             )
@@ -432,7 +462,7 @@ class SimpleExecutor(Executor):
                     frame=frame,
                     **{
                         k: _extra(k, v)
-                        for k, v in data_deps if k in extra_values and not k.startswith("derived_")
+                        for k, v in data_deps.items() if k in extra_values and not k.startswith("derived_")
                     },
                 )
             )
@@ -456,7 +486,7 @@ class SimpleExecutor(Executor):
                     annotation_manual=annotation_manual,
                     **{
                         k: _metric(v)
-                        for k, v in annotation_deps if k in analysis_values
+                        for k, v in annotation_deps.items() if k in analysis_values
                     },
                 )
             )
@@ -466,7 +496,7 @@ class SimpleExecutor(Executor):
                     frame=frame,
                     **{
                         k: _extra(k, v)
-                        for k, v in annotation_deps if k in extra_values and not k.startswith("derived_")
+                        for k, v in annotation_deps.items() if k in extra_values
                     },
                 )
             )

@@ -5,7 +5,7 @@ from encord_active.analysis.types import MetricResult, AnnotationMetadata, Metri
 class DistanceToBorderMetric(OneObjectMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="distance-to-border",
+            ident="metric_label_border_closeness",
             dependencies=set(),
             long_name="Distance in pixels to the border",
             desc="",

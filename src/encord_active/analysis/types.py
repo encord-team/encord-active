@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Annotated, NamedTuple, Optional, Union
+import uuid
+from typing import Annotated, NamedTuple, Optional, Union, Tuple
 from dataclasses import dataclass
 import torch
 from torch import Tensor
@@ -25,8 +26,9 @@ class AnnotationMetadata:
 
 
 @dataclass(frozen=True)
-class NearestNeighbors(NamedTuple):
+class NearestNeighbors:
     metric_deps: list[MetricDependencies]
+    metric_keys: list[Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]]
     similarities: list[float]
 
 

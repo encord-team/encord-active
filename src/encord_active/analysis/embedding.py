@@ -9,7 +9,11 @@ from encord_active.analysis.types import (
 )
 
 
-class PureImageEmbedding(BaseEvaluation, metaclass=ABCMeta):
+class BaseEmbedding(BaseEvaluation, metaclass=ABCMeta):
+    pass
+
+
+class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
     """
     Pure image based embedding, can optionally be calculated on a per-object basis as well as per-image by default.
     """
@@ -48,7 +52,7 @@ class PureImageEmbedding(BaseEvaluation, metaclass=ABCMeta):
         ...
 
 
-class PureObjectEmbedding(BaseEvaluation, metaclass=ABCMeta):
+class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
     def __init__(self, ident: str, dependencies: Set[str], allow_queries: bool = False) -> None:
         super().__init__(ident, dependencies)
         self.allow_queries = allow_queries

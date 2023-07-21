@@ -143,8 +143,8 @@ def _assign_metrics(
         existing_score = metrics_dict[metric_column_name]
         if existing_score != score:
             score_delta = float(abs(existing_score - score))
-            score_p1 = abs((score_delta / float(score)) * 100.0)
-            score_p2 = abs((score_delta / float(existing_score)) * 100.0)
+            score_p1 = score_delta if score == 0.0 else abs((score_delta / float(score)) * 100.0)
+            score_p2 = score_delta if existing_score == 0.0 else abs((score_delta / float(existing_score)) * 100.0)
             if score_p1 >= 0.5 or score_p2 >= 0.5:
                 print(
                     f"WARNING: different derived and calculated scores: "

@@ -182,12 +182,10 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
+    # Embeddings derived
+    derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
-
-    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
-    embedding_clip_2d_x: Optional[float]
-    embedding_clip_2d_y: Optional[float]
 
     __table_args__ = (
         fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,
@@ -281,6 +279,8 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
+    # Embeddings derived
+    derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
 

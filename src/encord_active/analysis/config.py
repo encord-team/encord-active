@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch.types import Device
 
@@ -100,9 +102,9 @@ class AnalysisConfig:
 def default_torch_device() -> Device:
     """Default torch device to use for the analysis config"""
     torch_device_str = "cpu"
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and os.environ.get("ACTIVE_ALLOW_TORCH_CUDA_BACKEND", "0") == "1":
         torch_device_str = "cuda"
-    elif torch.backends.mps.is_available():
+    elif torch.backends.mps.is_available() and os.environ.get("ACTIVE_ALLOW_TORCH_MPS_BACKEND", "0") == "1":
         torch_device_str = "mps"
     return torch.device(torch_device_str)
 

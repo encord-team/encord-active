@@ -170,29 +170,38 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        if prev_frame is None or next_frame is None:
-            return BaseFrameOutput(
-                image=self.calculate_default(),
-                annotations={}
-            )
-        return BaseFrameOutput(
-            image=self.calculate(
-                deps=frame.image_deps,
-                image=frame.image,
-                mask=None,
-                prev_deps=prev_frame.image_deps,
-                prev_image=prev_frame.image,
-                prev_mask=None,
-                next_deps=next_frame.image_deps,
-                next_image=next_frame.image,
-                next_mask=None,
-            ),
-            annotations={},
+        image = self.calculate(
+            deps=frame.image_deps,
+            image=frame.image,
+            mask=None,
+            prev_image=None if prev_frame is None else prev_frame.image,
+            prev_mask=None,
+            next_image=None if next_frame is None else next_frame.image,
+            next_mask=None,
         )
-
-    @abstractmethod
-    def calculate_default(self) -> MetricResult:
-        ...
+        annotations = {}
+        for annotation_hash, annotation in frame.annotations.items():
+            if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
+                continue
+            annotation_deps = frame.annotations_deps[annotation_hash]
+            if annotation.annotation_type != AnnotationType.CLASSIFICATION:
+                prev_annotation = None if prev_frame is None else prev_frame.annotations.get(annotation_hash, None)
+                next_annotation = None if next_frame is None else next_frame.annotations.get(annotation_hash, None)
+                annotations[annotation_hash] = self.calculate(
+                    deps=annotation_deps,
+                    image=frame.image,
+                    mask=annotation.mask,
+                    prev_image=None if prev_frame is None else prev_frame.image,
+                    prev_mask=None if prev_annotation is None else prev_annotation.mask,
+                    next_image=None if next_frame is None else next_frame.image,
+                    next_mask=None if next_annotation is None else next_annotation.mask,
+                )
+            else:
+                annotations[annotation_hash] = image
+        return BaseFrameOutput(
+            image=image,
+            annotations=annotations,
+        )
 
     @abstractmethod
     def calculate(
@@ -200,17 +209,15 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
         deps: MetricDependencies,
         image: ImageTensor,
         mask: Optional[MaskTensor],
-        prev_deps: MetricDependencies,
         prev_image: ImageTensor,
         prev_mask: Optional[MaskTensor],
-        next_deps: MetricDependencies,
         next_image: ImageTensor,
         next_mask: Optional[MaskTensor],
     ) -> MetricResult:
         ...
 
 
-class TemporalOneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
+class TemporalOneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     """
     Temporal variant of [OneObjectMetric].
     """
@@ -221,11 +228,26 @@ class TemporalOneObjectMetric(BaseAnalysis, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        return BaseFrameOutput(image=None, annotations={})
+        annotations = {}
+        for annotation_hash, annotation in frame.annotations.items():
+            if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
+                continue
+            annotation_deps = frame.annotations_deps[annotation_hash]
+            annotations[annotation_hash] = self.calculate(
+                annotation=annotation,
+                deps=annotation_deps,
+                prev_annotation=None if prev_frame is None else prev_frame.annotations.get(annotation_hash, None),
+                next_annotation=None if next_frame is None else next_frame.annotations.get(annotation_hash, None),
+            )
+        return BaseFrameOutput(image=None, annotations=annotations)
 
     @abstractmethod
     def calculate(
         self,
+        annotation: AnnotationMetadata,
+        deps: MetricDependencies,
+        prev_annotation: Optional[AnnotationMetadata],
+        next_annotation: Optional[AnnotationMetadata],
     ) -> MetricResult:
         ...
 
@@ -238,29 +260,41 @@ class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        return BaseFrameOutput(image=None, annotations={})
+        return BaseFrameOutput(
+            image=None,
+            annotations=self.calculate(
+                annotations=frame.annotations,
+                annotation_deps=frame.annotations_deps,
+                prev_annotations=None if prev_frame is None else prev_frame.annotations,
+                next_annotations=None if next_frame is None else next_frame.annotations,
+            )
+        )
 
     @abstractmethod
     def calculate(
         self,
-    ) -> dict[str, MetricResult]:
+        annotations: Dict[str, AnnotationMetadata],
+        annotation_deps: dict[str, MetricDependencies],
+        prev_annotations: Optional[Dict[str, AnnotationMetadata]],
+        next_annotations: Optional[Dict[str, AnnotationMetadata]],
+    ) -> Dict[str, MetricResult]:
         ...
 
 
-class DerivedMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
+class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
     """
     Simple metric that only depends on the pixels, if enabled the mask argument allows this metric to
     also apply to objects by only considering the subset of the image the object is present in.
     """
 
-    def raw_calculate( # FIXME: inputs are wrong, this should use separate calculate logic.
+    def raw_calculate(
         self,
         prev_frame: Optional[BaseFrameInput],
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        return BaseFrameOutput(image=None, annotations={})
+        raise AttributeError("Derived uses separate interface, this function should NEVER be called!")
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies) -> MetricResult:
+    def calculate(self, deps: MetricDependencies, annotation: Optional[AnnotationMetadata]) -> MetricResult:
         ...
