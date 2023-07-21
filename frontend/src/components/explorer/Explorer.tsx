@@ -706,7 +706,9 @@ const Embeddings = ({
   ) : (
     <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
       {isLoading || isloadingItems ? (
-        <Spin />
+        <div className="absolute" style={{left: "50%"}}>
+          <Spin />
+        </div>
       ) : (
         <ScatteredEmbeddings
           embeddings={filtered || []}
