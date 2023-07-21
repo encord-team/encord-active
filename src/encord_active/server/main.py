@@ -46,6 +46,11 @@ def _index():
     return FileResponse(frontend_build_path / "index.html")
 
 
+@app.get("/favicon.ico")
+def _favicon_ico():
+    return FileResponse(frontend_build_path / "favicon.ico")
+
+
 @app.on_event("startup")
 async def on_startup():
     root_path = get_settings().SERVER_START_PATH
