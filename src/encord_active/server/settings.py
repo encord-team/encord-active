@@ -1,5 +1,5 @@
 from enum import Enum
-from functools import lru_cache
+from cachetools import cached, LRUCache
 from os import environ
 from pathlib import Path
 from typing import Optional
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def get_settings():
     path = Path(environ.get("SERVER_START_PATH", "/data"))
     return Settings(SERVER_START_PATH=path.parent if is_project(path) else path)

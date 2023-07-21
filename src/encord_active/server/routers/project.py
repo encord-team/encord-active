@@ -3,7 +3,7 @@ import json
 import shutil
 import uuid
 from enum import Enum
-from functools import lru_cache
+from cachetools import cached, LRUCache
 from typing import Annotated, List, Optional, Union, cast
 from uuid import UUID
 
@@ -436,7 +436,7 @@ def get_tags(project: ProjectFileStructureDep):
     return to_grouped_tags(all_tags(project))
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def get_querier(project: ProjectFileStructure):
     settings = get_settings()
     if settings.DEPLOYMENT_NAME is not None:
@@ -755,7 +755,12 @@ def upload_to_encord(
         new_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
         if new_project_hash == old_project_hash:
             raise ValueError(f"BUG: Upload to encord hasn't changed project hash")
-        migrate_disk_to_db(pfs)
+
+        # Move folder so uuid lookup will work correctly.
+        new_project_name = pfs.load_project_meta()["project_title"]
+        shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
+        new_project_file_structure = ProjectFileStructure(pfs.project_dir.parent / new_project_name)
+        migrate_disk_to_db(new_project_file_structure)
         with Session(engine) as sess:
             # Now that the new project hash has been synced to the database
             # delete the old (out-of-date) value.
@@ -766,9 +771,6 @@ def upload_to_encord(
                 raise ValueError(f"BUG: Could not find old project")
             sess.delete(old_db)
             sess.commit()
-        # Move folder so uuid lookup will work correctly.
-        new_project_name = pfs.load_project_meta()["project_title"]
-        shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
     except Exception as e:
         print(str(e))
         raise e
