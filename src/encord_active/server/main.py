@@ -33,7 +33,10 @@ if is_dev:
     logger.info("Make sure you run the frontend separately.")
 else:
     # FIXME: change to reference of a build python module or save locally somehow.
-    frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "build"
+    import encord_active_components as frontend
+
+    frontend_build_path = Path(frontend.__file__).parent / "frontend" / "dist"
+    # frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "dist"
     app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
 
     @app.get("/")

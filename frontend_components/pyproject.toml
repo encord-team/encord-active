@@ -5,11 +5,11 @@ description = "Frontend components used by Encord Active"
 authors = ["Cord Technologies Limited <hello@encord.com>"]
 license = "Apache-2.0"
 
-packages = [{include = "encord_active_components", from = "src"}]
-include = ["src/encord_active_components/frontend/dist/**/*"]
+packages = [{include = "encord_active_components"}]
+include = ["encord_active_components/frontend/dist/**/*"]
 exclude = [
-  "src/encord_active_components/frontend/node_modules/**/*",
-  "src/encord_active_components/frontend/src/**/*"
+  "encord_active_components/frontend/node_modules/**/*",
+  "encord_active_components/frontend/src/**/*"
 ]
 
 [tool.poetry.dependencies]

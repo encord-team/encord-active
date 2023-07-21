@@ -10,7 +10,7 @@ export default defineConfig(({ mode }): UserConfig => {
   }
   return {
     build: {
-      outDir: "build",
+      outDir: "dist",
     },
     optimizeDeps: {
       esbuildOptions: {
