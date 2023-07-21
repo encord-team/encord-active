@@ -15,7 +15,7 @@ class ClipImgEmbedding(PureImageEmbedding):
         super().__init__(
             ident=ident,
             dependencies=set(),
-            allow_object_embedding=False,
+            allow_object_embedding=True,
             allow_queries=True,
         )
         self.model, self.preprocess = clip_load(name=model_name, device=device)
@@ -38,4 +38,4 @@ class ClipImgEmbedding(PureImageEmbedding):
         if mask is not None:
             image = torch.masked_fill(image, ~mask, 0)
         preprocessed = torch.stack([self.preprocess(image.type(torch.float32))])
-        return self.model.encode_image(preprocessed.to(self.device))
+        return self.model.encode_image(preprocessed.to(self.device)).reshape(-1)

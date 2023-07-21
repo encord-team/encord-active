@@ -10,7 +10,7 @@ from encord_active.analysis.types import MetricResult, AnnotationMetadata, Image
 class ObjectCountMetric(ImageObjectsMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="object-count",
+            ident="metric_object_count",
             dependencies=set(),
             long_name="Object Count",
             desc="Number of objects present in an image",

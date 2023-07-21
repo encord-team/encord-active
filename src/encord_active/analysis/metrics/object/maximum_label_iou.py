@@ -10,7 +10,7 @@ from encord_active.analysis.types import MetricResult, AnnotationMetadata
 class MaximumLabelIOUMetric(ObjectByFrameMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="maximum",
+            ident="metric_label_duplicates", # FIXME: maybe rename column?
             dependencies=set(),
             long_name="Object Count",
             desc="Assigns the maximum IOU between each label and the rest of the labels in the frame.",
