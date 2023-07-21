@@ -103,7 +103,7 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     classifications: list = Field(sa_column=Column(JSON))
 
     __table_args__ = (
-        Index("active_project_data_units_unique_du_hash_frame", "du_hash", "frame", unique=True),
+        Index("active_project_data_units_unique_du_hash_frame", "project_hash", "du_hash", "frame", unique=True),
         fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "active_data_unit_data_fk"),
     )
 

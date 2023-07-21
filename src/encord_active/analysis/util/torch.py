@@ -35,15 +35,15 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
     height = float(img_h)
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
-    if annotation_type == AnnotationType.POLYGON:
+    if annotation_type == AnnotationType.POLYGON or annotation_type == AnnotationType.POLYLINE:
         points = obj["polygon"]
         data = [
             [points[str(i)]["x"] * width, points[str(i)]["y"] * height]
             for i in range(len(points))
         ]
+        if len(data) == 0:
+            raise ValueError(f"Polygon found with 0 points: {obj}")
         return torch.tensor(data, dtype=torch.float32)
-    elif annotation_type == AnnotationType.POLYLINE:
-        raise ValueError(f"Poly-line shape is not supported")
     elif annotation_type == AnnotationType.BOUNDING_BOX:
         bb = obj.get("bounding_box", None) or obj.get("boundingBox", None)
         if bb is None:
@@ -102,6 +102,8 @@ def obj_to_mask(
         return point_mask(device, x, y, img_w, img_h)
     elif annotation_type == AnnotationType.SKELETON:
         raise ValueError(f"Skeleton object shape is not supported")
+    elif annotation_type == AnnotationType.BITMASK:
+        raise ValueError(f"Bitmask object shape is not supported")
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
 
 
@@ -120,10 +122,10 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
     # TODO: Implement the winding algorithm in torch instead for performance
     mask = np.zeros((height, width), dtype=np.uint8)
-    points = coordinates.cpu().numpy().round(0).astype(np.uint8)
+    points = coordinates.cpu().numpy().round(0).astype(np.int32)
     # FIXME: broken!!! cv2.fillPoly(mask, [points], 1)
     for x, y in points:
-        mask[y, x] = 1
+        mask[min(y, height - 1), min(x, width - 1)] = 1
     # mask = cv2.fillPoly(mask, points, 1)
     # FIXME: this is broken!!
     return torch.tensor(mask).bool()
@@ -131,15 +133,18 @@ def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTenso
 
 def bounding_box_mask(device: Device, top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
     mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
-    mask[top_left.y: bottom_right.y, top_left.x: bottom_right.x] = True
+    mask[
+        min(top_left.y, height - 1): min(bottom_right.y, height - 1),
+        min(top_left.x, width - 1): min(bottom_right.x, width - 1)
+    ] = True
     return mask
 
 
 def point_mask(device: Device, x: float, y: float, width: int, height: int) -> MaskTensor:
-    mask = torch.zeros(width, height, dtype=torch.bool, device=device).bool()
+    mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
     x_i = round(x * width)
     y_i = round(y * height)
-    mask[x_i, y_i] = True
+    mask[min(y_i, height - 1), min(x_i, width - 1)] = True
     return mask  # type: ignore
 
 
