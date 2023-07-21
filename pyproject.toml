@@ -47,7 +47,6 @@ python = ">=3.9,<3.9.7 || >3.9.7,<3.12"
 encord = "^0.1.83"
 numpy = ">=1.23.5,<1.24.0"
 opencv-python = "4.5.5.64"
-streamlit = "1.22.0"
 natsort = "^8.1.0"
 pandas = "^1.4.3"
 shapely = "^1.7.0"
@@ -62,7 +61,6 @@ plotly = "^5.10.0"
 termcolor = "^2.0.1"
 loguru = "^0.6.0"
 python-dotenv = "^0.21.0"
-streamlit-nested-layout = "^0.1.1"
 typer = "^0.6.1"
 rich = "^12.6.0"
 PyYAML = "^6.0"
@@ -74,9 +72,7 @@ pandera = {extras = ["mypy"], version = "^0.15.1"}
 jupyterlab = { version = "^3.5.2", optional = true }
 ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
-statsmodels = "^0.14.0" # TDOD: remove me when we don't use plotly on the streamlit app
 umap-learn = "^0.5.3"
-streamlit-plotly-events = "^0.0.6"
 llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
 # TODO: updated me after publishing a new version
 encord-active-components = { path ="./frontend_components/dist/encord_active_components-0.0.27.tar.gz" }

@@ -45,7 +45,7 @@ def import_encord_project(
     encord_project_hash: Optional[str],
     store_data_locally: bool,
 ) -> Path:
-    from .streamlit import ensure_safe_project
+    from .server import ensure_safe_project
 
     client = get_client(ssh_key_path)
 

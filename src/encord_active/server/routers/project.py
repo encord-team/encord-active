@@ -23,7 +23,7 @@ from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
 from encord_active.cli.app_config import app_config
-from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.cli.utils.server import ensure_safe_project
 from encord_active.db.models import (
     Project,
     ProjectTag,

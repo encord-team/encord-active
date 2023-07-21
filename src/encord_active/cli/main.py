@@ -11,7 +11,7 @@ from rich.panel import Panel
 from typer.core import TyperGroup
 
 from encord_active.cli.project import project_cli
-from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.cli.utils.server import ensure_safe_project
 
 load_dotenv()
 
@@ -24,7 +24,6 @@ from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
 from encord_active.cli.utils.decorators import (
-    bypass_streamlit_question,
     ensure_project,
     find_child_projects,
 )
@@ -411,7 +410,6 @@ def refresh(
 
 
 @cli.command(name="start")
-@bypass_streamlit_question
 def start(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
@@ -420,13 +418,12 @@ def start(
     """
     [green bold]Launch[/green bold] the application with the provided project ✨
     """
-    from encord_active.cli.utils.streamlit import launch_server_app
+    from encord_active.cli.utils.server import launch_app
 
-    launch_server_app(target)
+    launch_app(target)
 
 
 @cli.command()
-@bypass_streamlit_question
 def quickstart(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
@@ -435,7 +432,7 @@ def quickstart(
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    from encord_active.cli.utils.streamlit import launch_server_app
+    from encord_active.cli.utils.server import launch_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_name = "quickstart"
@@ -443,7 +440,7 @@ def quickstart(
     project_dir.mkdir(exist_ok=True)
 
     fetch_prebuilt_project(project_name, project_dir)
-    launch_server_app(project_dir)
+    launch_app(project_dir)
 
 
 @cli.command(rich_help_panel="Resources")

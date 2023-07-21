@@ -9,7 +9,7 @@ import typer
 from rich.markup import escape
 from tqdm.auto import tqdm
 
-from encord_active.cli.utils.streamlit import ensure_safe_project
+from encord_active.cli.utils.server import ensure_safe_project
 from encord_active.server.settings import AvailableSandboxProjects
 
 
