@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://docs.encord.com/active/docs" target="_blank">Documentation</a> |
+<a href="https://docs.encord.com/docs/active-overview" target="_blank">Documentation</a> |
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
@@ -21,9 +21,9 @@
 
 In this directory, you find examples of how to use Encord Active.
 
-Generally, you need to have installed [`encord-active`](https://docs.encord.com/active/docs) and [`jupyter-lab`](#jupyter-lab).
+Generally, you need to have installed [`encord-active`](https://docs.encord.com/docs/active-overview) and [`jupyter-lab`](#jupyter-lab).
 
-## Table of Contensts
+## Table of Contents
 
 - [Jupyter Lab](#jupyter-lab)
   - [Installation](#installation)
@@ -126,16 +126,16 @@ If you want to share your notebooks, custom metrics, or improve the tool, please
 [colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
-[contribute-url]: https://docs.encord.com/active/docs/contributing
+[contribute-url]: https://docs.encord.com/docs/active-contributing
 [docs-image]: https://img.shields.io/badge/docs-online-blue
-[encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
-[encord-active-docs]: https://docs.encord.com/active/docs
+[encord-active-docs-write-metric]: https://docs.encord.com/docs/active-write-custom-quality-metrics
+[encord-active-docs]: https://docs.encord.com/docs/active-overview
 [join-discord]: https://discord.gg/TU6yT7Uvx3
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
 [pypi-package-image]: https://img.shields.io/pypi/v/encord-active
 [pypi-package]: https://www.piwheels.org/project/encord-active/
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
-[report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
+[report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
 [discord-image]: https://shields.io/badge/Discord-chat-blue?logo=discord&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
 [twitter-url]: https://twitter.com/encord_team

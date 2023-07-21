@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://docs.encord.com/active/docs" target="_blank">Documentation</a> |
+<a href="https://docs.encord.com/docs/active-overview" target="_blank">Documentation</a> |
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
@@ -57,7 +57,7 @@ pip install encord-active
 
 > `encord-active` requires [python3.9][python-39].
 > If you have trouble installing `encord-active`, you find more detailed instructions on
-> installing it [here](https://docs.encord.com/active/docs/installation). If just want to see it in action try out [this Colab notebook][colab-notebook].
+> installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook][colab-notebook].
 
 ## 👋 Quickstart
 
@@ -88,13 +88,13 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ## 🔖 Documentation
 
-Our full documentation is available [here](https://docs.encord.com/active/docs). In particular, we recommend checking out:
+Our full documentation is available [here](https://docs.encord.com/docs/active-overview). In particular, we recommend checking out:
 
-- [Getting Started](https://docs.encord.com/active/docs/getting-started)
-- [Imports](https://docs.encord.com/active/docs/import/)
+- [Getting Started](https://docs.encord.com/docs/active-getting-started)
+- [Imports](https://docs.encord.com/docs/active-import)
 - [Workflows][encord-active-docs-workflow]
-- [User Guides](https://docs.encord.com/active/docs/category/user-guide)
-- [CLI Documentation](https://docs.encord.com/active/docs/cli)
+- [User Guides](https://docs.encord.com/docs/active-user-guide)
+- [CLI Documentation](https://docs.encord.com/docs/active-cli)
 
 ## ⬇️  Download a sandbox dataset
 
@@ -109,7 +109,7 @@ encord-active visualize
 
 The app should then open in the browser.
 If not, navigate to [`localhost:8501`](http://localhost:8501).
-Our [docs][encord-active-docs] contains more information about what you can see in the page.
+Our [docs][encord-active-docs] contain more information about what you can see in the page.
 
 ## <img width="24" height="24" src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_icon.png"/> Import your dataset
 
@@ -171,15 +171,15 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 ### Core features:
 
-- [Data Exploration](https://docs.encord.com/active/docs/workflows/understand-data-distribution)
-- [Data Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases)
-- [Label Outlier detection](https://docs.encord.com/active/docs/workflows/identify-outliers-edge-cases#label-outliers)
-- [Object Detection/segmentation Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-detection-model)
-- [Classification Model Decomposition](https://docs.encord.com/active/docs/workflows/evaluate-classification-model)
-- [Similarity Search](https://docs.encord.com/active/docs/workflows/image-similarity)
-- [Data Tagging](https://docs.encord.com/active/docs/user-guide/tagging)
-- [Visualize TP/FP/FN](https://docs.encord.com/active/docs/workflows/evaluate-detection-model#exploring-the-individual-samples)
-- [COCO Exports](https://docs.encord.com/active/docs/user-guide/exporting#coco)
+- [Data Exploration](https://docs.encord.com/docs/active-exploring-data-distribution)
+- [Data Outlier detection](https://docs.encord.com/docs/active-identify-outliers#data-outliers)
+- [Label Outlier detection](https://docs.encord.com/docs/active-identify-outliers#label-outliers)
+- [Object Detection/segmentation Model Decomposition](https://docs.encord.com/docs/active-evaluate-detection-models)
+- [Classification Model Decomposition](https://docs.encord.com/docs/active-evaluate-classification-models)
+- [Similarity Search](https://docs.encord.com/docs/active-exploring-image-similarity)
+- [Data & Label Tagging](https://docs.encord.com/docs/active-tagging)
+- [Visualize TP/FP/FN](https://docs.encord.com/docs/active-evaluate-detection-models#exploring-the-individual-samples)
+- [COCO Exports](https://docs.encord.com/docs/active-exporting#generate-coco-file)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.
@@ -228,15 +228,15 @@ This repository is published under the Apache 2.0 licence.
 [colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
 [contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
-[contribute-url]: https://docs.encord.com/active/docs/contributing
+[contribute-url]: https://docs.encord.com/docs/active-contributing
 [docs-image]: https://img.shields.io/badge/docs-online-blue
 [downloads-badge]: https://static.pepy.tech/badge/encord-active
-[encord-active-docs-init]: https://docs.encord.com/active/docs/import/quick-import-data
-[encord-active-docs-workflow]: https://docs.encord.com/active/docs/category/workflows
-[encord-active-docs-write-metric]: https://docs.encord.com/active/docs/metrics/write-your-own
-[encord-active-docs]: https://docs.encord.com/active/docs
+[encord-active-docs-init]: https://docs.encord.com/docs/active-quick-import
+[encord-active-docs-workflow]: https://docs.encord.com/docs/active-workflows
+[encord-active-docs-write-metric]: https://docs.encord.com/docs/active-write-custom-quality-metrics
+[encord-active-docs]: https://docs.encord.com/docs/active-overview
 [encord-active-landing]: https://encord.com/encord-active/
-[encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[encord-docs-ssh]: https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication
 [homepage-visual]: https://raw.githubusercontent.com/encord-team/encord-active/main/homepage_visual.png
 [join-discord]: https://discord.gg/TU6yT7Uvx3
 [license-image]: https://img.shields.io/github/license/encord-team/encord-active
@@ -245,7 +245,7 @@ This repository is published under the Apache 2.0 licence.
 [pypi-package]: https://www.piwheels.org/project/encord-active/
 [pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [python-39]: https://www.python.org/downloads/release/python-3915/
-[report-issue]: https://github.com/encord-team/data-quality-pocs/issues/new
+[report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
 [discord-image]: https://shields.io/badge/Discord-chat-blue?logo=discord&logoColor=white
 [twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
 [twitter-url]: https://twitter.com/encord_team

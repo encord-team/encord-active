@@ -42,5 +42,5 @@ This will import the project in a subdirectory of `/path/to/store/project`.
 :::
 
 
-[encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[encord-docs-ssh]: https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication
 [encord-sign-up]: https://app.encord.com/register

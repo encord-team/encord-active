@@ -56,7 +56,7 @@ class Entropy(AcquisitionFunction):
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher entropy score can be offered for annotation."
             ),
-            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#entropy",
+            doc_url="https://docs.encord.com/docs/active-model-quality-metrics#entropy",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -98,7 +98,7 @@ class LeastConfidence(AcquisitionFunction):
                 "image. Like before, the higher the image's score, the more “confused” the model is. "
                 "As a result, data samples with higher **LC** score can be offered for annotation."
             ),
-            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#least-confidence",
+            doc_url="https://docs.encord.com/docs/active-model-quality-metrics#least-confidence",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -130,7 +130,7 @@ class Margin(AcquisitionFunction):
                 " image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower margin score can be offered for annotation."
             ),
-            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#margin",
+            doc_url="https://docs.encord.com/docs/active-model-quality-metrics#margin",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -167,7 +167,7 @@ class Variance(AcquisitionFunction):
                 "image. Like before, the lower the image's score, the more “confused” the model is. "
                 "As a result, data samples with lower variance score can be offered for annotation."
             ),
-            doc_url="https://docs.encord.com/active/docs/metrics/model-quality-metrics#variance",
+            doc_url="https://docs.encord.com/docs/active-model-quality-metrics#variance",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,

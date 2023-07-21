@@ -6,7 +6,7 @@ On Encord-Annotate, open the project, go to Settings => Copy project. Select eve
 
 2. Import the new project to Encord-Active.
 
-See documentation: https://docs.encord.com/active/docs/cli/import-encord-project
+See documentation: https://docs.encord.com/docs/active-cli#project
 
 3. Open the Encord-Active app.
 
