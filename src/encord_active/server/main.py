@@ -1,3 +1,4 @@
+import logging
 import webbrowser
 from pathlib import Path
 
@@ -16,14 +17,32 @@ from encord_active.server.dependencies import verify_premium, verify_token
 from encord_active.server.utils import get_similarity_finder
 
 from .routers import project, project2
-from .settings import get_settings
+from .settings import Env, get_settings
 
 app = FastAPI(dependencies=[Depends(verify_token)])
 
 app.include_router(project.router)
 app.include_router(project2.router)
 
-origins = ["http://localhost:5173", "http://localhost:8501", get_settings().ALLOWED_ORIGIN, "http://localhost:3000"]
+origins = [get_settings().ALLOWED_ORIGIN, "http://localhost:3000", "http://localhost:5173"]
+
+is_dev = get_settings().ENV == Env.DEV
+
+if is_dev:
+    logger = logging.getLogger(__name__)
+    logger.info("Make sure you run the frontend separately.")
+else:
+    # FIXME: change to reference of a build python module or save locally somehow.
+    frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "build"
+    app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
+
+    @app.get("/")
+    @app.get("/index.html")
+    def _index():
+        return FileResponse(frontend_build_path / "index.html")
+
+
+app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=False), name="sandbox-static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,18 +51,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# FIXME: change to reference of a build python module or save locally somehow.
-frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "build"
-
-app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=False), name="sandbox-static")
-app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
-
-
-@app.get("/")
-@app.get("/index.html")
-def _index():
-    return FileResponse(frontend_build_path / "index.html")
 
 
 @app.get("/favicon.ico")
@@ -69,7 +76,8 @@ async def on_startup():
             except:
                 pass
 
-    webbrowser.open(get_settings().API_URL, new=0, autoraise=True)
+    if not is_dev:
+        webbrowser.open(get_settings().API_URL, new=0, autoraise=True)
 
 
 @app.get("/premium_available")

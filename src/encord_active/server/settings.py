@@ -16,6 +16,7 @@ class AvailableSandboxProjects(str, Enum):
 
 
 class Env(str, Enum):
+    DEV = "dev"
     LOCAL = "local"
     SANDBOX = "sandbox"
     PROD = "prod"
