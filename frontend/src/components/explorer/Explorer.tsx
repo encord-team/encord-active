@@ -11,6 +11,7 @@ import { useAllTags } from "../explorer/Tagging";
 import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
+import { useDebounce } from "usehooks-ts";
 import {
   ApiContext,
   classificationsPredictionOutcomes,
@@ -84,7 +85,7 @@ export const Explorer = ({
   const [newFilters, setNewFilters] =
     useState<FilterState>(DefaultFilters);
 
-  const filters = useMemo(
+  const rawFilters = useMemo(
     () => {
       const range = Object.fromEntries(
         Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [k, { min, max }])
@@ -123,6 +124,7 @@ export const Explorer = ({
     },
     [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
   );
+  const filters = useDebounce(rawFilters, 500);
   const apiContext = useContext(ApiContext);
   let api: ReturnType<typeof getApi>;
   if (apiContext == null) {
