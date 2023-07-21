@@ -75,11 +75,11 @@ export const Explorer = ({
     filters.prediction_filters.iou_threshold = iou;
   }
 
-  const api = getApi(projectName, authToken, baseUrl);
+  const api = getApi(projectName, baseUrl, authToken);
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-      api.fetchHasPremiumFeatures,
+    api.fetchHasPremiumFeatures,
     { staleTime: Infinity, networkMode: "always" }
   );
   const { data: hasSimilaritySearch } = useQuery(
@@ -227,8 +227,7 @@ export const Explorer = ({
                   : selectedMetric.embeddingType
               }
               onSelectionChange={(selection) => (
-                setPage(1),
-                setItemSet(new Set(selection.map(({ id }) => id)))
+                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
               )}
               onReset={() => setItemSet(new Set())}
             />

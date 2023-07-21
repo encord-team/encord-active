@@ -24,7 +24,7 @@ class Env(str, Enum):
 class Settings(BaseSettings):
     ENV: Env = Env.LOCAL
     DEPLOYMENT_NAME: Optional[str] = None
-    API_URL: str = "http://localhost:8502"
+    API_URL: str = "http://localhost:8000"
     ALLOWED_ORIGIN: Optional[str] = None
     JWT_SECRET: Optional[str] = None
     SERVER_START_PATH: Path
