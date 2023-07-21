@@ -721,11 +721,14 @@ def upload_to_encord(
     pfs: ProjectFileStructureDep,
     item: UploadToEncordModel,
 ):
-    if (pfs.project_dir.parent / item.project_title).exists():
+    old_project_meta = pfs.load_project_meta()
+    if (
+        pfs.project_dir.parent / item.project_title
+    ).exists() and item.project_title != old_project_meta["project_title"]:
         raise ValueError(
             f"Project Title already used locally - cannot rename project to this while uploading to encord!"
         )
-    old_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
+    old_project_hash = uuid.UUID(old_project_meta["project_hash"])
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
     # FIXME: don't fetch app_config from here.
@@ -758,7 +761,8 @@ def upload_to_encord(
 
         # Move folder so uuid lookup will work correctly.
         new_project_name = pfs.load_project_meta()["project_title"]
-        shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
+        if pfs.project_dir != (pfs.project_dir.parent / new_project_name):
+            shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
         new_project_file_structure = ProjectFileStructure(pfs.project_dir.parent / new_project_name)
         migrate_disk_to_db(new_project_file_structure)
         with Session(engine) as sess:
