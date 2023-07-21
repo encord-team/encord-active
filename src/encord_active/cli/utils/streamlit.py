@@ -39,7 +39,7 @@ def is_port_in_use(port: int) -> bool:
 
 
 def launch_server_app(target: Path):
-    if is_port_in_use(8502):
+    if is_port_in_use(8000):
         import typer
 
         rich.print("[red]Port already in use...")
@@ -51,5 +51,5 @@ def launch_server_app(target: Path):
         generate_prisma_client()
     ensure_safe_project(target)
     data_dir = target.expanduser().absolute()
-    rich.print("[green] Server starting on localhost:8502")
+    rich.print("[green] Server starting on localhost:8000")
     start(data_dir, app_config.is_dev)

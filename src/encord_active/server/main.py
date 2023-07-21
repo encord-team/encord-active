@@ -1,3 +1,4 @@
+import webbrowser
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
@@ -62,6 +63,8 @@ async def on_startup():
                 get_similarity_finder(embedding_type, project_file_structure)
             except:
                 pass
+
+    webbrowser.open(get_settings().API_URL, new=0, autoraise=True)
 
 
 @app.get("/premium_available")
