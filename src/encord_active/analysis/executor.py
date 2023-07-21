@@ -73,11 +73,12 @@ class SimpleExecutor(Executor):
         List[ProjectAnnotationAnalyticsExtra]
     ]:
         with torch.no_grad():
-            for data_metadata, du_metadata_list in tqdm(values, "Metric Stage 1: Image & Object computation"):
+            for data_metadata, du_metadata_list in tqdm(
+                values,
+                desc="Metric Computation Stage 1: Image & Object computation"
+            ):
                 du_metadata_list.sort(key=lambda v: (v.du_hash, v.frame))
                 if data_metadata.data_type == "video":
-                    if data_metadata.num_frames > 10_000:
-                        raise ValueError(f"DEBUG ONLY long running video - skipping")  # FIXME: remove this condition!!!
                     # Run assertions
                     if du_metadata_list[0].du_hash != du_metadata_list[-1].du_hash:
                         raise ValueError(f"Video has different du_hash")
@@ -99,8 +100,9 @@ class SimpleExecutor(Executor):
                     with av.open(str(video_url_or_path), mode="r") as container:
                         for frame in tqdm(
                             container.decode(video=0),
-                            desc=f"Processing Video: {data_metadata.data_title}",
+                            desc=f" - Processing Video: {data_metadata.data_title}",
                             total=container.streams.video[0].frames,
+                            leave=False,
                         ):
                             frame_num: int = frame.index
                             frame_du_meta = du_metadata_list[frame_num]
@@ -324,11 +326,13 @@ class SimpleExecutor(Executor):
         # Note: in-efficient, but needed for first version of this.
         # Stage 2 evaluation will always be very closely bound to the executor
         # and the associated storage and indexing strategy.
-        for metric in tqdm(self.config.derived_embeddings, desc="Metric Stage 2: Building indices"):
+        for metric in tqdm(self.config.derived_embeddings, desc="Metric Computation Stage 2: Building indices"):
             for metrics in tqdm(
                 [self.data_metrics, self.annotation_metrics],
-                desc=f"              : Generating indices for {metric.ident}"
+                desc=f"                          : Generating indices for {metric.ident}"
             ):
+                if len(metrics) == 0:
+                    continue
                 max_neighbours = int(metric.max_neighbours)
                 if max_neighbours > 50:
                     raise ValueError(f"Too many embedding nn-query results")
@@ -356,7 +360,7 @@ class SimpleExecutor(Executor):
                     if len(indices) > 0 and indices[0] == i:
                         indices = indices[1:]
                         distances = distances[1:]
-                    while math.isinf(distances[-1]):
+                    while len(distances) > 0 and math.isinf(distances[-1]):
                         indices = distances[:-1]
                         distances = distances[:-1]
 
@@ -377,11 +381,17 @@ class SimpleExecutor(Executor):
     def _stage_3(self) -> None:
         # Stage 3: Derived metrics from stage 1 & stage 2 metrics
         # dependencies must be pure.
-        for data_metric in self.data_metrics.values():
+        for data_metric in tqdm(
+            self.data_metrics.values(),
+            desc="Metric Computation Stage 3: Derived - Data"
+        ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(data_metric), None)
                 data_metric[metric.ident] = derived_metric
-        for annotation_metric in self.annotation_metrics.values():
+        for annotation_metric in tqdm(
+            self.annotation_metrics.values(),
+            desc="Metric Computation Stage 3: Derived - Annotation"
+        ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(annotation_metric), annotation_metric["annotation_type"])
                 annotation_metric[metric.ident] = derived_metric
