@@ -56,7 +56,7 @@ class AppConfig:
 Encord Active needs to know the path to the [blue]private ssh key[/blue] which is associated with Encord.
 Don't know this? Please see our documentation on the topic to get more help.
 
-[blue]https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication[/blue]
+[blue]https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication[/blue]
             """,
             title="SSH Key Path",
             expand=False,

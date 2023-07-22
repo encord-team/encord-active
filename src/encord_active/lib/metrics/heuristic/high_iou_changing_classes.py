@@ -50,7 +50,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
 `Cat:2` will be flagged as potentially having a broken track, because track ids `1` and `2` doesn't match.
 
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#inconsistent-object-classification-and-track-ids",
+            doc_url="https://docs.encord.com/docs/active-label-quality-metrics#inconsistent-object-classification-and-track-ids",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.SEQUENCE,
             annotation_type=[

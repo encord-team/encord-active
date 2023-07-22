@@ -17,7 +17,7 @@ classifiers = [
   "Topic :: Software Development",
   "Topic :: Software Development :: Quality Assurance",
 ]
-documentation = "https://docs.encord.com/active/docs"
+documentation = "https://docs.encord.com/docs/active-overview"
 homepage = "https://encord.com/encord-active/"
 keywords = [
   "encord",
