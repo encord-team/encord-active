@@ -1,19 +1,29 @@
 import uuid
-from typing import Dict, Union, List, Optional, Type, Literal
+from typing import Dict, List, Literal, Optional, Type, Union
 
 from pydantic import BaseModel
 
 from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
-from encord_active.db.metrics import MetricDefinition, DataMetrics, AnnotationMetrics
-from encord_active.db.models import ProjectDataAnalyticsReduced, ProjectAnnotationAnalyticsReduced, \
-    ProjectTaggedDataUnit, ProjectTaggedAnnotation, ProjectDataAnalytics, ProjectPredictionAnalytics, \
-    ProjectAnnotationAnalytics, ProjectDataAnalyticsExtra, ProjectPredictionAnalyticsExtra, \
-    ProjectAnnotationAnalyticsExtra, ProjectPredictionAnalyticsReduced, ProjectPredictionAnalyticsFalseNegatives
+from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
+from encord_active.db.models import (
+    ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsReduced,
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
+    ProjectDataAnalyticsReduced,
+    ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsExtra,
+    ProjectPredictionAnalyticsFalseNegatives,
+    ProjectPredictionAnalyticsReduced,
+    ProjectTaggedAnnotation,
+    ProjectTaggedDataUnit,
+)
 
 AnalyticsTable = Type[Union[ProjectDataAnalytics, ProjectAnnotationAnalytics, ProjectPredictionAnalytics]]
-ReductionTable = Type[Union[
-    ProjectDataAnalyticsReduced, ProjectAnnotationAnalyticsReduced, ProjectPredictionAnalyticsReduced
-]]
+ReductionTable = Type[
+    Union[ProjectDataAnalyticsReduced, ProjectAnnotationAnalyticsReduced, ProjectPredictionAnalyticsReduced]
+]
 MetadataTable = Type[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectPredictionAnalyticsExtra]]
 TagTable = Type[Union[ProjectTaggedDataUnit, ProjectTaggedAnnotation]]
 TableJoinLiterals = List[Literal["du_hash", "frame", "object_hash"]]
@@ -65,12 +75,12 @@ _DOMAIN_PREDICTION_TP_FP = DomainTables(
     enums=AnnotationEnums,
 )
 
-_DOMAIN_PREDICTION_FN_FIXME = DomainTables( # FIXME: whole table is mostly wrong - we want to make decision on table
+_DOMAIN_PREDICTION_FN_FIXME = DomainTables(  # FIXME: whole table is mostly wrong - we want to make decision on table
     # structure for false negatives
     analytics=ProjectPredictionAnalyticsFalseNegatives,
     metadata=ProjectAnnotationAnalyticsExtra,
     reduction=ProjectAnnotationAnalyticsReduced,
-    tag=ProjectTaggedAnnotation, # FIXME: change everything.
+    tag=ProjectTaggedAnnotation,  # FIXME: change everything.
     join=["du_hash", "frame", "object_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
@@ -97,7 +107,4 @@ TABLES_PREDICTION_TP_FP = Tables(
 
 # FIXME: we may aim to implement search over false negative metrics via join against annotations table
 #  as we would otherwise be duplicating the requests.
-TABLES_PREDICTION_FN = Tables(
-    data=_DOMAIN_DATA,
-    annotation=_DOMAIN_PREDICTION_FN_FIXME
-)
+TABLES_PREDICTION_FN = Tables(data=_DOMAIN_DATA, annotation=_DOMAIN_PREDICTION_FN_FIXME)

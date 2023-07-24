@@ -1,8 +1,8 @@
-from cachetools import cached, LRUCache
 from pathlib import Path
 from typing import Iterable, List, Optional, Union, cast
 
 import pandas as pd
+from cachetools import LRUCache, cached
 from loguru import logger
 from natsort import natsorted
 from pandera.typing import DataFrame

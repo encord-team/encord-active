@@ -1,15 +1,29 @@
 import dataclasses
 import math
-from typing import Dict, Type, Union, Tuple, Optional, Literal, TypeVar
+from typing import Callable, Dict, Literal, Optional, Tuple, Type, TypeVar, Union
 
-from sqlalchemy.sql.operators import is_not, not_between_op, between_op
-from sqlalchemy.sql.functions import count as sql_count, max as sql_max, min as sql_min
-from sqlmodel import Session, SQLModel, select, func
+from sqlalchemy.sql.functions import count as sql_count_raw
+from sqlalchemy.sql.functions import max as sql_max_raw
+from sqlalchemy.sql.functions import min as sql_min_raw
+from sqlalchemy.sql.functions import sum as sql_sum_raw
+from sqlalchemy.sql.operators import between_op, is_not, not_between_op
+from sqlmodel import Session, SQLModel, func, select
 
 from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType
 from encord_active.server.routers.queries import search_query
-from encord_active.server.routers.queries.domain_query import Tables, AnalyticsTable, ProjectFilters
+from encord_active.server.routers.queries.domain_query import (
+    AnalyticsTable,
+    ProjectFilters,
+    Tables,
+)
+
+# Type hints
+TType = TypeVar("TType")
+sql_count: Callable[[], int] = sql_count_raw  # type: ignore
+sql_min: Callable[[TType], TType] = sql_min_raw  # type: ignore
+sql_max: Callable[[TType], TType] = sql_max_raw  # type: ignore
+sql_sum: Callable[[TType], TType] = sql_sum_raw  # type: ignore
 
 """
 Severe IQR Scale factor for iqr range
@@ -41,16 +55,18 @@ def get_metric_or_enum(
     if metric is not None:
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
+            group_attr = raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits)
             return AttrMetadata(
-                group_attr=raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits),
+                group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.UFLOAT:
             # FIXME: work for different distributions (currently ONLY aspect ratio)
             #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
+            group_attr = raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits)
             return AttrMetadata(
-                group_attr=raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits),
+                group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
@@ -66,11 +82,11 @@ def get_metric_or_enum(
             )
         elif metric.type == MetricType.RANK:
             # FIXME: currently image difficulty - try and see if this metric type can be removed.
-            rank_attr = func.row_number().over(
-                order_by=raw_metric_attr,
-            )
+            # rank_attr = func.row_number().over(
+            #     order_by=raw_metric_attr,
+            # )
             return AttrMetadata(
-                group_attr=rank_attr,
+                group_attr=raw_metric_attr,
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
@@ -98,14 +114,7 @@ def query_metric_attr_summary(
     metric = metrics[metric_name]
     metric_attr: Union[int, float] = getattr(table, metric_name)
     metric_count, metric_min, metric_max = sess.exec(
-        select(
-            sql_count(),
-            sql_min(metric_attr),
-            sql_max(metric_attr)
-        ).where(
-            *where,
-            is_not(metric_attr, None)
-        )
+        select(sql_count(), sql_min(metric_attr), sql_max(metric_attr)).where(*where, is_not(metric_attr, None))
     ).first() or (0, 0, 0)
     if metric.type == MetricType.RANK:
         return {
@@ -118,38 +127,44 @@ def query_metric_attr_summary(
             "moderate": 0,
             "severe": 0,
         }
-    metric_q1 = sess.exec(
-        select(metric_attr).where(
-            *where,
-            is_not(metric_attr, None)
-        ).offset(metric_count // 4).limit(1)
-    ).first() or 0
-    metric_q2 = sess.exec(
-        select(metric_attr).where(
-            *where,
-            is_not(metric_attr, None)
-        ).offset(metric_count // 2).limit(1)
-    ).first() or 0
-    metric_q3 = sess.exec(
-        select(metric_attr).where(
-            *where,
-            is_not(metric_attr, None)
-        ).offset((metric_count*3) // 4).limit(1)
-    ).first() or 0
+    metric_q1 = (
+        sess.exec(
+            select(metric_attr).where(*where, is_not(metric_attr, None)).offset(metric_count // 4).limit(1)
+        ).first()
+        or 0
+    )
+    metric_q2 = (
+        sess.exec(
+            select(metric_attr).where(*where, is_not(metric_attr, None)).offset(metric_count // 2).limit(1)
+        ).first()
+        or 0
+    )
+    metric_q3 = (
+        sess.exec(
+            select(metric_attr).where(*where, is_not(metric_attr, None)).offset((metric_count * 3) // 4).limit(1)
+        ).first()
+        or 0
+    )
 
     metric_iqr = metric_q3 - metric_q1
     moderate_lb, moderate_ub = metric_q1 - MODERATE_IQR_SCALE * metric_iqr, metric_q3 + MODERATE_IQR_SCALE * metric_iqr
     severe_lb, severe_ub = metric_q1 - SEVERE_IQR_SCALE * metric_iqr, metric_q3 + SEVERE_IQR_SCALE * metric_iqr
-    metric_severe = sess.exec(
-        select(func.count()).where(*where, not_between_op(metric_attr, severe_lb, severe_ub))  # type: ignore
-    ).first() or 0
-    metric_moderate = sess.exec(
-        select(func.count()).where(  # type: ignore
-            *where,
-            not_between_op(metric_attr, moderate_lb, moderate_ub),
-            between_op(metric_attr, severe_lb, severe_ub),
-        )
-    ).first() or 0
+    metric_severe = (
+        sess.exec(
+            select(func.count()).where(*where, not_between_op(metric_attr, severe_lb, severe_ub))  # type: ignore
+        ).first()
+        or 0
+    )
+    metric_moderate = (
+        sess.exec(
+            select(func.count()).where(  # type: ignore
+                *where,
+                not_between_op(metric_attr, moderate_lb, moderate_ub),
+                between_op(metric_attr, severe_lb, severe_ub),
+            )
+        ).first()
+        or 0
+    )
     return {
         "min": metric_min,
         "q1": metric_q1,
@@ -189,10 +204,7 @@ def query_attr_summary(
     return {
         "count": count,
         "metrics": {k: v for k, v in metrics.items() if v is not None},
-        "enums": {
-            k: {}  # FIXME: implement properly
-            for k, e in domain_tables.enums.items()
-        },
+        "enums": {k: {} for k, e in domain_tables.enums.items()},  # FIXME: implement properly
     }
 
 
@@ -214,13 +226,14 @@ def query_attr_distribution(
         search=filters,
         project_filters=project_filters,
     )
-    grouping_query = select(
-        attr.group_attr,
-        sql_count(),
-    ).where(
-        *where,
-        is_not(attr.filter_attr, None)
-    ).group_by(attr.group_attr)
+    grouping_query = (
+        select(
+            attr.group_attr,
+            sql_count(),
+        )
+        .where(*where, is_not(attr.filter_attr, None))
+        .group_by(attr.group_attr)
+    )
     grouping_results = sess.exec(grouping_query).fetchall()
     return {
         "results": [
@@ -228,7 +241,7 @@ def query_attr_distribution(
                 "group": grouping,
                 "count": count,
             }
-            for grouping, count, *rest in grouping_results
+            for grouping, count in grouping_results
         ],
         "sampling": 1.0,
     }
@@ -256,15 +269,19 @@ def query_attr_scatter(
         search=filters,
         project_filters=project_filters,
     )
-    scatter_query = select(
-        x_attr.group_attr,
-        y_attr.group_attr,
-        sql_count(),
-    ).where(
-        *where,
-        is_not(x_attr.filter_attr, None),
-        is_not(x_attr.filter_attr, None),
-    ).group_by(x_attr.group_attr, y_attr.group_attr)
+    scatter_query = (
+        select(
+            x_attr.group_attr,
+            y_attr.group_attr,
+            sql_count(),
+        )
+        .where(
+            *where,
+            is_not(x_attr.filter_attr, None),
+            is_not(x_attr.filter_attr, None),
+        )
+        .group_by(x_attr.group_attr, y_attr.group_attr)
+    )
     scatter_results = sess.exec(scatter_query).fetchall()
 
     return {
@@ -274,9 +291,10 @@ def query_attr_scatter(
                 "x": x,
                 "y": y,
                 "n": n,
-            } for x, y, n, *rest in scatter_results
+            }
+            for x, y, n in scatter_results
         ],
     }
 
 
-TSearch = TypeVar('TSearch', bound=Tuple)
+TSearch = TypeVar("TSearch", bound=Tuple)

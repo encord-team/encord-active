@@ -172,8 +172,11 @@ class ProjectDataAnalytics(SQLModel, table=True):
     __table_args__ = define_metric_indices(
         "active_data",
         DataMetrics,
-        [fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata,
-                       "active_data_project_analytics_data_fk")],
+        [
+            fk_constraint(
+                ["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "active_data_project_analytics_data_fk"
+            )
+        ],
     )
 
 
@@ -190,8 +193,9 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
     __table_args__ = (
-        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,
-                      "active_data_project_data_analytics_extra_fk"),
+        fk_constraint(
+            ["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "active_data_project_data_analytics_extra_fk"
+        ),
     )
 
 
@@ -206,10 +210,12 @@ class ProjectDataAnalyticsReduced(SQLModel, table=True):
     y: Optional[float]
 
     __table_args__ = (
-        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,
-                      "active_data_project_data_analytics_reduced_fk"),
-        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
-                      "active_data_project_data_analytics_reduced_reduction_fk"),
+        fk_constraint(
+            ["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "active_data_project_data_analytics_reduced_fk"
+        ),
+        fk_constraint(
+            ["reduction_hash"], ProjectEmbeddingReduction, "active_data_project_data_analytics_reduced_reduction_fk"
+        ),
         Index("active_project_analytics_data_reduced_x", "reduction_hash", "project_hash", "x", "y"),
         Index("active_project_analytics_data_reduced_y", "reduction_hash", "project_hash", "y", "x"),
     )
@@ -285,8 +291,11 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
     __table_args__ = (
-        fk_constraint(["project_hash", "du_hash", "frame"], ProjectAnnotationAnalytics,
-                      "active_data_project_annotation_analytics_extra_fk"),
+        fk_constraint(
+            ["project_hash", "du_hash", "frame"],
+            ProjectAnnotationAnalytics,
+            "active_data_project_annotation_analytics_extra_fk",
+        ),
     )
 
 
@@ -303,10 +312,16 @@ class ProjectAnnotationAnalyticsReduced(SQLModel, table=True):
     y: Optional[float]
 
     __table_args__ = (
-        fk_constraint(["project_hash", "du_hash", "frame", "object_hash"], ProjectAnnotationAnalytics,
-                      "active_data_project_annotation_analytics_reduced_fk"),
-        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
-                      "active_data_project_annotation_analytics_reduced_reduction_fk"),
+        fk_constraint(
+            ["project_hash", "du_hash", "frame", "object_hash"],
+            ProjectAnnotationAnalytics,
+            "active_data_project_annotation_analytics_reduced_fk",
+        ),
+        fk_constraint(
+            ["reduction_hash"],
+            ProjectEmbeddingReduction,
+            "active_data_project_annotation_analytics_reduced_reduction_fk",
+        ),
         Index("active_project_analytics_annotation_reduced_x", "reduction_hash", "project_hash", "x", "y"),
         Index("active_project_analytics_annotation_reduced_y", "reduction_hash", "project_hash", "y", "x"),
     )
@@ -451,8 +466,11 @@ class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
     embedding_clip: Optional[bytes]
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "du_hash", "frame"], ProjectPredictionAnalytics,
-                      "active_project_prediction_analytics_extra_fk"),
+        fk_constraint(
+            ["prediction_hash", "du_hash", "frame"],
+            ProjectPredictionAnalytics,
+            "active_project_prediction_analytics_extra_fk",
+        ),
     )
 
 
@@ -469,10 +487,16 @@ class ProjectPredictionAnalyticsReduced(SQLModel, table=True):
     y: Optional[float]
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "du_hash", "frame", "object_hash"], ProjectPredictionAnalytics,
-                      "active_data_project_prediction_analytics_reduced_fk"),
-        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction,
-                      "active_data_project_prediction_analytics_reduced_reduction_fk"),
+        fk_constraint(
+            ["prediction_hash", "du_hash", "frame", "object_hash"],
+            ProjectPredictionAnalytics,
+            "active_data_project_prediction_analytics_reduced_fk",
+        ),
+        fk_constraint(
+            ["reduction_hash"],
+            ProjectEmbeddingReduction,
+            "active_data_project_prediction_analytics_reduced_reduction_fk",
+        ),
         Index("active_project_analytics_prediction_reduced_x", "reduction_hash", "prediction_hash", "x", "y"),
         Index("active_project_analytics_prediction_reduced_y", "reduction_hash", "prediction_hash", "y", "x"),
     )
@@ -561,13 +585,15 @@ def get_engine(
         if use_alembic:
             # Execute alembic config
             import encord_active.db as alembic_file
+
             alembic_cwd = Path(alembic_file.__file__).expanduser().resolve().parent
             alembic_args = [
-                'alembic',
-                '--raiseerr',
-                '-x',
-                f'dbPath={engine_url}',
-                'upgrade', 'head',
+                "alembic",
+                "--raiseerr",
+                "-x",
+                f"dbPath={engine_url}",
+                "upgrade",
+                "head",
             ]
             # How to run alembic via subprocess if running locally with temp cwd change
             # ends up causing issues:
@@ -583,6 +609,7 @@ def get_engine(
             try:
                 os.chdir(alembic_cwd)
                 import alembic.config
+
                 alembic.config.main(argv=alembic_args[1:])
             finally:
                 os.chdir(current_cwd)

@@ -1,5 +1,5 @@
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
-from encord_active.lib.common.data_utils import url_to_file_path, file_path_to_url
+from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.db.connection import PrismaConnection
 from encord_active.lib.project import ProjectFileStructure
 
@@ -27,7 +27,7 @@ def up(pfs: ProjectFileStructure) -> None:
                                 "data_hash": data_unit.data_hash,
                                 "frame": data_unit.frame,
                             }
-                        }
+                        },
                     )
             batch.commit()
     # Run database migration script

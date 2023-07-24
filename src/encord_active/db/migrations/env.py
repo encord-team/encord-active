@@ -1,6 +1,6 @@
 from logging.config import fileConfig
 
-from alembic import context # type: ignore
+from alembic import context  # type: ignore
 from sqlalchemy import engine_from_config, pool  # type: ignore
 
 # Alembic needs all model types import to recognise them correctly.
@@ -67,9 +67,9 @@ def run_migrations_online() -> None:
     ini_section = config.get_section(config.config_ini_section, {})
 
     # if a database path was provided, override the one in alembic.ini
-    db_path = context.get_x_argument(as_dictionary=True).get('dbPath')
+    db_path = context.get_x_argument(as_dictionary=True).get("dbPath")
     if db_path:
-        ini_section['sqlalchemy.url'] = db_path
+        ini_section["sqlalchemy.url"] = db_path
 
     # Run migration online
     connectable = engine_from_config(

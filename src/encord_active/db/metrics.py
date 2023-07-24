@@ -182,7 +182,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         short_desc="Annotation or prediction confidence for non-manual labelling",
         long_desc="",
         type=MetricType.NORMAL,
-    )
+    ),
 }
 
 
@@ -208,7 +208,7 @@ def assert_cls_metrics_match(
         # No extra metrics
         for field in fields:
             if field.startswith("metric_custom"):
-                custom_id = int(field[len("metric_custom"):])
+                custom_id = int(field[len("metric_custom") :])
                 if custom_id >= custom or custom_id < 0:
                     raise ValueError(f"Class: {cls.__name__} has wrong custom metric count: {field}")  # type: ignore
             elif field.startswith("metric_"):

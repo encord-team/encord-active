@@ -1,9 +1,9 @@
 from enum import Enum
-from cachetools import cached, LRUCache
 from os import environ
 from pathlib import Path
 from typing import Optional
 
+from cachetools import LRUCache, cached
 from pydantic import BaseSettings
 
 from encord_active.cli.utils.decorators import is_project

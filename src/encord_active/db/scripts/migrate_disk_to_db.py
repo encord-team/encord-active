@@ -16,24 +16,29 @@ from encord_active.db.metrics import (
 )
 from encord_active.db.models import (
     AnnotationType,
+    EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsReduced,
     ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
+    ProjectDataAnalyticsReduced,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectEmbeddingReduction,
     ProjectPrediction,
     ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsExtra,
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra, ProjectPredictionAnalyticsExtra,
-    ProjectEmbeddingReduction, ProjectDataAnalyticsReduced,
-    ProjectAnnotationAnalyticsReduced, EmbeddingReductionType,
+    get_engine,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
-from encord_active.lib.common.utils import rle_to_binary_mask, mask_to_polygon
-from encord_active.lib.db.connection import PrismaConnection, DBConnection
+from encord_active.lib.common.utils import mask_to_polygon, rle_to_binary_mask
+from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.db.tags import Tag, TagScope
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
@@ -58,7 +63,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Frame object density": "metric_object_density",
     "Green Values": "metric_green",
     "Image Difficulty": "metric_image_difficulty",
-    "Image Diversity": "metric_image_difficulty", # NOTE: Renamed
+    "Image Diversity": "metric_image_difficulty",  # NOTE: Renamed
     "Image Singularity": "metric_image_singularity",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
@@ -104,14 +109,14 @@ def assert_valid_args(cls, dct: dict) -> dict:
 
 
 def _assign_metrics(
-        metric_column_name: str,
-        metrics_dict: dict,
-        score: float,
-        metric_types: Dict[str, MetricDefinition],
-        metrics_derived: Set[str],
-        error_identifier: str,
-        description_dict: Optional[Tuple[Dict[str, bytes], Dict[str, str]]],
-        description: Optional[str],
+    metric_column_name: str,
+    metrics_dict: dict,
+    score: float,
+    metric_types: Dict[str, MetricDefinition],
+    metrics_derived: Set[str],
+    error_identifier: str,
+    description_dict: Optional[Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]],
+    description: Optional[str],
 ):
     if metric_column_name not in metrics_dict:
         raw_score = score
@@ -168,13 +173,19 @@ def _assign_metrics(
                     f"{metric_column_name}: existing={existing_score}, new={score}"
                 )
     # Assign description
-    if description_dict is not None and description is not None \
-            and isinstance(description, str) and len(description) > 0:
+    if (
+        description_dict is not None
+        and description is not None
+        and isinstance(description, str)
+        and len(description) > 0
+    ):
         _, metric_description_map = description_dict
         if metric_column_name not in metric_description_map:
             metric_description_map[metric_column_name] = description
         elif description not in metric_description_map[metric_column_name]:
-            metric_description_map[metric_column_name] = str(metric_description_map[metric_column_name] + ", " + description)
+            metric_description_map[metric_column_name] = str(
+                metric_description_map[metric_column_name] + ", " + description
+            )
 
 
 def _load_embeddings(
@@ -186,7 +197,7 @@ def _load_embeddings(
         (EmbeddingType.IMAGE, "embedding_clip"),
         (EmbeddingType.OBJECT, "embedding_clip"),
         (EmbeddingType.CLASSIFICATION, "embedding_clip"),
-        #FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu"),
+        # FIXME: (EmbeddingType.HU_MOMENTS, "embedding_hu"),
     ]:
         label_embeddings = load_label_embeddings(embedding_type, pfs)
         for embedding in label_embeddings:
@@ -208,9 +219,9 @@ def _load_embeddings_2d(
     project_hash: uuid.UUID,
     reduced_embeddings: List[ProjectEmbeddingReduction],
     data_reduced_embeddings: List[ProjectDataAnalyticsReduced],
-    annotation_reduced_embeddings: List[ProjectAnnotationAnalyticsReduced]
+    annotation_reduced_embeddings: List[ProjectAnnotationAnalyticsReduced],
 ) -> None:
-    reduction_hash_map = {}
+    reduction_hash_map: Dict[str, uuid.UUID] = {}
     for embedding_type, embedding_name in [
         (EmbeddingType.IMAGE, "embedding_clip"),
         (EmbeddingType.OBJECT, "embedding_clip"),
@@ -228,33 +239,40 @@ def _load_embeddings_2d(
                 du_hash = uuid.UUID(du_hash_str)
                 frame = int(frame_str)
                 if len(annotation_hash_list) == 0:
-                    data_reduced_embeddings.append(ProjectDataAnalyticsReduced(
-                        project_hash=project_hash,
-                        du_hash=du_hash,
-                        frame=frame,
-                        reduction_hash=reduction_hash,
-                        x=x,
-                        y=y,
-                    ))
+                    data_reduced_embeddings.append(
+                        ProjectDataAnalyticsReduced(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
+                            frame=frame,
+                            reduction_hash=reduction_hash,
+                            x=x,
+                            y=y,
+                        )
+                    )
                 for annotation_hash in annotation_hash_list:
-                    annotation_reduced_embeddings.append(ProjectAnnotationAnalyticsReduced(
-                        project_hash=project_hash,
-                        du_hash=du_hash,
-                        frame=frame,
-                        object_hash=annotation_hash,
-                        reduction_hash=reduction_hash,
-                        x=x,
-                        y=y,
-                    ))
+                    annotation_reduced_embeddings.append(
+                        ProjectAnnotationAnalyticsReduced(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
+                            frame=frame,
+                            object_hash=annotation_hash,
+                            reduction_hash=reduction_hash,
+                            x=x,
+                            y=y,
+                        )
+                    )
     for k, v in reduction_hash_map.items():
-        reduced_embeddings.append(ProjectEmbeddingReduction(
-            reduction_hash=v,
-            project_hash=project_hash,
-            reduction_name=f"Migrated ({k})",
-            reduction_description="",
-            reduction_type=EmbeddingReductionType.UMAP,
-            reduction_bytes="".encode("utf-8")
-        ))
+        reduced_embeddings.append(
+            ProjectEmbeddingReduction(
+                reduction_hash=v,
+                project_hash=project_hash,
+                reduction_name=f"Migrated ({k})",
+                reduction_description="",
+                reduction_type=EmbeddingReductionType.UMAP,
+                reduction_bytes="".encode("utf-8"),
+            )
+        )
+
 
 # TP condition: E.iou >= :iou && E.match_iou < :iou (calculated via post-processing in function below)
 
@@ -263,9 +281,7 @@ _PREDICTION_MATCH_IOU_ALWAYS_FP: float = 1.0
 _PREDICTION_MATCH_IOU_ALWAYS_TP: float = -1.0
 
 
-def __prediction_iou_range_post_process(
-    model_prediction_group: List[ProjectPredictionAnalytics]
-) -> None:
+def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPredictionAnalytics]) -> None:
     if len(model_prediction_group) <= 1:
         single_model = model_prediction_group[0]
         if single_model.feature_hash != single_model.match_feature_hash:
@@ -274,6 +290,7 @@ def __prediction_iou_range_post_process(
         # Unconditionally match as no clashes to have higher confidence.
         single_model.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
     else:
+
         def confidence_compare_key(m_obj: ProjectPredictionAnalytics):
             return m_obj.metric_label_confidence, m_obj.iou, m_obj.object_hash
 
@@ -316,9 +333,7 @@ def __prediction_iou_range_post_process(
         #  B = {iou = 0.5, conf=0.7}
         #  => resolution B = TP always, B = FP always (required)
 
-        model_prediction_group.sort(
-            key=iou_compare_key, reverse=True
-        )
+        model_prediction_group.sort(key=iou_compare_key, reverse=True)
 
         # Iterate over each model prediction group in order of decreasing confidence.
         # Each candidate will remain the TP for some iou range until a newer
@@ -381,12 +396,7 @@ def __prediction_iou_bound_false_negative(
     prediction_hash,
 ) -> ProjectPredictionAnalyticsFalseNegatives:
     du_hash, frame, annotation_hash = key
-    iou_threshold = max(
-        (
-            model.iou for model in model_prediction_group
-        ),
-        default=2.0  # Always a false negative
-    )
+    iou_threshold = max((model.iou for model in model_prediction_group), default=2.0)  # Always a false negative
 
     if len(model_prediction_group) == 0:
         raise ValueError("Bugged Model Prediction Group")
@@ -402,10 +412,7 @@ def __prediction_iou_bound_false_negative(
         frame=frame,
         object_hash=annotation_hash,
         iou_threshold=iou_threshold,
-        **assert_valid_args(
-            ProjectPredictionAnalyticsFalseNegatives,
-            missing_annotation_metrics
-        )
+        **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
     )
 
 
@@ -452,9 +459,7 @@ def __migrate_predictions(
         )
 
     # Tracking for applying associated metadata to the query.
-    model_prediction_best_match_candidates: Dict[
-        Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]
-    ] = {}
+    model_prediction_best_match_candidates: Dict[Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]] = {}
     model_prediction_unmatched_indices = set(range(len(labels)))
 
     for model_prediction in model_predictions.to_dict(orient="records"):
@@ -477,7 +482,7 @@ def __migrate_predictions(
         p_metrics: dict = {}
         f_metrics: dict = {}
         metric_name: str
-        for metric_name, metric_value in model_prediction.items():
+        for metric_name, metric_value in model_prediction.items():  # type: ignore
             if metric_name.endswith(")"):
                 metric_target = metric_name[-4:]
                 metric_key = WELL_KNOWN_METRICS[metric_name[:-4]]
@@ -565,10 +570,9 @@ def __migrate_predictions(
         img_h: int = int(frame_metrics["metric_height"])
         if rle is None or rle == "nan":
             annotation_type = AnnotationType.BOUNDING_BOX
-            annotation_array = np.array([
-                pb / (img_w if i % 2 == 0 else img_h)
-                for i, pb in enumerate(pbb)
-            ], dtype=np.float)
+            annotation_array = np.array(
+                [pb / (img_w if i % 2 == 0 else img_h) for i, pb in enumerate(pbb)], dtype=np.single
+            )
         else:
             try:
                 rle_json = json.loads(rle.replace("'", '"'))
@@ -581,15 +585,10 @@ def __migrate_predictions(
             polygon, bbox = mask_to_polygon(mask)
             if polygon is None:
                 annotation_type = AnnotationType.BITMASK
-                annotation_array = np.array(
-                    rle_json["counts"], dtype=np.int
-                )
+                annotation_array = np.array(rle_json["counts"], dtype=np.int_)
             else:
                 annotation_type = AnnotationType.POLYGON
-                annotation_array = np.array([
-                    [float(x) / img_w, float(y) / img_h]
-                    for x, y in polygon
-                ], dtype=np.float)
+                annotation_array = np.array([[float(x) / img_w, float(y) / img_h] for x, y in polygon], dtype=np.single)
 
         # Add the new prediction to the database!!!
         if len(object_hashes) == 0:
@@ -656,9 +655,7 @@ def __migrate_predictions(
         missing_label_class_id = int(missing_label.pop("class_id"))
         missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
         missing_label_identifier = missing_label.pop("identifier")
-        _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split(
-            "_"
-        )
+        _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split("_")
         if len(matched_label_hashes) != 1:
             raise ValueError(f"Matched against multiple labels, this is invalid: {missing_label_identifier}")
 
@@ -675,10 +672,7 @@ def __migrate_predictions(
                 frame=missing_frame,
                 object_hash=missing_annotation_hash,
                 iou_threshold=2.0,  # Always a false negative
-                **assert_valid_args(
-                    ProjectPredictionAnalyticsFalseNegatives,
-                    missing_annotation_metrics
-                )
+                **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
             )
         )
 
@@ -703,7 +697,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         Tuple[uuid.UUID, int], List[Dict[str, Union[int, float, bytes, str, AnnotationType, None]]]
     ] = {}
     data_metric_extra: Dict[Tuple[uuid.UUID, int], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]] = {}
-    annotation_metric_extra: Dict[Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]] = {}
+    annotation_metric_extra: Dict[
+        Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]
+    ] = {}
 
     database_dir = pfs.project_dir.parent.expanduser().resolve()
 
@@ -894,23 +890,23 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     with DBConnection(pfs) as metric_conn:
         all_metrics = MergedMetrics(metric_conn).all()
         all_metrics = all_metrics.reset_index()
-        all_metrics_records = all_metrics.to_dict('records')
+        all_metrics_records = all_metrics.to_dict("records")
         for merged_metric in all_metrics_records:
             _, du_hash_str, frame_str, *annotation_hashes = merged_metric["identifier"].split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
-            tags: List[Tag] = merged_metric["tags"]
-            for tag in tags:
-                if tag.name in tag_name_map:
-                    tag_uuid = tag_name_map[tag.name]
+            metric_tags: List[Tag] = merged_metric["tags"]
+            for metric_tag in metric_tags:
+                if metric_tag.name in tag_name_map:
+                    tag_uuid = tag_name_map[metric_tag.name]
                 else:
                     tag_uuid = uuid.uuid4()
-                    tag_name_map[tag.name] = tag_uuid
+                    tag_name_map[metric_tag.name] = tag_uuid
                     project_tag_definitions.append(
                         ProjectTag(
                             tag_hash=tag_uuid,
                             project_hash=project_hash,
-                            name=tag.name,
+                            name=metric_tag.name,
                             description="",
                         )
                     )
@@ -980,7 +976,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     metrics_derived=DERIVED_DATA_METRICS,
                     error_identifier=metric_entry["identifier"],
                     description_dict=data_metric_extra[(du_hash, frame)],
-                    description=metric_entry.get("description", None)
+                    description=metric_entry.get("description", None),
                 )
                 if metric_column_name in DataAnnotationSharedMetrics:
                     for classification_dict in data_classification_metrics.get((du_hash, frame), []):
@@ -996,16 +992,12 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                         )
 
     # Load embeddings
-    _load_embeddings(
-        pfs=pfs,
-        data_metric_extra=data_metric_extra,
-        annotation_metric_extra=annotation_metric_extra
-    )
+    _load_embeddings(pfs=pfs, data_metric_extra=data_metric_extra, annotation_metric_extra=annotation_metric_extra)
 
     # Load 2d embeddings
-    data_reduced_embeddings = []
-    annotation_reduced_embeddings = []
-    reduced_embeddings = []
+    data_reduced_embeddings: List[ProjectDataAnalyticsReduced] = []
+    annotation_reduced_embeddings: List[ProjectAnnotationAnalyticsReduced] = []
+    reduced_embeddings: List[ProjectEmbeddingReduction] = []
     _load_embeddings_2d(
         pfs=pfs,
         project_hash=project_hash,

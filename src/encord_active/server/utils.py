@@ -4,7 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
-from cachetools import cached, LRUCache
+from cachetools import LRUCache, cached
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
