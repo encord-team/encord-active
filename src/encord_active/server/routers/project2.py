@@ -33,12 +33,10 @@ from encord_active.server.routers import (
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.settings import get_settings
-from encord_active.server.utils import _get_url
 
 router = APIRouter(
     prefix="/projects_v2",
     tags=["projects_v2"],
-    # FIXME: dependencies=[Depends(verify_token)],
 )
 router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
@@ -251,7 +249,7 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
                 return FileResponse(url_path)
         raise HTTPException(
             status_code=404,
-            detail=f"Project local file not found"
+            detail="Project local file not found"
         )
 
 
@@ -334,7 +332,7 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
     timestamp = None
     if uri_is_video:
         if frames_per_second is None:
-            raise ValueError(f"Video defined but missing valid frames_per_second")
+            raise ValueError("Video defined but missing valid frames_per_second")
         timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
 
     return {"url": uri, "timestamp": timestamp, "objects": objects, "tags": [tag.tag_hash for tag in result_tags]}

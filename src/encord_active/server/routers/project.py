@@ -1,4 +1,3 @@
-import asyncio
 import json
 import shutil
 import uuid
@@ -124,7 +123,7 @@ def read_item_ids(
 
     if scope == MetricScope.PREDICTION:
         if filters.prediction_filters is None:
-            raise
+            raise HTTPException(status_code=422, detail="filters must contain prediction_filters when scope is 'prediction'")
         df, _ = get_model_predictions(project, filters.prediction_filters)
         df = apply_filters(df, filters, project, scope)
 
@@ -726,7 +725,7 @@ def upload_to_encord(
         pfs.project_dir.parent / item.project_title
     ).exists() and item.project_title != old_project_meta["project_title"]:
         raise ValueError(
-            f"Project Title already used locally - cannot rename project to this while uploading to encord!"
+            "Project Title already used locally - cannot rename project to this while uploading to encord!"
         )
     old_project_hash = uuid.UUID(old_project_meta["project_hash"])
     with DBConnection(pfs) as conn:
@@ -756,7 +755,7 @@ def upload_to_encord(
         pfs.cache_clear()
         new_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
         if new_project_hash == old_project_hash:
-            raise ValueError(f"BUG: Upload to encord hasn't changed project hash")
+            raise ValueError("BUG: Upload to encord hasn't changed project hash")
 
         # Move folder so uuid lookup will work correctly.
         new_project_name = pfs.load_project_meta()["project_title"]
@@ -771,7 +770,7 @@ def upload_to_encord(
                 select(Project).where(Project.project_hash == old_project_hash)
             ).first()
             if old_db is None:
-                raise ValueError(f"BUG: Could not find old project")
+                raise ValueError("BUG: Could not find old project")
             sess.delete(old_db)
             sess.commit()
     except Exception as e:

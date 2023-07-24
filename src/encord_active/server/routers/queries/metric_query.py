@@ -75,7 +75,7 @@ def get_metric_or_enum(
                 metric_type=metric.type,
             )
         else:
-            raise ValueError(f"Unknown metric type")
+            raise ValueError("Unknown metric type")
 
     enum = enums.get(attr_name, None)
     if enum is not None:

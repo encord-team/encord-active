@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 
 class EnumType(enum.Enum):

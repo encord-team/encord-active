@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, Optional, Type, TypeVar, Union
+from typing import Callable, Dict, Type, TypeVar
 
 from pydantic import BaseModel
-from sqlmodel import column
 
 
 class MetricType(Enum):

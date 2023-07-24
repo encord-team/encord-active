@@ -138,11 +138,11 @@ profile = "black"
 plugins = "pandera.mypy"
 ignore_missing_imports = true
 enable_recursive_aliases = true
-exclude = ['examples/']
+exclude = ['examples/', "./src/encord_active/db/migrations/.*"]
 
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"
-ignore-paths = ['^examples/.*']
+ignore-paths = ['^examples/.*', "src/encord_active/db/migrations.*" ]
 
 [tool.pylint.'TYPING']
 generated-members = "torch.*, cv2"
