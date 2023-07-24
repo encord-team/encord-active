@@ -850,7 +850,7 @@ description = "Frontend components used by Encord Active"
 optional = false
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
 files = []
-develop = false
+develop = true
 
 [package.source]
 type = "directory"
@@ -5189,4 +5189,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "eb40774075591a191785ae7ac559fe786bd3f61a4837c3f0a82844e2a6b3eaba"
+content-hash = "3426b61d9f6880d79339d4fcada3f02f07e6d1a8e0a1876671ee0728d390a303"
