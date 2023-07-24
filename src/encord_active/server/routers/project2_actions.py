@@ -1,8 +1,7 @@
 import uuid
 from typing import List
 
-from encord.orm.project import CopyDatasetAction, ReviewApprovalState, CopyDatasetOptions, CopyLabelsOptions, \
-    ProjectDataset
+from encord.orm.project import CopyDatasetAction, ReviewApprovalState, CopyDatasetOptions, CopyLabelsOptions
 from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy.sql.operators import in_op
@@ -106,7 +105,7 @@ def create_active_subset(project_hash: uuid.UUID, item: CreateProjectSubsetPostA
                 for label_row in new_project_label_rows
             }
             if len(new_project_dataset_hashes) > 0:
-                raise ValueError(f"Found multiple dataset hashes!")
+                raise ValueError("Found multiple dataset hashes!")
             new_project_dataset_hash = uuid.UUID(list(new_project_dataset_hashes)[0])
 
         #

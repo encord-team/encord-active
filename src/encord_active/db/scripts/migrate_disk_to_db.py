@@ -28,7 +28,7 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
     get_engine, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra, ProjectPredictionAnalyticsExtra,
-    ProjectEmbeddingReduction, ProjectPredictionAnalyticsReduced, ProjectDataAnalyticsReduced,
+    ProjectEmbeddingReduction, ProjectDataAnalyticsReduced,
     ProjectAnnotationAnalyticsReduced, EmbeddingReductionType,
 )
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
@@ -269,7 +269,7 @@ def __prediction_iou_range_post_process(
     if len(model_prediction_group) <= 1:
         single_model = model_prediction_group[0]
         if single_model.feature_hash != single_model.match_feature_hash:
-            raise ValueError(f"Bug: should be filtered out earlier")
+            raise ValueError("Bug: should be filtered out earlier")
 
         # Unconditionally match as no clashes to have higher confidence.
         single_model.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
@@ -330,7 +330,7 @@ def __prediction_iou_range_post_process(
 
         for model_prediction_entry in model_prediction_group[1:]:
             if model_prediction_entry.feature_hash != model_prediction_entry.match_feature_hash:
-                raise ValueError(f"Bug: should be filtered out earlier")
+                raise ValueError("Bug: should be filtered out earlier")
             model_confidence: float = model_prediction_entry.metric_label_confidence
             if model_confidence > current_true_positive_confidence:
                 # This model is considered the true positive whenever it matches, as it has a higher confidence
@@ -516,7 +516,7 @@ def __migrate_predictions(
             elif metric_target == " (F)":
                 # Frame metrics (we have them saved already)
                 if metric_key in f_metrics:
-                    raise ValueError(f"Duplicate frame metric on prediction")
+                    raise ValueError("Duplicate frame metric on prediction")
                 f_metrics[metric_key] = metric_value
             else:
                 raise ValueError(f"Unknown metric target: '{metric_target}'")
@@ -667,7 +667,7 @@ def __migrate_predictions(
         missing_annotation_hash = str(matched_label_hashes[0])
         missing_annotation_metrics = annotation_metrics[(missing_du_hash, missing_frame, missing_annotation_hash)]
         if str(missing_feature_hash) != missing_annotation_metrics["feature_hash"]:
-            raise ValueError(f"Inconsistent feature_hash for missed annotation!")
+            raise ValueError("Inconsistent feature_hash for missed annotation!")
         predictions_missed_db.append(
             ProjectPredictionAnalyticsFalseNegatives(
                 prediction_hash=prediction_hash,
@@ -685,7 +685,7 @@ def __migrate_predictions(
     # Ensure the same number of predictions are defined
     if len(predictions_missed_db) != len(labels):
         raise ValueError(
-            f"Bug while generating missed prediction array: "
+            "Bug while generating missed prediction array: "
             f"{len(predictions_missed_db)} != {len(gt_matched_inverted_list)}"
         )
 

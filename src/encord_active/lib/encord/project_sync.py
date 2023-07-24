@@ -1,4 +1,5 @@
 import json
+import logging
 import pickle
 import subprocess
 import uuid
@@ -93,7 +94,7 @@ def replace_uids(
     for old_dh, new_dh in data_hash_mapping.items():
         renaming_map[old_dh] = new_dh
 
-    print(f"DEBUG: renaming map for execution", renaming_map)
+    logging.debug(f"renaming map for execution: {renaming_map}")
     try:
         _replace_uids(project_file_structure, renaming_map)
     except Exception as e:

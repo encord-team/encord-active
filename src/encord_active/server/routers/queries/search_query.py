@@ -62,7 +62,7 @@ def search_filters(
         # Data only.
         if search is not None:
             if search.annotation is not None:
-                raise ValueError(f"Annotation queries are not supported in the raw data domain")
+                raise ValueError("Annotation queries are not supported in the raw data domain")
             if search.data is not None:
                 _append_filters(
                     tables=tables.data,
