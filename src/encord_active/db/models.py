@@ -95,6 +95,10 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     frame: int = Field(primary_key=True, ge=0)
     data_hash: UUID
 
+    # Size metadata - used for efficient computation scheduling.
+    width: int
+    height: int
+
     # Optionally set to support local data (video can be stored as decoded frames or as a video object)
     data_uri: Optional[str] = Field(default=None)
     data_uri_is_video: bool = Field(default=False)
@@ -185,10 +189,6 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     embedding_hu: Optional[bytes]
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
-
-    # FIXME: 2d embedding reduction (should potentially be moved to separate table)
-    embedding_clip_2d_x: Optional[float]
-    embedding_clip_2d_y: Optional[float]
 
     __table_args__ = (
         fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics,

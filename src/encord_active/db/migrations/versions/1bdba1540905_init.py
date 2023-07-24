@@ -1,8 +1,8 @@
 """init
 
-Revision ID: e7733ac6bae8
+Revision ID: 1bdba1540905
 Revises: 
-Create Date: 2023-07-18 18:09:57.848898+01:00
+Create Date: 2023-07-24 11:26:30.661710+01:00
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision = "e7733ac6bae8"
+revision = "1bdba1540905"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -106,6 +106,8 @@ def upgrade() -> None:
         sa.Column("du_hash", sqlmodel.sql.sqltypes.GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("data_hash", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("width", sa.Integer(), nullable=False),
+        sa.Column("height", sa.Integer(), nullable=False),
         sa.Column("data_uri", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("data_uri_is_video", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -715,8 +717,6 @@ def upgrade() -> None:
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("embedding_clip", sa.LargeBinary(), nullable=True),
         sa.Column("embedding_hu", sa.LargeBinary(), nullable=True),
-        sa.Column("embedding_clip_2d_x", sa.Float(), nullable=True),
-        sa.Column("embedding_clip_2d_y", sa.Float(), nullable=True),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             [

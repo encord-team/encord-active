@@ -114,13 +114,27 @@ def _assign_metrics(
         description: Optional[str],
 ):
     if metric_column_name not in metrics_dict:
+        raw_score = score
         if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
             score = score / 100.0
         metric_def = metric_types[metric_column_name]
-        if metric_column_name == "metric_sharpness" or metric_column_name == "metric_label_shape_outlier":
-            score = min(max(score, 0.0), 1.0)
-            # FIXME: properly scale sharpness to a normalised result!!!
-        elif metric_def.type == MetricType.NORMAL:
+        # Run set of patches to generate correctly scaled results.
+        if metric_column_name == "metric_sharpness":
+            # Normalise metric sharpness
+            # NOTE: max sharpness comes from 50% 255 & 50%
+            # 127.5 assuming max = 255
+            # However for 4x laplacian kernel, max = 4 * 255
+            # and min is not 0, its -max
+            # Not sure what laplacian kernel cv2 uses or if its
+            # more complete. As had to increase the value from 1020
+            # due to larger values being returned from the metric.
+            score = score / 10000.0
+        elif metric_column_name == "metric_label_shape_outlier":
+            # NOTE: guesswork, not based on any analysis of hu moments
+            score = score / 10000.0
+            pass
+        # Update the score
+        if metric_def.type == MetricType.NORMAL:
             # Clamp 0->1 (some metrics do not generate correctly clamped scores.
             original_score = score
             score = min(max(score, 0.0), 1.0)
@@ -130,7 +144,8 @@ def _assign_metrics(
                 score_p2 = abs((score_delta / float(original_score)) * 100.0)
                 if score_p1 >= 0.5 or score_p2 >= 0.5:
                     print(
-                        f"WARNING: clamped normal metric score - {metric_column_name}: {original_score} => {score}, "
+                        f"WARNING: clamped normal metric score[Original={raw_score}] - {metric_column_name}:"
+                        f" {original_score} => {score}, "
                         f"Percentage = {score_p1}, {score_p2}"
                         f"identifier={error_identifier}"
                     )
@@ -740,7 +755,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             for data_unit in label_row.data_units or []:
                 du_hash = uuid.UUID(data_unit.data_hash)
                 du_json = data_units_json[data_unit.data_hash]
-                expected_data_units.remove(data_unit.data_hash)
+                if data_type != "video":
+                    expected_data_units.remove(data_unit.data_hash)
                 if data_type == "image" or data_type == "img_group":
                     labels_json = du_json["labels"]
                 elif data_type == "video":
@@ -806,6 +822,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 project_data_unit_meta = ProjectDataUnitMetadata(
                     project_hash=project_hash,
                     du_hash=du_hash,
+                    width=data_unit.width,
+                    height=data_unit.height,
                     # FIXME: check calculation of this value is consistent!
                     frame=data_unit.frame if data_type == "video" else 0,
                     data_hash=data_hash,
@@ -816,7 +834,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                 )
                 data_units_metas.append(project_data_unit_meta)
             # Apply to parent
-            if len(expected_data_units) > 0:
+            if len(expected_data_units) > 0 and data_type != "video":
                 raise ValueError(
                     f"Validation failure: prisma db missed data units for label row: \n"
                     f"For: {project_data_meta.label_hash}/{expected_data_units}\n"
