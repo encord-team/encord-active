@@ -23,8 +23,8 @@ def run_data_migrations(pfs: ProjectFileStructure, final_data_version: Optional[
     migrations_to_run = [
         migration
         for migration in all_migrations
-        if get_timestamp_of_migration_file(migration) > last_migration_timestemp and
-        (final_data_version is None or final_data_version >= get_timestamp_of_migration_file(migration))
+        if get_timestamp_of_migration_file(migration) > last_migration_timestemp
+        and (final_data_version is None or final_data_version >= get_timestamp_of_migration_file(migration))
     ]
     migrations_to_run.sort(key=lambda file: get_timestamp_of_migration_file(file))
 

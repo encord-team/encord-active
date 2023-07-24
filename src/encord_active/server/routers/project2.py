@@ -2,7 +2,6 @@ import uuid
 from typing import Dict, List, Literal, Optional, Tuple, TypedDict
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import func
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
@@ -32,6 +31,7 @@ from encord_active.server.routers import (
     project2_prediction,
 )
 from encord_active.server.routers.project2_engine import engine
+from encord_active.server.routers.queries.metric_query import sql_count
 from encord_active.server.settings import get_settings
 
 router = APIRouter(
@@ -110,7 +110,11 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
             # TODO: remove me when we can download sandbox projects from the UI
             sandbox_projects[str(project_hash)]["sandbox"] = False
             continue
-        url, timestamp = _get_first_image_with_polygons_url(project_hash)
+        url_timestamp = _get_first_image_with_polygons_url(project_hash)
+        url: Optional[str] = None
+        timestamp: Optional[float] = None
+        if url_timestamp is not None:
+            url, timestamp = url_timestamp
         projects[str(project_hash)] = ProjectReturn(
             title=title,
             description=description,
@@ -169,20 +173,20 @@ def get_project_summary(project_hash: uuid.UUID):
             ).first()
 
         du_count = sess.exec(
-            select(func.count())
+            select(sql_count())
             .where(ProjectDataAnalytics.project_hash == project_hash)
             .group_by(ProjectDataAnalytics.du_hash)
         ).first()
         frame_count = sess.exec(
-            select(func.count())
+            select(sql_count())
             .where(ProjectDataAnalytics.project_hash == project_hash)
             .group_by(ProjectDataAnalytics.du_hash)
         ).first()
         annotation_count = sess.exec(
-            select(func.count()).where(ProjectAnnotationAnalytics.project_hash == project_hash)
+            select(sql_count()).where(ProjectAnnotationAnalytics.project_hash == project_hash)
         ).first()
         classification_count = sess.exec(
-            select(func.count()).where(
+            select(sql_count()).where(
                 ProjectAnnotationAnalytics.project_hash == project_hash,
                 ProjectAnnotationAnalytics.annotation_type == AnnotationType.CLASSIFICATION,
             )
@@ -208,7 +212,7 @@ def get_project_summary(project_hash: uuid.UUID):
         "global": {
             "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
             "enums": _enum_summary(AnnotationEnums | DataEnums),
-         },
+        },
         "tags": {tag.tag_hash: tag.name for tag in tags},
         "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
     }
@@ -233,9 +237,7 @@ def list_supported_2d_embedding_reductions(project_hash: uuid.UUID):
 @router.get("/{project_hash}/files/{du_hash}/{frame}")
 def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     with Session(engine) as sess:
-        query = select(
-            ProjectDataUnitMetadata.data_uri,
-        ).where(
+        query = select(ProjectDataUnitMetadata.data_uri,).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
             ProjectDataUnitMetadata.du_hash == du_hash,
             ProjectDataUnitMetadata.frame == frame,
@@ -247,10 +249,7 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
             url_path = url_to_file_path(data_uri, root_path)
             if url_path is not None:
                 return FileResponse(url_path)
-        raise HTTPException(
-            status_code=404,
-            detail="Project local file not found"
-        )
+        raise HTTPException(status_code=404, detail="Project local file not found")
 
 
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")

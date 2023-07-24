@@ -1,22 +1,31 @@
 import json
 import math
 import uuid
-from typing import Dict, List, Tuple, Optional, Literal
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import Float, bindparam, func, text, Integer
+from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
 from encord_active.db.metrics import AnnotationMetrics
-from encord_active.db.models import ProjectPredictionAnalytics, ProjectPredictionAnalyticsFalseNegatives
+from encord_active.db.models import (
+    ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsFalseNegatives,
+)
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
-from encord_active.server.routers.queries.domain_query import TABLES_PREDICTION_TP_FP, TABLES_PREDICTION_FN
-from encord_active.server.routers.queries.search_query import SearchFiltersFastAPIDepends
+from encord_active.server.routers.queries.domain_query import (
+    TABLES_PREDICTION_FN,
+    TABLES_PREDICTION_TP_FP,
+)
+from encord_active.server.routers.queries.metric_query import sql_count, sql_sum
+from encord_active.server.routers.queries.search_query import (
+    SearchFiltersFastAPIDepends,
+)
 
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
@@ -27,6 +36,7 @@ router = APIRouter(
 
 # FIXME: for group by filter_hash queries, what is the correct behaviour r.e case where no value exists for that feature
 #  hash
+
 
 @router.get("/summary")
 def get_project_prediction_summary(
@@ -42,7 +52,7 @@ def get_project_prediction_summary(
         project_filters={
             "prediction_hash": [prediction_hash],
             # FIXME: project_hash
-        }
+        },
     )
     # FIXME: fn_where needs separate set of queries as this is implemented as a side table join.
     # FIXME: performance improvements are possible
@@ -52,7 +62,7 @@ def get_project_prediction_summary(
         false_negative_counts_raw = sess.exec(
             select(
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
-                func.count(),
+                sql_count(),
             )
             .where(
                 ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
@@ -70,16 +80,11 @@ def get_project_prediction_summary(
         positive_counts_raw = sess.exec(
             select(
                 ProjectPredictionAnalytics.feature_hash,
-                func.sum(
-                    (
-                        (ProjectPredictionAnalytics.match_duplicate_iou < iou)
-                    ).cast(Integer)
-                ),
-                func.count(),
-            ).where(
-                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
-                ProjectPredictionAnalytics.iou >= iou
-            ).group_by(
+                sql_sum((ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)),  # type: ignore
+                sql_count(),
+            )
+            .where(ProjectPredictionAnalytics.prediction_hash == prediction_hash, ProjectPredictionAnalytics.iou >= iou)
+            .group_by(
                 ProjectPredictionAnalytics.feature_hash,
             )
         )
@@ -161,8 +166,8 @@ def get_project_prediction_summary(
                 },
             ).first()
             precision_recall[feature_hash] = {
-                "ap": pr_result[0],
-                "ar": pr_result[1],
+                "ap": pr_result[0],  # type: ignore
+                "ar": pr_result[1],  # type: ignore
             }
 
     # Calculate correlation for metrics
@@ -297,7 +302,8 @@ def get_project_prediction_summary(
                 "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
                 "iou": iou,
                 "feature_hash": feature_hash,
-                "r_divisor": true_positive_count_map.get(feature_hash, 0) + false_negative_count_map.get(feature_hash, 0)
+                "r_divisor": true_positive_count_map.get(feature_hash, 0)
+                + false_negative_count_map.get(feature_hash, 0),
             },
         ).fetchall()
         prs[feature_hash] = pr_result
@@ -306,10 +312,7 @@ def get_project_prediction_summary(
     for metric_name in AnnotationMetrics.keys():
         importance_data_query = select(
             ProjectPredictionAnalytics.iou
-            * (
-                (ProjectPredictionAnalytics.iou >= iou)
-                & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
-            ),
+            * ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)),
             getattr(ProjectPredictionAnalytics, metric_name),
         ).where(
             ProjectPredictionAnalytics.prediction_hash == prediction_hash,
@@ -346,7 +349,8 @@ def get_project_prediction_summary(
 @router.get("/analytics/{prediction_domain}/distribution")
 def prediction_metric_distribution(
     prediction_hash: uuid.UUID,
-    group: str, buckets: Literal[10, 100, 1000] = 10,
+    group: str,
+    buckets: Literal[10, 100, 1000] = 10,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     # FIXME: prediction_domain!!! (this & scatter) both need it implemented
@@ -368,7 +372,10 @@ def prediction_metric_distribution(
 
 @router.get("/analytics/{prediction_domain}/scatter")
 def prediction_metric_scatter(
-    prediction_hash: uuid.UUID, x_metric: str, y_metric: str, buckets: Literal[10, 100, 1000] = 10,
+    prediction_hash: uuid.UUID,
+    x_metric: str,
+    y_metric: str,
+    buckets: Literal[10, 100, 1000] = 10,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     with Session(engine) as sess:
@@ -401,7 +408,7 @@ def prediction_metric_performance(
         project_filters={
             "prediction_hash": [prediction_hash],
             # FIXME: needs project hash for correct data join behaviour!!
-        }
+        },
     )
     where_fn = search_query.search_filters(
         tables=TABLES_PREDICTION_FN,
@@ -409,7 +416,7 @@ def prediction_metric_performance(
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
-        }
+        },
     )
     with Session(engine) as sess:
         metric_attr = metric_query.get_metric_or_enum(
@@ -417,26 +424,21 @@ def prediction_metric_performance(
             attr_name=metric_name,
             metrics=AnnotationMetrics,
             enums={},
-            buckets=buckets, # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
+            buckets=buckets,  # FIXME: bucket behaviour needs improvement (sql round is better than current impl).
         )
         metric_buckets = sess.exec(
             select(
                 ProjectPredictionAnalytics.feature_hash,
                 metric_attr.group_attr,
-                func.sum(
-                    (ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)
-                ),
-                func.count(),
+                sql_sum((ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)),  # type: ignore
+                sql_count(),
             )
-            .where(
-                ProjectPredictionAnalytics.iou >= iou,
-                is_not(metric_attr.filter_attr, None),
-                *where_tp_fp
-            )
+            .where(ProjectPredictionAnalytics.iou >= iou, is_not(metric_attr.filter_attr, None), *where_tp_fp)
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
                 metric_attr.group_attr,
-            ).order_by(
+            )
+            .order_by(
                 metric_attr.group_attr,
             )
         ).fetchall()
@@ -444,23 +446,21 @@ def prediction_metric_performance(
         tp_count: Dict[Tuple[str, float], int] = {}
         for feature, bucket_m, bucket_tp, bucket_tp_fp in metric_buckets:
             bucket_avg = float(bucket_tp) / float(bucket_tp_fp)
-            precision.setdefault(feature, []).append(
-                {"m": bucket_m, "a": bucket_avg, "n": bucket_tp_fp}
-            )
+            precision.setdefault(feature, []).append({"m": bucket_m, "a": bucket_avg, "n": bucket_tp_fp})
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr = metric_query.get_metric_or_enum(
-            table=ProjectPredictionAnalyticsFalseNegatives,
+            table=ProjectPredictionAnalyticsFalseNegatives,  # type: ignore
             attr_name=metric_name,
             metrics=AnnotationMetrics,
             enums={},
             buckets=buckets,
         )
         metric_fn_buckets = sess.exec(
-            select(  # type: ignore
+            select(
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
                 metric_attr.group_attr,
-                func.count(),
+                sql_count(),
             )
             .where(
                 ProjectPredictionAnalyticsFalseNegatives.iou_threshold > iou,
@@ -470,20 +470,17 @@ def prediction_metric_performance(
             .group_by(
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
                 metric_attr.group_attr,
-            ).order_by(
+            )
+            .order_by(
                 metric_attr.group_attr,
             )
         ).fetchall()
         fns: Dict[str, List[dict]] = {}
         for feature, bucket_m, fn_num in metric_fn_buckets:
             fp_tp_num = tp_count.get((feature, bucket_m), 0)
-            label_num = (fn_num + fp_tp_num)
+            label_num = fn_num + fp_tp_num
             fns.setdefault(feature, []).append(
-                {
-                    "m": bucket_m,
-                    "a": 0 if label_num == 0 else fn_num / label_num,
-                    "n": label_num
-                }
+                {"m": bucket_m, "a": 0 if label_num == 0 else fn_num / label_num, "n": label_num}
             )
     return {
         "precision": precision,
@@ -523,4 +520,3 @@ def get_prediction_item(
 ):
     # FIXME: return required metadata to correctly view the associated value.
     return None
-

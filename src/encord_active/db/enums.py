@@ -14,7 +14,7 @@ class EnumType(enum.Enum):
 class EnumDefinition:
     enum_type: EnumType
     title: str
-    values: Optional[Dict[str, str]] = None,
+    values: Optional[Dict[str, str]] = None
 
 
 class AnnotationType(enum.Enum):
@@ -38,10 +38,7 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
     "annotation_type": EnumDefinition(
         enum_type=EnumType.ENUM,
         title="Annotation Type",
-        values={
-            annotation_type.value: annotation_type.name
-            for annotation_type in AnnotationType
-        },
+        values={annotation_type.value: annotation_type.name for annotation_type in AnnotationType},
     ),
     "annotation_manual": EnumDefinition(
         enum_type=EnumType.ENUM,
@@ -49,6 +46,6 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
         values={
             "0": "Automated Annotation",
             "1": "Manual Annotation",
-        }
-    )
+        },
+    ),
 }

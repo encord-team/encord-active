@@ -75,7 +75,9 @@ inquirerpy = "^0.3.4"
 umap-learn = "^0.5.3"
 llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
 # TODO: updated me after publishing a new version
-encord-active-components = { path ="./frontend_components/dist/encord_active_components-0.0.27.tar.gz" }
+# TODO???: encord-active-components = { path ="./frontend_components/dist/encord_active_components-0.0.27.tar.gz" }
+encord-active-components = { path = "./frontend_components"}
+# TODO: - end of need to update
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.2"
@@ -91,6 +93,8 @@ poethepoet = "^0.16.5"
 orjson = "^3.9.0"
 sqlmodel = "^0.0.8"
 alembic = "^1.11.1"
+cachetools = "^5.3.1"
+types-cachetools = "^5.3.0.6"
 
 [tool.poetry.extras]
 coco = ["pycocotools"]

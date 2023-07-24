@@ -2,11 +2,11 @@ import json
 import shutil
 import uuid
 from enum import Enum
-from cachetools import cached, LRUCache
-from typing import Annotated, List, Optional, Union, cast
+from typing import Annotated, Dict, List, Optional, Union, cast
 from uuid import UUID
 
 import pandas as pd
+from cachetools import LRUCache, cached
 from encord.orm.project import (
     CopyDatasetAction,
     CopyDatasetOptions,
@@ -32,7 +32,11 @@ from encord_active.db.models import (
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
-from encord_active.lib.common.utils import DataHashMapping, partial_column, IndexOrSeries
+from encord_active.lib.common.utils import (
+    DataHashMapping,
+    IndexOrSeries,
+    partial_column,
+)
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.helpers.tags import (
     GroupedTags,
@@ -41,7 +45,6 @@ from encord_active.lib.db.helpers.tags import (
     from_grouped_tags,
     to_grouped_tags,
 )
-
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
@@ -123,7 +126,9 @@ def read_item_ids(
 
     if scope == MetricScope.PREDICTION:
         if filters.prediction_filters is None:
-            raise HTTPException(status_code=422, detail="filters must contain prediction_filters when scope is 'prediction'")
+            raise HTTPException(
+                status_code=422, detail="filters must contain prediction_filters when scope is 'prediction'"
+            )
         df, _ = get_model_predictions(project, filters.prediction_filters)
         df = apply_filters(df, filters, project, scope)
 
@@ -176,16 +181,16 @@ def server_local_fs_file(project: ProjectFileStructureDep, lr_hash: str, du_hash
     data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
         label_row_structure.iter_data_unit(du_hash, None), None
     )
-    if data_opt:
+    if data_opt is not None:
         signed_url = data_opt.signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
-        return FileResponse(file_path)
-    else:
-        debug_id = f"{lr_hash}_{du_hash}_{frame}"
-        raise HTTPException(
-            status_code=404,
-            detail=f"Local resource with id={debug_id} was not found for project: {project}"
-        )
+        if file_path is not None:
+            return FileResponse(file_path)
+
+    debug_id = f"{lr_hash}_{du_hash}_{frame}"
+    raise HTTPException(
+        status_code=404, detail=f"Local resource with id={debug_id} was not found for project: {project}"
+    )
 
 
 @router.get("/{project}/items/{id:path}")
@@ -239,21 +244,20 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
 
         def _tag_hash(name: str) -> uuid.UUID:
             tag_hash_candidate = sess.exec(
-                select(ProjectTag.tag_hash).where(
-                    ProjectTag.project_hash == project_hash,
-                    ProjectTag.name == name
-                )
+                select(ProjectTag.tag_hash).where(ProjectTag.project_hash == project_hash, ProjectTag.name == name)
             ).first()
             if tag_hash_candidate is not None:
                 return tag_hash_candidate
             else:
                 new_tag_hash = uuid.uuid4()
-                sess.add(ProjectTag(
-                    tag_hash=new_tag_hash,
-                    project_hash=project_hash,
-                    name=name,
-                    description="",
-                ))
+                sess.add(
+                    ProjectTag(
+                        tag_hash=new_tag_hash,
+                        project_hash=project_hash,
+                        name=name,
+                        description="",
+                    )
+                )
                 return new_tag_hash
 
         data_exists = set()
@@ -270,41 +274,55 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                 if dup_key in data_exists:
                     continue
                 data_exists.add(dup_key)
-                if sess.exec(select(ProjectTaggedDataUnit).where(
-                    ProjectTaggedDataUnit.project_hash == project_hash,
-                    ProjectTaggedDataUnit.du_hash == du_hash,
-                    ProjectTaggedDataUnit.frame == frame,
-                    ProjectTaggedDataUnit.tag_hash == tag_hash,
-                )).first() is not None:
+                if (
+                    sess.exec(
+                        select(ProjectTaggedDataUnit).where(
+                            ProjectTaggedDataUnit.project_hash == project_hash,
+                            ProjectTaggedDataUnit.du_hash == du_hash,
+                            ProjectTaggedDataUnit.frame == frame,
+                            ProjectTaggedDataUnit.tag_hash == tag_hash,
+                        )
+                    ).first()
+                    is not None
+                ):
                     continue
-                sess.add(ProjectTaggedDataUnit(
-                    project_hash=project_hash,
-                    du_hash=du_hash,
-                    frame=frame,
-                    tag_hash=tag_hash,
-                ))
-            for annotation_hash in annotation_hashes:
-                for annotation_tag in annotation_tag_list:
-                    tag_hash = _tag_hash(annotation_tag)
-                    dup_key = (project_hash, du_hash, frame, annotation_hash, tag_hash)
-                    if dup_key in label_exists:
-                        continue
-                    label_exists.add(dup_key)
-                    if sess.exec(select(ProjectTaggedAnnotation).where(
-                        ProjectTaggedAnnotation.project_hash == project_hash,
-                        ProjectTaggedAnnotation.du_hash == du_hash,
-                        ProjectTaggedAnnotation.frame == frame,
-                        ProjectTaggedAnnotation.object_hash == annotation_hash,
-                        ProjectTaggedAnnotation.tag_hash == tag_hash,
-                    )).first() is not None:
-                        continue
-                    sess.add(ProjectTaggedAnnotation(
+                sess.add(
+                    ProjectTaggedDataUnit(
                         project_hash=project_hash,
                         du_hash=du_hash,
                         frame=frame,
-                        object_hash=annotation_hash,
                         tag_hash=tag_hash,
-                    ))
+                    )
+                )
+            for annotation_hash in annotation_hashes:
+                for annotation_tag in annotation_tag_list:
+                    tag_hash = _tag_hash(annotation_tag)
+                    dup_key2 = (project_hash, du_hash, frame, annotation_hash, tag_hash)
+                    if dup_key2 in label_exists:
+                        continue
+                    label_exists.add(dup_key2)
+                    if (
+                        sess.exec(
+                            select(ProjectTaggedAnnotation).where(
+                                ProjectTaggedAnnotation.project_hash == project_hash,
+                                ProjectTaggedAnnotation.du_hash == du_hash,
+                                ProjectTaggedAnnotation.frame == frame,
+                                ProjectTaggedAnnotation.object_hash == annotation_hash,
+                                ProjectTaggedAnnotation.tag_hash == tag_hash,
+                            )
+                        ).first()
+                        is not None
+                    ):
+                        continue
+                    sess.add(
+                        ProjectTaggedAnnotation(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
+                            frame=frame,
+                            object_hash=annotation_hash,
+                            tag_hash=tag_hash,
+                        )
+                    )
         sess.commit()
 
 
@@ -332,6 +350,8 @@ def get_available_metrics(
     prediction_outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None,
 ):
     if scope == MetricScope.PREDICTION:
+        if prediction_type is None:
+            raise ValueError("Prediction metrics requires prediction type")
         prediction_metrics, label_metrics, *_ = read_prediction_files(project, prediction_type)
         metrics = (
             label_metrics if prediction_outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES else prediction_metrics
@@ -339,7 +359,11 @@ def get_available_metrics(
     else:
         metrics = load_project_metrics(project)
 
-    results = {MetricScope.DATA: [], MetricScope.ANNOTATION: [], MetricScope.PREDICTION: []}
+    results: Dict[MetricScope, List[dict]] = {
+        MetricScope.DATA: [],
+        MetricScope.ANNOTATION: [],
+        MetricScope.PREDICTION: [],
+    }
     for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name):
         metric_result = {
             "name": metric.name,
@@ -656,23 +680,20 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
             dataset_hash = str(uuid.uuid4())
             with PrismaConnection(target_project_structure) as prisma_conn:
                 prisma_label_rows = prisma_conn.labelrow.find_many()
-                lh_map = {
-                    label_row.label_hash: str(uuid.uuid4())
-                    for label_row in prisma_label_rows
+                lh_map: Dict[str, str] = {
+                    label_row.label_hash or "": str(uuid.uuid4()) for label_row in prisma_label_rows
                 }
                 lr_du_mapping = {
-                    LabelRowDataUnit(
-                        label_row.label_hash, label_row.data_hash
-                    ): LabelRowDataUnit(
-                        lh_map[label_row.label_hash], label_row.data_hash
+                    LabelRowDataUnit(label_row.label_hash or "", label_row.data_hash): LabelRowDataUnit(
+                        lh_map[label_row.label_hash or ""], label_row.data_hash
                     )
                     for label_row in prisma_label_rows
                 }
-                label_row_json_map = {
-                    lh_map[label_row.label_hash]: json.loads(label_row.label_row_json)
+                label_row_json_map_2: Dict[str, dict] = {
+                    lh_map[label_row.label_hash or ""]: json.loads(label_row.label_row_json or "")
                     for label_row in prisma_label_rows
                 }
-                for label_hash, label_row_json in label_row_json_map.items():
+                for label_hash, label_row_json in label_row_json_map_2.items():
                     label_row_json["dataset_hash"] = dataset_hash
                     label_row_json["label_hash"] = label_hash
             replace_uids(
@@ -687,10 +708,7 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
                 target_project_structure,
                 du_hash_map=DataHashMapping(),
                 lr_du_mapping=lr_du_mapping,
-                label_row_json_map={
-                    k: json.dumps(v)
-                    for k, v in label_row_json_map.items()
-                },
+                label_row_json_map={k: json.dumps(v) for k, v in label_row_json_map_2.items()},
                 refresh=False,  # Not a remote project running the migration
             )
 
@@ -721,9 +739,9 @@ def upload_to_encord(
     item: UploadToEncordModel,
 ):
     old_project_meta = pfs.load_project_meta()
-    if (
-        pfs.project_dir.parent / item.project_title
-    ).exists() and item.project_title != old_project_meta["project_title"]:
+    if (pfs.project_dir.parent / item.project_title).exists() and item.project_title != old_project_meta[
+        "project_title"
+    ]:
         raise ValueError(
             "Project Title already used locally - cannot rename project to this while uploading to encord!"
         )
@@ -766,9 +784,7 @@ def upload_to_encord(
         with Session(engine) as sess:
             # Now that the new project hash has been synced to the database
             # delete the old (out-of-date) value.
-            old_db = sess.exec(
-                select(Project).where(Project.project_hash == old_project_hash)
-            ).first()
+            old_db = sess.exec(select(Project).where(Project.project_hash == old_project_hash)).first()
             if old_db is None:
                 raise ValueError("BUG: Could not find old project")
             sess.delete(old_db)
@@ -790,10 +806,7 @@ def _download_task(pfs: ProjectFileStructure, project_name: str):
 
 
 @router.get("/{project}/download_sandbox")
-def download_sandbox_project(
-    project: str,
-    background_tasks: BackgroundTasks
-):
+def download_sandbox_project(project: str, background_tasks: BackgroundTasks):
     sandbox_projects = available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS)
     sandbox_project = next(
         (sandbox_project for sandbox_project in sandbox_projects.values() if sandbox_project["hash"] == project), None

@@ -44,6 +44,10 @@ else:
     def _index():
         return FileResponse(frontend_build_path / "index.html")
 
+    @app.get("/favicon.ico")
+    def _favicon_ico():
+        return FileResponse(frontend_build_path / "favicon.ico")
+
 
 app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=False), name="sandbox-static")
 
@@ -54,11 +58,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.get("/favicon.ico")
-def _favicon_ico():
-    return FileResponse(frontend_build_path / "favicon.ico")
 
 
 @app.on_event("startup")

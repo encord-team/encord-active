@@ -22,11 +22,18 @@ from encord_active.lib.embeddings.utils import (
 from encord_active.lib.metrics.metric import MetricMetadata
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import load_metric_dataframe
-from encord_active.lib.model_predictions.reader import get_model_predictions, read_prediction_files
+from encord_active.lib.model_predictions.reader import (
+    get_model_predictions,
+    read_prediction_files,
+)
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
-from encord_active.server.utils import load_project_metrics, get_similarity_finder, filtered_merged_metrics, \
-    read_class_idx
+from encord_active.server.utils import (
+    filtered_merged_metrics,
+    get_similarity_finder,
+    load_project_metrics,
+    read_class_idx,
+)
 
 
 class LabelRowDataUnit(NamedTuple):
@@ -135,7 +142,7 @@ def _replace_uids(
         read_prediction_files,
     ]
     for cache in caches:
-        cache.cache_clear()
+        cache.cache_clear()  # type: ignore
     project_file_structure.cache_clear()
 
 

@@ -12,11 +12,17 @@ from sqlalchemy import func
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
-
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
-from encord_active.server.routers.queries.domain_query import Tables, TABLES_DATA, TABLES_ANNOTATION
-from encord_active.server.routers.queries.search_query import SearchFiltersFastAPIDepends
+from encord_active.server.routers.queries.domain_query import (
+    TABLES_ANNOTATION,
+    TABLES_DATA,
+    DomainTables,
+    Tables,
+)
+from encord_active.server.routers.queries.search_query import (
+    SearchFiltersFastAPIDepends,
+)
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
@@ -40,8 +46,9 @@ def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
 
 @router.get("/summary")
 def metric_summary(
-    project_hash: uuid.UUID, domain: AnalysisDomain,
-    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -71,20 +78,13 @@ def metric_search(
         tables=tables,
         base="analytics",  # FIXME: this should select the best base table (reduction if no analytics filters)
         search=filters,
-        project_filters={
-            "project_hash": [project_hash]
-        }
+        project_filters={"project_hash": [project_hash]},
     )
     print(f"Filter debugging =>: {filters}")
     print(f"Where debugging =>: {where}")
 
     with Session(engine) as sess:
-        query = select(
-            *[
-                getattr(base_table.analytics, join_attr)
-                for join_attr in base_table.join
-            ]
-        ).where(*where)
+        query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
 
         if order_by is not None:
             if order_by in base_table.metrics or order_by in base_table.enums:
@@ -103,12 +103,8 @@ def metric_search(
     return {
         "truncated": truncated,
         "results": [
-            {
-                join_attr: value
-                for join_attr, value in zip(base_table.join, result)
-            }
-            for result in search_results[:-1]
-        ]
+            {join_attr: value for join_attr, value in zip(base_table.join, result)} for result in search_results[:-1]
+        ],
     }
 
 
@@ -126,9 +122,7 @@ def scatter_2d_data_metric(
         return metric_query.query_attr_scatter(
             sess=sess,
             tables=tables,
-            project_filters={
-                "project_hash": [project_hash]
-            },
+            project_filters={"project_hash": [project_hash]},
             x_metric_name=x_metric,
             y_metric_name=y_metric,
             buckets=buckets,
@@ -176,29 +170,27 @@ def get_2d_embedding_summary(
         search=filters,
         project_filters={
             "project_hash": [project_hash],
-        }
+        },
     )
     with Session(engine) as sess:
         round_digits = None if buckets is None else int(math.log10(buckets))
-        query = select(
-            func.round(domain_tables.reduction.x, round_digits),
-            func.round(domain_tables.reduction.y, round_digits),
-            func.count(),
-        ).where(
-            domain_tables.reduction.reduction_hash == reduction_hash,
-            *where,
-        ).group_by(
-            func.round(domain_tables.reduction.x, round_digits),
-            func.round(domain_tables.reduction.y, round_digits),
+        query = (
+            select(  # type: ignore
+                func.round(domain_tables.reduction.x, round_digits),
+                func.round(domain_tables.reduction.y, round_digits),
+                func.count(),
+            )
+            .where(
+                domain_tables.reduction.reduction_hash == reduction_hash,
+                *where,
+            )
+            .group_by(
+                func.round(domain_tables.reduction.x, round_digits),
+                func.round(domain_tables.reduction.y, round_digits),
+            )
         )
         results = sess.exec(query)
-    return {
-        "count": sum(n for x, y, n in results),
-        "2d_embedding": [
-            {"x": x, "y": y, "n": n}
-            for x, y, n in results
-        ]
-    }
+    return {"count": sum(n for x, y, n in results), "2d_embedding": [{"x": x, "y": y, "n": n} for x, y, n in results]}
 
 
 @functools.lru_cache(maxsize=2)
@@ -206,17 +198,15 @@ def _get_nn_descent(
     project_hash: uuid.UUID, domain: AnalysisDomain
 ) -> Tuple[NNDescent, List[Tuple[Optional[bytes], uuid.UUID, int, Optional[str]]]]:
     tables = _get_metric_domain_tables(domain)
-    base_domain = tables.annotation or tables.data
+    base_domain: DomainTables = tables.annotation or tables.data
     with Session(engine) as sess:
         query = select(
             base_domain.metadata.embedding_clip,
-            *[
-                getattr(base_domain.metadata, join_attr)
-                for join_attr in base_domain.join
-            ],
+            *[getattr(base_domain.metadata, join_attr) for join_attr in base_domain.join],
         ).where(
-            base_domain.metadata.project_hash == project_hash,
-            is_not(base_domain.metadata.embedding_clip, None)
+            # FIXME: will break for nearest embedding on predictions
+            base_domain.metadata.project_hash == project_hash,  # type: ignore
+            is_not(base_domain.metadata.embedding_clip, None),
         )
         results = sess.exec(query).fetchall()
     embeddings = np.stack([np.frombuffer(e[0], dtype=np.float) for e in results]).astype(np.float32)  # type: ignore
@@ -227,8 +217,12 @@ def _get_nn_descent(
 @router.get("/similarity/{du_hash}/{frame}/{object_hash}")
 @router.get("/similarity/{du_hash}/{frame}/")
 def search_similarity(
-        project_hash: uuid.UUID, domain: AnalysisDomain, du_hash: uuid.UUID, frame: int,
-        embedding: str, object_hash: Optional[str] = None
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    du_hash: uuid.UUID,
+    frame: int,
+    embedding: str,
+    object_hash: Optional[str] = None,
 ):
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.annotation or tables.data
@@ -243,11 +237,12 @@ def search_similarity(
     with Session(engine) as sess:
         src_embedding = sess.exec(
             select(base_domain.metadata.embedding_clip).where(
-                base_domain.metadata.project_hash == project_hash,
+                # FIXME: prediction needs separate join!
+                base_domain.metadata.project_hash == project_hash,  # type: ignore
                 *[
                     getattr(base_domain.metadata, join_attr) == join_attr_set[join_attr]
                     for join_attr in base_domain.join
-                ]
+                ],
             )
         ).first()
         if src_embedding is None:
@@ -278,9 +273,9 @@ def search_similarity(
 
 @router.get("/project_compare/metric_dissimilarity")
 def compare_metric_dissimilarity(
-        project_hash: uuid.UUID,
-        domain: AnalysisDomain,
-        compare_project_hash: uuid.UUID,
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    compare_project_hash: uuid.UUID,
 ):
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.annotation or tables.data
@@ -288,18 +283,16 @@ def compare_metric_dissimilarity(
     with Session(engine) as sess:
         for metric_name in base_domain.metrics.keys():
             metric_attr: float = getattr(base_domain.analytics, metric_name)
-            all_data_1 = sess.exec(select(
-                metric_attr,
-            ).where(
-                base_domain.analytics.project_hash == project_hash,
-                is_not(metric_attr, None)
-            )).fetchall()
-            all_data_2 = sess.exec(select(
-                metric_attr,
-            ).where(
-                base_domain.analytics.project_hash == compare_project_hash,
-                is_not(metric_attr, None)
-            )).fetchall()
+            all_data_1 = sess.exec(
+                select(
+                    metric_attr,
+                ).where(base_domain.analytics.project_hash == project_hash, is_not(metric_attr, None))
+            ).fetchall()
+            all_data_2 = sess.exec(
+                select(
+                    metric_attr,
+                ).where(base_domain.analytics.project_hash == compare_project_hash, is_not(metric_attr, None))
+            ).fetchall()
             if len(all_data_1) > 0 and len(all_data_2) > 0:
                 k_score, _ = ks_2samp(np.array(all_data_1), np.array(all_data_2))
                 dissimilarity[metric_name] = k_score

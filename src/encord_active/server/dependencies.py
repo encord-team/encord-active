@@ -39,16 +39,17 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)]) -> None:
     if settings.JWT_SECRET is None:
         return
 
-    opts = {
-        "status_code": status.HTTP_401_UNAUTHORIZED,
-        "headers": {"WWW-Authenticate": "Bearer"},
-    }
+    def _http_exception(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"}, detail=detail
+        )
+
     try:
         decoded = decode(token, settings.JWT_SECRET, algorithms=["HS256"])
         if decoded["deployment_name"] != settings.DEPLOYMENT_NAME:
-            raise HTTPException(**opts, detail="Cannot acccess deployment")
+            raise _http_exception(detail="Cannot access deployment")
     except:
-        raise HTTPException(**opts, detail="Cannot acccess deployment")
+        raise _http_exception(detail="Cannot access deployment")
 
 
 async def verify_token_with_project_hash(token: Annotated[str, Depends(oauth2_scheme)], project_hash: str) -> None:

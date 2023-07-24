@@ -1,12 +1,12 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from cachetools import cached, LRUCache
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 
 import pandas as pd
 import pandera as pa
+from cachetools import LRUCache, cached
 from encord.objects.common import PropertyType
 from encord.ontology import OntologyStructure
 from natsort import natsorted

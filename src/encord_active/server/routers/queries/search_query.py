@@ -1,12 +1,17 @@
 import uuid
-from typing import Dict, Tuple, Union, List, Optional, Literal
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
-from fastapi import Depends, Query, HTTPException
+from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as
 from sqlalchemy.sql.operators import between_op, in_op
 
-from encord_active.server.routers.queries.domain_query import Tables, DomainTables, AnalyticsTable, ReductionTable, \
-    ProjectFilters
+from encord_active.server.routers.queries.domain_query import (
+    AnalyticsTable,
+    DomainTables,
+    ProjectFilters,
+    ReductionTable,
+    Tables,
+)
 
 
 class Embedding2DFilter(BaseModel):
@@ -51,14 +56,10 @@ def search_filters(
     search: Optional[SearchFilters],
     project_filters: ProjectFilters,
 ) -> list:
-    filters = []
+    filters: list = []
     if tables.annotation is None:
         base_table = tables.data.analytics if base == "analytics" else tables.data.reduction
-        _project_filters(
-            table=base_table,
-            project_filters=project_filters,
-            filters=filters
-        )
+        _project_filters(table=base_table, project_filters=project_filters, filters=filters)
         # Data only.
         if search is not None:
             if search.annotation is not None:
@@ -72,11 +73,7 @@ def search_filters(
                 )
     else:
         base_table = tables.annotation.analytics if base == "analytics" else tables.annotation.reduction
-        _project_filters(
-            table=base_table,
-            project_filters=project_filters,
-            filters=filters
-        )
+        _project_filters(table=base_table, project_filters=project_filters, filters=filters)
         # Data & Annotation
         if search is not None:
             if search.annotation is not None:
@@ -112,19 +109,14 @@ def _project_filters(
 
 
 def _append_filters(
-    tables: DomainTables,
-    search: DomainSearchFilters,
-    base_table: Union[AnalyticsTable, ReductionTable],
-    filters: list
+    tables: DomainTables, search: DomainSearchFilters, base_table: Union[AnalyticsTable, ReductionTable], filters: list
 ) -> None:
     # Metric filters
     analytics_join = False
     if len(search.metrics) > 0:
         if base_table != tables.analytics:
             for j in tables.join:
-                filters.append(
-                    getattr(base_table, j) == getattr(tables.analytics, j)
-                )
+                filters.append(getattr(base_table, j) == getattr(tables.analytics, j))
             analytics_join = True
         for metric_name, (filter_start, filter_end) in search.metrics.items():
             if metric_name not in tables.metrics:
@@ -139,9 +131,7 @@ def _append_filters(
     if len(search.enums) > 0:
         if base_table != tables.analytics and not analytics_join:
             for j in tables.join:
-                filters.append(
-                    getattr(base_table, j) == getattr(tables.analytics, j)
-                )
+                filters.append(getattr(base_table, j) == getattr(tables.analytics, j))
         for enum_name, enum_list in search.enums.items():
             if enum_name not in tables.enums:
                 raise ValueError(f"Invalid enum filter: {enum_name}")
@@ -154,9 +144,7 @@ def _append_filters(
     # Tag filters
     if search.tags is not None:
         for j in tables.join:
-            filters.append(
-                getattr(base_table, j) == getattr(tables.tag, j)
-            )
+            filters.append(getattr(base_table, j) == getattr(tables.tag, j))
         if len(search.tags) == 1:
             filters.append(tables.tag.tag_hash == search.tags[0])
         else:
@@ -166,9 +154,7 @@ def _append_filters(
     if search.reduction is not None:
         if base_table != tables.reduction:
             for j in tables.join:
-                filters.append(
-                    getattr(base_table, j) == getattr(tables.reduction, j)
-                )
+                filters.append(getattr(base_table, j) == getattr(tables.reduction, j))
         min_x, min_y = search.reduction.min
         max_x, max_y = search.reduction.max
         filters.append(between_op(tables.reduction.x, min_x, max_x))
