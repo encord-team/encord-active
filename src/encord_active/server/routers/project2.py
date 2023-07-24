@@ -1,6 +1,8 @@
 import uuid
 from typing import Dict, List, Literal, Optional, Tuple, TypedDict
 
+from cachetools import cached, TTLCache
+from encord.objects import OntologyStructure
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
@@ -74,6 +76,7 @@ def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[Tupl
 
 
 @router.get("/")
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minutes TTL Cache
 def get_all_projects() -> Dict[str, ProjectReturn]:
     # FIXME: revert back to this code!
     # with Session(engine) as sess:
@@ -101,10 +104,30 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
 
     with Session(engine) as sess:
         db_projects = sess.exec(
-            select(Project.project_hash, Project.project_name, Project.project_description)
+            select(
+                Project.project_hash,
+                Project.project_name,
+                Project.project_description,
+                Project.project_ontology
+            )
         ).fetchall()
+        data_count = sess.exec(select(
+            ProjectDataMetadata.project_hash, sql_count()
+        ).group_by(ProjectDataMetadata.project_hash)).fetchall()
+        data_count_dict = {
+            p: c
+            for p, c in data_count
+        }
+        annotation_count = sess.exec(select(
+            ProjectAnnotationAnalytics.project_hash,
+            sql_count()
+        ).group_by(ProjectAnnotationAnalytics.project_hash))
+        annotation_count_dict = {
+            p: c
+            for p, c in annotation_count
+        }
     projects = {}
-    for project_hash, title, description in db_projects:
+    for project_hash, title, description, ontology in db_projects:
         if str(project_hash) in sandbox_projects:
             sandbox_projects[str(project_hash)]["downloaded"] = True
             # TODO: remove me when we can download sandbox projects from the UI
@@ -115,11 +138,17 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
         timestamp: Optional[float] = None
         if url_timestamp is not None:
             url, timestamp = url_timestamp
+        ontology = OntologyStructure.from_dict(ontology)
+        label_classes = len(ontology.objects) + len(ontology.classifications)
         projects[str(project_hash)] = ProjectReturn(
             title=title,
             description=description,
             projectHash=project_hash,
-            stats=None,  # TODO: fix me
+            stats=ProjectStats(
+                dataUnits=data_count_dict.get(project_hash, 0),
+                labels=annotation_count_dict.get(project_hash, 0),
+                classes=label_classes,
+            ),
             downloaded=True,
             imageUrl=url or "",
             imageUrlTimestamp=timestamp,
