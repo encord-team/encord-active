@@ -418,9 +418,9 @@ def start(
     """
     [green bold]Launch[/green bold] the application with the provided project ✨
     """
-    from encord_active.cli.utils.server import launch_app
+    from encord_active.cli.utils.server import launch_server_app
 
-    launch_app(target)
+    launch_server_app(target)
 
 
 @cli.command()
@@ -432,7 +432,7 @@ def quickstart(
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    from encord_active.cli.utils.server import launch_app
+    from encord_active.cli.utils.server import launch_server_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_name = "quickstart"
@@ -440,7 +440,7 @@ def quickstart(
     project_dir.mkdir(exist_ok=True)
 
     fetch_prebuilt_project(project_name, project_dir)
-    launch_app(project_dir)
+    launch_server_app(project_dir)
 
 
 @cli.command(rich_help_panel="Resources")
