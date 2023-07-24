@@ -12,12 +12,17 @@ from encord_active.analysis.types import (
     LaplacianTensor,
     MaskTensor,
     Point,
-    PointTensor,
+    PointTensor, ImageBatchTensor, MaskBatchTensor,
 )
 from encord_active.db.enums import AnnotationType
 
 _laplacian_kernel = (
-    torch.tensor([0.0, 1.0, 0.0, 1.0, -4.0, 1.0, 0.0, 1.0, 0.0], requires_grad=False).reshape(1, 1, 3, 3).float()
+    torch.tensor(
+        [0.0, 1.0, 0.0,
+         1.0, -4.0, 1.0,
+         0.0, 1.0, 0.0],
+        requires_grad=False
+    ).reshape(1, 1, 3, 3).float()
 )
 
 
@@ -115,8 +120,8 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
     """
     Applies Laplacian kernel over Image
     """
-    channels_as_batch = image.float().unsqueeze(1)  # [c, 1, h, w]
-    return conv2d(channels_as_batch, weight=_laplacian_kernel).float().unsqueeze(1)  # type: ignore
+    channels_as_batch = image.float()
+    return conv2d(channels_as_batch, weight=_laplacian_kernel, padding=1)
 
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
@@ -164,12 +169,17 @@ def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
     y_min, x_min = torch.min(yx_coords, 0).values
     y_max, x_max = torch.max(yx_coords, 0).values
 
+    # FIXME: deprecate with torchvision masks_to_boxes
     return Point(x_min, y_min), Point(x_max, y_max)
 
 
-def image_width(image: Union[ImageTensor, MaskTensor]) -> int:
+def image_width(image: Union[ImageTensor, MaskTensor, ImageBatchTensor, MaskBatchTensor]) -> int:
     return image.shape[-1]
 
 
-def image_height(image: ImageTensor) -> int:
+def image_height(image: Union[ImageTensor, MaskTensor, ImageBatchTensor, MaskBatchTensor]) -> int:
     return image.shape[-2]
+
+
+def batch_size(batch: Union[ImageBatchTensor, MaskBatchTensor]) -> int:
+    return batch.shape[0]

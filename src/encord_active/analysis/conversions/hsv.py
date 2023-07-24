@@ -10,7 +10,7 @@ HSVRange = Union[tuple[int, int], list[tuple[int, int]]]
 class RGBToHSV(BaseConverter):
     def __init__(self) -> None:
         super().__init__(
-            ident="hsv_image",
+            ident="ephemeral_hsv_image",
             dependencies=set(),
         )
 

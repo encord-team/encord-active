@@ -2,17 +2,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from pydantic import BaseModel
-
 from encord_active.analysis.types import (
     AnnotationMetadata,
     ImageTensor,
     MetricDependencies,
-    MetricResult,
+    MetricResult, MetricBatchResult, ImageBatchTensor, MetricBatchDependencies, MaskBatchTensor, BoundingBoxBatchTensor,
+    ImageIndexBatchTensor, FeatureHashBatchTensor,
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True) # FIXME: deprecate for new version
 class BaseFrameInput:
     image: ImageTensor
     image_deps: MetricDependencies
@@ -28,6 +27,78 @@ class BaseFrameInput:
 class BaseFrameOutput:
     image: Optional[MetricResult]
     annotations: Dict[str, MetricResult]
+
+
+@dataclass
+class BaseFrameAnnotationBatchInput:
+    """
+    Dictionary to B x dependencies
+    """
+    objects_masks: MaskBatchTensor
+    """
+    O x Masks (O = SUM{i.annotation_count * B}
+    """
+    objects_bounding_boxes: BoundingBoxBatchTensor
+    """"
+    O x Bounding Boxes
+    """
+    objects_deps: MetricBatchDependencies
+    """
+    dependency map to Ox<value> tensors
+    """
+    objects_image_indices: ImageIndexBatchTensor
+    """
+    O x int32 index to the associated image.
+    """
+    objects_feature_hash: FeatureHashBatchTensor
+    """
+    O x int64 converted feature hash values
+    """
+    classifications_deps: MetricBatchDependencies
+    """
+    dependency map to Cx<value> tensors
+    """
+    classifications_image_indices: ImageIndexBatchTensor
+    """
+    C x int32 index to the associated image.
+    """
+    classifications_feature_hash: FeatureHashBatchTensor
+    """
+    C x int64 converted feature hash values
+    """
+
+
+@dataclass
+class BaseFrameBatchInput:
+    images: ImageBatchTensor
+    """
+    B x image tensors
+    """
+    images_deps: MetricBatchDependencies
+    """
+    Dictionary to B x dependencies
+    """
+    annotations: Optional[BaseFrameAnnotationBatchInput]
+    """
+    All annotation batches associated with this image batch.
+    Values are split into classifications & objects (objects have masks + aabb)
+    """
+
+
+@dataclass
+class BaseFrameBatchOutput:
+    images: Optional[MetricBatchResult]
+    """
+    B x image results
+    """
+    objects: Optional[MetricBatchResult]
+    """
+    O x annotation results
+    """
+    classifications: Optional[MetricBatchResult]
+    """
+    C x classification results
+    """
 
 
 class BaseEvaluation(ABC):
@@ -57,6 +128,17 @@ class BaseEvaluation(ABC):
         be considered unstable.
         """
         ...
+
+    @abstractmethod
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
+    ) -> BaseFrameBatchOutput:
+        """
+        Base implementation of batched metric calculation.
+        """
 
 
 class BaseAnalysis(BaseEvaluation, ABC):

@@ -4,15 +4,15 @@ import numpy as np
 import torch
 
 from encord_active.analysis.metric import MetricDependencies, ObjectByFrameMetric
-from encord_active.analysis.types import MetricResult, AnnotationMetadata
+from encord_active.analysis.types import MetricResult, AnnotationMetadata, MaskBatchTensor, MetricBatchResult
 
 
 class MaximumLabelIOUMetric(ObjectByFrameMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_label_duplicates", # FIXME: maybe rename column?
+            ident="metric_max_iou",  # FIXME: maybe rename column?
             dependencies=set(),
-            long_name="Object Count",
+            long_name="Label Duplicates",
             desc="Assigns the maximum IOU between each label and the rest of the labels in the frame.",
         )
 
@@ -40,3 +40,11 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
         ious[np.diag_indices_from(ious)] = -1  # don't consider self against self
         max_ious = ious.max(1).values.cpu()
         return dict(zip([obj_hash for obj_hash, obj_mask in objs], max_ious))
+
+    def calculate_batched(
+        self,
+        masks: MaskBatchTensor, # FIXME: batch_extra_dimensions??
+    ) -> MetricBatchResult:
+        intersections = (masks.unsqueeze(0) & masks.unsqueeze(1)).view(b, b, -1).sum(-1)
+        unions = (masks.unsqueeze(0) | masks.unsqueeze(1)).view(b, b, -1).sum()
+        ious = intersections / unions

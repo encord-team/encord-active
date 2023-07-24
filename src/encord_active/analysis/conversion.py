@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Union
 
-from encord_active.analysis.base import BaseEvaluation, BaseFrameOutput, BaseFrameInput
+from encord_active.analysis.base import BaseEvaluation, BaseFrameOutput, BaseFrameInput, BaseFrameBatchInput, \
+    BaseFrameBatchOutput
 from encord_active.analysis.types import HSVTensor, ImageTensor
 
 
@@ -30,6 +31,21 @@ class BaseConverter(BaseEvaluation, metaclass=ABCMeta):
                 k: image
                 for k in frame.annotations.keys()
             },
+        )
+
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput,
+    ) -> BaseFrameBatchOutput:
+        """
+        Base implementation of batched metric calculation.
+        """
+        images = self.convert(frame.images)
+        return BaseFrameBatchOutput(
+            image=images,
+            annotations=None,
         )
 
     @abstractmethod

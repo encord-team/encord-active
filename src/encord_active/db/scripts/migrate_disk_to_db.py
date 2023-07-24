@@ -69,12 +69,12 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Green Values": "metric_green",
     "Image Difficulty": "metric_image_difficulty",
     "Image Diversity": "metric_image_difficulty",  # NOTE: Renamed
-    "Image Singularity": "metric_image_singularity",
+    "Image Singularity": "metric_image_uniqueness",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
     "Red Values": "metric_red",
     "Sharpness": "metric_sharpness",
-    "Annotation Duplicates": "metric_label_duplicates",
+    "Annotation Duplicates": "metric_max_iou",
     "Annotation closeness to image borders": "metric_label_border_closeness",
     "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
     "Missing Objects and Broken Tracks": "metric_label_missing_or_broken_tracks",
@@ -1237,7 +1237,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
 
 
     path = database_dir / "encord-active.sqlite"
-    engine = get_engine(path)
+    engine = get_engine(path, use_alembic=False) # FIXME: undo this && remove computation engine above
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)

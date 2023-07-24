@@ -1,13 +1,18 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional, Set, Dict
+from dataclasses import dataclass
+from typing import Optional, Set, Dict, Protocol
 
-from encord_active.analysis.base import BaseAnalysis, BaseFrameInput, BaseFrameOutput
+import torch
+
+from encord_active.analysis.base import BaseAnalysis, BaseFrameInput, BaseFrameOutput, BaseFrameAnnotationBatchInput, \
+    BaseFrameBatchInput, BaseFrameBatchOutput
 from encord_active.analysis.types import (
     AnnotationMetadata,
     ImageTensor,
     MaskTensor,
     MetricDependencies,
-    MetricResult,
+    MetricResult, MetricBatchDependencies, ImageBatchTensor, MaskBatchTensor, MetricBatchResult, BoundingBoxBatchTensor,
+    ImageIndexBatchTensor,
 )
 from encord_active.db.models import AnnotationType
 
@@ -28,6 +33,37 @@ class BaseAnalysisWithAnnotationFilter(BaseAnalysis, metaclass=ABCMeta):
     ) -> None:
         super().__init__(ident, dependencies, long_name, desc)
         self.annotation_types = annotation_types
+
+
+class ObjectOnlyBatchInput(Protocol):
+    """
+    Dictionary to B x dependencies
+    """
+    objects_masks: MaskBatchTensor
+    """
+    O x Masks (O = SUM{i.annotation_count * B}
+    """
+    objects_bounding_boxes: BoundingBoxBatchTensor
+    """"
+    O x Bounding Boxes
+    """
+    objects_deps: MetricBatchDependencies
+    """
+    dependency map to Ox<value> tensors
+    """
+    objects_image_indices: ImageIndexBatchTensor
+
+
+@dataclass
+class ImageObjectOnlyOutputBatch:
+    images: Optional[MetricBatchResult]
+    """
+    B x image results
+    """
+    objects: Optional[MetricBatchResult]
+    """
+    O x annotation results
+    """
 
 
 class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
@@ -65,6 +101,42 @@ class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
+    ) -> BaseFrameBatchOutput:
+        """
+        Base implementation of batched metric calculation.
+        """
+        res = self.calculate_batched(
+            frame.images_deps,
+            frame.images,
+            frame.annotations,
+        )
+        classifications = None
+        if frame.annotations is not None:
+            classifications = torch.index_select(
+                res.images,
+                0,
+                frame.annotations.classifications_image_indices
+            )
+        return BaseFrameBatchOutput(
+            images=res.images,
+            objects=res.objects,
+            classifications=classifications,
+        )
+
+    @abstractmethod
+    def calculate_batched(
+        self,
+        deps: MetricBatchDependencies,
+        image: ImageBatchTensor,
+        annotation: Optional[ObjectOnlyBatchInput]
+    ) -> ImageObjectOnlyOutputBatch:
+        ...
+
 
 class OneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     """
@@ -96,6 +168,30 @@ class OneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResult:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput,
+    ) -> BaseFrameBatchOutput:
+        """
+        Base implementation of batched metric calculation.
+        """
+        return self.calculate_batched(
+            frame.images_deps,
+            frame.images,
+            frame.annotations,
+        )
+
+    @abstractmethod
+    def calculate_batched(
+        self,
+        deps: MetricBatchDependencies,
+        image: ImageBatchTensor,
+        annotation: Optional[BaseFrameAnnotationBatchInput]
+    ) -> BaseFrameBatchOutput:
+        ...
+
 
 class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
     """
@@ -123,6 +219,21 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
         annotations: Dict[str, AnnotationMetadata],
         annotation_deps: dict[str, MetricDependencies],
     ) -> Dict[str, MetricResult]:
+        ...
+
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput,
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Not implemented")
+
+    @abstractmethod
+    def calculate_batched(
+        self,
+        masks: MaskBatchTensor,
+    ) -> MetricBatchResult:
         ...
 
 
@@ -157,6 +268,14 @@ class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
         TODO: This is currently only used by object count which doesn't require all these arguments.
         """
         ...
+
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Batch not yet implemented")
 
 
 class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
@@ -216,6 +335,14 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
     ) -> MetricResult:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Batch not yet implemented")
+
 
 class TemporalOneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
     """
@@ -251,6 +378,14 @@ class TemporalOneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMet
     ) -> MetricResult:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Batch not yet implemented")
+
 
 class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
 
@@ -280,6 +415,14 @@ class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
     ) -> Dict[str, MetricResult]:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Batch not yet implemented")
+
 
 class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
     """
@@ -293,6 +436,14 @@ class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
+        raise AttributeError("Derived uses separate interface, this function should NEVER be called!")
+
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: BaseFrameBatchInput,
+    ) -> BaseFrameBatchOutput:
         raise AttributeError("Derived uses separate interface, this function should NEVER be called!")
 
     @abstractmethod

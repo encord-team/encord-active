@@ -7,14 +7,17 @@ from typing import List, Tuple, Dict, Optional, Set, Union, Type
 import av
 import numpy as np
 import torch
+import torchvision
 from PIL import Image
 from pynndescent import NNDescent
 from torch import Tensor
+from torchvision.io import VideoReader
+from torchvision.ops import masks_to_boxes
 from tqdm import tqdm
 
 from encord_active.analysis.types import AnnotationMetadata, MetricDependencies, NearestNeighbors
 from encord_active.analysis.util.torch import pillow_to_tensor, obj_to_points, obj_to_mask
-from .base import BaseFrameInput, BaseAnalysis
+from .base import BaseFrameInput, BaseAnalysis, BaseFrameBatchInput
 
 from encord_active.analysis.config import AnalysisConfig
 from encord_active.db.models import ProjectDataMetadata, ProjectDataUnitMetadata, AnnotationType, \
@@ -65,127 +68,296 @@ class SimpleExecutor(Executor):
         values: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
         project_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str]
+        project_ssh_path: Optional[str],
+        batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra]
     ]:
-        with torch.no_grad():
-            for data_metadata, du_metadata_list in tqdm(
-                values,
-                desc="Metric Computation Stage 1: Image & Object computation"
-            ):
-                du_metadata_list.sort(key=lambda v: (v.du_hash, v.frame))
-                if data_metadata.data_type == "video":
-                    # Run assertions
-                    if du_metadata_list[0].du_hash != du_metadata_list[-1].du_hash:
-                        raise ValueError(f"Video has different du_hash")
-                    if du_metadata_list[-1].frame + 1 != len(du_metadata_list) or du_metadata_list[0].frame != 0:
-                        raise ValueError(f"Video has skipped frames")
-                    if len({x.frame for x in du_metadata_list}) != len(du_metadata_list):
-                        raise ValueError(f"Video has frame duplicates")
-                    video_start = du_metadata_list[0]
-                    video_url_or_path = self._get_url_or_path(
-                        uri=video_start.data_uri, project_dir=project_dir, project_hash=project_hash,
-                        project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
-                        du_hash=video_start.du_hash,
-                    )
-                    prev_frame: Optional[BaseFrameInput] = None
-                    curr_frame: Optional[BaseFrameInput] = None
-                    next_frame: Optional[BaseFrameInput] = None
-                    iter_frame_num = -1
-                    # FIXME: use torchvision VideoReader!!
-                    with av.open(str(video_url_or_path), mode="r") as container:
-                        for frame in tqdm(
-                            container.decode(video=0),
-                            desc=f" - Processing Video: {data_metadata.data_title}",
-                            total=container.streams.video[0].frames,
-                            leave=False,
-                        ):
-                            frame_num: int = frame.index
-                            frame_du_meta = du_metadata_list[frame_num]
-                            if frame_du_meta.frame != frame_num:
-                                raise ValueError(f"Frame metadata mismatch: {frame_du_meta.frame} != {frame_num}")
-                            if frame.is_corrupt:
-                                raise ValueError(f"Corrupt video frame")
-                            if iter_frame_num + 1 != frame_num:
-                                raise ValueError(f"AV video frame out of sequence: {iter_frame_num} -> {frame_num}")
-                            iter_frame_num = frame_num
-                            frame_image = frame.to_image().convert("RGB")
-                            frame_input = self._get_frame_input(
-                                image=frame_image,
-                                du_meta=frame_du_meta,
-                            )
-                            # Step through window
-                            if prev_frame is None:
-                                prev_frame = frame_input
-                            elif curr_frame is None:
-                                curr_frame = frame_input
-                            elif next_frame is None:
-                                next_frame = frame_input
-                            else:
-                                prev_frame = curr_frame
-                                curr_frame = next_frame
-                                next_frame = frame_input
-                            # Run stage 1 metrics
-                            if next_frame is not None:
-                                # Process non-first & non-last frame
-                                self._execute_stage_1_metrics(
-                                    prev_frame=prev_frame,
-                                    current_frame=curr_frame,
-                                    next_frame=next_frame,
-                                    du_hash=du_metadata_list[0].du_hash,
-                                    frame=iter_frame_num - 1,
-                                )
-                            elif curr_frame is not None:
-                                # Process first frame
-                                self._execute_stage_1_metrics(
-                                    prev_frame=None,
-                                    current_frame=prev_frame,
-                                    next_frame=curr_frame,
-                                    du_hash=du_metadata_list[0].du_hash,
-                                    frame=iter_frame_num - 1,
-                                )
+        # Split into videos & images
+        video_values = [
+            v for v in values if v[0].data_type == "video"
+        ]
+        image_values = [
+            (d, dle)
+            for d, dl in values
+            if d.data_type != "video"
+            for dle in dl
+        ]
+        image_values.sort(key=lambda d: (d[1].width, d[1].height))
+        for data_metadata, du_metadata_list in video_values:
+            # Well-formed
+            du_metadata_list.sort(key=lambda v: (v.du_hash, v.frame))
+            if data_metadata.data_type != "video":
+                raise ValueError("Bug separating videos")
 
-                    # Process final frame
-                    self._execute_stage_1_metrics(
-                        prev_frame=curr_frame,
-                        current_frame=next_frame,
-                        next_frame=None,
-                        du_hash=du_metadata_list[0].du_hash,
-                        frame=iter_frame_num,
-                    )
-                else:
-                    for du_metadata in du_metadata_list:
-                        if du_metadata.data_uri_is_video:
-                            raise ValueError(f"Invalid du_metadata input, image marked as video")
-                        img_url_or_path = self._get_url_or_path(
-                            uri=du_metadata.data_uri, project_dir=project_dir, project_hash=project_hash,
-                            project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
-                            du_hash=du_metadata.du_hash,
-                        )
-                        if isinstance(img_url_or_path, Path):
-                            image = Image.open(img_url_or_path)
-                        else:
-                            image = download_image(img_url_or_path, project_dir=project_dir, cache=False)
-                        frame_input = self._get_frame_input(
-                            image=image.convert("RGB"),
-                            du_meta=du_metadata,
-                        )
-                        self._execute_stage_1_metrics(
-                            prev_frame=None,
-                            current_frame=frame_input,
-                            next_frame=None,
-                            du_hash=du_metadata.du_hash,
-                            frame=du_metadata.frame,
-                        )
+            # Run assertions
+            if du_metadata_list[0].du_hash != du_metadata_list[-1].du_hash:
+                raise ValueError(f"Video has different du_hash")
+            if du_metadata_list[-1].frame + 1 != len(du_metadata_list) or du_metadata_list[0].frame != 0:
+                raise ValueError(f"Video has skipped frames")
+            if len({x.frame for x in du_metadata_list}) != len(du_metadata_list):
+                raise ValueError(f"Video has frame duplicates")
+
+        # Video best thing
+        with torch.no_grad():
+            # Stage 1
+            if batch is None:
+                self._stage_1_video_no_batching(
+                    video_values,
+                    project_dir=project_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                )
+                self._stage_1_image_no_batching(
+                    image_values,
+                    project_dir=project_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                )
+            else:
+                self._stage_1_video_batching(
+                    video_values,
+                    project_dir=project_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                )
+                self._stage_1_image_batching(
+                    image_values,
+                    project_dir=project_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                    batching=batch,
+                )
 
             # Post-processing stages
             self._stage_2()
             self._stage_3()
             return self._pack_output()
+
+    def _stage_1_video_batching(
+        self,
+        videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
+        project_dir: Path,
+        project_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+    ):
+        if len(videos) == 0:
+            return
+        # Select video backend
+        if self.config.device.type == "cuda":
+            torchvision.set_video_backend("cuda")
+        else:
+            torchvision.set_video_backend("pyav")
+        # Start execution
+        for data_metadata, du_meta_list in tqdm(
+            videos, desc=f"Metric Computation Stage 1: Videos ({torchvision.get_video_backend()})"
+        ):
+            video_start = du_meta_list[0]
+            video_url_or_path = self._get_url_or_path(
+                uri=video_start.data_uri, project_dir=project_dir, project_hash=project_hash,
+                project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                du_hash=video_start.du_hash,
+            )
+            reader = VideoReader(
+                src=str(video_url_or_path),
+                stream="video:0",
+            )
+            frame_metadata = reader.get_metadata()
+            frame_iterator = enumerate(reader)
+            first_frame = next(frame_iterator, None)
+            if first_frame is not None:
+                # Execute first frame
+                pass
+            for frame_idx, frame in frame_iterator:
+                data: torch.Tensor = frame["data"]
+                pts: float = frame["pts"]  # FIXME: use for frame_idx validation?!
+
+    def _stage_1_video_no_batching(
+        self,
+        videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
+        project_dir: Path,
+        project_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+    ):
+        if len(videos) == 0:
+            return
+        for data_metadata, du_meta_list in tqdm(
+            videos, desc="Metric Computation Stage 1: Videos"
+        ):
+            video_start = du_meta_list[0]
+            video_url_or_path = self._get_url_or_path(
+                uri=video_start.data_uri, project_dir=project_dir, project_hash=project_hash,
+                project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                du_hash=video_start.du_hash,
+            )
+            prev_frame: Optional[BaseFrameInput] = None
+            curr_frame: Optional[BaseFrameInput] = None
+            next_frame: Optional[BaseFrameInput] = None
+            iter_frame_num = -1
+            # FIXME: use torchvision VideoReader!!
+            with av.open(str(video_url_or_path), mode="r") as container:
+                for frame in tqdm(
+                    container.decode(video=0),
+                    desc=f" - Processing Video: {data_metadata.data_title}",
+                    total=container.streams.video[0].frames,
+                    leave=False,
+                ):
+                    frame_num: int = frame.index
+                    frame_du_meta = du_meta_list[frame_num]
+                    if frame_du_meta.frame != frame_num:
+                        raise ValueError(f"Frame metadata mismatch: {frame_du_meta.frame} != {frame_num}")
+                    if frame.is_corrupt:
+                        raise ValueError(f"Corrupt video frame")
+                    if iter_frame_num + 1 != frame_num:
+                        raise ValueError(f"AV video frame out of sequence: {iter_frame_num} -> {frame_num}")
+                    iter_frame_num = frame_num
+                    frame_image = frame.to_image().convert("RGB")
+                    frame_input = self._get_frame_input(
+                        image=frame_image,
+                        du_meta=frame_du_meta,
+                    )
+                    # Step through window
+                    if prev_frame is None:
+                        prev_frame = frame_input
+                    elif curr_frame is None:
+                        curr_frame = frame_input
+                    elif next_frame is None:
+                        next_frame = frame_input
+                    else:
+                        prev_frame = curr_frame
+                        curr_frame = next_frame
+                        next_frame = frame_input
+                    # Run stage 1 metrics
+                    if next_frame is not None:
+                        # Process non-first & non-last frame
+                        self._execute_stage_1_metrics_no_batching(
+                            prev_frame=prev_frame,
+                            current_frame=curr_frame,
+                            next_frame=next_frame,
+                            du_hash=du_meta_list[0].du_hash,
+                            frame=iter_frame_num - 1,
+                        )
+                    elif curr_frame is not None:
+                        # Process first frame
+                        self._execute_stage_1_metrics_no_batching(
+                            prev_frame=None,
+                            current_frame=prev_frame,
+                            next_frame=curr_frame,
+                            du_hash=du_meta_list[0].du_hash,
+                            frame=iter_frame_num - 1,
+                        )
+
+                # Process final frame
+                self._execute_stage_1_metrics_no_batching(
+                    prev_frame=curr_frame,
+                    current_frame=next_frame,
+                    next_frame=None,
+                    du_hash=du_meta_list[0].du_hash,
+                    frame=iter_frame_num,
+                )
+
+    def _stage_1_image_no_batching(
+        self,
+        images: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
+        project_dir: Path,
+        project_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+    ):
+        for data_metadata, du_meta in tqdm(
+            images, desc="Metric Computation Stage 1: Images"
+        ):
+            frame_input = self._get_frame_input(
+                image=self._open_image(
+                    uri=du_meta.data_uri, project_dir=project_dir, project_hash=project_hash,
+                    project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                    du_hash=du_meta.du_hash,
+                ),
+                du_meta=du_meta
+            )
+            self._execute_stage_1_metrics_no_batching(
+                prev_frame=None,
+                current_frame=frame_input,
+                next_frame=None,
+                du_hash=du_meta.du_hash,
+                frame=du_meta.frame,
+            )
+
+    def _stage_1_image_batching(
+        self,
+        values: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
+        project_dir: Path,
+        project_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+        batching: int,
+    ) -> None:
+        grouped_values: Dict[Tuple[int, int], List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]]] = {}
+        for data_metadata, du_metadata in values:
+            grouped_values.setdefault((du_metadata.width, du_metadata.height), []).append((data_metadata, du_metadata))
+        for group in grouped_values.values():
+            for i in range(0, len(group), batching):
+                grouped_batch = group[i:i + batching]
+                frame_inputs = [
+                    self._get_frame_input(
+                        image=self._open_image(
+                            uri=du_meta.data_uri, project_dir=project_dir, project_hash=project_hash,
+                            project_ssh_path=project_ssh_path, label_hash=meta.label_hash,
+                            du_hash=du_meta.du_hash,
+                        ),
+                        du_meta=du_meta
+                    )
+                    for meta, du_meta in grouped_batch
+                ]
+
+                batch_inputs = BaseFrameBatchInput(
+                    images=torch.stack([frame.image for frame in frame_inputs]),
+                    images_deps={},
+                    annotations=None, # FIXME: actually assign these values to something correct!!
+                )
+
+                # Execute
+                image_results = {}
+                object_results = {}
+                classification_results = {}
+                for evaluation in self.config.analysis:
+                    metric_result = evaluation.raw_calculate_batch(
+                        prev_frame=None,
+                        frame=batch_inputs,
+                        next_frame=None,
+                    )
+                    non_ephemeral = isinstance(evaluation, BaseAnalysis) or isinstance(evaluation, BaseEmbedding)
+                    if metric_result.images is not None:
+                        batch_inputs.images[evaluation.ident] = metric_result.images
+                        if non_ephemeral:
+                            image_results[evaluation.ident] = metric_result.images
+                    if metric_result.objects is not None:
+                        batch_inputs.annotations.objects_deps[evaluation.ident] = metric_result.objects
+                        if non_ephemeral:
+                            object_results[evaluation.ident] = metric_result.objects
+                    if metric_result.classifications is not None:
+                        batch_inputs.annotations.classifications_deps[evaluation.ident] = metric_result.classifications
+                        if non_ephemeral:
+                            classification_results[evaluation.ident] = metric_result.classifications
+
+    def _open_image(
+        self,
+        uri: Optional[str],
+        project_dir: Path,
+        project_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+        label_hash: uuid.UUID,
+        du_hash: uuid.UUID,
+    ):
+        img_url_or_path = self._get_url_or_path(
+            uri=uri, project_dir=project_dir, project_hash=project_hash,
+            project_ssh_path=project_ssh_path, label_hash=label_hash,
+            du_hash=du_hash,
+        )
+        if isinstance(img_url_or_path, Path):
+            return Image.open(img_url_or_path)
+        return download_image(img_url_or_path, project_dir=project_dir, cache=False)
 
     def _get_url_or_path(
         self,
@@ -216,7 +388,7 @@ class SimpleExecutor(Executor):
         else:
             raise ValueError(f"Cannot resolve project url: {project_hash} / {label_hash} / {du_hash}")
 
-    def _execute_stage_1_metrics(
+    def _execute_stage_1_metrics_no_batching(
         self,
         prev_frame: Optional[BaseFrameInput],
         current_frame: BaseFrameInput,
@@ -286,11 +458,12 @@ class SimpleExecutor(Executor):
                 annotations[obj_hash] = AnnotationMetadata(
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    points=points.to(self.config.device),
-                    mask=mask.to(self.config.device),
+                    points=None if points is None else points.to(self.config.device),
+                    mask=None if mask is None else mask.to(self.config.device),
                     annotation_email=str(obj["createdBy"]),
                     annotation_manual=bool(obj["manualAnnotation"]),
                     annotation_confidence=float(obj["confidence"]),
+                    bounding_box=None if mask is None else masks_to_boxes(mask.unsqueeze(0)).to(self.config.device)
                 )
                 annotations_deps[obj_hash] = {}
         for cls in du_meta.classifications:
@@ -307,6 +480,7 @@ class SimpleExecutor(Executor):
                     annotation_email=str(cls["createdBy"]),
                     annotation_manual=bool(cls["manualAnnotation"]),
                     annotation_confidence=float(cls["confidence"]),
+                    bounding_box=None,
                 )
                 annotations_deps[cls_hash] = {}
 

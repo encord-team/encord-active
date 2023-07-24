@@ -1,5 +1,9 @@
+from typing import Optional
+
+from encord_active.analysis.base import BaseFrameAnnotationBatchInput, BaseFrameBatchOutput
 from encord_active.analysis.metric import OneObjectMetric
-from encord_active.analysis.types import MetricResult, AnnotationMetadata, MetricDependencies
+from encord_active.analysis.types import MetricResult, AnnotationMetadata, MetricDependencies, MetricBatchDependencies, \
+    ImageBatchTensor
 
 
 class DistanceToBorderMetric(OneObjectMetric):
@@ -23,3 +27,12 @@ class DistanceToBorderMetric(OneObjectMetric):
             return 0
         else:
             raise ValueError(f"Border closeness not supported for bitmasks yet!")
+
+    def calculate_batched(
+        self,
+        deps: MetricBatchDependencies,
+        image: ImageBatchTensor,
+        annotation: Optional[BaseFrameAnnotationBatchInput]
+    ) -> BaseFrameBatchOutput:
+        raise ValueError(f"Not yet implemented for batching")
+

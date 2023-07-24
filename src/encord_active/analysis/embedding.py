@@ -1,16 +1,28 @@
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from typing import Optional, Set
-from encord_active.analysis.base import BaseEvaluation, BaseFrameInput, BaseFrameOutput
+
+import torch
+
+from encord_active.analysis.base import BaseEvaluation, BaseFrameInput, BaseFrameOutput, BaseFrameBatchOutput, \
+    BaseFrameBatchInput
+from encord_active.analysis.metric import ObjectOnlyBatchInput
 from encord_active.analysis.types import (
     EmbeddingTensor,
     ImageTensor,
     MaskTensor,
-    PointTensor,
+    PointTensor, ImageBatchTensor, MaskBatchTensor, EmbeddingBatchTensor,
 )
 
 
 class BaseEmbedding(BaseEvaluation, metaclass=ABCMeta):
     pass
+
+
+@dataclass
+class ImageEmbeddingResult:
+    images: EmbeddingBatchTensor
+    objects: Optional[EmbeddingBatchTensor]
 
 
 class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
@@ -51,6 +63,37 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
     def evaluate_embedding(self, image: ImageTensor, mask: Optional[MaskTensor]) -> EmbeddingTensor:
         ...
 
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
+    ) -> BaseFrameBatchOutput:
+        res = self.evaluate_embedding_batched(
+            frame.images,
+            None if frame.annotations else frame.annotations.objects_masks,
+        )
+        classifications = None
+        if frame.annotations is not None:
+            classifications = torch.index_select(
+                res.images,
+                0,
+                frame.annotations.classifications_image_indices
+            )
+        return BaseFrameBatchOutput(
+            images=res.images,
+            objects=res.objects,
+            classifications=classifications,
+        )
+
+    @abstractmethod
+    def evaluate_embedding_batched(
+        self,
+        image: ImageBatchTensor,
+        objects: Optional[ObjectOnlyBatchInput]
+    ) -> ImageEmbeddingResult:
+        ...
+
 
 class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
     def __init__(self, ident: str, dependencies: Set[str], allow_queries: bool = False) -> None:
@@ -71,7 +114,7 @@ class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
         return BaseFrameOutput(image=None, annotations={})
 
     @abstractmethod
-    def evaluate_embedding(self, mask: MaskTensor, points: PointTensor) -> EmbeddingTensor:
+    def evaluate_embedding(self, mask: MaskTensor) -> EmbeddingTensor:
         ...
 
 

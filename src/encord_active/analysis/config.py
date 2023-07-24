@@ -3,17 +3,18 @@ import os
 import torch
 from torch.types import Device
 
-from encord_active.analysis.metrics.object.nearest_neighbor_agreement import (
-    NearestNeighborAgreement,
-)
+from encord_active.analysis.types import NearestNeighbors
 
 from .base import BaseEvaluation
 from .conversions.hsv import RGBToHSV
+from .conversions.grayscale import RGBToGray
 from .embedding import NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
 from .metric import DerivedMetric
-from .metrics.image.area import AreaMetric
+from .metrics.active_learning.uniqueness import ImageUniqueness
+from .metrics.annotation.density import ObjectDensityMetric
+from .metrics.image.area import AreaMetric, AreaRelativeMetric
 from .metrics.image.aspect_ratio import AspectRatioMetric
 from .metrics.image.brightness import BrightnessMetric
 from .metrics.image.colors import HSVColorMetric
@@ -22,9 +23,11 @@ from .metrics.image.height import HeightMetric
 from .metrics.image.random import RandomMetric
 from .metrics.image.sharpness import SharpnessMetric
 from .metrics.image.width import WidthMetric
-from .metrics.object.count import ObjectCountMetric
-from .metrics.object.distance_to_border import DistanceToBorderMetric
-from .metrics.object.maximum_label_iou import MaximumLabelIOUMetric
+from .metrics.annotation.count import ObjectCountMetric
+from .metrics.annotation.nearest_neighbor_agreement import NearestNeighborAgreement
+from .metrics.annotation.distance_to_border import DistanceToBorderMetric
+from .metrics.annotation.maximum_label_iou import MaximumLabelIOUMetric
+from .metrics.sequence.missing_objects_and_wrong_tracks import TemporalMissingObjectsAndWrongTracks
 
 """
 Operations to support tracking for:
@@ -114,38 +117,51 @@ def create_analysis(device: Device) -> AnalysisConfig:
     analysis: list[BaseEvaluation] = [
         # Generate embeddings
         ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
-        HuMomentEmbeddings("embedding_hu_moments"),
+        # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Data conversions
         RGBToHSV(),
-        # Image+object hybrid feature metrics
-        AspectRatioMetric(),
-        AreaMetric(),
-        BrightnessMetric(),
-        ContrastMetric(),
-        # FIXME: re-enable SharpnessMetric(),
-        HSVColorMetric("red", hue_query=0.0),
-        HSVColorMetric("green", hue_query=1 / 3.0),
-        HSVColorMetric("blue", hue_query=2 / 3.0),
-        HeightMetric(),
-        WidthMetric(),
-        RandomMetric(),
-        # Geometric metrics
-        MaximumLabelIOUMetric(),
-        # Heuristic metrics
-        DistanceToBorderMetric(),
-        ObjectCountMetric(),
+        RGBToGray(),
+        # Unified Feature metrics
+        AspectRatioMetric(),  # metric_aspect_ratio
+        AreaMetric(),  # metric_area
+        BrightnessMetric(),  # metric_brightness
+        ContrastMetric(),  # metric_contrast
+        SharpnessMetric(),  # metric_sharpness
+        HSVColorMetric("red", hue_query=0.0),  # metric_red
+        HSVColorMetric("green", hue_query=1 / 3.0),  # metric_green
+        HSVColorMetric("blue", hue_query=2 / 3.0),  # metric_blue
+        HeightMetric(),  # metric_height
+        WidthMetric(),  # metric_width
+        RandomMetric(),  # metric_random
+        # Object only metrics
+        AreaRelativeMetric(),  # metric_area_relative
+        MaximumLabelIOUMetric(),  # metric_max_iou
+        DistanceToBorderMetric(),  # metric_label_border_closeness
+        # Annotation based Frame Metrics
+        ObjectCountMetric(),  # metric_object_count
+        ObjectDensityMetric(),  # metric_object_density ("Frame object density")
+        # Data Only Metrics
+        # metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
+        # metric_label_inconsistent_classification_and_track ("Inconsistent Object Classification and Track IDs")
+        # metric_label_shape_outlier ("Shape outlier detection")
+        # metric_label_poly_similarity ("Polygon Shape Similarity")
+        # Temporal metrics
+        TemporalMissingObjectsAndWrongTracks(),  # metric_label_missing_or_broken_tracks ("Missing Objects and Broken Tracks")
     ]
     derived_embeddings: list[NearestImageEmbeddingQuery] = [
         # Derive properties from embedding
-        # TODO ☝️  The typing needs to be more general eventually
         NearestImageEmbeddingQuery("derived_clip_nearest", "embedding_clip"),
     ]
     derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY
-        NearestNeighborAgreement()
+        NearestNeighborAgreement(),  # metric_annotation_quality
+        ImageUniqueness(),  # metric_image_singularity ("Image Singularity")
     ]
     return AnalysisConfig(
-        analysis=analysis, derived_embeddings=derived_embeddings, derived_metrics=derived_metrics,
+        analysis=analysis,
+        # FIXME?: derived_temporal (derived metrics that have access to analysis values in N frame range)
+        derived_embeddings=derived_embeddings,
+        derived_metrics=derived_metrics,
         device=device,
     )
 

@@ -1,7 +1,11 @@
 import torch
 from typing import Optional
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult
+
+from encord_active.analysis.base import BaseFrameAnnotationBatchInput
+from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ImageObjectOnlyOutputBatch, \
+    ObjectOnlyBatchInput
+from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchDependencies, \
+    ImageBatchTensor, MaskBatchTensor, MetricBatchResult
 
 
 class BrightnessMetric(OneImageMetric):
@@ -21,3 +25,23 @@ class BrightnessMetric(OneImageMetric):
             image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
             mask_total = torch.sum(torch.masked_fill(image_reduced, ~mask, 0), dtype=torch.float32).item()
             return float(mask_total) / (255.0 * mask_count)
+
+    def calculate_batched(
+        self,
+        deps: MetricBatchDependencies,
+        image: ImageBatchTensor,
+        annotation: Optional[ObjectOnlyBatchInput]
+    ) -> ImageObjectOnlyOutputBatch:
+        grayscale = deps["ephemeral_grayscale_image"]
+        objects = None
+        if annotation is not None:
+            masked_count = annotation.objects_deps["metric_area"].type(dtype=torch.float32)
+            mask_grayscale = torch.index_select(image, 0, annotation.objects_image_indices)
+            masked_gray = torch.masked_fill(mask_grayscale, ~annotation.objects_masks, 0)
+            masked_sum = torch.sum(masked_gray, dtype=torch.int64).type(dtype=torch.float32)
+            objects = masked_sum / masked_count
+
+        return ImageObjectOnlyOutputBatch(
+            images=torch.mean(grayscale, dim=(-1, -2), dtype=torch.float32) / 255.0,
+            objects=objects
+        )
