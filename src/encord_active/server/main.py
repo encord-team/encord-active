@@ -32,11 +32,16 @@ if is_dev:
     logger = logging.getLogger(__name__)
     logger.info("Make sure you run the frontend separately.")
 else:
-    # FIXME: change to reference of a build python module or save locally somehow.
-    import encord_active_components as frontend
+    import encord_active_components as frontend_components
 
-    frontend_build_path = Path(frontend.__file__).parent / "frontend" / "dist"
-    # frontend_build_path = Path(__file__).parent.parent.parent.parent / "frontend" / "dist"
+    frontend_build_path = Path(frontend_components.__file__).parent / "frontend" / "dist"
+
+    if not frontend_build_path.exists() or not (frontend_build_path / "assets").exists():
+        logger = logging.getLogger(__name__)
+        logger.error("Cannot find frontend-components:")
+        logger.error(f" {frontend_build_path} does not exist...")
+        raise RuntimeError("Bad encord-active install, frontend-components are missing!!")
+
     app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
 
     @app.get("/")
