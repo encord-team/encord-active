@@ -441,7 +441,12 @@ def __migrate_predictions(
     label_metric_datas = reader.read_label_metric_data(metrics_dir)
     labels = reader.read_labels(predictions_dir, label_metric_datas, prediction_type)
     if gt_matched is None or labels is None or model_predictions is None:
-        raise ValueError("Missing prediction files for migration!")
+        raise ValueError(
+            f"Missing prediction files for migration (False = missing)!\n"
+            f" GT = {gt_matched}\n"
+            f" Labels = {labels}\n"
+            f" Model Predictions = {model_predictions}\n"
+        )
 
     # Setup inverse matching dictionary for calculating the label being matched against the
     gt_matched_inverted_list: List[Tuple[Tuple[int, int, int], int]] = [
@@ -1018,16 +1023,24 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         # Work out what prediction type we are loading and the correct folders to search for both variants of legacy
         # predictions storage. If they exist.
         if not predictions_dir.exists():
-            continue
+            continue  # Case 1: no prediction folder
+
         predictions_child_dirs = list(predictions_dir.iterdir())
         if len(predictions_child_dirs) == 0:
-            continue
+            continue  # Case 2: empty prediction folder
+
+        # Select between different prediction types:
+        #  if no object / classification folder but prediction folder exists => use folder & always object
         names = {child_dir.name for child_dir in predictions_child_dirs}
         if prediction_type.value in names and "predictions.csv" not in names:
             predictions_dir = predictions_dir / prediction_type.value
         elif prediction_type == MainPredictionType.CLASSIFICATION:
             # SKIP, will already be loaded by object classification type
             continue
+
+        # Not check if child folder is valid
+        if not predictions_dir.exists():
+            continue  # Case 3: one of CLASSIFICATION or OBJECT exists
 
         extend_missed_db = __migrate_predictions(
             predictions_dir=predictions_dir,
