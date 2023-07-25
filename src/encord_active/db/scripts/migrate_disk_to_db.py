@@ -708,7 +708,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         project = Project(
             project_hash=project_hash,
             project_name=project_meta["project_title"],
-            project_description=project_meta["project_description"],
+            project_description=project_meta.get("project_description", ""),
             project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
             project_ontology=json.loads(pfs.ontology.read_text(encoding="utf-8")),
         )
