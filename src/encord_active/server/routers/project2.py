@@ -1,7 +1,7 @@
 import uuid
 from typing import Dict, List, Literal, Optional, Tuple, TypedDict
 
-from cachetools import cached, TTLCache
+from cachetools import TTLCache, cached
 from encord.objects import OntologyStructure
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, select
@@ -104,28 +104,18 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
 
     with Session(engine) as sess:
         db_projects = sess.exec(
-            select(
-                Project.project_hash,
-                Project.project_name,
-                Project.project_description,
-                Project.project_ontology
-            )
+            select(Project.project_hash, Project.project_name, Project.project_description, Project.project_ontology)
         ).fetchall()
-        data_count = sess.exec(select(
-            ProjectDataMetadata.project_hash, sql_count()
-        ).group_by(ProjectDataMetadata.project_hash)).fetchall()
-        data_count_dict = {
-            p: c
-            for p, c in data_count
-        }
-        annotation_count = sess.exec(select(
-            ProjectAnnotationAnalytics.project_hash,
-            sql_count()
-        ).group_by(ProjectAnnotationAnalytics.project_hash))
-        annotation_count_dict = {
-            p: c
-            for p, c in annotation_count
-        }
+        data_count = sess.exec(
+            select(ProjectDataMetadata.project_hash, sql_count()).group_by(ProjectDataMetadata.project_hash)
+        ).fetchall()
+        data_count_dict = {p: c for p, c in data_count}
+        annotation_count = sess.exec(
+            select(ProjectAnnotationAnalytics.project_hash, sql_count()).group_by(
+                ProjectAnnotationAnalytics.project_hash
+            )
+        )
+        annotation_count_dict = {p: c for p, c in annotation_count}
     projects = {}
     for project_hash, title, description, ontology in db_projects:
         if str(project_hash) in sandbox_projects:
