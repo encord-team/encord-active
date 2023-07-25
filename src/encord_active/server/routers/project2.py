@@ -129,7 +129,7 @@ def get_all_projects() -> Dict[str, ProjectReturn]:
         if url_timestamp is not None:
             url, timestamp = url_timestamp
         ontology = OntologyStructure.from_dict(ontology)
-        label_classes = len(ontology.objects) + len(ontology.classifications)
+        label_classes = len(ontology.objects) + len(ontology.classifications)  # type: ignore
         projects[str(project_hash)] = ProjectReturn(
             title=title,
             description=description,
