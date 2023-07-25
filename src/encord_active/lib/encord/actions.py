@@ -159,9 +159,9 @@ class EncordActions:
                 # Obtain the data unit hashes of the images contained in the image group
                 new_data_row.refetch_data(images_data_fetch_options=ImagesDataFetchOptions(fetch_signed_urls=False))
                 new_du_hash_to_original_mapping = DataHashMapping()
-                for i, i_data_unit in enumerate(sorted_data_units):
+                for i, du in enumerate(sorted_data_units):
                     image_data = new_data_row.images_data[i]
-                    new_du_hash_to_original_mapping.set(image_data.image_hash, i_data_unit.du_hash)
+                    new_du_hash_to_original_mapping.set(image_data.image_hash, du["data_hash"])
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.VIDEO.value:
