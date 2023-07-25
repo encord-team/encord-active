@@ -102,13 +102,15 @@ class IntegratedAPI implements QueryAPI {
     const { projects } = this;
     const [results, total] = useMemo(() => {
       const results = Object.values(projects)
-        // .filter((project) => project.title.toLowerCase().startsWith(search.toLowerCase()))
+        .filter((project) => project.downloaded)
         .map((project) => ({
           project_hash: project.projectHash,
           title: project.title,
           description: project.description,
         }));
       results.sort((a, b) => (a.title < b.title ? -1 : 1));
+      console.log(results);
+
       return [results.slice(offset, offset + limit), results.length];
     }, [projects, offset, limit]);
     return useQuery(
@@ -537,7 +539,7 @@ export function useProjectsList(): UseQueryResult<
         allData[projectHash] = {
           ...projectMeta,
           imageUrl: (
-              projectMeta.imageUrl.startsWith("https://") || projectMeta.imageUrl.startsWith("https://")
+            projectMeta.imageUrl.startsWith("https://") || projectMeta.imageUrl.startsWith("https://")
           ) ? projectMeta.imageUrl : `${apiUrl}${projectMeta.imageUrl}`,
           baseProjectUrl: `${apiUrl}/projects_v2/${projectHash}`,
         };
