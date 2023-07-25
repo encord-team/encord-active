@@ -440,12 +440,37 @@ def __migrate_predictions(
 
     label_metric_datas = reader.read_label_metric_data(metrics_dir)
     labels = reader.read_labels(predictions_dir, label_metric_datas, prediction_type)
+    if (
+        gt_matched is None
+        and model_predictions is not None
+        and labels is not None
+        and prediction_type == MainPredictionType.CLASSIFICATION
+    ):
+        # Classification prediction projects do not store gt_matched
+        #  generate equivalent function
+        gt_matched = {}
+        for model_prediction in model_predictions.to_dict(orient="records"):
+            pidx = int(model_prediction["Unnamed: 0"])
+            img_id = int(model_prediction["img_id"])
+            class_id = int(model_prediction["class_id"])
+            label_find_f = labels[labels["img_id"] == img_id]
+            label_find = label_find_f[label_find_f["class_id"] == class_id].to_dict(orient="records")
+            if len(label_find) > 0:
+                mapping_list = gt_matched.setdefault(class_id, {}).setdefault(img_id, [])
+                for label_find_entry in label_find:
+                    lidx = int(label_find_entry["Unnamed: 0"])  # type: ignore
+                    mapping_list.append({"lidx": lidx, "pidxs": [pidx]})
+
     if gt_matched is None or labels is None or model_predictions is None:
         raise ValueError(
-            f"Missing prediction files for migration (False = missing)!\n"
-            f" GT = {gt_matched}\n"
-            f" Labels = {labels}\n"
-            f" Model Predictions = {model_predictions}\n"
+            f"Missing prediction files for migration:\n"
+            f" GT exists = {gt_matched is not None}\n"
+            f" Labels exists = {labels is not None}\n"
+            f" Model Predictions exists = {model_predictions is not None}\n"
+            f" ==========\n"
+            f" Prediction dir = {predictions_dir}\n"
+            f" Metric dir = {metrics_dir}\n"
+            f" Prediction type = {prediction_type}\n"
         )
 
     # Setup inverse matching dictionary for calculating the label being matched against the
@@ -467,6 +492,8 @@ def __migrate_predictions(
     model_prediction_best_match_candidates: Dict[Tuple[uuid.UUID, int, str], List[ProjectPredictionAnalytics]] = {}
     model_prediction_unmatched_indices = set(range(len(labels)))
 
+    is_classify = prediction_type == MainPredictionType.CLASSIFICATION
+    generated_classify_hashes = set()
     for model_prediction in model_predictions.to_dict(orient="records"):
         identifier: str = model_prediction.pop("identifier")
         model_prediction.pop("url")
@@ -475,15 +502,19 @@ def __migrate_predictions(
         class_id = int(model_prediction.pop("class_id"))
         feature_hash = class_idx_dict[str(class_id)]["featureHash"]
         confidence = float(model_prediction.pop("confidence"))
-        theta = model_prediction.pop("theta", None)
-        rle = str(model_prediction.pop("rle"))
-        iou = float(model_prediction.pop("iou"))
-        pbb: List[float] = [
-            float(model_prediction.pop("x1")),
-            float(model_prediction.pop("y1")),
-            float(model_prediction.pop("x2")),
-            float(model_prediction.pop("y2")),
-        ]
+        theta = model_prediction.pop("theta", None)  # FIXME ??
+        rle = None if is_classify else str(model_prediction.pop("rle"))
+        iou = 1.0 if is_classify else float(model_prediction.pop("iou"))
+        pbb: List[float] = (
+            []
+            if is_classify
+            else [
+                float(model_prediction.pop("x1")),
+                float(model_prediction.pop("y1")),
+                float(model_prediction.pop("x2")),
+                float(model_prediction.pop("y2")),
+            ]
+        )
         p_metrics: dict = {}
         f_metrics: dict = {}
         metric_name: str
@@ -534,7 +565,15 @@ def __migrate_predictions(
         # Decompose identifier
         label_hash, du_hash_str, frame_str, *object_hashes = identifier.split("_")
         if len(object_hashes) == 0:
-            raise ValueError(f"Missing label hash: {identifier}")
+            if is_classify:
+                # create a fake classification hash (add hardening against duplicate hashes)
+                new_hash = str(uuid.uuid4()).replace("-", "")[:8]
+                while new_hash in generated_classify_hashes:
+                    new_hash = str(uuid.uuid4()).replace("-", "")[:8]
+                generated_classify_hashes.add(new_hash)
+                object_hashes = [new_hash]
+            else:
+                raise ValueError(f"Missing label hash: {identifier}")
         du_hash = uuid.UUID(du_hash_str)
         frame = int(frame_str)
 
@@ -573,7 +612,10 @@ def __migrate_predictions(
         frame_metrics = data_metrics[(du_hash, frame)]
         img_w: int = int(frame_metrics["metric_width"])
         img_h: int = int(frame_metrics["metric_height"])
-        if rle is None or rle == "nan":
+        if is_classify:
+            annotation_type = AnnotationType.CLASSIFICATION
+            annotation_array = np.array([], dtype=np.single)
+        elif rle is None or rle == "nan":
             annotation_type = AnnotationType.BOUNDING_BOX
             annotation_array = np.array(
                 [pb / (img_w if i % 2 == 0 else img_h) for i, pb in enumerate(pbb)], dtype=np.single
@@ -915,7 +957,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                             description="",
                         )
                     )
-                if len(annotation_hashes) == 0 or tag.scope == TagScope.DATA:
+                if len(annotation_hashes) == 0 or metric_tag.scope == TagScope.DATA:
                     project_data_tags.append(
                         ProjectTaggedDataUnit(
                             project_hash=project_hash,
@@ -1032,11 +1074,15 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         # Select between different prediction types:
         #  if no object / classification folder but prediction folder exists => use folder & always object
         names = {child_dir.name for child_dir in predictions_child_dirs}
-        if prediction_type.value in names and "predictions.csv" not in names:
+        if "predictions.csv" not in names:
+            # 1 or 2 predictions for objects / classifications in the child structure
             predictions_dir = predictions_dir / prediction_type.value
         elif prediction_type == MainPredictionType.CLASSIFICATION:
-            # SKIP, will already be loaded by object classification type
+            # 1 prediction for objects - hence classification predictions should be skipped.
             continue
+        else:
+            # 1 prediction for objects at the root folder
+            pass
 
         # Not check if child folder is valid
         if not predictions_dir.exists():
