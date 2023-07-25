@@ -123,28 +123,33 @@ class EncordActions:
                 return new_du_hash_to_original_mapping
 
         elif label_row["data_type"] == DataType.IMG_GROUP.value:
-            sorted_data_units = sorted(
-                (du for du in label_row["data_units"].values() if du["data_hash"] in data_unit_hashes),
-                key=lambda du_key: int(du_key["data_sequence"]),
+            sorted_data_units: list[dict] = sorted(
+                (_du for _du in label_row["data_units"].values() if _du["data_hash"] in data_unit_hashes),
+                key=lambda _du: int(_du["data_sequence"]),
             )
-            image_urls = [
-                data_unit.signed_url
-                for du in sorted_data_units
-                for data_unit in label_row_structure.iter_data_unit(data_unit_hash=du["data_hash"])
+            dus_with_signed_url = [
+                (_du, _data_unit.signed_url)
+                for _du in sorted_data_units
+                for _data_unit in label_row_structure.iter_data_unit(data_unit_hash=_du["data_hash"])
             ]
 
-            if len(image_urls) > 0:
+            if len(dus_with_signed_url) > 0:
                 # create_image_group() method doesn't allow to send data unit names, so their hashes are used instead
                 with tempfile.TemporaryDirectory() as tmpdir:
                     tmp_path = Path(tmpdir)
-                    for idx, image_url in enumerate(image_urls):
+                    image_paths = [
                         download_file(
-                            image_url,
+                            signed_url,
                             project_dir=self.project_file_structure.project_dir,
-                            destination=tmp_path / f"{idx}",
-                        )
+                            destination=tmp_path / f"{_du['data_title'].replace('/', ':')}",
+                            # replace the '/' for ':' in the data unit title to avoid confusing the destination path
+                        ).as_posix()
+                        for _du, signed_url in dus_with_signed_url
+                    ]
 
-                    image_paths = [str(tmp_path / f"{idx}") for idx, _ in enumerate(image_urls)]
+                    # Reverse the image paths because of the undocumented behaviour of `dataset.create_image_group()`
+                    # which creates the image group with the images in the reversed order
+                    image_paths = list(reversed(image_paths))
                     dataset.create_image_group(file_paths=image_paths, title=label_row["data_title"])
                 # Since `create_image_group()` does not return info related to the uploaded images,
                 # we need to find the data hash of the image group in a hacky way
