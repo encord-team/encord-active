@@ -67,7 +67,7 @@ def generate_image_embeddings(
     raw_embeddings: list[np.ndarray] = []
     batch = []
     skip: set[int] = set()
-    for i, (data_unit, image) in enumerate(iterator.iterate(desc="Embedding image data.")):
+    for i, (data_unit, image) in enumerate(iterator.iterate(desc="Embedding image data")):
         if image is None:
             skip.add(i)
             continue
@@ -124,7 +124,7 @@ def generate_object_embeddings(
         feature_extractor = get_default_embedder()
 
     label_embeddings: List[LabelEmbedding] = []
-    for data_unit, image in iterator.iterate(desc="Embedding object data."):
+    for data_unit, image in iterator.iterate(desc="Embedding object data"):
         if image is None:
             continue
 
@@ -191,7 +191,7 @@ def generate_classification_embeddings(
         feature_extractor = get_default_embedder()
 
     clf_label_embeddings = []
-    for data_unit, image in iterator.iterate(desc="Embedding classification data."):
+    for data_unit, image in iterator.iterate(desc="Embedding classification data"):
         if image is None:
             continue
 
@@ -243,7 +243,7 @@ def generate_classification_embeddings(
                                 annotator=classification["createdBy"],
                             )
                         )
-            # NOTE: since we only support one one classification for now
+            # NOTE: since we only support one classification for now
             identified_answers = answers[0] if len(answers) else None
 
             entry = LabelEmbedding(
