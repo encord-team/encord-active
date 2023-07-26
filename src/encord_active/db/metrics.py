@@ -148,7 +148,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         type=MetricType.NORMAL,
     ),
     "metric_label_poly_similarity": MetricDefinition(
-        title="Polygon Simularity",
+        title="Polygon Similarity",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
