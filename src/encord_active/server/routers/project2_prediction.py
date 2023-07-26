@@ -22,7 +22,11 @@ from encord_active.server.routers.queries.domain_query import (
     TABLES_PREDICTION_FN,
     TABLES_PREDICTION_TP_FP,
 )
-from encord_active.server.routers.queries.metric_query import sql_count, sql_sum
+from encord_active.server.routers.queries.metric_query import (
+    literal_bucket_depends,
+    sql_count,
+    sql_sum,
+)
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
@@ -328,7 +332,6 @@ def get_project_prediction_summary(
         )
         importance[metric_name] = float(importance_regression[0])
 
-    print(precision_recall)
     return {
         "mAP": sum(pr["ap"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
         "mAR": sum(pr["ar"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
@@ -350,7 +353,7 @@ def get_project_prediction_summary(
 def prediction_metric_distribution(
     prediction_hash: uuid.UUID,
     group: str,
-    buckets: Literal[10, 100, 1000] = 10,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     # FIXME: prediction_domain!!! (this & scatter) both need it implemented
@@ -375,7 +378,7 @@ def prediction_metric_scatter(
     prediction_hash: uuid.UUID,
     x_metric: str,
     y_metric: str,
-    buckets: Literal[10, 100, 1000] = 10,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     with Session(engine) as sess:
@@ -398,7 +401,7 @@ def prediction_metric_performance(
     prediction_hash: uuid.UUID,
     iou: float,
     metric_name: str,
-    buckets: Literal[10, 100, 1000] = 100,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     where_tp_fp = search_query.search_filters(

@@ -20,6 +20,7 @@ from encord_active.server.routers.queries.domain_query import (
     DomainTables,
     Tables,
 )
+from encord_active.server.routers.queries.metric_query import literal_bucket_depends
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
@@ -114,7 +115,7 @@ def scatter_2d_data_metric(
     domain: AnalysisDomain,
     x_metric: str,
     y_metric: str,
-    buckets: Literal[10, 100, 1000] = 1000,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(1000),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)
@@ -135,7 +136,7 @@ def get_metric_distribution(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     group: str,
-    buckets: Literal[10, 100, 1000] = 100,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)
@@ -157,7 +158,7 @@ def get_2d_embedding_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,
-    buckets: Literal[10, 100, 1000] = 10,
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)

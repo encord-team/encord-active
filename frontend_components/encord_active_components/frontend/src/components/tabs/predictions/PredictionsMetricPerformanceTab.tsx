@@ -5,32 +5,16 @@ import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredict
 
 const bucketOptions: { label: number; value: number }[] = [
   {
+    label: 1000,
+    value: 1000,
+  },
+  {
     label: 100,
     value: 100,
   },
   {
-    label: 50,
-    value: 50,
-  },
-  {
-    label: 40,
-    value: 40,
-  },
-  {
-    label: 30,
-    value: 30,
-  },
-  {
-    label: 20,
-    value: 20,
-  },
-  {
     label: 10,
     value: 10,
-  },
-  {
-    label: 5,
-    value: 5,
   },
 ];
 
@@ -61,7 +45,7 @@ export function PredictionsMetricPerformanceTab(props: {
       })),
     [metricsSummary]
   );
-  const [bucketCount, setBucketCount] = useState(50);
+  const [bucketCount, setBucketCount] = useState(10);
   const [classList, setClassList] = useState<string[]>([]);
 
   const queryPerformance = queryAPI.useProjectPredictionMetricPerformance(
@@ -82,8 +66,8 @@ export function PredictionsMetricPerformanceTab(props: {
     [featureHashMap]
   );
 
-  const scoreLabel =
-    metricsSummary.metrics[selectedMetric ?? ""]?.title ?? "Unknown";
+  const scoreLabel = selectedMetric == null ? "No Metric Selected" :
+    metricsSummary.metrics[selectedMetric]?.title ?? "Unknown";
 
   return (
     <>
