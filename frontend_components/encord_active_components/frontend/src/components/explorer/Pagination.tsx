@@ -4,7 +4,7 @@ import { classy } from "../../helpers/classy";
 
 const pageSizes = [20, 40, 60, 80] as const;
 const defaultPageSize = pageSizes[0];
-export type PageSize = typeof pageSizes[number];
+export type PageSize = (typeof pageSizes)[number];
 
 export const usePagination = <T extends any>(items: T[]) => {
   const [page, setPage] = useState(1);
