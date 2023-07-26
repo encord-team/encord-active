@@ -31,33 +31,83 @@ export function PredictionSummaryTab(props: {
     debounceIOU
   );
 
+  const classificationOnlyProject = predictionSummaryData?.classification_only !== false;
+
+  // FIXME: expose all information for classifications!!
+  // classification
+  // Average Precision = TP / (TP + FP)
+  // Average Recall = TP / (TP + FN)
+  // Average Accuracy = (TP + TN) / (TP + FP + FN) {FN makes only fo classifications}
+  // FN (currently) = {num_frames * feature_hashes} - tp - fp - fn
+  // So need num_frames as exposed value (only used for classification project).
+  const cTP = predictionSummaryData?.tTP ?? 0;
+  const cFP = predictionSummaryData?.tFP ?? 0;
+  const cFN = predictionSummaryData?.tFN ?? 0;
+  const cNF = predictionSummaryData?.num_frames ?? 0;
+  const cTN = cNF - cFN - cFP - cTP;// FIXME: wrong if multiple classifications per frame is allowed
+
   return (
     <>
-      <Row align="middle">
-        <Typography.Text strong>IOU:</Typography.Text>
-        <Slider
-          value={iou}
-          onChange={setIOU}
-          min={0}
-          max={1}
-          step={0.01}
-          style={{ width: 300 }}
-        />
-      </Row>
-      <Divider />
+       {classificationOnlyProject ? null : (
+        <>
+          <Row align="middle">
+            <Typography.Text strong>IOU:</Typography.Text>
+            <Slider
+              value={iou}
+              onChange={setIOU}
+              min={0}
+              max={1}
+              step={0.01}
+              style={{ width: 300 }}
+            />
+          </Row>
+          <Divider />
+         </>
+      )}
       <Row wrap justify="space-evenly">
-        <Card bordered={false} loading={predictionSummaryData == null}>
-          <Statistic
-            title="mAP"
-            value={(predictionSummaryData?.mAP ?? 0).toFixed(3)}
-          />
-        </Card>
-        <Card bordered={false} loading={predictionSummaryData == null}>
-          <Statistic
-            title="mAR"
-            value={(predictionSummaryData?.mAR ?? 0).toFixed(3)}
-          />
-        </Card>
+        {classificationOnlyProject ? (
+          <>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="Average Precision"
+                value={(
+                    cTP / (cTP + cFP)
+                ).toFixed(3)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="Average Recall"
+                value={(
+                    cTP / (cTP + cFN)
+                ).toFixed(3)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="Average Accuracy"
+                value={(
+                    (cTP + cTN) / (cTP + cFN + cFP)
+                ).toFixed(3)}
+              />
+            </Card>
+          </>
+        ) : (
+            <>
+                <Card bordered={false} loading={predictionSummaryData == null}>
+                  <Statistic
+                    title="mAP"
+                    value={(predictionSummaryData?.mAP ?? 0).toFixed(3)}
+                  />
+                </Card>
+                <Card bordered={false} loading={predictionSummaryData == null}>
+                  <Statistic
+                    title="mAR"
+                    value={(predictionSummaryData?.mAR ?? 0).toFixed(3)}
+                  />
+                </Card>
+            </>
+        )}
         <Card bordered={false} loading={predictionSummaryData == null}>
           <Statistic
             title="True Positives"

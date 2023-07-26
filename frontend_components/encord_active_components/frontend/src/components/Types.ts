@@ -305,6 +305,8 @@ export type PaginationResult<T> = {
 };
 
 export type ProjectPredictionSummary = {
+  readonly classification_only: boolean;
+  readonly num_frames: number;
   readonly mAP: number;
   readonly mAR: number;
   readonly tTP: number;

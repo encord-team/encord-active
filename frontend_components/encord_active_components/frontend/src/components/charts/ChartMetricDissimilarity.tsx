@@ -41,7 +41,7 @@ export function ChartMetricDissimilarity(props: {
     if (data === undefined) {
       return [];
     }
-    const getColor = scaleLinear([0.0, 1], ["#ffffff", "#0000ef"]);
+    const getColor = scaleLinear([0.0, 1], ["#7bfdee", "#0000ef"]);
     const results = Object.entries(data.results).map(
       ([metricKey, dissimilarity]) => ({
         metric: metricsSummary.metrics[metricKey]?.title ?? metricKey,
