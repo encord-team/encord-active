@@ -82,48 +82,47 @@ export const Explorer = ({
   >();
   const [iou, setIou] = useState<number | undefined>();
 
-  const [newFilters, setNewFilters] =
-    useState<FilterState>(DefaultFilters);
+  const [newFilters, setNewFilters] = useState<FilterState>(DefaultFilters);
 
-  const rawFilters = useMemo(
-    () => {
-      const range = Object.fromEntries(
-        Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [k, { min, max }])
-      );
-      let tagData: string[] = [];
-      let tagLabel: string[] = [];
-      let labelClass = undefined;
-      Object.entries(newFilters.enumFilters).forEach(([kEnum, kValues]) => {
-        if (kEnum == "label_tags") {
-          tagLabel = [...kValues];
-        } else if (kEnum == "data_tags") {
-          tagData = [...kValues];
-        } else if (kEnum == "feature_hash") {
-          labelClass = [...kValues];
-        } else {
-          throw Error("Unknown Enum Filter")
-        }
-      })
-      return ({
-        range: range,
-        tags: {
-          data: tagData,
-          label: tagLabel,
-        },
-        object_classes: labelClass,
-        ...(scope === "prediction" && predictionType
-          ? {
+  const rawFilters = useMemo(() => {
+    const range = Object.fromEntries(
+      Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [
+        k,
+        { min, max },
+      ]),
+    );
+    let tagData: string[] = [];
+    let tagLabel: string[] = [];
+    let labelClass = undefined;
+    Object.entries(newFilters.enumFilters).forEach(([kEnum, kValues]) => {
+      if (kEnum == "label_tags") {
+        tagLabel = [...kValues];
+      } else if (kEnum == "data_tags") {
+        tagData = [...kValues];
+      } else if (kEnum == "feature_hash") {
+        labelClass = [...kValues];
+      } else {
+        throw Error("Unknown Enum Filter");
+      }
+    });
+    return {
+      range: range,
+      tags: {
+        data: tagData,
+        label: tagLabel,
+      },
+      object_classes: labelClass,
+      ...(scope === "prediction" && predictionType
+        ? {
             prediction_filters: {
               type: predictionType,
               outcome: predictionOutcome,
               iou_threshold: iou,
             },
           }
-          : {}),
-      } as Filters);
-    },
-    [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]
-  );
+        : {}),
+    } as Filters;
+  }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
   const filters = useDebounce(rawFilters, 500);
   const apiContext = useContext(ApiContext);
   let api: ReturnType<typeof getApi>;
@@ -138,12 +137,12 @@ export const Explorer = ({
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
     api.fetchHasPremiumFeatures,
-    { staleTime: Infinity }
+    { staleTime: Infinity },
   );
   const { data: hasSimilaritySearch } = useQuery(
     sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric, staleTime: Infinity }
+    { enabled: !!selectedMetric, staleTime: Infinity },
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
@@ -151,9 +150,9 @@ export const Explorer = ({
     () =>
       api.fetchSimilarItems(
         similarityItem!,
-        scope === "prediction" ? "image" : selectedMetric?.embeddingType!
+        scope === "prediction" ? "image" : selectedMetric?.embeddingType!,
       ),
-    { enabled: !!similarityItem && !!selectedMetric }
+    { enabled: !!similarityItem && !!selectedMetric },
   );
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
@@ -170,7 +169,7 @@ export const Explorer = ({
     {
       enabled: !!selectedMetric && predictionTypeFound,
       staleTime: Infinity,
-    }
+    },
   );
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
     [
@@ -183,51 +182,58 @@ export const Explorer = ({
     {
       enabled: predictionTypeFound,
       staleTime: Infinity,
-    }
+    },
   );
 
-  const { allDataTags, allLabelTags } = useAllTags()
+  const { allDataTags, allLabelTags } = useAllTags();
   const filterMetricSummary = useMemo((): ProjectMetricSummary => {
-    const metricSummary: Record<string, ProjectMetricSummary['metrics'][string]> = {};
+    const metricSummary: Record<
+      string,
+      ProjectMetricSummary["metrics"][string]
+    > = {};
     if (metrics != null) {
       metrics.data.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
           long_desc: "",
-          type: "ufloat"
-        }
+          type: "ufloat",
+        };
       });
       metrics.annotation.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
           long_desc: "",
-          type: "ufloat"
-        }
+          type: "ufloat",
+        };
       });
       metrics.prediction.forEach(({ name }) => {
         metricSummary[name] = {
           title: name,
           short_desc: "",
           long_desc: "",
-          type: "ufloat"
-        }
+          type: "ufloat",
+        };
       });
     }
-    const labelValues = Object.fromEntries(([...allLabelTags]).map((v) => [v, v]));
-    const dataValues = Object.fromEntries(([...allDataTags]).map((v) => [v, v]));
+    const labelValues = Object.fromEntries(
+      [...allLabelTags].map((v) => [v, v]),
+    );
+    const dataValues = Object.fromEntries([...allDataTags].map((v) => [v, v]));
     return {
       metrics: metricSummary,
       enums: {
-        "label_tags": { type: "enum", title: "Label Tags", values: labelValues },
-        "data_tags": { type: "enum", title: "Data Tags", values: dataValues },
-        "feature_hash": { type: "ontology" }
-      }
-    }
+        label_tags: { type: "enum", title: "Label Tags", values: labelValues },
+        data_tags: { type: "enum", title: "Data Tags", values: dataValues },
+        feature_hash: { type: "ontology", title: "Ontology" },
+      },
+    };
   }, [metricsSummary, metrics, allDataTags, allLabelTags]);
   const filterLabelClassMap = useMemo(() => {
-    const res = Object.fromEntries(Object.values(featureHashMap).map((v) => [v.name, v]));
+    const res = Object.fromEntries(
+      Object.values(featureHashMap).map((v) => [v.name, v]),
+    );
     res["No class"] = {
       name: "No class",
       color: "",
@@ -238,7 +244,7 @@ export const Explorer = ({
   const withSortOrder = useMemo(
     () =>
       isAscending ? sortedItems || [] : [...(sortedItems || [])].reverse(),
-    [isAscending, sortedItems]
+    [isAscending, sortedItems],
   );
 
   const {
@@ -350,7 +356,7 @@ export const Explorer = ({
             "w-full flex flex-col gap-5 items-center pb-5 m-auto",
             {
               hidden: previewedItem,
-            }
+            },
           )}
         >
           {/* TODO: move model predictions embeddings plot to FE */}
@@ -360,9 +366,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                    ...item,
-                    id: id.slice(0, id.lastIndexOf("_")),
-                  }))
+                      ...item,
+                      id: id.slice(0, id.lastIndexOf("_")),
+                    }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -388,8 +394,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                      ? "missing-target"
-                      : undefined
+                    ? "missing-target"
+                    : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -399,7 +405,7 @@ export const Explorer = ({
                   <select
                     onChange={(event) =>
                       setSelectedMetric(
-                        JSON.parse(event.target.value) as Metric
+                        JSON.parse(event.target.value) as Metric,
                       )
                     }
                     className="select select-bordered focus:outline-none"
@@ -417,10 +423,10 @@ export const Explorer = ({
                                 >
                                   {metric.name}
                                 </option>
-                              )
+                              ),
                             )}
                           </optgroup>
-                        )
+                        ),
                     )}
                   </select>
                   <label
@@ -474,7 +480,7 @@ export const Explorer = ({
                       metricRanges={Object.fromEntries(
                         Object.values(metrics || {})
                           .flat()
-                          ?.map(({ name, range }) => [name, range]) ?? []
+                          ?.map(({ name, range }) => [name, range]) ?? [],
                       )}
                       featureHashMap={filterLabelClassMap}
                     />
@@ -638,7 +644,7 @@ const PredictionFilters = ({
           onOutcomeChange(
             value === ALL_PREDICTION_OUTCOMES
               ? undefined
-              : (value as PredictionOutcome)
+              : (value as PredictionOutcome),
           )
         }
       >
@@ -688,13 +694,13 @@ const Embeddings = ({
 }) => {
   const { isLoading, data: scatteredEmbeddings } = useApi().fetch2DEmbeddings(
     embeddingType,
-    filters
+    filters,
   );
 
   const filtered = useMemo(() => {
     const ids = new Set(idValues.map(({ id }) => id));
     return scatteredEmbeddings?.filter(
-      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_")))
+      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_"))),
     );
   }, [JSON.stringify(idValues), JSON.stringify(scatteredEmbeddings)]);
 
@@ -708,7 +714,7 @@ const Embeddings = ({
   ) : (
     <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
       {isLoading || isloadingItems ? (
-        <div className="absolute" style={{left: "50%"}}>
+        <div className="absolute" style={{ left: "50%" }}>
           <Spin />
         </div>
       ) : (
@@ -860,7 +866,8 @@ const GalleryItem = ({
     );
 
   const [metricName, value] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) => metric.toLowerCase() === selectedMetric?.name.toLowerCase()
+    ([metric, _]) =>
+      metric.toLowerCase() === selectedMetric?.name.toLowerCase(),
   ) || [selectedMetric?.name, ""];
   const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
   const displayValue =
@@ -956,10 +963,10 @@ const GalleryItem = ({
 const getObjects = (item: Item) => {
   const { objectHash } = splitId(item.id);
   const object = item.labels.objects.find(
-    (object) => object.objectHash === objectHash
+    (object) => object.objectHash === objectHash,
   );
   const prediction = item.predictions.objects.find(
-    (object) => object.objectHash === objectHash
+    (object) => object.objectHash === objectHash,
   );
 
   if (object) return [object];
@@ -974,7 +981,7 @@ type ItemLabelObject = Item["labels"]["objects"][0];
 const pointsRecordToPolygonPoints = (
   points: ItemLabelObject["points"],
   width: number,
-  height: number
+  height: number,
 ) =>
   Object.values(points)
     .map(({ x, y }) => `${x * width},${y * height}`)
@@ -1011,12 +1018,13 @@ const ImageWithPolygons = ({
         points,
         shape,
         boundingBoxPoints,
-      }))
+      })),
     );
   }, [width, height, item.id]);
-  const itemUrl = (
+  const itemUrl =
     item.url.startsWith("https://") || item.url.startsWith("https://")
-  ) ? item.url : `${apiUrl}${item.url}`;
+      ? item.url
+      : `${apiUrl}${item.url}`;
   return (
     <figure {...rest} className={classy("relative", className)}>
       {item.videoTimestamp != null ? (
@@ -1078,7 +1086,7 @@ const ImageWithPolygons = ({
                       points={pointsRecordToPolygonPoints(
                         points,
                         width,
-                        height
+                        height,
                       )}
                     />
                     {boundingBoxPoints && (
@@ -1093,14 +1101,14 @@ const ImageWithPolygons = ({
                         points={pointsRecordToPolygonPoints(
                           boundingBoxPoints,
                           width,
-                          height
+                          height,
                         )}
                       />
                     )}
                   </>
                 )}
               </>
-            )
+            ),
           )}
         </svg>
       )}
