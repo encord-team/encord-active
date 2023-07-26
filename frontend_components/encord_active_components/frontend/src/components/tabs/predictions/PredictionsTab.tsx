@@ -51,16 +51,20 @@ export function PredictionsTab(
 
   return (
     <>
-      <Space align="center" wrap>
-        <Typography.Text strong>Prediction: </Typography.Text>
-        <Select
-          value={predictionHash}
-          options={allPredictionOptions ?? []}
-          onChange={setPredictionHash}
-          style={{width: 300}}
-        />
-      </Space>
-      <Divider />
+        {allPredictionOptions != null && allPredictionOptions.length > 1 ? (
+            <>
+                <Space align="center" wrap>
+                    <Typography.Text strong>Prediction: </Typography.Text>
+                    <Select
+                      value={predictionHash}
+                      options={allPredictionOptions ?? []}
+                      onChange={setPredictionHash}
+                      style={{width: 300}}
+                    />
+                </Space>
+                <Divider />
+            </>
+        ) : null}
       {predictionHash === undefined ? null : (
         <Tabs
           items={[
