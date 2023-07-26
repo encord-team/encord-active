@@ -171,7 +171,7 @@ export const Explorer = ({
       staleTime: Infinity,
     },
   );
-  const { data: metrics, isLoading: isLoadingMetrics } = useQuery(
+  const { data: metrics, isFetching: isLoadingMetrics } = useQuery(
     [
       projectHash,
       scope,
@@ -400,7 +400,7 @@ export const Explorer = ({
               >
                 <BulkTaggingForm items={[...selectedItems]} />
               </TaggingDropdown>
-              {metrics && totalMetricsCount && (
+              {metrics && !!totalMetricsCount && (
                 <label className="input-group  w-auto">
                   <select
                     onChange={(event) =>
@@ -413,7 +413,7 @@ export const Explorer = ({
                   >
                     {Object.entries(metrics).map(
                       ([scope, scopedMetrics]) =>
-                        scopedMetrics.length && (
+                        !!scopedMetrics.length && (
                           <optgroup label={`${capitalize(scope)} Metrics`}>
                             {metrics[scope as keyof typeof metrics].map(
                               (metric) => (
@@ -613,7 +613,7 @@ const PredictionFilters = ({
   }, [iou, drag]);
 
   if (isLoading) return <Spin />;
-  if (!predictionTypes) return null;
+  if (!predictionTypes?.length) return null;
 
   const outcomes =
     predictionType === "object"
@@ -979,7 +979,7 @@ const getObjects = (item: Item) => {
 type ItemLabelObject = Item["labels"]["objects"][0];
 
 const pointsRecordToPolygonPoints = (
-  points: ItemLabelObject["points"],
+  points: NonNullable<ItemLabelObject["points"]>,
   width: number,
   height: number,
 ) =>
@@ -1052,63 +1052,67 @@ const ImageWithPolygons = ({
       {width && height && polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(
-            ({ points, boundingBoxPoints, color, shape }, index) => (
-              <>
-                {shape === "point" ? (
-                  <>
-                    <circle
-                      key={index + "_inner"}
-                      cx={points[0].x}
-                      cy={points[0].y}
-                      r="5px"
-                      fill={color}
-                    />
-                    <circle
-                      key={index + "_outer"}
-                      cx={points[0].x}
-                      cy={points[0].y}
-                      r="7px"
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="1px"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <polygon
-                      key={index + "_polygon"}
-                      style={{
-                        fill: shape === "polyline" ? "none" : color,
-                        fillOpacity: ".20",
-                        stroke: color,
-                        strokeWidth: "2px",
-                      }}
-                      points={pointsRecordToPolygonPoints(
-                        points,
-                        width,
-                        height,
-                      )}
-                    />
-                    {boundingBoxPoints && (
-                      <polygon
-                        key={index + "_box"}
-                        style={{
-                          fill: shape === "polyline" ? "none" : color,
-                          fillOpacity: ".40",
-                          stroke: color,
-                          strokeWidth: "4px",
-                        }}
-                        points={pointsRecordToPolygonPoints(
-                          boundingBoxPoints,
-                          width,
-                          height,
-                        )}
+            ({ points, boundingBoxPoints, color, shape }, index) => {
+              return (
+                <>
+                  {shape === "point" && points ? (
+                    <>
+                      <circle
+                        key={index + "_inner"}
+                        cx={points[0].x}
+                        cy={points[0].y}
+                        r="5px"
+                        fill={color}
                       />
-                    )}
-                  </>
-                )}
-              </>
-            ),
+                      <circle
+                        key={index + "_outer"}
+                        cx={points[0].x}
+                        cy={points[0].y}
+                        r="7px"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="1px"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {points && (
+                        <polygon
+                          key={index + "_polygon"}
+                          style={{
+                            fill: shape === "polyline" ? "none" : color,
+                            fillOpacity: ".20",
+                            stroke: color,
+                            strokeWidth: "2px",
+                          }}
+                          points={pointsRecordToPolygonPoints(
+                            points,
+                            width,
+                            height,
+                          )}
+                        />
+                      )}
+                      {boundingBoxPoints && (
+                        <polygon
+                          key={index + "_box"}
+                          style={{
+                            fill: shape === "polyline" ? "none" : color,
+                            fillOpacity: ".40",
+                            stroke: color,
+                            strokeWidth: "4px",
+                          }}
+                          points={pointsRecordToPolygonPoints(
+                            boundingBoxPoints,
+                            width,
+                            height,
+                          )}
+                        />
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            },
           )}
         </svg>
       )}
