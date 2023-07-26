@@ -58,7 +58,7 @@ export function ChartMetricDissimilarity(props: {
       width="100%"
       height={Math.max(40 * barData.length, 120)}
     >
-      <BarChart data={barData} layout="vertical">
+      <BarChart data={barData} layout="vertical" className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
         <YAxis name="Metric" type="category" dataKey="metric" />
         <XAxis name="Score" type="number" domain={[0.0, 1.0]} />

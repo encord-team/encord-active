@@ -41,6 +41,7 @@ export type ProjectMetricSummary = {
     readonly [enum_key: string]:
     | {
       readonly type: "ontology";
+      readonly title: string;
     }
     | {
       readonly type: "enum";

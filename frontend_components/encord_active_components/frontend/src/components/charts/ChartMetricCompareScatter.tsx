@@ -99,9 +99,9 @@ export function ChartMetricCompareScatter(props: {
     <>
       <Space align="center" wrap>
         <Typography.Text strong>X Metric: </Typography.Text>
-        <Select value={xMetric} onChange={setXMetric} options={metricOptions} />
+        <Select value={xMetric} onChange={setXMetric} options={metricOptions} style={{width: 265}}/>
         <Typography.Text strong>Y Metric: </Typography.Text>
-        <Select value={yMetric} onChange={setYMetric} options={metricOptions} />
+        <Select value={yMetric} onChange={setYMetric} options={metricOptions} style={{width: 265}}/>
         {allowTrend ? (
           <>
             <Typography.Text strong>Show trend: </Typography.Text>
@@ -113,7 +113,7 @@ export function ChartMetricCompareScatter(props: {
         ) : null}
       </Space>
       <ResponsiveContainer width="100%" height={400}>
-        <ScatterChart>
+        <ScatterChart className="active-chart">
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="x"
@@ -122,6 +122,7 @@ export function ChartMetricCompareScatter(props: {
               value: metricsSummary.metrics[xMetric ?? ""]?.title ?? "x",
               angle: 0,
               position: "insideBottom",
+              offset: -3,
             }}
             name={metricsSummary.metrics[xMetric ?? ""]?.title ?? "x"}
           />

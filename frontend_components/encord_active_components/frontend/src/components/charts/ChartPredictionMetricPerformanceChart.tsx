@@ -192,7 +192,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
 
   return (
     <ResponsiveContainer width="100%" height={500}>
-      <ComposedChart data={barCharts}>
+      <ComposedChart data={barCharts} className="active-chart">
         <XAxis
           dataKey="m"
           type="category"
