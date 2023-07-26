@@ -45,7 +45,7 @@ export function ProjectComparisonTab(props: {
           </Row>
         </Col>
         <Col span={12}>
-          <Typography.Text strong>Domain: </Typography.Text>
+          <Typography.Text strong>Scope: </Typography.Text>
           <Select
             onChange={setDomain}
             value={domain}

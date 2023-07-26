@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import {useEffect, useMemo, useState} from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
@@ -36,6 +36,18 @@ export function PredictionsTab(
     [allPredictions]
   );
   const [currentTab, setCurrentTab] = useState("0");
+
+  // Auto-select prediction if one exists.
+  useEffect(() => {
+    if (allPredictionOptions != null && allPredictionOptions.length >= 1 && predictionHash == null) {
+        setPredictionHash(allPredictionOptions[0].value);
+    }
+  }, [predictionHash, allPredictionOptions]);
+
+  // No prediction can be selected
+  if (allPredictionOptions != null && allPredictionOptions.length === 0 && predictionHash == null) {
+      return <Typography.Title>No Predictions for Active Project</Typography.Title>
+  }
 
   return (
     <>
