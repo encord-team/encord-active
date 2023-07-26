@@ -29,7 +29,11 @@ export function UploadToEncordModal(props: {
       title="Upload Project to Encord"
       okText="Upload"
       onCancel={close}
-      okButtonProps={{ loading: mutateCreateSubset.isLoading }}
+      okButtonProps={{
+        loading: mutateCreateSubset.isLoading,
+        style: { backgroundColor: "#5555ff" }
+      }}
+      cancelButtonProps={{ disabled: mutateCreateSubset.isLoading }}
       onOk={() => {
         form
           .validateFields()
