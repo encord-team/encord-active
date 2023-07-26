@@ -76,10 +76,10 @@ export function ChartPredictionRecallCurve(props: {
 
   return (
     <ResponsiveContainer width="100%" height={500}>
-      <ScatterChart>
+      <ScatterChart className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="r" name="Recall" type="number" domain={[0.0, 1.0]} />
-        <YAxis dataKey="p" name="Precision" type="number" domain={[0.0, 1.0]} />
+        <YAxis dataKey="p" name="Precision" type="number" domain={[0.0, 1.0]} width={150}/>
         <Tooltip formatter={formatTooltip} labelFormatter={() => null} />
         <Legend
           onMouseEnter={(e: { value: string }) => setHoverKeyword(e.value)}

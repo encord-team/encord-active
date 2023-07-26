@@ -52,7 +52,7 @@ export function ChartOutlierSummaryBar(props: {
   // Bar chart
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={barData ?? []}>
+      <BarChart data={barData ?? []} className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="metric"
@@ -61,6 +61,7 @@ export function ChartOutlierSummaryBar(props: {
             value: "Metrics",
             angle: 0,
             position: "insideBottom",
+            offset: -3,
           }}
         />
         <YAxis

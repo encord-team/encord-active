@@ -43,18 +43,11 @@ export function ChartDistributionBar(props: {
         value: metricKey,
       })
     );
-    Object.entries(metricsSummary.enums).forEach(([enumName]) => {
-      if (enumName === "feature_hash") {
-        properties.push({
-          label: "Label Class",
-          value: "feature_hash",
-        });
-      } else {
-        properties.push({
-          label: enumName,
-          value: enumName,
-        });
-      }
+    Object.entries(metricsSummary.enums).forEach(([enumName, enumMeta]) => {
+      properties.push({
+        label: enumMeta.title,
+        value: enumName,
+      });
     });
     return properties;
   }, [metricsSummary]);
@@ -134,6 +127,7 @@ export function ChartDistributionBar(props: {
           value={selectedProperty}
           onChange={setSelectedProperty}
           options={allProperties}
+          style={{width: 265}}
         />
         {!isMetric ? null : (
           <>
@@ -146,11 +140,11 @@ export function ChartDistributionBar(props: {
         )}
       </Space>
       <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={barData}>
+        <BarChart data={barData} className="active-chart">
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="group"
-            label={{ value: "Metrics", angle: 0, position: "insideBottom" }}
+            label={{ value: "Metrics", angle: 0, position: "insideBottom", offset: -3, }}
           />
           <YAxis
             label={{

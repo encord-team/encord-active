@@ -48,7 +48,7 @@ export function ChartPredictionMetricVBar(props: {
     const getColor =
       predictionMetric === "correlations"
         ? scaleLinear([-1.0, 1.0], ["#ef4444", "#22c55e"])
-        : scaleLinear([0.0, 1], ["#ffffff", "#0000ef"]);
+        : scaleLinear([0.0, 1], ["#7bfdee", "#0000ef"]);
     return barData.map((data) => ({ ...data, fill: getColor(data.score) }));
   }, [barData, predictionMetric]);
 
@@ -68,12 +68,13 @@ export function ChartPredictionMetricVBar(props: {
       width="100%"
       height={Math.max(40 * barData.length, 120)}
     >
-      <BarChart data={formattedBarData} layout="vertical">
+      <BarChart data={formattedBarData} layout="vertical" className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
         <YAxis
           name={metricsSummary != null ? "Metric" : "Class"}
           type="category"
           dataKey="group"
+          width={150}
         />
         <XAxis
           name="Score"
