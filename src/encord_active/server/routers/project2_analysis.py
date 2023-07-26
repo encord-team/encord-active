@@ -135,7 +135,7 @@ def get_metric_distribution(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     group: str,
-    buckets: Literal[10, 100, 1000] = 10,
+    buckets: Literal[10, 100, 1000] = 100,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ):
     tables = _get_metric_domain_tables(domain)

@@ -149,6 +149,7 @@ export function SummaryTab(props: {
       <Card type="inner" bordered={false}>
         <ChartMetricCompareScatter
           metricsSummary={metricsSummary}
+          analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
           queryAPI={queryAPI}
@@ -161,6 +162,7 @@ export function SummaryTab(props: {
       <Card type="inner" bordered={false}>
         <ChartDistributionBar
           metricsSummary={metricsSummary}
+          analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
           queryAPI={queryAPI}

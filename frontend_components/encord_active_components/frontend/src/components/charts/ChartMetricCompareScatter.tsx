@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { scaleLinear } from "d3-scale";
 import {
-  ProjectAnalysisDomain,
+  ProjectAnalysisDomain, ProjectAnalysisSummary,
   ProjectMetricSummary,
   QueryAPI,
 } from "../Types";
@@ -19,6 +19,7 @@ import { formatTooltip } from "../util/Formatter";
 
 export function ChartMetricCompareScatter(props: {
   metricsSummary: ProjectMetricSummary;
+  analysisSummary?: undefined | ProjectAnalysisSummary;
   analysisDomain: ProjectAnalysisDomain;
   projectHash: string;
   compareProjectHash?: string | undefined;
@@ -27,6 +28,7 @@ export function ChartMetricCompareScatter(props: {
 }) {
   const {
     metricsSummary,
+    analysisSummary,
     analysisDomain,
     projectHash,
     queryAPI,
@@ -36,25 +38,6 @@ export function ChartMetricCompareScatter(props: {
   const [xMetric, setXMetric] = useState<undefined | string>();
   const [yMetric, setYMetric] = useState<undefined | string>();
   const [showTrend, setShowTrend] = useState<boolean>(true);
-  useEffect(() => {
-    const allMetricKeys = Object.keys(metricsSummary.metrics);
-    const m1 = allMetricKeys[0] ?? "null";
-    const m2 = allMetricKeys[1] ?? m1;
-    setXMetric((oldM1) => {
-      if (oldM1 !== undefined && oldM1 in metricsSummary.metrics) {
-        return oldM1;
-      } else {
-        return m1;
-      }
-    });
-    setYMetric((oldM2) => {
-      if (oldM2 !== undefined && oldM2 in metricsSummary.metrics) {
-        return oldM2;
-      } else {
-        return m2;
-      }
-    });
-  }, [metricsSummary.metrics]);
   const sampledState = queryAPI.useProjectAnalysisMetricScatter(
     projectHash,
     analysisDomain,
@@ -77,12 +60,37 @@ export function ChartMetricCompareScatter(props: {
   const sampledData = sampledState.data;
   const compareSampledData =
     compareProjectHash != null ? compareSampledState.data : null;
-  const metricOptions = Object.entries(metricsSummary.metrics).map(
+  const metricOptions = useMemo(() => {
+    return Object.entries(metricsSummary.metrics).filter(
+        ([metricKey]) => {
+          if (analysisSummary == null) {
+            return true;
+          }
+          const value = analysisSummary.metrics[metricKey];
+          return value == null || value.count > 0;
+        }
+    ).map(
     ([metricKey, metricData]) => ({
       value: metricKey,
       label: metricData.title,
     })
   );
+  }, [metricsSummary, analysisSummary]);
+  useEffect(() => {
+    const metrics = new Set(metricOptions.map((v) => v.value));
+    let chosenXMetric = xMetric;
+    if (xMetric === undefined || !metrics.has(xMetric)) {
+      setXMetric(metricOptions[0]?.value);
+      chosenXMetric = metricOptions[0]?.value;
+    }
+    if (yMetric === undefined || !metrics.has(yMetric)) {
+      if (metricOptions[0]?.value !== chosenXMetric) {
+        setYMetric(metricOptions[0]?.value);
+      } else {
+        setYMetric(metricOptions[1]?.value);
+      }
+    }
+  }, [metricOptions, xMetric, yMetric])
 
   const data = useMemo(() => {
     if (sampledData == null) {
