@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import uuid
 from pathlib import Path
@@ -133,7 +134,7 @@ def _assign_metrics(
             # Not sure what laplacian kernel cv2 uses or if its
             # more complete. As had to increase the value from 1020
             # due to larger values being returned from the metric.
-            score = score / 10000.0
+            score = math.sqrt(score) / (8.0 * 255.0)
         elif metric_column_name == "metric_label_shape_outlier":
             # NOTE: guesswork, not based on any analysis of hu moments
             score = score / 10000.0
@@ -148,7 +149,7 @@ def _assign_metrics(
                 score_p1 = abs((score_delta / float(score)) * 100.0)
                 score_p2 = abs((score_delta / float(original_score)) * 100.0)
                 if score_p1 >= 0.5 or score_p2 >= 0.5:
-                    print(
+                    logging.getLogger("MigrateDB").debug(
                         f"WARNING: clamped normal metric score[Original={raw_score}] - {metric_column_name}:"
                         f" {original_score} => {score}, "
                         f"Percentage = {score_p1}, {score_p2}"
@@ -167,7 +168,7 @@ def _assign_metrics(
             score_p1 = score_delta if score == 0.0 else abs((score_delta / float(score)) * 100.0)
             score_p2 = score_delta if existing_score == 0.0 else abs((score_delta / float(existing_score)) * 100.0)
             if score_p1 >= 0.5 or score_p2 >= 0.5:
-                print(
+                logging.getLogger("MigrateDB").debug(
                     f"WARNING: different derived and calculated scores: \n"
                     f"Percentage = {score_p1}, {score_p2}\n"
                     f"{metric_column_name}: existing={existing_score}, new={score}"

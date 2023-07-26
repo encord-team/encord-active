@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ProjectAnalysisDomain,
+  ProjectAnalysisDomain, ProjectAnalysisSummary,
   ProjectMetricSummary,
   QueryAPI,
 } from "../Types";
@@ -19,6 +19,7 @@ import { formatTooltip } from "../util/Formatter";
 
 export function ChartDistributionBar(props: {
   metricsSummary: ProjectMetricSummary;
+  analysisSummary?: undefined | ProjectAnalysisSummary;
   analysisDomain: ProjectAnalysisDomain;
   projectHash: string;
   queryAPI: QueryAPI;
@@ -31,13 +32,22 @@ export function ChartDistributionBar(props: {
     projectHash,
     queryAPI,
     metricsSummary,
+    analysisSummary,
     analysisDomain,
     featureHashMap,
   } = props;
   const [showQuartiles, setShowQuartiles] = useState(false);
 
   const allProperties = useMemo(() => {
-    const properties = Object.entries(metricsSummary.metrics).map(
+    const properties = Object.entries(metricsSummary.metrics).filter(
+        ([metricKey]) => {
+          if (analysisSummary == null) {
+            return true;
+          }
+          const value = analysisSummary.metrics[metricKey];
+          return value == null || value.count > 0;
+        }
+    ).map(
       ([metricKey, metric]) => ({
         label: metric.title,
         value: metricKey,
@@ -50,7 +60,7 @@ export function ChartDistributionBar(props: {
       });
     });
     return properties;
-  }, [metricsSummary]);
+  }, [metricsSummary, analysisSummary]);
   const [selectedProperty, setSelectedProperty] = useState<
     undefined | string
   >();
@@ -112,8 +122,12 @@ export function ChartDistributionBar(props: {
       allProperties.findIndex((value) => value.value === selectedProperty) ===
         -1
     ) {
+      const hasFeatureHash = allProperties
+          .find((value) => value.value === "feature_hash") != null;
       const chosenProperty = allProperties[allProperties.length - 1];
-      if (chosenProperty !== undefined) {
+      if (hasFeatureHash) {
+        setSelectedProperty("feature_hash");
+      } else if (chosenProperty !== undefined) {
         setSelectedProperty(chosenProperty.value);
       }
     }
