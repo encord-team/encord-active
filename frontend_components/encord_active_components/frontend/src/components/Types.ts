@@ -51,6 +51,33 @@ export type ProjectMetricSummary = {
   };
 };
 
+type OntologyObjectAttributeBase = {
+  readonly id: number | string;
+  readonly featureNodeHash: string;
+  readonly name: string;
+}
+
+export type OntologyObjectAttribute =
+  | (OntologyObjectAttributeBase & {
+      type: "checklist" | "radio";
+      options: OntologyObjectAttributeOptions[];
+    })
+  | (OntologyObjectAttributeBase & {
+      type: "text";
+    });
+
+export type OntologyObjectAttributeOptions = {
+  readonly id: number | string;
+  readonly featureNodeHash: string;
+  readonly label: string;
+  readonly value: string;
+  readonly options?: (
+    | OntologyObjectAttribute
+    | OntologyObjectAttributeOptions
+  )[];
+};
+
+
 export type ProjectSummary = {
   readonly name: string;
   readonly description: string;
@@ -61,6 +88,7 @@ export type ProjectSummary = {
       readonly color: string;
       readonly shape: string;
       readonly featureNodeHash: string;
+      readonly attributes?: readonly OntologyObjectAttribute[];
     }[];
     readonly classifications: readonly {
       readonly id: string;
@@ -68,6 +96,7 @@ export type ProjectSummary = {
       readonly color: string;
       readonly shape: string;
       readonly featureNodeHash: string;
+      readonly attributes?: readonly OntologyObjectAttribute[];
     }[];
   };
   readonly local_project: boolean;

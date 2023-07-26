@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from "react";
 import { Spin, Tabs } from "antd";
-import { QueryAPI } from "./Types";
+import {OntologyObjectAttribute, OntologyObjectAttributeOptions, QueryAPI} from "./Types";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
@@ -42,11 +42,34 @@ export function ProjectPage(props: {
     if (projectSummary == null) {
       return {};
     }
+    const procAttribute = (
+        a: | OntologyObjectAttribute | OntologyObjectAttributeOptions,
+        color: string
+    ) => {
+      if ("name" in a) {
+        featureHashMap[a.featureNodeHash] = {color, name: a.name ?? a.featureNodeHash};
+        if (a.type === "checklist" || a.type === "radio") {
+
+          a.options.forEach((o) => procAttribute(o, color));
+        }
+      } else {
+        featureHashMap[a.featureNodeHash] = {color, name: a.label ?? a.featureNodeHash}
+        if (a.options != null) {
+          a.options.forEach((o) => procAttribute(o, color));
+        }
+      }
+    };
     projectSummary.ontology.objects.forEach((o) => {
-      featureHashMap[o.featureNodeHash] = o;
+      featureHashMap[o.featureNodeHash] = { color: o.color, name: o.name ?? o.featureNodeHash };
+      if (o.attributes != null) {
+        o.attributes.forEach((a) => procAttribute(a, o.color));
+      }
     });
     projectSummary.ontology.classifications.forEach((o) => {
-      featureHashMap[o.featureNodeHash] = o;
+      featureHashMap[o.featureNodeHash]  = { color: o.color, name: o.name ?? o.featureNodeHash };
+      if (o.attributes != null) {
+        o.attributes.forEach((a) => procAttribute(a, o.color));
+      }
     });
     return featureHashMap;
   }, [projectSummary]);
