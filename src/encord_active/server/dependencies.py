@@ -28,7 +28,9 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Project: {project} wasn't found in the DB"
             )
 
-        return ProjectFileStructure(get_settings().SERVER_START_PATH / db_project.project_name)
+        return ProjectFileStructure(
+            get_settings().SERVER_START_PATH / db_project.project_name.lower().replace(" ", "-")
+        )
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
