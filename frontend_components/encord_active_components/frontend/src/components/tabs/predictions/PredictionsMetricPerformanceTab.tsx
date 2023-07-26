@@ -2,6 +2,7 @@ import { Col, Divider, Row, Select, Slider, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
+import {useDebounce} from "usehooks-ts";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -48,13 +49,18 @@ export function PredictionsMetricPerformanceTab(props: {
   const [bucketCount, setBucketCount] = useState(10);
   const [classList, setClassList] = useState<string[]>([]);
 
+  const rawQueryState = useMemo(
+      () => ({ bucketCount, iou, selectedMetric }),
+      [bucketCount, iou, selectedMetric]
+  );
+  const debounceQueryState = useDebounce(rawQueryState);
   const queryPerformance = queryAPI.useProjectPredictionMetricPerformance(
     projectHash,
     predictionHash,
-    bucketCount,
-    iou,
-    selectedMetric ?? "",
-    { enabled: selectedMetric != null }
+    debounceQueryState.bucketCount,
+    debounceQueryState.iou,
+    debounceQueryState.selectedMetric ?? "",
+    { enabled: debounceQueryState.selectedMetric != null }
   );
 
   const classOptions = useMemo(

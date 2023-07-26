@@ -4,6 +4,7 @@ import { useAuth } from "./authContext";
 import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
+import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 
 export const App = () => {
   const { data: projects, isLoading, error } = useProjectsList();
@@ -32,12 +33,14 @@ export const App = () => {
   return (
     <div className="p-12 bg-white">
       {selectedProjectHash ? (
-        <ProjectPage
-          queryAPI={queryAPI}
-          projectHash={selectedProjectHash}
-          projects={Object.values(projects)}
-          setSelectedProjectHash={setSelectedProjectHash}
-        />
+        <ErrorBoundary message={"An error occurred rendering the project: "+selectedProjectHash}>
+          <ProjectPage
+            queryAPI={queryAPI}
+            projectHash={selectedProjectHash}
+            projects={Object.values(projects)}
+            setSelectedProjectHash={setSelectedProjectHash}
+          />
+        </ErrorBoundary>
       ) : (
         <ProjectsPage
           projects={projectList}

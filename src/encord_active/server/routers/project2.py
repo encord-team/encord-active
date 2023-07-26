@@ -76,7 +76,7 @@ def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[Tupl
 
 
 @router.get("/")
-@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minutes TTL Cache
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 1))  # 1 minute TTL Cache
 def get_all_projects() -> Dict[str, ProjectReturn]:
     # FIXME: revert back to this code!
     # with Session(engine) as sess:

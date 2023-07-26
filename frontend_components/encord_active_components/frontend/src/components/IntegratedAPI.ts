@@ -82,11 +82,11 @@ class IntegratedAPI implements QueryAPI {
     enabled: boolean | undefined
   ): string {
     if (enabled === false) {
-      return "/ACTIVE:DISABLED";
+      return `${apiUrl}/projects_v2_error_state/query_disabled`;
     }
     const base = this.projects[project_hash];
     if (base == null) {
-      throw Error(` - cannot find project with hash: "${project_hash}"`);
+        return `${apiUrl}/projects_v2_error_state/project_does_not_exist`;
     }
     return base.baseProjectUrl;
   }

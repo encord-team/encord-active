@@ -99,6 +99,7 @@ from encord_active.server.dependencies import (
     engine,
     verify_premium,
 )
+from encord_active.server.routers.project2 import get_all_projects
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
     filtered_merged_metrics,
@@ -723,6 +724,9 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     # FIXME: hacky
     ensure_safe_project(target_project_structure.project_dir)
 
+    # Project now exists - invalidate cache
+    get_all_projects.cache_clear()  # type: ignore
+
 
 class UploadToEncordModel(BaseModel):
     dataset_title: str
@@ -792,6 +796,9 @@ def upload_to_encord(
     except Exception as e:
         print(str(e))
         raise e
+
+    # Project now exists - invalidate cache
+    get_all_projects.cache_clear()  # type: ignore
     return {
         "project_hash": new_project.project_hash,
         "dataset_hash": dataset_creation_result.hash,

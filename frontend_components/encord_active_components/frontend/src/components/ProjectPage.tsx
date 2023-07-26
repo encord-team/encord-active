@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import {useEffect, useMemo, useState} from "react";
 import { Spin, Tabs } from "antd";
 import { QueryAPI } from "./Types";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
@@ -25,7 +25,14 @@ export function ProjectPage(props: {
     setSelectedProjectHash: setSelectedProject,
   } = props;
   const [activeTab, setActiveTab] = useState<string>("1");
-  const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
+  const { data: projectSummary, isError } = queryAPI.useProjectSummary(projectHash);
+
+  // Go to parent in the error case (project does not exist).
+  useEffect(() => {
+    if (isError) {
+      setSelectedProject(undefined);
+    }
+  }, [isError])
 
   const featureHashMap = useMemo(() => {
     const featureHashMap: Record<
