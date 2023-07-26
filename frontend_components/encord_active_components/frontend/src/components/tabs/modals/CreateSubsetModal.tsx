@@ -28,7 +28,11 @@ export function CreateSubsetModal(props: {
       title="Create Subset Project"
       okText="Create"
       onCancel={close}
-      okButtonProps={{ loading: mutateCreateSubset.isLoading }}
+      okButtonProps={{
+        loading: mutateCreateSubset.isLoading,
+        style: { backgroundColor: "#5555ff" }
+      }}
+      cancelButtonProps={{ disabled: mutateCreateSubset.isLoading }}
       onOk={() => {
         form
           .validateFields()
