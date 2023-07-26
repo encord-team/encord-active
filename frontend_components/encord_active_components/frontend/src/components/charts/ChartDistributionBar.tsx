@@ -133,6 +133,39 @@ export function ChartDistributionBar(props: {
     }
   }, [selectedProperty, allProperties]);
 
+  // Correct layout for reference line
+  const referenceLines = (metadata: ProjectAnalysisSummary["metrics"][string]) => {
+    const lineQ1 = lookupGrouping(metadata.q1);
+    const lineMedian = lookupGrouping(metadata.median);
+    const lineQ3 = lookupGrouping(metadata.q3);
+    return (
+      <>
+        <ReferenceLine
+          label={"Q1"+(lineQ1 === lineMedian ? (", Median"+(lineQ3 === lineMedian ? ", Q3" : "")) : "")}
+          stroke="black"
+          strokeDasharray="3 3"
+          x={lineQ1}
+        />
+        {lineQ1 !== lineMedian ? (
+            <ReferenceLine
+              label={"Median"+(lineQ3 === lineMedian ? ", Q3" : "")}
+              stroke="black"
+              strokeDasharray="3 3"
+              x={lineMedian}
+            />
+        ) : null}
+        {lineMedian !== lineQ3 ? (
+            <ReferenceLine
+              label="Q3"
+              stroke="black"
+              strokeDasharray="3 3"
+              x={lineQ3}
+            />
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <>
       <Space align="center" wrap>
@@ -169,28 +202,7 @@ export function ChartDistributionBar(props: {
           />
           <Tooltip formatter={formatTooltip} />
           <Bar dataKey="count" isAnimationActive={false} />
-          {metadata === undefined || !showQuartiles ? null : (
-            <>
-              <ReferenceLine
-                label="Q1"
-                stroke="black"
-                strokeDasharray="3 3"
-                x={lookupGrouping(metadata.q1)}
-              />
-              <ReferenceLine
-                label="Median"
-                stroke="black"
-                strokeDasharray="3 3"
-                x={lookupGrouping(metadata.median)}
-              />
-              <ReferenceLine
-                label="Q3"
-                stroke="black"
-                strokeDasharray="3 3"
-                x={lookupGrouping(metadata.q3)}
-              />
-            </>
-          )}
+          {metadata === undefined || !showQuartiles ? null : referenceLines(metadata)}
         </BarChart>
       </ResponsiveContainer>
     </>
