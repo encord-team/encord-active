@@ -2,6 +2,7 @@ import dataclasses
 import math
 from typing import Callable, Dict, Literal, Optional, Tuple, Type, TypeVar, Union
 
+from fastapi import Depends, Query
 from sqlalchemy.sql.functions import count as sql_count_raw
 from sqlalchemy.sql.functions import max as sql_max_raw
 from sqlalchemy.sql.functions import min as sql_min_raw
@@ -41,6 +42,15 @@ class AttrMetadata:
     group_attr: Union[int, float]
     filter_attr: Union[int, float]
     metric_type: Optional[MetricType]
+
+
+def literal_bucket_depends(default: int) -> Literal[10, 100, 1000]:
+    def _parse_buckets(
+        buckets: Literal["10", "100", "1000"] = Query(default, alias="buckets")
+    ) -> Literal[10, 100, 1000]:
+        return int(buckets)  # type: ignore
+
+    return Depends(_parse_buckets, use_cache=False)
 
 
 def get_metric_or_enum(

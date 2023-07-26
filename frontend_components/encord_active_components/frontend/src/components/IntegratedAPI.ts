@@ -512,7 +512,7 @@ class IntegratedAPI implements QueryAPI {
       () =>
         axios
           .get(`${baseURL}/predictions/${predictionHash}/metric_performance`, {
-            params: { iou, metric_name: metric }, // FIXME: buckets
+            params: { iou, metric_name: metric, buckets },
           }) // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...SummaryQueryOptions }

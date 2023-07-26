@@ -197,7 +197,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
           dataKey="m"
           type="category"
           domain={[0.0, 1.0]}
-          label="Bucket"
+          label={{ value: scoreLabel, angle: 0, position: "insideBottom", offset: -3 }}
           tickFormatter={(value: number) => value.toFixed(2)}
         />
         <YAxis
