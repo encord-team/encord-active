@@ -207,11 +207,11 @@ export const getApi = (projectHash: string, authToken?: string) => {
       PredictionTypeSchema.array().parse(
         await (
           await fetcher(`${apiUrl}/projects/${projectHash}/prediction_types`)
-        ).json()
+        ).json(),
       ),
     fetchProject2DEmbeddings: async (
       embedding_type: Metric["embeddingType"],
-      filters: Filters
+      filters: Filters,
     ) => {
       const url = `${apiUrl}/projects/${projectHash}/2d_embeddings`;
       try {
@@ -232,7 +232,7 @@ export const getApi = (projectHash: string, authToken?: string) => {
     fetchProjectMetrics: async (
       scope: Scope,
       prediction_type?: PredictionType,
-      prediction_outcome?: PredictionOutcome
+      prediction_outcome?: PredictionOutcome,
     ): Promise<z.infer<typeof MetricDefinitionsSchema>> => {
       const queryParams = new URLSearchParams({
         ...(scope ? { scope } : {}),
@@ -247,7 +247,7 @@ export const getApi = (projectHash: string, authToken?: string) => {
       scope: Scope,
       sort_by_metric: string,
       filters: Filters,
-      itemSet: Set<string>
+      itemSet: Set<string>,
     ) => {
       const result = await (
         await fetcher(`${apiUrl}/projects/${projectHash}/item_ids_by_metric`, {
@@ -273,8 +273,8 @@ export const getApi = (projectHash: string, authToken?: string) => {
       const item = await (
         await fetcher(
           `${apiUrl}/projects/${projectHash}/items/${encodeURIComponent(
-            id
-          )}?${queryParams}`
+            id,
+          )}?${queryParams}`,
         )
       ).json();
       return ItemSchema.parse(item) as Item;
@@ -286,12 +286,12 @@ export const getApi = (projectHash: string, authToken?: string) => {
         .parse(
           await (
             await fetcher(`${apiUrl}/projects/${projectHash}/tagged_items`)
-          ).json()
+          ).json(),
         ),
     fetchSimilarItems: async (
       id: string,
       embeddingType: Metric["embeddingType"],
-      pageSize?: number
+      pageSize?: number,
     ) => {
       const queryParams = new URLSearchParams({
         embedding_type: embeddingType,
@@ -299,13 +299,13 @@ export const getApi = (projectHash: string, authToken?: string) => {
       });
 
       const url = `${apiUrl}/projects/${projectHash}/similarities/${encodeURIComponent(
-        id
+        id,
       )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
       return z.string().array().parse(response);
     },
     fetchHasSimilaritySearch: async (
-      embeddingType: Metric["embeddingType"]
+      embeddingType: Metric["embeddingType"],
     ) => {
       const queryParams = new URLSearchParams({
         embedding_type: embeddingType,
@@ -316,10 +316,10 @@ export const getApi = (projectHash: string, authToken?: string) => {
     },
     fetchProjectTags: async () =>
       GroupedTagsSchema.parse(
-        await (await fetcher(`${apiUrl}/projects/${projectHash}/tags`)).json()
+        await (await fetcher(`${apiUrl}/projects/${projectHash}/tags`)).json(),
       ),
     updateItemTags: async (
-      itemTags: { id: string; groupedTags: GroupedTags }[]
+      itemTags: { id: string; groupedTags: GroupedTags }[],
     ) => {
       const url = `${apiUrl}/projects/${projectHash}/item_tags`;
       const data = itemTags.map(({ id, groupedTags }) => ({
@@ -342,7 +342,7 @@ export const getApi = (projectHash: string, authToken?: string) => {
         type,
         filters,
       }: { scope: Scope; query: string; type: SearchType; filters: Filters },
-      signal?: AbortSignal
+      signal?: AbortSignal,
     ) => {
       const response = await fetcher(
         `${apiUrl}/projects/${projectHash}/search`,
@@ -353,7 +353,7 @@ export const getApi = (projectHash: string, authToken?: string) => {
           },
           body: JSON.stringify({ query, scope, type, filters }),
           signal,
-        }
+        },
       );
 
       return searchResultSchema.parse(await response.json());
@@ -380,11 +380,11 @@ export const useApi = () => {
         onMutate: async (itemTagsList) => {
           Promise.all(
             itemTagsList.map(({ id }) =>
-              queryClient.cancelQueries({ queryKey: ["item", id] })
-            )
+              queryClient.cancelQueries({ queryKey: ["item", id] }),
+            ),
           );
           const previousItems = itemTagsList.map((itemTags) => {
-            const itemKey = ["item", itemTags.id];
+            const itemKey = [projectHash, "item", itemTags.id];
             const previousItem = queryClient.getQueryData(itemKey) as Item;
             queryClient.setQueryData(itemKey, {
               ...previousItem,
@@ -393,29 +393,31 @@ export const useApi = () => {
             return previousItem;
           });
 
-          await queryClient.cancelQueries(["tagged_items"]);
-          const previousTaggedItems = queryClient.getQueryData([
-            "tagged_items",
-          ]) as Awaited<ReturnType<API["fetchedTaggedItems"]>>;
+          const taggedItemsQueryKey = [projectHash, "tagged_items"];
+          await queryClient.cancelQueries(taggedItemsQueryKey);
+          const previousTaggedItems = queryClient.getQueryData(
+            taggedItemsQueryKey,
+          ) as Awaited<ReturnType<API["fetchedTaggedItems"]>>;
           const nextTaggedItems = new Map(previousTaggedItems);
           itemTagsList.forEach(({ id, groupedTags }) =>
-            nextTaggedItems.set(id, groupedTags)
+            nextTaggedItems.set(id, groupedTags),
           );
-          queryClient.setQueryData(["tagged_items"], nextTaggedItems);
+          queryClient.setQueryData(taggedItemsQueryKey, nextTaggedItems);
 
-          await queryClient.cancelQueries(["tags"]);
-          const previousTags = queryClient.getQueryData([
-            "tags",
-          ]) as GroupedTags;
+          const tagsQueryKey = [projectHash, "tags"];
+          await queryClient.cancelQueries(tagsQueryKey);
+          const previousTags = queryClient.getQueryData(
+            tagsQueryKey,
+          ) as GroupedTags;
           const nextTags = itemTagsList.reduce(
             (nextTags, { groupedTags }) => {
               groupedTags.data.forEach(nextTags.data.add, nextTags.data);
               groupedTags.label.forEach(nextTags.label.add, nextTags.label);
               return nextTags;
             },
-            { data: new Set<string>(), label: new Set<string>() }
+            { data: new Set<string>(), label: new Set<string>() },
           );
-          queryClient.setQueryData(["tags"], {
+          queryClient.setQueryData(tagsQueryKey, {
             data: [...nextTags.data],
             label: [...nextTags.label],
           });
@@ -428,22 +430,29 @@ export const useApi = () => {
         },
         onError: (_, __, context) => {
           context?.previousItems.forEach((item) =>
-            queryClient.setQueryData(["items", item.id], item)
+            queryClient.setQueryData([projectHash, "item", item.id], item),
           );
           queryClient.setQueryData(
-            ["tagged_items"],
-            context?.previousTaggedItems
+            [projectHash, "tagged_items"],
+            context?.previousTaggedItems,
           );
-          queryClient.setQueryData(["tags"], context?.previousTags);
+          queryClient.setQueryData(
+            [projectHash, "tags"],
+            context?.previousTags,
+          );
         },
         onSettled: (_, __, variables) => {
           variables.forEach(({ id }) =>
-            queryClient.invalidateQueries({ queryKey: ["items", id] })
+            queryClient.invalidateQueries({
+              queryKey: [projectHash, "item", id],
+            }),
           );
-          queryClient.invalidateQueries({ queryKey: ["tagged_items"] });
-          queryClient.invalidateQueries({ queryKey: ["tags"] });
+          queryClient.invalidateQueries({
+            queryKey: [projectHash, "tagged_items"],
+          });
+          queryClient.invalidateQueries({ queryKey: [projectHash, "tags"] });
         },
-      }
+      },
     ),
     fetchProjectTags: () =>
       useQuery([projectHash, "tags"], api.fetchProjectTags, {
@@ -455,16 +464,16 @@ export const useApi = () => {
       }),
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
       useQuery([projectHash, "item", ...args], () =>
-        api.fetchProjectItem(...args)
+        api.fetchProjectItem(...args),
       ),
     fetch2DEmbeddings: (
       embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
-      filters: Filters
+      filters: Filters,
     ) =>
       useQuery(
         [projectHash, "2d_embeddings", embeddingType, JSON.stringify(filters)],
         () => api.fetchProject2DEmbeddings(embeddingType, filters),
-        { enabled: !!embeddingType, staleTime: Infinity }
+        { enabled: !!embeddingType, staleTime: Infinity },
       ),
     search: (...args: Parameters<API["searchInProject"]>) =>
       api.searchInProject(...args),
@@ -474,7 +483,7 @@ export const useApi = () => {
       useQuery(
         [projectHash, "available_prediction_types"],
         () => api.fetchAvailablePredictionTypes(...args),
-        { staleTime: Infinity }
+        { staleTime: Infinity },
       ),
   };
 };
