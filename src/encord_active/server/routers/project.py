@@ -366,12 +366,17 @@ def get_available_metrics(
         MetricScope.PREDICTION: [],
     }
     for metric in natsorted(filter(filter_none_empty_metrics, metrics), key=lambda metric: metric.name):
+        prediction_metric = "predictions" in metric.path.as_posix()
+        label_outcome = prediction_outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES
+        if metric.name in ["Object Count", "Frame object density"]:
+            if (label_outcome and prediction_metric) or (not label_outcome and not prediction_metric):
+                continue
+
         metric_result = {
             "name": metric.name,
             "embeddingType": get_embedding_type(metric.meta.annotation_type),
             "range": Range(min=metric.meta.stats.min_value, max=metric.meta.stats.max_value),
         }
-
         if metric.level == "F":
             results[MetricScope.DATA].append(metric_result)
         elif scope == MetricScope.PREDICTION:
@@ -384,6 +389,9 @@ def get_available_metrics(
 
 @router.get("/{project}/prediction_types")
 def get_available_prediction_types(project: ProjectFileStructureDep):
+    if check_model_prediction_availability(project.predictions):
+        return [MainPredictionType.OBJECT if (project.predictions / "ground_truths_matched.json").exists() else MainPredictionType.CLASSIFICATION]
+
     return [
         prediction_type
         for prediction_type in MainPredictionType
