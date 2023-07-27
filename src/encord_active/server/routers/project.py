@@ -578,7 +578,7 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
-        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description or "")
+        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description or "", final_data_version=202306141750)
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 

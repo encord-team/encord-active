@@ -4,7 +4,7 @@ import pickle
 import subprocess
 import uuid
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 import pandas as pd
 import yaml
@@ -13,6 +13,9 @@ from encord_active.lib.common.data_utils import iterate_in_batches, url_to_file_
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.embeddings.dimensionality_reduction import (
+    generate_2d_embedding_data,
+)
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.embeddings.utils import (
@@ -185,6 +188,7 @@ def create_filtered_embeddings(
             filtered_embeddings = embeddings_df.to_dict(orient="records")
             target_project_structure.get_embeddings_file(embedding_type).write_bytes(pickle.dumps(filtered_embeddings))
             EmbeddingIndex.from_project(target_project_structure, embedding_type)
+            generate_2d_embedding_data(embedding_type, target_project_structure, embeddings)
 
 
 def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, objects):
@@ -332,12 +336,15 @@ def copy_project_meta(
     target_project_structure: ProjectFileStructure,
     project_title: str,
     project_description: str,
+    final_data_version: Optional[int] = None,
 ):
     project_meta = fetch_project_meta(curr_project_structure.project_dir)
     project_meta["project_title"] = project_title
     project_meta["project_description"] = project_description
     project_meta["has_remote"] = False
     project_meta["project_hash"] = str(uuid.uuid4())
+    if final_data_version:
+        project_meta["data_version"] = final_data_version
     target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta), encoding="utf-8")
 
 
