@@ -312,6 +312,9 @@ export type ProjectPredictionSummary = {
   readonly tTP: number;
   readonly tFP: number;
   readonly tFN: number;
+  readonly tp: Readonly<Record<string, number>>;
+  readonly fp: Readonly<Record<string, number>>;
+  readonly fn: Readonly<Record<string, number>>;
   readonly precisions: Readonly<Record<string, number>>;
   readonly recalls: Readonly<Record<string, number>>;
   readonly correlation: Readonly<Record<string, number>>;
