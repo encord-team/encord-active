@@ -64,8 +64,6 @@ def read_metric_data(entry_points: List[MetricEntryPoint], append_level_to_title
             all_metrics += natsorted(available_metrics, key=lambda x: x.name)
             continue
 
-        # for metric in available_metrics:
-        #     metric.name += " (P)" if entry.is_predictions else f" ({metric.level})"
         all_metrics += natsorted(available_metrics, key=lambda x: x.name[-3:] + x.name[:-3])
 
     return all_metrics
