@@ -414,7 +414,10 @@ export const Explorer = ({
                     {Object.entries(metrics).map(
                       ([scope, scopedMetrics]) =>
                         !!scopedMetrics.length && (
-                          <optgroup label={`${capitalize(scope)} Metrics`}>
+                          <optgroup
+                            key={scope}
+                            label={`${capitalize(scope)} Metrics`}
+                          >
                             {metrics[scope as keyof typeof metrics].map(
                               (metric) => (
                                 <option
@@ -1021,10 +1024,12 @@ const ImageWithPolygons = ({
       })),
     );
   }, [width, height, item.id]);
+
   const itemUrl =
     item.url.startsWith("https://") || item.url.startsWith("https://")
       ? item.url
       : `${apiUrl}${item.url}`;
+
   return (
     <figure {...rest} className={classy("relative", className)}>
       {item.videoTimestamp != null ? (
@@ -1053,64 +1058,60 @@ const ImageWithPolygons = ({
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(
             ({ points, boundingBoxPoints, color, shape }, index) => {
+              if (shape === "point" && points)
+                return (
+                  <g key={index}>
+                    <circle
+                      key={index + "_inner"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="5px"
+                      fill={color}
+                    />
+                    <circle
+                      key={index + "_outer"}
+                      cx={points[0].x}
+                      cy={points[0].y}
+                      r="7px"
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1px"
+                    />
+                  </g>
+                );
               return (
-                <>
-                  {shape === "point" && points ? (
-                    <>
-                      <circle
-                        key={index + "_inner"}
-                        cx={points[0].x}
-                        cy={points[0].y}
-                        r="5px"
-                        fill={color}
-                      />
-                      <circle
-                        key={index + "_outer"}
-                        cx={points[0].x}
-                        cy={points[0].y}
-                        r="7px"
-                        fill="none"
-                        stroke={color}
-                        strokeWidth="1px"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      {points && (
-                        <polygon
-                          key={index + "_polygon"}
-                          style={{
-                            fill: shape === "polyline" ? "none" : color,
-                            fillOpacity: ".20",
-                            stroke: color,
-                            strokeWidth: "2px",
-                          }}
-                          points={pointsRecordToPolygonPoints(
-                            points,
-                            width,
-                            height,
-                          )}
-                        />
+                <g key={index} fill={shape === "polyline" ? "none" : color}>
+                  {points && (
+                    <polygon
+                      key={index + "_polygon"}
+                      style={{
+                        fillOpacity: ".20",
+                        stroke: color,
+                        strokeWidth: "2px",
+                      }}
+                      points={pointsRecordToPolygonPoints(
+                        points,
+                        width,
+                        height,
                       )}
-                      {boundingBoxPoints && (
-                        <polygon
-                          key={index + "_box"}
-                          style={{
-                            fill: shape === "polyline" ? "none" : color,
-                            fillOpacity: ".40",
-                            stroke: color,
-                            strokeWidth: "4px",
-                          }}
-                          points={pointsRecordToPolygonPoints(
-                            boundingBoxPoints,
-                            width,
-                            height,
-                          )}
-                        />
-                      )}
-                    </>
+                    />
                   )}
-                </>
+                  {boundingBoxPoints && (
+                    <polygon
+                      key={index + "_box"}
+                      style={{
+                        fillOpacity: ".40",
+                        stroke: color,
+                        strokeWidth: "4px",
+                      }}
+                      points={pointsRecordToPolygonPoints(
+                        boundingBoxPoints,
+                        width,
+                        height,
+                      )}
+                    />
+                  )}
+                </g>
               );
             },
           )}
