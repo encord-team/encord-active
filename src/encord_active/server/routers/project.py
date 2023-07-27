@@ -549,7 +549,7 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     dataset_title = item.dataset_title
     dataset_description = item.dataset_description
     filtered_df = filtered_merged_metrics(curr_project_structure, item.filters).reset_index()
-    target_project_dir = curr_project_structure.project_dir.parent / project_title
+    target_project_dir = curr_project_structure.project_dir.parent / project_title.lower().replace(" ", "-")
     target_project_structure = ProjectFileStructure(target_project_dir)
     current_project_meta = curr_project_structure.load_project_meta()
     remote_copy = current_project_meta.get("has_remote", False)
@@ -751,13 +751,8 @@ def upload_to_encord(
     item: UploadToEncordModel,
 ):
     old_project_meta = pfs.load_project_meta()
-    if (pfs.project_dir.parent / item.project_title).exists() and item.project_title != old_project_meta[
-        "project_title"
-    ]:
-        raise ValueError(
-            "Project Title already used locally - cannot rename project to this while uploading to encord!"
-        )
     old_project_hash = uuid.UUID(old_project_meta["project_hash"])
+    old_project_name = str(old_project_meta["project_title"])
     with DBConnection(pfs) as conn:
         df = MergedMetrics(conn).all()
     encord_actions = EncordActions(pfs.project_dir, app_config.get_ssh_key())
@@ -783,16 +778,13 @@ def upload_to_encord(
 
         # Regenerate new database instance
         pfs.cache_clear()
-        new_project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
+        new_project_meta = pfs.load_project_meta()
+        new_project_hash = uuid.UUID(new_project_meta["project_hash"])
         if new_project_hash == old_project_hash:
             raise ValueError("BUG: Upload to encord hasn't changed project hash")
 
         # Move folder so uuid lookup will work correctly.
-        new_project_name = pfs.load_project_meta()["project_title"]
-        if pfs.project_dir != (pfs.project_dir.parent / new_project_name):
-            shutil.move(pfs.project_dir, pfs.project_dir.parent / new_project_name)
-        new_project_file_structure = ProjectFileStructure(pfs.project_dir.parent / new_project_name)
-        migrate_disk_to_db(new_project_file_structure)
+        migrate_disk_to_db(pfs)
         with Session(engine) as sess:
             # Now that the new project hash has been synced to the database
             # delete the old (out-of-date) value.
@@ -800,6 +792,14 @@ def upload_to_encord(
             if old_db is None:
                 raise ValueError("BUG: Could not find old project")
             sess.delete(old_db)
+
+            # The project name has to be reverted to the same value
+            # Update some metadata
+            new_db = sess.exec(select(Project).where(Project.project_hash == new_project_hash)).first()
+            if new_db is None:
+                raise ValueError(f"Missing new project in the database when uploading")
+            new_db.project_name = old_project_name
+            sess.add(new_db)
             sess.commit()
     except Exception as e:
         print(str(e))

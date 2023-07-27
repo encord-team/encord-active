@@ -112,16 +112,10 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         title="Image Difficulty",
         short_desc="",
         long_desc="",
-        type=MetricType.RANK,
+        type=MetricType.RANK,  # FIXME: attempt to convert this to normal metric!!
     ),
     "metric_image_singularity": MetricDefinition(
         title="Image Singularity",
-        short_desc="",
-        long_desc="",
-        type=MetricType.NORMAL,
-    ),
-    "metric_annotation_quality": MetricDefinition(
-        title="Annotation Quality",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,

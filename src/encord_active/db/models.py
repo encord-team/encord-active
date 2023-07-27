@@ -155,8 +155,6 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_blue: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
-    # Both - Annotation based
-    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Image Only
     metric_object_count: Optional[int] = MetricFieldTypePositiveInteger
     metric_object_density: Optional[float] = MetricFieldTypeNormal

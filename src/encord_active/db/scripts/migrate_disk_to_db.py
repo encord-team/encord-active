@@ -101,6 +101,10 @@ DERIVED_DATA_METRICS: Set[str] = {
     "metric_object_count",
 }
 
+DATA_LEVEL_ACTUALLY_CLASSIFICATION_METRICS: Set[str] = {
+    "metric_annotation_quality",
+}
+
 DERIVED_LABEL_METRICS: Set[str] = set()
 
 
@@ -795,6 +799,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
         Tuple[uuid.UUID, int, str], Tuple[Dict[str, Union[bytes, float]], Dict[str, str]]
     ] = {}
 
+    data_to_classifications: Dict[Tuple[uuid.UUID, int], List[str]] = {}
+
     database_dir = pfs.project_dir.parent.expanduser().resolve()
 
     # Load metadata
@@ -885,6 +891,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                             f"in du_hash={du_hash}, frame={data_unit.frame}"
                         )
                     object_hashes_seen.add(classification_hash)
+                    data_to_classifications.setdefault((du_hash, data_unit.frame), []).append(classification_hash)
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
                         "feature_hash": __label_classify_feature_hash(
                             classify, classification_answers, valid_classify_child_feature_hashes
@@ -1048,6 +1055,11 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     f"du_hash={du_hash}, frame={frame}, objects?={object_hash_list}\n"
                     f"identifier={metric_entry['identifier']} metric={metric}\n"
                 )
+
+            # 1 classification metric - does not actually assign classification metric hash
+            if len(object_hash_list) == 0 and metric_column_name in DATA_LEVEL_ACTUALLY_CLASSIFICATION_METRICS:
+                object_hash_list = data_to_classifications[(du_hash, frame)]
+
             if len(object_hash_list) >= 1:
                 for object_hash in object_hash_list:
                     if (du_hash, frame, object_hash) not in annotation_metrics:
