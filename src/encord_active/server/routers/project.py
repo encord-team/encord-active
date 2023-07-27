@@ -93,7 +93,7 @@ def read_item_ids(
             if filters.prediction_filters.outcome == ObjectDetectionOutcomeType.FALSE_NEGATIVES:
                 df = df[df.index.isin(merged_metrics.index)]
         except:
-            raise Exception("Couldn't find the selected metric in the the project")
+            raise Exception("Couldn't find the selected metric in the project.")
 
     res: pd.DataFrame = df[[column]].dropna().sort_values(by=[column], ascending=ascending)
     if ids:
@@ -140,7 +140,7 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
         rows = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")
 
         if not rows:
-            raise HTTPException(status_code=404, detail=f"Item with id: {id} was not found for project: {project}")
+            raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project}".')
 
         row = rows[0]
         # Include data tags from the relevant frame when the inspected item is a label
@@ -217,7 +217,7 @@ def get_2d_embeddings(
 
     if embeddings_df is None:
         raise HTTPException(
-            status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
+            status_code=404, detail=f'Embeddings of type "{embedding_type}" were not found for project "{project}".'
         )
 
     filtered = filtered_merged_metrics(project, filters)
@@ -231,7 +231,7 @@ def get_2d_embeddings(
 
         if filters.prediction_filters.type == MainPredictionType.OBJECT:
             labels = labels[[LabelMatchSchema.is_false_negative]]
-            labels = labels[labels[LabelMatchSchema.is_false_negative] == True].copy()
+            labels = labels[labels[LabelMatchSchema.is_false_negative]].copy()
             labels["data_row_id"] = partial_column(labels.index, 3)
             labels["score"] = 0
             labels.drop(LabelMatchSchema.is_false_negative, axis=1, inplace=True)
@@ -267,7 +267,7 @@ def get_2d_embeddings(
 
             embeddings_df["score"] = embeddings_df[Embedding2DSchema.label]
             embeddings_df[Embedding2DSchema.label] = embeddings_df[Embedding2DSchema.label].apply(
-                lambda x: "Correct Classifictaion" if x == 1.0 else "Misclassification"
+                lambda x: "Correct Classification" if x == 1.0 else "Misclassification"
             )
 
     return ORJSONResponse(embeddings_df.reset_index().rename({"identifier": "id"}, axis=1).to_dict("records"))
@@ -311,7 +311,7 @@ def search(
     scope: Annotated[Optional[MetricScope], Body()] = None,
 ):
     if not query:
-        raise HTTPException(status_code=422, detail="Invalid query")
+        raise HTTPException(status_code=422, detail="Invalid query.")
     querier = get_querier(project)
 
     merged_metrics = filtered_merged_metrics(project, filters)
@@ -327,7 +327,7 @@ def search(
                 snippet = result.snippet
 
         if not result:
-            raise HTTPException(status_code=422, detail="Invalid query")
+            raise HTTPException(status_code=422, detail="Invalid query.")
 
         return [item.identifier for item in result.result_identifiers], snippet
 
