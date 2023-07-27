@@ -36,7 +36,9 @@ export function ProjectComparisonTab(props: {
               value={compareProjectHash}
               style={{ width: 300 }}
               options={
-                allProjects.data?.results?.map((project) => ({
+                allProjects.data?.results?.filter(
+                  (project) => project.project_hash !== projectHash
+                )?.map((project) => ({
                   label: project.title,
                   value: project.project_hash,
                 })) ?? []

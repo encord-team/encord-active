@@ -60,7 +60,7 @@ export function ChartMetricDissimilarity(props: {
     >
       <BarChart data={barData} layout="vertical" className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
-        <YAxis name="Metric" type="category" dataKey="metric" />
+        <YAxis name="Metric" type="category" dataKey="metric" width={150} />
         <XAxis name="Score" type="number" domain={[0.0, 1.0]} />
         <Tooltip />
         <Legend />
