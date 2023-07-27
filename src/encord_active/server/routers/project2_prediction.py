@@ -6,7 +6,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 import numpy as np
 from fastapi import APIRouter
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import Float, Integer, bindparam, text, distinct, tuple_
+from sqlalchemy import Float, Integer, bindparam, distinct, text, tuple_
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
@@ -26,7 +26,9 @@ from encord_active.server.routers.queries.domain_query import (
 from encord_active.server.routers.queries.metric_query import (
     literal_bucket_depends,
     sql_count,
-    sql_sum, sql_min, sql_max,
+    sql_max,
+    sql_min,
+    sql_sum,
 )
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
@@ -63,12 +65,12 @@ def get_project_prediction_summary(
     # FIXME: performance improvements are possible
     guid = GUID()
     with Session(engine) as sess:
-        range_annotation_types = sess.exec(select(
-            sql_min(ProjectPredictionAnalytics.annotation_type),
-            sql_max(ProjectPredictionAnalytics.annotation_type),
-        ).where(
-            ProjectPredictionAnalytics.prediction_hash == prediction_hash
-        )).first()
+        range_annotation_types = sess.exec(
+            select(  # type: ignore
+                sql_min(ProjectPredictionAnalytics.annotation_type),
+                sql_max(ProjectPredictionAnalytics.annotation_type),
+            ).where(ProjectPredictionAnalytics.prediction_hash == prediction_hash)
+        ).first()
         is_classification = False
         if range_annotation_types is not None:
             annotate_ty_min, annotate_ty_max = range_annotation_types
@@ -77,15 +79,17 @@ def get_project_prediction_summary(
         # FIXME: this is only used by classification only predictions.
         # FIXME: this should be separated and considered in the future.
         num_frames = sess.exec(
-            select(sql_count()).select_from(select(
-                ProjectPredictionAnalyticsFalseNegatives.du_hash,
-                ProjectPredictionAnalyticsFalseNegatives.frame,
-            ).where(
-                ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash
-            ).group_by(
-                ProjectPredictionAnalyticsFalseNegatives.du_hash,
-                ProjectPredictionAnalyticsFalseNegatives.frame,
-            ))
+            select(sql_count()).select_from(
+                select(
+                    ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                    ProjectPredictionAnalyticsFalseNegatives.frame,
+                )
+                .where(ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash)
+                .group_by(
+                    ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                    ProjectPredictionAnalyticsFalseNegatives.frame,
+                )
+            )
         ).first()
 
         # Select summary count of TP / FP / FN

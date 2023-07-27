@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
+from encord.objects import OntologyStructure
+from encord.objects.common import PropertyType
 from sqlmodel import Session
 
 from encord_active.db.metrics import (
@@ -417,6 +419,50 @@ def __prediction_iou_bound_false_negative(
     )
 
 
+def __list_valid_child_feature_hashes(ontology_dict) -> Set[str]:
+    ontology = OntologyStructure.from_dict(ontology_dict)
+    valid_child_ontology_feature_hashes = set()
+    for class_label in ontology.classifications:
+        # Only allow nested to layer 1 IFF attributes[0] is RADIO && only 1 RADIO attribute.
+        num_radio = len(
+            [
+                class_question
+                for class_question in class_label.attributes
+                if class_question.get_property_type() == PropertyType.RADIO
+            ]
+        )
+        if num_radio != 1:
+            continue
+        class_question = class_label.attributes[0]
+        if class_question.get_property_type() == PropertyType.RADIO:
+            for counter, option in enumerate(class_question.options):
+                valid_child_ontology_feature_hashes.add(option.feature_node_hash)
+
+    return valid_child_ontology_feature_hashes
+
+
+def __prediction_feature_hash(class_idx_dict: dict, class_id: int, is_classify: bool) -> str:
+    class_id_meta = class_idx_dict[str(class_id)]
+    return class_id_meta["optionHash"] if is_classify else class_id_meta["featureHash"]
+
+
+def __label_classify_feature_hash(label, classification_answers, valid_classify_child_feature_hashes) -> str:
+    classification_hash = str(label["classificationHash"])
+    root_feature_hash = str(label["featureHash"])
+    answers = classification_answers.get(classification_hash, None)
+    if answers is None:
+        return root_feature_hash
+    for classify in answers["classifications"]:
+        classify_answers = classify["answers"]
+        if not isinstance(classify_answers, list):
+            continue
+        for answer in classify["answers"]:
+            answer_feature_hash = str(answer["featureHash"])
+            if answer_feature_hash in valid_classify_child_feature_hashes:
+                return answer_feature_hash
+    return root_feature_hash
+
+
 def __migrate_predictions(
     predictions_dir: Path,
     metrics_dir: Path,
@@ -501,7 +547,7 @@ def __migrate_predictions(
         pidx = int(model_prediction.pop("Unnamed: 0"))
         img_id = int(model_prediction.pop("img_id"))
         class_id = int(model_prediction.pop("class_id"))
-        feature_hash = class_idx_dict[str(class_id)]["featureHash"]
+        feature_hash = __prediction_feature_hash(class_idx_dict, class_id, is_classify)
         confidence = float(model_prediction.pop("confidence"))
         theta = model_prediction.pop("theta", None)  # FIXME ??
         rle = None if is_classify else str(model_prediction.pop("rle"))
@@ -607,7 +653,7 @@ def __migrate_predictions(
 
             # Set new values
             match_object_hash = matched_label_hashes[0]
-            match_feature_hash = class_idx_dict[str(matched_label_class_id)]["featureHash"]
+            match_feature_hash = __prediction_feature_hash(class_idx_dict, matched_label_class_id, is_classify)
 
         # Select annotation side tables for prediction
         frame_metrics = data_metrics[(du_hash, frame)]
@@ -701,7 +747,7 @@ def __migrate_predictions(
         if int(missing_label.pop("Unnamed: 0")) != missing_label_idx:
             raise ValueError(f"Inconsistent lookup: {missing_label}")
         missing_label_class_id = int(missing_label.pop("class_id"))
-        missing_feature_hash = class_idx_dict[str(missing_label_class_id)]["featureHash"]
+        missing_feature_hash = __prediction_feature_hash(class_idx_dict, missing_label_class_id, is_classify)
         missing_label_identifier = missing_label.pop("identifier")
         _missing_lh, missing_du_hash_str, missing_frame_str, *matched_label_hashes = missing_label_identifier.split("_")
         if len(matched_label_hashes) != 1:
@@ -753,13 +799,15 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
 
     # Load metadata
     with PrismaConnection(pfs) as conn:
+        ontology_dict = json.loads(pfs.ontology.read_text(encoding="utf-8"))
         project = Project(
             project_hash=project_hash,
             project_name=project_meta["project_title"],
             project_description=project_meta.get("project_description", ""),
             project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
-            project_ontology=json.loads(pfs.ontology.read_text(encoding="utf-8")),
+            project_ontology=ontology_dict,
         )
+        valid_classify_child_feature_hashes = __list_valid_child_feature_hashes(ontology_dict)
         label_rows = conn.labelrow.find_many(
             include={
                 "data_units": True,
@@ -781,6 +829,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                     f"{label_row.data_hash} != {label_row_json['data_hash']}"
                 )
             data_units_json: dict = label_row_json["data_units"]
+            classification_answers: dict = label_row_json.get("classification_answers", {})
             data_type: str = str(label_row_json["data_type"])
             project_data_meta = ProjectDataMetadata(
                 project_hash=project_hash,
@@ -837,7 +886,9 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
                         )
                     object_hashes_seen.add(classification_hash)
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
-                        "feature_hash": str(classify["featureHash"]),
+                        "feature_hash": __label_classify_feature_hash(
+                            classify, classification_answers, valid_classify_child_feature_hashes
+                        ),
                         "annotation_type": AnnotationType.CLASSIFICATION,
                         "annotation_email": str(classify["createdBy"]),
                         "annotation_manual": bool(classify["manualAnnotation"]),
