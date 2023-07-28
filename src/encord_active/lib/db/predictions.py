@@ -68,7 +68,7 @@ class ObjectDetection(BaseModel):
 class FrameClassification(BaseModel):
     feature_hash: str
     attribute_hash: str
-    option_hash: str
+    option_hash: Optional[str] = None
 
     class Config:
         frozen = True

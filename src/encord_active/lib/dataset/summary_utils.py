@@ -106,7 +106,6 @@ def get_all_annotation_numbers(project_file_structure: ProjectFileStructure) -> 
                         ][0]
                         classification_question_name = classification_answer_item["name"]
                         if classification_question_name in labels.classifications:
-
                             if isinstance(classification_answer_item["answers"], list):
                                 for answer_item in classification_answer_item["answers"]:
                                     if answer_item["name"] in labels.classifications[classification_question_name]:

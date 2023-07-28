@@ -188,11 +188,11 @@ def get_annotator_level_info(df: DataFrame[MetricSchema]) -> dict[str, Annotator
 
 def is_multiclass_ontology(ontology: OntologyStructure):
     has_objects = bool(ontology.objects)
-    radio_classifications = filter(
-        lambda class_label: class_label.attributes[0].get_property_type() == PropertyType.RADIO,
+    supported_classifications = filter(
+        lambda class_label: class_label.attributes[0].get_property_type() in [PropertyType.RADIO, PropertyType.TEXT],
         ontology.classifications,
     )
-    num_of_classifications = len(list(radio_classifications))
+    num_of_classifications = len(list(supported_classifications))
 
     return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)
 
@@ -200,7 +200,7 @@ def is_multiclass_ontology(ontology: OntologyStructure):
 def get_embedding_type(annotation_type: Optional[List[AnnotationTypeUnion]]) -> EmbeddingType:
     if not annotation_type:
         return EmbeddingType.IMAGE
-    elif len(annotation_type) == 1 and annotation_type[0] == AnnotationType.CLASSIFICATION.RADIO:
+    elif len(annotation_type) == 1 and annotation_type[0] in [PropertyType.RADIO, PropertyType.TEXT]:
         return EmbeddingType.CLASSIFICATION
     else:
         return EmbeddingType.OBJECT

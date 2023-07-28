@@ -166,12 +166,19 @@ def to_item(
 
         try:
             classifications = labels.get("classifications")
-            if classifications and metadata["labelClass"]:
+            if classifications:
                 clf_instance = classifications[0]
                 question = clf_instance["name"]
                 clf_hash = clf_instance["classificationHash"]
                 classification = label_row["classification_answers"][clf_hash]["classifications"][0]
-                metadata["labelClass"] = f"{question}: {classification['answers'][0]['name']}"
+                if isinstance(classification["answers"], list):
+                    answer = classification["answers"][0]["name"]
+                elif isinstance(classification["answers"], str):
+                    answer = classification["answers"]
+                else:
+                    raise
+                clf_instance["value"] = answer
+                metadata["labelClass"] = f"{question}: {answer}"
         except:
             pass
 

@@ -1,6 +1,6 @@
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, TypedDict
+from typing import Dict, List, TypedDict, Union
 
 import numpy as np
 import torch
@@ -39,7 +39,7 @@ class ClassificationInfo(DescriptionInfo):
 
 
 class ImageLevelQualityTest(Metric):
-    def __init__(self, num_nearest_neighbors: int = 10, certainty_ratio: float = 0.60):
+    def __init__(self, num_nearest_neighbors: int = 5, certainty_ratio: float = 0.60):
         """
 
         :param num_nearest_neighbors: determines how many nearest neighbors' labels should be checked for the quality.
@@ -57,7 +57,7 @@ class ImageLevelQualityTest(Metric):
             doc_url="https://docs.encord.com/docs/active-label-quality-metrics#image-level-annotation-quality",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
-            annotation_type=[AnnotationType.CLASSIFICATION.RADIO],
+            annotation_type=[AnnotationType.CLASSIFICATION.RADIO, AnnotationType.CLASSIFICATION.TEXT],
             embedding_type=EmbeddingType.CLASSIFICATION,
         )
         self.label_embeddings: list[LabelEmbedding] = []
@@ -139,7 +139,18 @@ class ImageLevelQualityTest(Metric):
                 if not answers:
                     gt_label = "Unclassified"
                 else:
-                    gt_label = self.featureNodeHash_to_index[question][answers["answer_featureHash"]]
+                    try:
+                        gt_label = self.featureNodeHash_to_index[question][answers["answer_featureHash"]]
+                    except:
+                        value = answers["answer_name"]
+                        counter = len(self.index_to_answer_name[question])
+                        if value not in self.featureNodeHash_to_index:
+                            counter += 1
+
+                        self.featureNodeHash_to_index[question][value] = counter
+                        self.featureNodeHash_to_name[question][value] = value
+                        self.index_to_answer_name[question][counter] = value
+                        gt_label = counter
 
                 noisy_labels_list.append(gt_label)
 
@@ -242,17 +253,21 @@ class ImageLevelQualityTest(Metric):
         found_any = False
         for class_label in iterator.project.ontology.classifications:
             class_question = class_label.attributes[0]
-            if class_question.get_property_type() == PropertyType.RADIO:
+            if class_question.get_property_type() in [PropertyType.RADIO, PropertyType.TEXT]:
                 found_any = True
+                self.featureNodeHash_to_question_name[class_label.feature_node_hash] = class_label.attributes[0].name
                 self.featureNodeHash_to_index[class_label.feature_node_hash] = {}
                 self.featureNodeHash_to_name[class_label.feature_node_hash] = {}
-                self.featureNodeHash_to_question_name[class_label.feature_node_hash] = class_label.attributes[0].name
                 self.index_to_answer_name[class_label.feature_node_hash] = {}
 
-                for counter, option in enumerate(class_question.options):
-                    self.featureNodeHash_to_index[class_label.feature_node_hash][option.feature_node_hash] = counter
-                    self.featureNodeHash_to_name[class_label.feature_node_hash][option.feature_node_hash] = option.label
-                    self.index_to_answer_name[class_label.feature_node_hash][counter] = option.label
+                if class_question.get_property_type() == PropertyType.RADIO:
+
+                    for counter, option in enumerate(class_question.options):
+                        self.featureNodeHash_to_index[class_label.feature_node_hash][option.feature_node_hash] = counter
+                        self.featureNodeHash_to_name[class_label.feature_node_hash][
+                            option.feature_node_hash
+                        ] = option.label
+                        self.index_to_answer_name[class_label.feature_node_hash][counter] = option.label
 
         return found_any
 

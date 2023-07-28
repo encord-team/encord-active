@@ -8,7 +8,7 @@ from encord_active.lib.metrics.utils import IdentifierSchema
 
 
 class ClassificationAnswer(TypedDict):
-    answer_featureHash: str
+    answer_featureHash: Optional[str]
     answer_name: str
     annotator: str
 

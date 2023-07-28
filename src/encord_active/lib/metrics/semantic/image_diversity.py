@@ -22,11 +22,11 @@ class ImageDiversity(Metric):
             title="Image Diversity",
             short_description="Ranks images according to their proximity to class prototypes (lower values = closer to "
             "class prototypes = easy samples)",
-            long_description=r"""  
-It clusters images according to the number of classes in the ontology (if there are both object and frame level 
-classifications in the ontology, the number of object classes is taken into account) 
-and rank images inside each cluster by assigning lower 
-score to the ones which are closer to the cluster center. Finally, ranked images in different clusters are 
+            long_description=r"""
+It clusters images according to the number of classes in the ontology (if there are both object and frame level
+classifications in the ontology, the number of object classes is taken into account)
+and rank images inside each cluster by assigning lower
+score to the ones which are closer to the cluster center. Finally, ranked images in different clusters are
 merged by keeping the samples of classes the same for the first _N_ samples.
 """,
             doc_url="https://docs.encord.com/docs/active-data-quality-metrics#image-diversity",

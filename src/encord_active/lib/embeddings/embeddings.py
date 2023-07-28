@@ -1,7 +1,7 @@
 import pickle
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
@@ -172,19 +172,22 @@ def generate_classification_embeddings(
 ) -> List[LabelEmbedding]:
     image_label_embeddings = get_embeddings(iterator, embedding_type=EmbeddingType.IMAGE)
 
-    ontology_class_hash_to_index: dict[str, dict] = {}
+    ontology_class_hash_to_index: dict[str, Union[dict, int]] = {}
     ontology_class_hash_to_question_hash: dict[str, str] = {}
 
     # TODO: This only evaluates immediate classes, not nested ones
     # TODO: Look into other types of classifications apart from radio buttons
     for class_label in iterator.project.ontology.classifications:
         class_question = class_label.attributes[0]
-        if class_question.get_property_type() == PropertyType.RADIO:
+        if class_question.get_property_type() in [PropertyType.RADIO, PropertyType.TEXT]:
             ontology_class_hash = class_label.feature_node_hash
             ontology_class_hash_to_index[ontology_class_hash] = {}
             ontology_class_hash_to_question_hash[ontology_class_hash] = class_question.feature_node_hash
-            for index, option in enumerate(class_question.options):  # type: ignore
-                ontology_class_hash_to_index[ontology_class_hash][option.feature_node_hash] = index
+            if class_question.get_property_type() == PropertyType.RADIO:
+                for index, option in enumerate(class_question.options):  # type: ignore
+                    ontology_class_hash_to_index[ontology_class_hash][option.feature_node_hash] = index
+            else:
+                ontology_class_hash_to_index[ontology_class_hash] = 0
 
     start = time.perf_counter()
     if feature_extractor is None:
@@ -236,13 +239,23 @@ def generate_classification_embeddings(
                         classification_answer["featureHash"]
                         == ontology_class_hash_to_question_hash[ontology_class_hash]
                     ):
-                        answers.append(
-                            ClassificationAnswer(
-                                answer_featureHash=classification_answer["answers"][0]["featureHash"],
-                                answer_name=classification_answer["answers"][0]["name"],
-                                annotator=classification["createdBy"],
+                        if isinstance(classification_answer["answers"], list):
+                            answers.append(
+                                ClassificationAnswer(
+                                    answer_featureHash=classification_answer["answers"][0]["featureHash"],
+                                    answer_name=classification_answer["answers"][0]["name"],
+                                    annotator=classification["createdBy"],
+                                )
                             )
-                        )
+                        elif isinstance(classification_answer["answers"], str):
+                            answers.append(
+                                ClassificationAnswer(
+                                    answer_featureHash=None,
+                                    answer_name=classification_answer["answers"],
+                                    annotator=classification["createdBy"],
+                                )
+                            )
+
             # NOTE: since we only support one one classification for now
             identified_answers = answers[0] if len(answers) else None
 

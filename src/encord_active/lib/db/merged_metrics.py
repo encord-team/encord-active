@@ -4,6 +4,7 @@ from sqlite3 import Connection
 from typing import List, Optional
 
 import pandas as pd
+from encord.objects.common import PropertyType
 
 from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.tags import Tag, TagScope
@@ -42,7 +43,7 @@ def build_merged_metrics(metrics_path: Path) -> pd.DataFrame:
         else:
             # Image-level quality index
             if (
-                meta.annotation_type[0] == ClassificationType.RADIO
+                meta.annotation_type[0] in [ClassificationType.RADIO, ClassificationType.TEXT]
                 and meta.data_type == DataType.IMAGE
                 and meta.embedding_type == EmbeddingType.CLASSIFICATION
             ):

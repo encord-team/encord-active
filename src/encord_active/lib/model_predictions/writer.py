@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 from encord.objects.classification import Classification
-from encord.objects.common import NestableOption, RadioAttribute
+from encord.objects.common import NestableOption, RadioAttribute, TextAttribute
 from encord.objects.ontology_structure import OntologyStructure
 from torchvision.ops import box_iou
 from tqdm.auto import tqdm
@@ -232,8 +232,8 @@ CLASS_INDEX_FILE = "class_idx.json"
 
 class ClassificationAttributeOption(NamedTuple):
     classification: Classification
-    attribute: RadioAttribute
-    option: NestableOption
+    attribute: Union[RadioAttribute, TextAttribute]
+    option: Optional[NestableOption] = None
 
 
 def iterate_classification_attribute_options(ontology: OntologyStructure):
@@ -246,6 +246,11 @@ def iterate_classification_attribute_options(ontology: OntologyStructure):
                         attribute_hash=attribute.feature_node_hash,
                         option_hash=option.feature_node_hash,
                     ), ClassificationAttributeOption(classification, attribute, option)
+            elif isinstance(attribute, TextAttribute):
+                yield FrameClassification(
+                    feature_hash=classification.feature_node_hash,
+                    attribute_hash=attribute.feature_node_hash,
+                ), ClassificationAttributeOption(classification, attribute)
 
 
 class PredictionWriter:
@@ -417,15 +422,17 @@ class PredictionWriter:
     def get_classification_class_id(
         self, classification: LabelClassification, classification_answer: ClassificationAnswer
     ) -> Optional[ClassID]:
-        if len(classification_answer.answers) == 0:
-            return None
-
         key = FrameClassification(
             feature_hash=classification.featureHash,
             attribute_hash=classification_answer.featureHash,
-            # NOTE: since we only support radio buttons, at this point we should have only one answer
-            option_hash=classification_answer.answers[0].featureHash,
         )
+
+        if len(classification_answer.answers) == 0:
+            return frame_classification
+
+        # NOTE: since we only support radio buttons, at this point we should have only one answer
+        frame_classification.option_hash=classification_answer.answers[0].featureHash,
+
         return self.classification_class_id_lookup.get(key)
 
     def __enter__(self):

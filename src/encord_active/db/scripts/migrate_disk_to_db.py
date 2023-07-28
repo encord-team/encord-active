@@ -432,7 +432,7 @@ def __list_valid_child_feature_hashes(ontology_dict) -> Set[str]:
             [
                 class_question
                 for class_question in class_label.attributes
-                if class_question.get_property_type() == PropertyType.RADIO
+                if class_question.get_property_type() in [PropertyType.RADIO, PropertyType.TEXT]
             ]
         )
         if num_radio != 1:
@@ -441,6 +441,8 @@ def __list_valid_child_feature_hashes(ontology_dict) -> Set[str]:
         if class_question.get_property_type() == PropertyType.RADIO:
             for counter, option in enumerate(class_question.options):
                 valid_child_ontology_feature_hashes.add(option.feature_node_hash)
+        elif class_question.get_property_type() == PropertyType.TEXT:
+            valid_child_ontology_feature_hashes.add(class_question.feature_node_hash)
 
     return valid_child_ontology_feature_hashes
 
