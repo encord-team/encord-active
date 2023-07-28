@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 if TYPE_CHECKING:
     import prisma
+    from prisma.types import DataUnitUpsertInput
 
 import yaml
 from encord import Project as EncordProject
@@ -25,7 +26,6 @@ from encord_active.lib.common.data_utils import (
     collect_async,
     count_frames,
     download_file,
-    download_image,
     extract_frames,
     file_path_to_url,
     get_frames_per_second,
@@ -360,10 +360,8 @@ def download_data(
         width = du["width"]
         height = du["height"]
 
-        # State the compound key representing the data unit in the db
-        query_where_input = {"data_hash_frame": {"data_hash": data_hash, "frame": frame}}
         # State what data is going to be created / updated in the db upsert
-        query_data_input = {
+        query_data_input: DataUnitUpsertInput = {
             "create": {
                 "data_hash": data_hash,
                 "data_title": du["data_title"],
@@ -395,7 +393,12 @@ def download_data(
             # The online version doesn't require any additional content, except for the image url,
             # which is not a permalink so best not to add it.
             pass
-        batch.dataunit.upsert(where=query_where_input, data=query_data_input)
+
+        batch.dataunit.upsert(
+            # State the compound key representing the data unit in the db
+            where={"data_hash_frame": {"data_hash": data_hash, "frame": frame}},
+            data=query_data_input,
+        )
 
 
 def download_label_row_and_data(
