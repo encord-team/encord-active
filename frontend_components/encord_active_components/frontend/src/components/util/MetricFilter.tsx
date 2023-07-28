@@ -281,6 +281,9 @@ function addNewEntry<
   };
 }
 
+const toFixedNumber = (number: number, precision: number) =>
+  parseFloat(number.toFixed(precision));
+
 export function MetricFilter<
   R extends {
     min: number;
@@ -429,11 +432,14 @@ export function MetricFilter<
                 min={metricBounds.min}
                 max={metricBounds.max}
                 style={{ width: 500 }}
-                step={metricBounds.step}
+                step={toFixedNumber(metricBounds.step, 2)}
                 value={
                   metricFilters != null
                     ? [metricFilters[0], metricFilters[1]]
-                    : [metricBounds.min, metricBounds.max]
+                    : [
+                        toFixedNumber(metricBounds.min, 2),
+                        toFixedNumber(metricBounds.max, 2),
+                      ]
                 }
                 onChange={(newRange: [number, number]) =>
                   setFilters(updateValue(filterKey, newRange, "metricFilters"))
