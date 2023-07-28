@@ -86,7 +86,7 @@ class IntegratedAPI implements QueryAPI {
     }
     const base = this.projects[project_hash];
     if (base == null) {
-        return `${apiUrl}/projects_v2_error_state/project_does_not_exist`;
+      return `${apiUrl}/projects_v2_error_state/project_does_not_exist`;
     }
     return base.baseProjectUrl;
   }
@@ -380,6 +380,7 @@ class IntegratedAPI implements QueryAPI {
       async (args: CreateSubsetMutationArguments) => {
         const params = {
           filters: args.filters ?? {},
+          ids: args.ids ?? [],
           project_title: args.project_title,
           project_description: args.project_description ?? "",
           dataset_title: args.dataset_title,

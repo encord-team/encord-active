@@ -8,8 +8,9 @@ export function CreateSubsetModal(props: {
   projectHash: string;
   queryAPI: QueryAPI;
   filters: Filters;
+  ids: string[];
 }) {
-  const { open, close, projectHash, queryAPI, filters } = props;
+  const { open, close, projectHash, queryAPI, filters, ids } = props;
   const [form] = Form.useForm<{
     project_title: string;
     project_description?: string | undefined;
@@ -19,7 +20,7 @@ export function CreateSubsetModal(props: {
 
   const mutateCreateSubset = queryAPI.useProjectMutationCreateSubset(
     projectHash,
-    { onSuccess: close }
+    { onSuccess: close },
   );
 
   return (
@@ -30,7 +31,7 @@ export function CreateSubsetModal(props: {
       onCancel={close}
       okButtonProps={{
         loading: mutateCreateSubset.isLoading,
-        style: { backgroundColor: "#5555ff" }
+        style: { backgroundColor: "#5555ff" },
       }}
       cancelButtonProps={{ disabled: mutateCreateSubset.isLoading }}
       onOk={() => {
@@ -40,7 +41,8 @@ export function CreateSubsetModal(props: {
             mutateCreateSubset.mutate({
               ...fields,
               filters,
-            })
+              ids,
+            }),
           )
           .catch(() => undefined);
       }}

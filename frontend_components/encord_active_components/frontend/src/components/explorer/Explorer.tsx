@@ -332,6 +332,7 @@ export const Explorer = ({
         projectHash={projectHash}
         queryAPI={queryAPI}
         filters={filters}
+        ids={[...itemSet]}
       />
       <UploadToEncordModal
         open={open === "upload"}

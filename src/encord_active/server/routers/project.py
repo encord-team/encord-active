@@ -536,6 +536,7 @@ def search(
 
 class CreateSubsetJSON(BaseModel):
     filters: Filters
+    ids: List[str]
     project_title: str
     dataset_title: str
     project_description: Optional[str] = None
@@ -549,6 +550,7 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     dataset_title = item.dataset_title
     dataset_description = item.dataset_description
     filtered_df = filtered_merged_metrics(curr_project_structure, item.filters).reset_index()
+    filtered_df = filtered_df[filtered_df["identifier"].isin(item.ids)]
     target_project_dir = curr_project_structure.project_dir.parent / project_title.lower().replace(" ", "-")
     target_project_structure = ProjectFileStructure(target_project_dir)
     current_project_meta = curr_project_structure.load_project_meta()
