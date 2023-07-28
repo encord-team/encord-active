@@ -348,38 +348,36 @@ def download_data(
     store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
     if store_data_locally:
         project_file_structure.local_data_store.mkdir(exist_ok=True)
-    data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
+    data_units = sorted(label_row.data_units.values(), key=lambda _du: int(_du["data_sequence"]))
+
+    # Skip video frames from being added to the db (they are added after the video processing stage)
+    if label_row.data_type == DataType.VIDEO.value:
+        return
+
     for du in data_units:
-
-        # Skip data units of type video from being added to the db (they are added after the video processing stage)
-        if label_row.data_type == DataType.VIDEO.value:
-            return
-
         data_hash = du["data_hash"]
         frame = int(du["data_sequence"])
+        width = du["width"]
+        height = du["height"]
 
-        batch.dataunit.upsert(
-            where={
-                "data_hash_frame": {  # state the values of the compound key
-                    "data_hash": data_hash,
-                    "frame": frame,
-                }
+        # State the compound key representing the data unit in the db
+        query_where_input = {"data_hash_frame": {"data_hash": data_hash, "frame": frame}}
+        # State what data is going to be created / updated in the db upsert
+        query_data_input = {
+            "create": {
+                "data_hash": data_hash,
+                "data_title": du["data_title"],
+                "frame": frame,
+                "lr_data_hash": label_row.data_hash,
+                "fps": 0,
+                "width": width,
+                "height": height,
             },
-            data={
-                "create": {
-                    "data_hash": data_hash,
-                    "data_title": du["data_title"],
-                    "frame": frame,
-                    "lr_data_hash": label_row.data_hash,
-                    "fps": 0,
-                    "width": -1,
-                    "height": -1,
-                },
-                "update": {
-                    "data_title": du["data_title"],
-                },
+            "update": {
+                "data_title": du["data_title"],
             },
-        )
+        }
+
         if store_data_locally:
             signed_url = du["data_link"]
             local_path = project_file_structure.local_data_store / data_hash
@@ -391,40 +389,13 @@ def download_data(
                 local_path,
                 cache=False,  # Disable cache symlink tricks
             )
-            image = Image.open(local_path)
-            batch.dataunit.update(
-                where={
-                    "data_hash_frame": {  # state the values of the compound key
-                        "data_hash": data_hash,
-                        "frame": frame,
-                    }
-                },
-                data={
-                    "width": image.width,
-                    "height": image.height,
-                    "data_uri": file_path_to_url(local_path, project_file_structure.project_dir),
-                },
-            )
+            file_url = file_path_to_url(local_path, project_file_structure.project_dir)
+            query_data_input["create"]["data_uri"] = query_data_input["update"]["data_uri"] = file_url
         else:
-            cached_signed_urls = project_file_structure.cached_signed_urls
-            signed_url = du["data_link"]
-            cached_signed_urls[du["data_hash"]] = signed_url
-            image = download_image(
-                signed_url,
-                project_dir=project_file_structure.project_dir,
-            )
-            batch.dataunit.update(
-                where={
-                    "data_hash_frame": {  # state the values of the compound key
-                        "data_hash": data_hash,
-                        "frame": frame,
-                    }
-                },
-                data={
-                    "width": image.width,
-                    "height": image.height,
-                },
-            )
+            # The online version doesn't require any additional content, except for the image url,
+            # which is not a permalink so best not to add it.
+            pass
+        batch.dataunit.upsert(where=query_where_input, data=query_data_input)
 
 
 def download_label_row_and_data(
