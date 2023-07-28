@@ -43,6 +43,12 @@ function getMetricBounds<
       max: bounds.max,
       step: bounds.max / 100,
     };
+  } else if (metric.type === "sfloat") {
+    return {
+      min: bounds.min,
+      max: bounds.max,
+      step: (bounds.max - bounds.min) / 100,
+    };
   } else if (metric.type === "uint") {
     return {
       min: 0,

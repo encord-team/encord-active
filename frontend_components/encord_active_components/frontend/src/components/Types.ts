@@ -34,7 +34,7 @@ export type ProjectMetricSummary = {
       readonly title: string;
       readonly short_desc: string;
       readonly long_desc: string;
-      readonly type: "normal" | "uint" | "ufloat" | "rank";
+      readonly type: "normal" | "uint" | "ufloat" | "rank" | "sfloat";
     };
   };
   readonly enums: {
