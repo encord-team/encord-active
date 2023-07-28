@@ -200,8 +200,9 @@ def get_project_prediction_summary(
                 },
             ).first()
             precision_recall[feature_hash] = {
-                "ap": pr_result[0],  # type: ignore
-                "ar": pr_result[1],  # type: ignore
+                # FIXME: NULL precision / recall handling on the backend!?!
+                "ap": pr_result[0] or 0.0,  # type: ignore
+                "ar": pr_result[1] or 0.0,  # type: ignore
             }
 
     # Calculate correlation for metrics

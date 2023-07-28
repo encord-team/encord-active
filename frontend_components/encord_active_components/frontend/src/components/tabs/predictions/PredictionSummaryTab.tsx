@@ -1,5 +1,5 @@
 import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
-import { useState } from "react";
+import {useMemo, useState} from "react";
 import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBar";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
@@ -33,18 +33,59 @@ export function PredictionSummaryTab(props: {
 
   const classificationOnlyProject = predictionSummaryData?.classification_only !== false;
 
-  // FIXME: expose all information for classifications!!
-  // classification
-  // Average Precision = TP / (TP + FP)
-  // Average Recall = TP / (TP + FN)
-  // Average Accuracy = (TP + TN) / (TP + FP + FN) {FN makes only fo classifications}
-  // FN (currently) = {num_frames * feature_hashes} - tp - fp - fn
-  // So need num_frames as exposed value (only used for classification project).
-  const cTP = predictionSummaryData?.tTP ?? 0;
-  const cFP = predictionSummaryData?.tFP ?? 0;
-  const cFN = predictionSummaryData?.tFN ?? 0;
-  const cNF = predictionSummaryData?.num_frames ?? 0;
-  const cTN = cNF - cFN - cFP - cTP;// FIXME: wrong if multiple classifications per frame is allowed
+  const classificationOnlySummary = useMemo(() => {
+    if (predictionSummaryData == null || !classificationOnlyProject) {
+      return null;
+    }
+    const featureHashes: Record<string, { fp: number, fn: number, tp: number, p: number, r: number }> = {};
+    Object.entries(predictionSummaryData.tp).forEach(([f, tp]) => {
+      featureHashes[f] = { tp, fn: 0, fp: 0, p: 0, r: 0};
+    });
+    Object.entries(predictionSummaryData.fp).forEach(([f, fp]) => {
+      if (f in featureHashes) {
+        featureHashes[f].fp = fp;
+      } else {
+        featureHashes[f] = { fp, tp: 0, fn: 0, p: 0, r: 0}
+      }
+    });
+    Object.entries(predictionSummaryData.fn).forEach(([f, fn]) => {
+      if (f in featureHashes) {
+        featureHashes[f].fn = fn;
+      } else {
+        featureHashes[f] = { fn, tp: 0, fp: 0, p: 0, r: 0}
+      }
+    });
+    Object.entries(predictionSummaryData.precisions).forEach(([f, p]) => {
+      if (f in featureHashes) {
+        featureHashes[f].p = p
+      }
+    });
+    Object.entries(predictionSummaryData.recalls).forEach(([f, r]) => {
+      if (f in featureHashes) {
+        featureHashes[f].r = r
+      }
+    });
+    const perFeatureProps = Object.values(featureHashes).map(({fp, fn, tp, p, r}) => {
+      return {
+        p: (tp + fp) == 0 ? 1 : tp / (tp + fp),
+        r: (tp + fn) == 0 ? 1 : tp / (tp + fn),
+        a: (predictionSummaryData.num_frames - fn - fp) / (tp + fp + fn),
+        f1: (p + r) === 0.0 ? 0.0 : (2 * p * r) / (p + r),
+      }
+    });
+    const featureCount = perFeatureProps.length;
+    const reduced = perFeatureProps.reduce(
+      (c, n) =>
+        ({p: c.p + n.p, r: c.r + n.r, a: c.a + n.a, f1: c.f1 + n.f1}),
+      {a: 0, r: 0, p: 0, f1: 0}
+    );
+    return {
+      a: reduced.a / featureCount,
+      r: reduced.r / featureCount,
+      p: reduced.p / featureCount,
+      f1: reduced.f1 / featureCount,
+    }
+  }, [predictionSummaryData, classificationOnlyProject]);
 
   return (
     <>
@@ -65,30 +106,30 @@ export function PredictionSummaryTab(props: {
          </>
       )}
       <Row wrap justify="space-evenly">
-        {classificationOnlyProject ? (
+        {classificationOnlySummary ? (
           <>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Average Precision"
-                value={(
-                    cTP / (cTP + cFP)
-                ).toFixed(3)}
+                value={classificationOnlySummary.p.toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Average Recall"
-                value={(
-                    cTP / (cTP + cFN)
-                ).toFixed(3)}
+                value={classificationOnlySummary.r.toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Average Accuracy"
-                value={(
-                    (cTP + cTN) / (cTP + cFN + cFP)
-                ).toFixed(3)}
+                value={classificationOnlySummary.a.toFixed(3)}
+              />
+            </Card>
+             <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="Average F1"
+                value={classificationOnlySummary.f1.toFixed(3)}
               />
             </Card>
           </>
