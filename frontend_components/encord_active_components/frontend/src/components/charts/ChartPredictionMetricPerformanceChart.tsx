@@ -10,7 +10,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { formatTooltip, formatTooltipLabel } from "../util/Formatter";
+import {featureHashToColor, formatTooltip, formatTooltipLabel} from "../util/Formatter";
 
 /**
  * Returns data for the average over the input data.
@@ -215,7 +215,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
           const color =
             feature === ""
               ? "#9090ff"
-              : featureHashMap[feature]?.color ?? feature;
+              : featureHashMap[feature]?.color ?? featureHashToColor(feature);
           const opacityBar =
             hoverKeyword === undefined || hoverKeyword === `${feature}n`
               ? 1.0
