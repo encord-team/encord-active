@@ -269,6 +269,11 @@ class Project:
 
         # Download new project data
         if len(label_rows_to_download) > 0:
+            operation_description = "Collecting the new data"
+            store_data_locally: bool = project_file_structure.load_project_meta().get("store_data_locally", False)
+            if not store_data_locally:
+                operation_description = "Collecting information on the new data"
+
             with PrismaConnection(project_file_structure) as conn:
                 with conn.batch_() as batch:
                     downloaded_label_rows = collect_async(
@@ -279,7 +284,7 @@ class Project:
                             batch=batch,
                         ),
                         label_rows_to_download,
-                        desc="Collecting new data",
+                        desc=operation_description,
                     )
                     batch.commit()
         else:
