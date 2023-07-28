@@ -197,7 +197,7 @@ export const Explorer = ({
           title: name,
           short_desc: "",
           long_desc: "",
-          type: name == "Blur" ? "sfloat" : "ufloat",
+          type: name === "Blur" ? "sfloat" : "ufloat",
         };
       });
       metrics.annotation.forEach(({ name }) => {
@@ -205,7 +205,7 @@ export const Explorer = ({
           title: name,
           short_desc: "",
           long_desc: "",
-          type: name == "Blur" ? "sfloat" : "ufloat",
+          type: name === "Blur" ? "sfloat" : "ufloat",
         };
       });
       metrics.prediction.forEach(({ name }) => {
