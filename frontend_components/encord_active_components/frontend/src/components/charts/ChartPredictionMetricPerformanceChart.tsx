@@ -91,6 +91,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
     { readonly color: string; readonly name: string }
   >;
   scoreLabel: string;
+  showDistributionBar: boolean;
 }) {
   const {
     data,
@@ -98,6 +99,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
     selectedClass,
     classDecomposition,
     featureHashMap,
+    showDistributionBar,
   } = props;
   const [barCharts, barRefs, barGroups]: [
     ({ m: number } & Record<string, number>)[],
@@ -224,13 +226,15 @@ export function ChartPredictionMetricPerformanceChart(props: {
               : 0.2;
           return (
             <>
-              <Bar
-                name={`${groupName} Samples`}
-                key={`${feature}n`}
-                dataKey={`${feature}n`}
-                fill={color}
-                fillOpacity={opacityBar}
-              />
+              {showDistributionBar ? (
+                <Bar
+                  name={`${groupName} Samples`}
+                  key={`${feature}n`}
+                  dataKey={`${feature}n`}
+                  fill={color}
+                  fillOpacity={opacityBar}
+                />
+              ) : null}
               <Line
                 name={`${groupName} Performance`}
                 key={`${feature}a`}
