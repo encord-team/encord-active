@@ -1,9 +1,10 @@
 import json
+import logging
 import pickle
 import subprocess
 import uuid
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 import pandas as pd
 import yaml
@@ -12,6 +13,9 @@ from encord_active.lib.common.data_utils import iterate_in_batches, url_to_file_
 from encord_active.lib.common.utils import DataHashMapping
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.embeddings.dimensionality_reduction import (
+    generate_2d_embedding_data,
+)
 from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.types import LabelEmbedding
 from encord_active.lib.embeddings.utils import (
@@ -20,8 +24,19 @@ from encord_active.lib.embeddings.utils import (
 )
 from encord_active.lib.metrics.metric import MetricMetadata
 from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.utils import load_metric_dataframe
+from encord_active.lib.model_predictions.reader import (
+    get_model_predictions,
+    read_prediction_files,
+)
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
+from encord_active.server.utils import (
+    filtered_merged_metrics,
+    get_similarity_finder,
+    load_project_metrics,
+    read_class_idx,
+)
 
 
 class LabelRowDataUnit(NamedTuple):
@@ -89,6 +104,7 @@ def replace_uids(
     for old_dh, new_dh in data_hash_mapping.items():
         renaming_map[old_dh] = new_dh
 
+    logging.debug(f"renaming map for execution: {renaming_map}")
     try:
         _replace_uids(project_file_structure, renaming_map)
     except Exception as e:
@@ -117,6 +133,20 @@ def _replace_uids(
     else:
         new_mappings = {v: k for k, v in renaming_map.items()}
     project_file_structure.mappings.write_text(json.dumps(new_mappings))
+
+    # Invalidate caches - all caches to do with this project are out of date!
+    caches = [
+        load_metric_dataframe,
+        load_project_metrics,
+        get_similarity_finder,
+        filtered_merged_metrics,
+        read_class_idx,
+        get_model_predictions,
+        read_prediction_files,
+    ]
+    for cache in caches:
+        cache.cache_clear()  # type: ignore
+    project_file_structure.cache_clear()
 
 
 def create_filtered_embeddings(
@@ -158,6 +188,7 @@ def create_filtered_embeddings(
             filtered_embeddings = embeddings_df.to_dict(orient="records")
             target_project_structure.get_embeddings_file(embedding_type).write_bytes(pickle.dumps(filtered_embeddings))
             EmbeddingIndex.from_project(target_project_structure, embedding_type)
+            generate_2d_embedding_data(embedding_type, target_project_structure, embeddings)
 
 
 def get_filtered_objects(filtered_labels, label_row_hash, data_unit_hash, objects):
@@ -305,12 +336,15 @@ def copy_project_meta(
     target_project_structure: ProjectFileStructure,
     project_title: str,
     project_description: str,
+    final_data_version: Optional[int] = None,
 ):
     project_meta = fetch_project_meta(curr_project_structure.project_dir)
     project_meta["project_title"] = project_title
     project_meta["project_description"] = project_description
     project_meta["has_remote"] = False
     project_meta["project_hash"] = str(uuid.uuid4())
+    if final_data_version:
+        project_meta["data_version"] = final_data_version
     target_project_structure.project_meta.write_text(yaml.safe_dump(project_meta), encoding="utf-8")
 
 

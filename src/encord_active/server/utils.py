@@ -1,10 +1,10 @@
 import json
-from functools import lru_cache, partial
+import uuid
+from functools import partial
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TypedDict, TypeVar
-from urllib.parse import quote
+from typing import Dict, List, Optional, Tuple, TypedDict
 
-import pandas as pd
+from cachetools import LRUCache, cached
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -29,7 +29,6 @@ from encord_active.lib.project.project_file_structure import (
     ProjectFileStructure,
 )
 from encord_active.server.dependencies import ProjectFileStructureDep
-from encord_active.server.settings import get_settings
 
 
 class Metadata(TypedDict):
@@ -38,39 +37,34 @@ class Metadata(TypedDict):
     metrics: Dict[str, str]
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricScope] = None) -> List[MetricData]:
-    if scope == MetricScope.MODEL_QUALITY:
+    if scope == MetricScope.PREDICTION:
         return load_available_metrics(project.predictions / "object" / "metrics")
     return load_available_metrics(project.metrics, scope)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
     return SimilaritiesFinder(embedding_type, project)
 
 
-@lru_cache
-def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters):
+@cached(cache=LRUCache(maxsize=100))
+def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all()
 
-    return apply_filters(merged_metrics, filters, project)
+    return apply_filters(merged_metrics, filters, project, scope)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=100))
 def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
 
 
-IndexOrSeries = TypeVar("IndexOrSeries", pd.Index, pd.Series)
-
-
-def partial_column(column: IndexOrSeries, parts: int) -> IndexOrSeries:
-    return column.str.split("_", n=parts).str[0:parts].str.join("_")
-
-
-def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -> Optional[Tuple[str, Optional[float]]]:
+def _get_url(
+    project_hash: uuid.UUID, label_row_structure: LabelRowStructure, du_hash: str, frame: str
+) -> Optional[Tuple[str, Optional[float]]]:
     data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
         label_row_structure.iter_data_unit(du_hash, None), None
     )
@@ -81,23 +75,8 @@ def _get_url(label_row_structure: LabelRowStructure, du_hash: str, frame: str) -
         signed_url = data_opt.signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
-            file_path = file_path.absolute()
-            settings = get_settings()
-            root_path = label_row_structure.label_row_file_deprecated_for_migration().parents[3]
-            try:
-                relative_path = file_path.relative_to(root_path)
-                signed_url = f"{settings.API_URL}/ea-static/{quote(relative_path.as_posix())}"
-            except ValueError as ex:
-                # Use hacky fallback
-                approx_relative_path = file_path.as_posix().removeprefix(root_path.as_posix())
-                if root_path.as_posix() != approx_relative_path:
-                    if approx_relative_path.startswith("/"):
-                        approx_relative_path = approx_relative_path[1:]
-                    signed_url = f"{settings.API_URL}/ea-static/{quote(approx_relative_path)}"
-                else:
-                    # Give up, hope that file paths are allowed in the users browser
-                    print("WARNING: failed to resolve path to relative")
-                    signed_url = file_path.absolute().as_uri()
+            url_frame = 0 if data_opt.data_type == "video" else frame
+            signed_url = f"/projects/{project_hash}/local-fs/{label_row_structure.label_hash}/{du_hash}/{url_frame}"
 
         return signed_url, timestamp
     return None
@@ -168,7 +147,7 @@ def to_item(
     )
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(label_row_structure, du_hash, frame)
+    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame)
 
     label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]

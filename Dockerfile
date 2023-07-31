@@ -30,8 +30,7 @@ RUN prisma generate --schema=./src/encord_active/lib/db/schema.prisma
 WORKDIR /data
 
 RUN git config --global --add safe.directory '*'
-EXPOSE 8501
-EXPOSE 8502
+EXPOSE 8000
 
 HEALTHCHECK CMD ecord-active --version
 ENTRYPOINT ["encord-active"]

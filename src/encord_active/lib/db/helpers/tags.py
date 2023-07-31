@@ -35,8 +35,8 @@ def to_grouped_tags(tags: List[Tag]) -> GroupedTags:
 
 
 def from_grouped_tags(tags: GroupedTags) -> tuple[List[Tag], List[Tag]]:
-    data_tags = [Tag(tag, TagScope.DATA) for tag in tags["data"]]
-    label_tags = [Tag(tag, TagScope.LABEL) for tag in tags["label"]]
+    data_tags = [Tag(tag, TagScope.DATA) for tag in tags.get("data", [])]
+    label_tags = [Tag(tag, TagScope.LABEL) for tag in tags.get("label", [])]
     return data_tags, label_tags
 
 
