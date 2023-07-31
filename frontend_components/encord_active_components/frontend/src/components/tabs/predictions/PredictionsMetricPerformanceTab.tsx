@@ -1,4 +1,4 @@
-import { Col, Divider, Row, Select, Slider, Typography } from "antd";
+import {Checkbox, Col, Divider, Row, Select, Slider, Typography} from "antd";
 import { useMemo, useState } from "react";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
@@ -48,6 +48,7 @@ export function PredictionsMetricPerformanceTab(props: {
   );
   const [bucketCount, setBucketCount] = useState(10);
   const [classList, setClassList] = useState<string[]>([]);
+  const [showDistributionBar, setShowDistributionBar] = useState(false);
 
   const rawQueryState = useMemo(
       () => ({ bucketCount, iou, selectedMetric }),
@@ -113,6 +114,7 @@ export function PredictionsMetricPerformanceTab(props: {
         </Col>
       </Row>
       <Row align="middle">
+        <Col span={8}>
         <Typography.Text strong>Class:</Typography.Text>
         <Select
           mode="multiple"
@@ -123,6 +125,14 @@ export function PredictionsMetricPerformanceTab(props: {
           style={{ width: "50%" }}
           bordered={false}
         />
+        </Col>
+        <Col span={8}>
+          <Typography.Text strong>Show Distribution: </Typography.Text>
+          <Checkbox
+            value={showDistributionBar}
+            onChange={() => setShowDistributionBar((e) => !e)}
+          />
+        </Col>
       </Row>
       <Divider orientation="left">
         <Typography.Title level={3}>Precision</Typography.Title>
@@ -133,6 +143,7 @@ export function PredictionsMetricPerformanceTab(props: {
         classDecomposition="auto"
         featureHashMap={featureHashMap}
         scoreLabel={scoreLabel}
+        showDistributionBar={showDistributionBar}
       />
       <Divider orientation="left">
         <Typography.Title level={3}>False Negative Rate</Typography.Title>
@@ -143,6 +154,7 @@ export function PredictionsMetricPerformanceTab(props: {
         classDecomposition="auto"
         featureHashMap={featureHashMap}
         scoreLabel={scoreLabel}
+        showDistributionBar={showDistributionBar}
       />
     </>
   );

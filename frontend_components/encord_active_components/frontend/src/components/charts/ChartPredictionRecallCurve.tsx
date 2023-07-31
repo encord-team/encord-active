@@ -9,7 +9,7 @@ import {
   Scatter,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { formatTooltip } from "../util/Formatter";
+import {featureHashToColor, formatTooltip} from "../util/Formatter";
 
 export function ChartPredictionRecallCurve(props: {
   data:
@@ -92,37 +92,29 @@ export function ChartPredictionRecallCurve(props: {
                 featureHashMap != null
                   ? featureHashMap[featureHash]?.name ?? featureHash
                   : featureHash;
+              const color = (featureHashMap != null
+                      ? featureHashMap[featureHash]?.color
+                      : null) ?? (featureHash === "" ? "#8884d8" : featureHashToColor(featureHash));
               return (
                 <Scatter
                   name={name}
                   id={name}
                   key={featureHash}
                   data={prCurve}
-                  fill={
-                    (featureHashMap != null
-                      ? featureHashMap[featureHash]?.color
-                      : null) ?? "#8884d8"
-                  }
+                  fill={color}
                   fillOpacity={
                     hoverKeyword === undefined || hoverKeyword === name
                       ? 1.0
                       : 0.3
                   }
-                  stroke={
-                    (featureHashMap != null
-                      ? featureHashMap[featureHash]?.color
-                      : null) ?? "#8884d8"
-                  }
+                  stroke={color}
                   strokeOpacity={
                     hoverKeyword === undefined || hoverKeyword === name
                       ? 1.0
                       : 0.3
                   }
                   line={{
-                    stroke:
-                      (featureHashMap != null
-                        ? featureHashMap[featureHash]?.color
-                        : null) ?? "#8884d8",
+                    stroke: color,
                     strokeWidth: 2,
                   }}
                   lineType="joint"

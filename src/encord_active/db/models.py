@@ -515,7 +515,7 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     # IOU threshold for missed prediction
     # this entry is a false negative IFF (iou < iou_threshold)
     # 2.0 is used for unconditional
-    iou_threshold: float = Field(ge=0, le=2.0)
+    iou_threshold: float = Field(ge=-1.0, le=1.0)
 
     # Unmatched annotation properties
     feature_hash: str = Field(min_length=8, max_length=8)

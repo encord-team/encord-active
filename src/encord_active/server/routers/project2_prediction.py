@@ -6,7 +6,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 import numpy as np
 from fastapi import APIRouter
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import Float, Integer, bindparam, distinct, text, tuple_
+from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
@@ -106,6 +106,17 @@ def get_project_prediction_summary(
                 ProjectPredictionAnalyticsFalseNegatives.feature_hash,
             )
         ).fetchall()
+        false_negative_all_feature_hashes = sess.exec(
+            select(
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
+            )
+            .where(
+                ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
+            )
+            .group_by(
+                ProjectPredictionAnalyticsFalseNegatives.feature_hash,
+            )
+        ).fetchall()
         false_negative_count_map = {}
         total_false_negative_count = 0
         for feature_hash, false_negative_count in false_negative_counts_raw:
@@ -133,7 +144,11 @@ def get_project_prediction_summary(
             total_true_positive_count += tp_count
             total_false_positive_count += fp_count
 
-        all_feature_hashes = set(true_positive_count_map.keys()) | set(false_negative_count_map.keys())
+        all_feature_hashes = (
+            set(true_positive_count_map.keys())
+            | set(false_negative_count_map.keys())
+            | set(false_negative_all_feature_hashes)
+        )
 
         # FIXME: check that feature_hash compare can be removed with changes to pre-calculation of match_iou condition.
         precision_recall = {}
@@ -200,8 +215,9 @@ def get_project_prediction_summary(
                 },
             ).first()
             precision_recall[feature_hash] = {
-                "ap": pr_result[0],  # type: ignore
-                "ar": pr_result[1],  # type: ignore
+                # FIXME: NULL precision / recall handling on the backend!?!
+                "ap": pr_result[0] or 0.0,  # type: ignore
+                "ar": pr_result[1] or 0.0,  # type: ignore
             }
 
     # Calculate correlation for metrics
@@ -210,7 +226,7 @@ def get_project_prediction_summary(
     metric_stats = sess.execute(
         text(
             f"""
-            SELECT 
+            SELECT
                 e_score,
                 avg(
                     ((

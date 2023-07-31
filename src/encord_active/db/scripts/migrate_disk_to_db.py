@@ -771,7 +771,7 @@ def __migrate_predictions(
                 du_hash=missing_du_hash,
                 frame=missing_frame,
                 object_hash=missing_annotation_hash,
-                iou_threshold=2.0,  # Always a false negative
+                iou_threshold=-1.0,  # Always a false negative
                 **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
             )
         )

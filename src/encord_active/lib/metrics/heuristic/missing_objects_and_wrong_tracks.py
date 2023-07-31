@@ -76,7 +76,7 @@ hash, they will be flagged as a potentially broken track.
 ```
 `CAT:2` will be marked as potentially having a wrong track id.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#missing-objects-and-broken-tracks",
+            doc_url="https://docs.encord.com/docs/active-label-quality-metrics#missing-objects-and-broken-tracks",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.SEQUENCE,
             annotation_type=[

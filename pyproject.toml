@@ -17,7 +17,7 @@ classifiers = [
   "Topic :: Software Development",
   "Topic :: Software Development :: Quality Assurance",
 ]
-documentation = "https://docs.encord.com/active/docs"
+documentation = "https://docs.encord.com/docs/active-overview"
 homepage = "https://encord.com/encord-active/"
 keywords = [
   "encord",
@@ -74,10 +74,10 @@ ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
 umap-learn = "^0.5.3"
 llvmlite = "^0.40.0"                                     # Pinning, as lower versions conflict with other libs
-# TODO: updated me after publishing a new version
-# TODO???: encord-active-components = { path ="./frontend_components/dist/encord_active_components-0.0.27.tar.gz" }
-encord-active-components = { path = "./frontend_components", develop=true }
-# TODO: - end of need to update
+# Encord-active-components (strict version match)
+encord-active-components = "0.0.28"
+# FE-dev: encord-active-components = { path = "./frontend_components", develop=true }
+# End of encord-active-components
 gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.2"

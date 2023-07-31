@@ -16,7 +16,7 @@ class ImageBorderCloseness(Metric):
             title="Annotation closeness to image borders",
             short_description="Ranks annotations by how close they are to image borders.",
             long_description=r"""This metric ranks annotations by how close they are to image borders.""",
-            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#annotation-closeness-to-image-borders",
+            doc_url="https://docs.encord.com/docs/active-label-quality-metrics#annotation-closeness-to-image-borders",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[

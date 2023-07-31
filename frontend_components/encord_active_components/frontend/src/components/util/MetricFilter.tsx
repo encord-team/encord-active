@@ -22,10 +22,10 @@ function getMetricBounds<
   R extends {
     min: number;
     max: number;
-  }
+  },
 >(
   bounds: R,
-  metric: ProjectMetricSummary["metrics"][string]
+  metric: ProjectMetricSummary["metrics"][string],
 ): {
   min: number;
   max: number;
@@ -42,6 +42,12 @@ function getMetricBounds<
       min: 0.0,
       max: bounds.max,
       step: bounds.max / 100,
+    };
+  } else if (metric.type === "sfloat") {
+    return {
+      min: bounds.min,
+      max: bounds.max,
+      step: (bounds.max - bounds.min) / 100,
     };
   } else if (metric.type === "uint") {
     return {
@@ -65,7 +71,7 @@ function getEnumList(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
 ): ReadonlyArray<string> {
   if (enumSummary.type === "ontology") {
     return Object.keys(featureHashMap);
@@ -81,7 +87,7 @@ function getEnumOptions(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
 ): Array<{ label: string; value: string }> {
   if (enumSummary.type === "ontology") {
     return Object.entries(featureHashMap).map(([featureHash, feature]) => ({
@@ -99,7 +105,7 @@ function getEnumOptions(
 
 function getEnumName(
   enumKey: string,
-  enumSummary: ProjectMetricSummary["enums"][string]
+  enumSummary: ProjectMetricSummary["enums"][string],
 ): string {
   if (enumKey === "feature_hash") {
     return "Label Class";
@@ -111,7 +117,7 @@ function getEnumName(
 
 function deleteKey(
   deleteKey: string,
-  filterType: FilterModes
+  filterType: FilterModes,
 ): (old: FilterState) => FilterState {
   return (old) => {
     const { [deleteKey]: deleted, ...newFilters } = old[filterType];
@@ -127,7 +133,7 @@ function deleteKey(
 function updateValue<K extends FilterModes>(
   updateKey: string,
   updateValue: FilterState[K][string],
-  filterType: K
+  filterType: K,
 ): (old: FilterState) => FilterState {
   return (old) => {
     const newFilters = {
@@ -145,7 +151,7 @@ function updateKey<
   R extends {
     min: number;
     max: number;
-  }
+  },
 >(
   oldKey: string,
   newKey: string,
@@ -154,7 +160,7 @@ function updateKey<
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
 ): (old: FilterState) => FilterState {
   return (old) => {
     const oldMetricSummary = metricsSummary.metrics[oldKey];
@@ -225,19 +231,19 @@ function addNewEntry<
   R extends {
     min: number;
     max: number;
-  }
+  },
 >(
   metricsSummary: ProjectMetricSummary,
   metricRanges: Record<string, R>,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
 ): (old: FilterState) => FilterState {
   return (old) => {
     // Try insert new 'metric' key.
     const newMetricEntry = Object.entries(metricsSummary.metrics).find(
-      ([candidate]) => !(candidate in old.metricFilters)
+      ([candidate]) => !(candidate in old.metricFilters),
     );
     if (newMetricEntry != null) {
       const [newMetricKey, newMetricSummary] = newMetricEntry;
@@ -261,7 +267,7 @@ function addNewEntry<
 
     // Try insert new 'enum' key.
     const newEnumEntry = Object.entries(metricsSummary.enums).find(
-      ([candidate]) => !(candidate in old.enumFilters)
+      ([candidate]) => !(candidate in old.enumFilters),
     );
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
@@ -281,16 +287,17 @@ function addNewEntry<
   };
 }
 
+const toFixedNumber = (number: number, precision: number) =>
+  parseFloat(number.toFixed(precision));
+
 export function MetricFilter<
   R extends {
     min: number;
     max: number;
-  }
+  },
 >(props: {
   filters: FilterState;
-  setFilters: (
-    arg: FilterState | ((old: FilterState) => FilterState)
-  ) => void;
+  setFilters: (arg: FilterState | ((old: FilterState) => FilterState)) => void;
   metricsSummary: ProjectMetricSummary;
   metricRanges: Record<string, R> | undefined;
   featureHashMap: Record<
@@ -310,7 +317,7 @@ export function MetricFilter<
   useEffect(() => {
     const entries = Object.entries(filters.metricFilters);
     const filteredEntries = entries.filter(
-      ([key]) => rawMetricsSummary.metrics[key] !== undefined
+      ([key]) => rawMetricsSummary.metrics[key] !== undefined,
     );
     if (filteredEntries.length !== entries.length) {
       setFilters({
@@ -325,7 +332,7 @@ export function MetricFilter<
       return undefined;
     }
     const metrics = Object.entries(rawMetricsSummary.metrics).filter(
-      ([k]) => k in metricRanges
+      ([k]) => k in metricRanges,
     );
     return { ...rawMetricsSummary, metrics: Object.fromEntries(metrics) };
   }, [metricRanges, rawMetricsSummary]);
@@ -388,13 +395,14 @@ export function MetricFilter<
             ? metric.title
             : getEnumName(filterKey, enumFilter ?? { type: "ontology" });
 
+        console.log(metricBounds);
+
         return (
           <Row align="middle" key={`row_filter_${filterKey}`}>
             <Button
               icon={<MinusOutlined />}
               shape="circle"
               size="small"
-              type="ghost"
               onClick={() => setFilters(deleteKey(filterKey, filterType))}
             />
             <Select
@@ -415,8 +423,8 @@ export function MetricFilter<
                     new_metric_key,
                     metricsSummary,
                     metricRanges,
-                    featureHashMap
-                  )
+                    featureHashMap,
+                  ),
                 )
               }
               options={[
@@ -430,11 +438,14 @@ export function MetricFilter<
                 min={metricBounds.min}
                 max={metricBounds.max}
                 style={{ width: 500 }}
-                step={metricBounds.step}
+                step={toFixedNumber(metricBounds.step, 2)}
                 value={
                   metricFilters != null
                     ? [metricFilters[0], metricFilters[1]]
-                    : [metricBounds.min, metricBounds.max]
+                    : [
+                        toFixedNumber(metricBounds.min, 2),
+                        toFixedNumber(metricBounds.max, 2),
+                      ]
                 }
                 onChange={(newRange: [number, number]) =>
                   setFilters(updateValue(filterKey, newRange, "metricFilters"))
@@ -447,7 +458,7 @@ export function MetricFilter<
                 value={[...(enumValues ?? [])]}
                 onChange={(newSelection: string[]) =>
                   setFilters(
-                    updateValue(filterKey, newSelection, "enumFilters")
+                    updateValue(filterKey, newSelection, "enumFilters"),
                   )
                 }
                 options={
