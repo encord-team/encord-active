@@ -67,20 +67,24 @@ export function PredictionSummaryTab(props: {
     });
     const perFeatureProps = Object.values(featureHashes).map(({fp, fn, tp, p, r}) => {
       return {
-        p: (tp + fp) == 0 ? 1 : tp / (tp + fp),
-        r: (tp + fn) == 0 ? 1 : tp / (tp + fn),
-        a: (predictionSummaryData.num_frames - fn - fp) / (tp + fp + fn),
-        f1: (p + r) === 0.0 ? 0.0 : (2 * p * r) / (p + r),
+        p: (tp + fp) === 0 ? 0 : tp / (tp + fp),
+        r: (tp + fn) === 0 ? 0 : tp / (tp + fn),
+        f1: (p + r) === 0 ? 0 : (2 * p * r) / (p + r),
       }
     });
     const featureCount = perFeatureProps.length;
     const reduced = perFeatureProps.reduce(
       (c, n) =>
-        ({p: c.p + n.p, r: c.r + n.r, a: c.a + n.a, f1: c.f1 + n.f1}),
-      {a: 0, r: 0, p: 0, f1: 0}
+        ({p: c.p + n.p, r: c.r + n.r, f1: c.f1 + n.f1}),
+      {r: 0, p: 0, f1: 0}
     );
+    const { tTP, tFN, tFP} = predictionSummaryData;
+    const tTN = (
+      predictionSummaryData.num_frames - tTP - tFN // FIXME: FP <= FN (and cover same values)
+    );
+    console.log({tTP, tTN, tFP, tFN, NF: predictionSummaryData.num_frames})
     return {
-      a: reduced.a / featureCount,
+      a: (tTP + tTN) / predictionSummaryData.num_frames,
       r: reduced.r / featureCount,
       p: reduced.p / featureCount,
       f1: reduced.f1 / featureCount,
@@ -110,19 +114,19 @@ export function PredictionSummaryTab(props: {
           <>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
-                title="Average Precision"
+                title="Mean Precision"
                 value={classificationOnlySummary.p.toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
-                title="Average Recall"
+                title="Mean Recall"
                 value={classificationOnlySummary.r.toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
-                title="Average Accuracy"
+                title="Accuracy"
                 value={classificationOnlySummary.a.toFixed(3)}
               />
             </Card>
