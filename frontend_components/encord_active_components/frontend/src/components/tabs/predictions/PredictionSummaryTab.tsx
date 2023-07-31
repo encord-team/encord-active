@@ -37,38 +37,30 @@ export function PredictionSummaryTab(props: {
     if (predictionSummaryData == null || !classificationOnlyProject) {
       return null;
     }
-    const featureHashes: Record<string, { fp: number, fn: number, tp: number, p: number, r: number }> = {};
+    const featureHashes: Record<string, { fp: number, fn: number, tp: number }> = {};
     Object.entries(predictionSummaryData.tp).forEach(([f, tp]) => {
-      featureHashes[f] = { tp, fn: 0, fp: 0, p: 0, r: 0};
+      featureHashes[f] = { tp, fn: 0, fp: 0};
     });
     Object.entries(predictionSummaryData.fp).forEach(([f, fp]) => {
       if (f in featureHashes) {
         featureHashes[f].fp = fp;
       } else {
-        featureHashes[f] = { fp, tp: 0, fn: 0, p: 0, r: 0}
+        featureHashes[f] = { fp, tp: 0, fn: 0}
       }
     });
     Object.entries(predictionSummaryData.fn).forEach(([f, fn]) => {
       if (f in featureHashes) {
         featureHashes[f].fn = fn;
       } else {
-        featureHashes[f] = { fn, tp: 0, fp: 0, p: 0, r: 0}
+        featureHashes[f] = { fn, tp: 0, fp: 0}
       }
     });
-    Object.entries(predictionSummaryData.precisions).forEach(([f, p]) => {
-      if (f in featureHashes) {
-        featureHashes[f].p = p
-      }
-    });
-    Object.entries(predictionSummaryData.recalls).forEach(([f, r]) => {
-      if (f in featureHashes) {
-        featureHashes[f].r = r
-      }
-    });
-    const perFeatureProps = Object.values(featureHashes).map(({fp, fn, tp, p, r}) => {
+    const perFeatureProps = Object.values(featureHashes).map(({fp, fn, tp}) => {
+      const p = (tp + fp) === 0 ? 0 : tp / (tp + fp);
+      const r = (tp + fn) === 0 ? 0 : tp / (tp + fn);
       return {
-        p: (tp + fp) === 0 ? 0 : tp / (tp + fp),
-        r: (tp + fn) === 0 ? 0 : tp / (tp + fn),
+        p,
+        r,
         f1: (p + r) === 0 ? 0 : (2 * p * r) / (p + r),
       }
     });
