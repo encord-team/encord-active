@@ -390,7 +390,11 @@ def get_available_metrics(
 @router.get("/{project}/prediction_types")
 def get_available_prediction_types(project: ProjectFileStructureDep):
     if check_model_prediction_availability(project.predictions):
-        return [MainPredictionType.OBJECT if (project.predictions / "ground_truths_matched.json").exists() else MainPredictionType.CLASSIFICATION]
+        return [
+            MainPredictionType.OBJECT
+            if (project.predictions / "ground_truths_matched.json").exists()
+            else MainPredictionType.CLASSIFICATION
+        ]
 
     return [
         prediction_type
@@ -580,7 +584,13 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
 
         shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
 
-        copy_project_meta(curr_project_structure, target_project_structure, project_title, project_description or "", final_data_version=202306141750)
+        copy_project_meta(
+            curr_project_structure,
+            target_project_structure,
+            project_title,
+            project_description or "",
+            final_data_version=202306141750,
+        )
 
         create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
 
@@ -799,7 +809,7 @@ def upload_to_encord(
             # Update some metadata
             new_db = sess.exec(select(Project).where(Project.project_hash == new_project_hash)).first()
             if new_db is None:
-                raise ValueError(f"Missing new project in the database when uploading")
+                raise ValueError("Missing new project in the database when uploading")
             new_db.project_name = old_project_name
             sess.add(new_db)
             sess.commit()

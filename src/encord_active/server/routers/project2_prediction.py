@@ -6,7 +6,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 import numpy as np
 from fastapi import APIRouter
 from sklearn.feature_selection import mutual_info_regression
-from sqlalchemy import Float, Integer, bindparam, distinct, text, tuple_
+from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
@@ -211,7 +211,7 @@ def get_project_prediction_summary(
     metric_stats = sess.execute(
         text(
             f"""
-            SELECT 
+            SELECT
                 e_score,
                 avg(
                     ((
