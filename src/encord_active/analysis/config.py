@@ -1,19 +1,22 @@
 import os
+from typing import Union
 
 import torch
 from torch.types import Device
 
-from encord_active.analysis.types import NearestNeighbors
-
 from .base import BaseEvaluation
-from .conversions.hsv import RGBToHSV
 from .conversions.grayscale import RGBToGray
+from .conversions.hsv import RGBToHSV
 from .embedding import NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
-from .metric import DerivedMetric
+from .metric import DerivedMetric, RandomSamplingQuery
 from .metrics.active_learning.uniqueness import ImageUniqueness
+from .metrics.annotation.count import ObjectCountMetric
 from .metrics.annotation.density import ObjectDensityMetric
+from .metrics.annotation.distance_to_border import DistanceToBorderMetric
+from .metrics.annotation.maximum_label_iou import MaximumLabelIOUMetric
+from .metrics.annotation.nearest_neighbor_agreement import NearestNeighborAgreement
 from .metrics.image.area import AreaMetric, AreaRelativeMetric
 from .metrics.image.aspect_ratio import AspectRatioMetric
 from .metrics.image.brightness import BrightnessMetric
@@ -23,11 +26,10 @@ from .metrics.image.height import HeightMetric
 from .metrics.image.random import RandomMetric
 from .metrics.image.sharpness import SharpnessMetric
 from .metrics.image.width import WidthMetric
-from .metrics.annotation.count import ObjectCountMetric
-from .metrics.annotation.nearest_neighbor_agreement import NearestNeighborAgreement
-from .metrics.annotation.distance_to_border import DistanceToBorderMetric
-from .metrics.annotation.maximum_label_iou import MaximumLabelIOUMetric
-from .metrics.sequence.missing_objects_and_wrong_tracks import TemporalMissingObjectsAndWrongTracks
+from .metrics.sequence.missing_objects_and_wrong_tracks import (
+    TemporalMissingObjectsAndWrongTracks,
+)
+from .metrics.sequence.shape_change import TemporalShapeChange
 
 """
 Operations to support tracking for:
@@ -60,7 +62,7 @@ class AnalysisConfig:
     def __init__(
         self,
         analysis: list[BaseEvaluation],
-        derived_embeddings: list[NearestImageEmbeddingQuery],
+        derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]],
         derived_metrics: list[DerivedMetric],
         device: Device,
     ) -> None:
@@ -119,10 +121,10 @@ def create_analysis(device: Device) -> AnalysisConfig:
         ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
         HuMomentEmbeddings(),
         # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
-        # Data conversions
+        # Image transformations
         RGBToHSV(),
         RGBToGray(),
-        # Unified Feature metrics
+        # Unified Image or Annotation Feature Metrics
         AspectRatioMetric(),  # metric_aspect_ratio
         AreaMetric(),  # metric_area
         BrightnessMetric(),  # metric_brightness
@@ -134,22 +136,22 @@ def create_analysis(device: Device) -> AnalysisConfig:
         HeightMetric(),  # metric_height
         WidthMetric(),  # metric_width
         RandomMetric(),  # metric_random
-        # Object only metrics
+        # Annotation only metrics
         AreaRelativeMetric(),  # metric_area_relative
         MaximumLabelIOUMetric(),  # metric_max_iou
         DistanceToBorderMetric(),  # metric_label_border_closeness
         # Annotation based Frame Metrics
         ObjectCountMetric(),  # metric_object_count
         ObjectDensityMetric(),  # metric_object_density ("Frame object density")
-        # Data Only Metrics
+        # ?????
         # metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
         # metric_label_inconsistent_classification_and_track ("Inconsistent Object Classification and Track IDs")
         # metric_label_shape_outlier ("Shape outlier detection")
-        # metric_label_poly_similarity ("Polygon Shape Similarity")
         # Temporal metrics
+        TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
         TemporalMissingObjectsAndWrongTracks(),  # metric_label_missing_or_broken_tracks ("Missing Objects and Broken Tracks")
     ]
-    derived_embeddings: list[NearestImageEmbeddingQuery] = [
+    derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]] = [
         # Derive properties from embedding
         NearestImageEmbeddingQuery("derived_clip_nearest", "embedding_clip"),
     ]
@@ -167,30 +169,5 @@ def create_analysis(device: Device) -> AnalysisConfig:
     )
 
 
-def verify_analysis(analysis_list: list[BaseEvaluation]) -> set[str]:
-    """Verify the config of the set of embedding and analysis passes to execute"""
-    all_idents: set[str] = set()
-    for analysis in analysis_list:
-        if analysis.ident in all_idents:
-            raise RuntimeError(f"Duplicate analysis ident: {analysis.ident}")
-        for dependency in analysis.dependencies:
-            if dependency not in all_idents:
-                raise RuntimeError(
-                    f"Dependency {dependency} for {analysis.ident} is not evaluated earlier in the ordering"
-                )
-        all_idents.add(analysis.ident)
-    return all_idents
-
-
-def split_analysis(analysis_list: list[BaseEvaluation]) -> list[list[BaseEvaluation]]:
-    complex_dependency_set = set()
-    res = [[]]
-    for analysis in analysis_list:
-        if any(dependency in complex_dependency_set for dependency in analysis.dependencies):
-            res.append([])
-            complex_dependency_set = set()
-        res[-1].append(analysis)
-        if isinstance(analysis, NearestImageEmbeddingQuery) or isinstance(analysis, TemporalBaseAnalysis):
-            complex_dependency_set.add(analysis.ident)
-
-    return res
+def get_default_analysis():
+    analysis = create_analysis(torch.device("cpu"))

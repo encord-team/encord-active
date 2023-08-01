@@ -1,38 +1,55 @@
 from typing import Optional
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput, BaseFrameBatchOutput
+import torch
+
+from encord_active.analysis.base import (
+    BaseFrameAnnotationBatchInput,
+    BaseFrameBatchOutput,
+)
 from encord_active.analysis.metric import OneObjectMetric
-from encord_active.analysis.types import MetricResult, AnnotationMetadata, MetricDependencies, MetricBatchDependencies, \
-    ImageBatchTensor
+from encord_active.analysis.types import (
+    AnnotationMetadata,
+    ImageBatchTensor,
+    MetricBatchDependencies,
+    MetricDependencies,
+    MetricResult,
+)
+from encord_active.analysis.util import image_height, image_width
+from encord_active.db.metrics import MetricType
 
 
 class DistanceToBorderMetric(OneObjectMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_label_border_closeness",
-            dependencies=set(),
             long_name="Distance in pixels to the border",
             desc="",
+            metric_type=MetricType.NORMAL,
         )
 
     def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResult:
+        # FIXME: make relative?? (NORMAL metrics are better)
         points = annotation.points
         mask = annotation.mask
-        if points is not None:
-            x_min, y_min = points.min(0).values.cpu()
-            x_max, y_max = 1 - points.max(0).values.cpu()
+        if points is not None and mask is not None:
+            w = image_width(mask)
+            h = image_height(mask)
+            sf = torch.tensor([[w, h]])
+            points_sf = points / sf
+            x_min, y_min = points_sf.min(0).values.cpu()
+            x_max, y_max = 1.0 - points_sf.max(0).values.cpu()
             return min(x_min, x_max, y_min, y_max)
-        elif mask is None:
+        elif mask is None and points is None:
+            # FIXME: does not handle bitmask correctly!?
             # Classification (distance = 0) FIXME: correct fallback or should this be NULL?!
-            return 0
+            return 0.0
         else:
-            raise ValueError(f"Border closeness not supported for bitmasks yet!")
+            raise ValueError("Border closeness not supported for bitmasks yet!")
 
     def calculate_batched(
         self,
         deps: MetricBatchDependencies,
         image: ImageBatchTensor,
-        annotation: Optional[BaseFrameAnnotationBatchInput]
+        annotation: Optional[BaseFrameAnnotationBatchInput],
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Not yet implemented for batching")
-
+        raise ValueError("Not yet implemented for batching")

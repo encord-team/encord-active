@@ -2,16 +2,16 @@ from typing import Optional
 
 import cv2
 import torch
-from torch import FloatTensor, BoolTensor
+from torch import BoolTensor, FloatTensor
 
 from encord_active.analysis.embedding import PureObjectEmbedding
-from encord_active.analysis.types import MaskTensor, EmbeddingTensor
-from encord_active.analysis.util import image_width, image_height
+from encord_active.analysis.types import EmbeddingTensor, MaskTensor
+from encord_active.analysis.util import image_height, image_width
 
 
 class HuMomentEmbeddings(PureObjectEmbedding):
     def __init__(self) -> None:
-        super().__init__("embedding_hu", set())
+        super().__init__("embedding_hu")
 
     def evaluate_embedding(self, mask: MaskTensor) -> EmbeddingTensor:
         np_mask = (mask.cpu().type(torch.uint8) * 255).numpy()
@@ -31,7 +31,7 @@ class HuMomentEmbeddings(PureObjectEmbedding):
         x_coordinates, y_coordinates = torch.meshgrid(
             torch.arange(0, image_width(mask), dtype=torch.float32),
             torch.arange(0, image_height(mask), dtype=torch.float32),
-            indexing='ij'
+            indexing="ij",
         )
         x_centroid = x_coordinates - x_midpoint.unsqueeze(1).unsqueeze(2)
         y_centroid = y_coordinates - y_midpoint.unsqueeze(1).unsqueeze(2)
@@ -58,12 +58,6 @@ class HuMomentEmbeddings(PureObjectEmbedding):
         m2 = torch.square(u30 - u02) + (4 * torch.square(u11))
         m3 = torch.square(u30 - (3 * u12)) + torch.square((3 * u21) - u30)
         m4 = torch.square(u30 + u12) + torch.square(u21 + u03)
-        m5 = (
-            (u30 - (3 * u12)) * (u30 + u12) * (
-                 torch.square() - 3*torch.square()
-            )
-        ) + (
-
-        )
+        m5 = ((u30 - (3 * u12)) * (u30 + u12) * (torch.square() - 3 * torch.square())) + ()
 
         return torch.stack([m1, m2, m3, m4, m5, m6, m7])

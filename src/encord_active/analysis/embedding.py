@@ -1,17 +1,23 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Set
+from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseEvaluation, BaseFrameInput, BaseFrameOutput, BaseFrameBatchOutput, \
-    BaseFrameBatchInput
+from encord_active.analysis.base import (
+    BaseEvaluation,
+    BaseFrameBatchInput,
+    BaseFrameBatchOutput,
+    BaseFrameInput,
+    BaseFrameOutput,
+)
 from encord_active.analysis.metric import ObjectOnlyBatchInput
 from encord_active.analysis.types import (
+    EmbeddingBatchTensor,
     EmbeddingTensor,
+    ImageBatchTensor,
     ImageTensor,
     MaskTensor,
-    PointTensor, ImageBatchTensor, MaskBatchTensor, EmbeddingBatchTensor,
 )
 
 
@@ -30,10 +36,8 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
     Pure image based embedding, can optionally be calculated on a per-object basis as well as per-image by default.
     """
 
-    def __init__(
-        self, ident: str, dependencies: Set[str], allow_object_embedding: bool = True, allow_queries: bool = False
-    ) -> None:
-        super().__init__(ident, dependencies)
+    def __init__(self, ident: str, allow_object_embedding: bool = True, allow_queries: bool = False) -> None:
+        super().__init__(ident)
         self.allow_object_embedding = allow_object_embedding
         self.allow_queries = allow_queries
 
@@ -75,11 +79,7 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
         )
         classifications = None
         if frame.annotations is not None:
-            classifications = torch.index_select(
-                res.images,
-                0,
-                frame.annotations.classifications_image_indices
-            )
+            classifications = torch.index_select(res.images, 0, frame.annotations.classifications_image_indices)
         return BaseFrameBatchOutput(
             images=res.images,
             objects=res.objects,
@@ -88,16 +88,14 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
 
     @abstractmethod
     def evaluate_embedding_batched(
-        self,
-        image: ImageBatchTensor,
-        objects: Optional[ObjectOnlyBatchInput]
+        self, image: ImageBatchTensor, objects: Optional[ObjectOnlyBatchInput]
     ) -> ImageEmbeddingResult:
         ...
 
 
 class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
-    def __init__(self, ident: str, dependencies: Set[str], allow_queries: bool = False) -> None:
-        super().__init__(ident, dependencies)
+    def __init__(self, ident: str, allow_queries: bool = False) -> None:
+        super().__init__(ident)
         self.allow_queries = allow_queries
 
     """

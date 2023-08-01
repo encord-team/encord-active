@@ -1227,17 +1227,17 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             data_units_metas,
             database_dir,
             project_hash,
-            project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None
+            project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
         )
     except Exception as e:
         import traceback
+
         print(f"Caught exception: {e}")
         print(f"Stack trace: {traceback.format_exc()}")
     print("=== Finished Computation Engine ===")
 
-
     path = database_dir / "encord-active.sqlite"
-    engine = get_engine(path, use_alembic=False) # FIXME: undo this && remove computation engine above
+    engine = get_engine(path, use_alembic=False)  # FIXME: undo this && remove computation engine above
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)

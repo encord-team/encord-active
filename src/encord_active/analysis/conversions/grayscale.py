@@ -8,7 +8,6 @@ class RGBToGray(BaseConverter):
     def __init__(self) -> None:
         super().__init__(
             ident="ephemeral_grayscale_image",
-            dependencies=set(),
         )
 
     def convert(self, image: ImageTensor) -> HSVTensor:

@@ -2,22 +2,31 @@ from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ObjectOnlyBatchInput, \
-    ImageObjectOnlyOutputBatch
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchResult, ImageBatchTensor, \
-    MetricBatchDependencies
+from encord_active.analysis.metric import (
+    ImageObjectOnlyOutputBatch,
+    MetricDependencies,
+    ObjectOnlyBatchInput,
+    OneImageMetric,
+)
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricResult,
+)
 from encord_active.analysis.util import image_width
-from encord_active.analysis.util.torch import mask_to_box_extremes, batch_size
+from encord_active.analysis.util.torch import batch_size, mask_to_box_extremes
+from encord_active.db.metrics import MetricType
 
 
 class WidthMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_width",
-            dependencies=set(),
             long_name="Width",
             desc="Width in pixels.",
+            metric_type=MetricType.UINT,
         )
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
@@ -28,10 +37,7 @@ class WidthMetric(OneImageMetric):
             return bottom_right.x + 1 - top_left.x
 
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         img_width = image_width(image)
         img_batch = batch_size(image)

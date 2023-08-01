@@ -1,20 +1,30 @@
-import torch
 from typing import Optional
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ImageObjectOnlyOutputBatch, \
-    ObjectOnlyBatchInput
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchDependencies, \
-    ImageBatchTensor, MaskBatchTensor, MetricBatchResult
+import torch
+
+from encord_active.analysis.metric import (
+    ImageObjectOnlyOutputBatch,
+    MetricDependencies,
+    ObjectOnlyBatchInput,
+    OneImageMetric,
+)
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricResult,
+)
+from encord_active.db.metrics import MetricType
 
 
 class BrightnessMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_brightness",
-            dependencies={"area"},
             long_name="Brightness",
             desc="",
+            metric_type=MetricType.NORMAL,
         )
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
@@ -27,10 +37,7 @@ class BrightnessMetric(OneImageMetric):
             return float(mask_total) / (255.0 * mask_count)
 
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         grayscale = deps["ephemeral_grayscale_image"]
         objects = None
@@ -42,6 +49,5 @@ class BrightnessMetric(OneImageMetric):
             objects = masked_sum / masked_count
 
         return ImageObjectOnlyOutputBatch(
-            images=torch.mean(grayscale, dim=(-1, -2), dtype=torch.float32) / 255.0,
-            objects=objects
+            images=torch.mean(grayscale, dim=(-1, -2), dtype=torch.float32) / 255.0, objects=objects
         )

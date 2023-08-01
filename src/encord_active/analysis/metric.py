@@ -1,23 +1,35 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Set, Dict, Protocol
+from typing import Dict, Optional, Protocol, Set
 
 import torch
 
-from encord_active.analysis.base import BaseAnalysis, BaseFrameInput, BaseFrameOutput, BaseFrameAnnotationBatchInput, \
-    BaseFrameBatchInput, BaseFrameBatchOutput
+from encord_active.analysis.base import (
+    BaseFrameAnnotationBatchInput,
+    BaseFrameBatchInput,
+    BaseFrameBatchOutput,
+    BaseFrameInput,
+    BaseFrameOutput,
+    BaseMetric,
+)
 from encord_active.analysis.types import (
     AnnotationMetadata,
-    ImageTensor,
-    MaskTensor,
-    MetricDependencies,
-    MetricResult, MetricBatchDependencies, ImageBatchTensor, MaskBatchTensor, MetricBatchResult, BoundingBoxBatchTensor,
+    BoundingBoxBatchTensor,
+    ImageBatchTensor,
     ImageIndexBatchTensor,
+    ImageTensor,
+    MaskBatchTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricBatchResult,
+    MetricDependencies,
+    MetricResult,
 )
+from encord_active.db.metrics import MetricType
 from encord_active.db.models import AnnotationType
 
 
-class BaseAnalysisWithAnnotationFilter(BaseAnalysis, metaclass=ABCMeta):
+class BaseMetricWithAnnotationFilter(BaseMetric, metaclass=ABCMeta):
     """
     Simple metric that only depends on the pixels, if enabled the mask argument allows this metric to
     also apply to objects by only considering the subset of the image the object is present in.
@@ -26,12 +38,12 @@ class BaseAnalysisWithAnnotationFilter(BaseAnalysis, metaclass=ABCMeta):
     def __init__(
         self,
         ident: str,
-        dependencies: set[str],
         long_name: str,
         desc: str,
+        metric_type: MetricType,
         annotation_types: Optional[Set[AnnotationType]] = None,
     ) -> None:
-        super().__init__(ident, dependencies, long_name, desc)
+        super().__init__(ident, long_name, desc, metric_type)
         self.annotation_types = annotation_types
 
 
@@ -39,6 +51,7 @@ class ObjectOnlyBatchInput(Protocol):
     """
     Dictionary to B x dependencies
     """
+
     objects_masks: MaskBatchTensor
     """
     O x Masks (O = SUM{i.annotation_count * B}
@@ -66,7 +79,7 @@ class ImageObjectOnlyOutputBatch:
     """
 
 
-class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
+class OneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
     """
     Simple metric that only depends on the pixels, if enabled the mask argument allows this metric to
     also apply to objects by only considering the subset of the image the object is present in.
@@ -92,10 +105,7 @@ class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
                 )
             else:
                 annotations[annotation_hash] = image
-        return BaseFrameOutput(
-            image=image,
-            annotations=annotations
-        )
+        return BaseFrameOutput(image=image, annotations=annotations)
 
     @abstractmethod
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
@@ -116,12 +126,8 @@ class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
             frame.annotations,
         )
         classifications = None
-        if frame.annotations is not None:
-            classifications = torch.index_select(
-                res.images,
-                0,
-                frame.annotations.classifications_image_indices
-            )
+        if frame.annotations is not None and res.images is not None:
+            classifications = torch.index_select(res.images, 0, frame.annotations.classifications_image_indices)
         return BaseFrameBatchOutput(
             images=res.images,
             objects=res.objects,
@@ -130,15 +136,12 @@ class OneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
 
     @abstractmethod
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         ...
 
 
-class OneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
+class OneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
     """
     Simple metric that only depends on the object shape itself (& pixels via per-object embeddings)
     This is implicitly applied to all child classifications of an object.
@@ -172,7 +175,7 @@ class OneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
         """
         Base implementation of batched metric calculation.
@@ -188,12 +191,12 @@ class OneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
         self,
         deps: MetricBatchDependencies,
         image: ImageBatchTensor,
-        annotation: Optional[BaseFrameAnnotationBatchInput]
+        annotation: Optional[BaseFrameAnnotationBatchInput],
     ) -> BaseFrameBatchOutput:
         ...
 
 
-class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
+class ObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
     """
     More complex single frame object metric where the result of each object depends on all other objects
     present in the single frame. The keys of the result should match the keys of 'objs'.
@@ -210,7 +213,9 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
             annotations=self.calculate(
                 frame.annotations,
                 frame.annotations_deps,
-            ) if len(frame.annotations) > 0 else {}
+            )
+            if len(frame.annotations) > 0
+            else {},
         )
 
     @abstractmethod
@@ -225,7 +230,7 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
         raise ValueError(f"Not implemented")
 
@@ -237,8 +242,7 @@ class ObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
         ...
 
 
-class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
-
+class ImageObjectsMetric(BaseMetric, metaclass=ABCMeta):
     def raw_calculate(
         self,
         prev_frame: Optional[BaseFrameInput],
@@ -273,12 +277,12 @@ class ImageObjectsMetric(BaseAnalysis, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Batch not yet implemented")
+        raise ValueError("Batch not yet implemented")
 
 
-class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
+class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
     """
     Temporal variant of [OneImageMetric]
     """
@@ -336,15 +340,12 @@ class TemporalOneImageMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta
         ...
 
     def raw_calculate_batch(
-        self,
-        prev_frame: Optional[BaseFrameBatchInput],
-        frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput
+        self, prev_frame: Optional[BaseFrameBatchInput], frame: BaseFrameBatchInput, next_frame: BaseFrameBatchInput
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Batch not yet implemented")
+        raise ValueError("Batch not yet implemented")
 
 
-class TemporalOneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMeta):
+class TemporalOneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
     """
     Temporal variant of [OneObjectMetric].
     """
@@ -382,13 +383,12 @@ class TemporalOneObjectMetric(BaseAnalysisWithAnnotationFilter, metaclass=ABCMet
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Batch not yet implemented")
+        raise ValueError("Batch not yet implemented")
 
 
-class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
-
+class TemporalObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
     def raw_calculate(
         self,
         prev_frame: Optional[BaseFrameInput],
@@ -402,7 +402,7 @@ class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
                 annotation_deps=frame.annotations_deps,
                 prev_annotations=None if prev_frame is None else prev_frame.annotations,
                 next_annotations=None if next_frame is None else next_frame.annotations,
-            )
+            ),
         )
 
     @abstractmethod
@@ -419,12 +419,12 @@ class TemporalObjectByFrameMetric(BaseAnalysis, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Batch not yet implemented")
+        raise ValueError("Batch not yet implemented")
 
 
-class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
+class DerivedMetric(BaseMetric, metaclass=ABCMeta):
     """
     Simple metric that only depends on the pixels, if enabled the mask argument allows this metric to
     also apply to objects by only considering the subset of the image the object is present in.
@@ -442,10 +442,22 @@ class DerivedMetric(BaseAnalysis, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
         raise AttributeError("Derived uses separate interface, this function should NEVER be called!")
 
     @abstractmethod
     def calculate(self, deps: MetricDependencies, annotation: Optional[AnnotationMetadata]) -> MetricResult:
         ...
+
+
+class RandomSamplingQuery:
+    """
+    Randomly select 'limit' number of entries from the analysis scope.
+    """
+
+    def __init__(self, ident: str, limit: int = 100) -> None:
+        self.ident = ident
+        self.limit = limit
+
+    # FIXME: add support for 'filters' (constraint the randomness depending on sql-like filters)??

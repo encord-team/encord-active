@@ -1,20 +1,17 @@
-from typing import Dict, Optional
+from typing import Dict
 
-from encord_active.analysis.base import BaseFrameBatchInput, BaseFrameBatchOutput
-from encord_active.analysis.metric import (
-    ImageObjectsMetric,
-    MetricDependencies,
-)
-from encord_active.analysis.types import MetricResult, AnnotationMetadata, ImageTensor
+from encord_active.analysis.metric import ImageObjectsMetric, MetricDependencies
+from encord_active.analysis.types import AnnotationMetadata, ImageTensor, MetricResult
+from encord_active.db.metrics import MetricType
 
 
 class ObjectCountMetric(ImageObjectsMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_object_count",
-            dependencies=set(),
             long_name="Object Count",
             desc="Number of objects present in an image",
+            metric_type=MetricType.UINT,
         )
 
     def calculate(
@@ -26,5 +23,3 @@ class ObjectCountMetric(ImageObjectsMetric):
         annotations_deps: Dict[str, MetricDependencies],
     ) -> MetricResult:
         return len(annotations)
-
-

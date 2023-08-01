@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Optional
 
 import torch
 from shapely.geometry import Polygon
@@ -8,7 +8,8 @@ from encord_active.analysis.metric import (
     TemporalObjectByFrameMetric,
 )
 from encord_active.analysis.types import AnnotationMetadata
-from encord_active.lib.common.utils import get_iou, get_polygon
+from encord_active.db.metrics import MetricType
+from encord_active.lib.common.utils import get_polygon
 
 
 def _filter_object(obj: Dict[str, MetricDependencies]) -> Dict[str, Polygon]:
@@ -25,9 +26,9 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_label_missing_or_broken_tracks",
-            dependencies=set(),
             long_name="Missing Object, Wrong Track",
             desc="",
+            metric_type=MetricType.NORMAL,
         )
 
     def calculate(
@@ -40,10 +41,7 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
         # FIXME: implement properly
         annotation_res = {}
         if prev_annotations is None or next_annotations is None:
-            return {
-                annotation_hash: 1.0
-                for annotation_hash in annotations.keys()
-            }
+            return {annotation_hash: 1.0 for annotation_hash in annotations.keys()}
         for next_annotation_hash, next_annotation_meta in next_annotations.items():
             best_iou = None
             # Search back 2 for similar
@@ -56,14 +54,14 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
                         iou = torch.mean(
                             prev_annotation_meta.mask & prev_annotation_meta.mask, dtype=torch.float32
                         ).item()
-                    if iou is not None and iou > best_iou:
+                    if iou is not None and (best_iou is None or iou > best_iou):
                         best_iou = iou
 
             # If iou > 0.5 we consider this to be a object that is likely to be interpolated in the middle
             if best_iou is not None and best_iou > 0.5:
                 # Search for best iou in the middle
                 best_mid_iou = 0.0
-                best_mid_annotation_hash = next(annotations.keys(), None) # FIXME: may error!?
+                best_mid_annotation_hash = next(annotations.keys(), None)  # FIXME: may error!?
                 for annotation_hash, annotation_meta in annotations.items():
                     if annotation_meta.feature_hash == next_annotation_meta.feature_hash:
                         pass  # FIXME: implement

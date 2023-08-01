@@ -6,12 +6,13 @@ from clip import load as clip_load
 from torch import BoolTensor, ByteTensor, FloatTensor
 from torch.types import Device
 from torchvision.transforms import InterpolationMode
-from torchvision.transforms.v2 import CenterCrop, Normalize, Resize, Compose
-from torchvision.utils import make_grid
+from torchvision.transforms.v2 import CenterCrop, Compose, Normalize, Resize
 
-from encord_active.analysis.embedding import PureImageEmbedding, ImageEmbeddingResult
+from encord_active.analysis.embedding import ImageEmbeddingResult, PureImageEmbedding
 from encord_active.analysis.metric import ObjectOnlyBatchInput
-from encord_active.analysis.types import ImageBatchTensor, EmbeddingBatchTensor, MaskBatchTensor
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+)
 from encord_active.analysis.util.torch import batch_size
 
 
@@ -19,7 +20,6 @@ class ClipImgEmbedding(PureImageEmbedding):
     def __init__(self, device: Device, ident: str, model_name: str) -> None:
         super().__init__(
             ident=ident,
-            dependencies=set(),
             allow_object_embedding=True,
             allow_queries=True,
         )
@@ -31,13 +31,16 @@ class ClipImgEmbedding(PureImageEmbedding):
         interpolation = InterpolationMode.BICUBIC if self.device.type != "mps" else InterpolationMode.BILINEAR
         if interpolation != InterpolationMode.BICUBIC:
             import logging
-            logging.warning(f"Using different InterpolationMode as currently executing under 'mps' torch backend.")
+
+            logging.warning("Using different InterpolationMode as currently executing under 'mps' torch backend.")
         n_px = self.model.visual.input_resolution
-        self.preprocess = Compose([
-            Resize(n_px, interpolation=interpolation, antialias=True),
-            CenterCrop(n_px),
-            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-        ])
+        self.preprocess = Compose(
+            [
+                Resize(n_px, interpolation=interpolation, antialias=True),
+                CenterCrop(n_px),
+                Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+            ]
+        )
 
     def evaluate_embedding(self, image: ByteTensor, mask: Optional[BoolTensor]) -> FloatTensor:
         # FIXME: mask is not implemented properly, require scale by bb & apply mask - see untested
@@ -46,25 +49,23 @@ class ClipImgEmbedding(PureImageEmbedding):
             boxes = torchvision.ops.masks_to_boxes(mask.unsqueeze(0)).cpu().squeeze(0)
             x1, y1, x2, y2 = boxes.type(torch.int32).tolist()
             image = torch.masked_fill(image, ~mask, 0)
-            image = image[:, x1:x2, y1:y2]
-        preprocessed = self.preprocess(image.type(torch.float32)).unsqueeze(0)
+            image = image[:, x1 : x2 + 1, y1 : y2 + 1]
+        try:
+            preprocessed = self.preprocess(image.type(torch.float32)).unsqueeze(0)
+        except Exception:
+            print(f"DEBUG: {image.shape} / {mask.shape} / {torch.min(mask).item()} / {torch.max(mask).item()}")
+            raise
         return self.model.encode_image(preprocessed.to(self.device)).reshape(-1)
 
     def evaluate_embedding_batched(
-        self,
-        image: ImageBatchTensor,
-        objects: Optional[ObjectOnlyBatchInput]
+        self, image: ImageBatchTensor, objects: Optional[ObjectOnlyBatchInput]
     ) -> ImageEmbeddingResult:
         image_preprocessed = self.preprocess(image.type(torch.float32))
         image_embeddings = self.model.encode_image(image_preprocessed)
         object_embeddings = None
         if objects is not None:
             # First convert to resized image space
-            object_images = torch.index_select(
-                image,
-                0,
-                objects.objects_image_indices
-            )
+            object_images = torch.index_select(image, 0, objects.objects_image_indices)
 
             # Generate bounding box grid, this is the size of the smallest dimension.
             n_px: int = self.model.visual.input_resolution
@@ -92,9 +93,6 @@ class ClipImgEmbedding(PureImageEmbedding):
                 object_bb_grid,
             )
             # FIXME: apply masks as well
-            object_preprocessed = self.preprocess(object_bb_images) # FIXME: resize twice?
+            object_preprocessed = self.preprocess(object_bb_images)  # FIXME: resize twice?
             object_embeddings = self.model.encode_image(object_preprocessed)
-        return ImageEmbeddingResult(
-            images=image_embeddings,
-            objects=object_embeddings
-        )
+        return ImageEmbeddingResult(images=image_embeddings, objects=object_embeddings)

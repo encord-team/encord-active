@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, NamedTuple, Optional, Union, Tuple, Dict
 from dataclasses import dataclass
+from typing import Annotated, Dict, NamedTuple, Optional, Tuple, Union
+
 import torch
 from torch import Tensor
 
@@ -42,6 +43,12 @@ class NearestNeighbors:
     metric_deps: list[MetricDependencies]
     metric_keys: list[Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]]
     similarities: list[float]
+
+
+@dataclass(frozen=True)
+class RandomSampling:
+    metric_deps: list[MetricDependencies]
+    metric_keys: list[Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]]
 
 
 MaskTensor = Annotated[Tensor, torch.bool, "height width"]
@@ -125,7 +132,7 @@ Batch of metric results.
 """
 
 
-MetricDependencies = dict[str, Union[MetricResult, EmbeddingTensor, NearestNeighbors]]
+MetricDependencies = dict[str, Union[MetricResult, EmbeddingTensor, NearestNeighbors, RandomSampling]]
 """
 Results for all objects in a frame
 `None` means not applicable.

@@ -2,22 +2,31 @@ from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ImageObjectOnlyOutputBatch, \
-    ObjectOnlyBatchInput
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchDependencies, \
-    ImageBatchTensor, MaskBatchTensor, MetricBatchResult
+from encord_active.analysis.metric import (
+    ImageObjectOnlyOutputBatch,
+    MetricDependencies,
+    ObjectOnlyBatchInput,
+    OneImageMetric,
+)
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricResult,
+)
 from encord_active.analysis.util import image_height
-from encord_active.analysis.util.torch import mask_to_box_extremes, batch_size
+from encord_active.analysis.util.torch import batch_size, mask_to_box_extremes
+from encord_active.db.metrics import MetricType
 
 
 class HeightMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_height",
-            dependencies=set(),
             long_name="Height",
             desc="Height in pixels.",
+            metric_type=MetricType.UINT,
         )
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
@@ -28,10 +37,7 @@ class HeightMetric(OneImageMetric):
             return bottom_right.y + 1 - top_left.y
 
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         img_height = image_height(image)
         img_batch = batch_size(image)
@@ -46,7 +52,5 @@ class HeightMetric(OneImageMetric):
             objects = h
 
         return ImageObjectOnlyOutputBatch(
-            images=torch.full((img_batch,), img_height, dtype=torch.int64),
-            objects=objects
+            images=torch.full((img_batch,), img_height, dtype=torch.int64), objects=objects
         )
-

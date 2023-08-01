@@ -2,42 +2,49 @@ from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ImageObjectOnlyOutputBatch, \
-    ObjectOnlyBatchInput
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchDependencies, \
-    ImageBatchTensor, MetricBatchResult
+from encord_active.analysis.metric import (
+    ImageObjectOnlyOutputBatch,
+    MetricDependencies,
+    ObjectOnlyBatchInput,
+    OneImageMetric,
+)
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricResult,
+)
+from encord_active.db.metrics import MetricType
 
 
 class ContrastMetric(OneImageMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_contrast",
-            dependencies={"brightness", "area"},
             long_name="Contrast",
             desc="",
+            metric_type=MetricType.NORMAL,
         )
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         # Max-std : [0, 255] = 255/2 = 127.5
         image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
         if mask is None:
-            return torch.std(image_reduced) / 255.0
+            return torch.std(image_reduced) / 127.5
         else:
-            # Masked standard deviation
-            mask_mean = float(deps["metric_brightness"])
-            mask_count = float(deps["metric_area"])
+            # Masked standard deviation - using known correct impl to fix later.
+            # mask_mean = float(deps["metric_brightness"])
+            # mask_count = float(deps["metric_area"])
 
-            mask_mean_delta = torch.masked_fill(image_reduced - mask_mean, ~mask, 0)
-            mask_mean_delta_sq_sum = torch.sum(mask_mean_delta**2, dtype=torch.float32)
+            # mask_mean_delta = torch.masked_fill(image_reduced - mask_mean, ~mask, 0)
+            # mask_mean_delta_sq_sum = torch.sum(mask_mean_delta**2, dtype=torch.float32)
 
-            return torch.sqrt(mask_mean_delta_sq_sum / mask_count) / 255.0
+            # return torch.sqrt(mask_mean_delta_sq_sum / mask_count) / 127.5
+            return torch.masked.std(image_reduced, mask=mask) / 127.5
 
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         grayscale: ImageBatchTensor = deps["ephemeral_grayscale_image"]
 

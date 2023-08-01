@@ -1,28 +1,25 @@
-import cv2
+from typing import Optional, Union
+
 import numpy as np
 import torch
-from typing import Union, Optional
 from PIL import Image
 from torch.nn.functional import conv2d
 from torch.types import Device
 from torchvision.transforms.functional import pil_to_tensor, to_pil_image
 
 from encord_active.analysis.types import (
+    ImageBatchTensor,
     ImageTensor,
     LaplacianTensor,
+    MaskBatchTensor,
     MaskTensor,
     Point,
-    PointTensor, ImageBatchTensor, MaskBatchTensor,
+    PointTensor,
 )
 from encord_active.db.enums import AnnotationType
 
 _laplacian_kernel = (
-    torch.tensor(
-        [0.0, 1.0, 0.0,
-         1.0, -4.0, 1.0,
-         0.0, 1.0, 0.0],
-        requires_grad=False
-    ).reshape(1, 1, 3, 3).float()
+    torch.tensor([0.0, 1.0, 0.0, 1.0, -4.0, 1.0, 0.0, 1.0, 0.0], requires_grad=False).reshape(1, 1, 3, 3).float()
 )
 
 
@@ -36,16 +33,13 @@ def pillow_to_tensor(image: Image.Image) -> ImageTensor:
 
 
 def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h: int) -> Optional[PointTensor]:
-    width = float(img_w) # FIXME: normalise or not to normalise??
+    width = float(img_w)  # FIXME: normalise or not to normalise??
     height = float(img_h)
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
     if annotation_type == AnnotationType.POLYGON or annotation_type == AnnotationType.POLYLINE:
         points = obj["polygon"]
-        data = [
-            [points[str(i)]["x"] * width, points[str(i)]["y"] * height]
-            for i in range(len(points))
-        ]
+        data = [[points[str(i)]["x"] * width, points[str(i)]["y"] * height] for i in range(len(points))]
         if len(data) == 0:
             raise ValueError(f"Polygon found with 0 points: {obj}")
         return torch.tensor(data, dtype=torch.float32)
@@ -67,7 +61,7 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
         ]
         return torch.tensor(data, dtype=torch.float32)
     elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
-        raise ValueError(f"Unsupported annotation type rot bounding box")
+        raise ValueError("Unsupported annotation type rot bounding box")
     elif annotation_type == AnnotationType.POINT:
         point = obj["point"]["0"]
         x = point["x"]
@@ -75,7 +69,7 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
         data = [[x * width, y * height]]
         return torch.tensor(data, dtype=torch.float32)
     elif annotation_type == AnnotationType.SKELETON:
-        raise ValueError(f"Skeleton object type is not supported")
+        raise ValueError("Skeleton object type is not supported")
     elif annotation_type == AnnotationType.BITMASK:
         return None
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
@@ -88,29 +82,26 @@ def obj_to_mask(
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
     elif annotation_type == AnnotationType.BITMASK:
-        raise ValueError(f"Bitmask object shape is not supported")
+        raise ValueError("Bitmask object shape is not supported")
     elif points is None:
-        raise ValueError(f"BUG: points value not passed as argument for annotation type containing points")
+        raise ValueError("BUG: points value not passed as argument for annotation type containing points")
     elif annotation_type == AnnotationType.POLYGON:
         return polygon_mask(points, img_w, img_h)
     elif annotation_type == AnnotationType.POLYLINE:
-        raise ValueError(f"Poly-line shape is not supported")
+        raise ValueError("Poly-line shape is not supported")
     elif annotation_type == AnnotationType.BOUNDING_BOX:
         # FIXME: cleanup and keep in gpu memory
         array = points.cpu().numpy().tolist()
         return bounding_box_mask(
-            device,
-            Point(*[int(round(x)) for x in array[0]]),
-            Point(*[int(round(x)) for x in array[2]]),
-            img_w, img_h
+            device, Point(*[int(round(x)) for x in array[0]]), Point(*[int(round(x)) for x in array[2]]), img_w, img_h
         )
     elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
-        raise ValueError(f"Rotated bounding box shape is not supported")
+        raise ValueError("Rotated bounding box shape is not supported")
     elif annotation_type == AnnotationType.POINT:
         x, y = points.cpu().numpy().tolist()
         return point_mask(device, x, y, img_w, img_h)
     elif annotation_type == AnnotationType.SKELETON:
-        raise ValueError(f"Skeleton object shape is not supported")
+        raise ValueError("Skeleton object shape is not supported")
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
 
 
@@ -141,8 +132,8 @@ def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTenso
 def bounding_box_mask(device: Device, top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
     mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
     mask[
-        min(top_left.y, height - 1): min(bottom_right.y, height - 1),
-        min(top_left.x, width - 1): min(bottom_right.x, width - 1)
+        min(top_left.y, height - 1) : min(bottom_right.y, height - 1),
+        min(top_left.x, width - 1) : min(bottom_right.x, width - 1),
     ] = True
     return mask
 

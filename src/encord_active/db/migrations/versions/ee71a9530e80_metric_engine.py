@@ -9,7 +9,6 @@ import sqlalchemy as sa
 import sqlmodel
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision = "ee71a9530e80"
 down_revision = "bcfdfc2f498a"
@@ -30,11 +29,9 @@ def upgrade() -> None:
     op.drop_index(
         "active_label_project_hash_metric_label_duplicates_index", table_name="active_project_analytics_annotation"
     )
-    with op.batch_alter_table('active_project_analytics_annotation') as bop:
+    with op.batch_alter_table("active_project_analytics_annotation") as bop:
         bop.alter_column(
-            'metric_label_duplicates',
-            nullable=True, new_column_name='metric_max_iou',
-            existing_type=sa.Float()
+            "metric_label_duplicates", nullable=True, new_column_name="metric_max_iou", existing_type=sa.Float()
         )
     op.create_index(
         "active_label_project_hash_metric_max_iou_index",
@@ -43,17 +40,13 @@ def upgrade() -> None:
         unique=False,
     )
     # metric_label_duplicates => metric_max_iou (Prediction)
-    with op.batch_alter_table('active_project_prediction_analytics') as bop:
+    with op.batch_alter_table("active_project_prediction_analytics") as bop:
         bop.alter_column(
-            'metric_label_duplicates',
-            nullable=True, new_column_name='metric_max_iou',
-            existing_type=sa.Float()
+            "metric_label_duplicates", nullable=True, new_column_name="metric_max_iou", existing_type=sa.Float()
         )
-    with op.batch_alter_table('active_project_prediction_analytics_false_negatives') as bop:
+    with op.batch_alter_table("active_project_prediction_analytics_false_negatives") as bop:
         bop.alter_column(
-            'metric_label_duplicates',
-            nullable=True, new_column_name='metric_max_iou',
-            existing_type=sa.Float()
+            "metric_label_duplicates", nullable=True, new_column_name="metric_max_iou", existing_type=sa.Float()
         )
     # metric_image_singularity => metric_image_uniqueness
     op.add_column("active_project_analytics_data", sa.Column("metric_image_uniqueness", sa.Float(), nullable=True))
@@ -77,11 +70,9 @@ def downgrade() -> None:
     op.drop_column("active_project_analytics_annotation_extra", "derived_clip_nearest")
     #  metric_max_iou => metric_label_duplicates (Annotation)
     op.drop_index("active_label_project_hash_metric_max_iou_index", table_name="active_project_analytics_annotation")
-    with op.batch_alter_table('active_project_analytics_annotation') as bop:
+    with op.batch_alter_table("active_project_analytics_annotation") as bop:
         bop.alter_column(
-            'metric_max_iou',
-            nullable=True, new_column_name='metric_label_duplicates',
-            existing_type=sa.FLOAT()
+            "metric_max_iou", nullable=True, new_column_name="metric_label_duplicates", existing_type=sa.FLOAT()
         )
     op.create_index(
         "active_label_project_hash_metric_label_duplicates_index",
@@ -90,25 +81,22 @@ def downgrade() -> None:
         unique=False,
     )
     # metric_max_iou => metric_label_duplicates (Prediction)
-    with op.batch_alter_table('active_project_prediction_analytics') as bop:
+    with op.batch_alter_table("active_project_prediction_analytics") as bop:
         bop.alter_column(
-            'metric_max_iou',
-            nullable=True, new_column_name='metric_label_duplicates',
-            existing_type=sa.FLOAT()
+            "metric_max_iou", nullable=True, new_column_name="metric_label_duplicates", existing_type=sa.FLOAT()
         )
-    with op.batch_alter_table('active_project_prediction_analytics_false_negatives') as bop:
+    with op.batch_alter_table("active_project_prediction_analytics_false_negatives") as bop:
         bop.alter_column(
-            'metric_max_iou',
-            nullable=True, new_column_name='metric_label_duplicates',
-            existing_type=sa.FLOAT()
+            "metric_max_iou", nullable=True, new_column_name="metric_label_duplicates", existing_type=sa.FLOAT()
         )
     # metric_image_uniqueness => metric_image_singularity
     op.drop_index("active_data_project_hash_metric_image_uniqueness_index", table_name="active_project_analytics_data")
-    with op.batch_alter_table('active_project_analytics_data') as bop:
+    with op.batch_alter_table("active_project_analytics_data") as bop:
         bop.alter_column(
-            'metric_image_uniqueness',
-            nullable=True, new_column_name='metric_image_singularity',
-            existing_type=sa.FLOAT()
+            "metric_image_uniqueness",
+            nullable=True,
+            new_column_name="metric_image_singularity",
+            existing_type=sa.FLOAT(),
         )
     op.create_index(
         "active_data_project_hash_metric_image_singularity_index",

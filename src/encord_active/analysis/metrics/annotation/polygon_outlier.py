@@ -1,3 +1,2 @@
-
-
-class PolygonOutlier():
+class PolygonOutlier:
+    pass

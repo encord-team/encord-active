@@ -1,17 +1,24 @@
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Optional
 
 from encord_active.analysis.types import (
     AnnotationMetadata,
+    BoundingBoxBatchTensor,
+    FeatureHashBatchTensor,
+    ImageBatchTensor,
+    ImageIndexBatchTensor,
     ImageTensor,
+    MaskBatchTensor,
+    MetricBatchDependencies,
+    MetricBatchResult,
     MetricDependencies,
-    MetricResult, MetricBatchResult, ImageBatchTensor, MetricBatchDependencies, MaskBatchTensor, BoundingBoxBatchTensor,
-    ImageIndexBatchTensor, FeatureHashBatchTensor,
+    MetricResult,
 )
+from encord_active.db.metrics import MetricType
 
 
-@dataclass(frozen=True) # FIXME: deprecate for new version
+@dataclass(frozen=True)  # FIXME: deprecate for new version
 class BaseFrameInput:
     image: ImageTensor
     image_deps: MetricDependencies
@@ -34,6 +41,7 @@ class BaseFrameAnnotationBatchInput:
     """
     Dictionary to B x dependencies
     """
+
     objects_masks: MaskBatchTensor
     """
     O x Masks (O = SUM{i.annotation_count * B}
@@ -112,9 +120,8 @@ class BaseEvaluation(ABC):
 
     """
 
-    def __init__(self, ident: str, dependencies: set[str]) -> None:
+    def __init__(self, ident: str) -> None:
         self.ident = ident
-        self.dependencies = dependencies
 
     @abstractmethod
     def raw_calculate(
@@ -141,13 +148,19 @@ class BaseEvaluation(ABC):
         """
 
 
-class BaseAnalysis(BaseEvaluation, ABC):
+class BaseAnalysis(BaseEvaluation, metaclass=ABCMeta):
     """
     The `BaseAnalysis` is all the metrics that needs to be stored in the
     database.
     """
 
-    def __init__(self, ident: str, dependencies: set[str], long_name: str, desc: str) -> None:
-        super().__init__(ident, dependencies)
+    def __init__(self, ident: str, long_name: str, desc: str) -> None:
+        super().__init__(ident)
         self.long_name = long_name
         self.desc = desc
+
+
+class BaseMetric(BaseAnalysis, metaclass=ABCMeta):
+    def __init__(self, ident: str, long_name: str, desc: str, metric_type: MetricType) -> None:
+        super().__init__(ident, long_name, desc)
+        self.metric_type = metric_type

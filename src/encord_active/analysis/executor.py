@@ -1,10 +1,12 @@
+import logging
 import math
+import random
 import uuid
-import encord
 from pathlib import Path
-from typing import List, Tuple, Dict, Optional, Set, Union, Type
+from typing import Dict, List, Optional, Set, Tuple, Type, Union
 
 import av
+import encord
 import numpy as np
 import torch
 import torchvision
@@ -15,16 +17,34 @@ from torchvision.io import VideoReader
 from torchvision.ops import masks_to_boxes
 from tqdm import tqdm
 
-from encord_active.analysis.types import AnnotationMetadata, MetricDependencies, NearestNeighbors
-from encord_active.analysis.util.torch import pillow_to_tensor, obj_to_points, obj_to_mask
-from .base import BaseFrameInput, BaseAnalysis, BaseFrameBatchInput
-
 from encord_active.analysis.config import AnalysisConfig
-from encord_active.db.models import ProjectDataMetadata, ProjectDataUnitMetadata, AnnotationType, \
-    ProjectAnnotationAnalytics, ProjectAnnotationAnalyticsExtra, ProjectDataAnalytics, ProjectDataAnalyticsExtra
+from encord_active.analysis.types import (
+    AnnotationMetadata,
+    MetricDependencies,
+    NearestNeighbors,
+    RandomSampling,
+)
+from encord_active.analysis.util.torch import (
+    obj_to_mask,
+    obj_to_points,
+    pillow_to_tensor,
+)
+from encord_active.db.models import (
+    AnnotationType,
+    ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
+    ProjectDataMetadata,
+    ProjectDataUnitMetadata,
+)
 from encord_active.lib.common.data_utils import download_image, url_to_file_path
-from .embedding import BaseEmbedding
+
+from ..db.metrics import MetricType
 from ..lib.encord.utils import get_encord_project
+from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
+from .embedding import BaseEmbedding, NearestImageEmbeddingQuery
+from .metric import RandomSamplingQuery
 
 
 class Executor:
@@ -45,20 +65,17 @@ class SimpleExecutor(Executor):
         du_meta: List[ProjectDataUnitMetadata],
         project_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str]
+        project_ssh_path: Optional[str],
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra]
+        List[ProjectAnnotationAnalyticsExtra],
     ]:
         du_dict = {}
         for du in du_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
-        values = [
-            (data, du_dict[data.data_hash])
-            for data in data_meta
-        ]
+        values = [(data, du_dict[data.data_hash]) for data in data_meta]
         return self.execute(
             values, project_dir=project_dir, project_hash=project_hash, project_ssh_path=project_ssh_path
         )
@@ -74,32 +91,25 @@ class SimpleExecutor(Executor):
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra]
+        List[ProjectAnnotationAnalyticsExtra],
     ]:
         # Split into videos & images
-        video_values = [
-            v for v in values if v[0].data_type == "video"
-        ]
-        image_values = [
-            (d, dle)
-            for d, dl in values
-            if d.data_type != "video"
-            for dle in dl
-        ]
+        video_values = [v for v in values if v[0].data_type == "video"]
+        image_values = [(d, dle) for d, dl in values if d.data_type != "video" for dle in dl]
         image_values.sort(key=lambda d: (d[1].width, d[1].height))
         for data_metadata, du_metadata_list in video_values:
             # Well-formed
             du_metadata_list.sort(key=lambda v: (v.du_hash, v.frame))
             if data_metadata.data_type != "video":
-                raise ValueError("Bug separating videos")
+                raise ValueError(f"Bug separating videos: {data_metadata.data_hash}")
 
             # Run assertions
             if du_metadata_list[0].du_hash != du_metadata_list[-1].du_hash:
-                raise ValueError(f"Video has different du_hash")
+                raise ValueError(f"Video has different du_hash: {data_metadata.data_hash}")
             if du_metadata_list[-1].frame + 1 != len(du_metadata_list) or du_metadata_list[0].frame != 0:
-                raise ValueError(f"Video has skipped frames")
+                raise ValueError(f"Video has skipped frames: {data_metadata.data_hash}")
             if len({x.frame for x in du_metadata_list}) != len(du_metadata_list):
-                raise ValueError(f"Video has frame duplicates")
+                raise ValueError(f"Video has frame duplicates: {data_metadata.data_hash}")
 
         # Video best thing
         with torch.no_grad():
@@ -147,7 +157,7 @@ class SimpleExecutor(Executor):
         if len(videos) == 0:
             return
         # Select video backend
-        if self.config.device.type == "cuda":
+        if self.config.device == "cuda" or self.config.device.type == "cuda":
             torchvision.set_video_backend("cuda")
         else:
             torchvision.set_video_backend("pyav")
@@ -157,8 +167,11 @@ class SimpleExecutor(Executor):
         ):
             video_start = du_meta_list[0]
             video_url_or_path = self._get_url_or_path(
-                uri=video_start.data_uri, project_dir=project_dir, project_hash=project_hash,
-                project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                uri=video_start.data_uri,
+                project_dir=project_dir,
+                project_hash=project_hash,
+                project_ssh_path=project_ssh_path,
+                label_hash=data_metadata.label_hash,
                 du_hash=video_start.du_hash,
             )
             reader = VideoReader(
@@ -184,13 +197,14 @@ class SimpleExecutor(Executor):
     ):
         if len(videos) == 0:
             return
-        for data_metadata, du_meta_list in tqdm(
-            videos, desc="Metric Computation Stage 1: Videos"
-        ):
+        for data_metadata, du_meta_list in tqdm(videos, desc="Metric Computation Stage 1: Videos"):
             video_start = du_meta_list[0]
             video_url_or_path = self._get_url_or_path(
-                uri=video_start.data_uri, project_dir=project_dir, project_hash=project_hash,
-                project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                uri=video_start.data_uri,
+                project_dir=project_dir,
+                project_hash=project_hash,
+                project_ssh_path=project_ssh_path,
+                label_hash=data_metadata.label_hash,
                 du_hash=video_start.du_hash,
             )
             prev_frame: Optional[BaseFrameInput] = None
@@ -251,13 +265,14 @@ class SimpleExecutor(Executor):
                         )
 
                 # Process final frame
-                self._execute_stage_1_metrics_no_batching(
-                    prev_frame=curr_frame,
-                    current_frame=next_frame,
-                    next_frame=None,
-                    du_hash=du_meta_list[0].du_hash,
-                    frame=iter_frame_num,
-                )
+                if next_frame is not None:
+                    self._execute_stage_1_metrics_no_batching(
+                        prev_frame=curr_frame,
+                        current_frame=next_frame,
+                        next_frame=None,
+                        du_hash=du_meta_list[0].du_hash,
+                        frame=iter_frame_num,
+                    )
 
     def _stage_1_image_no_batching(
         self,
@@ -266,16 +281,17 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
     ):
-        for data_metadata, du_meta in tqdm(
-            images, desc="Metric Computation Stage 1: Images"
-        ):
+        for data_metadata, du_meta in tqdm(images, desc="Metric Computation Stage 1: Images"):
             frame_input = self._get_frame_input(
                 image=self._open_image(
-                    uri=du_meta.data_uri, project_dir=project_dir, project_hash=project_hash,
-                    project_ssh_path=project_ssh_path, label_hash=data_metadata.label_hash,
+                    uri=du_meta.data_uri,
+                    project_dir=project_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                    label_hash=data_metadata.label_hash,
                     du_hash=du_meta.du_hash,
                 ),
-                du_meta=du_meta
+                du_meta=du_meta,
             )
             self._execute_stage_1_metrics_no_batching(
                 prev_frame=None,
@@ -298,15 +314,18 @@ class SimpleExecutor(Executor):
             grouped_values.setdefault((du_metadata.width, du_metadata.height), []).append((data_metadata, du_metadata))
         for group in grouped_values.values():
             for i in range(0, len(group), batching):
-                grouped_batch = group[i:i + batching]
+                grouped_batch = group[i : i + batching]
                 frame_inputs = [
                     self._get_frame_input(
                         image=self._open_image(
-                            uri=du_meta.data_uri, project_dir=project_dir, project_hash=project_hash,
-                            project_ssh_path=project_ssh_path, label_hash=meta.label_hash,
+                            uri=du_meta.data_uri,
+                            project_dir=project_dir,
+                            project_hash=project_hash,
+                            project_ssh_path=project_ssh_path,
+                            label_hash=meta.label_hash,
                             du_hash=du_meta.du_hash,
                         ),
-                        du_meta=du_meta
+                        du_meta=du_meta,
                     )
                     for meta, du_meta in grouped_batch
                 ]
@@ -314,7 +333,7 @@ class SimpleExecutor(Executor):
                 batch_inputs = BaseFrameBatchInput(
                     images=torch.stack([frame.image for frame in frame_inputs]),
                     images_deps={},
-                    annotations=None, # FIXME: actually assign these values to something correct!!
+                    annotations=None,  # FIXME: actually assign these values to something correct!!
                 )
 
                 # Execute
@@ -329,17 +348,23 @@ class SimpleExecutor(Executor):
                     )
                     non_ephemeral = isinstance(evaluation, BaseAnalysis) or isinstance(evaluation, BaseEmbedding)
                     if metric_result.images is not None:
-                        batch_inputs.images[evaluation.ident] = metric_result.images
+                        batch_inputs.images_deps[evaluation.ident] = metric_result.images
                         if non_ephemeral:
                             image_results[evaluation.ident] = metric_result.images
                     if metric_result.objects is not None:
-                        batch_inputs.annotations.objects_deps[evaluation.ident] = metric_result.objects
-                        if non_ephemeral:
-                            object_results[evaluation.ident] = metric_result.objects
+                        if batch_inputs.annotations is not None:
+                            batch_inputs.annotations.objects_deps[evaluation.ident] = metric_result.objects
+                            if non_ephemeral:
+                                object_results[evaluation.ident] = metric_result.objects
+                        else:
+                            raise ValueError(f"Object result but no annotations")
                     if metric_result.classifications is not None:
-                        batch_inputs.annotations.classifications_deps[evaluation.ident] = metric_result.classifications
-                        if non_ephemeral:
-                            classification_results[evaluation.ident] = metric_result.classifications
+                        if batch_inputs.annotations is not None:
+                            batch_inputs.annotations.classifications_deps[evaluation.ident] = metric_result.classifications
+                            if non_ephemeral:
+                                classification_results[evaluation.ident] = metric_result.classifications
+                        else:
+                            raise ValueError(f"Object result but no annotations"
 
     def _open_image(
         self,
@@ -351,8 +376,11 @@ class SimpleExecutor(Executor):
         du_hash: uuid.UUID,
     ):
         img_url_or_path = self._get_url_or_path(
-            uri=uri, project_dir=project_dir, project_hash=project_hash,
-            project_ssh_path=project_ssh_path, label_hash=label_hash,
+            uri=uri,
+            project_dir=project_dir,
+            project_hash=project_hash,
+            project_ssh_path=project_ssh_path,
+            label_hash=label_hash,
             du_hash=du_hash,
         )
         if isinstance(img_url_or_path, Path):
@@ -378,13 +406,11 @@ class SimpleExecutor(Executor):
             if project_hash in self.encord_projects:
                 encord_project = self.encord_projects[project_hash]
             else:
-                encord_project = get_encord_project(
-                    ssh_key_path=project_ssh_path, project_hash=str(project_hash)
-                )
+                encord_project = get_encord_project(ssh_key_path=project_ssh_path, project_hash=str(project_hash))
                 self.encord_projects[project_hash] = encord_project
-            return encord_project.get_label_row(
-                str(label_hash), get_signed_url=True,
-            )["data_units"][str(du_hash)]["data_link"]
+            return encord_project.get_label_row(str(label_hash), get_signed_url=True,)["data_units"][
+                str(du_hash)
+            ]["data_link"]
         else:
             raise ValueError(f"Cannot resolve project url: {project_hash} / {label_hash} / {du_hash}")
 
@@ -397,9 +423,7 @@ class SimpleExecutor(Executor):
         frame: int,
     ) -> None:
         # FIXME: add sanity checking that values are not mutated by metric runs
-        image_results_deps = {
-            "metric_metadata": {}  # String comments (currently not used)
-        }
+        image_results_deps = {"metric_metadata": {}}  # String comments (currently not used)
         annotation_results_deps = {
             k: {
                 "feature_hash": meta.feature_hash,
@@ -433,15 +457,9 @@ class SimpleExecutor(Executor):
         # Splat the results
         self.data_metrics[(du_hash, frame)] = image_results_deps
         for annotation_hash, annotation_deps in annotation_results_deps.items():
-            self.annotation_metrics[
-                (du_hash, frame, annotation_hash)
-            ] = annotation_deps
+            self.annotation_metrics[(du_hash, frame, annotation_hash)] = annotation_deps
 
-    def _get_frame_input(
-        self,
-        image: Image.Image,
-        du_meta: ProjectDataUnitMetadata
-    ) -> BaseFrameInput:
+    def _get_frame_input(self, image: Image.Image, du_meta: ProjectDataUnitMetadata) -> BaseFrameInput:
         annotations = {}
         annotations_deps = {}
         hash_collision = False
@@ -466,7 +484,7 @@ class SimpleExecutor(Executor):
                     annotation_email=str(obj["createdBy"]),
                     annotation_manual=bool(obj["manualAnnotation"]),
                     annotation_confidence=float(obj["confidence"]),
-                    bounding_box=None if mask is None else masks_to_boxes(mask.unsqueeze(0)).to(self.config.device)
+                    bounding_box=None if mask is None else masks_to_boxes(mask.unsqueeze(0)).to(self.config.device),
                 )
                 annotations_deps[obj_hash] = {}
         for cls in du_meta.classifications:
@@ -495,7 +513,7 @@ class SimpleExecutor(Executor):
             image_deps={},
             annotations=annotations,
             annotations_deps=annotations_deps,
-            hash_collision=hash_collision
+            hash_collision=hash_collision,
         )
 
     def _stage_2(self):
@@ -504,119 +522,170 @@ class SimpleExecutor(Executor):
         # Stage 2 evaluation will always be very closely bound to the executor
         # and the associated storage and indexing strategy.
         for metric in tqdm(self.config.derived_embeddings, desc="Metric Computation Stage 2: Building indices"):
-            for metrics in tqdm(
-                [self.data_metrics, self.annotation_metrics],
-                desc=f"                          : Generating indices for {metric.ident}"
-            ):
+            metrics_tqdm_desc = f"                          : Generating indices for {metric.ident}"
+            metrics_tqdm = tqdm([self.data_metrics, self.annotation_metrics], desc=metrics_tqdm_desc)
+            for metrics in metrics_tqdm:
+                metrics_tqdm.set_description(metrics_tqdm_desc)
                 if len(metrics) == 0:
                     continue
-                max_neighbours = int(metric.max_neighbours)
-                if max_neighbours > 50:
-                    raise ValueError(f"Too many embedding nn-query results")
-                data_keys = list(metrics.keys())
-                data_list = [
-                    metrics[k][metric.embedding_source].cpu().numpy()
-                    for k in data_keys
-                ]
-                data = np.stack(data_list)
-                nn_descent = NNDescent(
-                    data=data,
-                    parallel_batch_queries=True,
-                    n_jobs=-1,
-                )
-                nn_descent.prepare()
-                data_indices, data_distances = nn_descent.query(
-                    query_data=data,
-                    k=max_neighbours,
-                )
-                for i, k in enumerate(data_keys):
-                    indices = data_indices[i]
-                    distances = data_distances[i]
+                if isinstance(metric, NearestImageEmbeddingQuery):
+                    # Embedding query lookup
+                    max_neighbours = int(metric.max_neighbours)
+                    if max_neighbours > 50:
+                        raise ValueError(f"Too many embedding nn-query results")
+                    data_keys = list(metrics.keys())
+                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Loading data]")
+                    data_list = [metrics[k][metric.embedding_source].cpu().numpy() for k in data_keys]
+                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Preparing data]")
+                    data = np.stack(data_list)
+                    if len(data_list) <= 1000:
+                        # Exhaustive search is faster & more correct for very small datasets.
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Exhaustive search]")
+                        data_indices_list = []
+                        data_distances_list = []
+                        for data_key, data_embedding in zip(data_keys, data_list):
+                            data_raw_offsets = data - data_embedding
+                            data_raw_similarities = np.linalg.norm(data_raw_offsets, axis=1)
+                            data_raw_index = np.argsort(data_raw_similarities)[:max_neighbours]
+                            data_indices_list.append(data_raw_index)
+                            data_distances_list.append(data_raw_similarities[data_raw_index])
+                        data_indices = np.stack(data_indices_list)
+                        data_distances = np.stack(data_distances_list)
+                    else:
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Creating index]")
+                        nn_descent = NNDescent(
+                            data=data,
+                            parallel_batch_queries=True,
+                            n_jobs=-1,
+                        )
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Building index]")
+                        nn_descent.prepare()
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Querying index]")
+                        data_indices, data_distances = nn_descent.query(
+                            query_data=data,
+                            k=max_neighbours,
+                        )
+                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Finishing]")
+                    for i, k in enumerate(data_keys):
+                        indices = data_indices[i]
+                        distances = data_distances[i]
 
-                    # Post-process query result:
-                    if len(indices) > 0 and indices[0] == i:
-                        indices = indices[1:]
-                        distances = distances[1:]
-                    while len(distances) > 0 and math.isinf(distances[-1]):
-                        indices = distances[:-1]
-                        distances = distances[:-1]
+                        # Post-process query result:
+                        if len(indices) > 0 and indices[0] == i:
+                            indices = indices[1:]
+                            distances = distances[1:]
+                        while len(distances) > 0 and math.isinf(distances[-1]):
+                            indices = distances[:-1]
+                            distances = distances[:-1]
 
-                    # Transform value to result.
-                    nearest_neighbor_result = NearestNeighbors(
-                        similarities=distances.tolist(),
-                        metric_deps=[
-                            dict(metrics[data_keys[int(j)]])
-                            for j in indices.tolist()
-                        ],
-                        metric_keys=[
-                            data_keys[int(j)]
-                            for j in indices.tolist()
-                        ]
+                        # Transform value to result.
+                        nearest_neighbor_result = NearestNeighbors(
+                            similarities=distances.tolist(),
+                            metric_deps=[dict(metrics[data_keys[int(j)]]) for j in indices.tolist()],
+                            metric_keys=[data_keys[int(j)] for j in indices.tolist()],
+                        )
+                        metrics[k][metric.ident] = nearest_neighbor_result
+                elif isinstance(metric, RandomSamplingQuery):
+                    # Random sampling
+                    limit = metric.limit
+                    if limit > 100:
+                        raise ValueError("Too large random sampling amount")
+                    data_keys = list(metrics.keys())
+                    for i, dk in enumerate(data_keys):
+                        other_data_keys = data_keys[:i] + data_keys[i + 1 :]
+                        chosen_keys = random.choices(other_data_keys, k=max(limit, len(other_data_keys)))
+                        metrics[dk][metric.ident] = RandomSampling(
+                            metric_deps=[dict(metrics[k]) for k in chosen_keys.tolist()], metric_keys=chosen_keys
+                        )
+                else:
+                    raise ValueError(
+                        f"Unsupported index stage metric[{getattr(metric, 'ident', None)}]: {metric.__name__}"
                     )
-                    metrics[k][metric.ident] = nearest_neighbor_result
 
     def _stage_3(self) -> None:
         # Stage 3: Derived metrics from stage 1 & stage 2 metrics
         # dependencies must be pure.
-        for data_metric in tqdm(
-            self.data_metrics.values(),
-            desc="Metric Computation Stage 3: Derived - Data"
-        ):
+        for data_metric in tqdm(self.data_metrics.values(), desc="Metric Computation Stage 3: Derived - Data"):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(data_metric), None)
                 if derived_metric is not None:
                     data_metric[metric.ident] = derived_metric
         for annotation_metric in tqdm(
-            self.annotation_metrics.values(),
-            desc="Metric Computation Stage 3: Derived - Annotation"
+            self.annotation_metrics.values(), desc="Metric Computation Stage 3: Derived - Annotation"
         ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(annotation_metric), annotation_metric["annotation_type"])
                 if derived_metric is not None:
                     annotation_metric[metric.ident] = derived_metric
 
-    @staticmethod
     def _validate_pack_deps(
+        self,
         deps: MetricDependencies,
         ty_analytics: Type[Union[ProjectAnnotationAnalytics, ProjectDataAnalytics]],
         ty_extra: Type[Union[ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra]],
     ) -> Tuple[Set[str], Set[str]]:
-        analysis_values = {
-            k
-            for k in deps
-            if k in ty_analytics.__fields__ and k.startswith("metric_")
+        metric_lookup = {
+            m.ident: m.metric_type
+            for m in (self.config.analysis + self.config.derived_metrics)
+            if isinstance(m, BaseMetric)
         }
+        # Hardcoded special metric
+        metric_lookup["metric_label_confidence"] = MetricType.NORMAL
+        analysis_values = {k for k in deps if k in ty_analytics.__fields__ and k.startswith("metric_")}
+        for k in analysis_values:
+            m = metric_lookup[k]
+            v_raw = deps[k]
+            v = v_raw.item() if isinstance(v_raw, Tensor) else v_raw
+            if not isinstance(v, float) and not isinstance(v, int):
+                raise ValueError(f"Unsupported metric type: {type(v)}")
+            if m == MetricType.NORMAL:
+                if v < 0.0 or v > 1.0:
+                    raise ValueError(f"Normal metric out of bounds: {k}[{m}] = {v}")
+            elif m == MetricType.UINT or m == MetricType.UFLOAT:
+                if v < 0:
+                    raise ValueError(f"Unsigned metric out of bounds: {k}[{m}] = {v}")
+            else:
+                raise ValueError(f"Unsupported metric type: {m}")
+
+        # Extra values & missing values
         extra_values = set(deps.keys()) - analysis_values
         unassigned_metric_values = {
-            k for k in ty_analytics.__fields__
-            if (
-                k.startswith("metric_") or k.startswith("embedding_")
-            ) and k not in analysis_values and not k.startswith("metric_custom")
+            k
+            for k in ty_analytics.__fields__
+            if (k.startswith("metric_") or k.startswith("embedding_"))
+            and k not in analysis_values
+            and not k.startswith("metric_custom")
         }
+        log = logging.getLogger("Metric Executor")
         if len(unassigned_metric_values) > 0:
-            print(f"WARNING: unassigned analytics metrics({ty_analytics.__name__}) = {unassigned_metric_values}")
+            log.debug(f"WARNING: unassigned analytics metrics({ty_analytics.__name__}) = {unassigned_metric_values}")
         for extra_value in extra_values:
-            if not (
-                extra_value.startswith("metric_") or
-                extra_value.startswith("embedding_") or
-                extra_value.startswith("derived_")
-            ) or extra_value not in ty_extra.__fields__:
+            if (
+                not (
+                    extra_value.startswith("metric_")
+                    or extra_value.startswith("embedding_")
+                    or extra_value.startswith("derived_")
+                )
+                or extra_value not in ty_extra.__fields__
+            ):
                 raise ValueError(f"Unknown field name: '{extra_value}' for {ty_extra.__name__}")
         unassigned_extra_values = {
-            k for k in ty_extra.__fields__
-            if (
-               k.startswith("metric_") or k.startswith("embedding_") or k.startswith("derived_")
-            ) and k not in extra_values
+            k
+            for k in ty_extra.__fields__
+            if (k.startswith("metric_") or k.startswith("embedding_") or k.startswith("derived_"))
+            and k not in extra_values
         }
         if len(unassigned_extra_values) > 0:
-            print(f"WARNING: unassigned analytics extra value({ty_extra.__name__}) = {unassigned_extra_values}")
+            log.debug(f"WARNING: unassigned analytics extra value({ty_extra.__name__}) = {unassigned_extra_values}")
         return analysis_values, extra_values
 
-    def _pack_output(self) -> Tuple[
+    def _pack_output(
+        self,
+    ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra]
+        List[ProjectAnnotationAnalyticsExtra],
     ]:
         data_analysis = []
         data_analysis_extra = []
@@ -629,7 +698,7 @@ class SimpleExecutor(Executor):
             return v
 
         def _extra(
-            k: str, v: Union[Tensor, float, int, str, None, NearestNeighbors]
+            k: str, v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling]
         ) -> Union[bytes, float, int, str, None, dict]:
             if isinstance(v, Tensor):
                 if k.startswith("embedding_"):
@@ -645,17 +714,13 @@ class SimpleExecutor(Executor):
                     return v.cpu().numpy().tobytes()
                 return v.item()
             elif isinstance(v, NearestNeighbors):
-                return {
-                    "similarities": v.similarities,
-                    "keys": [
-                        list(k)
-                        for k in v.metric_keys
-                    ]
-                }
+                return {"similarities": v.similarities, "keys": [list(k) for k in v.metric_keys]}
+            elif isinstance(v, RandomSampling):
+                return {"keys": [list(k) for k in v.metric_keys]}
             return v
 
         for (du_hash, frame), data_deps in self.data_metrics.items():
-            analysis_values, extra_values = SimpleExecutor._validate_pack_deps(
+            analysis_values, extra_values = self._validate_pack_deps(
                 data_deps,
                 ProjectDataAnalytics,
                 ProjectDataAnalyticsExtra,
@@ -664,10 +729,7 @@ class SimpleExecutor(Executor):
                 ProjectDataAnalytics(
                     du_hash=du_hash,
                     frame=frame,
-                    **{
-                        k: _metric(v)
-                        for k, v in data_deps.items() if k in analysis_values
-                    },
+                    **{k: _metric(v) for k, v in data_deps.items() if k in analysis_values},
                 )
             )
             data_analysis_extra.append(
@@ -676,7 +738,8 @@ class SimpleExecutor(Executor):
                     frame=frame,
                     **{
                         k: _extra(k, v)
-                        for k, v in data_deps.items() if k in extra_values and not k.startswith("derived_")
+                        for k, v in data_deps.items()
+                        if k in extra_values and not k.startswith("derived_")
                     },
                 )
             )
@@ -685,7 +748,7 @@ class SimpleExecutor(Executor):
             annotation_type = annotation_deps.pop("annotation_type")
             annotation_email = annotation_deps.pop("annotation_email")
             annotation_manual = annotation_deps.pop("annotation_manual")
-            analysis_values, extra_values = SimpleExecutor._validate_pack_deps(
+            analysis_values, extra_values = self._validate_pack_deps(
                 annotation_deps,
                 ProjectAnnotationAnalytics,
                 ProjectAnnotationAnalyticsExtra,
@@ -698,26 +761,15 @@ class SimpleExecutor(Executor):
                     annotation_type=annotation_type,
                     annotation_email=annotation_email,
                     annotation_manual=annotation_manual,
-                    **{
-                        k: _metric(v)
-                        for k, v in annotation_deps.items() if k in analysis_values
-                    },
+                    **{k: _metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
             )
             annotation_analysis_extra.append(
                 ProjectAnnotationAnalyticsExtra(
                     du_hash=du_hash,
                     frame=frame,
-                    **{
-                        k: _extra(k, v)
-                        for k, v in annotation_deps.items() if k in extra_values
-                    },
+                    **{k: _extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
 
-        return (
-            data_analysis,
-            data_analysis_extra,
-            annotation_analysis,
-            annotation_analysis_extra
-        )
+        return (data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra)

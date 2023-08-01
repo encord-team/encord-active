@@ -2,15 +2,23 @@ from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseFrameAnnotationBatchInput
-from encord_active.analysis.metric import MetricDependencies, OneImageMetric, ImageObjectOnlyOutputBatch, \
-    ObjectOnlyBatchInput
-from encord_active.analysis.types import ImageTensor, MaskTensor, MetricResult, MetricBatchDependencies, \
-    ImageBatchTensor, MetricBatchResult
+from encord_active.analysis.metric import (
+    ImageObjectOnlyOutputBatch,
+    MetricDependencies,
+    ObjectOnlyBatchInput,
+    OneImageMetric,
+)
+from encord_active.analysis.types import (
+    ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
+    MetricBatchDependencies,
+    MetricResult,
+)
+from encord_active.db.metrics import MetricType
 
 
 class HSVColorMetric(OneImageMetric):
-
     def __init__(self, color_name: str, hue_query: float) -> None:
         """
         Computes the average hue distance to hue_query across all pixels in the
@@ -23,9 +31,9 @@ class HSVColorMetric(OneImageMetric):
         """
         super().__init__(
             ident=f"metric_{color_name.lower()}",
-            dependencies=set("hsv_image"),
             long_name=f"{color_name} Values".title(),
             desc=f"Ranks images by how {color_name.lower()} the average value of the image is.",
+            metric_type=MetricType.NORMAL,
         )
         self.hue_query = hue_query * 2 * torch.pi
 
@@ -45,18 +53,15 @@ class HSVColorMetric(OneImageMetric):
         return torch.minimum(dists1, dists2).mean() * 2
 
     def calculate_batched(
-        self,
-        deps: MetricBatchDependencies,
-        image: ImageBatchTensor,
-        annotation: Optional[ObjectOnlyBatchInput]
+        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         hsv_image = deps["ephemeral_hsv_image"]
         hue_image = hsv_image[:, 0, :, :]
 
         # Convert to 'color'-ness normalised value
         hue_delta_raw = torch.abs(hue_image - self.hue_query)
-        hue_delta_min = torch.min(hue_delta_raw, (2 * torch.pi) - hue_delta_raw) # 0 -> torch.pi
-        hue_delta = (torch.pi - hue_delta_min) / torch.pi # 0 -> 1 (1 is 'color'-ness)
+        hue_delta_min = torch.min(hue_delta_raw, (2 * torch.pi) - hue_delta_raw)  # 0 -> torch.pi
+        hue_delta = (torch.pi - hue_delta_min) / torch.pi  # 0 -> 1 (1 is 'color'-ness)
 
         objects = None
         if annotation is not None:
