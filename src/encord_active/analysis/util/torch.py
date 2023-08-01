@@ -85,9 +85,13 @@ def obj_to_mask(
     device: Device, annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
 ) -> Optional[MaskTensor]:
     # TODO fix me
-    if annotation_type == AnnotationType.CLASSIFICATION or points is None:
+    if annotation_type == AnnotationType.CLASSIFICATION:
         return None
-    if annotation_type == AnnotationType.POLYGON:
+    elif annotation_type == AnnotationType.BITMASK:
+        raise ValueError(f"Bitmask object shape is not supported")
+    elif points is None:
+        raise ValueError(f"BUG: points value not passed as argument for annotation type containing points")
+    elif annotation_type == AnnotationType.POLYGON:
         return polygon_mask(points, img_w, img_h)
     elif annotation_type == AnnotationType.POLYLINE:
         raise ValueError(f"Poly-line shape is not supported")
@@ -107,8 +111,6 @@ def obj_to_mask(
         return point_mask(device, x, y, img_w, img_h)
     elif annotation_type == AnnotationType.SKELETON:
         raise ValueError(f"Skeleton object shape is not supported")
-    elif annotation_type == AnnotationType.BITMASK:
-        raise ValueError(f"Bitmask object shape is not supported")
     raise ValueError(f"Unknown annotation type is not supported: {annotation_type}")
 
 

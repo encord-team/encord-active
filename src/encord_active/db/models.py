@@ -186,7 +186,6 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     frame: int = Field(primary_key=True, ge=0)
     # Embeddings
     embedding_clip: Optional[bytes]
-    embedding_hu: Optional[bytes]
     # Embeddings derived
     derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
     # Metric comments
@@ -234,9 +233,6 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
     annotation_email: str
     annotation_manual: bool
-    # Embeddings
-    embedding_clip: Optional[bytes]
-    embedding_hu: Optional[bytes]
     # Metrics - Absolute Size
     metric_width: Optional[int] = MetricFieldTypePositiveInteger
     metric_height: Optional[int] = MetricFieldTypePositiveInteger

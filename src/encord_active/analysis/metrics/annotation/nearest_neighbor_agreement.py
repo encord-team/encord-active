@@ -18,7 +18,7 @@ class NearestNeighborAgreement(DerivedMetric):
 
     def calculate(self, deps: MetricDependencies, annotation: Optional[AnnotationType]) -> MetricResult:
         if annotation is None:
-            return
+            return None
         # calculate
         nearest_neighbours: NearestNeighbors = deps["derived_clip_nearest"]
         feature_hash: str = deps["feature_hash"]
@@ -40,5 +40,5 @@ class NearestNeighborAgreement(DerivedMetric):
                 for m, t in zip(matches, raw_bias)
             ]
         score = sum(matches) / len(matches)
-        print(f"Debug NN Agreement: {nearest_neighbours.similarities} / {matches} => {score}")
+        # print(f"Debug NN Agreement: {nearest_neighbours.similarities} / {matches} => {score}")
         return score

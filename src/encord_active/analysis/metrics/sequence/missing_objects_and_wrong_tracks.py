@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple, Optional
 
+import torch
 from shapely.geometry import Polygon
 
 from encord_active.analysis.metric import (
@@ -36,7 +37,48 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
         prev_annotations: Optional[Dict[str, AnnotationMetadata]],
         next_annotations: Optional[Dict[str, AnnotationMetadata]],
     ) -> Dict[str, float]:
-        return {}
+        # FIXME: implement properly
+        annotation_res = {}
+        if prev_annotations is None or next_annotations is None:
+            return {
+                annotation_hash: 1.0
+                for annotation_hash in annotations.keys()
+            }
+        for next_annotation_hash, next_annotation_meta in next_annotations.items():
+            best_iou = None
+            # Search back 2 for similar
+            for prev_annotation_hash, prev_annotation_meta in prev_annotations.items():
+                if prev_annotation_meta.feature_hash == next_annotation_meta.feature_hash:
+                    iou = None
+                    if prev_annotation_meta.mask is None and next_annotation_meta.mask is None:
+                        iou = 1.0
+                    elif prev_annotation_meta.mask is not None and next_annotation_meta.mask is not None:
+                        iou = torch.mean(
+                            prev_annotation_meta.mask & prev_annotation_meta.mask, dtype=torch.float32
+                        ).item()
+                    if iou is not None and iou > best_iou:
+                        best_iou = iou
+
+            # If iou > 0.5 we consider this to be a object that is likely to be interpolated in the middle
+            if best_iou is not None and best_iou > 0.5:
+                # Search for best iou in the middle
+                best_mid_iou = 0.0
+                best_mid_annotation_hash = next(annotations.keys(), None) # FIXME: may error!?
+                for annotation_hash, annotation_meta in annotations.items():
+                    if annotation_meta.feature_hash == next_annotation_meta.feature_hash:
+                        pass  # FIXME: implement
+
+                # FIXME: kinda hard to select best annotation hash to union with if multiple map to this hash
+                # FIXME: works even worse if 0 items exist on this frame!?!
+                annotation_res[best_mid_annotation_hash] = min(
+                    best_mid_iou, annotation_res.get(best_mid_annotation_hash, 1.0)
+                )
+
+        # Any annotations not marked as suspect get instant scores of 1.0
+        for annotation_hash in annotations.keys():
+            if annotation_hash not in annotation_res:
+                annotation_res[annotation_hash] = 1.0
+        return annotation_res
         """
         if len(prev_frames) == 0 or len(next_frames) == 0:
             return {k: 0.0 for k in objs.keys()}

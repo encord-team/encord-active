@@ -397,7 +397,9 @@ class SimpleExecutor(Executor):
         frame: int,
     ) -> None:
         # FIXME: add sanity checking that values are not mutated by metric runs
-        image_results_deps = {}
+        image_results_deps = {
+            "metric_metadata": {}  # String comments (currently not used)
+        }
         annotation_results_deps = {
             k: {
                 "feature_hash": meta.feature_hash,
@@ -405,6 +407,7 @@ class SimpleExecutor(Executor):
                 "annotation_email": meta.annotation_email,
                 "annotation_manual": meta.annotation_manual,
                 "metric_label_confidence": meta.annotation_confidence,
+                "metric_metadata": {},  # String comments (currently not used)
             }
             for k, meta in current_frame.annotations.items()
         }
@@ -561,14 +564,16 @@ class SimpleExecutor(Executor):
         ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(data_metric), None)
-                data_metric[metric.ident] = derived_metric
+                if derived_metric is not None:
+                    data_metric[metric.ident] = derived_metric
         for annotation_metric in tqdm(
             self.annotation_metrics.values(),
             desc="Metric Computation Stage 3: Derived - Annotation"
         ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(annotation_metric), annotation_metric["annotation_type"])
-                annotation_metric[metric.ident] = derived_metric
+                if derived_metric is not None:
+                    annotation_metric[metric.ident] = derived_metric
 
     @staticmethod
     def _validate_pack_deps(
@@ -582,13 +587,29 @@ class SimpleExecutor(Executor):
             if k in ty_analytics.__fields__ and k.startswith("metric_")
         }
         extra_values = set(deps.keys()) - analysis_values
+        unassigned_metric_values = {
+            k for k in ty_analytics.__fields__
+            if (
+                k.startswith("metric_") or k.startswith("embedding_")
+            ) and k not in analysis_values and not k.startswith("metric_custom")
+        }
+        if len(unassigned_metric_values) > 0:
+            print(f"WARNING: unassigned analytics metrics({ty_analytics.__name__}) = {unassigned_metric_values}")
         for extra_value in extra_values:
             if not (
                 extra_value.startswith("metric_") or
                 extra_value.startswith("embedding_") or
                 extra_value.startswith("derived_")
             ) or extra_value not in ty_extra.__fields__:
-                raise ValueError(f"Unknown field name: {extra_value}")
+                raise ValueError(f"Unknown field name: '{extra_value}' for {ty_extra.__name__}")
+        unassigned_extra_values = {
+            k for k in ty_extra.__fields__
+            if (
+               k.startswith("metric_") or k.startswith("embedding_") or k.startswith("derived_")
+            ) and k not in extra_values
+        }
+        if len(unassigned_extra_values) > 0:
+            print(f"WARNING: unassigned analytics extra value({ty_extra.__name__}) = {unassigned_extra_values}")
         return analysis_values, extra_values
 
     def _pack_output(self) -> Tuple[
@@ -612,6 +633,15 @@ class SimpleExecutor(Executor):
         ) -> Union[bytes, float, int, str, None, dict]:
             if isinstance(v, Tensor):
                 if k.startswith("embedding_"):
+                    if len(v.shape) != 1:
+                        raise ValueError(f"Invalid embedding shape: {v.shape}")
+                    embedding_len = None
+                    if k == "embedding_hu":
+                        embedding_len = 7
+                    elif k == "embedding_clip":
+                        embedding_len = 512
+                    if v.shape[0] != embedding_len:
+                        raise ValueError(f"Embedding has wrong length: {v.shape} != {embedding_len or 'Unknown'}")
                     return v.cpu().numpy().tobytes()
                 return v.item()
             elif isinstance(v, NearestNeighbors):

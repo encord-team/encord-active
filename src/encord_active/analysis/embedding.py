@@ -110,12 +110,29 @@ class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        # FIXME: implement
-        return BaseFrameOutput(image=None, annotations={})
+        annotations = {}
+        for annotation_hash, annotation in frame.annotations.items():
+            if annotation.mask is not None:
+                annotations[annotation_hash] = self.evaluate_embedding(annotation.mask)
+            else:
+                annotations[annotation_hash] = self.classification_embedding()
+        return BaseFrameOutput(image=None, annotations=annotations)
 
     @abstractmethod
     def evaluate_embedding(self, mask: MaskTensor) -> EmbeddingTensor:
         ...
+
+    @abstractmethod
+    def classification_embedding(self) -> Optional[EmbeddingTensor]:
+        ...
+
+    def raw_calculate_batch(
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
+    ) -> BaseFrameBatchOutput:
+        raise ValueError()
 
 
 class NearestImageEmbeddingQuery:

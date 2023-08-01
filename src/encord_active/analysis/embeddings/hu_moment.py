@@ -1,15 +1,27 @@
+from typing import Optional
+
+import cv2
 import torch
 from torch import FloatTensor, BoolTensor
 
 from encord_active.analysis.embedding import PureObjectEmbedding
+from encord_active.analysis.types import MaskTensor, EmbeddingTensor
 from encord_active.analysis.util import image_width, image_height
 
 
 class HuMomentEmbeddings(PureObjectEmbedding):
-    def __init__(self, ident: str) -> None:
-        super().__init__(ident, set())
+    def __init__(self) -> None:
+        super().__init__("embedding_hu", set())
 
-    def evaluate_embedding(self, mask: BoolTensor, bb: torch.Tensor) -> FloatTensor:
+    def evaluate_embedding(self, mask: MaskTensor) -> EmbeddingTensor:
+        np_mask = (mask.cpu().type(torch.uint8) * 255).numpy()
+        hu_moments = cv2.HuMoments(cv2.moments(np_mask)).flatten()
+        return torch.from_numpy(hu_moments).type(torch.float32)
+
+    def classification_embedding(self) -> Optional[EmbeddingTensor]:
+        return torch.zeros(7, dtype=torch.float32)  # FIXME: return hardcoded whole image 'embedding'
+
+    def wip_torch_hu_moment(self, mask: BoolTensor, bb: torch.Tensor) -> FloatTensor:
         bounding_boxes = bb
         xy1 = bounding_boxes[:, :2]
         xy2 = bounding_boxes[:, 2:]

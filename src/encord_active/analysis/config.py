@@ -117,6 +117,7 @@ def create_analysis(device: Device) -> AnalysisConfig:
     analysis: list[BaseEvaluation] = [
         # Generate embeddings
         ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
+        HuMomentEmbeddings(),
         # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Data conversions
         RGBToHSV(),
@@ -155,7 +156,7 @@ def create_analysis(device: Device) -> AnalysisConfig:
     derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY
         NearestNeighborAgreement(),  # metric_annotation_quality
-        ImageUniqueness(),  # metric_image_singularity ("Image Singularity")
+        ImageUniqueness(),  # metric_image_uniqueness ("Image Singularity")
     ]
     return AnalysisConfig(
         analysis=analysis,

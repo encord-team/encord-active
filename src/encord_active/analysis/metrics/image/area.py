@@ -54,7 +54,7 @@ class AreaRelativeMetric(OneImageMetric):  # FIXME: OneObjectMetric
 
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         if mask is None:
-            return float(image_width(image)) * float(image_height(image))
+            return None
         else:
             obj_area = float(deps["metric_area"])
             area = float(image_width(image)) * float(image_height(image))
