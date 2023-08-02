@@ -1229,6 +1229,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
             project_hash,
             project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
         )
+        # FIXME: reduced embeddings, need to start working out train / serialize / load (joblib / pickle / other?)
+        #  can be delayed for later compared to metric_engine
     except Exception as e:
         import traceback
 
@@ -1237,7 +1239,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
     print("=== Finished Computation Engine ===")
 
     path = database_dir / "encord-active.sqlite"
-    engine = get_engine(path, use_alembic=False)  # FIXME: undo this && remove computation engine above
+    engine = get_engine(path)
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)

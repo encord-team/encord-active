@@ -247,6 +247,9 @@ class SimpleExecutor(Executor):
                     # Run stage 1 metrics
                     if next_frame is not None and curr_frame is not None:
                         # Process non-first & non-last frame
+                        # FIXME: seq metrics may work better with (curr, next, next_next)
+                        #  need to sanity check on changes to design before fully enabling.
+                        #  video metrics.
                         self._execute_stage_1_metrics_no_batching(
                             prev_frame=prev_frame,
                             current_frame=curr_frame,
@@ -472,21 +475,36 @@ class SimpleExecutor(Executor):
             if obj_hash in annotations:
                 hash_collision = True
             else:
-                points = obj_to_points(annotation_type, obj, img_w=image.width, img_h=image.height)
-                mask = obj_to_mask(
-                    self.config.device, annotation_type, img_w=image.width, img_h=image.height, points=points
-                )
+                try:
+                    points = obj_to_points(annotation_type, obj, img_w=image.width, img_h=image.height)
+                    mask = obj_to_mask(
+                        self.config.device, annotation_type, img_w=image.width, img_h=image.height, points=points
+                    )
+                except Exception:
+                    print(f"DEBUG Obj to Points & Mask for {annotation_type}: {obj}")
+                    raise
                 if mask is not None and mask.shape != (image.height, image.width):
                     raise ValueError(f"Wrong mask tensor shape: {mask.shape} != {(image.height, image.width)}")
+                bounding_box = None
+                if mask is not None:
+                    mask = mask.to(self.config.device)
+                    try:
+                        bounding_box = masks_to_boxes(mask.unsqueeze(0))
+                    except Exception:
+                        print(
+                            f"DEBUG BB-Gen Failure: {mask.shape}, {torch.min(mask)}, "
+                            f"{torch.max(mask)}, {annotation_type} => {obj}"
+                        )
+                        raise
                 annotations[obj_hash] = AnnotationMetadata(
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
                     points=None if points is None else points.to(self.config.device),
-                    mask=None if mask is None else mask.to(self.config.device),
+                    mask=mask,
                     annotation_email=str(obj["createdBy"]),
                     annotation_manual=bool(obj["manualAnnotation"]),
                     annotation_confidence=float(obj["confidence"]),
-                    bounding_box=None if mask is None else masks_to_boxes(mask.unsqueeze(0)).to(self.config.device),
+                    bounding_box=bounding_box,
                 )
                 annotations_deps[obj_hash] = {}
         for cls in du_meta.classifications:
@@ -540,6 +558,7 @@ class SimpleExecutor(Executor):
                     data_list = [metrics[k][metric.embedding_source].cpu().numpy() for k in data_keys]
                     metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Preparing data]")
                     data = np.stack(data_list)
+                    # FIXME: tune threshold where using pynndescent is actually faster.
                     if len(data_list) <= 1000:
                         # Exhaustive search is faster & more correct for very small datasets.
                         metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Exhaustive search]")

@@ -32,9 +32,10 @@ class SharpnessMetric(OneImageMetric):
     def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
         # Max range of laplacian kernel = [-4, 4] * 255 = [-1020, 1020]
         # Max value of variance = (2.0 * 1020.0 * 1020.0) = 2080800.
+        # FIXME: grayscale VS rgb??? (WHICH SHOULD WE USE!!!!!)
         grayscale = torch.mean(image, dim=-3, dtype=torch.float32).type(torch.uint8).unsqueeze(0)
         if mask is None:
-            # FIXME: variance VS stddev
+            # FIXME: variance VS stddev (which gives better summaries for normalisation)
             return torch.var(laplacian2d(grayscale)) / 2080800.0
         else:
             top_left, bottom_right = mask_to_box_extremes(mask)

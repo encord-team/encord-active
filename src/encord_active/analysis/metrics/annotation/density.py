@@ -10,6 +10,7 @@ from encord_active.db.metrics import MetricType
 
 class ObjectDensityMetric(ImageObjectsMetric):
     def __init__(self) -> None:
+        # FIXME: special case frame-level-annotation-metrics to a 3rd type of metric
         super().__init__(
             ident="metric_object_density",
             long_name="Object Density",

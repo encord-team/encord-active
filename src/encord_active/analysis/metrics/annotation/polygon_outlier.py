@@ -1,2 +1,2 @@
-class PolygonOutlier:
+class PolygonOutlier:  # FIXME: actually implement
     pass

@@ -23,6 +23,8 @@ class NearestNeighborAgreement(DerivedMetric):
     def calculate(self, deps: MetricDependencies, annotation: Optional[AnnotationMetadata]) -> MetricResult:
         if annotation is None:
             return None
+        # FIXME: experiment with different filtering strategies & weighting strategies
+        #  find one that works the best.
         # calculate
         nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
         if len(nearest_neighbours.similarities) == 0:

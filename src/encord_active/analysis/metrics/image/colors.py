@@ -47,6 +47,9 @@ class HSVColorMetric(OneImageMetric):
         else:
             hsv_pixels = hsv_image[:, mask]
 
+        # FIXME: (see dist code in batched - unused), (more efficient, float % is slow)
+        #  FIXME: should we consider the s & v channels, Black should not be considered very 'red'?
+        #         need to investigate more on the most useful reduction formula.
         hue_values = hsv_image[0]
         dists1 = (hue_values - self.hue_query) % 1.0
         dists2 = (self.hue_query - hue_values) % 1.0

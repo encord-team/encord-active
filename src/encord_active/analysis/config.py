@@ -25,10 +25,6 @@ from .metrics.image.height import HeightMetric
 from .metrics.image.random import RandomMetric
 from .metrics.image.sharpness import SharpnessMetric
 from .metrics.image.width import WidthMetric
-from .metrics.sequence.missing_objects_and_wrong_tracks import (
-    TemporalMissingObjectsAndWrongTracks,
-)
-from .metrics.sequence.shape_change import TemporalShapeChange
 
 """
 Operations to support tracking for:
@@ -106,6 +102,8 @@ class AnalysisConfig:
 def default_torch_device() -> torch.device:
     """Default torch device to use for the analysis config"""
     torch_device_str = "cpu"
+    # FIXME: currently CPU only due to GPU being too slow due to lack of batch support.
+    #  keep this until batch functions are properly implemented.
     if torch.cuda.is_available() and os.environ.get("ACTIVE_ALLOW_TORCH_CUDA_BACKEND", "0") == "1":
         torch_device_str = "cuda"
     elif torch.backends.mps.is_available() and os.environ.get("ACTIVE_ALLOW_TORCH_MPS_BACKEND", "0") == "1":
@@ -143,12 +141,13 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         ObjectCountMetric(),  # metric_object_count
         ObjectDensityMetric(),  # metric_object_density ("Frame object density")
         # ?????
-        # metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
-        # metric_label_inconsistent_classification_and_track ("Inconsistent Object Classification and Track IDs")
-        # metric_label_shape_outlier ("Shape outlier detection")
+        # FIXME: metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
+        # FIXME: metric_label_inconsistent_classification_and_track ("Inconsistent Object Classification and Track IDs")
+        # FIXME: metric_label_shape_outlier ("Shape outlier detection")
+        # FIXME: metric_seq_occlusion_detection (ALSO - MISSING COLUMN NAME, WILL NEED ALEMBIC MIGRATION)
         # Temporal metrics
-        TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
-        TemporalMissingObjectsAndWrongTracks(),  # metric_label_missing_or_broken_tracks ("Missing Objects and Broken Tracks")
+        # FIXME: DISABLED TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
+        # FIXME: DISABLED TemporalMissingObjectsAndWrongTracks(),  # metric_label_missing_or_broken_tracks ("Missing Objects and Broken Tracks")
     ]
     derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]] = [
         # Derive properties from embedding

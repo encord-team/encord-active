@@ -2,25 +2,18 @@ from typing import Optional
 
 import torch
 
-from encord_active.analysis.base import BaseFrameBatchInput, BaseFrameBatchOutput
-from encord_active.analysis.metric import (
-    ImageObjectOnlyOutputBatch,
-    MetricDependencies,
-    ObjectOnlyBatchInput,
-    OneImageMetric,
-)
-from encord_active.analysis.types import (
-    ImageBatchTensor,
-    ImageTensor,
-    MaskTensor,
-    MetricBatchDependencies,
-    MetricResult,
+from encord_active.analysis.base import (
+    BaseFrameBatchInput,
+    BaseFrameBatchOutput,
+    BaseFrameInput,
+    BaseFrameOutput,
+    BaseMetric,
 )
 from encord_active.analysis.util.torch import batch_size
 from encord_active.db.metrics import MetricType
 
 
-class RandomMetric(OneImageMetric):
+class RandomMetric(BaseMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_random",
@@ -29,8 +22,16 @@ class RandomMetric(OneImageMetric):
             metric_type=MetricType.NORMAL,
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
-        return torch.rand(1)
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        return BaseFrameOutput(
+            image=torch.rand(1),
+            annotations={annotation_hash: torch.rand(1) for annotation_hash in frame.annotations.keys()},
+        )
 
     def raw_calculate_batch(
         self,
@@ -49,8 +50,3 @@ class RandomMetric(OneImageMetric):
             if frame.annotations is None
             else torch.rand(batch_size(frame.annotations.classifications_image_indices)),
         )
-
-    def calculate_batched(
-        self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
-    ) -> ImageObjectOnlyOutputBatch:
-        raise ValueError("Base implementation overriden, this should never be called")

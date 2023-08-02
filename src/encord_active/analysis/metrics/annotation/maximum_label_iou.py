@@ -16,7 +16,7 @@ from encord_active.db.metrics import MetricType
 class MaximumLabelIOUMetric(ObjectByFrameMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_max_iou",  # FIXME: maybe rename column?
+            ident="metric_max_iou",
             long_name="Label Duplicates",
             desc="Assigns the maximum IOU between each label and the rest of the labels in the frame.",
             metric_type=MetricType.NORMAL,

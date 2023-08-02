@@ -21,7 +21,7 @@ from encord_active.db.metrics import MetricType
 class DistanceToBorderMetric(OneObjectMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_label_border_closeness",
+            ident="metric_label_border_closeness",  # FIXME: rename ident to something better??
             long_name="Distance in pixels to the border",
             desc="",
             metric_type=MetricType.NORMAL,
@@ -31,6 +31,7 @@ class DistanceToBorderMetric(OneObjectMetric):
         # FIXME: make relative?? (NORMAL metrics are better)
         points = annotation.points
         mask = annotation.mask
+        # FIXME: change to use bounding box!! (should give same answer).
         if points is not None and mask is not None:
             w = image_width(mask)
             h = image_height(mask)
@@ -44,6 +45,7 @@ class DistanceToBorderMetric(OneObjectMetric):
             # Classification (distance = 0) FIXME: correct fallback or should this be NULL?!
             return 0.0
         else:
+            # FIXME: implement (use bounding box).
             raise ValueError("Border closeness not supported for bitmasks yet!")
 
     def calculate_batched(
