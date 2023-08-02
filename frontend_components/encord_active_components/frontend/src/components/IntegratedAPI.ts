@@ -58,10 +58,10 @@ const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
 };
 
 const StatisticQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> =
-{
-  staleTime: 1000 * 60 * 5, // 5 minutes
-  cacheTime: 1000 * 60 * 5, // 5 minutes
-};
+  {
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    cacheTime: 1000 * 60 * 5, // 5 minutes
+  };
 
 class IntegratedAPI implements QueryAPI {
   private readonly projects: Readonly<
@@ -70,7 +70,7 @@ class IntegratedAPI implements QueryAPI {
 
   constructor(
     token: string | null,
-    projects: Readonly<Record<string, IntegratedProjectMetadata>>
+    projects: Readonly<Record<string, IntegratedProjectMetadata>>,
   ) {
     this.projects = projects;
     if (token)
@@ -79,7 +79,7 @@ class IntegratedAPI implements QueryAPI {
 
   private getBaseUrl(
     project_hash: string,
-    enabled: boolean | undefined
+    enabled: boolean | undefined,
   ): string {
     if (enabled === false) {
       return `${apiUrl}/projects_v2_error_state/query_disabled`;
@@ -97,7 +97,7 @@ class IntegratedAPI implements QueryAPI {
   useListProjectViews = (
     search: string,
     offset: number,
-    limit: number
+    limit: number,
   ): UseQueryResult<PaginationResult<ProjectView>> => {
     const { projects } = this;
     const [results, total] = useMemo(() => {
@@ -118,40 +118,40 @@ class IntegratedAPI implements QueryAPI {
       () => ({
         total,
         results,
-      })
+      }),
     );
   };
 
   useProjectSummary = (
     projectHash: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectSummary", projectHash],
       // eslint-disable-next-line
       () => axios.get(`${baseURL}/summary`).then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 
   useProjectListEmbeddingReductions = (
     projectHash: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectEmbeddingReductions> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
       ["ACTIVE:useProjectListEmbeddingReductions", projectHash],
       // eslint-disable-next-line
       () => axios.get(`${baseURL}/reductions`).then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 
   useProjectAnalysisSummary = (
     projectHash: string,
     analysisDomain: ProjectAnalysisDomain,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectAnalysisSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -161,7 +161,7 @@ class IntegratedAPI implements QueryAPI {
           .get(`${baseURL}/analysis/${analysisDomain}/summary`)
           // eslint-disable-next-line
           .then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 
@@ -170,7 +170,7 @@ class IntegratedAPI implements QueryAPI {
     analysisDomain: ProjectAnalysisDomain,
     xMetric: string,
     yMetric: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectAnalysisScatter> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -191,7 +191,7 @@ class IntegratedAPI implements QueryAPI {
           })
           // eslint-disable-next-line
           .then((res) => res.data as any),
-      { ...options, ...StatisticQueryOptions }
+      { ...options, ...StatisticQueryOptions },
     );
   };
 
@@ -199,7 +199,7 @@ class IntegratedAPI implements QueryAPI {
     projectHash: string,
     analysisDomain: ProjectAnalysisDomain,
     metricOrEnum: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectAnalysisDistribution> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -218,7 +218,7 @@ class IntegratedAPI implements QueryAPI {
           })
           // eslint-disable-next-line
           .then((res) => res.data as any),
-      { ...options, ...StatisticQueryOptions }
+      { ...options, ...StatisticQueryOptions },
     );
   };
 
@@ -226,7 +226,7 @@ class IntegratedAPI implements QueryAPI {
     projectHash: string,
     analysisDomain: ProjectAnalysisDomain,
     compareProjectHash: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectAnalysisCompareMetricDissimilarity> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -244,14 +244,14 @@ class IntegratedAPI implements QueryAPI {
               params: {
                 compare_project_hash: compareProjectHash,
               },
-            }
+            },
           )
           // eslint-disable-next-line
           .then((res) => res.data as any),
       {
         ...options,
         staleTime: 15 * 60 * 1000, // 15 minutes, do not refetch.
-      }
+      },
     );
   };
 
@@ -261,7 +261,7 @@ class IntegratedAPI implements QueryAPI {
     filters: SearchFilters,
     orderBy: null | string,
     desc: boolean,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectSearchResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -287,7 +287,7 @@ class IntegratedAPI implements QueryAPI {
       {
         ...options,
         staleTime: 15 * 60 * 1000, // 15 minutes, do not refetch.
-      }
+      },
     );
   };
 
@@ -297,7 +297,7 @@ class IntegratedAPI implements QueryAPI {
     duHash: string,
     frame: number,
     objectHash?: string | undefined | null,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectPreviewItemResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -311,7 +311,7 @@ class IntegratedAPI implements QueryAPI {
         ...options,
         staleTime: 1000 * 60 * 5, // 5 minutes
         cacheTime: 1000 * 60 * 5, // 5 minutes
-      }
+      },
     );
   };
 
@@ -319,7 +319,7 @@ class IntegratedAPI implements QueryAPI {
     projectHash: string,
     duHash: string,
     frame: number,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectItemDetailedSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -329,7 +329,7 @@ class IntegratedAPI implements QueryAPI {
           .get(`${baseURL}/item/${duHash}/${frame}/`)
           // eslint-disable-next-line
           .then((res) => res.data as any),
-      options
+      options,
     );
   };
 
@@ -338,7 +338,7 @@ class IntegratedAPI implements QueryAPI {
     duHash: string,
     frame: number,
     objectHash: string | undefined | null = null,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectSimilarityResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -352,13 +352,15 @@ class IntegratedAPI implements QueryAPI {
       () =>
         axios
           .get(
-            `${baseURL}/analysis/${objectHash == null ? "data" : "annotations"
-            }/similarity/${duHash}/${frame}/${objectHash == null ? "" : objectHash
-            }?embedding=embedding_clip`
+            `${baseURL}/analysis/${
+              objectHash == null ? "data" : "annotations"
+            }/similarity/${duHash}/${frame}/${
+              objectHash == null ? "" : objectHash
+            }?embedding=embedding_clip`,
           )
           // eslint-disable-next-line
           .then((res) => res.data as any),
-      options
+      options,
     );
   };
 
@@ -368,11 +370,11 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<
       UseMutationOptions<string, unknown, CreateSubsetMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
-    > = {}
+    > = {},
   ): UseMutationResult<string, unknown, CreateSubsetMutationArguments> => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
       "/projects_v2/",
-      "/projects/"
+      "/projects/",
     );
     const queryClient = useQueryClient();
     return useMutation(
@@ -393,14 +395,14 @@ class IntegratedAPI implements QueryAPI {
         const r = await axios.post(
           `${baseURL}/create_subset`,
           JSON.stringify(params),
-          { headers, timeout: LONG_RUNNING_TIMEOUT }
+          { headers, timeout: LONG_RUNNING_TIMEOUT },
         );
         await queryClient.invalidateQueries({
           queryKey: ["IntegratedAPI:useLookupProjectsFromUrlList"],
         });
         return r.data;
       },
-      options
+      options,
     );
   };
 
@@ -409,12 +411,12 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<
       UseMutationOptions<string, unknown, CreateTagMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
-    > = {}
+    > = {},
   ): UseMutationResult<string, unknown, CreateTagMutationArguments> =>
     useMutation(
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
       async (args: CreateTagMutationArguments) => "FIXME: impl",
-      options
+      options,
     );
 
   useProjectMutationUploadToEncord = (
@@ -422,11 +424,11 @@ class IntegratedAPI implements QueryAPI {
     options?: Pick<
       UseMutationOptions<string, unknown, UploadToEncordMutationArguments>,
       "onError" | "onSuccess" | "onSettled"
-    >
+    >,
   ): UseMutationResult<string, unknown, UploadToEncordMutationArguments> => {
     const baseURL = this.getBaseUrl(projectHash, true).replace(
       "/projects_v2/",
-      "/projects/"
+      "/projects/",
     );
     const queryClient = useQueryClient();
     return useMutation(
@@ -447,21 +449,21 @@ class IntegratedAPI implements QueryAPI {
         const r = await axios.post(
           `${baseURL}/upload_to_encord`,
           JSON.stringify(params),
-          { headers, timeout: LONG_RUNNING_TIMEOUT }
+          { headers, timeout: LONG_RUNNING_TIMEOUT },
         );
         await queryClient.invalidateQueries({
           queryKey: ["IntegratedAPI:useLookupProjectsFromUrlList"],
         });
         return r.data.project_hash;
       },
-      { ...options }
+      { ...options },
     );
   };
 
   // == Project predictions ===
   useProjectListPredictions = (
     projectHash: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<PaginationResult<PredictionView>> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -469,7 +471,7 @@ class IntegratedAPI implements QueryAPI {
       () =>
         // eslint-disable-next-line
         axios.get(`${baseURL}/predictions`).then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 
@@ -477,7 +479,7 @@ class IntegratedAPI implements QueryAPI {
     projectHash: string,
     predictionHash: string,
     iou: number,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectPredictionSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -488,7 +490,7 @@ class IntegratedAPI implements QueryAPI {
             params: { iou },
           }) // eslint-disable-next-line
           .then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 
@@ -498,7 +500,7 @@ class IntegratedAPI implements QueryAPI {
     buckets: number,
     iou: number,
     metric: string,
-    options: Pick<UseQueryOptions, "enabled"> = {}
+    options: Pick<UseQueryOptions, "enabled"> = {},
   ): UseQueryResult<ProjectMetricPerformance> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
     return useQuery(
@@ -516,7 +518,7 @@ class IntegratedAPI implements QueryAPI {
             params: { iou, metric_name: metric, buckets },
           }) // eslint-disable-next-line
           .then((res) => res.data as any),
-      { ...options, ...SummaryQueryOptions }
+      { ...options, ...SummaryQueryOptions },
     );
   };
 }
@@ -539,9 +541,9 @@ export function useProjectsList(): UseQueryResult<
       Object.entries(data).forEach(([projectHash, projectMeta]) => {
         allData[projectHash] = {
           ...projectMeta,
-          imageUrl: (
-            projectMeta.imageUrl.startsWith("https://") || projectMeta.imageUrl.startsWith("https://")
-          ) ? projectMeta.imageUrl : `${apiUrl}${projectMeta.imageUrl}`,
+          imageUrl: projectMeta.imageUrl.startsWith("http")
+            ? projectMeta.imageUrl
+            : `${apiUrl}${projectMeta.imageUrl}`,
           baseProjectUrl: `${apiUrl}/projects_v2/${projectHash}`,
         };
       });
@@ -552,13 +554,13 @@ export function useProjectsList(): UseQueryResult<
       // 30 minutes
       staleTime: 1000 * 60 * 30,
       cacheTime: 1000 * 60 * 30,
-    }
+    },
   );
 }
 
 export function useIntegratedAPI(
   token: string | null,
-  projects: Readonly<Record<string, IntegratedProjectMetadata>>
+  projects: Readonly<Record<string, IntegratedProjectMetadata>>,
 ): QueryAPI {
   return useMemo(() => new IntegratedAPI(token, projects), [token, projects]);
 }

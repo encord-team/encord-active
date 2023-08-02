@@ -1,6 +1,10 @@
-import {useEffect, useMemo, useState} from "react";
-import { Spin, Tabs } from "antd";
-import {OntologyObjectAttribute, OntologyObjectAttributeOptions, QueryAPI} from "./Types";
+import { useEffect, useMemo, useState } from "react";
+import { Tabs } from "antd";
+import {
+  OntologyObjectAttribute,
+  OntologyObjectAttributeOptions,
+  QueryAPI,
+} from "./Types";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
@@ -8,6 +12,8 @@ import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
+import { useAuth } from "../authContext";
+import { Spinner } from "./explorer/Spinner";
 
 export function ProjectPage(props: {
   queryAPI: QueryAPI;
@@ -25,14 +31,15 @@ export function ProjectPage(props: {
     setSelectedProjectHash: setSelectedProject,
   } = props;
   const [activeTab, setActiveTab] = useState<string>("1");
-  const { data: projectSummary, isError } = queryAPI.useProjectSummary(projectHash);
+  const { data: projectSummary, isError } =
+    queryAPI.useProjectSummary(projectHash);
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
     if (isError) {
       setSelectedProject(undefined);
     }
-  }, [isError])
+  }, [isError]);
 
   const featureHashMap = useMemo(() => {
     const featureHashMap: Record<
@@ -43,30 +50,41 @@ export function ProjectPage(props: {
       return {};
     }
     const procAttribute = (
-        a: | OntologyObjectAttribute | OntologyObjectAttributeOptions,
-        color: string
+      a: OntologyObjectAttribute | OntologyObjectAttributeOptions,
+      color: string,
     ) => {
       if ("name" in a) {
-        featureHashMap[a.featureNodeHash] = {color, name: a.name ?? a.featureNodeHash};
+        featureHashMap[a.featureNodeHash] = {
+          color,
+          name: a.name ?? a.featureNodeHash,
+        };
         if (a.type === "checklist" || a.type === "radio") {
-
           a.options.forEach((o) => procAttribute(o, color));
         }
       } else {
-        featureHashMap[a.featureNodeHash] = {color, name: a.label ?? a.featureNodeHash}
+        featureHashMap[a.featureNodeHash] = {
+          color,
+          name: a.label ?? a.featureNodeHash,
+        };
         if (a.options != null) {
           a.options.forEach((o) => procAttribute(o, color));
         }
       }
     };
     projectSummary.ontology.objects.forEach((o) => {
-      featureHashMap[o.featureNodeHash] = { color: o.color, name: o.name ?? o.featureNodeHash };
+      featureHashMap[o.featureNodeHash] = {
+        color: o.color,
+        name: o.name ?? o.featureNodeHash,
+      };
       if (o.attributes != null) {
         o.attributes.forEach((a) => procAttribute(a, o.color));
       }
     });
     projectSummary.ontology.classifications.forEach((o) => {
-      featureHashMap[o.featureNodeHash]  = { color: o.color, name: o.name ?? o.featureNodeHash };
+      featureHashMap[o.featureNodeHash] = {
+        color: o.color,
+        name: o.name ?? o.featureNodeHash,
+      };
       if (o.attributes != null) {
         o.attributes.forEach((a) => procAttribute(a, o.color));
       }
@@ -76,12 +94,13 @@ export function ProjectPage(props: {
 
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
-    return <Spin />;
+    return <Spinner />;
   }
 
   const remoteProject = !projectSummary.local_project;
 
-  const api = getApi(projectHash);
+  const { token } = useAuth();
+  const api = getApi(projectHash, token);
 
   return (
     <Tabs

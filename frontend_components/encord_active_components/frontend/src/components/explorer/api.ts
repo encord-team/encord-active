@@ -181,7 +181,7 @@ export type SeachResult = z.infer<typeof searchResultSchema>;
 
 export const defaultTags = { data: [], label: [] };
 
-export const getApi = (projectHash: string, authToken?: string) => {
+export const getApi = (projectHash: string, authToken?: string | null) => {
   const updateOptions = (options: Parameters<typeof fetch>[1]) => {
     if (!authToken) return options;
 
