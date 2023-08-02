@@ -1,4 +1,5 @@
 import json
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -10,6 +11,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from typer.core import TyperGroup
 
+from encord_active.cli.common import TYPER_ENCORD_DATABASE_DIR, TYPER_ENCORD_PROJECT_HASH
 from encord_active.cli.project import project_cli
 from encord_active.cli.utils.server import ensure_safe_project
 
@@ -23,11 +25,10 @@ from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import ensure_project, find_child_projects
+from encord_active.cli.utils.decorators import ensure_project
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
-from encord_active.lib.project.metadata import fetch_project_meta
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -80,10 +81,8 @@ cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold]
 
 @cli.command()
 def download(
-    project_name: str = typer.Option(None, help="Name of the chosen project."),
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
 ):
     """
     [green bold]Download[/green bold] a sandbox dataset to get started 📁
@@ -96,6 +95,7 @@ def download(
         available_prebuilt_projects,
         fetch_prebuilt_project_size,
     )
+    # FIXME: re-implement as sql scripts that can be executed w/ (project_hash, prediction_hash).
 
     if project_name is not None and project_name not in available_prebuilt_projects():
         rich.print("No such project in prebuilt projects.")
@@ -104,9 +104,9 @@ def download(
     if not project_name:
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
-        downloaded = {fetch_project_meta(project_path)["project_hash"] for project_path in find_child_projects(target)}
+        downloaded_project_hashes = set()  # FIXME: calculate this value
         for project_name, data in available_prebuilt_projects().items():
-            if data["hash"] in downloaded:
+            if data["hash"] in downloaded_project_hashes:
                 continue
             project_size = fetch_prebuilt_project_size(project_name)
             modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
@@ -122,14 +122,9 @@ def download(
             raise typer.Abort()
         project_name = answer.split(" ", maxsplit=1)[0]
 
+    raise ValueError(f"Project path not known")
+
     # create project folder
-    project_dir = target / project_name
-    project_dir.mkdir(exist_ok=True)
-
-    from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
-
-    project_path = fetch_prebuilt_project(project_name, project_dir)
-    ensure_safe_project(project_path)
     success_with_vizualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
 
@@ -385,7 +380,8 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="refresh")
 @ensure_project()
 def refresh(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_hash: uuid.UUID = TYPER_ENCORD_PROJECT_HASH,
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
@@ -396,10 +392,10 @@ def refresh(
     2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
     3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
     """
-    from encord_active.lib.project import Project
-
     try:
-        Project(target).refresh()
+        # this is implemented as delete + re-import of project_hash
+        # FIXME: actually implement this
+        raise ValueError(f"Stub deleted")
     except Exception as e:
         rich.print(f"[red] ERROR: The data sync failed. Log: {e}.")
     else:
@@ -408,23 +404,19 @@ def refresh(
 
 @cli.command(name="start")
 def start(
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
 ):
     """
     [green bold]Launch[/green bold] the application with the provided project ✨
     """
     from encord_active.cli.utils.server import launch_server_app
 
-    launch_server_app(target)
+    launch_server_app(database_dir)
 
 
 @cli.command()
 def quickstart(
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
 ):
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨

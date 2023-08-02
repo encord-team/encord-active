@@ -20,7 +20,7 @@ class EnumDefinition:
 class AnnotationType(enum.Enum):
     CLASSIFICATION = "classification"
     BOUNDING_BOX = "bounding_box"
-    ROT_BOUNDING_BOX = "rotatable_bounding_box"
+    ROTATABLE_BOUNDING_BOX = "rotatable_bounding_box"
     POINT = "point"
     POLYLINE = "polyline"
     POLYGON = "polygon"

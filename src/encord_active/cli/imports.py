@@ -1,26 +1,23 @@
 import pickle
+import uuid
 from pathlib import Path
 from typing import Optional
 
-import rich
 import typer
-import yaml
 from rich.markup import escape
-from rich.panel import Panel
 
+from encord_active.cli.common import TYPER_ENCORD_DATABASE_DIR
 from encord_active.cli.config import app_config
-from encord_active.cli.utils.decorators import ensure_project
 from encord_active.cli.utils.prints import success_with_vizualise_command
-from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
 
 @import_cli.command(name="predictions")
-@ensure_project()
 def import_predictions(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
     predictions_path: Path = typer.Argument(..., help="Path to a predictions file.", dir_okay=False, exists=True),
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
     coco: bool = typer.Option(False, help="Import a COCO results format file."),
 ):
     """
@@ -28,27 +25,16 @@ def import_predictions(
 
     If the `--coco` option is specified then the file should be a json following the COCO results format. :brain:
     """
-    from encord_active.lib.project import Project
-
-    project = Project(target)
-
     if coco:
-        from encord_active.cli.utils.coco import import_coco_predictions
-
-        predictions = import_coco_predictions(target, predictions_path)
+        from encord_active.imports.op import import_coco_prediction
+        import_coco_prediction(
+            database_dir=database_dir,
+            predictions_file_path=predictions_path,
+        )
     else:
         with open(predictions_path, "rb") as f:
             predictions = pickle.load(f)
-
-    from encord_active.lib.model_predictions.importers import (
-        import_predictions as app_import_predictions,
-    )
-
-    app_import_predictions(project, predictions)
-
-    from encord_active.lib.project.project_file_structure import ProjectFileStructure
-
-    migrate_disk_to_db(ProjectFileStructure(target), delete_existing_project=True)
+        raise ValueError(f"Not supported yet!!!")
 
 
 ENCORD_RICH_PANEL = "Encord Project Arguments"
@@ -58,13 +44,7 @@ REQUIRED_WITH_COCO = f"[dark_red]{escape('[required with --coco]')}[/dark_red]"
 
 @import_cli.command(name="project")
 def import_project(
-    target: Path = typer.Option(
-        Path.cwd(),
-        "--target",
-        "-t",
-        help="Directory where the project would be saved.",
-        file_okay=False,
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     # Encord
     encord_project_hash: Optional[str] = typer.Option(
         None,
@@ -108,53 +88,33 @@ def import_project(
 
     Confirm with each help panel what information you will have to provide.
     """
-    from encord_active.lib.project.metadata import ProjectMeta
-    from encord_active.lib.project.project_file_structure import ProjectFileStructure
-
-    file_structure = ProjectFileStructure(target)
-    if file_structure.project_meta.exists():
-        project_meta: ProjectMeta = yaml.safe_load(file_structure.project_meta.read_text())
-        rich.print(
-            Panel(
-                f"""Current working directory already contains a project named {project_meta['project_title']}
-
-[yellow]Re-importing will download any label rows and data units not present in the local project, re-generate embeddings and re-run all metrics[/yellow]""",
-                title=":open_file_folder: Project found :open_file_folder:",
-                expand=False,
-                style="blue",
-            )
-        )
-
-        if not typer.confirm("Would you like to continue?"):
-            raise typer.Abort()
-
-        from shutil import rmtree
-
-        encord_project_hash = project_meta["project_hash"]
-        if file_structure.embeddings.exists():
-            rmtree(file_structure.embeddings)
-        ssh_key_path = Path(project_meta["ssh_key_path"])
-        target = target.parent
+    project_hash = uuid.uuid4()
+    if encord_project_hash is not None:
+        project_hash = encord_project_hash
 
     if coco:
-        from encord_active.cli.utils.coco import import_coco_project
+        from encord_active.imports.op import import_coco_project
 
         if not annotations:
             raise typer.BadParameter("`annotations` argument is missing")
         elif not images:
             raise typer.BadParameter("`images` argument is missing")
 
-        project_path = import_coco_project(images, annotations, target, use_symlinks=symlinks)
+        import_coco_project(
+            database_dir=database_dir,
+            annotations_file_path=annotations,
+            images_dir_path=images,
+            store_symlinks=symlinks,
+            store_data_locally=store_data_locally,
+        )
     else:
-        from encord_active.cli.utils.encord import import_encord_project
-
+        from encord_active.imports.op import import_encord_project
         ssh_key_path = app_config.get_or_query_ssh_key()
-
-        project_path = import_encord_project(
-            ssh_key_path,
-            target,
-            encord_project_hash,
-            store_data_locally,
+        import_encord_project(
+            database_dir=database_dir,
+            encord_project_hash=project_hash,
+            ssh_key_path=ssh_key_path,
+            store_data_locally=store_data_locally,
         )
 
-    success_with_vizualise_command(project_path, "The data is downloaded and the metrics are complete.")
+    success_with_vizualise_command(database_dir, "The data is downloaded and the metrics are complete.")

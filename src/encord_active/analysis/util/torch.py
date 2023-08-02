@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -62,7 +63,7 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
             [x * width, y2 * height],
         ]
         return torch.tensor(data, dtype=torch.float32)
-    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+    elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
         raise ValueError("Unsupported annotation type rot bounding box")
     elif annotation_type == AnnotationType.POINT:
         point = obj["point"]["0"]
@@ -98,7 +99,7 @@ def obj_to_mask(
         return bounding_box_mask(
             device, Point(*[int(round(x)) for x in array[0]]), Point(*[int(round(x)) for x in array[2]]), img_w, img_h
         )
-    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+    elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
         raise ValueError("Rotated bounding box shape is not supported")
     elif annotation_type == AnnotationType.POINT:
         x, y = points.cpu().numpy().tolist()
@@ -125,11 +126,9 @@ def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTenso
     # TODO: Implement the winding algorithm in torch instead for performance
     mask = np.zeros((height, width), dtype=np.uint8)
     points = coordinates.cpu().numpy().round(0).astype(np.int32)
-    # FIXME: broken!!! cv2.fillPoly(mask, [points], 1)
+    cv2.fillPoly(mask, [points], 1)
     for x, y in points:
         mask[min(y, height - 1), min(x, width - 1)] = 1
-    # mask = cv2.fillPoly(mask, points, 1)
-    # FIXME: this is broken!!
     return torch.tensor(mask).bool()
 
 
