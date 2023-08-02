@@ -1883,6 +1883,26 @@ files = [
 ]
 
 [[package]]
+name = "kornia"
+version = "0.6.12"
+description = "Open Source Differentiable Computer Vision Library for PyTorch"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "kornia-0.6.12-py2.py3-none-any.whl", hash = "sha256:659f0f0948e127b69ed437592f49531ccf4fc83d672474e1d89ed30d087e39e1"},
+    {file = "kornia-0.6.12.tar.gz", hash = "sha256:e30bd3d830226f7a159dff1f7757c6200e8f27d1333f06e9d2f98bdb33ce18d3"},
+]
+
+[package.dependencies]
+packaging = "*"
+torch = ">=1.9.1"
+
+[package.extras]
+dev = ["isort", "kornia-rs (==0.0.8)", "mypy[reports]", "numpy", "opencv-python", "pre-commit (>=2)", "pydocstyle", "pytest (==7.3.1)", "pytest-cov (==4)", "scipy"]
+docs = ["PyYAML (>=5.1)", "furo", "kornia-moons", "matplotlib", "opencv-python", "sphinx (>=4)", "sphinx-autodoc-defaultargs", "sphinx-autodoc-typehints", "sphinx-copybutton (>=0.3)", "sphinx-design", "sphinxcontrib-bibtex", "sphinxcontrib-gtagjs", "sphinxcontrib-youtube", "torchvision"]
+x = ["accelerate (==0.18.0)"]
+
+[[package]]
 name = "lazy-object-proxy"
 version = "1.9.0"
 description = "A fast and thorough lazy object proxy."
@@ -5187,4 +5207,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "43de5427370baa2b81e1b36d9df1fa265bb34e3c5d6dcbcefb4ced1c89939853"
+content-hash = "24ec83a37ed6ccc4fbe4a52b73c02d4edb722380983e9206bc44eccfe272c415"

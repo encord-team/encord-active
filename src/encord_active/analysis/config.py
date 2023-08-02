@@ -22,7 +22,7 @@ from .metrics.image.brightness import BrightnessMetric
 from .metrics.image.colors import HSVColorMetric
 from .metrics.image.contrast import ContrastMetric
 from .metrics.image.height import HeightMetric
-from .metrics.image.random import RandomMetric
+from .metrics.image.random_value import RandomMetric
 from .metrics.image.sharpness import SharpnessMetric
 from .metrics.image.width import WidthMetric
 
