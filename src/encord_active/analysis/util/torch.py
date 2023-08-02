@@ -33,6 +33,8 @@ def pillow_to_tensor(image: Image.Image) -> ImageTensor:
 
 
 def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h: int) -> Optional[PointTensor]:
+    # FIXME: unsure how much we gain scaling to pixel-space here as we need to add correct rounding logic anyway
+    #  only user of scaled-to-pixel space is mask creation (which in-turn creates bounding boxes).
     width = float(img_w)  # FIXME: normalise or not to normalise??
     height = float(img_h)
     if annotation_type == AnnotationType.CLASSIFICATION:
@@ -90,6 +92,7 @@ def obj_to_mask(
     elif annotation_type == AnnotationType.POLYLINE:
         raise ValueError("Poly-line shape is not supported")
     elif annotation_type == AnnotationType.BOUNDING_BOX:
+        # FIXME: special case annotation bounding box creation for this to avoid the redundant calculation!!
         # FIXME: cleanup and keep in gpu memory
         array = points.cpu().numpy().tolist()
         return bounding_box_mask(
@@ -118,6 +121,7 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
 
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
+    # FIXME: implement & verify rounding behaviour & interaction.
     # TODO: Implement the winding algorithm in torch instead for performance
     mask = np.zeros((height, width), dtype=np.uint8)
     points = coordinates.cpu().numpy().round(0).astype(np.int32)
@@ -130,6 +134,7 @@ def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTenso
 
 
 def bounding_box_mask(device: Device, top_left: Point, bottom_right: Point, width: int, height: int) -> MaskTensor:
+    # FIXME: verify rounding behaviour & interaction.
     mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
     mask[
         min(top_left.y, height - 1) : min(bottom_right.y, height - 1),
@@ -139,6 +144,7 @@ def bounding_box_mask(device: Device, top_left: Point, bottom_right: Point, widt
 
 
 def point_mask(device: Device, x: float, y: float, width: int, height: int) -> MaskTensor:
+    # FIXME: verify rounding behaviour & interaction.
     mask = torch.zeros(height, width, dtype=torch.bool, device=device).bool()
     x_i = round(x * width)
     y_i = round(y * height)
@@ -147,6 +153,8 @@ def point_mask(device: Device, x: float, y: float, width: int, height: int) -> M
 
 
 def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
+    # FIXME: convert to torchvision.op.masks_to_boxes (& we expose bb's as an input now, this function
+    #  should never be used) !!!
     """
     Returns top_left and bottom_right point that includes `True` values.
     Make sure to not miss +1 index errors here. If you want to crop an
