@@ -50,7 +50,7 @@ class ClipImgEmbedding(PureImageEmbedding):
             boxes = torchvision.ops.masks_to_boxes(mask.unsqueeze(0)).cpu().squeeze(0)
             x1, y1, x2, y2 = boxes.type(torch.int32).tolist()
             image = torch.masked_fill(image, ~mask, 0)
-            image = image[:, x1 : x2 + 1, y1 : y2 + 1]
+            image = image[:, y1 : y2 + 1, x1 : x2 + 1]
         try:
             preprocessed = self.preprocess(image.type(torch.float32)).unsqueeze(0)
         except Exception:

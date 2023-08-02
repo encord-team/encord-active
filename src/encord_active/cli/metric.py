@@ -1,21 +1,12 @@
-from pathlib import Path
-from typing import Optional, TypedDict
-
-import rich
 import typer
 from loguru import logger
-from rich.table import Table, box
-
-from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
-from encord_active.lib.metrics.metadata import fetch_metrics_meta, update_metrics_meta
-from encord_active.lib.project import ProjectFileStructure
+from rich.table import box
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
 logger = logger.opt(colors=True)
 SIMPLE_HEAD_BOX = box.Box("    \n    \n -  \n    \n    \n    \n    \n    \n")
 
+'''
 
 @metric_cli.command(name="add", short_help="Add metrics.")
 @ensure_project()
@@ -238,3 +229,4 @@ def show_metrics(
                 sep="\n",
             )
             first = False
+'''

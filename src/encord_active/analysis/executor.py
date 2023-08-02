@@ -145,7 +145,7 @@ class SimpleExecutor(Executor):
             # Post-processing stages
             self._stage_2()
             self._stage_3()
-            return self._pack_output()
+            return self._pack_output(project_hash=project_hash)
 
     def _stage_1_video_batching(
         self,
@@ -702,6 +702,7 @@ class SimpleExecutor(Executor):
 
     def _pack_output(
         self,
+        project_hash: uuid.UUID,
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
@@ -747,9 +748,12 @@ class SimpleExecutor(Executor):
                     return v.cpu().numpy().tobytes()
                 return v.item()
             elif isinstance(v, NearestNeighbors):
-                return {"similarities": v.similarities, "keys": [list(k) for k in v.metric_keys]}
+                return {
+                    "similarities": v.similarities,
+                    "keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys],
+                }
             elif isinstance(v, RandomSampling):
-                return {"keys": [list(k) for k in v.metric_keys]}
+                return {"keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys]}
             return v
 
         for (du_hash, frame), data_deps in self.data_metrics.items():
@@ -760,6 +764,7 @@ class SimpleExecutor(Executor):
             )
             data_analysis.append(
                 ProjectDataAnalytics(
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
                     **{k: _metric(v) for k, v in data_deps.items() if k in analysis_values},
@@ -767,6 +772,7 @@ class SimpleExecutor(Executor):
             )
             data_analysis_extra.append(
                 ProjectDataAnalyticsExtra(
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
                     **{
@@ -788,8 +794,10 @@ class SimpleExecutor(Executor):
             )
             annotation_analysis.append(
                 ProjectAnnotationAnalytics(
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
+                    object_hash=annotation_hash,
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
                     annotation_email=annotation_email,
@@ -799,10 +807,12 @@ class SimpleExecutor(Executor):
             )
             annotation_analysis_extra.append(
                 ProjectAnnotationAnalyticsExtra(
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
+                    object_hash=annotation_hash,
                     **{k: _extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
 
-        return (data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra)
+        return data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra
