@@ -63,7 +63,7 @@ class SimpleExecutor(Executor):
         self,
         data_meta: List[ProjectDataMetadata],
         du_meta: List[ProjectDataUnitMetadata],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
     ) -> Tuple[
@@ -77,13 +77,13 @@ class SimpleExecutor(Executor):
             du_dict.setdefault(du.data_hash, []).append(du)
         values = [(data, du_dict[data.data_hash]) for data in data_meta]
         return self.execute(
-            values, project_dir=project_dir, project_hash=project_hash, project_ssh_path=project_ssh_path
+            values, database_dir=database_dir, project_hash=project_hash, project_ssh_path=project_ssh_path
         )
 
     def execute(
         self,
         values: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
@@ -117,26 +117,26 @@ class SimpleExecutor(Executor):
             if batch is None:
                 self._stage_1_video_no_batching(
                     video_values,
-                    project_dir=project_dir,
+                    database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                 )
                 self._stage_1_image_no_batching(
                     image_values,
-                    project_dir=project_dir,
+                    database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                 )
             else:
                 self._stage_1_video_batching(
                     video_values,
-                    project_dir=project_dir,
+                    database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                 )
                 self._stage_1_image_batching(
                     image_values,
-                    project_dir=project_dir,
+                    database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                     batching=batch,
@@ -150,7 +150,7 @@ class SimpleExecutor(Executor):
     def _stage_1_video_batching(
         self,
         videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
     ):
@@ -168,7 +168,7 @@ class SimpleExecutor(Executor):
             video_start = du_meta_list[0]
             video_url_or_path = self._get_url_or_path(
                 uri=video_start.data_uri,
-                project_dir=project_dir,
+                database_dir=database_dir,
                 project_hash=project_hash,
                 project_ssh_path=project_ssh_path,
                 label_hash=data_metadata.label_hash,
@@ -191,7 +191,7 @@ class SimpleExecutor(Executor):
     def _stage_1_video_no_batching(
         self,
         videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
     ):
@@ -201,7 +201,7 @@ class SimpleExecutor(Executor):
             video_start = du_meta_list[0]
             video_url_or_path = self._get_url_or_path(
                 uri=video_start.data_uri,
-                project_dir=project_dir,
+                database_dir=database_dir,
                 project_hash=project_hash,
                 project_ssh_path=project_ssh_path,
                 label_hash=data_metadata.label_hash,
@@ -280,7 +280,7 @@ class SimpleExecutor(Executor):
     def _stage_1_image_no_batching(
         self,
         images: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
     ):
@@ -288,7 +288,7 @@ class SimpleExecutor(Executor):
             frame_input = self._get_frame_input(
                 image=self._open_image(
                     uri=du_meta.data_uri,
-                    project_dir=project_dir,
+                    database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                     label_hash=data_metadata.label_hash,
@@ -307,7 +307,7 @@ class SimpleExecutor(Executor):
     def _stage_1_image_batching(
         self,
         values: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         batching: int,
@@ -322,7 +322,7 @@ class SimpleExecutor(Executor):
                     self._get_frame_input(
                         image=self._open_image(
                             uri=du_meta.data_uri,
-                            project_dir=project_dir,
+                            database_dir=database_dir,
                             project_hash=project_hash,
                             project_ssh_path=project_ssh_path,
                             label_hash=meta.label_hash,
@@ -374,7 +374,7 @@ class SimpleExecutor(Executor):
     def _open_image(
         self,
         uri: Optional[str],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         label_hash: uuid.UUID,
@@ -382,7 +382,7 @@ class SimpleExecutor(Executor):
     ):
         img_url_or_path = self._get_url_or_path(
             uri=uri,
-            project_dir=project_dir,
+            database_dir=database_dir,
             project_hash=project_hash,
             project_ssh_path=project_ssh_path,
             label_hash=label_hash,
@@ -390,19 +390,19 @@ class SimpleExecutor(Executor):
         )
         if isinstance(img_url_or_path, Path):
             return Image.open(img_url_or_path)
-        return download_image(img_url_or_path, project_dir=project_dir, cache=False)
+        return download_image(img_url_or_path, database_dir, cache=False)
 
     def _get_url_or_path(
         self,
         uri: Optional[str],
-        project_dir: Path,
+        database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         label_hash: uuid.UUID,
         du_hash: uuid.UUID,
     ) -> Union[str, Path]:
         if uri is not None:
-            url_path = url_to_file_path(uri, project_dir)
+            url_path = url_to_file_path(uri, database_dir)
             if url_path is not None:
                 return url_path
             else:
