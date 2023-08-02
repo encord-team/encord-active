@@ -232,7 +232,7 @@ class ObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
         frame: BaseFrameBatchInput,
         next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
-        raise ValueError(f"Not implemented")
+        raise ValueError("Not implemented")
 
     @abstractmethod
     def calculate_batched(
@@ -293,13 +293,18 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
+        if prev_frame is None or next_frame is None:
+            return BaseFrameOutput(
+                image=self.default_value(),
+                annotations={annotation_hash: self.default_value() for annotation_hash in frame.annotations.keys()},
+            )
         image = self.calculate(
             deps=frame.image_deps,
             image=frame.image,
             mask=None,
-            prev_image=None if prev_frame is None else prev_frame.image,
+            prev_image=prev_frame.image,
             prev_mask=None,
-            next_image=None if next_frame is None else next_frame.image,
+            next_image=next_frame.image,
             next_mask=None,
         )
         annotations = {}
@@ -314,9 +319,9 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
                     deps=annotation_deps,
                     image=frame.image,
                     mask=annotation.mask,
-                    prev_image=None if prev_frame is None else prev_frame.image,
+                    prev_image=prev_frame.image,
                     prev_mask=None if prev_annotation is None else prev_annotation.mask,
-                    next_image=None if next_frame is None else next_frame.image,
+                    next_image=next_frame.image,
                     next_mask=None if next_annotation is None else next_annotation.mask,
                 )
             else:
@@ -325,6 +330,10 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
             image=image,
             annotations=annotations,
         )
+
+    @abstractmethod
+    def default_value(self) -> MetricResult:
+        ...
 
     @abstractmethod
     def calculate(
@@ -340,7 +349,10 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         ...
 
     def raw_calculate_batch(
-        self, prev_frame: Optional[BaseFrameBatchInput], frame: BaseFrameBatchInput, next_frame: BaseFrameBatchInput
+        self,
+        prev_frame: Optional[BaseFrameBatchInput],
+        frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
         raise ValueError("Batch not yet implemented")
 

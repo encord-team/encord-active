@@ -3,21 +3,22 @@ from typing import Optional
 import torch
 import torchvision.ops.boxes
 from clip import load as clip_load
-from torch import BoolTensor, ByteTensor, FloatTensor
-from torch.types import Device
 from torchvision.transforms import InterpolationMode
 from torchvision.transforms.v2 import CenterCrop, Compose, Normalize, Resize
 
 from encord_active.analysis.embedding import ImageEmbeddingResult, PureImageEmbedding
 from encord_active.analysis.metric import ObjectOnlyBatchInput
 from encord_active.analysis.types import (
+    EmbeddingTensor,
     ImageBatchTensor,
+    ImageTensor,
+    MaskTensor,
 )
 from encord_active.analysis.util.torch import batch_size
 
 
 class ClipImgEmbedding(PureImageEmbedding):
-    def __init__(self, device: Device, ident: str, model_name: str) -> None:
+    def __init__(self, device: torch.device, ident: str, model_name: str) -> None:
         super().__init__(
             ident=ident,
             allow_object_embedding=True,
@@ -42,7 +43,7 @@ class ClipImgEmbedding(PureImageEmbedding):
             ]
         )
 
-    def evaluate_embedding(self, image: ByteTensor, mask: Optional[BoolTensor]) -> FloatTensor:
+    def evaluate_embedding(self, image: ImageTensor, mask: Optional[MaskTensor]) -> EmbeddingTensor:
         # FIXME: mask is not implemented properly, require scale by bb & apply mask - see untested
         # batch implementation.
         if mask is not None:
@@ -53,7 +54,11 @@ class ClipImgEmbedding(PureImageEmbedding):
         try:
             preprocessed = self.preprocess(image.type(torch.float32)).unsqueeze(0)
         except Exception:
-            print(f"DEBUG: {image.shape} / {mask.shape} / {torch.min(mask).item()} / {torch.max(mask).item()}")
+            print(
+                f"DEBUG: {image.shape} / {None if mask is None else mask.shape} "
+                f"/ {None if mask is None else torch.min(mask).item()} "
+                f"/ {None if mask is None else torch.max(mask).item()}"
+            )
             raise
         return self.model.encode_image(preprocessed.to(self.device)).reshape(-1)
 
@@ -85,7 +90,7 @@ class ClipImgEmbedding(PureImageEmbedding):
             midpoints = ((xy1 + xy2) / 2.0) - (scaling / 2.0)
 
             # (C * (scaling / n_px)) + (midpoint-(scaling / 2))
-            object_bb_grid = (xy_grid_batch * scaling.unsqeeze(-1).unsqueeze(-1)) + midpoints.unsqueeze(1).unsqueeze(1)
+            object_bb_grid = (xy_grid_batch * scaling.unsqueeze(-1).unsqueeze(-1)) + midpoints.unsqueeze(1).unsqueeze(1)
 
             # Apply grid transforms to generate
             object_bb_images = torch.nn.functional.grid_sample(

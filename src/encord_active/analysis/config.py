@@ -2,7 +2,6 @@ import os
 from typing import Union
 
 import torch
-from torch.types import Device
 
 from .base import BaseEvaluation
 from .conversions.grayscale import RGBToGray
@@ -64,7 +63,7 @@ class AnalysisConfig:
         analysis: list[BaseEvaluation],
         derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]],
         derived_metrics: list[DerivedMetric],
-        device: Device,
+        device: torch.device,
     ) -> None:
         """
         Args:
@@ -104,7 +103,7 @@ class AnalysisConfig:
         ...
 
 
-def default_torch_device() -> Device:
+def default_torch_device() -> torch.device:
     """Default torch device to use for the analysis config"""
     torch_device_str = "cpu"
     if torch.cuda.is_available() and os.environ.get("ACTIVE_ALLOW_TORCH_CUDA_BACKEND", "0") == "1":
@@ -114,7 +113,7 @@ def default_torch_device() -> Device:
     return torch.device(torch_device_str)
 
 
-def create_analysis(device: Device) -> AnalysisConfig:
+def create_analysis(device: torch.device) -> AnalysisConfig:
     """List of all analysis passes to be executed by encord active"""
     analysis: list[BaseEvaluation] = [
         # Generate embeddings

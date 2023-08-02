@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 from encord_active.analysis.metric import DerivedMetric
 from encord_active.analysis.types import (
@@ -29,7 +29,7 @@ class ImageUniqueness(DerivedMetric):
         if annotation is not None:
             return None
 
-        nearest_neighbours: NearestNeighbors = deps["derived_clip_nearest"]
+        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
         if len(nearest_neighbours.similarities) == 0:
             return 1.0
         else:

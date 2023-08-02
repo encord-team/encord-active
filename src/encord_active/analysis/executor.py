@@ -72,7 +72,7 @@ class SimpleExecutor(Executor):
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
     ]:
-        du_dict = {}
+        du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in du_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
         values = [(data, du_dict[data.data_hash]) for data in data_meta]
@@ -224,7 +224,7 @@ class SimpleExecutor(Executor):
                     if frame_du_meta.frame != frame_num:
                         raise ValueError(f"Frame metadata mismatch: {frame_du_meta.frame} != {frame_num}")
                     if frame.is_corrupt:
-                        raise ValueError(f"Corrupt video frame")
+                        raise ValueError(f"Corrupt video frame: {frame_num}")
                     if iter_frame_num + 1 != frame_num:
                         raise ValueError(f"AV video frame out of sequence: {iter_frame_num} -> {frame_num}")
                     iter_frame_num = frame_num
@@ -245,7 +245,7 @@ class SimpleExecutor(Executor):
                         curr_frame = next_frame
                         next_frame = frame_input
                     # Run stage 1 metrics
-                    if next_frame is not None:
+                    if next_frame is not None and curr_frame is not None:
                         # Process non-first & non-last frame
                         self._execute_stage_1_metrics_no_batching(
                             prev_frame=prev_frame,
@@ -357,14 +357,16 @@ class SimpleExecutor(Executor):
                             if non_ephemeral:
                                 object_results[evaluation.ident] = metric_result.objects
                         else:
-                            raise ValueError(f"Object result but no annotations")
+                            raise ValueError(f"Object result but no annotations: {evaluation.ident}")
                     if metric_result.classifications is not None:
                         if batch_inputs.annotations is not None:
-                            batch_inputs.annotations.classifications_deps[evaluation.ident] = metric_result.classifications
+                            batch_inputs.annotations.classifications_deps[
+                                evaluation.ident
+                            ] = metric_result.classifications
                             if non_ephemeral:
                                 classification_results[evaluation.ident] = metric_result.classifications
                         else:
-                            raise ValueError(f"Object result but no annotations"
+                            raise ValueError(f"Object result but no annotations: {evaluation.ident}")
 
     def _open_image(
         self,
@@ -423,8 +425,8 @@ class SimpleExecutor(Executor):
         frame: int,
     ) -> None:
         # FIXME: add sanity checking that values are not mutated by metric runs
-        image_results_deps = {"metric_metadata": {}}  # String comments (currently not used)
-        annotation_results_deps = {
+        image_results_deps: MetricDependencies = {"metric_metadata": {}}  # String comments (currently not used)
+        annotation_results_deps: Dict[str, MetricDependencies] = {
             k: {
                 "feature_hash": meta.feature_hash,
                 "annotation_type": meta.annotation_type,
@@ -461,7 +463,7 @@ class SimpleExecutor(Executor):
 
     def _get_frame_input(self, image: Image.Image, du_meta: ProjectDataUnitMetadata) -> BaseFrameInput:
         annotations = {}
-        annotations_deps = {}
+        annotations_deps: Dict[str, MetricDependencies] = {}
         hash_collision = False
         for obj in du_meta.objects:
             obj_hash = str(obj["objectHash"])
@@ -532,7 +534,7 @@ class SimpleExecutor(Executor):
                     # Embedding query lookup
                     max_neighbours = int(metric.max_neighbours)
                     if max_neighbours > 50:
-                        raise ValueError(f"Too many embedding nn-query results")
+                        raise ValueError(f"Too many embedding nn-query results: {metric.ident} => {max_neighbours}")
                     data_keys = list(metrics.keys())
                     metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Loading data]")
                     data_list = [metrics[k][metric.embedding_source].cpu().numpy() for k in data_keys]
@@ -692,15 +694,27 @@ class SimpleExecutor(Executor):
         annotation_analysis = []
         annotation_analysis_extra = []
 
-        def _metric(v: Union[Tensor, float, int, str, None]) -> Union[bytes, float, int, str, None]:
+        def _metric(
+            v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType]
+        ) -> Union[bytes, float, int, str, None]:
             if isinstance(v, Tensor):
                 return v.item()
+            if (
+                isinstance(v, NearestNeighbors)
+                or isinstance(v, RandomSampling)
+                or isinstance(v, dict)
+                or isinstance(v, AnnotationType)
+            ):
+                raise ValueError(f"Unsupported metric type: {type(v)}")
             return v
 
         def _extra(
-            k: str, v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling]
+            k: str,
+            v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType],
         ) -> Union[bytes, float, int, str, None, dict]:
-            if isinstance(v, Tensor):
+            if isinstance(v, AnnotationType):
+                raise ValueError(f"Annotation type is not a valid extra property: {k}")
+            elif isinstance(v, Tensor):
                 if k.startswith("embedding_"):
                     if len(v.shape) != 1:
                         raise ValueError(f"Invalid embedding shape: {v.shape}")

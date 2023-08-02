@@ -28,3 +28,4 @@ class TemporalShapeChange(TemporalOneObjectMetric):
         if prev_annotation is None or next_annotation is None:
             return 0.0  # no obvious outlier
         # FIXME: Please actually implement this.
+        return None

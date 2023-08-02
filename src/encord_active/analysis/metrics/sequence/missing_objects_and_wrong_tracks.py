@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
 
 import torch
 from shapely.geometry import Polygon
@@ -7,7 +7,7 @@ from encord_active.analysis.metric import (
     MetricDependencies,
     TemporalObjectByFrameMetric,
 )
-from encord_active.analysis.types import AnnotationMetadata
+from encord_active.analysis.types import AnnotationMetadata, MetricResult
 from encord_active.db.metrics import MetricType
 from encord_active.lib.common.utils import get_polygon
 
@@ -37,9 +37,9 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
         annotation_deps: dict[str, MetricDependencies],
         prev_annotations: Optional[Dict[str, AnnotationMetadata]],
         next_annotations: Optional[Dict[str, AnnotationMetadata]],
-    ) -> Dict[str, float]:
+    ) -> Dict[str, MetricResult]:
         # FIXME: implement properly
-        annotation_res = {}
+        annotation_res: Dict[str, MetricResult] = {}
         if prev_annotations is None or next_annotations is None:
             return {annotation_hash: 1.0 for annotation_hash in annotations.keys()}
         for next_annotation_hash, next_annotation_meta in next_annotations.items():
@@ -61,7 +61,7 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
             if best_iou is not None and best_iou > 0.5:
                 # Search for best iou in the middle
                 best_mid_iou = 0.0
-                best_mid_annotation_hash = next(annotations.keys(), None)  # FIXME: may error!?
+                best_mid_annotation_hash = list(annotations.keys())[0]  # FIXME: may error!?
                 for annotation_hash, annotation_meta in annotations.items():
                     if annotation_meta.feature_hash == next_annotation_meta.feature_hash:
                         pass  # FIXME: implement
@@ -69,8 +69,11 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
                 # FIXME: kinda hard to select best annotation hash to union with if multiple map to this hash
                 # FIXME: works even worse if 0 items exist on this frame!?!
                 annotation_res[best_mid_annotation_hash] = min(
-                    best_mid_iou, annotation_res.get(best_mid_annotation_hash, 1.0)
+                    best_mid_iou, cast(float, annotation_res.get(best_mid_annotation_hash, 1.0))
                 )
+                # image_difficulty (KMeans)
+                # shape outlier = _hu_static (Ignore??)
+                #
 
         # Any annotations not marked as suspect get instant scores of 1.0
         for annotation_hash in annotations.keys():

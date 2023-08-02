@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 
@@ -18,6 +18,7 @@ from encord_active.analysis.types import (
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
+    MetricResult,
 )
 
 
@@ -47,7 +48,7 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        annotations = {}
+        annotations: Dict[str, MetricResult] = {}
         image = self.evaluate_embedding(frame.image, mask=None)
         if self.allow_object_embedding:
             for annotation_hash, annotation in frame.annotations.items():
@@ -75,7 +76,7 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
     ) -> BaseFrameBatchOutput:
         res = self.evaluate_embedding_batched(
             frame.images,
-            None if frame.annotations else frame.annotations.objects_masks,
+            None if frame.annotations is None else frame.annotations,
         )
         classifications = None
         if frame.annotations is not None:
@@ -108,7 +109,7 @@ class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        annotations = {}
+        annotations: Dict[str, MetricResult] = {}
         for annotation_hash, annotation in frame.annotations.items():
             if annotation.mask is not None:
                 annotations[annotation_hash] = self.evaluate_embedding(annotation.mask)

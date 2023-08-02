@@ -53,4 +53,4 @@ class RandomMetric(OneImageMetric):
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
-        raise ValueError(f"Base implementation override")
+        raise ValueError("Base implementation overriden, this should never be called")

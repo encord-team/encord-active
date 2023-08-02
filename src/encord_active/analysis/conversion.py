@@ -39,7 +39,7 @@ class BaseConverter(BaseEvaluation, metaclass=ABCMeta):
         self,
         prev_frame: Optional[BaseFrameBatchInput],
         frame: BaseFrameBatchInput,
-        next_frame: BaseFrameBatchInput,
+        next_frame: Optional[BaseFrameBatchInput],
     ) -> BaseFrameBatchOutput:
         """
         Base implementation of batched metric calculation.

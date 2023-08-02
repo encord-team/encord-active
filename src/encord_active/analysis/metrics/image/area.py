@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 import torch
 
@@ -61,7 +61,7 @@ class AreaRelativeMetric(OneImageMetric):  # FIXME: OneObjectMetric
         if mask is None:
             return None
         else:
-            obj_area = float(deps["metric_area"])
+            obj_area = float(cast(float, deps["metric_area"]))
             area = float(image_width(image)) * float(image_height(image))
             return obj_area / area
 
@@ -69,9 +69,11 @@ class AreaRelativeMetric(OneImageMetric):  # FIXME: OneObjectMetric
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
     ) -> ImageObjectOnlyOutputBatch:
         if annotation is None:
-            return None
+            objects = None
         else:
             area = float(image_width(image)) * float(image_height(image))
-            obj_area = annotation.annotations_deps["metric_area"]
-            return obj_area.type(dtype=torch.float32) / area
-        return ImageObjectOnlyOutputBatch(images=None, objects=None)
+            obj_area = annotation.objects_deps["metric_area"]
+            objects = obj_area.type(dtype=torch.float32) / area
+        return ImageObjectOnlyOutputBatch(
+            images=None, objects=objects  # FIXME: classifications will not get a value assigned - do we want to??
+        )

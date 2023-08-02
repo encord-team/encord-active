@@ -49,7 +49,4 @@ class SharpnessMetric(OneImageMetric):
         # max-laplacian = [4x255
         grayscale = deps["ephemeral_grayscale_image"]
         laplacian = laplacian2d(grayscale)
-        if annotation is None:
-            return torch.std(laplacian, dim=(1, 2, 3)) / 255.0
-        else:
-            torch.masked_select()
+        raise ValueError("Not yet implemented properly")

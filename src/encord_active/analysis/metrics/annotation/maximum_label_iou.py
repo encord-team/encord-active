@@ -50,7 +50,7 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
         self,
         masks: MaskBatchTensor,  # FIXME: batch_extra_dimensions??
     ) -> MetricBatchResult:
-        #intersections = (masks.unsqueeze(0) & masks.unsqueeze(1)).view(b, b, -1).sum(-1)
+        # intersections = (masks.unsqueeze(0) & masks.unsqueeze(1)).view(b, b, -1).sum(-1)
         # unions = (masks.unsqueeze(0) | masks.unsqueeze(1)).view(b, b, -1).sum()
         # ious = intersections / unions
         raise ValueError()

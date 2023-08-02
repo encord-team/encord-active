@@ -1,8 +1,11 @@
-from typing import Optional
+from typing import Optional, cast
 
 from encord_active.analysis.metric import DerivedMetric, MetricDependencies
-from encord_active.analysis.types import MetricResult, NearestNeighbors, AnnotationMetadata
-from encord_active.db.enums import AnnotationType
+from encord_active.analysis.types import (
+    AnnotationMetadata,
+    MetricResult,
+    NearestNeighbors,
+)
 from encord_active.db.metrics import MetricType
 
 
@@ -21,13 +24,13 @@ class NearestNeighborAgreement(DerivedMetric):
         if annotation is None:
             return None
         # calculate
-        nearest_neighbours: NearestNeighbors = deps["derived_clip_nearest"]
+        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
         if len(nearest_neighbours.similarities) == 0:
             # No nearest neighbours for agreement, hence score of 0
             # FIXME: what should the default score be?
             return 0.0
 
-        feature_hash: str = deps["feature_hash"]
+        feature_hash: str = cast(str, deps["feature_hash"])
         matches = [float(dep["feature_hash"] == feature_hash) for dep in nearest_neighbours.metric_deps]
         similarity_sum = sum(nearest_neighbours.similarities)
         if similarity_sum > 0.0:

@@ -132,7 +132,9 @@ Batch of metric results.
 """
 
 
-MetricDependencies = dict[str, Union[MetricResult, EmbeddingTensor, NearestNeighbors, RandomSampling]]
+MetricDependencies = dict[
+    str, Union[MetricResult, EmbeddingTensor, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType]
+]
 """
 Results for all objects in a frame
 `None` means not applicable.

@@ -143,7 +143,7 @@ profile = "black"
 plugins = "pandera.mypy"
 ignore_missing_imports = true
 enable_recursive_aliases = true
-exclude = ['examples/', "./src/encord_active/db/migrations/.*"]
+exclude = ['examples/', "./src/encord_active/db/migrations/.*", "local_tests/.*", "venv/bin/.*"]
 
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"

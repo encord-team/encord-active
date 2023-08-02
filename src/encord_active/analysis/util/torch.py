@@ -3,8 +3,8 @@ from typing import Optional, Union
 import numpy as np
 import torch
 from PIL import Image
+from torch import device as Device
 from torch.nn.functional import conv2d
-from torch.types import Device
 from torchvision.transforms.functional import pil_to_tensor, to_pil_image
 
 from encord_active.analysis.types import (

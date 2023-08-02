@@ -366,7 +366,7 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
                 current_true_positive = model_prediction_entry
                 current_true_positive_confidence = model_confidence
             else:
-                # This model is always a false postive, as there exists a prediction with higher confidence
+                # This model is always a false positive, as there exists a prediction with higher confidence
                 # that for the whole iou range this is valid that is the new true positive.
                 model_prediction_entry.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_FP
 

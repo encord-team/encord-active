@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 import torch
 
@@ -31,7 +31,7 @@ class BrightnessMetric(OneImageMetric):
         if mask is None:
             return torch.mean(image, dtype=torch.float) / 255.0
         else:
-            mask_count = float(deps["metric_area"])
+            mask_count = float(cast(float, deps["metric_area"]))
             image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
             mask_total = torch.sum(torch.masked_fill(image_reduced, ~mask, 0), dtype=torch.float32).item()
             return float(mask_total) / (255.0 * mask_count)
