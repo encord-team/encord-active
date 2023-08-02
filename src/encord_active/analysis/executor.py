@@ -559,7 +559,7 @@ class SimpleExecutor(Executor):
                     metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Preparing data]")
                     data = np.stack(data_list)
                     # FIXME: tune threshold where using pynndescent is actually faster.
-                    if len(data_list) <= 1000:
+                    if len(data_list) <= 4096:
                         # Exhaustive search is faster & more correct for very small datasets.
                         metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Exhaustive search]")
                         data_indices_list = []
