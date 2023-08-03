@@ -128,7 +128,9 @@ def get_project_prediction_summary(
                 sql_sum(
                     (
                         (ProjectPredictionAnalytics.match_duplicate_iou < iou) & (ProjectPredictionAnalytics.iou >= iou)
-                    ).cast(Integer)
+                    ).cast(  # type: ignore
+                        Integer
+                    )  # type: ignore
                 ),  # type: ignore
                 sql_count(),
             )
@@ -488,7 +490,9 @@ def prediction_metric_performance(
                 sql_sum(
                     (
                         (ProjectPredictionAnalytics.match_duplicate_iou < iou) & (ProjectPredictionAnalytics.iou >= iou)
-                    ).cast(Integer)
+                    ).cast(  # type: ignore
+                        Integer
+                    )  # type: ignore
                 ),  # type: ignore
                 sql_count(),
             )

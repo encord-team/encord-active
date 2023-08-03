@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import numpy as np
 from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from encord_active.db.metrics import (
     AnnotationMetrics,
