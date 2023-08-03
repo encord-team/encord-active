@@ -47,6 +47,7 @@ def import_predictions(
     app_import_predictions(project, predictions)
 
     from encord_active.lib.project.project_file_structure import ProjectFileStructure
+
     migrate_disk_to_db(ProjectFileStructure(target), delete_existing_project=True)
 
 
