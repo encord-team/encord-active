@@ -39,6 +39,7 @@ from encord_active.db.models import (
     ProjectTaggedDataUnit,
     get_engine,
 )
+from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.common.utils import mask_to_polygon, rle_to_binary_mask
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
@@ -482,6 +483,7 @@ def __migrate_predictions(
 ) -> List[ProjectPredictionAnalyticsFalseNegatives]:
     # Used for validation
     predictions_missed_db = []
+    predictions_existing_hashes: Set[Tuple[uuid.UUID, int, str]] = set()
 
     # Load all metadata for this prediction store.
     predictions_metric_datas = reader.read_prediction_metric_data(predictions_dir, metrics_dir)
@@ -693,6 +695,9 @@ def __migrate_predictions(
             raise ValueError(f"Missing object hash: {identifier}")
 
         for object_hash in object_hashes:
+            if (du_hash, frame, object_hash) in predictions_existing_hashes:
+                raise ValueError(f"Duplicate (du_hash, frame, object_hash): {du_hash}, {frame}, {object_hash}")
+            predictions_existing_hashes.add((du_hash, frame, object_hash))
             new_predictions_object_db = ProjectPredictionAnalytics(
                 # Identifier
                 prediction_hash=prediction_hash,
@@ -784,7 +789,7 @@ def __migrate_predictions(
     return predictions_missed_db
 
 
-def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
+def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool = False) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
     annotation_metrics: Dict[
@@ -1218,6 +1223,8 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
+    if delete_existing_project:
+        delete_project_from_db(engine, project_hash)
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)

@@ -29,6 +29,7 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
+from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
@@ -797,14 +798,8 @@ def upload_to_encord(
 
         # Move folder so uuid lookup will work correctly.
         migrate_disk_to_db(pfs)
+        delete_project_from_db(engine, old_project_hash)
         with Session(engine) as sess:
-            # Now that the new project hash has been synced to the database
-            # delete the old (out-of-date) value.
-            old_db = sess.exec(select(Project).where(Project.project_hash == old_project_hash)).first()
-            if old_db is None:
-                raise ValueError("BUG: Could not find old project")
-            sess.delete(old_db)
-
             # The project name has to be reverted to the same value
             # Update some metadata
             new_db = sess.exec(select(Project).where(Project.project_hash == new_project_hash)).first()
