@@ -46,7 +46,7 @@ import { Popover, Button } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
-import { apiUrl, env } from "../../constants";
+import { apiUrl, env, local } from "../../constants";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { useAuth } from "../../authContext";
 
@@ -522,15 +522,17 @@ export const Explorer = ({
                   <BiSelectMultiple />
                   Select all ({itemsToRender.length})
                 </button>
-                <Button
-                  onClick={() => setOpen("subset")}
-                  type="text"
-                  size="large"
-                  disabled={!resetable}
-                >
-                  Create Project subset
-                </Button>
-                {env === "sandbox" || remoteProject ? null : (
+                {env !== "sandbox" && (
+                  <Button
+                    onClick={() => setOpen("subset")}
+                    type="text"
+                    size="large"
+                    disabled={!resetable}
+                  >
+                    Create Project subset
+                  </Button>
+                )}
+                {local && !remoteProject && (
                   <Button
                     onClick={() => setOpen("upload")}
                     type="text"

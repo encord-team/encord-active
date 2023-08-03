@@ -20,6 +20,7 @@ from pandera.typing import DataFrame
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
+from starlette.status import HTTP_403_FORBIDDEN
 
 from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.server import ensure_safe_project
@@ -550,6 +551,8 @@ class CreateSubsetJSON(BaseModel):
 
 @router.post("/{project}/create_subset")
 def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateSubsetJSON):
+    if get_settings().ENV != "sandbox":
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Subsetting is not allowed in the current environment")
     project_title = item.project_title
     project_description = item.project_description
     dataset_title = item.dataset_title
@@ -763,6 +766,9 @@ def upload_to_encord(
     pfs: ProjectFileStructureDep,
     item: UploadToEncordModel,
 ):
+    if get_settings().ENV in ["sandbox", "production"]:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Uploading is not allowed in the current environment")
+
     old_project_meta = pfs.load_project_meta()
     old_project_hash = uuid.UUID(old_project_meta["project_hash"])
     old_project_name = str(old_project_meta["project_title"])
