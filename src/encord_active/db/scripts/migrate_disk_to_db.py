@@ -39,6 +39,7 @@ from encord_active.db.models import (
     ProjectTaggedDataUnit,
     get_engine,
 )
+from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.lib.common.data_utils import file_path_to_url, url_to_file_path
 from encord_active.lib.common.utils import mask_to_polygon, rle_to_binary_mask
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
@@ -1223,12 +1224,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     if delete_existing_project:
-        with Session(engine) as sess:
-            old_project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
-            if old_project is None:
-                raise ValueError("BUG: Could not find old project")
-            sess.delete(old_project)
-            sess.commit()
+        delete_project_from_db(engine, project_hash)
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)
