@@ -191,6 +191,9 @@ export function ChartDistributionBar(props: {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="group"
+            type={isMetric && barData.length > 1  ? "number" : "category"}
+            domain={isMetric && barData.length > 1 ? [barData[0].group, barData[barData.length - 1].group] : undefined}
+            padding="no-gap"
             label={{ value: "Metrics", angle: 0, position: "insideBottom", offset: -3, }}
           />
           <YAxis

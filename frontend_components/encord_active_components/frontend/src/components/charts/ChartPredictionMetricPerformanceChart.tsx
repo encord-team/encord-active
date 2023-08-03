@@ -32,20 +32,22 @@ function getDataAverage(
   readonly n: number;
   readonly a: number;
 }> {
-  const lookup: Record<string, { m: number; n: number; a: number }> = {};
+  const lookup: Record<string, { m: number; n: number; as: number }> = {};
   Object.values(data).forEach((array) => {
     array.forEach((entry) => {
       const value = lookup[entry.m];
       if (value !== undefined) {
         value.n += entry.n;
-        value.a = (value.a * value.n + entry.a * entry.n) / (entry.n + value.n);
+        value.as += (entry.a * entry.n);
       } else {
-        lookup[entry.m] = { ...entry };
+        lookup[entry.m] = { m: entry.m, n: entry.n, as: entry.a * entry.n };
       }
     });
   });
 
-  return Object.values(lookup);
+  return Object.values(lookup).map(
+    ({as, n, m}) => ({m, n, a: as / n})
+  );
 }
 
 /**
@@ -135,14 +137,6 @@ export function ChartPredictionMetricPerformanceChart(props: {
           state[`${featureHash}a`] = entry.a;
         });
       });
-      filteredEntries.forEach(([featureHash]) =>
-        Object.values(lookup).forEach((entry) => {
-          if (!(`${featureHash}n` in entry)) {
-            entry[`${featureHash}n`] = 0;
-            entry[`${featureHash}a`] = 0;
-          }
-        })
-      );
 
       if (filteredEntries.length > 1) {
         // Add average column if at least 2 columns have been requested
@@ -197,8 +191,9 @@ export function ChartPredictionMetricPerformanceChart(props: {
       <ComposedChart data={barCharts} className="active-chart">
         <XAxis
           dataKey="m"
-          type="category"
-          domain={[0.0, 1.0]}
+          type={barCharts.length > 1 ? "number" : "category"}
+          domain={barCharts.length > 1 ? [barCharts[0].m, barCharts[barCharts.length -1].m] : undefined}
+          padding="no-gap"
           label={{ value: scoreLabel, angle: 0, position: "insideBottom", offset: -3 }}
           tickFormatter={(value: number) => value.toFixed(2)}
         />
@@ -243,6 +238,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                 fillOpacity={opacityLine}
                 stroke={color}
                 strokeOpacity={opacityLine}
+                connectNulls
               />
               {referenceY == null ? null : (
                 <ReferenceLine
