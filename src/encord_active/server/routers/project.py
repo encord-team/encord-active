@@ -128,7 +128,7 @@ def read_item_ids(
     if scope == MetricScope.PREDICTION:
         if filters.prediction_filters is None:
             raise HTTPException(
-                status_code=422, detail="filters must contain prediction_filters when scope is 'prediction'"
+                status_code=422, detail='Filters must contain "prediction_filters" when scope is "prediction"'
             )
         df, _ = get_model_predictions(project, filters.prediction_filters)
         df = apply_filters(df, filters, project, scope)
@@ -190,7 +190,7 @@ def server_local_fs_file(project: ProjectFileStructureDep, lr_hash: str, du_hash
 
     debug_id = f"{lr_hash}_{du_hash}_{frame}"
     raise HTTPException(
-        status_code=404, detail=f"Local resource with id={debug_id} was not found for project: {project}"
+        status_code=404, detail=f'Local resource with id "{debug_id}" was not found for project "{project}"'
     )
 
 
@@ -207,7 +207,7 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
         rows = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")
 
         if not rows:
-            raise HTTPException(status_code=404, detail=f"Item with id: {id} was not found for project: {project}")
+            raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project}"')
 
         row = rows[0]
         # Include data tags from the relevant frame when the inspected item is a label
@@ -411,7 +411,7 @@ def get_2d_embeddings(
 
     if embeddings_df is None:
         raise HTTPException(
-            status_code=404, detail=f"Embeddings of type: {embedding_type} were not found for project: {project}"
+            status_code=404, detail=f'Embeddings of type "{embedding_type}" were not found for project "{project}"'
         )
 
     filtered = filtered_merged_metrics(project, filters)
@@ -425,7 +425,7 @@ def get_2d_embeddings(
 
         if filters.prediction_filters.type == MainPredictionType.OBJECT:
             labels = labels[[LabelMatchSchema.is_false_negative]]
-            labels = labels[labels[LabelMatchSchema.is_false_negative] == True].copy()
+            labels = labels[labels[LabelMatchSchema.is_false_negative]].copy()
             labels["data_row_id"] = partial_column(labels.index, 3)
             labels["score"] = 0
             labels.drop(LabelMatchSchema.is_false_negative, axis=1, inplace=True)
@@ -461,7 +461,7 @@ def get_2d_embeddings(
 
             embeddings_df["score"] = embeddings_df[Embedding2DSchema.label]
             embeddings_df[Embedding2DSchema.label] = embeddings_df[Embedding2DSchema.label].apply(
-                lambda x: "Correct Classifictaion" if x == 1.0 else "Misclassification"
+                lambda x: "Correct Classification" if x == 1.0 else "Misclassification"
             )
 
     return ORJSONResponse(embeddings_df.reset_index().rename({"identifier": "id"}, axis=1).to_dict("records"))
@@ -839,7 +839,7 @@ def download_sandbox_project(project: str, background_tasks: BackgroundTasks):
         (sandbox_project for sandbox_project in sandbox_projects.values() if sandbox_project["hash"] == project), None
     )
     if not sandbox_project:
-        raise HTTPException(status_code=404, detail=f"Sandbox project with hash: '{project}' was not found")
+        raise HTTPException(status_code=404, detail=f'Sandbox project with hash "{project}" was not found')
 
     pfs = ProjectFileStructure(get_settings().SERVER_START_PATH / sandbox_project["name"])
 
@@ -856,4 +856,4 @@ def download_sandbox_project(project: str, background_tasks: BackgroundTasks):
         sess.commit()
 
     background_tasks.add_task(_download_task, pfs, sandbox_project["name"])
-    return "Downloding in background"
+    return "Downloading in background"
