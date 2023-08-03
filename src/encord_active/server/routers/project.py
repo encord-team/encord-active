@@ -552,7 +552,9 @@ class CreateSubsetJSON(BaseModel):
 @router.post("/{project}/create_subset")
 def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateSubsetJSON):
     if get_settings().ENV != "sandbox":
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Subsetting is not allowed in the current environment")
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, detail="Subsetting is not allowed in the current environment"
+        )
     project_title = item.project_title
     project_description = item.project_description
     dataset_title = item.dataset_title
@@ -767,7 +769,9 @@ def upload_to_encord(
     item: UploadToEncordModel,
 ):
     if get_settings().ENV in ["sandbox", "production"]:
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Uploading is not allowed in the current environment")
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, detail="Uploading is not allowed in the current environment"
+        )
 
     old_project_meta = pfs.load_project_meta()
     old_project_hash = uuid.UUID(old_project_meta["project_hash"])
