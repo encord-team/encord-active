@@ -7,11 +7,22 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor as Executor
 from itertools import product
 from pathlib import Path
-from typing import Any, Collection, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import (
+    Any,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
 import av
 import cv2
 import numpy as np
+import pandas as pd
 from loguru import logger
 from PIL import Image
 from shapely.errors import ShapelyDeprecationWarning
@@ -366,3 +377,10 @@ def mask_to_polygon(mask: np.ndarray) -> Tuple[Optional[List[Any]], CocoBbox]:
             return contour.squeeze(1).tolist(), (x, y, w, h)
 
     return None, (x, y, w, h)
+
+
+IndexOrSeries = TypeVar("IndexOrSeries", pd.Index, pd.Series)
+
+
+def partial_column(column: IndexOrSeries, parts: int) -> IndexOrSeries:
+    return column.str.split("_", n=parts).str[0:parts].str.join("_")

@@ -25,7 +25,7 @@ Alternatively, if you prefer to override the selection process, you can use the 
 
 You will get a directory containing all the data, labels, and [metrics](/category/quality-metrics) of the project. You have the option to choose whether to store the data in the local file system and can opt-in or opt-out accordingly.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [visualize](../cli#visualize) CLI command.
+When the process is done, follow the printed instructions to open the app or see more details in the [start](../cli#start) CLI command.
 
 If you are importing an Encord Annotate project for the first time, the Command Line Interface (CLI) will prompt you to provide the local path of a private SSH key associated with Encord.
 To associate an SSH key with Encord, please refer to the documentation available [here][encord-docs-ssh].
@@ -42,5 +42,5 @@ This will import the project in a subdirectory of `/path/to/store/project`.
 :::
 
 
-[encord-docs-ssh]: https://docs.encord.com/admins/settings/public-keys/#set-up-public-key-authentication
+[encord-docs-ssh]: https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication
 [encord-sign-up]: https://app.encord.com/register

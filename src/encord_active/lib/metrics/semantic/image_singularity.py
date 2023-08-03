@@ -39,7 +39,7 @@ This metric gives each image a score that shows each image's uniqueness.
 - **To delete duplicate images:** You can set the quality filter to cover only zero values (that ends up with all the duplicate images), then use bulk tagging (e.g., with a tag like `Duplicate`) to tag all images.
 - **To mark duplicate images:** Near duplicate images are shown side by side. Navigate through these images and mark whichever is of interest to you.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/semantic#image-singularity",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#image-singularity",
             metric_type=MetricType.SEMANTIC,
             data_type=DataType.IMAGE,
             embedding_type=EmbeddingType.IMAGE,

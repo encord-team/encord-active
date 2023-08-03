@@ -6,12 +6,12 @@ On Encord-Annotate, open the project, go to Settings => Copy project. Select eve
 
 2. Import the new project to Encord-Active.
 
-See documentation: https://docs.encord.com/active/docs/cli/import-encord-project
+See documentation: https://docs.encord.com/docs/active-cli#project
 
 3. Open the Encord-Active app.
 
 ```shell
-(encord-active-environment) > encord-active visualize
+(encord-active-environment) > encord-active start
 ```
 
 4. Go to **Label Quality => Explore**, and choose **Object annotation quality** metric.

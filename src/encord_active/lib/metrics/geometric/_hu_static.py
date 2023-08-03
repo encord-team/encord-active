@@ -36,7 +36,7 @@ class HuMomentsStatic(Metric):
             long_description=r"""Computes the Euclidean distance between the polygons'
     [Hu moments](https://en.wikipedia.org/wiki/Image_moment) for each class and
     the prototypical class moments.""",
-            doc_url="https://docs.encord.com/active/docs/metrics/label-quality-metrics#annotation-duplicates",
+            doc_url="https://docs.encord.com/docs/active-label-quality-metrics#annotation-duplicates",
             metric_type=MetricType.GEOMETRIC,
             data_type=DataType.IMAGE,
             annotation_type=[AnnotationType.OBJECT.POLYGON],

@@ -189,7 +189,7 @@ class CocoImporter:
         self.id_mappings: Dict[Tuple[int, Shape], int] = {}
 
         title = self.info.description or "new project"
-        self.title = f"[EA] {title}".replace(" ", "-")
+        self.title = f"[EA] {title}".lower().replace(" ", "-")
 
         self.project_dir = destination_dir / self.title
 

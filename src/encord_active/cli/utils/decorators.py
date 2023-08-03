@@ -8,18 +8,6 @@ import typer
 R = TypeVar("R")
 
 
-def bypass_streamlit_question(fn: Callable[..., R]) -> Callable[..., R]:
-    @wraps(fn)
-    def inner(*args: Any, **kwargs: Any) -> Any:
-        st_conf = Path.home() / ".streamlit" / "credentials.toml"
-        if not st_conf.exists():
-            st_conf.parent.mkdir(exist_ok=True)
-            st_conf.write_text('[general]\nemail = ""')
-        fn(*args, **kwargs)
-
-    return inner
-
-
 def try_find_parent_project(target: Path) -> Optional[Path]:
     for parent in target.parents:
         if (parent / "project_meta.yaml").is_file():

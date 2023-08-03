@@ -19,7 +19,7 @@ class ContrastMetric(SimpleMetric):
 
 Contrast is computed as the standard deviation of the pixel values.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#contrast",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#contrast",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -44,7 +44,7 @@ class Wrapper:  # we can't have a non-default-constructible Metric implementatio
                 short_description=f"Ranks images by how {color_name.lower()} the average value of the image is.",
                 long_description=f"""Ranks images by how {color_name.lower()} the average value of the
                     image is.""",
-                doc_url=f"https://docs.encord.com/active/docs/metrics/heuristic/#{color_name.lower()}-values",
+                doc_url=f"https://docs.encord.com/docs/active-data-quality-metrics#{color_name.lower()}-values",
                 metric_type=MetricType.HEURISTIC,
                 data_type=DataType.IMAGE,
                 annotation_type=AnnotationType.NONE,
@@ -134,7 +134,7 @@ class BrightnessMetric(SimpleMetric):
 
 Brightness is computed as the average (normalized) pixel value across each image.
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#brightness",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#brightness",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -160,7 +160,7 @@ image.
 score = cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#sharpness",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#sharpness",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -186,7 +186,7 @@ image. Note that this is $1 - \text{sharpness}$.
 score = 1 - cv2.Laplacian(image, cv2.CV_64F).var()
 ```
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#blur",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#blur",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -206,7 +206,7 @@ class AspectRatioMetric(Metric):
 
 Aspect ratio is computed as the ratio of image width to image height ($\frac{width}{height}$).
 """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#aspect-ratio",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#aspect-ratio",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,
@@ -231,7 +231,7 @@ class AreaMetric(Metric):
 
 Area is computed as the product of image width and image height ($width \times height$).
     """,
-            doc_url="https://docs.encord.com/active/docs/metrics/data-quality-metrics#area",
+            doc_url="https://docs.encord.com/docs/active-data-quality-metrics#area",
             metric_type=MetricType.HEURISTIC,
             data_type=DataType.IMAGE,
             annotation_type=AnnotationType.NONE,

@@ -11,21 +11,19 @@ from rich.panel import Panel
 from typer.core import TyperGroup
 
 from encord_active.cli.project import project_cli
+from encord_active.cli.utils.server import ensure_safe_project
 
 load_dotenv()
 
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
+import encord_active.db.models as __fixme_debugging
 import encord_active.lib.db  # pylint: disable=unused-import
-from encord_active.app.app_config import APP_NAME
+from encord_active.cli.app_config import APP_NAME
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import (
-    bypass_streamlit_question,
-    ensure_project,
-    find_child_projects,
-)
+from encord_active.cli.utils.decorators import ensure_project, find_child_projects
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
@@ -36,7 +34,7 @@ class OrderedPanelGroup(TyperGroup):
     COMMAND_ORDER = [
         "quickstart",
         "download",
-        "visualize",
+        "start",
         "init",
         "import",
         "refresh",
@@ -131,6 +129,7 @@ def download(
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_path = fetch_prebuilt_project(project_name, project_dir)
+    ensure_safe_project(project_path)
     success_with_vizualise_command(project_path, "Successfully downloaded sandbox dataset. ")
 
 
@@ -407,24 +406,21 @@ def refresh(
         rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
-@cli.command(name="visualise", hidden=True)  # Alias for backward compatibility
-@cli.command(name="visualize")
-@bypass_streamlit_question
-def visualize(
+@cli.command(name="start")
+def start(
     target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Path of the project you would like to visualize", file_okay=False
+        Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
     ),
 ):
     """
     [green bold]Launch[/green bold] the application with the provided project ✨
     """
-    from encord_active.cli.utils.streamlit import launch_streamlit_app
+    from encord_active.cli.utils.server import launch_server_app
 
-    launch_streamlit_app(target)
+    launch_server_app(target)
 
 
 @cli.command()
-@bypass_streamlit_question
 def quickstart(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
@@ -433,7 +429,7 @@ def quickstart(
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    from encord_active.cli.utils.streamlit import launch_streamlit_app
+    from encord_active.cli.utils.server import launch_server_app
     from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
 
     project_name = "quickstart"
@@ -441,7 +437,7 @@ def quickstart(
     project_dir.mkdir(exist_ok=True)
 
     fetch_prebuilt_project(project_name, project_dir)
-    launch_streamlit_app(project_dir)
+    launch_server_app(project_dir)
 
 
 @cli.command(rich_help_panel="Resources")
