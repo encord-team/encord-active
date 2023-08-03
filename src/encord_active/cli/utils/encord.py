@@ -86,7 +86,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         rich.print("⚡️ [red]You don't have access to the project, sorry[/red] 😫")
         exit()
 
-    project_path = target / project.title.replace(" ", "-")
+    project_path = target / project.title.lower().replace(" ", "-")
     project_path.mkdir(exist_ok=True, parents=True)
     project_file_structure = ProjectFileStructure(project_path)
 
