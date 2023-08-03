@@ -482,6 +482,7 @@ def __migrate_predictions(
 ) -> List[ProjectPredictionAnalyticsFalseNegatives]:
     # Used for validation
     predictions_missed_db = []
+    predictions_existing_hashes: Set[Tuple[uuid.UUID, int, str]] = set()
 
     # Load all metadata for this prediction store.
     predictions_metric_datas = reader.read_prediction_metric_data(predictions_dir, metrics_dir)
@@ -693,6 +694,9 @@ def __migrate_predictions(
             raise ValueError(f"Missing object hash: {identifier}")
 
         for object_hash in object_hashes:
+            if (du_hash, frame, object_hash) in predictions_existing_hashes:
+                raise ValueError(f"Duplicate (du_hash, frame, object_hash): {du_hash}, {frame}, {object_hash}")
+            predictions_existing_hashes.add((du_hash, frame, object_hash))
             new_predictions_object_db = ProjectPredictionAnalytics(
                 # Identifier
                 prediction_hash=prediction_hash,
