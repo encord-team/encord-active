@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
 import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
-import { Spin } from "./Spinner";
+import { Spinner } from "./Spinner";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
@@ -14,7 +14,7 @@ type Result = Awaited<ReturnType<SearchFn>>;
 export const useSearch = (
   scope: Scope,
   filters: Filters,
-  searchFn: SearchFn
+  searchFn: SearchFn,
 ) => {
   const client = useQueryClient();
 
@@ -28,11 +28,11 @@ export const useSearch = (
       client.cancelQueries(["search"]);
       const res = searchFn(
         { scope, filters, query: search.query, type: search.type },
-        signal
+        signal,
       );
       return res;
     },
-    { enabled: false }
+    { enabled: false },
   );
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export const Assistant = ({
                 "btn-disabled": isFetching || disabled,
               })}
             >
-              {isFetching ? <Spin /> : <FaMagic className="text-base" />}
+              {isFetching ? <Spinner /> : <FaMagic className="text-base" />}
             </button>
             <input
               name="query"

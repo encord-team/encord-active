@@ -1,10 +1,11 @@
-import { Alert, Spin } from "antd";
+import { Alert } from "antd";
 import { useState } from "react";
 import { useAuth } from "./authContext";
 import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
+import { Spinner } from "./components/explorer/Spinner";
 
 export const App = () => {
   const { data: projects, isLoading, error } = useProjectsList();
@@ -16,7 +17,9 @@ export const App = () => {
 
   if (isLoading)
     return (
-      <Spin className="w-full h-screen flex items-center justify-center" />
+      <div className="w-full h-screen flex items-center justify-center">
+        <Spinner />
+      </div>
     );
   if (error?.response && "detail" in error.response?.data)
     return (
@@ -33,7 +36,11 @@ export const App = () => {
   return (
     <div className="p-12 bg-white">
       {selectedProjectHash ? (
-        <ErrorBoundary message={"An error occurred rendering the project: "+selectedProjectHash}>
+        <ErrorBoundary
+          message={
+            "An error occurred rendering the project: " + selectedProjectHash
+          }
+        >
           <ProjectPage
             queryAPI={queryAPI}
             projectHash={selectedProjectHash}

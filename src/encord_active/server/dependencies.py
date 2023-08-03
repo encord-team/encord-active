@@ -1,4 +1,6 @@
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -17,6 +19,19 @@ engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
 engine = get_engine(engine_path, concurrent=True)
 
 
+@lru_cache
+def _try_find_project(path: Path, name: str, hash: str):
+    direct_match = path / name.lower().replace(" ", "-")
+    if direct_match.is_dir():
+        return ProjectFileStructure(direct_match)
+
+    for pfs in [ProjectFileStructure(path) for path in path.glob("*") if path.is_dir()]:
+        if pfs.project_meta.exists() and pfs.load_project_meta()["project_hash"] == hash:
+            return pfs
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found on disk.")
+
+
 async def get_project_file_structure(project: str) -> ProjectFileStructure:
     if (get_settings().SERVER_START_PATH / project).exists():
         return ProjectFileStructure(get_settings().SERVER_START_PATH / project)
@@ -28,8 +43,8 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Project: {project} wasn't found in the DB"
             )
 
-        return ProjectFileStructure(
-            get_settings().SERVER_START_PATH / db_project.project_name.lower().replace(" ", "-")
+        return _try_find_project(
+            get_settings().SERVER_START_PATH, db_project.project_name, str(db_project.project_hash)
         )
 
 
