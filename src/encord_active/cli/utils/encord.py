@@ -45,7 +45,7 @@ def import_encord_project(
     encord_project_hash: Optional[str],
     store_data_locally: bool,
 ) -> Path:
-    from .streamlit import ensure_safe_project
+    from .server import ensure_safe_project
 
     client = get_client(ssh_key_path)
 
@@ -86,7 +86,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         rich.print("⚡️ [red]You don't have access to the project, sorry[/red] 😫")
         exit()
 
-    project_path = target / project.title.replace(" ", "-")
+    project_path = target / project.title.lower().replace(" ", "-")
     project_path.mkdir(exist_ok=True, parents=True)
     project_file_structure = ProjectFileStructure(project_path)
 

@@ -11,7 +11,7 @@ See documentation: https://docs.encord.com/docs/active-cli#project
 3. Open the Encord-Active app.
 
 ```shell
-(encord-active-environment) > encord-active visualize
+(encord-active-environment) > encord-active start
 ```
 
 4. Go to **Label Quality => Explore**, and choose **Object annotation quality** metric.

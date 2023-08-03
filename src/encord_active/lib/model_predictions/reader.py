@@ -1,8 +1,8 @@
-from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, List, Optional, Union, cast
 
 import pandas as pd
+from cachetools import LRUCache, cached
 from loguru import logger
 from natsort import natsorted
 from pandera.typing import DataFrame
@@ -64,8 +64,6 @@ def read_metric_data(entry_points: List[MetricEntryPoint], append_level_to_title
             all_metrics += natsorted(available_metrics, key=lambda x: x.name)
             continue
 
-        for metric in available_metrics:
-            metric.name += " (P)" if entry.is_predictions else f" ({metric.level})"
         all_metrics += natsorted(available_metrics, key=lambda x: x.name[-3:] + x.name[:-3])
 
     return all_metrics
@@ -195,7 +193,7 @@ def match_predictions_and_labels(
     return _model_predictions.pipe(DataFrame[ClassificationPredictionMatchSchema])
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def read_prediction_files(project_file_structure: ProjectFileStructure, prediction_type: MainPredictionType):
     metrics_dir = project_file_structure.metrics
     predictions_dir = project_file_structure.predictions / prediction_type.value
@@ -224,7 +222,7 @@ def get_model_prediction_by_id(project_file_structure: ProjectFileStructure, id:
                 pass
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def get_model_predictions(
     project_file_structure: ProjectFileStructure,
     predictions_filters: PredictionsFilters,

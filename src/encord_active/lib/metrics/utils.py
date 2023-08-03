@@ -1,12 +1,12 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict
 
 import pandas as pd
 import pandera as pa
+from cachetools import LRUCache, cached
 from encord.objects.common import PropertyType
 from encord.ontology import OntologyStructure
 from natsort import natsorted
@@ -46,7 +46,7 @@ class MetricSchema(IdentifierSchema):
     url: Series[str] = pa.Field(nullable=True, coerce=True)
 
 
-@lru_cache
+@cached(cache=LRUCache(maxsize=10))
 def load_metric_dataframe(
     metric: MetricData, normalize: bool = False, *, sorting_key="score"
 ) -> DataFrame[MetricSchema]:
@@ -73,10 +73,10 @@ def load_metric_dataframe(
     return df.pipe(DataFrame[MetricSchema])
 
 
-class MetricScope(Enum):
-    DATA_QUALITY = "data_quality"
-    LABEL_QUALITY = "label_quality"
-    MODEL_QUALITY = "model_quality"
+class MetricScope(str, Enum):
+    DATA = "data"
+    ANNOTATION = "annotation"
+    PREDICTION = "prediction"
 
 
 def get_metric_operation_level(pth: Path) -> str:
@@ -98,9 +98,9 @@ def get_metric_operation_level(pth: Path) -> str:
 def is_valid_annotation_type(metric: MetricMetadata, metric_scope: Optional[MetricScope] = None) -> bool:
     if not metric_scope:
         return True
-    elif metric_scope == MetricScope.DATA_QUALITY:
+    elif metric_scope == MetricScope.DATA:
         return not metric.annotation_type
-    elif metric_scope == MetricScope.LABEL_QUALITY:
+    elif metric_scope == MetricScope.ANNOTATION:
         return bool(metric.annotation_type) and isinstance(metric.annotation_type, list)
     else:
         return False

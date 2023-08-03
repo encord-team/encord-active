@@ -11,7 +11,7 @@ def success_with_vizualise_command(
     cwd = Path.cwd()
     cd_dir = project_path.relative_to(cwd) if project_path.is_relative_to(cwd) else project_path
 
-    commands = "[cyan]encord-active visualize[/cyan]"
+    commands = "[cyan]encord-active start[/cyan]"
     if cd_dir.resolve() != cwd.resolve():
         commands = f"[cyan]cd {escape(cd_dir.as_posix())}[/cyan]\n{commands}"
 
