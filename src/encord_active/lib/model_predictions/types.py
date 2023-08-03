@@ -89,7 +89,7 @@ class PredictionsFilters(BaseModel):
     type: MainPredictionType
     outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None
     iou_threshold: Optional[Annotated[float, Field(ge=0, le=1)]] = None
-    ignore_frames_without_predictions: bool = True
+    ignore_frames_without_predictions: bool = False
 
     class Config:
         frozen = True
