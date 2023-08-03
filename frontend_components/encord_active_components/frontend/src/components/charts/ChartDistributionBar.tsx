@@ -86,7 +86,7 @@ export function ChartDistributionBar(props: {
       results.sort((a, b) => b.count - a.count);
       const median = results[(results.length / 2) | 0];
       if (median !== undefined) {
-        getFill = (score) => (score < median.count ? "#ef4444" : "#ffa600");
+        getFill = (score) => (score <= (median.count / 2.0) ? "#ef4444" : "#ffa600");
       }
     } else {
       results.sort((a, b) => Number(a.group) - Number(b.group));
