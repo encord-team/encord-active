@@ -18,7 +18,7 @@ const queryClient = new QueryClient();
 
 const Root = () => (
   <QueryClientProvider client={queryClient}>
-    {env === "local" && <ReactQueryDevtools position="bottom-right" />}
+    {env === "development" && <ReactQueryDevtools position="bottom-right" />}
     <AuthContext.Provider value={createAuthContext()}>
       <Routes>
         <Route path="/" element={<App />} />

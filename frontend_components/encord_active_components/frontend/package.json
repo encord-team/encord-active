@@ -6,8 +6,10 @@
   "scripts": {
     "start": "npm i && npm run dev",
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:no-tsc": "vite build",
+    "build": "tsc && concurrently npm:build:* ",
+    "build:packaged": "vite build --mode packaged --outDir dist/packaged",
+    "build:sandbox": "vite build --mode sandbox --outDir dist/sandbox",
+    "build:production": "vite build --outDir dist/production",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -42,6 +44,7 @@
     "@types/recharts": "^1.8.24",
     "@vitejs/plugin-react": "^3.1.0",
     "autoprefixer": "^10.4.12",
+    "concurrently": "^8.2.0",
     "hotscript": "^1.0.12",
     "postcss": "^8.4.18",
     "tailwindcss": "^3.1.8",

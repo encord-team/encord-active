@@ -1,8 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-  readonly VITE_ENV?: "prod" | "sandbox" | "local";
+  readonly VITE_ENV: "production" | "packaged" | "sandbox" | "development";
 }
 
 interface ImportMeta {

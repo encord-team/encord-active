@@ -46,7 +46,7 @@ import { Popover, Button } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
-import { apiUrl } from "../../constants";
+import { apiUrl, env } from "../../constants";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { useAuth } from "../../authContext";
 
@@ -530,7 +530,7 @@ export const Explorer = ({
                 >
                   Create Project subset
                 </Button>
-                {remoteProject ? null : (
+                {env === "sandbox" || remoteProject ? null : (
                   <Button
                     onClick={() => setOpen("upload")}
                     type="text"
