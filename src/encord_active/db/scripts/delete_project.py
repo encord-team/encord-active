@@ -40,7 +40,7 @@ def delete_project_from_db(engine: Engine, project_hash: uuid.UUID, error_on_mis
     # Fallback (sqlite can fail to run cascade deletion)
     with Session(engine) as sess:
         prediction_hashes = sess.exec(
-            select(ProjectPrediction.prediction_hash).where(Project.project_hash == project_hash)
+            select(ProjectPrediction.prediction_hash).where(ProjectPrediction.project_hash == project_hash)
         ).fetchall()
         project_types: List[
             Type[
