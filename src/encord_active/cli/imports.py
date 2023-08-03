@@ -11,6 +11,8 @@ from rich.panel import Panel
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.decorators import ensure_project
 from encord_active.cli.utils.prints import success_with_vizualise_command
+from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
+from encord_active.lib.project import ProjectFileStructure
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -44,6 +46,7 @@ def import_predictions(
     )
 
     app_import_predictions(project, predictions)
+    migrate_disk_to_db(ProjectFileStructure(target), delete_existing_project=True)
 
 
 ENCORD_RICH_PANEL = "Encord Project Arguments"

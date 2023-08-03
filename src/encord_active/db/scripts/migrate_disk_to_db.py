@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import numpy as np
 from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from encord_active.db.metrics import (
     AnnotationMetrics,
@@ -784,7 +784,7 @@ def __migrate_predictions(
     return predictions_missed_db
 
 
-def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
+def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool = False) -> None:
     project_meta = fetch_project_meta(pfs.project_dir)
     project_hash: uuid.UUID = uuid.UUID(project_meta["project_hash"])
     annotation_metrics: Dict[
@@ -1218,6 +1218,13 @@ def migrate_disk_to_db(pfs: ProjectFileStructure) -> None:
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
+    if delete_existing_project:
+        with Session(engine) as sess:
+            old_project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+            if old_project is None:
+                raise ValueError("BUG: Could not find old project")
+            sess.delete(old_project)
+            sess.commit()
     with Session(engine) as sess:
         sess.add(project)
         sess.add_all(data_metas)
