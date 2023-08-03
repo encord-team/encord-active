@@ -127,8 +127,7 @@ def get_project_prediction_summary(
                 ProjectPredictionAnalytics.feature_hash,
                 sql_sum(
                     (
-                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) &
-                        (ProjectPredictionAnalytics.iou >= iou)
+                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) & (ProjectPredictionAnalytics.iou >= iou)
                     ).cast(Integer)
                 ),  # type: ignore
                 sql_count(),
@@ -488,8 +487,7 @@ def prediction_metric_performance(
                 metric_attr.group_attr,
                 sql_sum(
                     (
-                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) &
-                        (ProjectPredictionAnalytics.iou >= iou)
+                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) & (ProjectPredictionAnalytics.iou >= iou)
                     ).cast(Integer)
                 ),  # type: ignore
                 sql_count(),
@@ -524,7 +522,7 @@ def prediction_metric_performance(
                 sql_count(),
             )
             .where(
-                ProjectPredictionAnalyticsFalseNegatives.iou_threshold > iou,
+                ProjectPredictionAnalyticsFalseNegatives.iou_threshold < iou,
                 is_not(metric_attr.filter_attr, None),
                 *where_fn,
             )
