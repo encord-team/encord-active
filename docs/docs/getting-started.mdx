@@ -2,9 +2,9 @@
 sidebar_position: 2
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-import Link from '@docusaurus/Link';
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Link from "@docusaurus/Link";
 
 # Getting Started
 
@@ -45,7 +45,7 @@ If you encounter any difficulties during the installation of encord-active, you 
 You can also run the docker image instead of install Encord Active
 
 ```shell
-docker run -it -p 8501:8501 -p 8502:8502 -v ${PWD}:/data encord/encord-active <command>
+docker run -it -p 8000:8000 -v ${PWD}:/data encord/encord-active <command>
 ```
 
 :::
@@ -102,11 +102,11 @@ encord-active init /path/to/data/directory
 
 A project will be created using the data (without labels) in the current working directory (unless used with `--target`).
 
-To visualize the project run:
+To start the project run:
 
 ```shell
 cd /path/to/project
-encord-active visualize
+encord-active start
 ```
 
 You can find more details on the `init` command in the [CLI section](./cli#init).
@@ -145,7 +145,7 @@ Next, `encord-active` will fetch your data and labels before computing all the [
 Downloading the data and computing the metrics may take a while.
 Bare with us, it is worth the wait.
 
-When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./cli#visualize) page.
+When the process is done, follow the printed instructions to open the app or see more details in the [Open Encord Active](./cli#start) page.
 
 ## Running the App
 
@@ -154,7 +154,7 @@ To launch the Encord Active app, run the following command:
 ```shell
 # within venv
 cd /path/to/project
-encord-active visualize
+encord-active start
 ```
 
 Now, your browser should open a new window with Encord Active.
@@ -180,11 +180,10 @@ You can also have a look at how to [write custom metrics](./metrics/write-your-o
 
 Please don't hesitate to contact us if you have any questions via our dedicated [Discord server][join-discord] or email at [active@encord.com][ea-email].
 
-If you encounter any errors, we would love to hear from you so we can address them promptly.  
+If you encounter any errors, we would love to hear from you so we can address them promptly.
 We receive immediate notifications when issues are submitted through Encord Active's [GitHub][repo-issues] repository.
-Also, feel free to reach out to us via [Discord][join-discord] or email at [active@encord.com][ea-email] for further assistance.  
+Also, feel free to reach out to us via [Discord][join-discord] or email at [active@encord.com][ea-email] for further assistance.
 We appreciate your feedback and assistance in improving Encord Active.
-
 
 [colab-download-sandbox-project]: https://colab.research.google.com/drive/1RujTUxcxpB9bGJHp_UtCdSSQn7oef2ci?usp=sharing
 [colab-import-your-own-project]: https://colab.research.google.com/drive/1P4C-JAml8yh8aUa_rvNPI_hPBvBgZ1FD?usp=sharing

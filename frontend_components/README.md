@@ -8,7 +8,7 @@ Built with React, Typescript, Vite and Tailwind.
 After making changes to the frontend side of things we need to build it.
 
 ```shell
-cd src/encord_active_components/frontend
+cd ./encord_active_components/frontend
 npm run build
 ```
 
@@ -17,7 +17,7 @@ When the frontend build is done, it is time to build the package and publish it.
 Navigate back to the root directory
 
 ```shell
-cd ../../../   # or `cd -` (anything that will get you back to root)
+cd ../../   # or `cd -` (anything that will get you back to root)
 ```
 
 Bump the version

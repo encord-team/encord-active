@@ -2,7 +2,7 @@ import rich
 import toml
 import typer
 
-from encord_active.app.app_config import CONFIG_PROPERTIES, app_config
+from encord_active.cli.app_config import CONFIG_PROPERTIES, app_config
 
 config_cli = typer.Typer(rich_markup_mode="markdown")
 

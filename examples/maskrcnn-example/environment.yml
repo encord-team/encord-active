@@ -137,8 +137,6 @@ dependencies:
       - shapely==1.8.5.post1
       - shortuuid==1.0.11
       - smmap==5.0.0
-      - streamlit==1.13.0
-      - streamlit-nested-layout==0.1.1
       - tenacity==8.1.0
       - tensorboardx==2.5.1
       - termcolor==2.1.1

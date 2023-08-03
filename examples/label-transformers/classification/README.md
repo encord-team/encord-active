@@ -37,7 +37,7 @@ The outcome should be a new project with 28 images of which
 Try running
 
 ```shell
-encord-active visualize
+encord-active start
 ```
 
 to see the results.

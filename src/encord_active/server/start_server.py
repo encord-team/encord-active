@@ -7,7 +7,9 @@ def start(path: Path, reload=False):
     from uvicorn import run
 
     environ["SERVER_START_PATH"] = path.as_posix()
-    run("encord_active.server.main:app", reload=reload, host="0.0.0.0", port=8502)
+    opts = {"reload": reload, "port": environ.get("PORT"), "host": environ.get("HOST")}
+    opts = {k: v for k, v in opts.items() if v is not None}
+    run("encord_active.server.main:app", **opts)
 
 
 if __name__ == "__main__":

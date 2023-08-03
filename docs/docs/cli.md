@@ -19,7 +19,7 @@ download           Download a sandbox dataset to get started 📁
 init               Initialize a project from your local file system 🌱
 import             Import projects or predictions ⬇️
 refresh            Sync data and labels from a remote Encord project 🔄
-visualize          Launch the application with the provided project ✨
+start          Launch the application with the provided project ✨
 project            Manage project settings ⚙️
 metric             Manage project metrics 📋
 print              Print useful information 🖨️
@@ -132,7 +132,7 @@ Sample pictures:
 
 </details>
 
-## `visualize`
+## `start`
 
 Launch the application with the provided project ✨
 
@@ -140,7 +140,7 @@ Launch the application with the provided project ✨
 Usage: encord-active quickstart [OPTIONS]
 
 Options:
- --target  -t  DIRECTORY  Path of the projects you would like to visualize
+ --target  -t  DIRECTORY  Path of the projects you would like to start
 ```
 
 ## `init`
