@@ -125,10 +125,15 @@ def get_project_prediction_summary(
         positive_counts_raw = sess.exec(
             select(
                 ProjectPredictionAnalytics.feature_hash,
-                sql_sum((ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)),  # type: ignore
+                sql_sum(
+                    (
+                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) &
+                        (ProjectPredictionAnalytics.iou >= iou)
+                    ).cast(Integer)
+                ),  # type: ignore
                 sql_count(),
             )
-            .where(ProjectPredictionAnalytics.prediction_hash == prediction_hash, ProjectPredictionAnalytics.iou >= iou)
+            .where(ProjectPredictionAnalytics.prediction_hash == prediction_hash)
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
             )
@@ -481,10 +486,15 @@ def prediction_metric_performance(
             select(
                 ProjectPredictionAnalytics.feature_hash,
                 metric_attr.group_attr,
-                sql_sum((ProjectPredictionAnalytics.match_duplicate_iou < iou).cast(Integer)),  # type: ignore
+                sql_sum(
+                    (
+                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) &
+                        (ProjectPredictionAnalytics.iou >= iou)
+                    ).cast(Integer)
+                ),  # type: ignore
                 sql_count(),
             )
-            .where(ProjectPredictionAnalytics.iou >= iou, is_not(metric_attr.filter_attr, None), *where_tp_fp)
+            .where(is_not(metric_attr.filter_attr, None), *where_tp_fp)
             .group_by(
                 ProjectPredictionAnalytics.feature_hash,
                 metric_attr.group_attr,
