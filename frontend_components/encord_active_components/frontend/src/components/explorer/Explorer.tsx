@@ -96,7 +96,7 @@ export const Explorer = ({
       Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [
         k,
         { min, max },
-      ]),
+      ])
     );
     let tagData: string[] = [];
     let tagLabel: string[] = [];
@@ -152,12 +152,12 @@ export const Explorer = ({
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
     api.fetchHasPremiumFeatures,
-    { staleTime: Infinity },
+    { staleTime: Infinity }
   );
   const { data: hasSimilaritySearch } = useQuery(
     sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric, staleTime: Infinity },
+    { enabled: !!selectedMetric, staleTime: Infinity }
   );
 
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
@@ -165,9 +165,9 @@ export const Explorer = ({
     () =>
       api.fetchSimilarItems(
         similarityItem!,
-        scope === "prediction" ? "image" : selectedMetric?.embeddingType!,
+        scope === "prediction" ? "image" : selectedMetric?.embeddingType!
       ),
-    { enabled: !!similarityItem && !!selectedMetric },
+    { enabled: !!similarityItem && !!selectedMetric }
   );
 
   const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
@@ -184,7 +184,7 @@ export const Explorer = ({
     {
       enabled: !!selectedMetric && predictionTypeFound,
       staleTime: Infinity,
-    },
+    }
   );
   const { data: metrics, isFetching: isLoadingMetrics } = useQuery(
     [
@@ -197,7 +197,7 @@ export const Explorer = ({
     {
       enabled: predictionTypeFound,
       staleTime: Infinity,
-    },
+    }
   );
 
   const { allDataTags, allLabelTags } = useAllTags();
@@ -233,7 +233,7 @@ export const Explorer = ({
       });
     }
     const labelValues = Object.fromEntries(
-      [...allLabelTags].map((v) => [v, v]),
+      [...allLabelTags].map((v) => [v, v])
     );
     const dataValues = Object.fromEntries([...allDataTags].map((v) => [v, v]));
     return {
@@ -247,7 +247,7 @@ export const Explorer = ({
   }, [metricsSummary, metrics, allDataTags, allLabelTags]);
   const filterLabelClassMap = useMemo(() => {
     const res = Object.fromEntries(
-      Object.values(featureHashMap).map((v) => [v.name, v]),
+      Object.values(featureHashMap).map((v) => [v.name, v])
     );
     res["No class"] = {
       name: "No class",
@@ -259,7 +259,7 @@ export const Explorer = ({
   const withSortOrder = useMemo(
     () =>
       isAscending ? sortedItems || [] : [...(sortedItems || [])].reverse(),
-    [isAscending, sortedItems],
+    [isAscending, sortedItems]
   );
 
   const {
@@ -387,7 +387,7 @@ export const Explorer = ({
             "w-full flex flex-col gap-5 items-center pb-5 m-auto",
             {
               hidden: previewedItem,
-            },
+            }
           )}
         >
           {/* TODO: move model predictions embeddings plot to FE */}
@@ -455,10 +455,10 @@ export const Explorer = ({
                                 >
                                   {metric.name}
                                 </option>
-                              ),
+                              )
                             )}
                           </optgroup>
-                        ),
+                        )
                     )}
                   </select>
                   <label
@@ -512,7 +512,7 @@ export const Explorer = ({
                       metricRanges={Object.fromEntries(
                         Object.values(metrics || {})
                           .flat()
-                          ?.map(({ name, range }) => [name, range]) ?? [],
+                          ?.map(({ name, range }) => [name, range]) ?? []
                       )}
                       featureHashMap={filterLabelClassMap}
                     />
@@ -585,7 +585,6 @@ export const Explorer = ({
               >
                 {pageItems.map((id) => (
                   <GalleryItem
-                    scope={scope}
                     selectedMetric={selectedMetric}
                     key={id}
                     itemId={id}
@@ -679,7 +678,7 @@ const PredictionFilters = ({
           onOutcomeChange(
             value === ALL_PREDICTION_OUTCOMES
               ? undefined
-              : (value as PredictionOutcome),
+              : (value as PredictionOutcome)
           )
         }
       >
@@ -729,13 +728,13 @@ const Embeddings = ({
 }) => {
   const { isLoading, data: scatteredEmbeddings } = useApi().fetch2DEmbeddings(
     embeddingType,
-    filters,
+    filters
   );
 
   const filtered = useMemo(() => {
     const ids = new Set(idValues.map(({ id }) => id));
     return scatteredEmbeddings?.filter(
-      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_"))),
+      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_")))
     );
   }, [JSON.stringify(idValues), JSON.stringify(scatteredEmbeddings)]);
 
@@ -875,7 +874,6 @@ const ItemPreview = ({
 };
 
 const GalleryItem = ({
-  scope,
   itemId,
   selected,
   selectedMetric,
@@ -884,7 +882,6 @@ const GalleryItem = ({
   onShowSimilar,
   iou,
 }: {
-  scope: Scope;
   itemId: string;
   selected: boolean;
   selectedMetric?: Metric;
@@ -903,8 +900,7 @@ const GalleryItem = ({
     );
 
   const [metricName, value] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) =>
-      metric.toLowerCase() === selectedMetric?.name.toLowerCase(),
+    ([metric, _]) => metric.toLowerCase() === selectedMetric?.name.toLowerCase()
   ) || [selectedMetric?.name, ""];
   const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
   const displayValue =
@@ -1001,10 +997,10 @@ const GalleryItem = ({
 const getObjects = (item: Item) => {
   const { objectHash } = splitId(item.id);
   const object = item.labels.objects.find(
-    (object) => object.objectHash === objectHash,
+    (object) => object.objectHash === objectHash
   );
   const prediction = item.predictions.objects.find(
-    (object) => object.objectHash === objectHash,
+    (object) => object.objectHash === objectHash
   );
 
   if (object) return [object];
@@ -1019,7 +1015,7 @@ type ItemLabelObject = Item["labels"]["objects"][0];
 const pointsRecordToPolygonPoints = (
   points: NonNullable<ItemLabelObject["points"]>,
   width: number,
-  height: number,
+  height: number
 ) =>
   Object.values(points)
     .map(({ x, y }) => `${x * width},${y * height}`)
@@ -1056,7 +1052,7 @@ const ImageWithPolygons = ({
         points,
         shape,
         boundingBoxPoints,
-      })),
+      }))
     );
   }, [width, height, item.id]);
 
@@ -1130,7 +1126,7 @@ const ImageWithPolygons = ({
                       points={pointsRecordToPolygonPoints(
                         points,
                         width,
-                        height,
+                        height
                       )}
                     />
                   )}
@@ -1145,13 +1141,13 @@ const ImageWithPolygons = ({
                       points={pointsRecordToPolygonPoints(
                         boundingBoxPoints,
                         width,
-                        height,
+                        height
                       )}
                     />
                   )}
                 </g>
               );
-            },
+            }
           )}
         </svg>
       )}
