@@ -39,14 +39,11 @@ export function PredictionsTab(
 
   // Auto-select prediction if one exists & unselect if an invalid prediction hash is selected;
   useEffect(() => {
-    let internalPredictionHash = predictionHash;
-    const a = allPredictionOptions?.findIndex(
-      (v) => v.value === predictionHash
-    );
-    if (a === -1 || a === undefined) {
-      internalPredictionHash = undefined;
-    }
-    if (allPredictionOptions != null && allPredictionOptions.length >= 1 && internalPredictionHash == null) {
+    if (
+      allPredictionOptions &&
+      allPredictionOptions?.find((v) => v.value === predictionHash)
+    )
+      setPredictionHash(allPredictionOptions[0].value);
         setPredictionHash(allPredictionOptions[0].value);
     }
   }, [predictionHash, allPredictionOptions]);
