@@ -213,12 +213,12 @@ export function ChartPredictionMetricPerformanceChart(props: {
               : featureHashMap[feature]?.color ?? featureHashToColor(feature);
           const opacityBar =
             hoverKeyword === undefined || hoverKeyword === `${feature}n`
-              ? 1.0
-              : 0.2;
+              ? 0.75
+              : 0.1;
           const opacityLine =
             hoverKeyword === undefined || hoverKeyword === `${feature}a`
               ? 1.0
-              : 0.2;
+              : 0.1;
           return (
             <>
               {showDistributionBar ? (

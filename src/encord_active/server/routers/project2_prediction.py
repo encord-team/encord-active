@@ -6,7 +6,9 @@ from typing import Dict, List, Literal, Optional, Tuple
 import numpy as np
 from fastapi import APIRouter
 from sklearn import metrics as sklearn_metrics
-from sklearn.feature_selection import mutual_info_regression as sklearn_mutual_info_regression
+from sklearn.feature_selection import (
+    mutual_info_regression as sklearn_mutual_info_regression,
+)
 from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
