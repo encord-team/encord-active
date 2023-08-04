@@ -257,18 +257,23 @@ def migrate_coco_predictions(
 
     # Verify the validity of the ontology object hashes, ensuring they exist and represent bounding boxes
     pfs = ProjectFileStructure(project_dir)
-    relevant_ontology_hashes = {
-        o.feature_node_hash: o.shape for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
+    relevant_ontology_objects = {
+        o.feature_node_hash: o for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
     }
-    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_objects]
     if len(bad_hashes) > 0:
+        bad_hashes_str = ", ".join(f"'{_}'" for _ in bad_hashes)
+        relevant_objects_str = ", ".join(f"{hash_}: '{obj.name}'" for hash_, obj in relevant_ontology_objects.items())
         raise ValueError(
-            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
-            "Please, update the mapping with the correct object hashes from the project's ontology."
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes_str}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology.\n"
+            f"Use the following ontology objects for references: {relevant_objects_str}."
         )
 
     # Invert the ontology mapping keeping the target shapes (from object class id + shape to ontology object hash)
-    class_id_and_shape_to_ontology_hash = {(v, relevant_ontology_hashes[k]): k for k, v in ontology_mapping.items()}
+    class_id_and_shape_to_ontology_hash = {
+        (v, relevant_ontology_objects[k].shape): k for k, v in ontology_mapping.items()
+    }
 
     # Migrate predictions from COCO Results format to the Prediction class format
     predictions = []
@@ -363,16 +368,19 @@ def migrate_kitti_predictions(
 
     # Verify the validity of the ontology object hashes, ensuring they exist and represent bounding boxes
     pfs = ProjectFileStructure(project_dir)
-    relevant_ontology_hashes = {
-        o.feature_node_hash
+    relevant_ontology_objects = {
+        o.feature_node_hash: o
         for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
         if o.shape.value in BoxShapes
     }
-    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_objects]
     if len(bad_hashes) > 0:
+        bad_hashes_str = ", ".join(f"'{_}'" for _ in bad_hashes)
+        relevant_objects_str = ", ".join(f"{hash_}: '{obj.name}'" for hash_, obj in relevant_ontology_objects.items())
         raise ValueError(
-            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
-            "Please, update the mapping with the correct object hashes from the project's ontology."
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes_str}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology.\n"
+            f"Use the following ontology objects for references: {relevant_objects_str}."
         )
 
     # Migrate predictions from the KITTI format to the Prediction class format
@@ -462,16 +470,19 @@ def migrate_mask_predictions(
 
     # Verify the validity of the ontology object hashes, ensuring they exist and represent polygons
     pfs = ProjectFileStructure(project_dir)
-    relevant_ontology_hashes = {
-        o.feature_node_hash
+    relevant_ontology_objects = {
+        o.feature_node_hash: o
         for o in OntologyStructure.from_dict(json.loads(pfs.ontology.read_text())).objects
         if o.shape.value == ObjectShape.POLYGON
     }
-    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
+    bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_objects]
     if len(bad_hashes) > 0:
+        bad_hashes_str = ", ".join(f"'{_}'" for _ in bad_hashes)
+        relevant_objects_str = ", ".join(f"{hash_}: '{obj.name}'" for hash_, obj in relevant_ontology_objects.items())
         raise ValueError(
-            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
-            "Please, update the mapping with the correct object hashes from the project's ontology."
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes_str}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology.\n"
+            f"Use the following ontology objects for references: {relevant_objects_str}."
         )
 
     # Migrate predictions from segmentation masks to the Prediction class format
