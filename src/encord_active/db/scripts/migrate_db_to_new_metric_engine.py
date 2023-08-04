@@ -23,7 +23,7 @@ def migrate_db_to_new_metric_engine(
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
-            raise ValueError(f"Project does not exist in the database!!")
+            raise ValueError("Project does not exist in the database!!")
         data_metas = sess.exec(
             select(ProjectDataMetadata).where(ProjectDataMetadata.project_hash == project_hash)
         ).fetchall()
@@ -41,7 +41,7 @@ def migrate_db_to_new_metric_engine(
             project.project_remote_ssh_key_path,
         )
         data_analytics, data_analytics_extra, annotation_analytics, annotation_analytics_extra = res
-        print(f"Success: NOTE => data is not stored anyway in the database yet!!! [FIXME]")
+        print("Success: NOTE => data is not stored anyway in the database yet!!! [FIXME]")
         # FIXME: upsert the values into the database.
         # FIXME: reduced embeddings, need to start working out train / serialize / load (joblib / pickle / other?)
         #  can be delayed for later compared to metric_engine
