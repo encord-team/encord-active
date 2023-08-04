@@ -306,19 +306,27 @@ export type PaginationResult<T> = {
 
 export type ProjectPredictionSummary = {
   readonly classification_only: boolean;
+  readonly classification_tTN: number;
+  readonly classification_accuracy: number;
   readonly num_frames: number;
   readonly mAP: number;
   readonly mAR: number;
+  readonly mP: number;
+  readonly mR: number;
+  readonly mF1: number;
   readonly tTP: number;
   readonly tFP: number;
   readonly tFN: number;
-  readonly tp: Readonly<Record<string, number>>;
-  readonly fp: Readonly<Record<string, number>>;
-  readonly fn: Readonly<Record<string, number>>;
-  readonly precisions: Readonly<Record<string, number>>;
-  readonly recalls: Readonly<Record<string, number>>;
-  readonly correlation: Readonly<Record<string, number>>;
-  readonly importance: Readonly<Record<string, number>>;
+  readonly feature_properties: Readonly<Record<string,{
+    readonly ap: number;
+    readonly ar: number;
+    readonly p: number;
+    readonly r: number;
+    readonly f1: number;
+    readonly tp: number;
+    readonly fp: number;
+    readonly fn: number;
+  }>>;
   readonly prs: Readonly<
     Record<
       string,
@@ -328,6 +336,8 @@ export type ProjectPredictionSummary = {
       }>
     >
   >;
+  readonly correlation: Readonly<Record<string, number>>;
+  readonly importance: Readonly<Record<string, number>>;
 };
 
 export type ProjectMetricPerformance = {

@@ -33,55 +33,16 @@ export function PredictionSummaryTab(props: {
 
   const classificationOnlyProject = predictionSummaryData?.classification_only !== false;
 
-  const classificationOnlySummary = useMemo(() => {
-    if (predictionSummaryData == null || !classificationOnlyProject) {
-      return null;
+  const [predictionSummaryPrecisions, predictionSummaryRecalls] = useMemo(() => {
+    if (predictionSummaryData == null) {
+      return [undefined, undefined];
     }
-    const featureHashes: Record<string, { fp: number, fn: number, tp: number }> = {};
-    Object.entries(predictionSummaryData.tp).forEach(([f, tp]) => {
-      featureHashes[f] = { tp, fn: 0, fp: 0};
-    });
-    Object.entries(predictionSummaryData.fp).forEach(([f, fp]) => {
-      if (f in featureHashes) {
-        featureHashes[f].fp = fp;
-      } else {
-        featureHashes[f] = { fp, tp: 0, fn: 0}
-      }
-    });
-    Object.entries(predictionSummaryData.fn).forEach(([f, fn]) => {
-      if (f in featureHashes) {
-        featureHashes[f].fn = fn;
-      } else {
-        featureHashes[f] = { fn, tp: 0, fp: 0}
-      }
-    });
-    const perFeatureProps = Object.values(featureHashes).map(({fp, fn, tp}) => {
-      const p = (tp + fp) === 0 ? 0 : tp / (tp + fp);
-      const r = (tp + fn) === 0 ? 0 : tp / (tp + fn);
-      return {
-        p,
-        r,
-        f1: (p + r) === 0 ? 0 : (2 * p * r) / (p + r),
-      }
-    });
-    const featureCount = perFeatureProps.length;
-    const reduced = perFeatureProps.reduce(
-      (c, n) =>
-        ({p: c.p + n.p, r: c.r + n.r, f1: c.f1 + n.f1}),
-      {r: 0, p: 0, f1: 0}
-    );
-    const { tTP, tFN, tFP} = predictionSummaryData;
-    const tTN = (
-      predictionSummaryData.num_frames - tTP - tFN // FIXME: FP <= FN (and cover same values)
-    );
-    console.log({tTP, tTN, tFP, tFN, NF: predictionSummaryData.num_frames})
-    return {
-      a: (tTP + tTN) / predictionSummaryData.num_frames,
-      r: reduced.r / featureCount,
-      p: reduced.p / featureCount,
-      f1: reduced.f1 / featureCount,
-    }
-  }, [predictionSummaryData, classificationOnlyProject]);
+    const p = Object.entries(predictionSummaryData?.feature_properties)
+      .map(([k, v]) => [k, v.ap]);
+    const r = Object.entries(predictionSummaryData?.feature_properties)
+      .map(([k, v]) => [k, v.ar]);
+    return [Object.fromEntries(p), Object.fromEntries(r)];
+  }, [predictionSummaryData]);
 
   return (
     <>
@@ -102,30 +63,30 @@ export function PredictionSummaryTab(props: {
          </>
       )}
       <Row wrap justify="space-evenly">
-        {classificationOnlySummary ? (
+        {classificationOnlyProject ? (
           <>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Mean Precision"
-                value={classificationOnlySummary.p.toFixed(3)}
+                value={(predictionSummaryData?.mP ?? 0).toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Mean Recall"
-                value={classificationOnlySummary.r.toFixed(3)}
+                value={(predictionSummaryData?.mR ?? 0).toFixed(3)}
               />
             </Card>
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Accuracy"
-                value={classificationOnlySummary.a.toFixed(3)}
+                value={(predictionSummaryData?.classification_accuracy ?? 0).toFixed(3)}
               />
             </Card>
              <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Average F1"
-                value={classificationOnlySummary.f1.toFixed(3)}
+                value={(predictionSummaryData?.mF1 ?? 0).toFixed(3)}
               />
             </Card>
           </>
@@ -196,7 +157,7 @@ export function PredictionSummaryTab(props: {
       </Divider>
       <ChartPredictionMetricVBar
         predictionMetric="feature-precision"
-        data={predictionSummaryData?.precisions}
+        data={predictionSummaryPrecisions}
         featureHashMap={featureHashMap}
       />
       <Divider orientation="left">
@@ -204,7 +165,7 @@ export function PredictionSummaryTab(props: {
       </Divider>
       <ChartPredictionMetricVBar
         predictionMetric="feature-recall"
-        data={predictionSummaryData?.recalls}
+        data={predictionSummaryRecalls}
         featureHashMap={featureHashMap}
       />
       <Divider orientation="left">
