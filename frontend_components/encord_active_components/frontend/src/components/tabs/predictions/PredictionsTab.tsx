@@ -42,9 +42,8 @@ export function PredictionsTab(
     if (
       allPredictionOptions &&
       allPredictionOptions?.find((v) => v.value === predictionHash)
-    )
+    ) {
       setPredictionHash(allPredictionOptions[0].value);
-        setPredictionHash(allPredictionOptions[0].value);
     }
   }, [predictionHash, allPredictionOptions]);
 
