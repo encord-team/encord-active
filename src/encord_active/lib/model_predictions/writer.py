@@ -432,6 +432,9 @@ class PredictionWriter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if len(self.predictions) == 0:
+            return
+
         if isinstance(self.predictions[0], ClassificationPredictionEntry):
             storage_folder = self.storage_dir / MainPredictionType.CLASSIFICATION.value
             storage_folder.mkdir(parents=True, exist_ok=True)
@@ -443,7 +446,8 @@ class PredictionWriter:
 
             # 1. The labels
             df = pd.DataFrame(self.classification_labels)
-            df.to_csv(storage_folder / LABELS_FILE)
+            if not df.empty:
+                df.to_csv(storage_folder / LABELS_FILE)
 
             # 3. The class idx map
             class_index: Dict[str, OntologyClassificationJSON] = {}
@@ -485,7 +489,8 @@ class PredictionWriter:
                 df["rle"] = df["rle"].map(
                     lambda x: " ".join(x.reshape(-1).astype(str).tolist()) if isinstance(x, np.ndarray) else x
                 )
-            df.to_csv(storage_folder / LABELS_FILE)
+            if not df.empty:
+                df.to_csv(storage_folder / LABELS_FILE)
 
             # 2. The GT matches
             with (storage_folder / GROUND_TRUTHS_MATCHED_FILE).open("w") as f:
