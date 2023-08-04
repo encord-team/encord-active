@@ -53,33 +53,36 @@ def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink
 def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
     # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
     img_dir.mkdir(parents=True, exist_ok=True)
-    command = f"ffmpeg -i {video_file_name} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner"
+    command = f'ffmpeg -i "{video_file_name}" -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
     if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False).returncode != 0:
         raise RuntimeError(
-            "Splitting videos into multiple image files failed. Please ensure that you have FFMPEG "
-            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
+            "Failed to split the video into multiple image files. Please ensure that you have FFMPEG "
+            f"installed on your machine. You can download it from https://ffmpeg.org/download.html. "
+            f" The command that failed was: `{command}`."
         )
 
 
 def count_frames(video_file_name: Path) -> int:
-    command = f"ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=nb_read_frames -of csv=p=0 {video_file_name}"
+    command = f'ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=nb_read_frames -of csv=p=0 "{video_file_name}"'
     output = subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False)
     if output.returncode != 0:
         raise RuntimeError(
-            "Counting the number of frames in a video has failed. Please ensure that you have FFMPEG "
-            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
+            "Failed to count the number of frames in the video. Please ensure that you have FFMPEG "
+            "installed on your machine. You can download it from https://ffmpeg.org/download.html. "
+            f"The command that failed was: `{command}`."
         )
     output_str = output.stdout.decode("utf-8")
     return int(output_str)
 
 
 def get_frames_per_second(video_file_name: Path) -> float:
-    command = f'ffmpeg -i {video_file_name} 2>&1 | sed -n "s/.*, \\(.*\\) fp.*/\\1/p"'
+    command = f'ffmpeg -i "{video_file_name}" 2>&1 | sed -n "s/.*, \\(.*\\) fp.*/\\1/p"'
     output = subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False)
     if output.returncode != 0:
         raise RuntimeError(
-            "Counting the frame rate in a video has failed. Please ensure that you have FFMPEG "
-            f"installed on your machine: https://ffmpeg.org/download.html The comamand that failed was `{command}`."
+            "Failed to count the frame rate in the video. Please ensure that you have FFMPEG "
+            f"installed on your machine. You can download it from https://ffmpeg.org/download.html. "
+            f"The command that failed was: `{command}`."
         )
     output_str = output.stdout.decode("utf-8")
     return float(output_str)
