@@ -85,8 +85,26 @@ export function PredictionSummaryTab(props: {
             </Card>
              <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
-                title="Average F1"
+                title="F1"
                 value={(predictionSummaryData?.mF1 ?? 0).toFixed(3)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="TP"
+                value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="FP"
+                value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title="FN"
+                value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
               />
             </Card>
           </>
@@ -94,36 +112,36 @@ export function PredictionSummaryTab(props: {
             <>
                 <Card bordered={false} loading={predictionSummaryData == null}>
                   <Statistic
-                    title="mAP"
+                    title={<div>mAP<sup>@IOU={iou}</sup></div>}
                     value={(predictionSummaryData?.mAP ?? 0).toFixed(3)}
                   />
                 </Card>
                 <Card bordered={false} loading={predictionSummaryData == null}>
                   <Statistic
-                    title="mAR"
-                    value={(predictionSummaryData?.mAR ?? 0).toFixed(3)}
+                    title={<div>mAR<sup>@IOU={iou}</sup></div>}
+                    value={(predictionSummaryData?.mR ?? 0).toFixed(3)}
                   />
                 </Card>
+              <Card bordered={false} loading={predictionSummaryData == null}>
+                <Statistic
+                  title={<div>TP<sup>@IOU={iou}</sup></div>}
+                  value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
+                />
+              </Card>
+              <Card bordered={false} loading={predictionSummaryData == null}>
+                <Statistic
+                  title={<div>FP<sup>@IOU={iou}</sup></div>}
+                  value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
+                />
+              </Card>
+              <Card bordered={false} loading={predictionSummaryData == null}>
+                <Statistic
+                  title={<div>FN<sup>@IOU={iou}</sup></div>}
+                  value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
+                />
+              </Card>
             </>
         )}
-        <Card bordered={false} loading={predictionSummaryData == null}>
-          <Statistic
-            title="True Positives"
-            value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
-          />
-        </Card>
-        <Card bordered={false} loading={predictionSummaryData == null}>
-          <Statistic
-            title="False Positives"
-            value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
-          />
-        </Card>
-        <Card bordered={false} loading={predictionSummaryData == null}>
-          <Statistic
-            title="False Negatives"
-            value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
-          />
-        </Card>
         <Card bordered={false} loading={predictionSummaryData == null}>
           <Statistic
             title="Labels"

@@ -158,8 +158,15 @@ def get_project_prediction_summary(
         # Mean Average Precision is calculated later
         feature_properties = {}
         for feature_hash in all_feature_hashes:
+            fn_feature = false_negative_count_map.get(feature_hash, 0)
+            tp_feature = true_positive_count_map.get(feature_hash, 0)
+            fp_feature = false_positive_count_map.get(feature_hash, 0)
+            feature_p = tp_feature / max(tp_feature + fp_feature, 1)
+            feature_r = tp_feature / max(tp_feature + fn_feature, 1)
+            feature_labels = tp_feature + fn_feature
+
             ar_values = []
-            iou_thresholds = [x / 10.0 for x in range(0, 11, 1) if (x / 10.0) >= iou]
+            iou_thresholds = [x / 10.0 for x in range(5, 11, 1)]
             for iou_threshold in iou_thresholds:
                 tp_iou: int = (
                     sess.exec(
@@ -172,24 +179,8 @@ def get_project_prediction_summary(
                     ).first()
                     or 0
                 )
-                fn_iou: int = (
-                    sess.exec(
-                        select(sql_count()).where(
-                            ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
-                            ProjectPredictionAnalyticsFalseNegatives.feature_hash == feature_hash,
-                            ProjectPredictionAnalyticsFalseNegatives.iou_threshold < iou_threshold,
-                        )
-                    ).first()
-                    or 0
-                )
-                iou_recall = tp_iou / max(tp_iou + fn_iou, 1)
+                iou_recall = tp_iou / max(feature_labels, 1)
                 ar_values.append(iou_recall)
-
-            fn_feature = false_negative_count_map.get(feature_hash, 0)
-            tp_feature = true_positive_count_map.get(feature_hash, 0)
-            fp_feature = false_positive_count_map.get(feature_hash, 0)
-            feature_p = tp_feature / max(tp_feature + fp_feature, 1)
-            feature_r = tp_feature / max(tp_feature + fn_feature, 1)
             feature_properties[feature_hash] = {
                 "ar": 2.0 * sklearn_metrics.auc(iou_thresholds, ar_values),
                 "p": feature_p,
