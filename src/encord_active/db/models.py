@@ -159,7 +159,7 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_object_count: Optional[int] = MetricFieldTypePositiveInteger
     metric_object_density: Optional[float] = MetricFieldTypeNormal
     metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
-    metric_image_singularity: Optional[float] = MetricFieldTypeNormal
+    metric_image_uniqueness: Optional[float] = MetricFieldTypeNormal
 
     # 4x custom normal metrics
     metric_custom0: Optional[float] = MetricFieldTypeNormal
@@ -186,7 +186,8 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     frame: int = Field(primary_key=True, ge=0)
     # Embeddings
     embedding_clip: Optional[bytes]
-    embedding_hu: Optional[bytes]
+    # Embeddings derived
+    derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
@@ -232,9 +233,6 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
     annotation_email: str
     annotation_manual: bool
-    # Embeddings
-    embedding_clip: Optional[bytes]
-    embedding_hu: Optional[bytes]
     # Metrics - Absolute Size
     metric_width: Optional[int] = MetricFieldTypePositiveInteger
     metric_height: Optional[int] = MetricFieldTypePositiveInteger
@@ -254,7 +252,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     # Both - Annotation based
     metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Metrics - Label Only
-    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = MetricFieldTypeNormal
     metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
     metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
@@ -285,6 +283,8 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     # Embeddings
     embedding_clip: Optional[bytes]
     embedding_hu: Optional[bytes]
+    # Embeddings derived
+    derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
     # Metric comments
     metric_metadata: dict = Field(sa_column=Column(JSON))
 
@@ -415,7 +415,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     # Both - Annotation based
     metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Metrics - Label Only
-    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = MetricFieldTypeNormal
     metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
     metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
@@ -539,7 +539,7 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     # Both - Annotation based
     metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
     # Metrics - Label Only
-    metric_label_duplicates: Optional[float] = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = MetricFieldTypeNormal
     metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
     metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
     metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
