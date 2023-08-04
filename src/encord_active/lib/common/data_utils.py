@@ -201,7 +201,7 @@ def file_path_to_url(path: Path, project_dir: Path, relative: Optional[bool] = N
     return path.as_uri()
 
 
-def download_image(url: str, project_dir: Path) -> Image.Image:
+def download_image(url: str, project_dir: Path, cache: bool = True) -> Image.Image:
     path = url_to_file_path(url, project_dir)
     if path is not None:
         return Image.open(path)
@@ -209,6 +209,12 @@ def download_image(url: str, project_dir: Path) -> Image.Image:
     cached_image = _get_from_cache(url)
     if cached_image is not None:
         return Image.open(cached_image)
+
+    if not cache:
+        r = requests.get(url)
+        if r.status_code != 200:
+            raise ConnectionError(f"Something happened, couldn't download file from: {url}")
+        Image.open(BytesIO(r.content))
 
     new_cache_download = _add_to_cache(url)
     try:
