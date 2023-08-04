@@ -83,8 +83,8 @@ class Prediction(BaseModel):
 
     @root_validator(pre=True, allow_reuse=True)
     def one_of_object_classification(cls, values):  # pylint: disable=no-self-argument
-        object = values.get("object")
+        object_ = values.get("object")
         classification = values.get("classification")
-        exactly_one_of = (object and not classification) or (classification and not object)
-        assert exactly_one_of, "Prediction must have exactly one of `object` or `classification"
+        exactly_one_of = (object_ and not classification) or (classification and not object_)
+        assert exactly_one_of, 'Prediction must have exactly one "object" or "classification"'
         return values
