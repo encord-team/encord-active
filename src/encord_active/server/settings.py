@@ -16,14 +16,14 @@ class AvailableSandboxProjects(str, Enum):
 
 
 class Env(str, Enum):
-    DEV = "dev"
-    LOCAL = "local"
+    DEVELOPMENT = "development"
+    PACKAGED = "packaged"
     SANDBOX = "sandbox"
-    PROD = "prod"
+    PRODUCTION = "production"
 
 
 class Settings(BaseSettings):
-    ENV: Env = Env.LOCAL
+    ENV: Env = Env.PACKAGED
     DEPLOYMENT_NAME: Optional[str] = None
     API_URL: str = "http://localhost:8000"
     ALLOWED_ORIGIN: Optional[str] = None

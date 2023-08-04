@@ -1,13 +1,9 @@
-import {defineConfig, loadEnv, UserConfig} from "vite";
+import { defineConfig, loadEnv, UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }): UserConfig => {
-  process.env = {...process.env, ...loadEnv(mode, process.cwd(), "")};
-  if (mode !== "development") {
-    // Build is served on the same url.
-    process.env.VITE_API_URL = "";
-  }
+  process.env = { ...process.env, ...loadEnv(mode, process.cwd(), "") };
   return {
     build: {
       outDir: "dist",
@@ -31,8 +27,6 @@ export default defineConfig(({ mode }): UserConfig => {
     define: {
       "process.env": process.env,
     },
-    plugins: [
-      react(),
-    ],
+    plugins: [react()],
   };
 });

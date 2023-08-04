@@ -26,7 +26,7 @@ app.include_router(project2.router, dependencies=[Depends(verify_token)])
 
 origins = [get_settings().ALLOWED_ORIGIN, "http://localhost:3000", "http://localhost:5173", "http://localhost:5173/"]
 
-is_dev = get_settings().ENV == Env.DEV
+is_dev = get_settings().ENV == Env.DEVELOPMENT
 
 if is_dev:
     logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ if is_dev:
 else:
     import encord_active_components as frontend_components
 
-    frontend_build_path = Path(frontend_components.__file__).parent / "frontend" / "dist"
+    frontend_build_path = Path(frontend_components.__file__).parent / "frontend" / "dist" / get_settings().ENV.value
 
     if not frontend_build_path.exists() or not (frontend_build_path / "assets").exists():
         logger = logging.getLogger(__name__)

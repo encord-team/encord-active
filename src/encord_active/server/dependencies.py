@@ -75,5 +75,5 @@ async def verify_token_with_project_hash(token: Annotated[str, Depends(oauth2_sc
 
 
 async def verify_premium():
-    if not get_settings().ENV != Env.LOCAL:
+    if not get_settings().ENV != Env.PACKAGED:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Search is not enabled")

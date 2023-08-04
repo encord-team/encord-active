@@ -40,7 +40,7 @@ export const ProjectsPage = ({
 
   return (
     <div className="h-max p-5 flex flex-col gap-5">
-      {env !== "prod" && (
+      {env !== "production" && (
         <>
           <h1 className="font-medium text-3xl">Let’s get started!</h1>
           <div className="flex flex-row gap-5 flex-wrap">
@@ -77,7 +77,7 @@ export const ProjectsPage = ({
         )}
       </div>
       {/* TODO: temporarily hide sandbox projects  */}
-      {false && env !== "prod" && sandboxProjects.length && (
+      {false && env !== "production" && sandboxProjects.length && (
         <>
           <h2 className="font-light text-xl text-neutral-700">
             View a sandbox project
