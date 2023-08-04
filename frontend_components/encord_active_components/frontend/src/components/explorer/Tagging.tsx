@@ -6,7 +6,7 @@ import { TbPolygon } from "react-icons/tb";
 
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
-import { Spin } from "./Spinner";
+import { Spinner } from "./Spinner";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -39,7 +39,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
         label.forEach(allTags.allLabelTags.add, allTags.allLabelTags),
         allTags
       ),
-      defaultAllTags
+      defaultAllTags,
     );
 };
 
@@ -56,7 +56,7 @@ export const TaggingDropdown = ({
       {...rest}
       className={classy(
         "dropdown dropdown-bottom min-w-fit tooltip tooltip-right",
-        className
+        className,
       )}
       data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
     >
@@ -76,7 +76,7 @@ export const TaggingDropdown = ({
 
 export const BulkTaggingForm = ({ items }: { items: string[] }) => {
   const { allDataTags, allLabelTags, isLoading, taggedItems } = useAllTags(
-    new Set(items)
+    new Set(items),
   );
   const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
 
@@ -95,29 +95,32 @@ export const BulkTaggingForm = ({ items }: { items: string[] }) => {
                 ? { ...itemTags, [scope]: [...itemTags[scope], selected] }
                 : { ...defaultTags, [scope]: [selected] },
             };
-          })
+          }),
         )
       }
       onDeselect={(scope, deselected) =>
         mutate(
-          items.reduce((payload, id) => {
-            const itemPreviousTags = taggedItems.get(id);
-            if (
-              itemPreviousTags &&
-              itemPreviousTags[scope].includes(deselected)
-            ) {
-              payload.push({
-                id,
-                groupedTags: {
-                  ...itemPreviousTags,
-                  [scope]: itemPreviousTags[scope].filter(
-                    (tag) => tag !== deselected
-                  ),
-                },
-              });
-            }
-            return payload;
-          }, [] as Parameters<typeof mutate>[0])
+          items.reduce(
+            (payload, id) => {
+              const itemPreviousTags = taggedItems.get(id);
+              if (
+                itemPreviousTags &&
+                itemPreviousTags[scope].includes(deselected)
+              ) {
+                payload.push({
+                  id,
+                  groupedTags: {
+                    ...itemPreviousTags,
+                    [scope]: itemPreviousTags[scope].filter(
+                      (tag) => tag !== deselected,
+                    ),
+                  },
+                });
+              }
+              return payload;
+            },
+            [] as Parameters<typeof mutate>[0],
+          ),
         )
       }
       seletedTags={{ data: [...allDataTags], label: [...allLabelTags] }}
@@ -147,7 +150,7 @@ export const TaggingForm = ({
   const { data: allTags } = useApi().fetchProjectTags();
 
   const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
-    TAG_GROUPS[0]
+    TAG_GROUPS[0],
   );
 
   // NOTE: hack to prevent loosing focus when loading
@@ -160,7 +163,7 @@ export const TaggingForm = ({
       tabIndex={0}
       className={classy(
         "dropdown-content card card-compact w-64 p-2 shadow bg-base-100 text-primary-content",
-        className
+        className,
       )}
     >
       <div className="tabs flex justify-center bg-base-100">
@@ -178,7 +181,7 @@ export const TaggingForm = ({
         ))}
       </div>
       <div ref={ref} tabIndex={-1} className="card-body">
-        {loading && <Spin />}
+        {loading && <Spinner />}
         {TAG_GROUPS.map(({ value }) => (
           <Select
             key={value}

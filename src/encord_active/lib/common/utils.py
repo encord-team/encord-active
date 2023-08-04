@@ -26,7 +26,7 @@ import pandas as pd
 from loguru import logger
 from PIL import Image
 from shapely.errors import ShapelyDeprecationWarning
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 from tqdm.auto import tqdm
 
 from encord_active.lib.labels.object import BoxShapes, ObjectShape, SimpleShapes
@@ -123,7 +123,7 @@ def get_object_coordinates(o: dict) -> Optional[list[tuple[Any, Any]]]:
     return points
 
 
-def get_polygon(o: dict) -> Optional[Polygon]:
+def get_polygon(o: dict, force_simple_polygons: bool = True) -> Optional[Polygon]:
     """
     Convert object dict into shapely polygon.
     :param o: the Encord object dict.
@@ -140,7 +140,7 @@ def get_polygon(o: dict) -> Optional[Polygon]:
         return None
 
     polygon = Polygon(points)
-    if not polygon.is_simple:
+    if force_simple_polygons and not polygon.is_simple:
         logger.debug("Not simple")
         return None
 
@@ -157,10 +157,20 @@ def get_geometry_from_encord_object(obj: dict, w: int, h: int) -> Optional[np.nd
     :return: The polygon coordinates
     """
 
-    polygon = get_polygon(obj)
+    polygon = get_polygon(obj, force_simple_polygons=False)
+
     if polygon:
+        polygon_buffered = polygon.buffer(0)
+        if isinstance(polygon_buffered, MultiPolygon):
+            if abs(polygon_buffered.area - polygon.area) < 1e-6:
+                final_polygon = polygon
+            else:
+                return None
+        else:
+            final_polygon = polygon_buffered
+
         img_size = np.array([[w, h]])
-        return (np.array(polygon.exterior.xy).T * img_size).astype(int)
+        return (np.array(final_polygon.exterior.xy).T * img_size).astype(int)
     else:
         return None
 

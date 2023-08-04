@@ -19,12 +19,12 @@ from encord_active.server.utils import get_similarity_finder
 from .routers import project, project2
 from .settings import Env, get_settings
 
-app = FastAPI(dependencies=[Depends(verify_token)])
+app = FastAPI()
 
-app.include_router(project.router)
-app.include_router(project2.router)
+app.include_router(project.router, dependencies=[Depends(verify_token)])
+app.include_router(project2.router, dependencies=[Depends(verify_token)])
 
-origins = [get_settings().ALLOWED_ORIGIN, "http://localhost:3000", "http://localhost:5173"]
+origins = [get_settings().ALLOWED_ORIGIN, "http://localhost:3000", "http://localhost:5173", "http://localhost:5173/"]
 
 is_dev = get_settings().ENV == Env.DEV
 

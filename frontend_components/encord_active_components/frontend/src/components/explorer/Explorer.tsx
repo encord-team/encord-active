@@ -6,7 +6,7 @@ import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
 import { RiUserLine } from "react-icons/ri";
 import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
-import { Spin } from "./Spinner";
+import { Spinner } from "./Spinner";
 import { useAllTags } from "../explorer/Tagging";
 import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
@@ -47,6 +47,8 @@ import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { apiUrl } from "../../constants";
+import { useImageSrc } from "../../hooks/useImageSrc";
+import { useAuth } from "../../authContext";
 
 export type Props = {
   projectHash: string;
@@ -125,9 +127,11 @@ export const Explorer = ({
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
   const filters = useDebounce(rawFilters, 500);
   const apiContext = useContext(ApiContext);
+  const { token } = useAuth();
+
   let api: ReturnType<typeof getApi>;
   if (apiContext == null) {
-    api = getApi(projectHash);
+    api = getApi(projectHash, token);
   } else {
     api = apiContext;
   }
@@ -541,7 +545,7 @@ export const Explorer = ({
           </div>
           {!!loadingDescription ? (
             <div className="h-32 flex items-center gap-2">
-              <Spin />
+              <Spinner />
               <span className="text-xl">{loadingDescription}</span>
             </div>
           ) : itemsToRender.length ? (
@@ -617,7 +621,7 @@ const PredictionFilters = ({
     if (iou != null && !drag) onIouChange?.(iou);
   }, [iou, drag]);
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Spinner />;
   if (!predictionTypes?.length) return null;
 
   const outcomes =
@@ -720,7 +724,7 @@ const Embeddings = ({
     <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
       {isLoading || isloadingItems ? (
         <div className="absolute" style={{ left: "50%" }}>
-          <Spin />
+          <Spinner />
         </div>
       ) : (
         <ScatteredEmbeddings
@@ -779,7 +783,7 @@ const ItemPreview = ({
   const { data, isLoading } = useApi().fetchItem(id, iou);
   const { mutate } = useApi().itemTagsMutation;
 
-  if (isLoading || !data) return <Spin />;
+  if (isLoading || !data) return <Spinner />;
 
   const { description, ...metrics } = data.metadata.metrics;
   const { editUrl } = data;
@@ -868,7 +872,7 @@ const GalleryItem = ({
   if (isLoading || !data)
     return (
       <div className="w-full h-full flex justify-center items-center min-h-[230px]">
-        <Spin />
+        <Spinner />
       </div>
     );
 
@@ -1030,10 +1034,13 @@ const ImageWithPolygons = ({
     );
   }, [width, height, item.id]);
 
-  const itemUrl =
-    item.url.startsWith("https://") || item.url.startsWith("https://")
-      ? item.url
-      : `${apiUrl}${item.url}`;
+  const itemUrl = item.url.startsWith("http")
+    ? item.url
+    : `${apiUrl}${item.url}`;
+
+  const { data: imgSrcUrl, isLoading } = useImageSrc(itemUrl);
+
+  if (isLoading) return <Spinner />;
 
   return (
     <figure {...rest} className={classy("relative", className)}>
@@ -1041,7 +1048,7 @@ const ImageWithPolygons = ({
         <video
           ref={video}
           className="object-contain rounded transition-opacity"
-          src={itemUrl}
+          src={imgSrcUrl}
           muted
           controls={false}
           onLoadedMetadata={() => {
@@ -1056,7 +1063,7 @@ const ImageWithPolygons = ({
           ref={image}
           className="object-contain rounded transition-opacity"
           alt=""
-          src={itemUrl}
+          src={imgSrcUrl}
         />
       )}
       {width && height && polygons.length > 0 && (

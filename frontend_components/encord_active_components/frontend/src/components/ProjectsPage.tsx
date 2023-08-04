@@ -10,16 +10,18 @@ import { classy } from "../helpers/classy";
 import { fork } from "radash";
 import { useRef } from "react";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiUrl, env } from "../constants";
 import axios from "axios";
+import { useImageSrc } from "../hooks/useImageSrc";
+import { Spinner } from "./explorer/Spinner";
 
 const useDownloadProject = (options?: Parameters<typeof useMutation>[2]) =>
   useMutation(
     ["useDownloadProject"],
     async (projectHash: string) =>
       await axios.get(`${apiUrl}/projects/${projectHash}/download_sandbox`),
-    options
+    options,
   );
 
 export type Props = {
@@ -32,7 +34,7 @@ export const ProjectsPage = ({
 }: Props) => {
   const [sandboxProjects, userProjects] = fork(
     projects,
-    ({ sandbox }) => !!sandbox
+    ({ sandbox }) => !!sandbox,
   );
   const { mutate: download, isLoading } = useDownloadProject();
 
@@ -90,7 +92,7 @@ export const ProjectsPage = ({
                   showDownloadedBadge={true}
                   onClick={() =>
                     (project.downloaded ? onSelectLocalProject : download)(
-                      project["projectHash"]
+                      project["projectHash"],
                     )
                   }
                 />
@@ -126,7 +128,7 @@ const NewProjectButton = ({
       <button
         className={classy(
           "btn btn-ghost normal-case flex felx-row gap-3 justify-start w-96 h-28 border-1 border-zinc-50 p-3.5",
-          { "shadow-lg": !disabled }
+          { "shadow-lg": !disabled },
         )}
         onClick={onClick}
         disabled={disabled}
@@ -162,51 +164,55 @@ const ProjectCard = ({
   showDownloadedBadge?: boolean;
   onClick: ButtonCardProps["onClick"];
 }) => {
-    const video = useRef<HTMLVideoElement>(null);
-    return (
-      <ButtonCard onClick={onClick}>
-        <figure className="max-h-36 rounded">
-            {project.imageUrlTimestamp != null && project.imageUrl ? (
-                <video
-                  src={project.imageUrl}
-                  muted
-                  controls={false}
-                  onLoadedMetadata={() => {
-                    const videoRef = video.current;
-                    if (videoRef != null) {
-                      videoRef.currentTime = project.imageUrlTimestamp || 0;
-                    }
-                  }}
-                />
-            ) : (
-                <img src={project.imageUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
-            )}
-        </figure>
-        <div className="card-body w-full p-0 justify-between gap-1">
-          <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
-          <div className="flex flex-col">
-            <ProjectStat
-              title={"Dataset"}
-              value={project?.stats?.dataUnits}
-              iconUrl={fileImageUrl}
-            />
-            <ProjectStat
-              title={"Annotations"}
-              value={project?.stats?.labels}
-              iconUrl={annotationsUrl}
-            />
-            <ProjectStat
-              title={"Classes"}
-              value={project?.stats?.classes}
-              iconUrl={classesUrl}
-            />
-          </div>
+  const video = useRef<HTMLVideoElement>(null);
+  const { data: imgSrcUrl, isLoading } = useImageSrc(project.imageUrl);
+
+  if (isLoading) return <Spinner />;
+
+  return (
+    <ButtonCard onClick={onClick}>
+      <figure className="max-h-36 rounded">
+        {project.imageUrlTimestamp != null && imgSrcUrl ? (
+          <video
+            src={imgSrcUrl}
+            muted
+            controls={false}
+            onLoadedMetadata={() => {
+              const videoRef = video.current;
+              if (videoRef != null) {
+                videoRef.currentTime = project.imageUrlTimestamp || 0;
+              }
+            }}
+          />
+        ) : (
+          <img src={imgSrcUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
+        )}
+      </figure>
+      <div className="card-body w-full p-0 justify-between gap-1">
+        <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
+        <div className="flex flex-col">
+          <ProjectStat
+            title={"Dataset"}
+            value={project?.stats?.dataUnits}
+            iconUrl={fileImageUrl}
+          />
+          <ProjectStat
+            title={"Annotations"}
+            value={project?.stats?.labels}
+            iconUrl={annotationsUrl}
+          />
+          <ProjectStat
+            title={"Classes"}
+            value={project?.stats?.classes}
+            iconUrl={classesUrl}
+          />
         </div>
-        {showDownloadedBadge && project?.downloaded ? (
-          <div className="badge absolute top-1">Downloaded</div>
-        ) : null}
-      </ButtonCard>
-    );
+      </div>
+      {showDownloadedBadge && project?.downloaded ? (
+        <div className="badge absolute top-1">Downloaded</div>
+      ) : null}
+    </ButtonCard>
+  );
 };
 const ProjectStat = ({
   title,
@@ -244,7 +250,7 @@ type ButtonCardProps = Pick<
 >;
 const ButtonCard = ({ children, onClick }: ButtonCardProps) => (
   <button
-    className="card card-bordered btn btn-ghost normal-case text-start w-72 h-[17rem] bg-base-100 shadow-sm border-1 border-zinc-50 rounded-xl py-3 gap-2"
+    className="card card-bordered flex-nowrap btn btn-ghost normal-case text-start w-72 h-[17rem] bg-base-100 shadow-sm border-1 border-zinc-50 rounded-xl py-3 gap-2"
     onClick={onClick}
     disabled={!onClick}
   >
