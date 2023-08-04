@@ -114,8 +114,8 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.RANK,  # FIXME: attempt to convert this to normal metric!!
     ),
-    "metric_image_singularity": MetricDefinition(
-        title="Image Singularity",
+    "metric_image_uniqueness": MetricDefinition(
+        title="Image Uniqueness",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
@@ -129,7 +129,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_duplicates": MetricDefinition(
+    "metric_max_iou": MetricDefinition(
         title="Label Duplicates",
         short_desc="",
         long_desc="",

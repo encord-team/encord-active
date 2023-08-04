@@ -68,12 +68,12 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Green Values": "metric_green",
     "Image Difficulty": "metric_image_difficulty",
     "Image Diversity": "metric_image_difficulty",  # NOTE: Renamed
-    "Image Singularity": "metric_image_singularity",
+    "Image Singularity": "metric_image_uniqueness",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",
     "Red Values": "metric_red",
     "Sharpness": "metric_sharpness",
-    "Annotation Duplicates": "metric_label_duplicates",
+    "Annotation Duplicates": "metric_max_iou",
     "Annotation closeness to image borders": "metric_label_border_closeness",
     "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
     "Missing Objects and Broken Tracks": "metric_label_missing_or_broken_tracks",
@@ -365,7 +365,7 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
                 current_true_positive = model_prediction_entry
                 current_true_positive_confidence = model_confidence
             else:
-                # This model is always a false postive, as there exists a prediction with higher confidence
+                # This model is always a false positive, as there exists a prediction with higher confidence
                 # that for the whole iou range this is valid that is the new true positive.
                 model_prediction_entry.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_FP
 
