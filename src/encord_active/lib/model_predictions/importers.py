@@ -117,14 +117,14 @@ def import_coco_predictions(
         to match the same category if they respectively cover the annotations with polygon or bounding box shape
         of that class.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param image_mapping: The mapping from the ids of the images in the COCO file to Encord's data unit hashes.
         This mapping allows to accurately match each image mentioned in the COCO results file with its corresponding
         data unit in Encord. It is a dictionary where the keys are the ids of the images in the COCO file, and the
         values are the hashes of the corresponding data units.
         If `image_mapping` is not specified, the function will attempt to load the mapping
-        from the `image_mapping.json` file located in the predictions directory.
+        from the `image_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     """
     predictions = migrate_coco_predictions(
@@ -153,7 +153,7 @@ def import_kitti_predictions(
         It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
         and the values are the corresponding names of the label classes.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param file_name_regex: A regular expression pattern used to filter the files based on their names.
         Only the files whose names match the pattern will be considered for import.
@@ -193,7 +193,7 @@ def import_mask_predictions(
         It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
         and the values are the corresponding ids of the label classes.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param file_name_regex: A regular expression pattern used to filter the files based on their names.
         Only the files whose names match the pattern will be considered for import.
@@ -233,14 +233,14 @@ def migrate_coco_predictions(
         to match the same category if they respectively cover the annotations with polygon or bounding box shape
         of that class.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param image_mapping: The mapping from the ids of the images in the COCO file to Encord's data unit hashes.
         This mapping allows to accurately match each image mentioned in the COCO results file with its corresponding
         data unit in Encord. It is a dictionary where the keys are the ids of the images in the COCO file, and the
         values are the hashes of the corresponding data units.
         If `image_mapping` is not specified, the function will attempt to load the mapping
-        from the `image_mapping.json` file located in the predictions directory.
+        from the `image_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :return: The migrated predictions in Encord's Prediction class format.
     """
@@ -262,7 +262,10 @@ def migrate_coco_predictions(
     }
     bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
     if len(bad_hashes) > 0:
-        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
+        raise ValueError(
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology."
+        )
 
     # Invert the ontology mapping keeping the target shapes (from object class id + shape to ontology object hash)
     class_id_and_shape_to_ontology_hash = {(v, relevant_ontology_hashes[k]): k for k, v in ontology_mapping.items()}
@@ -280,10 +283,10 @@ def migrate_coco_predictions(
 
         # Normalize the prediction's points by their image size to match the Encord format
         if res.segmentation:
-            format, shape = Format.POLYGON, Shape.POLYGON
+            format_, shape = Format.POLYGON, Shape.POLYGON
             data = res.segmentation / np.array([[du.width, du.height]])
         elif res.bbox:
-            format, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
+            format_, shape = Format.BOUNDING_BOX, Shape.BOUNDING_BOX
             orig_x, orig_y, orig_w, orig_h = res.bbox
             x = orig_x / du.width
             y = orig_y / du.height
@@ -304,7 +307,7 @@ def migrate_coco_predictions(
                 confidence=res.score,
                 object=ObjectDetection(
                     feature_hash=ontology_obj_hash,
-                    format=format,
+                    format=format_,
                     data=data,
                 ),
             )
@@ -330,7 +333,7 @@ def migrate_kitti_predictions(
         It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
         and the values are the corresponding names of the label classes.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param file_name_regex: A regular expression pattern used to filter the files based on their names.
         Only the files whose names match the pattern will be considered for migration.
@@ -367,7 +370,10 @@ def migrate_kitti_predictions(
     }
     bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
     if len(bad_hashes) > 0:
-        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
+        raise ValueError(
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology."
+        )
 
     # Migrate predictions from the KITTI format to the Prediction class format
     predictions = []
@@ -427,7 +433,7 @@ def migrate_mask_predictions(
         It is a dictionary where the keys are the ontology object hashes used in the ontology of the project,
         and the values are the corresponding ids of the label classes.
         If `ontology_mapping` is not specified, the function will attempt to load the mapping
-        from the `ontology_mapping.json` file located in the predictions directory.
+        from the `ontology_mapping.json` file located in the predictions' directory.
         If such file doesn't exist, a `FileNotFoundError` will be raised.
     :param file_name_regex: A regular expression pattern used to filter the files based on their names.
         Only the files whose names match the pattern will be considered for migration.
@@ -463,7 +469,10 @@ def migrate_mask_predictions(
     }
     bad_hashes = [h for h in ontology_mapping.keys() if h not in relevant_ontology_hashes]
     if len(bad_hashes) > 0:
-        raise ValueError(f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}")
+        raise ValueError(
+            f"The ontology mapping contains references to invalid ontology object hashes: {bad_hashes}.\n"
+            "Please, update the mapping with the correct object hashes from the project's ontology."
+        )
 
     # Migrate predictions from segmentation masks to the Prediction class format
     predictions = []
