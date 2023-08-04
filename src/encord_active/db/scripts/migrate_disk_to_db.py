@@ -10,8 +10,6 @@ from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
 from sqlmodel import Session
 
-from encord_active.analysis.config import create_analysis, default_torch_device
-from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataAnnotationSharedMetrics,
@@ -1222,26 +1220,6 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
         )
         for (du_hash, frame), (embeddings, metric_metadata) in data_metric_extra.items()
     ]
-
-    # FIXME: run for testing the metric computation engine
-    print("=== Running Computation Engine ===")
-    metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
-    try:
-        metric_engine.execute_from_db(
-            data_metas,
-            data_units_metas,
-            database_dir,
-            project_hash,
-            project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
-        )
-        # FIXME: reduced embeddings, need to start working out train / serialize / load (joblib / pickle / other?)
-        #  can be delayed for later compared to metric_engine
-    except Exception as e:
-        import traceback
-
-        print(f"Caught exception: {e}")
-        print(f"Stack trace: {traceback.format_exc()}")
-    print("=== Finished Computation Engine ===")
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
