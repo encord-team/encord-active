@@ -67,20 +67,29 @@ def import_predictions(project: Project, predictions: list[Prediction]):
 
     :param project: The project to import the predictions into.
     :param predictions: The predictions in Encord's Prediction class format to be imported.
+
+    :raises TypeError: If the predictions contain mixed types (both objects and classifications).
+
+    **Note**: All predictions must be of the same type (either objects or classifications).
+    Mixing types will raise a `TypeError`.
     """
     if len(predictions) == 0:
         return
 
+    # Ensure that all predictions are of the same type (either objects or classifications) due to structural limitations
+    all_object_type = all(pred.object is not None for pred in predictions)
+    all_classification_type = all(pred.classification is not None for pred in predictions)
+
+    if all_object_type:
+        prediction_type = MainPredictionType.OBJECT
+    elif all_classification_type:
+        prediction_type = MainPredictionType.CLASSIFICATION
+    else:
+        raise TypeError("Mismatched prediction types. All predictions must be either objects or classifications")
+
     with PredictionWriter(project) as writer:
         for pred in predictions:
             writer.add_prediction(pred)
-
-    if predictions[0].classification:
-        prediction_type = MainPredictionType.CLASSIFICATION
-    elif predictions[0].object:
-        prediction_type = MainPredictionType.OBJECT
-    else:
-        raise EmptyDataError("Predictions do not exist!")
 
     run_all_prediction_metrics(
         data_dir=project.file_structure.project_dir,
@@ -555,6 +564,6 @@ def _get_matching_data_unit(
 
 def _json_load(mapping_file: Path):
     if not mapping_file.exists() or not mapping_file.is_file() or mapping_file.suffix != ".json":
-        raise FileNotFoundError(f'JSON file with expected path "{mapping_file}" was not found.')
+        raise FileNotFoundError(f'JSON file with expected path "{mapping_file}" was not found')
     mapping = json.loads(mapping_file.read_text(encoding="utf-8"))
     return mapping
