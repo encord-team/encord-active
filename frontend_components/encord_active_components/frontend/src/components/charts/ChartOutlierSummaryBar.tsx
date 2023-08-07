@@ -75,15 +75,15 @@ export function ChartOutlierSummaryBar(props: {
         <Tooltip />
         <Legend />
         <Bar
-          dataKey="moderate"
-          name="Moderate"
-          fill="#ffa600"
-          isAnimationActive={false}
-        />
-        <Bar
           dataKey="severe"
           name="Severe"
           fill="#ff6347"
+          isAnimationActive={false}
+        />
+        <Bar
+          dataKey="moderate"
+          name="Moderate"
+          fill="#ffa600"
           isAnimationActive={false}
         />
       </BarChart>

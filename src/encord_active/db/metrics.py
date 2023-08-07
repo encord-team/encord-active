@@ -172,7 +172,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         type=MetricType.NORMAL,
     ),
     "metric_label_confidence": MetricDefinition(
-        title="Label Confidence",
+        title="Confidence",
         short_desc="Annotation or prediction confidence for non-manual labelling",
         long_desc="",
         type=MetricType.NORMAL,

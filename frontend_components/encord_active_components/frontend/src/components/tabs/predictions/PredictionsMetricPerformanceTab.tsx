@@ -1,5 +1,5 @@
 import {Checkbox, Col, Divider, Row, Select, Slider, Typography} from "antd";
-import { useMemo, useState } from "react";
+import {useEffect, useMemo, useState} from "react";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
 import {useDebounce} from "usehooks-ts";
@@ -49,6 +49,15 @@ export function PredictionsMetricPerformanceTab(props: {
   const [bucketCount, setBucketCount] = useState(10);
   const [classList, setClassList] = useState<string[]>([]);
   const [showDistributionBar, setShowDistributionBar] = useState(false);
+
+  useEffect(() => {
+    if (selectedMetric == null) {
+      const exists = metricOptions.find(({value}) => "metric_label_confidence") != null;
+      if (exists) {
+        setSelectedMetric("metric_label_confidence");
+      }
+    }
+  }, [selectedMetric, metricOptions])
 
   const rawQueryState = useMemo(
       () => ({ bucketCount, iou, selectedMetric }),

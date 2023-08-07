@@ -5,7 +5,10 @@ from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter
-from sklearn.feature_selection import mutual_info_regression
+from sklearn import metrics as sklearn_metrics
+from sklearn.feature_selection import (
+    mutual_info_regression as sklearn_mutual_info_regression,
+)
 from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
@@ -78,19 +81,22 @@ def get_project_prediction_summary(
 
         # FIXME: this is only used by classification only predictions.
         # FIXME: this should be separated and considered in the future.
-        num_frames = sess.exec(
-            select(sql_count()).select_from(
-                select(
-                    ProjectPredictionAnalyticsFalseNegatives.du_hash,
-                    ProjectPredictionAnalyticsFalseNegatives.frame,
+        num_frames: int = (
+            sess.exec(
+                select(sql_count()).select_from(
+                    select(
+                        ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                        ProjectPredictionAnalyticsFalseNegatives.frame,
+                    )
+                    .where(ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash)
+                    .group_by(
+                        ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                        ProjectPredictionAnalyticsFalseNegatives.frame,
+                    )
                 )
-                .where(ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash)
-                .group_by(
-                    ProjectPredictionAnalyticsFalseNegatives.du_hash,
-                    ProjectPredictionAnalyticsFalseNegatives.frame,
-                )
-            )
-        ).first()
+            ).first()
+            or 0
+        )
 
         # Select summary count of TP / FP / FN
         false_negative_counts_raw = sess.exec(
@@ -118,9 +124,7 @@ def get_project_prediction_summary(
             )
         ).fetchall()
         false_negative_count_map = {}
-        total_false_negative_count = 0
         for feature_hash, false_negative_count in false_negative_counts_raw:
-            total_false_negative_count += false_negative_count
             false_negative_count_map[feature_hash] = false_negative_count
         positive_counts_raw = sess.exec(
             select(
@@ -141,14 +145,10 @@ def get_project_prediction_summary(
         )
         true_positive_count_map = {}
         false_positive_count_map = {}
-        total_true_positive_count = 0
-        total_false_positive_count = 0
         for feature_hash, tp_count, tp_fp_count in positive_counts_raw:
             fp_count = tp_fp_count - tp_count
             true_positive_count_map[feature_hash] = tp_count
             false_positive_count_map[feature_hash] = fp_count
-            total_true_positive_count += tp_count
-            total_false_positive_count += fp_count
 
         all_feature_hashes = (
             set(true_positive_count_map.keys())
@@ -156,74 +156,41 @@ def get_project_prediction_summary(
             | set(false_negative_all_feature_hashes)
         )
 
-        # FIXME: check that feature_hash compare can be removed with changes to pre-calculation of match_iou condition.
-        precision_recall = {}
+        # Calculated Average Recall
+        # Mean Average Precision is calculated later
+        feature_properties = {}
         for feature_hash in all_feature_hashes:
-            sql = text(
-                """
-                SELECT (
-                    SELECT sum(
-                        coalesce(cast(ap_positives as real) / ap_total, 0.0)
-                    ) / (
-                        count(*)
-                    ) as ap FROM (
-                        SELECT
-                            row_number() OVER (
-                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
-                            ) AS ap_total,
-                            sum(cast(
-                                (
-                                    AP.iou >= :iou and
-                                    AP.match_duplicate_iou < :iou
-                                ) as integer
-                            )) OVER (
-                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
-                            ) AS ap_positives
-                        FROM active_project_prediction_analytics AP
-                        WHERE AP.prediction_hash = :prediction_hash
-                        AND AP.feature_hash == :feature_hash
-                        ORDER BY AP.metric_label_confidence DESC
-                    )
-                ) as ap,
-                (
-                    SELECT sum(
-                        coalesce(cast(ar_positives as real) / ar_total, 0.0)
-                    ) / (
-                        count(*) + :false_negatives
-                    ) FROM (
-                        SELECT
-                            row_number() OVER (
-                                ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
-                            ) AS ar_total,
-                            sum(cast(
-                                (
-                                    AR.iou >= :iou and
-                                    AR.match_duplicate_iou < :iou
-                                ) as integer
-                            )) OVER (
-                                ORDER BY AR.iou DESC ROWS UNBOUNDED PRECEDING
-                            ) AS ar_positives
-                        FROM active_project_prediction_analytics AR
-                        WHERE AR.prediction_hash = :prediction_hash
-                        AND AR.feature_hash = :feature_hash
-                        ORDER BY AR.iou
-                    )
+            fn_feature = false_negative_count_map.get(feature_hash, 0)
+            tp_feature = true_positive_count_map.get(feature_hash, 0)
+            fp_feature = false_positive_count_map.get(feature_hash, 0)
+            feature_p = tp_feature / max(tp_feature + fp_feature, 1)
+            feature_r = tp_feature / max(tp_feature + fn_feature, 1)
+            feature_labels = tp_feature + fn_feature
+
+            ar_values = []
+            iou_thresholds = [x / 10.0 for x in range(5, 11, 1)]
+            for iou_threshold in iou_thresholds:
+                tp_iou: int = (
+                    sess.exec(
+                        select(sql_count()).where(
+                            ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                            ProjectPredictionAnalytics.feature_hash == feature_hash,
+                            ProjectPredictionAnalytics.match_duplicate_iou < iou_threshold,
+                            ProjectPredictionAnalytics.iou >= iou_threshold,
+                        )
+                    ).first()
+                    or 0
                 )
-                """
-            ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float))
-            pr_result = sess.execute(
-                sql,
-                params={
-                    "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
-                    "iou": iou,
-                    "feature_hash": feature_hash,
-                    "false_negatives": false_negative_count_map.get(feature_hash, 0),
-                },
-            ).first()
-            precision_recall[feature_hash] = {
-                # FIXME: NULL precision / recall handling on the backend!?!
-                "ap": pr_result[0] or 0.0,  # type: ignore
-                "ar": pr_result[1] or 0.0,  # type: ignore
+                iou_recall = tp_iou / max(feature_labels, 1)
+                ar_values.append(iou_recall)
+            feature_properties[feature_hash] = {
+                "ar": 2.0 * sklearn_metrics.auc(iou_thresholds, ar_values),
+                "p": feature_p,
+                "r": feature_r,
+                "f1": (2 * feature_p * feature_r) / max(feature_p + feature_r, 1),
+                "tp": tp_feature,
+                "fp": fp_feature,
+                "fn": fn_feature,
             }
 
     # Calculate correlation for metrics
@@ -326,8 +293,8 @@ def get_project_prediction_summary(
                 round(r, 2) as r
             FROM (
                 SELECT
-                    cast(tp_count as real) / tp_and_fp_count as p,
-                    cast(tp_count as real) / :r_divisor as r
+                    cast(tp_count as real) / max(tp_and_fp_count) as p,
+                    coalesce(cast(tp_count as real) / :r_divisor, 0.0) as r
                 FROM (
                     SELECT
                         row_number() OVER (
@@ -352,7 +319,7 @@ def get_project_prediction_summary(
             ORDER BY round(r, 2) DESC
             """
         ).bindparams(bindparam("prediction_hash", GUID), bindparam("iou", Float), bindparam("r_divisor", Float))
-        pr_result = sess.execute(
+        pr_result_raw = sess.execute(
             sql,
             params={
                 "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
@@ -362,7 +329,12 @@ def get_project_prediction_summary(
                 + false_negative_count_map.get(feature_hash, 0),
             },
         ).fetchall()
+        pr_result = [{"p": p, "r": r} for p, r in pr_result_raw]
+        ap_vals = []
+        for recall_threshold in range(0, 11, 1):
+            ap_vals.append(max([v["p"] for v in pr_result if v["r"] >= (recall_threshold / 10.0)], default=0.0))
         prs[feature_hash] = pr_result
+        feature_properties[feature_hash]["ap"] = sum(ap_vals) / max(len(ap_vals), 1)
 
     importance = {}
     for metric_name in AnnotationMetrics.keys():
@@ -377,29 +349,37 @@ def get_project_prediction_summary(
         importance_data = sess.exec(importance_data_query).fetchall()
         if len(importance_data) == 0:
             continue
-        importance_regression = mutual_info_regression(
+        importance_regression = sklearn_mutual_info_regression(
             np.array([float(d[1]) for d in importance_data]).reshape(-1, 1),
             np.array([float(d[0]) for d in importance_data]),
             random_state=42,
         )
         importance[metric_name] = float(importance_regression[0])
 
+    t_tp: int = sum(p["tp"] for p in feature_properties.values())
+    t_fp: int = sum(p["fp"] for p in feature_properties.values())
+    t_fn: int = sum(p["fn"] for p in feature_properties.values())
+    classification_t_tn: int = num_frames - t_tp - t_fn
+    classification_accuracy: float = (t_tp + classification_t_tn) / max(num_frames, 1)
     return {
         "classification_only": is_classification,
-        "num_frames": num_frames or 0,
-        "mAP": sum(pr["ap"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
-        "mAR": sum(pr["ar"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
-        "precisions": {feature_hash: pr["ap"] for feature_hash, pr in precision_recall.items()},
-        "recalls": {feature_hash: pr["ar"] for feature_hash, pr in precision_recall.items()},
+        "classification_tTN": classification_t_tn if is_classification else None,
+        "classification_accuracy": classification_accuracy if is_classification else None,
+        "num_frames": num_frames,
+        "mAP": sum(p["ap"] for p in feature_properties.values()) / max(len(feature_properties), 1),
+        "mAR": sum(p["ar"] for p in feature_properties.values()) / max(len(feature_properties), 1),
+        "mP": sum(p["p"] for p in feature_properties.values()) / max(len(feature_properties), 1),
+        "mR": sum(p["r"] for p in feature_properties.values()) / max(len(feature_properties), 1),
+        "mF1": sum(p["f1"] for p in feature_properties.values()) / max(len(feature_properties), 1),
+        "tTP": t_tp,
+        "tFP": t_fp,
+        "tFN": t_fn,
+        # Feature properties
+        "feature_properties": feature_properties,
+        "prs": prs,
+        # Metric properties
         "correlation": correlations,
         "importance": importance,
-        "prs": prs,
-        "tTP": total_true_positive_count,
-        "tFP": total_false_positive_count,
-        "tFN": total_false_negative_count,
-        "tp": true_positive_count_map,
-        "fp": false_positive_count_map,
-        "fn": false_negative_count_map,
     }
 
 

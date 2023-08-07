@@ -37,10 +37,13 @@ export function PredictionsTab(
   );
   const [currentTab, setCurrentTab] = useState("0");
 
-  // Auto-select prediction if one exists.
+  // Auto-select prediction if one exists & unselect if an invalid prediction hash is selected;
   useEffect(() => {
-    if (allPredictionOptions != null && allPredictionOptions.length >= 1 && predictionHash == null) {
-        setPredictionHash(allPredictionOptions[0].value);
+    if (
+      allPredictionOptions &&
+      allPredictionOptions?.find((v) => v.value === predictionHash)
+    ) {
+      setPredictionHash(allPredictionOptions[0].value);
     }
   }, [predictionHash, allPredictionOptions]);
 
