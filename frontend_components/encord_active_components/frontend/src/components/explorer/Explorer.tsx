@@ -116,16 +116,22 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
+
   const filters = useDebounce(rawFilters, 500);
+
+  useEffect(() => {
+    setPage(1);
+  }, [JSON.stringify(filters)]);
+
   const apiContext = useContext(ApiContext);
   const { token } = useAuth();
 
@@ -290,7 +296,6 @@ export const Explorer = ({
   const showSimilarItems = (itemId: string) => (
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
-
   const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
 
   useEffect(() => {
@@ -371,9 +376,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -399,8 +404,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm items={[...selectedItems]} />
@@ -956,7 +961,7 @@ const GalleryItem = ({
             </button>
           </div>
           {scope !== "data" &&
-          (data.metadata.labelClass || data.metadata.annotator) ? (
+            (data.metadata.labelClass || data.metadata.annotator) ? (
             <div className="flex flex-col">
               <span className="flex items-center gap-1">
                 <VscSymbolClass />
