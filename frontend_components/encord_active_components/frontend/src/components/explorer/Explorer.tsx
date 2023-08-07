@@ -275,12 +275,13 @@ export const Explorer = ({
     similarItems?.length ||
     !isEmpty(filters.range) ||
     !isEmpty([...filters.tags?.data, ...filters.tags?.label]);
-  const reset = () => (
-    setItemSet(new Set()),
-    setSearch(undefined),
-    setSimilarityItem(null),
-    setNewFilters(DefaultFilters)
-  );
+  const reset = (clearFilters: boolean = true) => {
+    setItemSet(new Set());
+    setSearch(undefined);
+    setSimilarityItem(null);
+    if (clearFilters) setNewFilters(DefaultFilters);
+    setPage(1);
+  };
 
   const itemsToRender =
     similarItems ?? searchResults?.ids ?? withSortOrder.map(({ id }) => id);
@@ -302,6 +303,21 @@ export const Explorer = ({
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
   const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
+  const onMetricSelected = (newMetric: Metric) => {
+    if (!metrics || !selectedMetric) return;
+
+    const usedScopes = Object.entries(metrics)
+      .map(([_, scopedMetrics]) => scopedMetrics.map((metric) => metric.name))
+      .filter(
+        (scopedMetricNames) =>
+          scopedMetricNames.includes(selectedMetric.name) ||
+          scopedMetricNames.includes(newMetric.name),
+      )!;
+    if (usedScopes.length !== 1) {
+      reset(false);
+    }
+    setSelectedMetric(newMetric);
+  };
 
   useEffect(() => {
     if (!selectedMetric && metrics && totalMetricsCount > 0)
@@ -419,9 +435,7 @@ export const Explorer = ({
                 <label className="input-group  w-auto">
                   <select
                     onChange={(event) =>
-                      setSelectedMetric(
-                        JSON.parse(event.target.value) as Metric,
-                      )
+                      onMetricSelected(JSON.parse(event.target.value) as Metric)
                     }
                     className="select select-bordered focus:outline-none"
                     disabled={!!similarItems?.length}
