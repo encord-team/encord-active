@@ -92,15 +92,15 @@ export function ProjectPage(props: {
     return featureHashMap;
   }, [projectSummary]);
 
+  const { token } = useAuth();
+  const api = getApi(projectHash, token);
+
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
     return <Spinner />;
   }
 
   const remoteProject = !projectSummary.local_project;
-
-  const { token } = useAuth();
-  const api = getApi(projectHash, token);
 
   return (
     <Tabs
