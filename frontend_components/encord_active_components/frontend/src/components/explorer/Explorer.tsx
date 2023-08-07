@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useContext } from "react";
-import { BiInfoCircle, BiSelectMultiple } from "react-icons/bi";
+import {
+  BiCloudUpload,
+  BiInfoCircle,
+  BiSelectMultiple,
+  BiWindows,
+} from "react-icons/bi";
 import { BsCardText } from "react-icons/bs";
 import { FaEdit, FaExpand } from "react-icons/fa";
 import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
@@ -528,24 +533,24 @@ export const Explorer = ({
                   Select all ({itemsToRender.length})
                 </button>
                 {env !== "sandbox" && (
-                  <Button
+                  <button
+                    className="btn btn-ghost gap-2"
                     onClick={() => setOpen("subset")}
-                    type="text"
-                    size="large"
                     disabled={!resetable}
                   >
+                    <BiWindows />
                     Create Project subset
-                  </Button>
+                  </button>
                 )}
                 {local && !remoteProject && (
-                  <Button
+                  <button
+                    className="btn btn-ghost gap-2"
                     onClick={() => setOpen("upload")}
-                    type="text"
-                    size="large"
                     disabled={!!resetable}
                   >
+                    <BiCloudUpload />
                     Upload project
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
