@@ -551,7 +551,7 @@ class CreateSubsetJSON(BaseModel):
 
 @router.post("/{project}/create_subset")
 def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateSubsetJSON):
-    if get_settings().ENV != "sandbox":
+    if get_settings().ENV == "sandbox":
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN, detail="Subsetting is not allowed in the current environment"
         )
