@@ -290,6 +290,12 @@ export const Explorer = ({
   const showSimilarItems = (itemId: string) => (
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
+  const onNewFiltersSet = (
+    args: FilterState | ((old: FilterState) => FilterState),
+  ) => {
+    setPage(1);
+    setNewFilters(args);
+  };
 
   const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
 
@@ -483,7 +489,7 @@ export const Explorer = ({
                   content={
                     <MetricFilter
                       filters={newFilters}
-                      setFilters={setNewFilters}
+                      setFilters={onNewFiltersSet}
                       metricsSummary={filterMetricSummary}
                       metricRanges={Object.fromEntries(
                         Object.values(metrics || {})
