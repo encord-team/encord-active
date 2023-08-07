@@ -8,6 +8,9 @@ def start(path: Path, reload=False):
 
     environ["SERVER_START_PATH"] = path.as_posix()
     opts = {"reload": reload, "port": environ.get("PORT"), "host": environ.get("HOST")}
+    if reload:
+        server_watch_path = Path(__file__).parent.parent
+        opts["reload_dirs"] = [server_watch_path.resolve().as_posix()]
     opts = {k: v for k, v in opts.items() if v is not None}
     run("encord_active.server.main:app", **opts)
 
