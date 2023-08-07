@@ -275,13 +275,13 @@ export const Explorer = ({
     similarItems?.length ||
     !isEmpty(filters.range) ||
     !isEmpty([...filters.tags?.data, ...filters.tags?.label]);
-  const reset = () => (
-    setItemSet(new Set()),
-    setSearch(undefined),
-    setSimilarityItem(null),
-    setNewFilters(DefaultFilters),
-    setPage(1)
-  );
+  const reset = (clearFilters: boolean = true) => {
+    setItemSet(new Set());
+    setSearch(undefined);
+    setSimilarityItem(null);
+    if (clearFilters) setNewFilters(DefaultFilters);
+    setPage(1);
+  };
 
   const itemsToRender =
     similarItems ?? searchResults?.ids ?? withSortOrder.map(({ id }) => id);
@@ -314,7 +314,7 @@ export const Explorer = ({
           scopedMetricNames.includes(newMetric.name),
       )!;
     if (usedScopes.length !== 1) {
-      reset();
+      reset(false);
     }
     setSelectedMetric(newMetric);
   };
