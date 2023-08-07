@@ -178,21 +178,10 @@ def tagged_items(project: ProjectFileStructureDep):
 
 
 @router.get("/{project}/local-fs/{lr_hash}/{du_hash}/{frame}")
-def server_local_fs_file(project: ProjectFileStructureDep, lr_hash: str, du_hash: str, frame: int):
-    label_row_structure = project.label_row_structure(lr_hash)
-    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
-        label_row_structure.iter_data_unit(du_hash, None), None
-    )
-    if data_opt is not None:
-        signed_url = data_opt.signed_url
-        file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
-        if file_path is not None:
-            return FileResponse(file_path)
-
-    debug_id = f"{lr_hash}_{du_hash}_{frame}"
-    raise HTTPException(
-        status_code=404, detail=f'Local resource with id "{debug_id}" was not found for project "{project}"'
-    )
+def server_local_fs_file(project: uuid.UUID, lr_hash: str, du_hash: str, frame: int):
+    # TODO: remove the forward-to-project_v2 once known to never be called
+    from .project2 import display_raw_file
+    return display_raw_file(project_hash=project, du_hash=uuid.UUID(du_hash), frame=frame)
 
 
 @router.get("/{project}/items/{id:path}")

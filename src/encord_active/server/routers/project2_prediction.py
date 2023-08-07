@@ -1,10 +1,11 @@
 import json
 import math
 import uuid
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 from fastapi import APIRouter
+from pydantic import BaseModel
 from sklearn.feature_selection import mutual_info_regression
 from sqlalchemy import Float, Integer, bindparam, text
 from sqlalchemy.sql.operators import is_not
@@ -409,7 +410,7 @@ def prediction_metric_distribution(
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-):
+) -> metric_query.QueryDistribution:
     # FIXME: prediction_domain!!! (this & scatter) both need it implemented
     # FIXME: how to do we want to support fp-tp-fn split (2-group, 3-group)?
     # FIXME:  or try to support unified?
@@ -434,7 +435,7 @@ def prediction_metric_scatter(
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-):
+) -> metric_query.QueryScatter:
     with Session(engine) as sess:
         return metric_query.query_attr_scatter(
             sess=sess,
@@ -450,6 +451,17 @@ def prediction_metric_scatter(
         )
 
 
+class QueryMetricPerformanceEntry(BaseModel):
+    m: Union[int, float]
+    a: float
+    n: int
+
+
+class QueryMetricPerformance(BaseModel):
+    precision: Dict[str, List[QueryMetricPerformanceEntry]]
+    fns: Dict[str, QueryMetricPerformanceEntry]
+
+
 @router.get("/metric_performance")
 def prediction_metric_performance(
     prediction_hash: uuid.UUID,
@@ -457,7 +469,7 @@ def prediction_metric_performance(
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-):
+) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
         base="analytics",
@@ -505,11 +517,13 @@ def prediction_metric_performance(
                 metric_attr.group_attr,
             )
         ).fetchall()
-        precision: Dict[str, List[dict]] = {}
+        precision: Dict[str, List[QueryMetricPerformanceEntry]] = {}
         tp_count: Dict[Tuple[str, float], int] = {}
         for feature, bucket_m, bucket_tp, bucket_tp_fp in metric_buckets:
             bucket_avg = float(bucket_tp) / float(bucket_tp_fp)
-            precision.setdefault(feature, []).append({"m": bucket_m, "a": bucket_avg, "n": bucket_tp_fp})
+            precision.setdefault(feature, []).append(
+                QueryMetricPerformanceEntry(m=bucket_m, a=bucket_avg, n=bucket_tp_fp)
+            )
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr = metric_query.get_metric_or_enum(
@@ -538,17 +552,17 @@ def prediction_metric_performance(
                 metric_attr.group_attr,
             )
         ).fetchall()
-        fns: Dict[str, List[dict]] = {}
+        fns: Dict[str, List[QueryMetricPerformanceEntry]] = {}
         for feature, bucket_m, fn_num in metric_fn_buckets:
             fp_tp_num = tp_count.get((feature, bucket_m), 0)
             label_num = fn_num + fp_tp_num
             fns.setdefault(feature, []).append(
-                {"m": bucket_m, "a": 0 if label_num == 0 else fn_num / label_num, "n": label_num}
+                QueryMetricPerformanceEntry(m=bucket_m, a=0 if label_num == 0 else fn_num / label_num, n=label_num)
             )
-    return {
-        "precision": precision,
-        "fns": fns,
-    }
+    return QueryMetricPerformance(
+        precision=precision,
+        fns=fns,
+    )
 
 
 @router.get("/search")

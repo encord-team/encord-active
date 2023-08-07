@@ -1,8 +1,9 @@
 import dataclasses
 import math
-from typing import Callable, Dict, Literal, Optional, Tuple, Type, TypeVar, Union
+from typing import Callable, Dict, Literal, Optional, Tuple, Type, TypeVar, Union, List
 
 from fastapi import Depends, Query
+from pydantic import BaseModel
 from sqlalchemy.sql.functions import count as sql_count_raw
 from sqlalchemy.sql.functions import max as sql_max_raw
 from sqlalchemy.sql.functions import min as sql_min_raw
@@ -10,7 +11,7 @@ from sqlalchemy.sql.functions import sum as sql_sum_raw
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
 
-from encord_active.db.enums import EnumDefinition
+from encord_active.db.enums import EnumDefinition, AnnotationType
 from encord_active.db.metrics import MetricDefinition, MetricType
 from encord_active.server.routers.queries import search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -114,29 +115,40 @@ def get_metric_or_enum(
     raise ValueError(f"Attribute: {attr_name} is invalid")
 
 
+class QueryMetricSummary(BaseModel):
+    min: Union[int, float]
+    q1: Union[int, float]
+    median: Union[int, float]
+    q3: Union[int, float]
+    max: Union[int, float]
+    count: int
+    moderate: int
+    severe: int
+
+
 def query_metric_attr_summary(
     sess: Session,
     table: Type[SQLModel],
     where: list,
     metric_name: str,
     metrics: Dict[str, MetricDefinition],
-) -> dict:
+) -> QueryMetricSummary:
     metric = metrics[metric_name]
     metric_attr: Union[int, float] = getattr(table, metric_name)
     metric_count, metric_min, metric_max = sess.exec(
         select(sql_count(), sql_min(metric_attr), sql_max(metric_attr)).where(*where, is_not(metric_attr, None))
     ).first() or (0, 0, 0)
     if metric.type == MetricType.RANK:
-        return {
-            "min": 0,
-            "q1": metric_count // 4,
-            "median": metric_count // 2,
-            "q3": (metric_count * 3) // 4,
-            "max": metric_count,
-            "count": metric_count,
-            "moderate": 0,
-            "severe": 0,
-        }
+        return QueryMetricSummary(
+            min=0,
+            q1=metric_count // 4,
+            median=metric_count // 2,
+            q3=(metric_count * 3) // 4,
+            max=metric_count,
+            count=metric_count,
+            moderate=0,
+            severe=0,
+        )
     metric_q1 = (
         sess.exec(
             select(metric_attr).where(*where, is_not(metric_attr, None)).offset(metric_count // 4).limit(1)
@@ -181,16 +193,22 @@ def query_metric_attr_summary(
         # of outliers, so we override the calculation and always return 0.
         metric_severe = 0
         metric_moderate = 0
-    return {
-        "min": metric_min,
-        "q1": metric_q1,
-        "median": metric_q2,
-        "q3": metric_q3,
-        "max": metric_max,
-        "count": metric_count,
-        "moderate": metric_moderate,
-        "severe": metric_severe,
-    }
+    return QueryMetricSummary(
+        min=metric_min or 0,
+        q1=metric_q1,
+        median=metric_q2,
+        q3=metric_q3,
+        max=metric_max or 0,
+        count=metric_count,
+        moderate=metric_moderate,
+        severe=metric_severe,
+    )
+
+
+class QuerySummary(BaseModel):
+    count: int
+    metrics: Dict[str, QueryMetricSummary]
+    enums: Dict[str, None]
 
 
 def query_attr_summary(
@@ -198,7 +216,7 @@ def query_attr_summary(
     tables: Tables,
     project_filters: ProjectFilters,
     filters: Optional[search_query.SearchFilters],
-) -> dict:
+) -> QuerySummary:
     domain_tables = tables.annotation or tables.data
     where = search_query.search_filters(
         tables=tables,
@@ -217,11 +235,20 @@ def query_attr_summary(
         )
         for metric_name, metric in domain_tables.metrics.items()
     }
-    return {
-        "count": count,
-        "metrics": {k: v for k, v in metrics.items() if v is not None},
-        "enums": {k: {} for k, e in domain_tables.enums.items()},  # FIXME: implement properly
-    }
+    return QuerySummary(
+        count=count,
+        metrics={k: v for k, v in metrics.items() if v is not None},
+        enums={k: None for k, e in domain_tables.enums.items()},  # FIXME: implement properly
+    )
+
+
+class QueryDistributionGroup(BaseModel):
+    group: Union[AnnotationType, str, bool, int, float]
+    count: int
+
+
+class QueryDistribution(BaseModel):
+    results: List[QueryDistributionGroup]
 
 
 def query_attr_distribution(
@@ -231,7 +258,7 @@ def query_attr_distribution(
     attr_name: str,
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
-) -> dict:
+) -> QueryDistribution:
     domain_tables = tables.annotation or tables.data
     attr = get_metric_or_enum(
         domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
@@ -251,16 +278,24 @@ def query_attr_distribution(
         .group_by(attr.group_attr)
     )
     grouping_results = sess.exec(grouping_query).fetchall()
-    return {
-        "results": [
-            {
-                "group": grouping,
-                "count": count,
-            }
+    return QueryDistribution(
+        results=[
+            QueryDistributionGroup(
+                group=grouping, count=count,
+            )
             for grouping, count in grouping_results
         ],
-        "sampling": 1.0,
-    }
+    )
+
+
+class QueryScatterPoint(BaseModel):
+    x: Union[int, float]
+    y: Union[int, float]
+    n: int
+
+
+class QueryScatter(BaseModel):
+    samples: List[QueryScatterPoint]
 
 
 def query_attr_scatter(
@@ -271,13 +306,13 @@ def query_attr_scatter(
     y_metric_name: str,
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
-) -> dict:
+) -> QueryScatter:
     domain_tables = tables.annotation or tables.data
     x_attr = get_metric_or_enum(
-        domain_tables.analytics, x_metric_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+        domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets
     )
     y_attr = get_metric_or_enum(
-        domain_tables.analytics, y_metric_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+        domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets
     )
     where = search_query.search_filters(
         tables=tables,
@@ -300,17 +335,12 @@ def query_attr_scatter(
     )
     scatter_results = sess.exec(scatter_query).fetchall()
 
-    return {
-        "sampling": 1.0,
-        "samples": [
-            {
-                "x": x,
-                "y": y,
-                "n": n,
-            }
+    return QueryScatter(
+        samples=[
+            QueryScatterPoint(x=x, y=y, n=n)
             for x, y, n in scatter_results
         ],
-    }
+    )
 
 
 TSearch = TypeVar("TSearch", bound=Tuple)

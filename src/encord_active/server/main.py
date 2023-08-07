@@ -66,7 +66,7 @@ app.add_middleware(
 
 
 @app.on_event("startup")
-async def on_startup():
+async def on_startup() -> None:
     root_path = get_settings().SERVER_START_PATH
     paths = [root_path] if is_project(root_path) else find_child_projects(root_path)
 
@@ -88,7 +88,7 @@ async def on_startup():
 
 
 @app.get("/premium_available")
-async def premium_available():
+async def premium_available() -> bool:
     try:
         await verify_premium()
         return True

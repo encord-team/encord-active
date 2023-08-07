@@ -4,6 +4,7 @@ from typing import Dict, List, Literal, Optional, Set, Tuple, TypedDict
 from cachetools import TTLCache, cached
 from encord.objects import OntologyStructure
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
@@ -20,7 +21,7 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
-    ProjectTaggedDataUnit,
+    ProjectTaggedDataUnit, EmbeddingReductionType,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
@@ -255,24 +256,36 @@ def get_project_summary(project_hash: uuid.UUID):
     }
 
 
+class ProjectList2DEmbeddingReductionResultEntry(BaseModel):
+    name: str
+    description: str
+    hash: uuid.UUID
+    type: EmbeddingReductionType
+
+
+class ProjectList2DEmbeddingReductionResult(BaseModel):
+    total: int
+    results: List[ProjectList2DEmbeddingReductionResultEntry]
+
+
 @router.get("/{project_hash}/reductions")
-def list_supported_2d_embedding_reductions(project_hash: uuid.UUID):
+def list_supported_2d_embedding_reductions(project_hash: uuid.UUID) -> ProjectList2DEmbeddingReductionResult:
     with Session(engine) as sess:
-        r = sess.exec(select(ProjectEmbeddingReduction).where(ProjectEmbeddingReduction.project_hash == project_hash))
-    return {
-        "results": {
-            e.reduction_hash: {
-                "name": e.reduction_name,
-                "description": e.reduction_description,
-                "type": e.reduction_type.value,
-            }
-            for e in r
-        }
-    }
+        r = sess.exec(
+            select(ProjectEmbeddingReduction).where(ProjectEmbeddingReduction.project_hash == project_hash)
+        ).fetchall()
+    return ProjectList2DEmbeddingReductionResult(
+        total=len(r),
+        results=[
+            ProjectList2DEmbeddingReductionResultEntry(
+                name=e.reduction_name, description=e.reduction_description, hash=e.reduction_hash, type=e.reduction_type
+            ) for e in r
+        ],
+    )
 
 
 @router.get("/{project_hash}/files/{du_hash}/{frame}")
-def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) -> FileResponse:
     with Session(engine) as sess:
         query = select(ProjectDataUnitMetadata.data_uri,).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
@@ -290,7 +303,7 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
 
 
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
-def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):
+def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):    # FIXME: type
     objects: List[dict] = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
@@ -375,12 +388,12 @@ def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, obj
 
 
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/")
-def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
     return display_preview(project_hash, du_hash, frame)
 
 
 @router.get("/{project_hash}/item/{du_hash}/{frame}/")
-def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
     with Session(engine) as sess:
         du_meta = sess.exec(
             select(ProjectDataUnitMetadata).where(
@@ -437,27 +450,38 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     }
 
 
+class ListProjectPredictionResultEntry(BaseModel):
+    name: str
+    prediction_hash: uuid.UUID
+
+
+class ListProjectPredictionResult(BaseModel):
+    total: int
+    results: List[ListProjectPredictionResultEntry]
+
+
 @router.get("/{project_hash}/predictions")
 def list_project_predictions(
     project_hash: uuid.UUID,
     offset: Optional[int] = None,
     limit: Optional[int] = None,
     order_by: Optional[Literal[""]] = None,
-):
+) -> ListProjectPredictionResult:
     with Session(engine) as sess:
         predictions = sess.exec(
             select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)
         ).fetchall()
-    return {
-        "total": len(predictions),
-        "results": [
-            {"name": prediction.name, "prediction_hash": prediction.prediction_hash} for prediction in predictions
+    return ListProjectPredictionResult(
+        total=len(predictions),
+        results=[
+            ListProjectPredictionResultEntry(name=prediction.name, prediction_hash=prediction.prediction_hash)
+            for prediction in predictions
         ],
-    }
+    )
 
 
 @router.post("/{project_hash}/create/tag/data")
-def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], name: str):
+def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], name: str) -> None:
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
         sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
@@ -470,7 +494,7 @@ def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], 
 
 
 @router.post("/{project_hash}/create/tag/annotation")
-def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.UUID, int, str]], name: str):
+def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.UUID, int, str]], name: str) -> None:
     tag_hash = uuid.uuid4()
     with Session(engine) as sess:
         sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
