@@ -186,7 +186,7 @@ export const TaggingForm = ({
           <Select
             key={value}
             className={classy({
-              hidden: value !== selectedTab.value,
+              "!hidden": value !== selectedTab.value,
             })}
             mode="tags"
             placeholder="Tags"
