@@ -49,7 +49,7 @@ def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStr
     return SimilaritiesFinder(embedding_type, project)
 
 
-@cached(cache=LRUCache(maxsize=100))
+@cached(cache=LRUCache(maxsize=5))
 def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
     with DBConnection(project) as conn:
         merged_metrics = MergedMetrics(conn).all()
