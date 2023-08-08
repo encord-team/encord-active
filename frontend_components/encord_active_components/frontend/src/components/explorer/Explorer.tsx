@@ -81,6 +81,8 @@ export const Explorer = ({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>();
+  const [allowTaggingAnnotations, setAllowTaggingAnnotations] =
+    useState<boolean>(false);
   const [predictionType, setPredictionType] = useState<
     PredictionType | undefined
   >();
@@ -303,6 +305,7 @@ export const Explorer = ({
     closePreview(), setPage(1), setSimilarityItem(itemId)
   );
   const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
+
   const onMetricSelected = (newMetric: Metric) => {
     if (!metrics || !selectedMetric) return;
 
@@ -318,6 +321,22 @@ export const Explorer = ({
     }
     setSelectedMetric(newMetric);
   };
+  useEffect(() => {
+    if (!metrics) {
+      setAllowTaggingAnnotations(false);
+      return;
+    }
+
+    if (!selectedMetric) {
+      setAllowTaggingAnnotations(false);
+    } else {
+      setAllowTaggingAnnotations(
+        metrics.annotation
+          .map(({ name }) => name)
+          .includes(selectedMetric.name),
+      );
+    }
+  }, [selectedMetric]);
 
   useEffect(() => {
     if (!selectedMetric && metrics && totalMetricsCount > 0)
@@ -380,6 +399,7 @@ export const Explorer = ({
             iou={iou}
             onClose={closePreview}
             onShowSimilar={() => showSimilarItems(previewedItem)}
+            allowTaggingAnnotations={allowTaggingAnnotations}
           />
         )}
         <div
@@ -429,7 +449,10 @@ export const Explorer = ({
                     : undefined
                 }
               >
-                <BulkTaggingForm items={[...selectedItems]} />
+                <BulkTaggingForm
+                  items={[...selectedItems]}
+                  allowTaggingAnnotations={allowTaggingAnnotations}
+                />
               </TaggingDropdown>
               {metrics && !!totalMetricsCount && (
                 <label className="input-group  w-auto">
@@ -797,6 +820,7 @@ const ItemPreview = ({
   iou,
   onClose,
   onShowSimilar,
+  allowTaggingAnnotations = false,
 }: {
   id: string;
   similaritySearchDisabled: boolean;
@@ -804,11 +828,13 @@ const ItemPreview = ({
   onClose: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
   iou?: number;
+  allowTaggingAnnotations: boolean;
 }) => {
   const { data, isLoading } = useApi().fetchItem(id, iou);
   const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spinner />;
+  console.log({ allowTaggingAnnotations });
 
   const { description, ...metrics } = data.metadata.metrics;
   const { editUrl } = data;
@@ -841,6 +867,7 @@ const ItemPreview = ({
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
               seletedTags={data.tags}
               tabIndex={0}
+              allowTaggingAnnotations={allowTaggingAnnotations}
             />
           </TaggingDropdown>
         </div>

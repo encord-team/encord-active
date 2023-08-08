@@ -74,7 +74,13 @@ export const TaggingDropdown = ({
   );
 };
 
-export const BulkTaggingForm = ({ items }: { items: string[] }) => {
+export const BulkTaggingForm = ({
+  items,
+  allowTaggingAnnotations,
+}: {
+  items: string[];
+  allowTaggingAnnotations: boolean;
+}) => {
   const { allDataTags, allLabelTags, isLoading, taggedItems } = useAllTags(
     new Set(items),
   );
@@ -85,6 +91,7 @@ export const BulkTaggingForm = ({ items }: { items: string[] }) => {
       loading={isLoading || isMutating}
       controlled={true}
       allowClear={false}
+      allowTaggingAnnotations={allowTaggingAnnotations}
       onSelect={(scope, selected) =>
         mutate(
           items.map((id) => {
@@ -137,6 +144,7 @@ export const TaggingForm = ({
   onSelect,
   onDeselect,
   allowClear = true,
+  allowTaggingAnnotations: allowTaggingAnnotatoins = false,
   ...rest
 }: {
   seletedTags: GroupedTags;
@@ -146,8 +154,10 @@ export const TaggingForm = ({
   onDeselect?: (scope: keyof GroupedTags, tag: string) => void;
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
+  allowTaggingAnnotations?: boolean;
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
-  const { data: allTags } = useApi().fetchProjectTags();
+  const { allDataTags, allLabelTags } = useAllTags();
+  const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
   const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
     TAG_GROUPS[0],
@@ -188,6 +198,7 @@ export const TaggingForm = ({
             className={classy({
               "!hidden": value !== selectedTab.value,
             })}
+            disabled={value == "label" && !allowTaggingAnnotatoins}
             mode="tags"
             placeholder="Tags"
             allowClear={allowClear}

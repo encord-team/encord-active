@@ -314,10 +314,6 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       const response = await fetcher(url).then((res) => res.json());
       return z.boolean().parse(response);
     },
-    fetchProjectTags: async () =>
-      GroupedTagsSchema.parse(
-        await (await fetcher(`${apiUrl}/projects/${projectHash}/tags`)).json(),
-      ),
     updateItemTags: async (
       itemTags: { id: string; groupedTags: GroupedTags }[],
     ) => {
@@ -454,10 +450,6 @@ export const useApi = () => {
         },
       },
     ),
-    fetchProjectTags: () =>
-      useQuery([projectHash, "tags"], api.fetchProjectTags, {
-        initialData: defaultTags,
-      }),
     fetchTaggedItems: () =>
       useQuery([projectHash, "tagged_items"], api.fetchedTaggedItems, {
         initialData: new Map<string, GroupedTags>(),

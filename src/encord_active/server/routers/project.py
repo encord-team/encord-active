@@ -35,6 +35,10 @@ from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.server import ensure_safe_project
 from encord_active.db.models import (
     Project,
+    ProjectAnnotationAnalytics,
+    ProjectDataAnalytics,
+    ProjectDataMetadata,
+    ProjectDataUnitMetadata,
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
@@ -49,13 +53,7 @@ from encord_active.lib.common.utils import (
     partial_column,
 )
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
-from encord_active.lib.db.helpers.tags import (
-    GroupedTags,
-    Tag,
-    all_tags,
-    from_grouped_tags,
-    to_grouped_tags,
-)
+from encord_active.lib.db.helpers.tags import GroupedTags, Tag, to_grouped_tags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
@@ -168,25 +166,52 @@ def read_item_ids(
 
 @router.get("/{project}/tagged_items")
 def tagged_items(project: ProjectFileStructureDep):
-    # TODO fix this to use DB
-
-    with DBConnection(project) as conn:
-        df = MergedMetrics(conn).all(columns=["tags"]).reset_index()
-    records = df[df["tags"].str.len() > 0].to_dict("records")
-
-    # Assign the respective frame's data tags to the rows representing the labels
-    data_row_id_to_data_tags: dict[str, List[Tag]] = dict()
-    for row in records:
-        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
-        if row["identifier"] == data_row_id:  # The row contains the info related to a frame
-            data_row_id_to_data_tags[data_row_id] = row.get("tags", [])
-    for row in records:
-        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
-        if row["identifier"] != data_row_id:  # The row contains the info related to some labels
-            selected_tags = row.setdefault("tags", [])
-            selected_tags.extend(data_row_id_to_data_tags.get(data_row_id, []))
-
-    return {record["identifier"]: to_grouped_tags(record["tags"]) for record in records}
+    project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
+    identifier_tags: dict[str, GroupedTags] = {}
+    with Session(engine) as sess:
+        data_tags = sess.exec(
+            select(
+                ProjectDataMetadata.label_hash,
+                ProjectTaggedDataUnit.du_hash,
+                ProjectTaggedDataUnit.frame,
+                ProjectTag.name,
+            ).where(
+                ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash,
+                ProjectTaggedDataUnit.project_hash == project_hash,
+                ProjectTag.project_hash == project_hash,
+                ProjectDataMetadata.project_hash == project_hash,
+                ProjectDataUnitMetadata.project_hash == project_hash,
+                ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
+                ProjectDataUnitMetadata.du_hash == ProjectTaggedDataUnit.du_hash,
+            )
+        )
+        for label_hash, du_hash, frame, tag in data_tags:
+            key = f"{label_hash}_{du_hash}_{frame:05d}"
+            identifier_tags.setdefault(key, GroupedTags(data=[], label=[]))["data"].append(tag)
+        label_tags = sess.exec(
+            select(
+                ProjectDataMetadata.label_hash,
+                ProjectTaggedAnnotation.du_hash,
+                ProjectTaggedAnnotation.frame,
+                ProjectTaggedAnnotation.object_hash,
+                ProjectTag.name,
+            ).where(
+                ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
+                ProjectTaggedAnnotation.project_hash == project_hash,
+                ProjectTag.project_hash == project_hash,
+                ProjectDataUnitMetadata.project_hash == project_hash,
+                ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
+                ProjectDataUnitMetadata.du_hash == ProjectTaggedAnnotation.du_hash,
+            )
+        )
+        for label_hash, du_hash, frame, annotation_hash, tag in label_tags:
+            data_key = f"{label_hash}_{du_hash}_{frame:05d}"
+            label_key = f"{data_key}_{annotation_hash}"
+            du_tags = identifier_tags.setdefault(data_key, GroupedTags(data=[], label=[]))
+            if tag not in du_tags["label"]:
+                du_tags["label"].append(tag)
+            identifier_tags.setdefault(label_key, GroupedTags(data=du_tags["data"], label=[]))["label"].append(tag)
+    return identifier_tags
 
 
 @router.get("/{project}/local-fs/{lr_hash}/{du_hash}/{frame}")
@@ -207,6 +232,54 @@ def server_local_fs_file(project: ProjectFileStructureDep, lr_hash: str, du_hash
     )
 
 
+def append_tags_to_row(project: ProjectFileStructureDep, row: dict):
+    project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
+    _, du_hash_str, frame_str, *annotation_hashes = row["identifier"].split("_")
+    du_hash = uuid.UUID(du_hash_str)
+    frame = int(frame_str)
+
+    with Session(engine) as sess:
+        data_tags = sess.exec(
+            select(ProjectTag.name)
+            .join(ProjectTaggedDataUnit)
+            .where(
+                ProjectTaggedDataUnit.project_hash == project_hash,
+                ProjectTaggedDataUnit.du_hash == du_hash,
+                ProjectTaggedDataUnit.frame == frame,
+                ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash,
+            )
+        ).all()
+
+    label_tags = []
+    with Session(engine) as sess:
+        if annotation_hashes:
+            for annotation_hash in annotation_hashes:
+                label_tags += sess.exec(
+                    select(ProjectTag.name)
+                    .join(ProjectTaggedAnnotation)
+                    .where(
+                        ProjectTaggedAnnotation.project_hash == project_hash,
+                        ProjectTaggedAnnotation.du_hash == du_hash,
+                        ProjectTaggedAnnotation.frame == frame,
+                        ProjectTaggedAnnotation.object_hash == annotation_hash,
+                        ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
+                    )
+                ).all()
+        else:
+            label_tags += sess.exec(
+                select(ProjectTag.name)
+                .join(ProjectTaggedAnnotation)
+                .where(
+                    ProjectTaggedAnnotation.project_hash == project_hash,
+                    ProjectTaggedAnnotation.du_hash == du_hash,
+                    ProjectTaggedAnnotation.frame == frame,
+                    ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
+                )
+            ).unique()
+
+    row["tags"] = {"data": data_tags, "label": label_tags}
+
+
 @router.get("/{project}/items/{id:path}")
 def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = None):
     lr_hash, du_hash, frame, *object_hash = id.split("_")
@@ -223,13 +296,8 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
             raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project}"')
 
         row = rows[0]
-        # Include data tags from the relevant frame when the inspected item is a label
-        data_row_id = "_".join(row["identifier"].split("_", maxsplit=3)[:3])
-        if row["identifier"] != data_row_id:
-            data_row = MergedMetrics(conn).get_row(data_row_id).dropna(axis=1).to_dict("records")[0]
-            selected_tags = row.setdefault("tags", [])
-            selected_tags.extend(data_row.get("tags", []))
 
+    append_tags_to_row(project, row)
     return to_item(row, project, lr_hash, du_hash, frame)
 
 
@@ -297,9 +365,24 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                     )
                 )
             for tag_hash in existing_data_tags.difference(new_data_tag_uuids):
-                sess.delete(
-                    ProjectTaggedDataUnit(project_hash=project_hash, du_hash=du_hash, frame=frame, tag_hash=tag_hash)
-                )
+                data_tag_to_delete = sess.exec(
+                    select(ProjectTaggedDataUnit).where(
+                        ProjectTaggedDataUnit.project_hash == project_hash,
+                        ProjectTaggedDataUnit.du_hash == du_hash,
+                        ProjectTaggedDataUnit.frame == frame,
+                        ProjectTaggedDataUnit.tag_hash == tag_hash,
+                    )
+                ).first()
+                sess.delete(data_tag_to_delete)
+
+            if not annotation_hashes and annotation_tag_list:
+                annotation_hashes = sess.exec(
+                    select(ProjectAnnotationAnalytics.object_hash).where(
+                        ProjectAnnotationAnalytics.project_hash == project_hash,
+                        ProjectAnnotationAnalytics.du_hash == du_hash,
+                        ProjectAnnotationAnalytics.frame == frame,
+                    )
+                ).all()
 
             for annotation_hash in annotation_hashes:
                 existing_label_tags = set(
@@ -332,15 +415,16 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                         )
                     )
                 for tag_hash in existing_label_tags.difference(new_label_tag_uuids):
-                    sess.delete(
-                        ProjectTaggedAnnotation(
-                            project_hash=project_hash,
-                            du_hash=du_hash,
-                            frame=frame,
-                            object_hash=annotation_hash,
-                            tag_hash=tag_hash,
+                    tag_to_remove = sess.exec(
+                        select(ProjectTaggedAnnotation).where(
+                            ProjectTaggedAnnotation.project_hash == project_hash,
+                            ProjectTaggedAnnotation.du_hash == du_hash,
+                            ProjectTaggedAnnotation.frame == frame,
+                            ProjectTaggedAnnotation.object_hash == annotation_hash,
+                            ProjectTaggedAnnotation.tag_hash == tag_hash,
                         )
-                    )
+                    ).first()
+                    sess.delete(tag_to_remove)
 
         sess.commit()
 
@@ -483,12 +567,6 @@ def get_2d_embeddings(
             )
 
     return ORJSONResponse(embeddings_df.reset_index().rename({"identifier": "id"}, axis=1).to_dict("records"))
-
-
-@router.get("/{project}/tags")
-def get_tags(project: ProjectFileStructureDep):
-    # TODO update to use database
-    return to_grouped_tags(all_tags(project))
 
 
 @cached(cache=LRUCache(maxsize=10))

@@ -12,7 +12,7 @@ from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.common.filtering import Filters, apply_filters
 from encord_active.lib.common.utils import mask_to_polygon, rle_to_binary_mask
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.helpers.tags import to_grouped_tags
+from encord_active.lib.db.helpers.tags import GroupedTags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
@@ -138,7 +138,7 @@ def to_item(
         project_hash = project_meta["project_hash"]
         edit_url = f"https://app.encord.com/label_editor/{du_hash}&{project_hash}/{frame}"
 
-    tags = row.pop("tags", None)
+    tags = row.pop("tags", GroupedTags(data=[], label=[]))
     identifier = row.pop("identifier")
     metadata = Metadata(
         labelClass=row.pop("object_class", None),
@@ -192,7 +192,7 @@ def to_item(
         "dataTitle": data_title,
         "editUrl": edit_url,
         "metadata": metadata,
-        "tags": to_grouped_tags(tags or []),
+        "tags": tags,
         "labels": labels or {"objects": [], "classifications": []},
         "predictions": {"objects": object_predictions, "classifications": classification_predictions},
     }
