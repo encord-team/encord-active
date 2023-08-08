@@ -39,7 +39,8 @@ class AppConfig:
 
     @property
     def is_dev(self) -> bool:
-        return self.contents.get(ConfigProperties.DEV.value, False)
+        _is_dev = self.contents.get(ConfigProperties.DEV.value, "false")
+        return _is_dev.lower()[0] in {"t", "1"} if _is_dev else False
 
     def get_ssh_key(self) -> Optional[Path]:
         if ConfigProperties.SSH_KEY_PATH.value in self.contents:
