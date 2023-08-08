@@ -1,7 +1,7 @@
 import json
 import math
 import uuid
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter
@@ -452,7 +452,7 @@ def prediction_metric_scatter(
 
 
 class QueryMetricPerformanceEntry(BaseModel):
-    m: Union[int, float]
+    m: float
     a: float
     n: int
 

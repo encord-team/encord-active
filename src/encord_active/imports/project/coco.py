@@ -12,7 +12,7 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
 )
 
-from ...db.enums import AnnotationType
+from ...db.enums import AnnotationType, annotation_type_from_str
 from ...lib.common.time import get_timestamp
 from .op import ProjectImportSpec
 from .util import get_data_uri
@@ -219,12 +219,12 @@ def import_coco_ontology(
     id_mapping = {}
     for cat in coco_file.categories:
         cat_shapes = shape_dict.get(cat.id, {AnnotationType.BOUNDING_BOX, AnnotationType.POLYGON})
-        for i, shape in enumerate(sorted([str(s.value) for s in cat_shapes])):
+        for i, shape in enumerate(sorted([str(s) for s in cat_shapes])):
             # NOTE: add one to the category id to avoid index 0
             new_id = (cat.id + 1) * 10 + i
             name = cat.name
             obj = ontology_structure.add_object(name=name, shape=Shape(shape), uid=new_id)
-            id_mapping[(cat.id, AnnotationType(shape))] = obj
+            id_mapping[(cat.id, annotation_type_from_str(shape))] = obj
 
     return ontology_structure.to_dict(), id_mapping
 

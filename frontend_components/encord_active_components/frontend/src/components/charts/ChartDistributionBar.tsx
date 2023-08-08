@@ -82,6 +82,7 @@ export function ChartDistributionBar(props: {
     }
     let getFill: (score: number) => string = () => "#ffa600";
     const results = [...groupingData.data.results];
+    let keyValues: Readonly<Record<string, string>> = {};
     if (!isMetric) {
       results.sort((a, b) => b.count - a.count);
       const median = results[(results.length / 2) | 0];
@@ -89,14 +90,22 @@ export function ChartDistributionBar(props: {
         getFill = (score) => (score < median.count ? "#ef4444" : "#ffa600");
       }
     } else {
+      const enumEntry = metricsSummary.enums[selectedProperty];
+      if (enumEntry != null && "values" in enumEntry) {
+        keyValues = enumEntry.values;
+      }
       results.sort((a, b) => Number(a.group) - Number(b.group));
+    }
+    const getGroupName = (group: string | number): string => {
+      if (selectedProperty === "feature_hash") {
+        return featureHashMap[group]?.name ?? group;
+      } else {
+        return keyValues[group] ?? group;
+      }
     }
     return results.map((grouping) => ({
       ...grouping,
-      group:
-        (selectedProperty === "feature_hash"
-          ? featureHashMap[grouping.group]?.name
-          : null) ?? grouping.group,
+      group: getGroupName(grouping.group),
       fill: getFill(grouping.count),
     }));
   }, [featureHashMap, groupingData.data, isMetric, selectedProperty]);

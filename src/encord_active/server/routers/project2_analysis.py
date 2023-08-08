@@ -2,7 +2,7 @@ import functools
 import math
 import uuid
 from enum import Enum
-from typing import List, Literal, Optional, Dict, Union
+from typing import Dict, List, Literal, Optional
 
 import numpy as np
 from fastapi import APIRouter
@@ -13,7 +13,11 @@ from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
 from encord_active.server.routers.project2_engine import engine
-from encord_active.server.routers.queries import metric_query, search_query, similarity_query
+from encord_active.server.routers.queries import (
+    metric_query,
+    search_query,
+    similarity_query,
+)
 from encord_active.server.routers.queries.domain_query import (
     TABLES_ANNOTATION,
     TABLES_DATA,
@@ -115,9 +119,8 @@ def metric_search(
     return AnalysisSearch(
         truncated=truncated,
         results=[
-            AnalysisSearchEntry(
-                **{join_attr: value for join_attr, value in zip(base_table.join, result)}
-            ) for result in search_results[:-1]
+            AnalysisSearchEntry(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
+            for result in search_results[:-1]
         ],
     )
 
@@ -216,9 +219,7 @@ def get_2d_embedding_summary(
 
 
 @functools.lru_cache(maxsize=2)
-def _get_similarity_query(
-    project_hash: uuid.UUID, domain: AnalysisDomain
-) -> similarity_query.SimilarityQuery:
+def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> similarity_query.SimilarityQuery:
     tables = _get_metric_domain_tables(domain)
     base_domain: DomainTables = tables.annotation or tables.data
     with Session(engine) as sess:
@@ -231,7 +232,7 @@ def _get_similarity_query(
             is_not(base_domain.metadata.embedding_clip, None),
         )
         results = sess.exec(query).fetchall()
-    embeddings = [np.frombuffer(e[0], dtype=np.float).astype(np.float32) for e in results]
+    embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results]
     return similarity_query.SimilarityQuery(embeddings, results)
 
 
@@ -270,13 +271,11 @@ def search_similarity(
             raise ValueError("Source entry does not exist or missing embedding")
 
     similarity_query_impl = _get_similarity_query(project_hash, domain)
-    return similarity_query_impl.query(
-        np.frombuffer(src_embedding, dtype=np.float), k=50
-    )
+    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=50)
 
 
 class MetricDissimilarityResult(BaseModel):
-    results: Dict[str, Union[int, float]]
+    results: Dict[str, float]
 
 
 @router.get("/project_compare/metric_dissimilarity")

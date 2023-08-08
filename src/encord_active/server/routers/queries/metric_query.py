@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import Callable, Dict, Literal, Optional, Tuple, Type, TypeVar, Union, List
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ from sqlalchemy.sql.functions import sum as sql_sum_raw
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
 
-from encord_active.db.enums import EnumDefinition, AnnotationType
+from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType
 from encord_active.server.routers.queries import search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -116,11 +116,11 @@ def get_metric_or_enum(
 
 
 class QueryMetricSummary(BaseModel):
-    min: Union[int, float]
-    q1: Union[int, float]
-    median: Union[int, float]
-    q3: Union[int, float]
-    max: Union[int, float]
+    min: float
+    q1: float
+    median: float
+    q3: float
+    max: float
     count: int
     moderate: int
     severe: int
@@ -243,7 +243,7 @@ def query_attr_summary(
 
 
 class QueryDistributionGroup(BaseModel):
-    group: Union[AnnotationType, str, bool, int, float]
+    group: Union[float, str, bool]
     count: int
 
 
@@ -281,7 +281,8 @@ def query_attr_distribution(
     return QueryDistribution(
         results=[
             QueryDistributionGroup(
-                group=grouping, count=count,
+                group=grouping,
+                count=count,
             )
             for grouping, count in grouping_results
         ],
@@ -289,8 +290,8 @@ def query_attr_distribution(
 
 
 class QueryScatterPoint(BaseModel):
-    x: Union[int, float]
-    y: Union[int, float]
+    x: float
+    y: float
     n: int
 
 
@@ -308,12 +309,8 @@ def query_attr_scatter(
     filters: Optional[search_query.SearchFilters],
 ) -> QueryScatter:
     domain_tables = tables.annotation or tables.data
-    x_attr = get_metric_or_enum(
-        domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets
-    )
-    y_attr = get_metric_or_enum(
-        domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets
-    )
+    x_attr = get_metric_or_enum(domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets)
+    y_attr = get_metric_or_enum(domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets)
     where = search_query.search_filters(
         tables=tables,
         base="analytics",
@@ -336,10 +333,7 @@ def query_attr_scatter(
     scatter_results = sess.exec(scatter_query).fetchall()
 
     return QueryScatter(
-        samples=[
-            QueryScatterPoint(x=x, y=y, n=n)
-            for x, y, n in scatter_results
-        ],
+        samples=[QueryScatterPoint(x=x, y=y, n=n) for x, y, n in scatter_results],
     )
 
 

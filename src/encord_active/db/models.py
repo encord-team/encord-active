@@ -4,12 +4,11 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
-from sqlalchemy import JSON, Column
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import JSON, Column, Integer
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 
-from encord_active.db.enums import AnnotationType
+from encord_active.db.enums import AnnotationType, AnnotationTypeMaxValue
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
@@ -112,12 +111,20 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     )
 
 
-# MetricFieldTypeNormal = Field(ge=0, le=0)
-# MetricFieldTypePositiveInteger = Field(ge=0)
-# MetricFieldTypePositiveFloat = Field(ge=0)
-MetricFieldTypeNormal = Field()
-MetricFieldTypePositiveInteger = Field()
-MetricFieldTypePositiveFloat = Field()
+def metric_field_type_normal() -> float:
+    return Field(ge=0, le=0)
+
+
+def metric_field_type_positive_integer() -> int:
+    return Field(ge=0)
+
+
+def metric_field_type_positive_float() -> float:
+    return Field(ge=0)
+
+
+def field_type_annotation_type() -> AnnotationType:
+    return Field(sa_column=Column(Integer, nullable=False), ge=0, le=AnnotationTypeMaxValue)
 
 
 def define_metric_indices(
@@ -141,31 +148,31 @@ class ProjectDataAnalytics(SQLModel, table=True):
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     # Metrics - Absolute Size
-    metric_width: Optional[int] = MetricFieldTypePositiveInteger
-    metric_height: Optional[int] = MetricFieldTypePositiveInteger
-    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    metric_width: Optional[int] = metric_field_type_positive_integer()
+    metric_height: Optional[int] = metric_field_type_positive_integer()
+    metric_area: Optional[int] = metric_field_type_positive_integer()
     # Metrics - Relative Size
-    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = MetricFieldTypeNormal
-    metric_contrast: Optional[float] = MetricFieldTypeNormal
-    metric_sharpness: Optional[float] = MetricFieldTypeNormal
-    metric_red: Optional[float] = MetricFieldTypeNormal
-    metric_green: Optional[float] = MetricFieldTypeNormal
-    metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_brightness: Optional[float] = metric_field_type_normal()
+    metric_contrast: Optional[float] = metric_field_type_normal()
+    metric_sharpness: Optional[float] = metric_field_type_normal()
+    metric_red: Optional[float] = metric_field_type_normal()
+    metric_green: Optional[float] = metric_field_type_normal()
+    metric_blue: Optional[float] = metric_field_type_normal()
     # Random
-    metric_random: Optional[float] = MetricFieldTypeNormal
+    metric_random: Optional[float] = metric_field_type_normal()
     # Image Only
-    metric_object_count: Optional[int] = MetricFieldTypePositiveInteger
-    metric_object_density: Optional[float] = MetricFieldTypeNormal
+    metric_object_count: Optional[int] = metric_field_type_positive_integer()
+    metric_object_density: Optional[float] = metric_field_type_normal()
     metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
-    metric_image_uniqueness: Optional[float] = MetricFieldTypeNormal
+    metric_image_uniqueness: Optional[float] = metric_field_type_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = MetricFieldTypeNormal
-    metric_custom1: Optional[float] = MetricFieldTypeNormal
-    metric_custom2: Optional[float] = MetricFieldTypeNormal
-    metric_custom3: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = metric_field_type_normal()
+    metric_custom1: Optional[float] = metric_field_type_normal()
+    metric_custom2: Optional[float] = metric_field_type_normal()
+    metric_custom3: Optional[float] = metric_field_type_normal()
 
     __table_args__ = define_metric_indices(
         "active_data",
@@ -230,41 +237,41 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     object_hash: str = Field(primary_key=True, min_length=8, max_length=8)
     # Extra properties
     feature_hash: str = Field(min_length=8, max_length=8)
-    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_type: AnnotationType = field_type_annotation_type()
     annotation_email: str
     annotation_manual: bool
     # Metrics - Absolute Size
-    metric_width: Optional[int] = MetricFieldTypePositiveInteger
-    metric_height: Optional[int] = MetricFieldTypePositiveInteger
-    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    metric_width: Optional[int] = metric_field_type_positive_integer()
+    metric_height: Optional[int] = metric_field_type_positive_integer()
+    metric_area: Optional[int] = metric_field_type_positive_integer()
     # Metrics - Relative Size
-    metric_area_relative: Optional[float] = MetricFieldTypeNormal
-    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    metric_area_relative: Optional[float] = metric_field_type_normal()
+    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = MetricFieldTypeNormal
-    metric_contrast: Optional[float] = MetricFieldTypeNormal
-    metric_sharpness: Optional[float] = MetricFieldTypeNormal
-    metric_red: Optional[float] = MetricFieldTypeNormal
-    metric_green: Optional[float] = MetricFieldTypeNormal
-    metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_brightness: Optional[float] = metric_field_type_normal()
+    metric_contrast: Optional[float] = metric_field_type_normal()
+    metric_sharpness: Optional[float] = metric_field_type_normal()
+    metric_red: Optional[float] = metric_field_type_normal()
+    metric_green: Optional[float] = metric_field_type_normal()
+    metric_blue: Optional[float] = metric_field_type_normal()
     # Random
-    metric_random: Optional[float] = MetricFieldTypeNormal
+    metric_random: Optional[float] = metric_field_type_normal()
     # Both - Annotation based
-    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    metric_annotation_quality: Optional[float] = metric_field_type_normal()
     # Metrics - Label Only
-    metric_max_iou: Optional[float] = MetricFieldTypeNormal
-    metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
-    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
-    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
-    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
-    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
-    metric_label_confidence: float = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = metric_field_type_normal()
+    metric_label_border_closeness: Optional[float] = metric_field_type_normal()
+    metric_label_poly_similarity: Optional[float] = metric_field_type_normal()
+    metric_label_missing_or_broken_tracks: Optional[float] = metric_field_type_normal()
+    metric_label_inconsistent_classification_and_track: Optional[float] = metric_field_type_normal()
+    metric_label_shape_outlier: Optional[float] = metric_field_type_normal()
+    metric_label_confidence: float = metric_field_type_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = MetricFieldTypeNormal
-    metric_custom1: Optional[float] = MetricFieldTypeNormal
-    metric_custom2: Optional[float] = MetricFieldTypeNormal
-    metric_custom3: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = metric_field_type_normal()
+    metric_custom1: Optional[float] = metric_field_type_normal()
+    metric_custom2: Optional[float] = metric_field_type_normal()
+    metric_custom3: Optional[float] = metric_field_type_normal()
 
     __table_args__ = define_metric_indices(
         "active_label",
@@ -387,7 +394,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     project_hash: UUID
 
     # Prediction data for display.
-    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_type: AnnotationType = field_type_annotation_type()
 
     # Prediction metadata: (for iou dependent TP vs FP split & feature hash grouping)
     match_object_hash: Optional[str] = Field(min_length=8, max_length=8)
@@ -397,37 +404,37 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
 
     # Prediction object metrics
     # Metrics - Absolute Size
-    metric_width: Optional[int] = MetricFieldTypePositiveInteger
-    metric_height: Optional[int] = MetricFieldTypePositiveInteger
-    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    metric_width: Optional[int] = metric_field_type_positive_integer()
+    metric_height: Optional[int] = metric_field_type_positive_integer()
+    metric_area: Optional[int] = metric_field_type_positive_integer()
     # Metrics - Relative Size
-    metric_area_relative: Optional[float] = MetricFieldTypeNormal
-    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    metric_area_relative: Optional[float] = metric_field_type_normal()
+    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = MetricFieldTypeNormal
-    metric_contrast: Optional[float] = MetricFieldTypeNormal
-    metric_sharpness: Optional[float] = MetricFieldTypeNormal
-    metric_red: Optional[float] = MetricFieldTypeNormal
-    metric_green: Optional[float] = MetricFieldTypeNormal
-    metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_brightness: Optional[float] = metric_field_type_normal()
+    metric_contrast: Optional[float] = metric_field_type_normal()
+    metric_sharpness: Optional[float] = metric_field_type_normal()
+    metric_red: Optional[float] = metric_field_type_normal()
+    metric_green: Optional[float] = metric_field_type_normal()
+    metric_blue: Optional[float] = metric_field_type_normal()
     # Random
-    metric_random: Optional[float] = MetricFieldTypeNormal
+    metric_random: Optional[float] = metric_field_type_normal()
     # Both - Annotation based
-    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    metric_annotation_quality: Optional[float] = metric_field_type_normal()
     # Metrics - Label Only
-    metric_max_iou: Optional[float] = MetricFieldTypeNormal
-    metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
-    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
-    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
-    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
-    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
-    metric_label_confidence: float = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = metric_field_type_normal()
+    metric_label_border_closeness: Optional[float] = metric_field_type_normal()
+    metric_label_poly_similarity: Optional[float] = metric_field_type_normal()
+    metric_label_missing_or_broken_tracks: Optional[float] = metric_field_type_normal()
+    metric_label_inconsistent_classification_and_track: Optional[float] = metric_field_type_normal()
+    metric_label_shape_outlier: Optional[float] = metric_field_type_normal()
+    metric_label_confidence: float = metric_field_type_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = MetricFieldTypeNormal
-    metric_custom1: Optional[float] = MetricFieldTypeNormal
-    metric_custom2: Optional[float] = MetricFieldTypeNormal
-    metric_custom3: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = metric_field_type_normal()
+    metric_custom1: Optional[float] = metric_field_type_normal()
+    metric_custom2: Optional[float] = metric_field_type_normal()
+    metric_custom3: Optional[float] = metric_field_type_normal()
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_objects_prediction_fk"),
@@ -515,43 +522,43 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
 
     # Unmatched annotation properties
     feature_hash: str = Field(min_length=8, max_length=8)
-    annotation_type: AnnotationType = Field(sa_column=Column(SQLEnum(AnnotationType)))
+    annotation_type: AnnotationType = field_type_annotation_type()
     annotation_email: str
     annotation_manual: bool
 
     # Unmatched annotation metrics.
     # Metrics - Absolute Size
-    metric_width: Optional[int] = MetricFieldTypePositiveInteger
-    metric_height: Optional[int] = MetricFieldTypePositiveInteger
-    metric_area: Optional[int] = MetricFieldTypePositiveInteger
+    metric_width: Optional[int] = metric_field_type_positive_integer()
+    metric_height: Optional[int] = metric_field_type_positive_integer()
+    metric_area: Optional[int] = metric_field_type_positive_integer()
     # Metrics - Relative Size
-    metric_area_relative: Optional[float] = MetricFieldTypeNormal
-    metric_aspect_ratio: Optional[float] = MetricFieldTypePositiveFloat
+    metric_area_relative: Optional[float] = metric_field_type_normal()
+    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = MetricFieldTypeNormal
-    metric_contrast: Optional[float] = MetricFieldTypeNormal
-    metric_sharpness: Optional[float] = MetricFieldTypeNormal
-    metric_red: Optional[float] = MetricFieldTypeNormal
-    metric_green: Optional[float] = MetricFieldTypeNormal
-    metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_brightness: Optional[float] = metric_field_type_normal()
+    metric_contrast: Optional[float] = metric_field_type_normal()
+    metric_sharpness: Optional[float] = metric_field_type_normal()
+    metric_red: Optional[float] = metric_field_type_normal()
+    metric_green: Optional[float] = metric_field_type_normal()
+    metric_blue: Optional[float] = metric_field_type_normal()
     # Random
-    metric_random: Optional[float] = MetricFieldTypeNormal
+    metric_random: Optional[float] = metric_field_type_normal()
     # Both - Annotation based
-    metric_annotation_quality: Optional[float] = MetricFieldTypeNormal
+    metric_annotation_quality: Optional[float] = metric_field_type_normal()
     # Metrics - Label Only
-    metric_max_iou: Optional[float] = MetricFieldTypeNormal
-    metric_label_border_closeness: Optional[float] = MetricFieldTypeNormal
-    metric_label_poly_similarity: Optional[float] = MetricFieldTypeNormal
-    metric_label_missing_or_broken_tracks: Optional[float] = MetricFieldTypeNormal
-    metric_label_inconsistent_classification_and_track: Optional[float] = MetricFieldTypeNormal
-    metric_label_shape_outlier: Optional[float] = MetricFieldTypeNormal
-    metric_label_confidence: float = MetricFieldTypeNormal
+    metric_max_iou: Optional[float] = metric_field_type_normal()
+    metric_label_border_closeness: Optional[float] = metric_field_type_normal()
+    metric_label_poly_similarity: Optional[float] = metric_field_type_normal()
+    metric_label_missing_or_broken_tracks: Optional[float] = metric_field_type_normal()
+    metric_label_inconsistent_classification_and_track: Optional[float] = metric_field_type_normal()
+    metric_label_shape_outlier: Optional[float] = metric_field_type_normal()
+    metric_label_confidence: float = metric_field_type_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = MetricFieldTypeNormal
-    metric_custom1: Optional[float] = MetricFieldTypeNormal
-    metric_custom2: Optional[float] = MetricFieldTypeNormal
-    metric_custom3: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = metric_field_type_normal()
+    metric_custom1: Optional[float] = metric_field_type_normal()
+    metric_custom2: Optional[float] = metric_field_type_normal()
+    metric_custom3: Optional[float] = metric_field_type_normal()
 
     __table_args__ = (
         fk_constraint(["prediction_hash"], ProjectPrediction, "active_project_prediction_unmatched_prediction_fk"),

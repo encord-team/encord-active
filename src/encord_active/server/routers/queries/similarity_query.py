@@ -1,5 +1,5 @@
 import uuid
-from typing import Union, List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from pydantic import BaseModel
@@ -32,9 +32,7 @@ class SimilarityQuery:
         if len(embeddings) <= 4096:
             self.query_impl = embeddings_stack
         else:
-            nn: NNDescent = NNDescent(
-                data=embeddings_stack
-            )
+            nn: NNDescent = NNDescent(data=embeddings_stack)
             nn.prepare()
             self.query_impl = nn
         self.results = results
@@ -49,7 +47,4 @@ class SimilarityQuery:
             similarities = np.linalg.norm(offsets, axis=1)
             indices = np.argsort(similarities)[:k]
             distances = similarities[indices]
-        return [
-            _similarity_result(self.results[idx], similarity)
-            for idx, similarity in zip(indices, distances)
-        ]
+        return [_similarity_result(self.results[idx], similarity) for idx, similarity in zip(indices, distances)]

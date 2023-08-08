@@ -12,6 +12,7 @@ from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
 from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
 from encord_active.db.models import (
     AnnotationType,
+    EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
     ProjectDataAnalytics,
@@ -21,7 +22,7 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectTag,
     ProjectTaggedAnnotation,
-    ProjectTaggedDataUnit, EmbeddingReductionType,
+    ProjectTaggedDataUnit,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
@@ -279,7 +280,8 @@ def list_supported_2d_embedding_reductions(project_hash: uuid.UUID) -> ProjectLi
         results=[
             ProjectList2DEmbeddingReductionResultEntry(
                 name=e.reduction_name, description=e.reduction_description, hash=e.reduction_hash, type=e.reduction_type
-            ) for e in r
+            )
+            for e in r
         ],
     )
 
@@ -303,7 +305,9 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) ->
 
 
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
-def display_preview(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None):    # FIXME: type
+def display_preview(
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None
+):  # FIXME: type
     objects: List[dict] = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()

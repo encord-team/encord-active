@@ -9,17 +9,6 @@ from torch import Tensor
 
 from encord_active.db.models import AnnotationType
 
-ANNOTATION_TYPE_TO_INT: Dict[AnnotationType, int] = {
-    AnnotationType.CLASSIFICATION: 0,
-    AnnotationType.BOUNDING_BOX: 1,
-    AnnotationType.ROTATABLE_BOUNDING_BOX: 2,
-    AnnotationType.POINT: 3,
-    AnnotationType.POLYLINE: 4,
-    AnnotationType.POLYGON: 5,
-    AnnotationType.SKELETON: 6,
-    AnnotationType.BITMASK: 7,
-}
-
 
 class Point(NamedTuple):
     x: int

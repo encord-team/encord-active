@@ -17,16 +17,34 @@ class EnumDefinition:
     values: Optional[Dict[str, str]] = None
 
 
-class AnnotationType(enum.Enum):
-    CLASSIFICATION = "classification"
-    BOUNDING_BOX = "bounding_box"
-    ROTATABLE_BOUNDING_BOX = "rotatable_bounding_box"
-    POINT = "point"
-    POLYLINE = "polyline"
-    POLYGON = "polygon"
-    SKELETON = "skeleton"
-    BITMASK = "bitmask"
+class AnnotationType(enum.IntEnum):
+    CLASSIFICATION = 0  # "classification"
+    BOUNDING_BOX = 1  # "bounding_box"
+    ROTATABLE_BOUNDING_BOX = 2  # "rotatable_bounding_box"
+    POINT = 3  # "point"
+    POLYLINE = 4  # "polyline"
+    POLYGON = 5  # "polygon"
+    SKELETON = 6  # "skeleton"
+    BITMASK = 7  # "bitmask"
 
+
+_ANNOTATION_TYPE_LOOKUP: Dict[str, AnnotationType] = {
+    "classification": AnnotationType.CLASSIFICATION,
+    "bounding_box": AnnotationType.BOUNDING_BOX,
+    "rotatable_bounding_box": AnnotationType.ROTATABLE_BOUNDING_BOX,
+    "point": AnnotationType.POINT,
+    "polyline": AnnotationType.POLYLINE,
+    "polygon": AnnotationType.POLYGON,
+    "skeleton": AnnotationType.SKELETON,
+    "bitmask": AnnotationType.BITMASK,
+}
+
+
+def annotation_type_from_str(value: str) -> AnnotationType:
+    return _ANNOTATION_TYPE_LOOKUP[value]
+
+
+AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
 
 DataEnums: Dict[str, EnumDefinition] = {}
 AnnotationEnums: Dict[str, EnumDefinition] = {
@@ -39,15 +57,16 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
         enum_type=EnumType.ENUM,
         title="Annotation Type",
         values={
-            annotation_type.value: annotation_type.name.replace("_", "").title() for annotation_type in AnnotationType
+            str(annotation_type.value): annotation_type.name.replace("_", "").title()
+            for annotation_type in AnnotationType
         },
     ),
     "annotation_manual": EnumDefinition(
         enum_type=EnumType.ENUM,
         title="Manual Annotation",
         values={
-            "0": "Automated Annotation",
-            "1": "Manual Annotation",
+            "False": "Automated Annotation",
+            "True": "Manual Annotation",
         },
     ),
 }

@@ -40,6 +40,7 @@ from encord_active.db.models import (
 )
 from encord_active.lib.common.data_utils import download_image, url_to_file_path
 
+from ..db.enums import annotation_type_from_str
 from ..db.metrics import MetricType
 from ..lib.encord.utils import get_encord_project
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
@@ -471,7 +472,7 @@ class SimpleExecutor(Executor):
         for obj in du_meta.objects:
             obj_hash = str(obj["objectHash"])
             feature_hash = str(obj["featureHash"])
-            annotation_type = AnnotationType(str(obj["shape"]))
+            annotation_type = annotation_type_from_str(str(obj["shape"]))
             if obj_hash in annotations:
                 hash_collision = True
             else:
