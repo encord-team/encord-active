@@ -120,6 +120,12 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
+    "metric_video_red_density": MetricDefinition(
+        title="Video Red Density",
+        short_desc="Redness of the video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
 }
 
 AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {

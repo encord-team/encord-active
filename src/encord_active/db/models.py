@@ -153,6 +153,7 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_red: Optional[float] = MetricFieldTypeNormal
     metric_green: Optional[float] = MetricFieldTypeNormal
     metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
     # Image Only
@@ -160,7 +161,7 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_object_density: Optional[float] = MetricFieldTypeNormal
     metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
     metric_image_singularity: Optional[float] = MetricFieldTypeNormal
-
+    metric_video_red_density: Optional[float] = MetricFieldTypeNormal
     # 4x custom normal metrics
     metric_custom0: Optional[float] = MetricFieldTypeNormal
     metric_custom1: Optional[float] = MetricFieldTypeNormal
@@ -249,6 +250,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     metric_red: Optional[float] = MetricFieldTypeNormal
     metric_green: Optional[float] = MetricFieldTypeNormal
     metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
     # Both - Annotation based
@@ -410,6 +412,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     metric_red: Optional[float] = MetricFieldTypeNormal
     metric_green: Optional[float] = MetricFieldTypeNormal
     metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
     # Both - Annotation based
@@ -534,6 +537,7 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     metric_red: Optional[float] = MetricFieldTypeNormal
     metric_green: Optional[float] = MetricFieldTypeNormal
     metric_blue: Optional[float] = MetricFieldTypeNormal
+    metric_custom0: Optional[float] = MetricFieldTypeNormal
     # Random
     metric_random: Optional[float] = MetricFieldTypeNormal
     # Both - Annotation based
