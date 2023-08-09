@@ -41,6 +41,7 @@ def import_encord_project(
 def import_coco_prediction(
     database_dir: Path,
     predictions_file_path: Path,
+    project_uuid: uuid.UUID,
 ) -> None:
     raise ValueError()
 

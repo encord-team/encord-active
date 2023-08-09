@@ -405,7 +405,7 @@ def __prediction_iou_bound_false_negative(
     prediction_hash,
 ) -> ProjectPredictionAnalyticsFalseNegatives:
     du_hash, frame, annotation_hash = key
-    iou_threshold = max((model.iou for model in model_prediction_group), default=2.0)  # Always a false negative
+    iou_threshold = max((model.iou for model in model_prediction_group), default=-1.0)  # Always a false negative
 
     if len(model_prediction_group) == 0:
         raise ValueError("Bugged Model Prediction Group")

@@ -6,7 +6,10 @@ from typing import Optional
 import typer
 from rich.markup import escape
 
-from encord_active.cli.common import TYPER_ENCORD_DATABASE_DIR
+from encord_active.cli.common import (
+    TYPER_ENCORD_DATABASE_DIR,
+    select_project_hash_from_name,
+)
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.prints import success_with_vizualise_command
 
@@ -25,12 +28,12 @@ def import_predictions(
 
     If the `--coco` option is specified then the file should be a json following the COCO results format. :brain:
     """
+    project_uuid = select_project_hash_from_name(database_dir, project_name or "")
     if coco:
         from encord_active.imports.op import import_coco_prediction
 
         import_coco_prediction(
-            database_dir=database_dir,
-            predictions_file_path=predictions_path,
+            database_dir=database_dir, predictions_file_path=predictions_path, project_uuid=project_uuid
         )
     else:
         with open(predictions_path, "rb") as f:

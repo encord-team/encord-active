@@ -1,6 +1,7 @@
+import math
 import uuid
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 from encord.objects import Object, OntologyStructure, Shape
 from encord.utilities import label_utilities
@@ -12,8 +13,8 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
 )
 
-from ...db.enums import AnnotationType, annotation_type_from_str
-from ...lib.common.time import get_timestamp
+from ...db.enums import AnnotationType
+from ..util import append_object_to_list
 from .op import ProjectImportSpec
 from .util import get_data_uri
 
@@ -117,114 +118,121 @@ def _crop_box_to_image_size(x, y, w, h, image: CoCoImageInfo) -> Tuple[int, int,
 
 
 def import_coco_annotation(
-    annotation: CoCoAnnotationInfo, image: CoCoImageInfo, annotation_id_map: Dict[Tuple[int, AnnotationType], Object]
+    annotation: CoCoAnnotationInfo, image: CoCoImageInfo, annotation_id_map: Dict[int, Tuple[AnnotationType, Object]]
 ) -> Tuple[List[dict], bool]:
+    annotation_type, ontology_object = annotation_id_map[annotation.category_id]
+    shape_data_list: List[Union[Dict[str, Dict[str, float]], Dict[str, float]]] = []
     if annotation.segmentation:
         if isinstance(annotation.segmentation, CoCoBitmaskSegmentation):
-            ontology_object = annotation_id_map[annotation.category_id, AnnotationType.BITMASK]
-            annotation_type = AnnotationType.BITMASK
+            # BITMASK: Not supported
+            print("WARNING: BITMASK Coco Annotation found: this is not currently supported")
         else:
-            ontology_object = annotation_id_map[annotation.category_id, AnnotationType.POLYGON]
-            annotation_type = AnnotationType.POLYGON
+            for points in annotation.segmentation:
+                if len(points) % 2 == 1:
+                    raise ValueError(f"Cannot convert segmentation into polygon: {points}")
+                shape_data_poly: Dict[str, Dict[str, float]] = {}
+                for i in range(0, len(points), 2):
+                    px = points[i]
+                    py = points[i + 1]
+                    pi = i // 2
+                    shape_data_poly[str(pi)] = {"x": float(px / image.width), "y": float(py / image.height)}
+                if annotation_type == AnnotationType.BITMASK:
+                    raise ValueError("Bitmask conversion not implemented yet")
+                else:
+                    shape_data_list.append(shape_data_poly)
     elif len(annotation.bbox) == 4:
-        if annotation.rotation or (annotation.category_id, AnnotationType.BOUNDING_BOX) not in annotation_id_map:
-            ontology_object = annotation_id_map[annotation.category_id, AnnotationType.ROTATABLE_BOUNDING_BOX]
-            annotation_type = AnnotationType.ROTATABLE_BOUNDING_BOX
-        else:
-            ontology_object = annotation_id_map[annotation.category_id, AnnotationType.BOUNDING_BOX]
-            annotation_type = AnnotationType.BOUNDING_BOX
-    else:
-        raise ValueError(f"Unknown coco annotation shape: {annotation}")
-    shape_data_list: List[Union[Dict[str, Dict[str, float]], Dict[str, float]]] = []
-    if annotation_type == AnnotationType.BITMASK:
-        pass  # FIXME: not supported yet!!
-    elif annotation_type == AnnotationType.POLYGON:
-        if isinstance(annotation.segmentation, CoCoBitmaskSegmentation):
-            raise ValueError(f"Converting coco bitmask to polygon: {annotation}")
-        if len(annotation.segmentation) == 0:
-            raise ValueError(f"Cannot convert segmentation into polygon: {annotation.segmentation}")
-        for points in annotation.segmentation:
-            if len(points) % 2 == 1:
-                raise ValueError(f"Cannot convert segmentation into polygon: {points}")
-            shape_data_poly: Dict[str, Dict[str, float]] = {}
-            for i in range(0, len(points), 2):
-                px = points[i]
-                py = points[i + 1]
-                pi = i // 2
-                shape_data_poly[str(pi)] = {"x": float(px / image.width), "y": float(py / image.height)}
-            shape_data_list.append(shape_data_poly)
-    elif annotation_type in {AnnotationType.ROTATABLE_BOUNDING_BOX, AnnotationType.BOUNDING_BOX}:
         x, y, w, h = _crop_box_to_image_size(*annotation.bbox, image=image)
-        shape_data: Dict[str, float] = {
-            "x": float(x / image.width),
-            "y": float(y / image.height),
-            "w": float(w / image.width),
-            "h": float(h / image.height),
-        }
-        if annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
-            shape_data["theta"] = float(annotation.rotation or 0.0)
-        shape_data_list.append(shape_data)
-    else:
-        raise ValueError(f"Unsupported annotation_type for coco import: {annotation_type}")
+        theta = float(annotation.rotation or 0.0)
 
-    timestamp: str = get_timestamp()
-    object_list = []
-    for shape_data_entry in shape_data_list:
-        object_list.append(
-            {
-                "name": ontology_object.name,
-                "color": ontology_object.color,
-                "value": "_".join(ontology_object.name.lower().split()),
-                "createdAt": timestamp,
-                "createdBy": "robot@encord.com",
-                "confidence": annotation.score or 1.0,
-                "objectHash": annotation.encord_track_uuid or str(uuid.uuid4())[:8],
-                "featureHash": ontology_object.feature_node_hash,
-                "lastEditedAt": timestamp,
-                "lastEditedBy": "robot@encord.com",
-                "shape": str(annotation_type.value),
-                "manualAnnotation": False,
-                "reviews": [],
-                str(annotation_type.value): shape_data_entry,
+        # Convert to polygon
+        if annotation_type not in {AnnotationType.BOUNDING_BOX, AnnotationType.ROTATABLE_BOUNDING_BOX}:
+            x2 = x + w
+            y2 = y + h
+            xm = x + (w / 2.0)
+            ym = y + (h / 2.0)
+            cs = math.cos(theta)
+            sn = math.cos(theta)
+
+            def _transform(xv: float, yv: float) -> Dict[str, float]:
+                xv -= xm
+                yv -= ym
+                xr = (xv * cs) - (yv * sn)
+                yr = (xv * sn) + (yv * cs)
+                return {
+                    "x": (xr + xm) / image.width,
+                    "y": (yr + ym) / image.height,
+                }
+
+            shape_data_poly = {
+                "0": _transform(x, y),
+                "1": _transform(x, y2),
+                "2": _transform(x2, y2),
+                "3": _transform(x2, y),
             }
-        )
+            if annotation_type == AnnotationType.BITMASK:
+                raise ValueError("Bitmask conversion not implemented yet")
+            else:
+                shape_data_list.append(shape_data_poly)
+        else:
+            shape_data_bb: Dict[str, float] = {
+                "x": float(x / image.width),
+                "y": float(y / image.height),
+                "w": float(w / image.width),
+                "h": float(h / image.height),
+            }
+            if annotation is not AnnotationType.BOUNDING_BOX:
+                shape_data_bb["theta"] = theta
+            elif bool(annotation.rotation):
+                raise ValueError("Inferred category id to bounding box, but rotation is requested")
+            shape_data_list.append(shape_data_bb)
+    else:
+        raise ValueError(f"CoCo annotation with no segmentation & invalid bbox format: {annotation}")
+    object_list: List[dict] = []
+    append_object_to_list(
+        object_list=object_list,
+        annotation_type=annotation_type,
+        shape_data_list=shape_data_list,
+        ontology_object=ontology_object,
+        confidence=annotation.score,
+        object_hash=annotation.encord_track_uuid,
+    )
     return object_list, True
 
 
-def infer_coco_shape(coco_file: CoCoFileSpec) -> Dict[int, Set[AnnotationType]]:
-    shapes_dict: Dict[int, Set[AnnotationType]] = {}
+def infer_coco_shape(coco_file: CoCoFileSpec) -> Dict[int, AnnotationType]:
+    shapes_dict: Dict[int, AnnotationType] = {}
     for annotation in coco_file.annotations:
-        annotation_type_set = shapes_dict.setdefault(annotation.category_id, set())
+        # Set to the least general shape that is supported by both
+        # BOUNDING_BOX -> ROTATABLE_BOUNDING_BOX -> POLYGON -> BITMASK
+        annotation_type = shapes_dict.setdefault(annotation.category_id, AnnotationType.BOUNDING_BOX)
         if annotation.segmentation:
             if isinstance(annotation.segmentation, CoCoBitmaskSegmentation):
-                annotation_type_set.add(AnnotationType.BITMASK)
+                print("WARNING: Bitmask CoCo Annotation Found, this is not currently supported")
+                # FIXME: shapes_dict[annotation_type] = AnnotationType.BITMASK
             else:
-                annotation_type_set.add(AnnotationType.POLYGON)
-        if len(annotation.bbox) == 4:
-            if bool(annotation.rotation):
-                annotation_type_set.add(AnnotationType.ROTATABLE_BOUNDING_BOX)
-                if AnnotationType.BOUNDING_BOX in annotation_type_set:
-                    annotation_type_set.remove(AnnotationType.BOUNDING_BOX)
-            elif AnnotationType.ROTATABLE_BOUNDING_BOX not in annotation_type_set:
-                annotation_type_set.add(AnnotationType.BOUNDING_BOX)
+                if annotation_type != AnnotationType.BITMASK:
+                    shapes_dict[annotation_type] = AnnotationType.POLYGON
+        elif len(annotation.bbox) == 4:
+            if bool(annotation.rotation) and annotation_type == AnnotationType.BOUNDING_BOX:
+                shapes_dict[annotation_type] = AnnotationType.ROTATABLE_BOUNDING_BOX
+        else:
+            raise ValueError(f"CoCo annotation with no segmentation & invalid bbox format: {annotation}")
 
     return shapes_dict
 
 
 def import_coco_ontology(
     coco_file: CoCoFileSpec,
-    shape_dict: Dict[int, Set[AnnotationType]],
-) -> Tuple[dict, Dict[Tuple[int, AnnotationType], Object]]:
+    shape_dict: Dict[int, AnnotationType],
+) -> Tuple[dict, Dict[int, Tuple[AnnotationType, Object]]]:
     ontology_structure = OntologyStructure()
     id_mapping = {}
     for cat in coco_file.categories:
-        cat_shapes = shape_dict.get(cat.id, {AnnotationType.BOUNDING_BOX, AnnotationType.POLYGON})
-        for i, shape in enumerate(sorted([str(s) for s in cat_shapes])):
-            # NOTE: add one to the category id to avoid index 0
-            new_id = (cat.id + 1) * 10 + i
-            name = cat.name
-            obj = ontology_structure.add_object(name=name, shape=Shape(shape), uid=new_id)
-            id_mapping[(cat.id, annotation_type_from_str(shape))] = obj
+        shape = shape_dict.get(cat.id, AnnotationType.BITMASK)
+        new_id = cat.id + 1  # NOTE: add one to the category id to avoid index 0
+        name = cat.name
+        obj = ontology_structure.add_object(name=name, shape=Shape(str(shape)), uid=new_id)
+        id_mapping[cat.id] = shape, obj
 
     return ontology_structure.to_dict(), id_mapping
 

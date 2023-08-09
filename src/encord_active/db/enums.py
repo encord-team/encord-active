@@ -27,6 +27,12 @@ class AnnotationType(enum.IntEnum):
     SKELETON = 6  # "skeleton"
     BITMASK = 7  # "bitmask"
 
+    def __str__(self) -> str:
+        return self.name.lower()
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 
 _ANNOTATION_TYPE_LOOKUP: Dict[str, AnnotationType] = {
     "classification": AnnotationType.CLASSIFICATION,

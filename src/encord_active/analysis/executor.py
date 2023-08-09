@@ -3,7 +3,7 @@ import math
 import random
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
 import av
 import encord
@@ -37,6 +37,9 @@ from encord_active.db.models import (
     ProjectDataAnalyticsExtra,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsExtra,
+    ProjectPredictionAnalyticsFalseNegatives,
 )
 from encord_active.lib.common.data_utils import download_image, url_to_file_path
 
@@ -46,6 +49,11 @@ from ..lib.encord.utils import get_encord_project
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
 from .embedding import BaseEmbedding, NearestImageEmbeddingQuery
 from .metric import RandomSamplingQuery
+
+TTypeAnnotationAnalytics = TypeVar("TTypeAnnotationAnalytics", ProjectAnnotationAnalytics, ProjectPredictionAnalytics)
+TTypeAnnotationAnalyticsExtra = TypeVar(
+    "TTypeAnnotationAnalyticsExtra", ProjectAnnotationAnalyticsExtra, ProjectPredictionAnalyticsExtra
+)
 
 
 class Executor:
@@ -58,6 +66,7 @@ class SimpleExecutor(Executor):
         super().__init__(config=config)
         self.data_metrics: Dict[Tuple[uuid.UUID, int], MetricDependencies] = {}
         self.annotation_metrics: Dict[Tuple[uuid.UUID, int, str], MetricDependencies] = {}
+        self.prediction_false_negatives: Dict[Tuple[uuid.UUID, int, str], Tuple[str, float]] = {}
         self.encord_projects: Dict[uuid.UUID, encord.Project] = {}
 
     def execute_from_db(
@@ -77,9 +86,41 @@ class SimpleExecutor(Executor):
         for du in du_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
         values = [(data, du_dict[data.data_hash]) for data in data_meta]
-        return self.execute(
-            values, database_dir=database_dir, project_hash=project_hash, project_ssh_path=project_ssh_path
+        self.execute(
+            values,
+            database_dir=database_dir,
+            project_hash=project_hash,
+            project_ssh_path=project_ssh_path,
         )
+        return self._pack_output(project_hash=project_hash)
+
+    def execute_prediction_from_db(
+        self,
+        data_meta: List[ProjectDataMetadata],
+        ground_truth_annotation_meta: List[ProjectDataUnitMetadata],
+        predicted_annotation_meta: List[ProjectDataUnitMetadata],
+        database_dir: Path,
+        project_hash: uuid.UUID,
+        prediction_hash: uuid.UUID,
+        project_ssh_path: Optional[str],
+    ) -> Tuple[
+        List[ProjectPredictionAnalytics],
+        List[ProjectPredictionAnalyticsExtra],
+        List[ProjectPredictionAnalyticsFalseNegatives],
+    ]:
+        du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
+        for du in predicted_annotation_meta:
+            du_dict.setdefault(du.data_hash, []).append(du)
+        values = [(data, du_dict[data.data_hash]) for data in data_meta]
+        gt_lookup = {(gt.du_hash, gt.frame): gt for gt in ground_truth_annotation_meta}
+        self.execute(
+            values,
+            database_dir=database_dir,
+            project_hash=project_hash,
+            project_ssh_path=project_ssh_path,
+            gt_lookup=gt_lookup,
+        )
+        return self._pack_prediction(project_hash=project_hash, prediction_hash=prediction_hash)
 
     def execute(
         self,
@@ -87,13 +128,9 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]] = None,
         batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
-    ) -> Tuple[
-        List[ProjectDataAnalytics],
-        List[ProjectDataAnalyticsExtra],
-        List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra],
-    ]:
+    ) -> None:
         # Split into videos & images
         video_values = [v for v in values if v[0].data_type == "video"]
         image_values = [(d, dle) for d, dl in values if d.data_type != "video" for dle in dl]
@@ -121,12 +158,14 @@ class SimpleExecutor(Executor):
                     database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
+                    gt_lookup=gt_lookup,
                 )
                 self._stage_1_image_no_batching(
                     image_values,
                     database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
+                    gt_lookup=gt_lookup,
                 )
             else:
                 self._stage_1_video_batching(
@@ -134,6 +173,7 @@ class SimpleExecutor(Executor):
                     database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
+                    gt_lookup=gt_lookup,
                 )
                 self._stage_1_image_batching(
                     image_values,
@@ -141,12 +181,12 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                     batching=batch,
+                    gt_lookup=gt_lookup,
                 )
 
             # Post-processing stages
             self._stage_2()
             self._stage_3()
-            return self._pack_output(project_hash=project_hash)
 
     def _stage_1_video_batching(
         self,
@@ -154,6 +194,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         if len(videos) == 0:
             return
@@ -195,6 +236,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         if len(videos) == 0:
             return
@@ -208,9 +250,7 @@ class SimpleExecutor(Executor):
                 label_hash=data_metadata.label_hash,
                 du_hash=video_start.du_hash,
             )
-            prev_frame: Optional[BaseFrameInput] = None
-            curr_frame: Optional[BaseFrameInput] = None
-            next_frame: Optional[BaseFrameInput] = None
+            frames: List[Tuple[BaseFrameInput, Optional[Dict[str, AnnotationMetadata]]]] = []
             iter_frame_num = -1
             # FIXME: use torchvision VideoReader!!
             with av.open(str(video_url_or_path), mode="r") as container:
@@ -234,49 +274,53 @@ class SimpleExecutor(Executor):
                         image=frame_image,
                         du_meta=frame_du_meta,
                     )
-                    # Step through window
-                    if prev_frame is None:
-                        prev_frame = frame_input
-                    elif curr_frame is None:
-                        curr_frame = frame_input
-                    elif next_frame is None:
-                        next_frame = frame_input
+                    gt = None if gt_lookup is None else gt_lookup[frame_du_meta.du_hash, frame_du_meta.frame]
+                    if gt is None:
+                        gt_input = None
                     else:
-                        prev_frame = curr_frame
-                        curr_frame = next_frame
-                        next_frame = frame_input
+                        gt_input, _ignore = self._get_frame_annotations(
+                            gt, image_width=frame_image.width, image_height=frame_image.height
+                        )
+                    frames.append((frame_input, gt_input))
+
                     # Run stage 1 metrics
-                    if next_frame is not None and curr_frame is not None:
+                    if len(frames) == 3:
                         # Process non-first & non-last frame
                         # FIXME: seq metrics may work better with (curr, next, next_next)
                         #  need to sanity check on changes to design before fully enabling.
                         #  video metrics.
                         self._execute_stage_1_metrics_no_batching(
-                            prev_frame=prev_frame,
-                            current_frame=curr_frame,
-                            next_frame=next_frame,
+                            prev_frame=frames[0][0],
+                            current_frame=frames[1][0],
+                            next_frame=frames[1][0],
+                            current_frame_gt=frames[1][1],
                             du_hash=du_meta_list[0].du_hash,
                             frame=iter_frame_num - 1,
                         )
-                    elif curr_frame is not None:
+                        frames = frames[1:]
+                    elif len(frames) == 2:
                         # Process first frame
                         self._execute_stage_1_metrics_no_batching(
                             prev_frame=None,
-                            current_frame=prev_frame,
-                            next_frame=curr_frame,
+                            current_frame=frames[0][0],
+                            next_frame=frames[1][0],
+                            current_frame_gt=frames[0][1],
                             du_hash=du_meta_list[0].du_hash,
                             frame=iter_frame_num - 1,
                         )
 
-                # Process final frame
-                if next_frame is not None:
+                # Process final frame (special case handling for 1-frame video as well)
+                if len(frames) == 1 or len(frames) == 2:
                     self._execute_stage_1_metrics_no_batching(
-                        prev_frame=curr_frame,
-                        current_frame=next_frame,
+                        prev_frame=frames[-2][0] if len(frames) == 2 else None,
+                        current_frame=frames[-1][0],
                         next_frame=None,
+                        current_frame_gt=frames[-1][1],
                         du_hash=du_meta_list[0].du_hash,
                         frame=iter_frame_num,
                     )
+                else:
+                    raise ValueError("Video frame processing bug")
 
     def _stage_1_image_no_batching(
         self,
@@ -284,23 +328,31 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         for data_metadata, du_meta in tqdm(images, desc="Metric Computation Stage 1: Images"):
+            gt = None if gt_lookup is None else gt_lookup[du_meta.du_hash, du_meta.frame]
+            image = self._open_image(
+                uri=du_meta.data_uri,
+                database_dir=database_dir,
+                project_hash=project_hash,
+                project_ssh_path=project_ssh_path,
+                label_hash=data_metadata.label_hash,
+                du_hash=du_meta.du_hash,
+            )
             frame_input = self._get_frame_input(
-                image=self._open_image(
-                    uri=du_meta.data_uri,
-                    database_dir=database_dir,
-                    project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
-                    label_hash=data_metadata.label_hash,
-                    du_hash=du_meta.du_hash,
-                ),
+                image=image,
                 du_meta=du_meta,
             )
+            if gt is None:
+                gt_input = None
+            else:
+                gt_input, _ignore = self._get_frame_annotations(gt, image_width=image.width, image_height=image.height)
             self._execute_stage_1_metrics_no_batching(
                 prev_frame=None,
                 current_frame=frame_input,
                 next_frame=None,
+                current_frame_gt=gt_input,
                 du_hash=du_meta.du_hash,
                 frame=du_meta.frame,
             )
@@ -312,6 +364,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         batching: int,
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ) -> None:
         grouped_values: Dict[Tuple[int, int], List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]]] = {}
         for data_metadata, du_metadata in values:
@@ -425,6 +478,7 @@ class SimpleExecutor(Executor):
         prev_frame: Optional[BaseFrameInput],
         current_frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
+        current_frame_gt: Optional[Dict[str, AnnotationMetadata]],
         du_hash: uuid.UUID,
         frame: int,
     ) -> None:
@@ -460,14 +514,87 @@ class SimpleExecutor(Executor):
                     if non_ephemeral:
                         annotation_result_deps[evaluation.ident] = annotation_value
 
+        if current_frame_gt is not None:
+            # Calculate iou matches & iou thresholds
+            min_iou_threshold_map: Dict[str, float] = {}
+            gt_matches: Dict[str, Dict[str, MetricDependencies]] = {}
+            for annotation_hash, annotation_meta in current_frame.annotations.items():
+                # Calculate iou & best_match & best_match_feature_hash
+                best_iou: float = 0.0
+                best_iou_match: Optional[Tuple[str, str]] = None
+                if annotation_meta.mask is None:
+                    # classification
+                    for gt_hash, gt_meta in current_frame_gt.items():
+                        if gt_meta.feature_hash == annotation_meta.feature_hash:
+                            best_iou = 1.0
+                            best_iou_match = (gt_hash, gt_meta.feature_hash)
+                else:
+                    pass
+                annotation_result = annotation_results_deps[annotation_hash]
+                annotation_result["iou"] = best_iou
+                if best_iou_match is None:
+                    annotation_result["match_object_hash"] = None
+                    annotation_result["match_feature_hash"] = None
+                else:
+                    annotation_result["match_object_hash"] = best_iou_match[0]
+                    annotation_result["match_feature_hash"] = best_iou_match[1]
+                    if best_iou_match[1] == annotation_meta.feature_hash:
+                        gt_iou_threshold = min_iou_threshold_map.get(best_iou_match[0], -1.0)
+                        min_iou_threshold_map[best_iou_match[0]] = max(gt_iou_threshold, best_iou)
+                        gt_matches.setdefault(best_iou_match[0], {})[annotation_hash] = annotation_result
+                    else:
+                        annotation_result["match_duplicate_iou"] = 1.0  # Always false positive
+
+            # Populate calculation of ranges
+            for gt_match_set in gt_matches.values():
+                gt_match_list = list(gt_match_set.items())
+                if len(gt_match_list) == 1:
+                    gt_match_list[0][1]["match_duplicate_iou"] = -1.0  # Always true positive
+                else:
+                    # Order by iou descending, calc the highest confidence value (TP) in the range of iou values
+                    # considered for the TP associated with an IOU range.
+                    def iou_compare_key(m_obj: Tuple[str, MetricDependencies]):
+                        oh, m_deps = m_obj
+                        return m_deps["iou"], m_deps["metric_label_confidence"], oh
+
+                    gt_match_list.sort(key=iou_compare_key, reverse=True)
+
+                    current_true_positive: MetricDependencies = gt_match_list[0][1]
+                    current_true_positive["match_duplicate_iou"] = -1.0
+                    current_true_positive_confidence: float = float(
+                        cast(float, current_true_positive["metric_label_confidence"])
+                    )
+                    for mh_oh, mh_dict in gt_match_list[1:]:
+                        model_confidence: float = float(cast(float, mh_dict["metric_label_confidence"]))
+                        if model_confidence > current_true_positive_confidence:
+                            mh_dict["match_duplicate_iou"] = -1.0
+                            current_true_positive["match_duplicate_iou"] = mh_dict["iou"]
+                            # Change of TP at iou threshold
+                            current_true_positive = mh_dict
+                            current_true_positive_confidence = model_confidence
+                        else:
+                            # Always FP
+                            mh_dict["match_duplicate_iou"] = 1.0
+
+            # Populate prediction false negatives table
+            for gt_hash, gt_meta in current_frame_gt.items():
+                self.prediction_false_negatives[(du_hash, frame, gt_hash)] = (
+                    gt_meta.feature_hash,
+                    min_iou_threshold_map.get(gt_hash, -1.0),
+                )
+
         # Splat the results
         self.data_metrics[(du_hash, frame)] = image_results_deps
         for annotation_hash, annotation_deps in annotation_results_deps.items():
             self.annotation_metrics[(du_hash, frame, annotation_hash)] = annotation_deps
 
-    def _get_frame_input(self, image: Image.Image, du_meta: ProjectDataUnitMetadata) -> BaseFrameInput:
+    def _get_frame_annotations(
+        self,
+        du_meta: ProjectDataUnitMetadata,
+        image_width: int,
+        image_height: int,
+    ) -> Tuple[Dict[str, AnnotationMetadata], bool]:
         annotations = {}
-        annotations_deps: Dict[str, MetricDependencies] = {}
         hash_collision = False
         for obj in du_meta.objects:
             obj_hash = str(obj["objectHash"])
@@ -477,15 +604,15 @@ class SimpleExecutor(Executor):
                 hash_collision = True
             else:
                 try:
-                    points = obj_to_points(annotation_type, obj, img_w=image.width, img_h=image.height)
+                    points = obj_to_points(annotation_type, obj, img_w=image_width, img_h=image_height)
                     mask = obj_to_mask(
-                        self.config.device, annotation_type, img_w=image.width, img_h=image.height, points=points
+                        self.config.device, annotation_type, img_w=image_width, img_h=image_height, points=points
                     )
                 except Exception:
                     print(f"DEBUG Obj to Points & Mask for {annotation_type}: {obj}")
                     raise
-                if mask is not None and mask.shape != (image.height, image.width):
-                    raise ValueError(f"Wrong mask tensor shape: {mask.shape} != {(image.height, image.width)}")
+                if mask is not None and mask.shape != (image_height, image_width):
+                    raise ValueError(f"Wrong mask tensor shape: {mask.shape} != {(image_height, image_width)}")
                 bounding_box = None
                 if mask is not None:
                     mask = mask.to(self.config.device)
@@ -507,7 +634,6 @@ class SimpleExecutor(Executor):
                     annotation_confidence=float(obj["confidence"]),
                     bounding_box=bounding_box,
                 )
-                annotations_deps[obj_hash] = {}
         for cls in du_meta.classifications:
             cls_hash = str(cls["classificationHash"])
             feature_hash = str(cls["featureHash"])
@@ -524,7 +650,15 @@ class SimpleExecutor(Executor):
                     annotation_confidence=float(cls["confidence"]),
                     bounding_box=None,
                 )
-                annotations_deps[cls_hash] = {}
+        return annotations, hash_collision
+
+    def _get_frame_input(self, image: Image.Image, du_meta: ProjectDataUnitMetadata) -> BaseFrameInput:
+        annotations, hash_collision = self._get_frame_annotations(
+            du_meta=du_meta, image_width=image.width, image_height=image.height
+        )
+        annotations_deps: Dict[str, MetricDependencies] = {
+            annotation_hash: {} for annotation_hash in annotations.keys()
+        }
 
         image_tensor = pillow_to_tensor(image).to(self.config.device)
         if image_tensor.shape != (3, image.height, image.width):
@@ -643,8 +777,10 @@ class SimpleExecutor(Executor):
     def _validate_pack_deps(
         self,
         deps: MetricDependencies,
-        ty_analytics: Type[Union[ProjectAnnotationAnalytics, ProjectDataAnalytics]],
-        ty_extra: Type[Union[ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra]],
+        ty_analytics: Type[Union[ProjectPredictionAnalytics, ProjectAnnotationAnalytics, ProjectDataAnalytics]],
+        ty_extra: Type[
+            Union[ProjectPredictionAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra]
+        ],
     ) -> Tuple[Set[str], Set[str]]:
         metric_lookup = {
             m.ident: m.metric_type
@@ -701,6 +837,51 @@ class SimpleExecutor(Executor):
             log.debug(f"WARNING: unassigned analytics extra value({ty_extra.__name__}) = {unassigned_extra_values}")
         return analysis_values, extra_values
 
+    @classmethod
+    def _pack_metric(
+        cls, v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType]
+    ) -> Union[bytes, float, int, str, None]:
+        if isinstance(v, Tensor):
+            return v.item()
+        if (
+            isinstance(v, NearestNeighbors)
+            or isinstance(v, RandomSampling)
+            or isinstance(v, dict)
+            or isinstance(v, AnnotationType)
+        ):
+            raise ValueError(f"Unsupported metric type: {type(v)}")
+        return v
+
+    @classmethod
+    def _pack_extra(
+        cls,
+        k: str,
+        v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType],
+    ) -> Union[bytes, float, int, str, None, dict]:
+        if isinstance(v, AnnotationType):
+            raise ValueError(f"Annotation type is not a valid extra property: {k}")
+        elif isinstance(v, Tensor):
+            if k.startswith("embedding_"):
+                if len(v.shape) != 1:
+                    raise ValueError(f"Invalid embedding shape: {v.shape}")
+                embedding_len = None
+                if k == "embedding_hu":
+                    embedding_len = 7
+                elif k == "embedding_clip":
+                    embedding_len = 512
+                if v.shape[0] != embedding_len:
+                    raise ValueError(f"Embedding has wrong length: {v.shape} != {embedding_len or 'Unknown'}")
+                return v.cpu().numpy().tobytes()
+            return v.item()
+        elif isinstance(v, NearestNeighbors):
+            return {
+                "similarities": v.similarities,
+                "keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys],
+            }
+        elif isinstance(v, RandomSampling):
+            return {"keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys]}
+        return v
+
     def _pack_output(
         self,
         project_hash: uuid.UUID,
@@ -715,48 +896,6 @@ class SimpleExecutor(Executor):
         annotation_analysis = []
         annotation_analysis_extra = []
 
-        def _metric(
-            v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType]
-        ) -> Union[bytes, float, int, str, None]:
-            if isinstance(v, Tensor):
-                return v.item()
-            if (
-                isinstance(v, NearestNeighbors)
-                or isinstance(v, RandomSampling)
-                or isinstance(v, dict)
-                or isinstance(v, AnnotationType)
-            ):
-                raise ValueError(f"Unsupported metric type: {type(v)}")
-            return v
-
-        def _extra(
-            k: str,
-            v: Union[Tensor, float, int, str, None, NearestNeighbors, RandomSampling, Dict[str, str], AnnotationType],
-        ) -> Union[bytes, float, int, str, None, dict]:
-            if isinstance(v, AnnotationType):
-                raise ValueError(f"Annotation type is not a valid extra property: {k}")
-            elif isinstance(v, Tensor):
-                if k.startswith("embedding_"):
-                    if len(v.shape) != 1:
-                        raise ValueError(f"Invalid embedding shape: {v.shape}")
-                    embedding_len = None
-                    if k == "embedding_hu":
-                        embedding_len = 7
-                    elif k == "embedding_clip":
-                        embedding_len = 512
-                    if v.shape[0] != embedding_len:
-                        raise ValueError(f"Embedding has wrong length: {v.shape} != {embedding_len or 'Unknown'}")
-                    return v.cpu().numpy().tobytes()
-                return v.item()
-            elif isinstance(v, NearestNeighbors):
-                return {
-                    "similarities": v.similarities,
-                    "keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys],
-                }
-            elif isinstance(v, RandomSampling):
-                return {"keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys]}
-            return v
-
         for (du_hash, frame), data_deps in self.data_metrics.items():
             analysis_values, extra_values = self._validate_pack_deps(
                 data_deps,
@@ -768,7 +907,7 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    **{k: _metric(v) for k, v in data_deps.items() if k in analysis_values},
+                    **{k: self._pack_metric(v) for k, v in data_deps.items() if k in analysis_values},
                 )
             )
             data_analysis_extra.append(
@@ -777,7 +916,7 @@ class SimpleExecutor(Executor):
                     du_hash=du_hash,
                     frame=frame,
                     **{
-                        k: _extra(k, v)
+                        k: self._pack_extra(k, v)
                         for k, v in data_deps.items()
                         if k in extra_values and not k.startswith("derived_")
                     },
@@ -803,7 +942,7 @@ class SimpleExecutor(Executor):
                     annotation_type=annotation_type,
                     annotation_email=annotation_email,
                     annotation_manual=annotation_manual,
-                    **{k: _metric(v) for k, v in annotation_deps.items() if k in analysis_values},
+                    **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
             )
             annotation_analysis_extra.append(
@@ -812,8 +951,67 @@ class SimpleExecutor(Executor):
                     du_hash=du_hash,
                     frame=frame,
                     object_hash=annotation_hash,
-                    **{k: _extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
+                    **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
 
         return data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra
+
+    def _pack_prediction(
+        self, project_hash: uuid.UUID, prediction_hash: uuid.UUID
+    ) -> Tuple[
+        List[ProjectPredictionAnalytics],
+        List[ProjectPredictionAnalyticsExtra],
+        List[ProjectPredictionAnalyticsFalseNegatives],
+    ]:
+        prediction_analysis = []
+        prediction_analysis_extra = []
+        prediction_false_negatives = []
+
+        for (du_hash, frame, annotation_hash), annotation_deps in self.annotation_metrics.items():
+            feature_hash = annotation_deps.pop("feature_hash")
+            annotation_type = annotation_deps.pop("annotation_type")
+            annotation_email = annotation_deps.pop("annotation_email")
+            annotation_manual = annotation_deps.pop("annotation_manual")
+            analysis_values, extra_values = self._validate_pack_deps(
+                annotation_deps,
+                ProjectPredictionAnalytics,
+                ProjectPredictionAnalyticsExtra,
+            )
+            prediction_analysis.append(
+                ProjectPredictionAnalytics(
+                    prediction_hash=prediction_hash,
+                    project_hash=project_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    object_hash=annotation_hash,
+                    feature_hash=feature_hash,
+                    annotation_type=annotation_type,
+                    annotation_email=annotation_email,
+                    annotation_manual=annotation_manual,
+                    **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
+                )
+            )
+            prediction_analysis_extra.append(
+                ProjectPredictionAnalyticsExtra(
+                    prediction_hash=prediction_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    object_hash=annotation_hash,
+                    **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
+                )
+            )
+
+        for (du_hash, frame, annotation_hash), (feature_hash, iou_threshold) in self.prediction_false_negatives.items():
+            prediction_false_negatives.append(
+                ProjectPredictionAnalyticsFalseNegatives(
+                    prediction_hash=prediction_hash,
+                    du_hash=du_hash,
+                    frame=frame,
+                    annotation_hash=annotation_hash,
+                    iou_threshold=iou_threshold,
+                    feature_hash=feature_hash,
+                )
+            )
+
+        return prediction_analysis, prediction_analysis_extra, prediction_false_negatives
