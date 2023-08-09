@@ -126,6 +126,18 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
+    "metric_video_green_density": MetricDefinition(
+        title="Video Green Density",
+        short_desc="Greenness of the video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_video_blue_density": MetricDefinition(
+        title="Video Blue Density",
+        short_desc="Blueness of the video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
 }
 
 AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {

@@ -86,6 +86,8 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Image-level Annotation Quality": "metric_annotation_quality",
     "Shape outlier detection": "metric_label_shape_outlier",
     "Video Red Density": "metric_video_red_density",
+    "Video Green Density": "metric_video_green_density",
+    "Video Blue Density": "metric_video_blue_density",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.

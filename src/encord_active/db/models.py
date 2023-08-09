@@ -162,6 +162,8 @@ class ProjectDataAnalytics(SQLModel, table=True):
     metric_image_difficulty: Optional[float]  # FIXME: is the output of this always an integer??
     metric_image_singularity: Optional[float] = MetricFieldTypeNormal
     metric_video_red_density: Optional[float] = MetricFieldTypeNormal
+    metric_video_green_density: Optional[float] = MetricFieldTypeNormal
+    metric_video_blue_density: Optional[float] = MetricFieldTypeNormal
     # 4x custom normal metrics
     metric_custom0: Optional[float] = MetricFieldTypeNormal
     metric_custom1: Optional[float] = MetricFieldTypeNormal
