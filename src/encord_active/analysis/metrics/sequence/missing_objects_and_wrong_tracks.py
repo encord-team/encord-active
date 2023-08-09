@@ -25,7 +25,7 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
 
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_label_missing_or_broken_tracks",
+            ident="metric_missing_or_broken_track",
             long_name="Missing Object, Wrong Track",
             desc="",
             metric_type=MetricType.NORMAL,

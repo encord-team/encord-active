@@ -75,9 +75,9 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Red Values": "metric_red",
     "Sharpness": "metric_sharpness",
     "Annotation Duplicates": "metric_max_iou",
-    "Annotation closeness to image borders": "metric_label_border_closeness",
-    "Inconsistent Object Classification and Track IDs": "metric_label_inconsistent_classification_and_track",
-    "Missing Objects and Broken Tracks": "metric_label_missing_or_broken_tracks",
+    "Annotation closeness to image borders": "metric_border_relative",
+    "Inconsistent Object Classification and Track IDs": "metric_inconsistent_class",
+    "Missing Objects and Broken Tracks": "metric_missing_or_broken_track",
     "Object Annotation Quality": "metric_annotation_quality",
     "Object Area - Absolute": "metric_area",
     "Object Area - Relative": "metric_area_relative",
@@ -301,10 +301,10 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
     else:
 
         def confidence_compare_key(m_obj: ProjectPredictionAnalytics):
-            return m_obj.metric_label_confidence, m_obj.iou, m_obj.object_hash
+            return m_obj.metric_confidence, m_obj.iou, m_obj.object_hash
 
         def iou_compare_key(m_obj: ProjectPredictionAnalytics) -> Tuple[float, float, str]:
-            return m_obj.iou, m_obj.metric_label_confidence, m_obj.object_hash
+            return m_obj.iou, m_obj.metric_confidence, m_obj.object_hash
 
         # Consider each candidate in confidence order:
         # max-confidence: always the TP if it matches (if iou is valid and hence not null)
@@ -350,12 +350,12 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
         # The max confidence candidate is the TP until an entry with smaller iou is found.
         current_true_positive: ProjectPredictionAnalytics = model_prediction_group[0]
         current_true_positive.match_duplicate_iou = _PREDICTION_MATCH_IOU_ALWAYS_TP
-        current_true_positive_confidence: float = current_true_positive.metric_label_confidence
+        current_true_positive_confidence: float = current_true_positive.metric_confidence
 
         for model_prediction_entry in model_prediction_group[1:]:
             if model_prediction_entry.feature_hash != model_prediction_entry.match_feature_hash:
                 raise ValueError("Bug: should be filtered out earlier")
-            model_confidence: float = model_prediction_entry.metric_label_confidence
+            model_confidence: float = model_prediction_entry.metric_confidence
             if model_confidence > current_true_positive_confidence:
                 # This model is considered the true positive whenever it matches, as it has a higher confidence
                 # and smaller iou. The boundary on the parent remaining a true-positive is defined.
@@ -708,7 +708,7 @@ def __migrate_predictions(
                 # Prediction metadata
                 project_hash=project_hash,
                 feature_hash=feature_hash,
-                metric_label_confidence=confidence,
+                metric_confidence=confidence,
                 iou=iou,
                 annotation_type=annotation_type,
                 # Ground truth match metadata
@@ -885,7 +885,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                         "annotation_type": annotation_type,
                         "annotation_email": str(obj["createdBy"]),
                         "annotation_manual": bool(obj["manualAnnotation"]),
-                        "metric_label_confidence": float(obj["confidence"]),
+                        "metric_confidence": float(obj["confidence"]),
                     }
                     annotation_metric_extra[(du_hash, data_unit.frame, object_hash)] = ({}, {})
                 classifications = labels_json.get("classifications", [])
@@ -905,7 +905,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                         "annotation_type": AnnotationType.CLASSIFICATION,
                         "annotation_email": str(classify["createdBy"]),
                         "annotation_manual": bool(classify["manualAnnotation"]),
-                        "metric_label_confidence": float(classify["confidence"]),
+                        "metric_confidence": float(classify["confidence"]),
                     }
                     annotation_metric_extra[(du_hash, data_unit.frame, classification_hash)] = ({}, {})
                     data_classification_metrics.setdefault((du_hash, data_unit.frame), []).append(

@@ -52,6 +52,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         sess.add(project.project)
         sess.add_all(project.project_data_list)
         sess.add_all(project.project_du_list)
+        sess.commit()
         sess.add_all(data_analytics)
         sess.add_all(data_analytics_extra)
         sess.add_all(annotation_analytics)

@@ -211,10 +211,10 @@ def infer_coco_shape(coco_file: CoCoFileSpec) -> Dict[int, AnnotationType]:
                 # FIXME: shapes_dict[annotation_type] = AnnotationType.BITMASK
             else:
                 if annotation_type != AnnotationType.BITMASK:
-                    shapes_dict[annotation_type] = AnnotationType.POLYGON
+                    shapes_dict[annotation.category_id] = AnnotationType.POLYGON
         elif len(annotation.bbox) == 4:
             if bool(annotation.rotation) and annotation_type == AnnotationType.BOUNDING_BOX:
-                shapes_dict[annotation_type] = AnnotationType.ROTATABLE_BOUNDING_BOX
+                shapes_dict[annotation.category_id] = AnnotationType.ROTATABLE_BOUNDING_BOX
         else:
             raise ValueError(f"CoCo annotation with no segmentation & invalid bbox format: {annotation}")
 
@@ -342,11 +342,17 @@ def import_coco(
         )
 
     # Transform into encord-alike project spec
+    if coco_file.info.encord_title is not None:
+        title = coco_file.info.encord_title
+        description = coco_file.info.description
+    else:
+        title = coco_file.info.description
+        description = ""
     return ProjectImportSpec(
         project=Project(
             project_hash=project_hash,
-            project_name=coco_file.info.encord_title or annotations_file_path.stem,
-            project_description=coco_file.info.description,
+            project_name=title,
+            project_description=description,
             project_remote_ssh_key_path=None,
             project_ontology=ontology,
         ),

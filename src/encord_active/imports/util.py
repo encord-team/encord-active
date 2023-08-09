@@ -39,10 +39,10 @@ def append_object_to_list(
                 "featureHash": ontology_object.feature_node_hash,
                 "lastEditedAt": timestamp,
                 "lastEditedBy": "robot@encord.com",
-                "shape": str(annotation_type.value),
+                "shape": str(annotation_type),
                 "manualAnnotation": False,
                 "reviews": [],
-                str(annotation_type.value): shape_data_entry,
+                str(annotation_type): shape_data_entry,
             }
         )
 

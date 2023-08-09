@@ -135,7 +135,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_border_closeness": MetricDefinition(
+    "metric_border_relative": MetricDefinition(
         title="Border Closeness",
         short_desc="",
         long_desc="",
@@ -147,7 +147,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_missing_or_broken_tracks": MetricDefinition(
+    "metric_missing_or_broken_track": MetricDefinition(
         title="Missing or Broken Tracks",
         short_desc="",
         long_desc="",
@@ -159,7 +159,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_inconsistent_classification_and_track": MetricDefinition(
+    "metric_inconsistent_class": MetricDefinition(
         title="Inconsistent Classification And Track",
         short_desc="",
         long_desc="",
@@ -171,7 +171,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_confidence": MetricDefinition(
+    "metric_confidence": MetricDefinition(
         title="Label Confidence",
         short_desc="Annotation or prediction confidence for non-manual labelling",
         long_desc="",

@@ -490,7 +490,7 @@ class SimpleExecutor(Executor):
                 "annotation_type": meta.annotation_type,
                 "annotation_email": meta.annotation_email,
                 "annotation_manual": meta.annotation_manual,
-                "metric_label_confidence": meta.annotation_confidence,
+                "metric_confidence": meta.annotation_confidence,
                 "metric_metadata": {},  # String comments (currently not used)
             }
             for k, meta in current_frame.annotations.items()
@@ -555,17 +555,17 @@ class SimpleExecutor(Executor):
                     # considered for the TP associated with an IOU range.
                     def iou_compare_key(m_obj: Tuple[str, MetricDependencies]):
                         oh, m_deps = m_obj
-                        return m_deps["iou"], m_deps["metric_label_confidence"], oh
+                        return m_deps["iou"], m_deps["metric_confidence"], oh
 
                     gt_match_list.sort(key=iou_compare_key, reverse=True)
 
                     current_true_positive: MetricDependencies = gt_match_list[0][1]
                     current_true_positive["match_duplicate_iou"] = -1.0
                     current_true_positive_confidence: float = float(
-                        cast(float, current_true_positive["metric_label_confidence"])
+                        cast(float, current_true_positive["metric_confidence"])
                     )
                     for mh_oh, mh_dict in gt_match_list[1:]:
-                        model_confidence: float = float(cast(float, mh_dict["metric_label_confidence"]))
+                        model_confidence: float = float(cast(float, mh_dict["metric_confidence"]))
                         if model_confidence > current_true_positive_confidence:
                             mh_dict["match_duplicate_iou"] = -1.0
                             current_true_positive["match_duplicate_iou"] = mh_dict["iou"]
@@ -788,7 +788,7 @@ class SimpleExecutor(Executor):
             if isinstance(m, BaseMetric)
         }
         # Hardcoded special metric
-        metric_lookup["metric_label_confidence"] = MetricType.NORMAL
+        metric_lookup["metric_confidence"] = MetricType.NORMAL
         analysis_values = {k for k in deps if k in ty_analytics.__fields__ and k.startswith("metric_")}
         for k in analysis_values:
             m = metric_lookup[k]

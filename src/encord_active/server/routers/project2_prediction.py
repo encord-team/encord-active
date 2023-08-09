@@ -4,7 +4,7 @@ import uuid
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sklearn.feature_selection import mutual_info_regression
 from sqlalchemy import Float, Integer, bindparam, text
@@ -16,7 +16,7 @@ from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import (
     ProjectPredictionAnalytics,
-    ProjectPredictionAnalyticsFalseNegatives,
+    ProjectPredictionAnalyticsFalseNegatives, ProjectAnnotationAnalytics, ProjectPrediction,
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
@@ -35,8 +35,23 @@ from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
 
+
+def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
+    with Session(engine) as sess:
+        exists = sess.exec(select(1).where(
+            ProjectPrediction.prediction_hash == prediction_hash,
+            ProjectPrediction.project_hash == project_hash
+        )).first() is not None
+        if not exists:
+            raise HTTPException(
+                status_code=404,
+                detail="The prediction hash is not associated with this project"
+            )
+
+
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
+    dependencies=[Depends(check_project_prediction_hash_match)]
 )
 
 
@@ -170,7 +185,7 @@ def get_project_prediction_summary(
                     ) as ap FROM (
                         SELECT
                             row_number() OVER (
-                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY AP.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_total,
                             sum(cast(
                                 (
@@ -178,12 +193,12 @@ def get_project_prediction_summary(
                                     AP.match_duplicate_iou < :iou
                                 ) as integer
                             )) OVER (
-                                ORDER BY AP.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                                ORDER BY AP.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                             ) AS ap_positives
                         FROM active_project_prediction_analytics AP
                         WHERE AP.prediction_hash = :prediction_hash
                         AND AP.feature_hash == :feature_hash
-                        ORDER BY AP.metric_label_confidence DESC
+                        ORDER BY AP.metric_confidence DESC
                     )
                 ) as ap,
                 (
@@ -332,7 +347,7 @@ def get_project_prediction_summary(
                 FROM (
                     SELECT
                         row_number() OVER (
-                            ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                            ORDER BY PR.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_and_fp_count,
                         sum(cast(
                             (
@@ -340,12 +355,12 @@ def get_project_prediction_summary(
                                 PR.match_duplicate_iou < :iou
                             ) as integer
                         )) OVER (
-                            ORDER BY PR.metric_label_confidence DESC ROWS UNBOUNDED PRECEDING
+                            ORDER BY PR.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_count
                     FROM active_project_prediction_analytics PR
                     WHERE PR.prediction_hash = :prediction_hash
                     AND PR.feature_hash = :feature_hash
-                    ORDER BY metric_label_confidence DESC
+                    ORDER BY PR.metric_confidence DESC
                 )
                 GROUP BY tp_count
             )
@@ -464,6 +479,7 @@ class QueryMetricPerformance(BaseModel):
 
 @router.get("/metric_performance")
 def prediction_metric_performance(
+    project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     iou: float,
     metric_name: str,
@@ -527,7 +543,7 @@ def prediction_metric_performance(
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr = metric_query.get_metric_or_enum(
-            table=ProjectPredictionAnalyticsFalseNegatives,  # type: ignore
+            table=ProjectAnnotationAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
             enums={},
@@ -541,6 +557,9 @@ def prediction_metric_performance(
             )
             .where(
                 ProjectPredictionAnalyticsFalseNegatives.iou_threshold < iou,
+                ProjectAnnotationAnalytics.project_hash == project_hash,
+                ProjectAnnotationAnalytics.du_hash == ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                ProjectAnnotationAnalytics.frame == ProjectPredictionAnalyticsFalseNegatives.frame,
                 is_not(metric_attr.filter_attr, None),
                 *where_fn,
             )
