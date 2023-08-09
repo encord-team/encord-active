@@ -1072,7 +1072,7 @@ const ImageWithPolygons = ({
           className="object-contain rounded transition-opacity"
           src={imgSrcUrl}
           muted
-          controls={false}
+          controls={true}
           onLoadedMetadata={() => {
             const videoRef = video.current;
             if (videoRef != null) {
