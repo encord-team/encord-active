@@ -53,7 +53,7 @@ def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink
 def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
     # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
     img_dir.mkdir(parents=True, exist_ok=True)
-    command = f'ffmpeg -i "{video_file_name}" -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
+    command = f'ffmpeg -i "{video_file_name}" -r 1 -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
     if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False).returncode != 0:
         raise RuntimeError(
             "Failed to split the video into multiple image files. Please ensure that you have FFMPEG "
