@@ -9,12 +9,6 @@ from encord_active.analysis.types import (
 )
 from encord_active.db.metrics import MetricType
 
-"""
-FIXME: we don't want rank metrics - some summary values lose information by making ranked.
-class ImageSingularity(OneImageMetric):
-    pass
-"""
-
 
 class ImageUniqueness(DerivedMetric):
     def __init__(self):

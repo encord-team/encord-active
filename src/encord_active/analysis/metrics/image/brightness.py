@@ -9,6 +9,7 @@ from encord_active.analysis.metric import (
     OneImageMetric,
 )
 from encord_active.analysis.types import (
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
@@ -27,10 +28,15 @@ class BrightnessMetric(OneImageMetric):
             metric_type=MetricType.NORMAL,
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
-        if mask is None:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
+        if mask is None or bb is None:
             return torch.mean(image, dtype=torch.float) / 255.0
         else:
+            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
+            image = image[:, y1 : y2 + 1, x1 : x2 + 1]
+            mask = mask[y1 : y2 + 1, x1 : x2 + 1]
             mask_count = float(cast(float, deps["metric_area"]))
             image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
             mask_total = torch.sum(torch.masked_fill(image_reduced, ~mask, 0), dtype=torch.float32).item()

@@ -2,10 +2,12 @@ from typing import Optional
 
 import torch
 import torchvision.ops.boxes
+from astroid import Dict
 from clip import load as clip_load
 from torchvision.transforms import InterpolationMode
 from torchvision.transforms.v2 import CenterCrop, Compose, Normalize, Resize
 
+from encord_active.analysis.base import BaseFrameInput, BaseFrameOutput
 from encord_active.analysis.embedding import ImageEmbeddingResult, PureImageEmbedding
 from encord_active.analysis.metric import ObjectOnlyBatchInput
 from encord_active.analysis.types import (
@@ -13,6 +15,7 @@ from encord_active.analysis.types import (
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
+    MetricResult,
 )
 from encord_active.analysis.util.torch import batch_size
 
@@ -41,6 +44,38 @@ class ClipImgEmbedding(PureImageEmbedding):
                 CenterCrop(n_px),
                 Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
             ]
+        )
+
+    def raw_calculate(
+        self,
+        prev_frame: Optional[BaseFrameInput],
+        frame: BaseFrameInput,
+        next_frame: Optional[BaseFrameInput],
+    ) -> BaseFrameOutput:
+        annotation_embeddings: Dict[str, MetricResult] = {}
+        # NOTE: override implementation to batch image & all objects together!!
+        embedding_stack = [self.preprocess(frame.image.type(torch.float32))]
+        annotation_ordered = list(frame.annotations.items())
+        for _, annotation in annotation_ordered:
+            if annotation.mask is None or annotation.bounding_box is None:
+                continue
+            x1, y1, x2, y2 = annotation.bounding_box.type(torch.int32).tolist()
+            annotate_image = torch.masked_fill(
+                frame.image[:, y1 : y2 + 1, x1 : x2 + 1], ~annotation.mask[y1 : y2 + 1, x1 : x2 + 1], 0
+            )
+            embedding_stack.append(self.preprocess(annotate_image.type(torch.float32)))
+
+        embedding_result_stack = self.model.encode_image(torch.stack(embedding_stack))
+        image_embedding = embedding_result_stack[0]
+        idx = 1
+        for annotation_hash, annotation in annotation_ordered:
+            if annotation.mask is None or annotation.bounding_box is None:
+                continue
+            annotation_embeddings[annotation_hash] = embedding_result_stack[idx]
+            idx += 1
+        return BaseFrameOutput(
+            image=image_embedding,
+            annotations=annotation_embeddings,
         )
 
     def evaluate_embedding(self, image: ImageTensor, mask: Optional[MaskTensor]) -> EmbeddingTensor:

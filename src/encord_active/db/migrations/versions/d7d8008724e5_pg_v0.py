@@ -17,12 +17,12 @@ down_revision = "89fbd64a5a1c"
 branch_labels = None
 depends_on = None
 
-TType = TypeVar('TType')
+TType = TypeVar("TType")
 
 
 def _sqlite_hack(sqlite: TType, other: TType) -> TType:
     bind = op.get_bind()
-    if bind.engine.name == 'sqlite':
+    if bind.engine.name == "sqlite":
         return sqlite
     else:
         return other
@@ -30,7 +30,7 @@ def _sqlite_hack(sqlite: TType, other: TType) -> TType:
 
 def upgrade() -> None:
     bind = op.get_bind()
-    if bind.engine.name != 'sqlite':
+    if bind.engine.name != "sqlite":
         # Actually create the database schema.
         return create_new_database_not_sqlite()
 
@@ -69,34 +69,38 @@ def upgrade() -> None:
         _sqlite_hack(
             "active_label_project_hash_metric_label_inconsistent_classification_and_track_index",
             "active_label_project_hash_metric_label_inconsistent_class",
-        ), table_name="active_project_analytics_annotation"
+        ),
+        table_name="active_project_analytics_annotation",
     )
     op.drop_index(
         _sqlite_hack(
             "active_label_project_hash_metric_label_missing_or_broken_tracks_index",
             "active_label_project_hash_metric_label_missing_or_bad_track",
-        ), table_name="active_project_analytics_annotation"
+        ),
+        table_name="active_project_analytics_annotation",
     )
     with op.batch_alter_table("active_project_analytics_annotation") as bop:
-        bop.alter_column(
-            "annotation_type", existing_type=sa.SMALLINT(), nullable=False
-        )
+        bop.alter_column("annotation_type", existing_type=sa.SMALLINT(), nullable=False)
         bop.alter_column(
             "metric_label_confidence", nullable=True, new_column_name="metric_confidence", existing_type=sa.Float()
         )
         bop.alter_column(
-            "metric_label_border_closeness", nullable=True, new_column_name="metric_border_relative",
-            existing_type=sa.Float()
+            "metric_label_border_closeness",
+            nullable=True,
+            new_column_name="metric_border_relative",
+            existing_type=sa.Float(),
         )
         bop.alter_column(
-            "metric_label_inconsistent_classification_and_track", nullable=True,
+            "metric_label_inconsistent_classification_and_track",
+            nullable=True,
             new_column_name="metric_inconsistent_class",
-            existing_type=sa.Float()
+            existing_type=sa.Float(),
         )
         bop.alter_column(
-            "metric_label_missing_or_broken_tracks", nullable=True,
+            "metric_label_missing_or_broken_tracks",
+            nullable=True,
             new_column_name="metric_missing_or_broken_track",
-            existing_type=sa.Float()
+            existing_type=sa.Float(),
         )
         # Splitting user emails out to side-tables
         bop.drop_column("annotation_email")
@@ -144,28 +148,27 @@ def upgrade() -> None:
         "active_project_prediction_objects_feature_confidence_index", table_name="active_project_prediction_analytics"
     )
     with op.batch_alter_table("active_project_prediction_analytics") as bop:
+        bop.alter_column("annotation_type", existing_type=sa.SMALLINT(), nullable=False)
         bop.alter_column(
-            "annotation_type", existing_type=sa.SMALLINT(), nullable=False
+            "metric_label_confidence", nullable=True, new_column_name="metric_confidence", existing_type=sa.Float()
         )
         bop.alter_column(
-            "metric_label_confidence", nullable=True,
-            new_column_name="metric_confidence",
-            existing_type=sa.Float()
-        )
-        bop.alter_column(
-            "metric_label_border_closeness", nullable=True,
+            "metric_label_border_closeness",
+            nullable=True,
             new_column_name="metric_border_relative",
-            existing_type=sa.Float()
+            existing_type=sa.Float(),
         )
         bop.alter_column(
-            "metric_label_missing_or_broken_tracks", nullable=True,
+            "metric_label_missing_or_broken_tracks",
+            nullable=True,
             new_column_name="metric_missing_or_broken_track",
-            existing_type=sa.Float()
+            existing_type=sa.Float(),
         )
         bop.alter_column(
-            "metric_label_inconsistent_classification_and_track", nullable=True,
+            "metric_label_inconsistent_classification_and_track",
+            nullable=True,
             new_column_name="metric_inconsistent_class",
-            existing_type=sa.Float()
+            existing_type=sa.Float(),
         )
     op.create_index(
         "active_project_prediction_objects_confidence_index",
@@ -208,13 +211,11 @@ def upgrade() -> None:
         bop.drop_column("metric_label_missing_or_broken_tracks")
         bop.drop_column("metric_blue")
         bop.drop_column("annotation_manual")
-        bop.drop_column(
-            "metric_label_inconsistent_classification_and_track"
-        )
+        bop.drop_column("metric_label_inconsistent_classification_and_track")
 
     # Fix foreign key bugs introduced in sqlite tables
     bind = op.get_bind()
-    if bind.engine.name == 'sqlite':
+    if bind.engine.name == "sqlite":
         with op.batch_alter_table("active_project_analytics_annotation_extra") as bop:
             bop.drop_constraint(
                 "active_data_project_annotation_analytics_extra_fk",
@@ -229,10 +230,7 @@ def upgrade() -> None:
                 ondelete="CASCADE",
             )
         with op.batch_alter_table("active_project_prediction_analytics_extra") as bop:
-            bop.drop_constraint(
-                "active_project_prediction_analytics_extra_fk",
-                type_="foreignkey"
-            )
+            bop.drop_constraint("active_project_prediction_analytics_extra_fk", type_="foreignkey")
             bop.create_foreign_key(
                 "active_project_prediction_analytics_extra_fk",
                 "active_project_prediction_analytics",
@@ -243,12 +241,12 @@ def upgrade() -> None:
             )
     # Drop type not used.
     bind = op.get_bind()
-    if bind.engine.name != 'sqlite':
+    if bind.engine.name != "sqlite":
         op.execute("DROP TYPE annotationtype")
         for table in [
             "active_project_analytics_annotation_reduced",
             "active_project_analytics_data_reduced",
-            "active_project_prediction_analytics_reduced"
+            "active_project_prediction_analytics_reduced",
         ]:
             op.alter_column(
                 table,
@@ -542,9 +540,7 @@ def create_new_database_not_sqlite() -> None:
         sa.CheckConstraint("metric_area_relative BETWEEN 0.0 AND 1.0", name="active_annotate_metric_area_relative"),
         sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="active_annotate_metric_aspect_ratio"),
         sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="active_annotate_metric_blue"),
-        sa.CheckConstraint(
-            "metric_border_relative BETWEEN 0.0 AND 1.0", name="active_annotate_metric_border_relative"
-        ),
+        sa.CheckConstraint("metric_border_relative BETWEEN 0.0 AND 1.0", name="active_annotate_metric_border_relative"),
         sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="active_annotate_metric_brightness"),
         sa.CheckConstraint("metric_confidence BETWEEN 0.0 AND 1.0", name="active_annotate_metric_confidence"),
         sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="active_annotate_metric_contrast"),
@@ -739,9 +735,7 @@ def create_new_database_not_sqlite() -> None:
         sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="active_data_metric_contrast"),
         sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="active_data_metric_green"),
         sa.CheckConstraint("metric_height >= 0", name="active_data_metric_height"),
-        sa.CheckConstraint(
-            "metric_image_uniqueness BETWEEN 0.0 AND 1.0", name="active_data_metric_image_uniqueness"
-        ),
+        sa.CheckConstraint("metric_image_uniqueness BETWEEN 0.0 AND 1.0", name="active_data_metric_image_uniqueness"),
         sa.CheckConstraint("metric_object_count >= 0", name="active_data_metric_object_count"),
         sa.CheckConstraint("metric_object_density BETWEEN 0.0 AND 1.0", name="active_data_metric_object_density"),
         sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="active_data_metric_random"),
@@ -1112,5 +1106,5 @@ def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     raise RuntimeError(
         f"Downgrading from this version of the database is not supported: ",
-        f"Database version has been normalised to stable between all different users"
+        f"Database version has been normalised to stable between all different users",
     )

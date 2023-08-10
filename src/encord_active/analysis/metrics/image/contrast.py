@@ -9,6 +9,7 @@ from encord_active.analysis.metric import (
     OneImageMetric,
 )
 from encord_active.analysis.types import (
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
@@ -27,10 +28,12 @@ class ContrastMetric(OneImageMetric):
             metric_type=MetricType.NORMAL,
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
         # Max-std : [0, 255] = 255/2 = 127.5
         image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
-        if mask is None:
+        if mask is None or bb is None:
             return torch.std(image_reduced) / 127.5
         else:
             # Masked standard deviation - using known correct impl to fix later.
@@ -41,6 +44,9 @@ class ContrastMetric(OneImageMetric):
             # mask_mean_delta_sq_sum = torch.sum(mask_mean_delta**2, dtype=torch.float32)
 
             # return torch.sqrt(mask_mean_delta_sq_sum / mask_count) / 127.5
+            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
+            image_reduced = image_reduced[y1 : y2 + 1, x1 : x2 + 1]
+            mask = mask[y1 : y2 + 1, x1 : x2 + 1]
             return torch.masked.std(image_reduced, mask=mask) / 127.5
 
     def calculate_batched(

@@ -83,9 +83,7 @@ def run_migrations_online() -> None:
     )
 
     if use_meta:
-        print(
-            "DANGEROUS: Generating direct SQLModel schema for correctness checks, do not run this against production"
-        )
+        print("DANGEROUS: Generating direct SQLModel schema for correctness checks, do not run this against production")
         continue_value = input("Continue: y?: ")
         if continue_value not in ["y", "yes"]:
             return

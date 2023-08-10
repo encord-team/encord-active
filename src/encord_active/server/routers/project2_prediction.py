@@ -15,8 +15,10 @@ from sqlmodel.sql.sqltypes import GUID
 from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import (
+    ProjectAnnotationAnalytics,
+    ProjectPrediction,
     ProjectPredictionAnalytics,
-    ProjectPredictionAnalyticsFalseNegatives, ProjectAnnotationAnalytics, ProjectPrediction,
+    ProjectPredictionAnalyticsFalseNegatives,
 )
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
@@ -38,20 +40,20 @@ from encord_active.server.routers.queries.search_query import (
 
 def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
     with Session(engine) as sess:
-        exists = sess.exec(select(1).where(
-            ProjectPrediction.prediction_hash == prediction_hash,
-            ProjectPrediction.project_hash == project_hash
-        )).first() is not None
+        exists = (
+            sess.exec(
+                select(1).where(
+                    ProjectPrediction.prediction_hash == prediction_hash, ProjectPrediction.project_hash == project_hash
+                )
+            ).first()
+            is not None
+        )
         if not exists:
-            raise HTTPException(
-                status_code=404,
-                detail="The prediction hash is not associated with this project"
-            )
+            raise HTTPException(status_code=404, detail="The prediction hash is not associated with this project")
 
 
 router = APIRouter(
-    prefix="/{project_hash}/predictions/{prediction_hash}",
-    dependencies=[Depends(check_project_prediction_hash_match)]
+    prefix="/{project_hash}/predictions/{prediction_hash}", dependencies=[Depends(check_project_prediction_hash_match)]
 )
 
 

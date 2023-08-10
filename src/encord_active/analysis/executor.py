@@ -1,7 +1,9 @@
 import logging
 import math
+import os
 import random
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
@@ -62,12 +64,14 @@ class Executor:
 
 
 class SimpleExecutor(Executor):
-    def __init__(self, config: AnalysisConfig) -> None:
+    def __init__(self, config: AnalysisConfig, pool_size: int = 4) -> None:
         super().__init__(config=config)
         self.data_metrics: Dict[Tuple[uuid.UUID, int], MetricDependencies] = {}
         self.annotation_metrics: Dict[Tuple[uuid.UUID, int, str], MetricDependencies] = {}
         self.prediction_false_negatives: Dict[Tuple[uuid.UUID, int, str], Tuple[str, float]] = {}
         self.encord_projects: Dict[uuid.UUID, encord.Project] = {}
+        self.encord_project_urls: Dict[Tuple[uuid.UUID, uuid.UUID], str] = {}
+        self.pool_size = pool_size
 
     def execute_from_db(
         self,
@@ -149,6 +153,14 @@ class SimpleExecutor(Executor):
             if len({x.frame for x in du_metadata_list}) != len(du_metadata_list):
                 raise ValueError(f"Video has frame duplicates: {data_metadata.data_hash}")
 
+        # Pre-fetch encord-urls
+        if project_ssh_path is not None:
+            self._batch_populate_lookup_cache(
+                project_hash=project_hash,
+                project_ssh_path=project_ssh_path,
+                values=values,
+            )
+
         # Video best thing
         with torch.no_grad():
             # Stage 1
@@ -187,6 +199,43 @@ class SimpleExecutor(Executor):
             # Post-processing stages
             self._stage_2()
             self._stage_3()
+
+    def _batch_populate_lookup_cache(
+        self,
+        project_hash: uuid.UUID,
+        project_ssh_path: str,
+        values: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
+    ) -> None:
+        if project_hash in self.encord_projects:
+            encord_project = self.encord_projects[project_hash]
+        else:
+            encord_project = get_encord_project(ssh_key_path=project_ssh_path, project_hash=str(project_hash))
+            self.encord_projects[project_hash] = encord_project
+        data_hashes: List[str] = []
+        for data_hash_meta, du_meta_list in values:
+            if data_hash_meta.data_type == "video":
+                continue  # Don't gain much from pre-fetch
+            lookup = False
+            for du_meta in du_meta_list:
+                if du_meta.data_uri is None:
+                    lookup = True
+                    break
+            if lookup:
+                data_hashes.append(str(data_hash_meta.data_hash))
+
+        if len(data_hashes) == 0:
+            return
+
+        with ThreadPoolExecutor(max_workers=self.pool_size) as pool:
+            results = []
+            for data_hash in data_hashes:
+                results.append(pool.submit(encord_project.get_data, data_hash=data_hash, get_signed_url=True))
+            for result in tqdm(results, desc="Prefetching data links"):
+                _, images = result.result(timeout=120.0)
+                for image in images or []:
+                    du_hash = uuid.UUID(image["data_hash"])
+                    signed_url = str(image["file_link"])
+                    self.encord_project_urls[(project_hash, du_hash)] = signed_url
 
     def _stage_1_video_batching(
         self,
@@ -330,32 +379,43 @@ class SimpleExecutor(Executor):
         project_ssh_path: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
-        for data_metadata, du_meta in tqdm(images, desc="Metric Computation Stage 1: Images"):
-            gt = None if gt_lookup is None else gt_lookup[du_meta.du_hash, du_meta.frame]
-            image = self._open_image(
-                uri=du_meta.data_uri,
-                database_dir=database_dir,
-                project_hash=project_hash,
-                project_ssh_path=project_ssh_path,
-                label_hash=data_metadata.label_hash,
-                du_hash=du_meta.du_hash,
-            )
-            frame_input = self._get_frame_input(
-                image=image,
-                du_meta=du_meta,
-            )
-            if gt is None:
-                gt_input = None
-            else:
-                gt_input, _ignore = self._get_frame_annotations(gt, image_width=image.width, image_height=image.height)
-            self._execute_stage_1_metrics_no_batching(
-                prev_frame=None,
-                current_frame=frame_input,
-                next_frame=None,
-                current_frame_gt=gt_input,
-                du_hash=du_meta.du_hash,
-                frame=du_meta.frame,
-            )
+        def _job(data_meta_job: ProjectDataMetadata, du_meta_job: ProjectDataUnitMetadata):
+            with torch.no_grad():
+                gt = None if gt_lookup is None else gt_lookup[du_meta_job.du_hash, du_meta_job.frame]
+                image = self._open_image(
+                    uri=du_meta_job.data_uri,
+                    database_dir=database_dir,
+                    project_hash=project_hash,
+                    project_ssh_path=project_ssh_path,
+                    label_hash=data_meta_job.label_hash,
+                    du_hash=du_meta_job.du_hash,
+                )
+                frame_input = self._get_frame_input(
+                    image=image,
+                    du_meta=du_meta,
+                )
+                if gt is None:
+                    gt_input = None
+                else:
+                    gt_input, _ignore = self._get_frame_annotations(
+                        gt, image_width=image.width, image_height=image.height
+                    )
+                self._execute_stage_1_metrics_no_batching(
+                    prev_frame=None,
+                    current_frame=frame_input,
+                    next_frame=None,
+                    current_frame_gt=gt_input,
+                    du_hash=du_meta_job.du_hash,
+                    frame=du_meta_job.frame,
+                )
+
+        results = []
+        with ThreadPoolExecutor(max_workers=self.pool_size) as pool:
+            for data_metadata, du_meta in images:
+                results.append(pool.submit(_job, data_meta_job=data_metadata, du_meta_job=du_meta))
+            for result in tqdm(results, desc="Metric Computation Stage 1: Images"):
+                # Wait for completion.
+                result.result(timeout=3000.0)
 
     def _stage_1_image_batching(
         self,
@@ -462,6 +522,8 @@ class SimpleExecutor(Executor):
             else:
                 return uri
         elif project_ssh_path is not None:
+            if (project_hash, du_hash) in self.encord_project_urls:
+                return self.encord_project_urls[(project_hash, du_hash)]
             if project_hash in self.encord_projects:
                 encord_project = self.encord_projects[project_hash]
             else:
@@ -617,7 +679,7 @@ class SimpleExecutor(Executor):
                 if mask is not None:
                     mask = mask.to(self.config.device)
                     try:
-                        bounding_box = masks_to_boxes(mask.unsqueeze(0))
+                        bounding_box = masks_to_boxes(mask.unsqueeze(0)).squeeze(0)
                     except Exception:
                         print(
                             f"DEBUG BB-Gen Failure: {mask.shape}, {torch.min(mask)}, "

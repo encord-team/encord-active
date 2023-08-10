@@ -19,12 +19,17 @@ def import_encord(
 ) -> ProjectImportSpec:
     project_hash = uuid.UUID(encord_project.project_hash)
 
-    # Iter label rows
+    # Batch label row initialization.
     label_rows = encord_project.list_label_rows_v2()
+    bundle = encord_project.create_bundle()
+    for label_row in label_rows:
+        label_row.initialise_labels(bundle=bundle)
+    bundle.execute()
+
+    # Iter label rows
     project_data_list: List[ProjectDataMetadata] = []
     project_du_list: List[ProjectDataUnitMetadata] = []
     for label_row in tqdm(label_rows, desc="Importing Label Rows"):
-        label_row.initialise_labels()
         label_row_json = label_row.to_encord_dict()
         data_hash = uuid.UUID(label_row_json["data_hash"])
         data_type = str(label_row_json["data_type"])

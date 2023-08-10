@@ -15,6 +15,7 @@ from encord_active.analysis.base import (
 from encord_active.analysis.types import (
     AnnotationMetadata,
     BoundingBoxBatchTensor,
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageIndexBatchTensor,
     ImageTensor,
@@ -91,7 +92,7 @@ class OneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        image = self.calculate(frame.image_deps, frame.image, None)
+        image = self.calculate(frame.image_deps, frame.image, None, None)
         annotations = {}
         for annotation_hash, annotation in frame.annotations.items():
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
@@ -102,13 +103,16 @@ class OneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
                     deps=annotation_deps,
                     image=frame.image,
                     mask=annotation.mask,
+                    bb=annotation.bounding_box,
                 )
             else:
                 annotations[annotation_hash] = image
         return BaseFrameOutput(image=image, annotations=annotations)
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
         ...
 
     def raw_calculate_batch(

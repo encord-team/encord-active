@@ -9,6 +9,7 @@ from encord_active.analysis.metric import (
     OneImageMetric,
 )
 from encord_active.analysis.types import (
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
@@ -37,15 +38,18 @@ class HSVColorMetric(OneImageMetric):
         )
         self.hue_query = hue_query * 2 * torch.pi
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
         hsv_image = deps["ephemeral_hsv_image"]
         if not isinstance(hsv_image, torch.Tensor):
             raise ValueError("missing hsv image")
 
-        if mask is None:
-            hsv_pixels = hsv_image.reshape(3, -1)
-        else:
-            hsv_pixels = hsv_image[:, mask]
+        if mask is not None and bb is not None:
+            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
+            hsv_image = hsv_image[:, y1 : y2 + 1, x1 : x2 + 1]
+            mask = mask[y1 : y2 + 1, x1 : x2 + 1]
+            # FIXME: use the mask when generating this value!??!
 
         # FIXME: (see dist code in batched - unused), (more efficient, float % is slow)
         #  FIXME: should we consider the s & v channels, Black should not be considered very 'red'?

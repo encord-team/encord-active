@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
-from sqlalchemy import JSON, NCHAR, CheckConstraint, Column, INT, REAL, SMALLINT
+from sqlalchemy import INT, JSON, NCHAR, REAL, SMALLINT, CheckConstraint, Column
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 
@@ -13,7 +13,8 @@ from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
     MetricDefinition,
-    assert_cls_metrics_match, MetricType,
+    MetricType,
+    assert_cls_metrics_match,
 )
 
 
@@ -148,7 +149,8 @@ def field_type_char8(primary_key: bool = False, nullable: bool = False) -> str:
     return Field(
         primary_key=primary_key,
         sa_column=Column(NCHAR(length=8), nullable=nullable, primary_key=primary_key),
-        min_length=8, max_length=8
+        min_length=8,
+        max_length=8,
     )
 
 
@@ -501,7 +503,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
         CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="active_project_prediction_iou"),
         CheckConstraint(
             "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0::real",
-            name="active_project_prediction_match_duplicate_iou"
+            name="active_project_prediction_match_duplicate_iou",
         ),
     )
 
@@ -581,8 +583,8 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
         Index("active_project_prediction_unmatched_feature_hash_index", "prediction_hash", "feature_hash"),
         CheckConstraint(
             "iou_threshold BETWEEN 0.0 AND 1.0 OR iou_threshold = -1.0",
-            name="active_project_prediction_unmatched_iou_threshold"
-        )
+            name="active_project_prediction_unmatched_iou_threshold",
+        ),
     )
 
 
