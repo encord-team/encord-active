@@ -197,9 +197,11 @@ def is_multiclass_ontology(ontology: OntologyStructure):
     return (has_objects and num_of_classifications > 0) or (num_of_classifications > 1)
 
 
-def get_embedding_type(annotation_type: Optional[List[AnnotationTypeUnion]]) -> EmbeddingType:
+def get_embedding_type(
+    annotation_type: Optional[List[AnnotationTypeUnion]], embedding_type: Optional[EmbeddingType] = None
+) -> EmbeddingType:
     if not annotation_type:
-        return EmbeddingType.IMAGE
+        return embedding_type or EmbeddingType.IMAGE
     elif len(annotation_type) == 1 and annotation_type[0] == AnnotationType.CLASSIFICATION.RADIO:
         return EmbeddingType.CLASSIFICATION
     else:

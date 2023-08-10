@@ -6,8 +6,16 @@ from PIL import Image
 from tqdm import tqdm
 
 from encord_active.lib.common.iterator import Iterator
+from encord_active.lib.embeddings.embeddings import (
+    create_video_embeddings_from_frame_embeddings,
+)
 from encord_active.lib.metrics.metric import Metric
-from encord_active.lib.metrics.types import AnnotationType, DataType, MetricType
+from encord_active.lib.metrics.types import (
+    AnnotationType,
+    DataType,
+    EmbeddingType,
+    MetricType,
+)
 from encord_active.lib.metrics.writer import CSVMetricWriter
 
 logger = logger.opt(colors=True)
@@ -28,6 +36,7 @@ class VideoColorMetricWrapper:
                 metric_type=MetricType.HEURISTIC,
                 data_type=DataType.SEQUENCE,
                 annotation_type=AnnotationType.NONE,
+                embedding_type=EmbeddingType.VIDEO,
             )
             if color_name not in ["Red", "Green", "Blue"]:
                 raise ValueError("color_name parameter should be one of ['Red', 'Green', 'Blue']")
@@ -49,6 +58,7 @@ class VideoColorMetricWrapper:
             return np.mean(color) / 255
 
         def execute(self, iterator: Iterator, writer: CSVMetricWriter):
+
             videos_to_colors: Dict[str, List] = {}
             for label_row_hash, label_row in tqdm(
                 iterator.label_rows.items(), desc="Collecting videos...", leave=False
@@ -56,16 +66,23 @@ class VideoColorMetricWrapper:
                 if label_row["data_type"] == "video":
                     videos_to_colors[label_row_hash] = []
 
+            if len(videos_to_colors) == 0:
+                logger.info("<yellow>[Skipping]</yellow> There is no video in the project.")
+                return
+
+            create_video_embeddings_from_frame_embeddings(iterator, list(videos_to_colors.keys()))
+
             for data_unit, image in iterator.iterate(desc="Calculating average colors"):
                 if iterator.label_rows[iterator.label_hash]["data_type"] == "video":
                     if iterator.frame % self._sample_rate == 0:
                         videos_to_colors[iterator.label_hash].append(self.calculate_average_color_density(image))
 
-                    if iterator.frame == int(data_unit["data_fps"] * data_unit["data_duration"]) - 1:
+                    if iterator.frame == round(data_unit["data_fps"] * data_unit["data_duration"]) - 1:
+                        middle_frame = (iterator.frame + 1) // 2
                         writer.write(
                             sum(videos_to_colors[iterator.label_hash]) / len(videos_to_colors[iterator.label_hash]),
-                            frame=iterator.frame // 2,
-                            key=f"{iterator.label_hash}_{data_unit['data_hash']}_{iterator.frame//2}",
+                            frame=middle_frame,
+                            key=f"{iterator.label_hash}_{data_unit['data_hash']}_{middle_frame}",
                         )
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
 import torch
 from encord.objects.common import PropertyType
 from encord.project_ontology.object_type import ObjectShape
@@ -17,7 +18,11 @@ from encord_active.lib.embeddings.dimensionality_reduction import (
 )
 from encord_active.lib.embeddings.models.clip_embedder import CLIPEmbedder
 from encord_active.lib.embeddings.models.embedder_model import ImageEmbedder
-from encord_active.lib.embeddings.types import ClassificationAnswer, LabelEmbedding
+from encord_active.lib.embeddings.types import (
+    ClassificationAnswer,
+    Embedding2DSchema,
+    LabelEmbedding,
+)
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -310,3 +315,87 @@ def generate_embeddings(
     logger.info("Done!")
 
     return embeddings
+
+
+def create_video_embeddings_from_frame_embeddings(iterator: Iterator, video_label_hashes: List[str]):
+    """
+    This function will utilize the already calculated frame-level embeddings of the videos.
+    """
+
+    get_embeddings(iterator, EmbeddingType.IMAGE)
+
+    # === 1. Process full embeddings ===
+    video_embeddings_path = iterator.project.file_structure.get_embeddings_file(EmbeddingType.VIDEO, reduced=False)
+    if video_embeddings_path.is_file():
+        return
+
+    image_embeddings = pd.DataFrame(
+        pickle.loads(
+            iterator.project.file_structure.get_embeddings_file(EmbeddingType.IMAGE, reduced=False).read_bytes()
+        )
+    )
+
+    image_embeddings_filtered = image_embeddings[image_embeddings["label_row"].isin(video_label_hashes)]
+
+    df_max_frame = image_embeddings_filtered.groupby("label_row")["frame"].max().reset_index()
+    df_max_frame["mid_frame"] = (df_max_frame["frame"] + 1) // 2
+
+    result_df = pd.merge(
+        image_embeddings_filtered,
+        df_max_frame[["label_row", "mid_frame"]],
+        left_on=["label_row", "frame"],
+        right_on=["label_row", "mid_frame"],
+        how="inner",
+    )
+    result_df = result_df.drop(columns=["mid_frame"])
+
+    avg_embeddings = (
+        image_embeddings_filtered.groupby("label_row")["embedding"]
+        .agg(lambda x: np.mean(np.stack(x), axis=0))
+        .reset_index()
+    )
+    result_df = result_df.merge(avg_embeddings, on="label_row")
+    result_df["embedding"] = result_df["embedding_y"]  # take the averaged embeddings
+    result_df = result_df.drop(columns=["embedding_x", "embedding_y"])
+
+    video_embeddings_path.write_bytes(pickle.dumps(result_df))
+
+    # === 2. Process reduced embeddings ===
+    video_embeddings_reduced_path = iterator.project.file_structure.get_embeddings_file(
+        EmbeddingType.VIDEO, reduced=True
+    )
+    if video_embeddings_reduced_path.is_file():
+        return
+
+    image_embeddings_reduced = pd.DataFrame(
+        pickle.loads(
+            iterator.project.file_structure.get_embeddings_file(EmbeddingType.IMAGE, reduced=True).read_bytes()
+        )
+    )
+
+    # Separate label_row for filtering
+    image_embeddings_reduced["label_row"] = image_embeddings_reduced[Embedding2DSchema.identifier].str.split("_").str[0]
+    image_embeddings_reduced_filtered = image_embeddings_reduced[
+        image_embeddings_reduced["label_row"].isin(video_label_hashes)
+    ]
+
+    image_embeddings_reduced_filtered["lrHash_duHash"] = image_embeddings_reduced_filtered[
+        Embedding2DSchema.identifier
+    ].str.extract(r"(.+?)_\d+$", expand=False)
+    avg_values = (
+        image_embeddings_reduced_filtered.groupby(["lrHash_duHash"])[[Embedding2DSchema.x, Embedding2DSchema.y]]
+        .mean()
+        .reset_index()
+    )
+
+    frameX = image_embeddings_reduced_filtered.groupby(["lrHash_duHash"]).size().reset_index(name="frame_count")
+    frameX["frameX"] = (frameX["frame_count"] // 2).astype(str)
+
+    video_df = pd.merge(avg_values, frameX, on=["lrHash_duHash"])
+    video_df[Embedding2DSchema.identifier] = video_df["lrHash_duHash"] + "_" + video_df["frameX"]
+
+    # Drop unnecessary columns and rename the desired columns
+    video_df = video_df[[Embedding2DSchema.identifier, Embedding2DSchema.x, Embedding2DSchema.y]]
+    video_df[Embedding2DSchema.label] = "No label"
+
+    video_embeddings_reduced_path.write_bytes(pickle.dumps(video_df.to_dict(orient="list")))

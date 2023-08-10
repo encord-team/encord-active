@@ -28,12 +28,14 @@ EMBEDDING_TYPE_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images.pkl",
     EmbeddingType.CLASSIFICATION: "cnn_classifications.pkl",
     EmbeddingType.OBJECT: "cnn_objects.pkl",
+    EmbeddingType.VIDEO: "cnn_video.pkl",
 }
 
 EMBEDDING_REDUCED_TO_FILENAME = {
     EmbeddingType.IMAGE: "cnn_images_reduced.pkl",
     EmbeddingType.CLASSIFICATION: "cnn_classifications_reduced.pkl",
     EmbeddingType.OBJECT: "cnn_objects_reduced.pkl",
+    EmbeddingType.VIDEO: "cnn_video_reduced.pkl",
 }
 
 

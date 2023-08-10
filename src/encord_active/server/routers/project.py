@@ -385,7 +385,7 @@ def get_available_metrics(
 
         metric_result = {
             "name": metric.name,
-            "embeddingType": get_embedding_type(metric.meta.annotation_type),
+            "embeddingType": get_embedding_type(metric.meta.annotation_type, metric.meta.embedding_type),
             "range": Range(min=metric.meta.stats.min_value, max=metric.meta.stats.max_value),
         }
         if metric.level == "F":

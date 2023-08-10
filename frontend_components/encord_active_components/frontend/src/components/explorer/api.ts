@@ -139,6 +139,7 @@ const EmbeddingTypeSchema = z.union([
   z.literal("object"),
   z.literal("hu_moments"),
   z.literal("image"),
+  z.literal("video"),
 ]);
 
 export const MetricSchema = z.object({
