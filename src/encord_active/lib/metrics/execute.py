@@ -15,7 +15,7 @@ from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import Metric, SimpleMetric, StatsMetadata
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import get_embedding_type
-from encord_active.lib.metrics.writer import CSVMetricWriter
+from encord_active.lib.metrics.writer import CSVAvgScoreWriter, CSVMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.metadata import fetch_encord_project_instance
 
@@ -145,10 +145,13 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
     if len(metrics) == 0:
         return
     logger.info(f"Running metrics <blue>{', '.join(metric.metadata.title for metric in metrics)}</blue>")
-    csv_writers = [CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()) for metric in metrics]
+    csv_writers = [
+        CSVAvgScoreWriter(CSVMetricWriter(cache_dir, iterator, prefix=metric.metadata.get_unique_name()))
+        for metric in metrics
+    ]
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):
-        csv_w.attach(stats)
+        csv_w.metric_writer.attach(stats)
     for data_unit, image in iterator.iterate():
         if image is None:
             continue
@@ -156,11 +159,18 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
             cv_image = convert_image_bgr(image)
             for metric, csv_w in zip(metrics, csv_writers):
                 rank = metric.execute(cv_image)
-                csv_w.write(rank)
+                csv_w.record(rank)
         except Exception as e:
             logging.critical(e, exc_info=True)
     for metric, stats in zip(metrics, stats_observers):
         _write_meta_file(cache_dir, metric, stats)
+
+    for csv_w, metric in zip(csv_writers, metrics):
+        csv_w.write()
+        meta_file = csv_w.filename.parent / f"{csv_w.filename.stem}.meta.json"
+        metric.metadata.title = f"{metric.metadata.title} Average"
+        with meta_file.open("w") as f:
+            f.write(metric.metadata.json())
 
 
 @logger.catch()

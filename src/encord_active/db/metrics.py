@@ -120,6 +120,42 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
+    "metric_contrast_avg": MetricDefinition(
+        title="Contrast Average",
+        short_desc="Average contrast of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_blue_avg": MetricDefinition(
+        title="Blue Average",
+        short_desc="Average blueness of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_green_avg": MetricDefinition(
+        title="Green Average",
+        short_desc="Average greenness of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_red_avg": MetricDefinition(
+        title="Red Average",
+        short_desc="Average redness of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_sharpness_avg": MetricDefinition(
+        title="Sharpness Average",
+        short_desc="Average sharpness of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
+    "metric_brightness_avg": MetricDefinition(
+        title="Brightness Average",
+        short_desc="Average brightness of a video",
+        long_desc="",
+        type=MetricType.NORMAL,
+    ),
 }
 
 AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {

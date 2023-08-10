@@ -85,6 +85,13 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Random Values on Objects": "metric_random",
     "Image-level Annotation Quality": "metric_annotation_quality",
     "Shape outlier detection": "metric_label_shape_outlier",
+    "Contrast Average": "metric_contrast_avg",
+    "Blue Values Average": "metric_blue_avg",
+    "Green Values Average": "metric_green_avg",
+    "Red Values Average": "metric_red_avg",
+    "Sharpness Average": "metric_sharpness_avg",
+    "Blur Average": "$SKIP",
+    "Brightness Average": "metric_brightness_avg",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.

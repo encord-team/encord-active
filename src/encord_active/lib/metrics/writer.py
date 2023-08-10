@@ -68,3 +68,42 @@ class CSVMetricWriter(CSVWriter):
         self.csv_file.flush()
 
         super().write(score)
+
+
+class CSVAvgScoreWriter(CSVWriter):
+    def __init__(self, metric_writer: CSVMetricWriter):
+        filename = metric_writer.filename.parent / f"{metric_writer.filename.stem}_avg{metric_writer.filename.suffix}"
+        super(CSVAvgScoreWriter, self).__init__(filename=filename, iterator=metric_writer.iterator)
+
+        self.writer = csv.DictWriter(self.csv_file, fieldnames=SCORE_CSV_FIELDS)
+        self.writer.writeheader()
+        self.metric_writer = metric_writer
+        self.records: dict[tuple[str, str], list[Union[float, int]]] = {}
+
+    def record(
+        self,
+        score: Union[float, int],
+    ):
+        self.metric_writer.write(score)
+
+        label_hash = self.iterator.label_hash
+        du_hash = self.iterator.du_hash
+        self.records.setdefault((label_hash, du_hash), []).append(score)
+
+    def write(self):
+        for (label_hash, du_hash), values in self.records.items():
+            if len(values) < 2:
+                return
+
+            key = self.get_identifier(None, label_hash, du_hash, 0)
+            row = {
+                "identifier": key,
+                "score": sum(values) / len(values),
+                "description": "",
+                "object_class": "",
+                "frame": 0,
+                "url": f"https://app.encord.com/label_editor/{du_hash}&{self.iterator.project.project_hash}",
+                "annotator": "",
+            }
+            self.writer.writerow(row)
+            self.csv_file.flush()
