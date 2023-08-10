@@ -35,8 +35,6 @@ from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.server import ensure_safe_project
 from encord_active.db.models import (
     Project,
-    ProjectAnnotationAnalytics,
-    ProjectDataAnalytics,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectTag,
@@ -53,7 +51,7 @@ from encord_active.lib.common.utils import (
     partial_column,
 )
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
-from encord_active.lib.db.helpers.tags import GroupedTags, Tag, to_grouped_tags
+from encord_active.lib.db.helpers.tags import GroupedTags, Tag
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
@@ -375,15 +373,6 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                 ).first()
                 sess.delete(data_tag_to_delete)
 
-            if not annotation_hashes and annotation_tag_list:
-                annotation_hashes = sess.exec(
-                    select(ProjectAnnotationAnalytics.object_hash).where(
-                        ProjectAnnotationAnalytics.project_hash == project_hash,
-                        ProjectAnnotationAnalytics.du_hash == du_hash,
-                        ProjectAnnotationAnalytics.frame == frame,
-                    )
-                ).all()
-
             for annotation_hash in annotation_hashes:
                 existing_label_tags = set(
                     sess.exec(
@@ -425,7 +414,6 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                         )
                     ).first()
                     sess.delete(tag_to_remove)
-
         sess.commit()
 
 

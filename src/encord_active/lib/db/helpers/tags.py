@@ -12,24 +12,6 @@ class GroupedTags(TypedDict):
     label: List[str]
 
 
-def all_tags(project_file_structure: ProjectFileStructure) -> List[Tag]:
-    with DBConnection(project_file_structure) as conn:
-        tag_list = MergedMetrics(conn).all(columns=["tags"])["tags"].values
-    return list({tag for tag_list in tag_list for tag in tag_list})
-
-
-def to_grouped_tags(tags: List[Tag]) -> GroupedTags:
-    grouped_tags = GroupedTags(data=[], label=[])
-
-    for name, scope in tags:
-        if scope == TagScope.DATA:
-            grouped_tags["data"].append(name)
-        elif scope == TagScope.LABEL:
-            grouped_tags["label"].append(name)
-
-    return grouped_tags
-
-
 def from_grouped_tags(tags: GroupedTags) -> tuple[List[Tag], List[Tag]]:
     data_tags = [Tag(tag, TagScope.DATA) for tag in tags.get("data", [])]
     label_tags = [Tag(tag, TagScope.LABEL) for tag in tags.get("label", [])]
