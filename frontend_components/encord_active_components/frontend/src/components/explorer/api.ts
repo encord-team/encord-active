@@ -345,10 +345,12 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       signal?: AbortSignal,
     ) => {
       const formData = new FormData();
-      formData.append("query", query);
-      formData.append("scope", scope);
-      formData.append("type", type);
-      formData.append("filters", JSON.stringify(filters));
+      Object.entries(args).forEach(([key, value]) =>
+        formData.append(
+          key,
+          typeof value === "object" ? JSON.stringify(value) : value,
+        ),
+      );
       const response = await fetcher(
         `${apiUrl}/projects/${projectHash}/search`,
         {
