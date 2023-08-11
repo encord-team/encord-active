@@ -336,12 +336,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       });
     },
     searchInProject: async (
-      {
-        scope,
-        query,
-        type,
-        filters,
-      }: { scope: Scope; query: string; type: SearchType; filters: Filters },
+      args: { scope: Scope; query: string; type: SearchType; filters: Filters },
       signal?: AbortSignal,
     ) => {
       const formData = new FormData();
