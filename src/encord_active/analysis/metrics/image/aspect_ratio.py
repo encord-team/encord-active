@@ -37,7 +37,7 @@ class AspectRatioMetric(OneImageMetric):
             return float(image_width(image)) / float(image_height(image))
         else:
             x1, y1, x2, y2 = bb.type(torch.int32).tolist()
-            return (x2 - x1) / (y2 - y1)
+            return (x2 + 1 - x1) / (y2 + 1 - y1)
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

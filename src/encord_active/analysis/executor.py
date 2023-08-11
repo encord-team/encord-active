@@ -597,6 +597,7 @@ class SimpleExecutor(Executor):
                 if best_iou_match is None:
                     annotation_result["match_object_hash"] = None
                     annotation_result["match_feature_hash"] = None
+                    annotation_result["match_duplicate_iou"] = 1.0  # Always false positive
                 else:
                     annotation_result["match_object_hash"] = best_iou_match[0]
                     annotation_result["match_feature_hash"] = best_iou_match[1]
@@ -668,7 +669,7 @@ class SimpleExecutor(Executor):
                 try:
                     points = obj_to_points(annotation_type, obj, img_w=image_width, img_h=image_height)
                     mask = obj_to_mask(
-                        self.config.device, annotation_type, img_w=image_width, img_h=image_height, points=points
+                        self.config.device, annotation_type, obj, img_w=image_width, img_h=image_height, points=points
                     )
                 except Exception:
                     print(f"DEBUG Obj to Points & Mask for {annotation_type}: {obj}")
@@ -843,6 +844,7 @@ class SimpleExecutor(Executor):
         ty_extra: Type[
             Union[ProjectPredictionAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra]
         ],
+        ty_extra_metric: Set[str],
     ) -> Tuple[Set[str], Set[str]]:
         metric_lookup = {
             m.ident: m.metric_type
@@ -851,8 +853,13 @@ class SimpleExecutor(Executor):
         }
         # Hardcoded special metric
         metric_lookup["metric_confidence"] = MetricType.NORMAL
-        analysis_values = {k for k in deps if k in ty_analytics.__fields__ and k.startswith("metric_")}
+        analysis_values = {
+            k for k in deps
+            if k in ty_analytics.__fields__ and (k.startswith("metric_") or k in ty_extra_metric)
+        }
         for k in analysis_values:
+            if k in ty_extra_metric:
+                continue
             m = metric_lookup[k]
             v_raw = deps[k]
             v = v_raw.item() if isinstance(v_raw, Tensor) else v_raw
@@ -963,6 +970,7 @@ class SimpleExecutor(Executor):
                 data_deps,
                 ProjectDataAnalytics,
                 ProjectDataAnalyticsExtra,
+                set(),
             )
             data_analysis.append(
                 ProjectDataAnalytics(
@@ -993,6 +1001,7 @@ class SimpleExecutor(Executor):
                 annotation_deps,
                 ProjectAnnotationAnalytics,
                 ProjectAnnotationAnalyticsExtra,
+                set(),
             )
             annotation_analysis.append(
                 ProjectAnnotationAnalytics(
@@ -1039,6 +1048,7 @@ class SimpleExecutor(Executor):
                 annotation_deps,
                 ProjectPredictionAnalytics,
                 ProjectPredictionAnalyticsExtra,
+                {"iou", "match_object_hash", "match_feature_hash", "match_duplicate_iou"}
             )
             prediction_analysis.append(
                 ProjectPredictionAnalytics(
@@ -1070,7 +1080,7 @@ class SimpleExecutor(Executor):
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    annotation_hash=annotation_hash,
+                    object_hash=annotation_hash,
                     iou_threshold=iou_threshold,
                     feature_hash=feature_hash,
                 )

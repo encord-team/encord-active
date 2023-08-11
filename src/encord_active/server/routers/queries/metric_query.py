@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar
 from fastapi import Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import Numeric
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.functions import count as sql_count_raw
 from sqlalchemy.sql.functions import max as sql_max_raw
 from sqlalchemy.sql.functions import min as sql_min_raw
@@ -56,6 +57,7 @@ def literal_bucket_depends(default: int) -> Literal[10, 100, 1000]:
 
 
 def get_metric_or_enum(
+    engine: Engine,
     table: AnalyticsTable,
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
@@ -67,9 +69,14 @@ def get_metric_or_enum(
     if metric is not None:
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
-            group_attr = raw_metric_attr if round_digits is None else func.ROUND(
-                raw_metric_attr.cast(Numeric), round_digits
-            )
+            if engine.dialect == "sqlite":
+                group_attr = raw_metric_attr if round_digits is None else func.ROUND(
+                    raw_metric_attr, round_digits
+                )
+            else:
+                group_attr = raw_metric_attr if round_digits is None else raw_metric_attr.cast(
+                    Numeric(1+round_digits, round_digits)
+                )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
@@ -79,7 +86,7 @@ def get_metric_or_enum(
             # FIXME: work for different distributions (currently ONLY aspect ratio)
             #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
             group_attr = raw_metric_attr if round_digits is None else func.ROUND(
-                raw_metric_attr.cast(Numeric), round_digits
+                raw_metric_attr.cast(Numeric(20, 10)), round_digits
             )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
@@ -266,7 +273,7 @@ def query_attr_distribution(
 ) -> QueryDistribution:
     domain_tables = tables.annotation or tables.data
     attr = get_metric_or_enum(
-        domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+        sess.bind, domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
     )
     where = search_query.search_filters(
         tables=tables,
@@ -276,11 +283,11 @@ def query_attr_distribution(
     )
     grouping_query = (
         select(
-            attr.group_attr,
+            attr.group_attr.label("g"),
             sql_count(),
         )
         .where(*where, is_not(attr.filter_attr, None))
-        .group_by(attr.group_attr)
+        .group_by("g")
     )
     grouping_results = sess.exec(grouping_query).fetchall()
     return QueryDistribution(
@@ -314,8 +321,12 @@ def query_attr_scatter(
     filters: Optional[search_query.SearchFilters],
 ) -> QueryScatter:
     domain_tables = tables.annotation or tables.data
-    x_attr = get_metric_or_enum(domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets)
-    y_attr = get_metric_or_enum(domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets)
+    x_attr = get_metric_or_enum(
+        sess.bind, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets
+    )
+    y_attr = get_metric_or_enum(
+        sess.bind, domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets
+    )
     where = search_query.search_filters(
         tables=tables,
         base="analytics",
@@ -324,8 +335,8 @@ def query_attr_scatter(
     )
     scatter_query = (
         select(
-            x_attr.group_attr,
-            y_attr.group_attr,
+            x_attr.group_attr.label("x"),
+            y_attr.group_attr.label("y"),
             sql_count(),
         )
         .where(
@@ -333,7 +344,7 @@ def query_attr_scatter(
             is_not(x_attr.filter_attr, None),
             is_not(x_attr.filter_attr, None),
         )
-        .group_by(x_attr.group_attr, y_attr.group_attr)
+        .group_by("x", "y")
     )
     scatter_results = sess.exec(scatter_query).fetchall()
 

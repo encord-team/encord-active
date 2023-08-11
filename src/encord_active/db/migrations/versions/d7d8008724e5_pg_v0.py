@@ -853,6 +853,8 @@ def create_new_database_not_sqlite() -> None:
         sa.Column("object_hash", sa.NCHAR(length=8), nullable=False),
         sa.Column("annotation_bytes", sa.LargeBinary(), nullable=False),
         sa.Column("embedding_clip", sa.LargeBinary(), nullable=True),
+        sa.Column("derived_clip_nearest", sa.JSON(), nullable=True),
+        sa.Column("metric_metadata", sa.JSON(), nullable=True),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "du_hash", "frame", "object_hash"],
             [

@@ -4,11 +4,15 @@ from typing import Optional
 
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
+from sqlalchemy.engine import Engine
+from sqlmodel import select, Session
 
-from ..db.models import get_engine
+from ..db.models import get_engine, Project, ProjectImportMetadata
 from .project.coco import import_coco
 from .project.encord import import_encord
 from .project.op import import_project
+from .prediction.coco import import_coco_result
+from .prediction.op import import_prediction
 
 
 def import_coco_project(
@@ -41,9 +45,36 @@ def import_encord_project(
 def import_coco_prediction(
     database_dir: Path,
     predictions_file_path: Path,
-    project_uuid: uuid.UUID,
+    project_hash: uuid.UUID,
+    prediction_name: str,
 ) -> None:
-    raise ValueError()
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        ontology = sess.exec(
+            select(Project.project_ontology).where(Project.project_hash == project_hash)
+        ).first()
+        if ontology is None:
+            raise RuntimeError(f"Project hash: {project_hash} is missing from the database")
+        metadata = sess.exec(
+            select(ProjectImportMetadata.import_metadata).where(
+                ProjectImportMetadata.project_hash == project_hash,
+                ProjectImportMetadata.import_metadata_type == "COCO"
+            )
+        ).first()
+        if metadata is None:
+            raise RuntimeError(
+                "Project missing coco metadata to support importing coco prediction"
+            )
+    coco_prediction = import_coco_result(
+        ontology=ontology, prediction_name=prediction_name, project_hash=project_hash,
+        prediction_file=predictions_file_path, import_metadata=metadata
+    )
+    import_prediction(
+        engine=engine,
+        database_dir=database_dir,
+        prediction=coco_prediction
+    )
 
 
 def import_encord_pickle_prediction(

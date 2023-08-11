@@ -22,6 +22,7 @@ def import_predictions(
     project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
     predictions_path: Path = typer.Argument(..., help="Path to a predictions file.", dir_okay=False, exists=True),
     coco: bool = typer.Option(False, help="Import a COCO results format file."),
+    prediction_name: Optional[str] = typer.Option("Prediction", help="Name of the prediction")
 ):
     """
     [green bold]Imports[/green bold] a predictions file. The predictions should be using the `Prediction` model and be stored in a pkl file.
@@ -33,7 +34,8 @@ def import_predictions(
         from encord_active.imports.op import import_coco_prediction
 
         import_coco_prediction(
-            database_dir=database_dir, predictions_file_path=predictions_path, project_uuid=project_uuid
+            database_dir=database_dir, predictions_file_path=predictions_path, project_hash=project_uuid,
+            prediction_name=prediction_name
         )
     else:
         with open(predictions_path, "rb") as f:

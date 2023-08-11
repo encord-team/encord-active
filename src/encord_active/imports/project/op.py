@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
@@ -9,6 +9,7 @@ from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.models import (
     Project,
+    ProjectImportMetadata,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
 )
@@ -17,6 +18,7 @@ from encord_active.db.models import (
 @dataclass
 class ProjectImportSpec:
     project: Project
+    project_import_meta: Optional[ProjectImportMetadata]
     project_data_list: List[ProjectDataMetadata]
     project_du_list: List[ProjectDataUnitMetadata]
 
@@ -50,6 +52,8 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
     # Populate the database.
     with Session(engine) as sess:
         sess.add(project.project)
+        if project.project_import_meta is not None:
+            sess.add(project.project_import_meta)
         sess.add_all(project.project_data_list)
         sess.add_all(project.project_du_list)
         sess.commit()

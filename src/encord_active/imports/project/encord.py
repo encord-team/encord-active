@@ -103,6 +103,7 @@ def import_encord(
             project_remote_ssh_key_path=str(ssh_key_path),
             project_ontology=encord_project.get_project_ontology().to_dict(),
         ),
+        project_import_meta=None,
         project_data_list=project_data_list,
         project_du_list=project_du_list,
     )

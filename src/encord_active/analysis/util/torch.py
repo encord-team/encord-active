@@ -79,13 +79,19 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
 
 
 def obj_to_mask(
-    device: Device, annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
+    device: Device, annotation_type: AnnotationType, obj: dict, img_w: int, img_h: int, points: Optional[PointTensor]
 ) -> Optional[MaskTensor]:
     # TODO fix me
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
     elif annotation_type == AnnotationType.BITMASK:
-        raise ValueError("Bitmask object shape is not supported")
+        from pycocotools import mask
+        bitmask = mask.decode({
+            "counts": obj["bitmask"],  # FIXME: check, is our bitmask format the same as the coco format?
+            "size": [img_w, img_h]
+        })
+        tensor = torch.from_numpy(bitmask)
+        return tensor.T  # Convert to height, width format
     elif points is None:
         raise ValueError("BUG: points value not passed as argument for annotation type containing points")
     elif annotation_type == AnnotationType.POLYGON:

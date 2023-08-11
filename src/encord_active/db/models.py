@@ -531,6 +531,11 @@ class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
 
     # Embeddings
     embedding_clip: Optional[bytes]
+    embedding_hu: Optional[bytes]
+    # Embeddings derived
+    derived_clip_nearest: Optional[dict] = Field(sa_column=Column(JSON))
+    # Metric comments
+    metric_metadata: dict = Field(sa_column=Column(JSON))
 
     __table_args__ = (
         fk_constraint(

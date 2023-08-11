@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from encord_active.db.models import (
     Project,
     ProjectDataMetadata,
-    ProjectDataUnitMetadata,
+    ProjectDataUnitMetadata, ProjectImportMetadata,
 )
 
 from ...db.enums import AnnotationType
@@ -262,8 +262,10 @@ def import_coco(
     annotations_map: Dict[int, List[CoCoAnnotationInfo]] = {}
     for annotation in coco_file.annotations:
         annotations_map.setdefault(annotation.image_id, []).append(annotation)
+    images_map = {}
     for image in coco_file.images:
         data_hash = uuid.uuid4()
+        images_map[str(image.id)] = str(data_hash)
         label_hash = uuid.uuid4()
         image_url_or_path = _get_image_url(image, images_dir_path)
 
@@ -355,6 +357,13 @@ def import_coco(
             project_description=description,
             project_remote_ssh_key_path=None,
             project_ontology=ontology,
+        ),
+        project_import_meta=ProjectImportMetadata(
+            project_hash=project_hash,
+            import_metadata_type="COCO",
+            import_metadata={
+                "images": images_map
+            },
         ),
         project_data_list=project_data_list,
         project_du_list=project_du_list,

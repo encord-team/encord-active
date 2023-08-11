@@ -51,7 +51,7 @@ class WidthMetric(OneImageMetric):
             bounding_boxes = annotation.objects_bounding_boxes
             x1 = bounding_boxes[:, 0]
             x2 = bounding_boxes[:, 2]
-            w = x2 - x1
+            w = x2 + 1 - x1
             objects = w
 
         return ImageObjectOnlyOutputBatch(
