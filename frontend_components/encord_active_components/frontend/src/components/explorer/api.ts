@@ -344,14 +344,19 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       }: { scope: Scope; query: string; type: SearchType; filters: Filters },
       signal?: AbortSignal,
     ) => {
+      const formData = new FormData();
+      Object.entries(args).forEach(([key, value]) =>
+        formData.append(
+          key,
+          typeof value === "object" ? JSON.stringify(value) : value,
+        ),
+      );
       const response = await fetcher(
         `${apiUrl}/projects/${projectHash}/search`,
         {
           method: "post",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query, scope, type, filters }),
+          headers: {},
+          body: formData,
           signal,
         },
       );

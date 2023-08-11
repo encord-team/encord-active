@@ -17,6 +17,11 @@ class TextQuery(SubsetQueryDefinition):
     text: str
 
 
+class CLIPQuery(SubsetQueryDefinition):
+    text: Optional[str]
+    image: Optional[bytes]
+
+
 class SearchResponse(BaseModel):
     result_identifiers: List[IdentifierValue]
     is_ordered: bool

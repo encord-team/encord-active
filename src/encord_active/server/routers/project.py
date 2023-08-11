@@ -13,7 +13,16 @@ from encord.orm.project import (
     CopyLabelsOptions,
     ReviewApprovalState,
 )
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
@@ -88,7 +97,7 @@ from encord_active.lib.model_predictions.types import (
     PredictionsFilters,
 )
 from encord_active.lib.model_predictions.writer import MainPredictionType
-from encord_active.lib.premium.model import TextQuery
+from encord_active.lib.premium.model import CLIPQuery, TextQuery
 from encord_active.lib.premium.querier import Querier
 from encord_active.lib.project.metadata import fetch_project_meta, update_project_meta
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
@@ -501,23 +510,34 @@ def get_ids(ids_column: IndexOrSeries, scope: Optional[MetricScope] = None):
 @router.post("/{project}/search", dependencies=[Depends(verify_premium)])
 def search(
     project: ProjectFileStructureDep,
-    query: Annotated[str, Body()],
-    type: Annotated[SearchType, Body()],
-    filters: Filters = Filters(),
-    scope: Annotated[Optional[MetricScope], Body()] = None,
+    type: Annotated[SearchType, Form()],
+    filters: Annotated[str, Form()] = "",
+    query: Annotated[Optional[str], Form()] = None,
+    image: Annotated[Optional[UploadFile], File()] = None,
+    scope: Annotated[Optional[MetricScope], Form()] = None,
 ):
-    if not query:
-        raise HTTPException(status_code=422, detail="Invalid query")
+    if not (query or (image is not None)):
+        raise HTTPException(status_code=422, detail="Invalid query. Either `query` or `image` should be specified")
+
+    if filters:
+        _filters = Filters.parse_raw(filters)
+    else:
+        _filters = Filters()
+
     querier = get_querier(project)
 
-    merged_metrics = filtered_merged_metrics(project, filters)
+    merged_metrics = filtered_merged_metrics(project, _filters)
 
     def _search(ids: List[str]):
         snippet = None
-        text_query = TextQuery(text=query, limit=-1, identifiers=ids)
         if type == SearchType.SEARCH:
-            result = querier.search_semantics(text_query)
+            image_bytes = None
+            if image is not None:
+                image_bytes = image.file.read()
+            _query = CLIPQuery(text=query, image=image_bytes, limit=-1, identifiers=ids)
+            result = querier.search_semantics(_query)
         else:
+            text_query = TextQuery(text=query, limit=-1, identifiers=ids)
             result = querier.search_with_code(text_query)
             if result:
                 snippet = result.snippet
@@ -527,8 +547,8 @@ def search(
 
         return [item.identifier for item in result.result_identifiers], snippet
 
-    if scope == MetricScope.PREDICTION and filters.prediction_filters is not None:
-        _, _, predictions, _ = read_prediction_files(project, filters.prediction_filters.type)
+    if scope == MetricScope.PREDICTION and _filters.prediction_filters is not None:
+        _, _, predictions, _ = read_prediction_files(project, _filters.prediction_filters.type)
         if predictions is not None:
             ids, snippet = _search(get_ids(predictions["identifier"], scope))
             prediction_ids = predictions["identifier"].sort_values(
