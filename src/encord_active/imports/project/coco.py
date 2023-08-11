@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from encord_active.db.models import (
     Project,
     ProjectDataMetadata,
-    ProjectDataUnitMetadata, ProjectImportMetadata,
+    ProjectDataUnitMetadata,
+    ProjectImportMetadata,
 )
 
 from ...db.enums import AnnotationType
@@ -361,9 +362,7 @@ def import_coco(
         project_import_meta=ProjectImportMetadata(
             project_hash=project_hash,
             import_metadata_type="COCO",
-            import_metadata={
-                "images": images_map
-            },
+            import_metadata={"images": images_map},
         ),
         project_data_list=project_data_list,
         project_du_list=project_du_list,

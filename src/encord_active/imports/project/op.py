@@ -9,9 +9,9 @@ from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.models import (
     Project,
-    ProjectImportMetadata,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectImportMetadata,
 )
 
 

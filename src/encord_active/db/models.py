@@ -615,9 +615,7 @@ def get_engine(
 
     path = path.expanduser().resolve()
     engine_url = override_db if override_db is not None else f"sqlite:///{path}"
-    connect_args = {
-        "check_same_thread": False
-    } if concurrent and engine_url.startswith("sqlite:/") else {}
+    connect_args = {"check_same_thread": False} if concurrent and engine_url.startswith("sqlite:/") else {}
 
     # Create the engine connection
     print(f"Connection to database: {engine_url}")

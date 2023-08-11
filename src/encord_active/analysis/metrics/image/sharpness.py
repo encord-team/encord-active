@@ -1,4 +1,5 @@
-from typing import Optional
+import math
+from typing import Optional, cast
 
 import torch
 
@@ -17,7 +18,6 @@ from encord_active.analysis.types import (
     MetricResult,
 )
 from encord_active.analysis.util import laplacian2d
-from encord_active.analysis.util.torch import mask_to_box_extremes
 from encord_active.db.metrics import MetricType
 
 
@@ -35,17 +35,8 @@ class SharpnessMetric(OneImageMetric):
     ) -> MetricResult:
         # Max range of laplacian kernel = [-4, 4] * 255 = [-1020, 1020]
         # Max value of variance = (2.0 * 1020.0 * 1020.0) = 2080800.
-        # FIXME: grayscale VS rgb??? (WHICH SHOULD WE USE!!!!!)
-        grayscale = torch.mean(image, dim=-3, dtype=torch.float32).type(torch.uint8).unsqueeze(0)
-        if mask is None or bb is None:
-            # FIXME: variance VS stddev (which gives better summaries for normalisation)
-            return torch.var(laplacian2d(grayscale)) / 2080800.0
-        else:
-            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
-            image_crop = grayscale[:, y1 : y2 + 1, x1 : x2 + 1]
-            laplacian_box = laplacian2d(image_crop).squeeze(0)
-            laplacian_mask = laplacian_box[~mask[y1 : y2 + 1, x1 : x2 + 1]]
-            return laplacian_mask.var() / 2080800.0
+        laplacian = cast(torch.Tensor, deps["ephemeral_laplacian_image"])
+        return math.sqrt(torch.var(laplacian).cpu().item() / 2080800.0)
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

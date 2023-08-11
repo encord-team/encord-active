@@ -31,7 +31,8 @@ class ObjectDensityMetric(ImageObjectsMetric):
             return 0.0
         mask_stack = torch.stack(filter_annotations)
         mask_union = torch.any(mask_stack, dim=0)
-        mask_area = torch.sum(mask_union.type(torch.int64), dtype=torch.float32)
+        # FIXME: change from float32!?
+        mask_area = float(torch.sum(mask_union.type(torch.float32)).cpu().item())
         img_area = float(image_width(image)) * float(image_height(image))
         # Relative area of mask union for non classification
         return mask_area / img_area

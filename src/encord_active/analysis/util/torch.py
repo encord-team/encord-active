@@ -86,10 +86,13 @@ def obj_to_mask(
         return None
     elif annotation_type == AnnotationType.BITMASK:
         from pycocotools import mask
-        bitmask = mask.decode({
-            "counts": obj["bitmask"],  # FIXME: check, is our bitmask format the same as the coco format?
-            "size": [img_w, img_h]
-        })
+
+        bitmask = mask.decode(
+            {
+                "counts": obj["bitmask"],  # FIXME: check, is our bitmask format the same as the coco format?
+                "size": [img_w, img_h],
+            }
+        )
         tensor = torch.from_numpy(bitmask)
         return tensor.T  # Convert to height, width format
     elif points is None:
@@ -124,7 +127,9 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
     Applies Laplacian kernel over Image
     """
     channels_as_batch = image.float()
-    return conv2d(channels_as_batch, weight=_laplacian_kernel, padding=1)
+    channel_count = image.shape[-3]
+    kernel = _laplacian_kernel.repeat(channel_count, 1, 1, 1).to(image.device)
+    return conv2d(channels_as_batch, weight=kernel, padding=1, groups=channel_count)
 
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
@@ -155,28 +160,6 @@ def point_mask(device: Device, x: float, y: float, width: int, height: int) -> M
     y_i = round(y * height)
     mask[min(y_i, height - 1), min(x_i, width - 1)] = True
     return mask  # type: ignore
-
-
-def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
-    # FIXME: convert to torchvision.op.masks_to_boxes (& we expose bb's as an input now, this function
-    #  should never be used) !!!
-    """
-    Returns top_left and bottom_right point that includes `True` values.
-    Make sure to not miss +1 index errors here. If you want to crop an
-    image, for example, you would do
-    ```
-    tl, br = mask_box(mask)
-    crop = img[:, tl.y:br.y+1, tl.x:br.x+1]
-    ```
-    """
-    yx_coords = torch.stack(torch.where(mask)).T  # [n, 2]
-    # FIXME: cast to support mps backend - check perf & maybe remove in future
-    yx_coords = yx_coords.type(torch.int32)
-    y_min, x_min = torch.min(yx_coords, 0).values
-    y_max, x_max = torch.max(yx_coords, 0).values
-
-    # FIXME: deprecate with torchvision masks_to_boxes
-    return Point(x_min, y_min), Point(x_max, y_max)
 
 
 def image_width(image: Union[ImageTensor, MaskTensor, ImageBatchTensor, MaskBatchTensor]) -> int:

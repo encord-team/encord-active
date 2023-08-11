@@ -20,11 +20,17 @@ def import_encord(
     project_hash = uuid.UUID(encord_project.project_hash)
 
     # Batch label row initialization.
+    tqdm_iter = tqdm(total=1, desc="Listing Label Rows")
     label_rows = encord_project.list_label_rows_v2()
-    bundle = encord_project.create_bundle()
-    for label_row in label_rows:
-        label_row.initialise_labels(bundle=bundle)
-    bundle.execute()
+    tqdm_iter.update(1)
+    tqdm_iter = tqdm(total=len(label_rows), desc="Downloading Labels")
+    for i in range(0, len(label_rows), 100):
+        label_row_group = label_rows[i : i + 100]
+        bundle = encord_project.create_bundle()
+        for label_row in label_row_group:
+            label_row.initialise_labels(bundle=bundle)
+        bundle.execute()
+        tqdm_iter.update(len(label_row_group))
 
     # Iter label rows
     project_data_list: List[ProjectDataMetadata] = []

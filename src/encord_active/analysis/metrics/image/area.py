@@ -36,7 +36,8 @@ class AreaMetric(OneImageMetric):
         if mask is None:
             return float(image_width(image)) * float(image_height(image))
         else:
-            return float(torch.sum(mask.long()).item())
+            return cast(torch.Tensor, deps["ephemeral_grayscale_image"]).shape[0]
+            # return float(torch.sum(mask.long()).item())
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

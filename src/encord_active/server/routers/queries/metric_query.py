@@ -70,12 +70,12 @@ def get_metric_or_enum(
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
             if engine.dialect == "sqlite":
-                group_attr = raw_metric_attr if round_digits is None else func.ROUND(
-                    raw_metric_attr, round_digits
-                )
+                group_attr = raw_metric_attr if round_digits is None else func.ROUND(raw_metric_attr, round_digits)
             else:
-                group_attr = raw_metric_attr if round_digits is None else raw_metric_attr.cast(
-                    Numeric(1+round_digits, round_digits)
+                group_attr = (
+                    raw_metric_attr
+                    if round_digits is None
+                    else raw_metric_attr.cast(Numeric(1 + round_digits, round_digits))
                 )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
@@ -85,8 +85,10 @@ def get_metric_or_enum(
         elif metric.type == MetricType.UFLOAT:
             # FIXME: work for different distributions (currently ONLY aspect ratio)
             #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
-            group_attr = raw_metric_attr if round_digits is None else func.ROUND(
-                raw_metric_attr.cast(Numeric(20, 10)), round_digits
+            group_attr = (
+                raw_metric_attr
+                if round_digits is None
+                else func.ROUND(raw_metric_attr.cast(Numeric(20, 10)), round_digits)
             )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
@@ -273,7 +275,12 @@ def query_attr_distribution(
 ) -> QueryDistribution:
     domain_tables = tables.annotation or tables.data
     attr = get_metric_or_enum(
-        sess.bind, domain_tables.analytics, attr_name, domain_tables.metrics, domain_tables.enums, buckets=buckets
+        sess.bind,  # type: ignore
+        domain_tables.analytics,
+        attr_name,
+        domain_tables.metrics,
+        domain_tables.enums,
+        buckets=buckets,
     )
     where = search_query.search_filters(
         tables=tables,
@@ -283,7 +290,7 @@ def query_attr_distribution(
     )
     grouping_query = (
         select(
-            attr.group_attr.label("g"),
+            attr.group_attr.label("g"),  # type: ignore
             sql_count(),
         )
         .where(*where, is_not(attr.filter_attr, None))
@@ -322,10 +329,10 @@ def query_attr_scatter(
 ) -> QueryScatter:
     domain_tables = tables.annotation or tables.data
     x_attr = get_metric_or_enum(
-        sess.bind, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets
+        sess.bind, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
     )
     y_attr = get_metric_or_enum(
-        sess.bind, domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets
+        sess.bind, domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
     )
     where = search_query.search_filters(
         tables=tables,
@@ -335,8 +342,8 @@ def query_attr_scatter(
     )
     scatter_query = (
         select(
-            x_attr.group_attr.label("x"),
-            y_attr.group_attr.label("y"),
+            x_attr.group_attr.label("x"),  # type: ignore
+            y_attr.group_attr.label("y"),  # type: ignore
             sql_count(),
         )
         .where(

@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import cv2
 import pytz
 import torch
-import torchvision.ops
 from torchvision.ops import masks_to_boxes
 
 from encord_active.db.enums import AnnotationType
@@ -23,7 +22,7 @@ def get_timestamp():
 def append_object_to_list(
     object_list: List[dict],
     annotation_type: AnnotationType,
-    shape_data_list: List[Union[Dict[str, float], Dict[str, Dict[str, float]]]],
+    shape_data_list: Sequence[Union[Dict[str, float], Dict[str, Dict[str, float]], str]],
     ontology_object,
     confidence: Optional[float],
     object_hash: Optional[str],
@@ -52,10 +51,8 @@ def append_object_to_list(
 
 def coco_str_to_bitmask(rle: str, width: int, height: int) -> torch.Tensor:
     from pycocotools import mask
-    bitmask = mask.decode({
-        "counts": rle,
-        "size": [width, height]
-    })
+
+    bitmask = mask.decode({"counts": rle, "size": [width, height]})
     tensor = torch.from_numpy(bitmask)
     return tensor.T  # Convert to height, width format
 
@@ -75,7 +72,7 @@ def bitmask_to_rotatable_bounding_box(bitmask: torch.Tensor) -> Dict[str, float]
     raise ValueError
 
 
-def bitmask_to_polygon(bitmask: torch.Tensor) -> List[Dict[str, Dict[str,float]]]:
+def bitmask_to_polygon(bitmask: torch.Tensor) -> List[Dict[str, Dict[str, float]]]:
     height, width = bitmask.shape
     npmask = bitmask.numpy()
     contours, _ = cv2.findContours(npmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -94,13 +91,10 @@ def bitmask_to_polygon(bitmask: torch.Tensor) -> List[Dict[str, Dict[str,float]]
 
 def bitmask_to_encord_str(bitmask: torch.Tensor) -> str:
     from pycocotools import mask
+
     res = mask.encode(bitmask.T.numpy())
     return res["counts"].decode("utf-8")
 
 
-def polygon_to_bitmask(
-    polygon: Dict[str, Dict[str, float]],
-    width: int,
-    height: int
-) -> torch.Tensor:
+def polygon_to_bitmask(polygon: Dict[str, Dict[str, float]], width: int, height: int) -> torch.Tensor:
     raise ValueError

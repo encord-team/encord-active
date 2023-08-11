@@ -17,7 +17,7 @@ from encord_active.analysis.types import (
     MetricResult,
 )
 from encord_active.analysis.util import image_height
-from encord_active.analysis.util.torch import batch_size, mask_to_box_extremes
+from encord_active.analysis.util.torch import batch_size
 from encord_active.db.metrics import MetricType
 
 

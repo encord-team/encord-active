@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from encord.objects import Object, OntologyStructure
 from pydantic import BaseModel, parse_file_as
@@ -14,9 +14,10 @@ from encord_active.imports.prediction.op import (
 from encord_active.imports.util import (
     append_object_to_list,
     bitmask_to_bounding_box,
+    bitmask_to_encord_str,
     bitmask_to_polygon,
     bitmask_to_rotatable_bounding_box,
-    coco_str_to_bitmask, bitmask_to_encord_str,
+    coco_str_to_bitmask,
 )
 
 
@@ -71,12 +72,13 @@ def import_coco_result(
             predict.segmentation.counts, width=predict.segmentation.size[0], height=predict.segmentation.size[1]
         )
         # Counts to torch tensor
+        shape_dict_list: List[Union[Dict[str, float], Dict[str, Dict[str, float]], str]]
         if annotation_type == AnnotationType.BOUNDING_BOX:
             shape_dict_list = [bitmask_to_bounding_box(bitmask)]
         elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
             shape_dict_list = [bitmask_to_rotatable_bounding_box(bitmask)]
         elif annotation_type == AnnotationType.POLYGON:
-            shape_dict_list = bitmask_to_polygon(bitmask)
+            shape_dict_list = list(bitmask_to_polygon(bitmask))
         elif annotation_type == AnnotationType.BITMASK:
             shape_dict_list = [bitmask_to_encord_str(bitmask)]
             # FIXME: bug -

@@ -1,6 +1,5 @@
 import logging
 import math
-import os
 import random
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -64,7 +63,7 @@ class Executor:
 
 
 class SimpleExecutor(Executor):
-    def __init__(self, config: AnalysisConfig, pool_size: int = 4) -> None:
+    def __init__(self, config: AnalysisConfig, pool_size: int = 8) -> None:
         super().__init__(config=config)
         self.data_metrics: Dict[Tuple[uuid.UUID, int], MetricDependencies] = {}
         self.annotation_metrics: Dict[Tuple[uuid.UUID, int, str], MetricDependencies] = {}
@@ -72,6 +71,7 @@ class SimpleExecutor(Executor):
         self.encord_projects: Dict[uuid.UUID, encord.Project] = {}
         self.encord_project_urls: Dict[Tuple[uuid.UUID, uuid.UUID], str] = {}
         self.pool_size = pool_size
+        print(f"Simple executor: using {self.config.device.type} device")
 
     def execute_from_db(
         self,
@@ -154,12 +154,12 @@ class SimpleExecutor(Executor):
                 raise ValueError(f"Video has frame duplicates: {data_metadata.data_hash}")
 
         # Pre-fetch encord-urls
-        if project_ssh_path is not None:
-            self._batch_populate_lookup_cache(
-                project_hash=project_hash,
-                project_ssh_path=project_ssh_path,
-                values=values,
-            )
+        # if project_ssh_path is not None:
+        # self._batch_populate_lookup_cache(
+        #    project_hash=project_hash,
+        #    project_ssh_path=project_ssh_path,
+        #    values=values,
+        # )
 
         # Video best thing
         with torch.no_grad():
@@ -263,6 +263,7 @@ class SimpleExecutor(Executor):
                 project_hash=project_hash,
                 project_ssh_path=project_ssh_path,
                 label_hash=data_metadata.label_hash,
+                data_hash=data_metadata.data_hash,
                 du_hash=video_start.du_hash,
             )
             reader = VideoReader(
@@ -297,6 +298,7 @@ class SimpleExecutor(Executor):
                 project_hash=project_hash,
                 project_ssh_path=project_ssh_path,
                 label_hash=data_metadata.label_hash,
+                data_hash=data_metadata.data_hash,
                 du_hash=video_start.du_hash,
             )
             frames: List[Tuple[BaseFrameInput, Optional[Dict[str, AnnotationMetadata]]]] = []
@@ -388,6 +390,7 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
                     label_hash=data_meta_job.label_hash,
+                    data_hash=data_meta_job.data_hash,
                     du_hash=du_meta_job.du_hash,
                 )
                 frame_input = self._get_frame_input(
@@ -409,13 +412,22 @@ class SimpleExecutor(Executor):
                     frame=du_meta_job.frame,
                 )
 
-        results = []
-        with ThreadPoolExecutor(max_workers=self.pool_size) as pool:
-            for data_metadata, du_meta in images:
-                results.append(pool.submit(_job, data_meta_job=data_metadata, du_meta_job=du_meta))
-            for result in tqdm(results, desc="Metric Computation Stage 1: Images"):
-                # Wait for completion.
-                result.result(timeout=3000.0)
+        # Thread-pool execute by chunks when running on cpu mode
+        if self.config.device.type == "cpu":
+            with ThreadPoolExecutor(max_workers=self.pool_size) as pool:
+                tqdm_desc = tqdm(total=len(images), desc="Metric Computation Stage 1: Images")
+                for i in range(0, len(images), 100):
+                    images_group = images[i : i + 100]
+                    results = []
+                    for data_metadata, du_meta in images_group:
+                        results.append(pool.submit(_job, data_meta_job=data_metadata, du_meta_job=du_meta))
+                    for result in results:
+                        # Wait for completion.
+                        result.result(timeout=3000.0)
+                        tqdm_desc.update(1)
+        else:
+            for data_metadata, du_meta in tqdm(images, desc="Metric Computation Stage 1: Images"):
+                _job(data_meta_job=data_metadata, du_meta_job=du_meta)
 
     def _stage_1_image_batching(
         self,
@@ -440,6 +452,7 @@ class SimpleExecutor(Executor):
                             project_hash=project_hash,
                             project_ssh_path=project_ssh_path,
                             label_hash=meta.label_hash,
+                            data_hash=du_meta.data_hash,
                             du_hash=du_meta.du_hash,
                         ),
                         du_meta=du_meta,
@@ -492,6 +505,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         label_hash: uuid.UUID,
+        data_hash: uuid.UUID,
         du_hash: uuid.UUID,
     ):
         img_url_or_path = self._get_url_or_path(
@@ -500,6 +514,7 @@ class SimpleExecutor(Executor):
             project_hash=project_hash,
             project_ssh_path=project_ssh_path,
             label_hash=label_hash,
+            data_hash=data_hash,
             du_hash=du_hash,
         )
         if isinstance(img_url_or_path, Path):
@@ -513,6 +528,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
         label_hash: uuid.UUID,
+        data_hash: uuid.UUID,
         du_hash: uuid.UUID,
     ) -> Union[str, Path]:
         if uri is not None:
@@ -529,9 +545,16 @@ class SimpleExecutor(Executor):
             else:
                 encord_project = get_encord_project(ssh_key_path=project_ssh_path, project_hash=str(project_hash))
                 self.encord_projects[project_hash] = encord_project
-            return encord_project.get_label_row(str(label_hash), get_signed_url=True,)["data_units"][
-                str(du_hash)
-            ]["data_link"]
+            video, images = encord_project.get_data(data_hash=str(data_hash), get_signed_url=True)
+            for image in images or []:
+                du_hash = uuid.UUID(image["data_hash"])
+                signed_url = str(image["file_link"])
+                self.encord_project_urls[(project_hash, du_hash)] = signed_url
+            if video is not None:
+                du_hash = uuid.UUID(video["data_hash"]) if "data_hash" in video else data_hash
+                signed_url = str(video["file_link"])
+                self.encord_project_urls[(project_hash, du_hash)] = signed_url
+            return self.encord_project_urls[(project_hash, du_hash)]
         else:
             raise ValueError(f"Cannot resolve project url: {project_hash} / {label_hash} / {du_hash}")
 
@@ -668,34 +691,39 @@ class SimpleExecutor(Executor):
             else:
                 try:
                     points = obj_to_points(annotation_type, obj, img_w=image_width, img_h=image_height)
+                    mask_device = torch.device("cpu") if self.config.device.type == "mps" else self.config.device
                     mask = obj_to_mask(
-                        self.config.device, annotation_type, obj, img_w=image_width, img_h=image_height, points=points
+                        mask_device, annotation_type, obj, img_w=image_width, img_h=image_height, points=points
                     )
                 except Exception:
-                    print(f"DEBUG Obj to Points & Mask for {annotation_type}: {obj}")
+                    print(f"DEBUG Exception Obj to Points & Mask for {annotation_type}: {obj}")
                     raise
                 if mask is not None and mask.shape != (image_height, image_width):
                     raise ValueError(f"Wrong mask tensor shape: {mask.shape} != {(image_height, image_width)}")
                 bounding_box = None
                 if mask is not None:
-                    mask = mask.to(self.config.device)
                     try:
-                        bounding_box = masks_to_boxes(mask.unsqueeze(0)).squeeze(0)
+                        if self.config.device.type == "mps":
+                            bounding_box = masks_to_boxes(mask.unsqueeze(0)).squeeze(0)
+                            mask = mask.to(self.config.device)
+                        else:
+                            mask = mask.to(self.config.device)
+                            bounding_box = masks_to_boxes(mask.unsqueeze(0)).squeeze(0)
                     except Exception:
                         print(
-                            f"DEBUG BB-Gen Failure: {mask.shape}, {torch.min(mask)}, "
+                            f"DEBUG Exception BB-Gen Failure: {mask.shape}, {torch.min(mask)}, "
                             f"{torch.max(mask)}, {annotation_type} => {obj}"
                         )
                         raise
                 annotations[obj_hash] = AnnotationMetadata(
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    points=None if points is None else points.to(self.config.device),
+                    points=points,
                     mask=mask,
                     annotation_email=str(obj["createdBy"]),
                     annotation_manual=bool(obj["manualAnnotation"]),
                     annotation_confidence=float(obj["confidence"]),
-                    bounding_box=bounding_box,
+                    bounding_box=bounding_box.cpu() if bounding_box is not None else None,
                 )
         for cls in du_meta.classifications:
             cls_hash = str(cls["classificationHash"])
@@ -854,8 +882,7 @@ class SimpleExecutor(Executor):
         # Hardcoded special metric
         metric_lookup["metric_confidence"] = MetricType.NORMAL
         analysis_values = {
-            k for k in deps
-            if k in ty_analytics.__fields__ and (k.startswith("metric_") or k in ty_extra_metric)
+            k for k in deps if k in ty_analytics.__fields__ and (k.startswith("metric_") or k in ty_extra_metric)
         }
         for k in analysis_values:
             if k in ty_extra_metric:
@@ -1048,7 +1075,7 @@ class SimpleExecutor(Executor):
                 annotation_deps,
                 ProjectPredictionAnalytics,
                 ProjectPredictionAnalyticsExtra,
-                {"iou", "match_object_hash", "match_feature_hash", "match_duplicate_iou"}
+                {"iou", "match_object_hash", "match_feature_hash", "match_duplicate_iou"},
             )
             prediction_analysis.append(
                 ProjectPredictionAnalytics(

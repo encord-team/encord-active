@@ -6,6 +6,7 @@ import torch
 from .base import BaseEvaluation
 from .conversions.grayscale import RGBToGray
 from .conversions.hsv import RGBToHSV
+from .conversions.laplacian import RGBToLaplacian
 from .embedding import NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
@@ -119,8 +120,9 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         HuMomentEmbeddings(),
         # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Image transformations
-        RGBToHSV(),
+        RGBToLaplacian(),
         RGBToGray(),
+        RGBToHSV(),
         # Unified Image or Annotation Feature Metrics
         AspectRatioMetric(),  # metric_aspect_ratio
         AreaMetric(),  # metric_area

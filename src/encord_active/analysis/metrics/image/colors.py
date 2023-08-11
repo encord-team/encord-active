@@ -41,15 +41,10 @@ class HSVColorMetric(OneImageMetric):
     def calculate(
         self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
     ) -> MetricResult:
+        # NOTE: ephemeral image is un-sized with mask applied already.
         hsv_image = deps["ephemeral_hsv_image"]
         if not isinstance(hsv_image, torch.Tensor):
             raise ValueError("missing hsv image")
-
-        if mask is not None and bb is not None:
-            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
-            hsv_image = hsv_image[:, y1 : y2 + 1, x1 : x2 + 1]
-            mask = mask[y1 : y2 + 1, x1 : x2 + 1]
-            # FIXME: use the mask when generating this value!??!
 
         # FIXME: (see dist code in batched - unused), (more efficient, float % is slow)
         #  FIXME: should we consider the s & v channels, Black should not be considered very 'red'?
@@ -57,7 +52,7 @@ class HSVColorMetric(OneImageMetric):
         hue_values = hsv_image[0]
         dists1 = (hue_values - self.hue_query) % 1.0
         dists2 = (self.hue_query - hue_values) % 1.0
-        return torch.minimum(dists1, dists2).mean() * 2
+        return torch.minimum(dists1, dists2).mean().cpu() * 2
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

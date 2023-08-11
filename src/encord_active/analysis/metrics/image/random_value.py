@@ -29,8 +29,8 @@ class RandomMetric(BaseMetric):
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
         return BaseFrameOutput(
-            image=torch.rand(1),
-            annotations={annotation_hash: torch.rand(1) for annotation_hash in frame.annotations.keys()},
+            image=torch.rand(1, device="cpu"),
+            annotations={annotation_hash: torch.rand(1, device="cpu") for annotation_hash in frame.annotations.keys()},
         )
 
     def raw_calculate_batch(

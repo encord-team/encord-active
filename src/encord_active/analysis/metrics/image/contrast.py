@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 import torch
 
@@ -32,22 +32,8 @@ class ContrastMetric(OneImageMetric):
         self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
     ) -> MetricResult:
         # Max-std : [0, 255] = 255/2 = 127.5
-        image_reduced = torch.round(torch.mean(image, dim=0, dtype=torch.float32))
-        if mask is None or bb is None:
-            return torch.std(image_reduced) / 127.5
-        else:
-            # Masked standard deviation - using known correct impl to fix later.
-            # mask_mean = float(deps["metric_brightness"])
-            # mask_count = float(deps["metric_area"])
-
-            # mask_mean_delta = torch.masked_fill(image_reduced - mask_mean, ~mask, 0)
-            # mask_mean_delta_sq_sum = torch.sum(mask_mean_delta**2, dtype=torch.float32)
-
-            # return torch.sqrt(mask_mean_delta_sq_sum / mask_count) / 127.5
-            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
-            image_reduced = image_reduced[y1 : y2 + 1, x1 : x2 + 1]
-            mask = mask[y1 : y2 + 1, x1 : x2 + 1]
-            return torch.masked.std(image_reduced, mask=mask) / 127.5
+        grayscale_image = cast(torch.Tensor, deps["ephemeral_grayscale_image"])
+        return torch.std(grayscale_image.type(torch.float32)).cpu() / 127.5
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

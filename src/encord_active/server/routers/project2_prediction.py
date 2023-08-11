@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sklearn.feature_selection import mutual_info_regression
 from sqlalchemy import Float, Integer, bindparam, text
-from sqlalchemy.sql.operators import is_not
 from sqlalchemy.sql.functions import coalesce
+from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
@@ -337,9 +337,10 @@ def get_project_prediction_summary(
         else:
             correlations = {}
     else:
-        correlation_result = sess.execute(
-            text(
-                f"""
+        correlation_result = (
+            sess.execute(
+                text(
+                    f"""
                 SELECT
                     {",".join(
                         [   
@@ -355,12 +356,14 @@ def get_project_prediction_summary(
                 FROM active_project_prediction_analytics
                 WHERE prediction_hash = :prediction_hash
                 """
-            ),
-            params={
-                "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
-                "iou": iou,
-            },
-        ).first()
+                ),
+                params={
+                    "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
+                    "iou": iou,
+                },
+            ).first()
+            or []
+        )
         correlations = {name: value for name, value in zip(metric_names, correlation_result)}
 
     # Precision recall curves
@@ -413,10 +416,11 @@ def get_project_prediction_summary(
 
     importance = {}
     for metric_name in AnnotationMetrics.keys():
-        importance_data_query = select(
+        importance_data_query = select(  # type: ignore
             ProjectPredictionAnalytics.iou
             * ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou))
-            .cast(Integer).cast(Float),
+            .cast(Integer)  # type: ignore
+            .cast(Float),
             coalesce(getattr(ProjectPredictionAnalytics, metric_name).cast(Float), 0.0),
         ).where(
             ProjectPredictionAnalytics.prediction_hash == prediction_hash,
@@ -548,13 +552,17 @@ def prediction_metric_performance(
             select(
                 ProjectPredictionAnalytics.feature_hash,
                 metric_attr.group_attr,
-                coalesce(sql_sum(
-                    (
-                        (ProjectPredictionAnalytics.match_duplicate_iou < iou) & (ProjectPredictionAnalytics.iou >= iou)
-                    ).cast(  # type: ignore
-                        Integer
-                    )  # type: ignore
-                ), 0),  # type: ignore
+                coalesce(
+                    sql_sum(
+                        (
+                            (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+                            & (ProjectPredictionAnalytics.iou >= iou)
+                        ).cast(  # type: ignore
+                            Integer
+                        )  # type: ignore
+                    ),
+                    0,
+                ),  # type: ignore
                 sql_count(),
             )
             .where(is_not(metric_attr.filter_attr, None), *where_tp_fp)
