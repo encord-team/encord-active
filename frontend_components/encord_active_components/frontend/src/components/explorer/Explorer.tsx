@@ -235,7 +235,7 @@ export const Explorer = ({
       });
     }
     const labelValues = Object.fromEntries(
-      [...allLabelTags].map((v) => [v, v]),
+      [...allLabelTags, "Untagged annotations"].map((v) => [v, v]),
     );
     const dataValues = Object.fromEntries(
       [...allDataTags, "Untagged frames"].map((v) => [v, v]),

@@ -1,14 +1,13 @@
 import json
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Type
 
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.sql.operators import eq, in_op, or_
-from sqlmodel import Session, select
+from sqlmodel import Session, SQLModel, select
 
 from encord_active.db.models import (
-    ProjectDataAnalytics,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectTag,
@@ -23,7 +22,8 @@ from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.dependencies import engine
 
-UNTAGED_FRAMES_LABEL = "Untagged frames"
+UNTAGGED_FRAMES_LABEL = "Untagged frames"
+UNTAGGED_ANNOTATIONS_LABEL = "Untagged annotations"
 NO_CLASS_LABEL = "No class"
 
 
@@ -94,49 +94,92 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
         return to_filter
 
     df = to_filter.copy()
-    with Session(engine) as sess:
-        selected_tag_hashes = sess.exec(
-            select(ProjectTag.tag_hash).where(
-                ProjectTag.project_hash == project_hash, in_op(ProjectTag.name, [t.name for t in data_tags])
-            )
-        ).all()
-        stmt = (
-            select(
+
+    def _filter_tags_table(
+        tags_table: Type[ProjectTaggedDataUnit] | Type[ProjectTaggedAnnotation],
+        tags: list[Tag],
+        untagged_name: str | None,
+    ) -> set[str]:
+        is_annotations = ProjectTaggedAnnotation == tags_table
+        with Session(engine) as sess:
+            selected_tag_hashes = sess.exec(
+                select(ProjectTag.tag_hash).where(
+                    ProjectTag.project_hash == project_hash, in_op(ProjectTag.name, [t.name for t in tags])
+                )
+            ).all()
+            column_selection = [
                 ProjectDataMetadata.label_hash,
                 ProjectDataUnitMetadata.du_hash,
                 ProjectDataUnitMetadata.frame,
+            ]
+            if is_annotations:
+                column_selection.append(ProjectTaggedAnnotation.object_hash)
+            stmt = (
+                select(*column_selection)
+                .join(
+                    tags_table,
+                    (tags_table.du_hash == ProjectDataUnitMetadata.du_hash)
+                    & (tags_table.frame == ProjectDataUnitMetadata.frame)
+                    & (tags_table.project_hash == ProjectDataUnitMetadata.project_hash),
+                    isouter=True,
+                )
+                .join(
+                    ProjectDataMetadata,
+                    (ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash)
+                    & (ProjectDataUnitMetadata.project_hash == ProjectDataMetadata.project_hash),
+                )
+                .where(
+                    ProjectDataMetadata.project_hash == project_hash,
+                )
             )
-            .join(
-                ProjectTaggedDataUnit,
-                (ProjectTaggedDataUnit.du_hash == ProjectDataUnitMetadata.du_hash)
-                & (ProjectTaggedDataUnit.frame == ProjectDataUnitMetadata.frame)
-                & (ProjectTaggedDataUnit.project_hash == ProjectDataUnitMetadata.project_hash),
-                isouter=True,
-            )
-            .join(
-                ProjectDataMetadata,
-                (ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash)
-                & (ProjectDataUnitMetadata.project_hash == ProjectDataMetadata.project_hash),
-            )
-            .where(
-                ProjectDataMetadata.project_hash == project_hash,
-            )
-        )
-        if next((t.name for t in data_tags if t.name == UNTAGED_FRAMES_LABEL), None):
-            print("Contains untagged")
-            stmt = stmt.where(
-                or_(
-                    eq(ProjectTaggedDataUnit.tag_hash, None), in_op(ProjectTaggedDataUnit.tag_hash, selected_tag_hashes)
-                ),
-            )
+            if untagged_name in [t.name for t in tags]:
+                stmt = stmt.where(
+                    or_(eq(tags_table.tag_hash, None), in_op(tags_table.tag_hash, selected_tag_hashes)),
+                )
+            else:
+                stmt = stmt.where(
+                    in_op(tags_table.tag_hash, selected_tag_hashes),
+                )
+
+            tagged_rows = sess.exec(stmt).all()
+            if is_annotations:
+                data_identifiers = set(
+                    [f"{label_hash}_{du_hash}_{frame:05d}" for label_hash, du_hash, frame, _ in tagged_rows]
+                )
+                label_identifiers = set(
+                    [
+                        f"{label_hash}_{du_hash}_{frame:05d}_{annotation_hash}"
+                        for label_hash, du_hash, frame, annotation_hash in tagged_rows
+                    ]
+                )
+                return data_identifiers.union(label_identifiers)
+            else:
+                data_identifiers = set(
+                    [f"{label_hash}_{du_hash}_{frame:05d}" for label_hash, du_hash, frame in tagged_rows]
+                )
+                return data_identifiers
+
+    if data_tags:
+        identifiers = _filter_tags_table(ProjectTaggedDataUnit, data_tags, UNTAGGED_FRAMES_LABEL)
+        df = df[df.data_row_id.isin(identifiers)]
+
+    if label_tags:
+        search_tags = [t for t in label_tags]
+        untagged_subset = None
+        if UNTAGGED_ANNOTATIONS_LABEL in [t.name for t in search_tags]:
+            search_tags = [t for t in search_tags if t.name != UNTAGGED_ANNOTATIONS_LABEL]
+            with Session(engine) as sess:
+                all_tags = [Tag(name=t, scope=TagScope.LABEL) for t in sess.exec(select(ProjectTag.name)).all()]
+            all_tagged_identifiers = _filter_tags_table(ProjectTaggedAnnotation, all_tags, None)
+            untagged_subset = df[~df.index.isin(all_tagged_identifiers)]
+
+        identifiers = _filter_tags_table(ProjectTaggedAnnotation, search_tags, UNTAGGED_ANNOTATIONS_LABEL)
+        tagged_subset = df[df.index.isin(identifiers)]
+        if untagged_subset is not None and not untagged_subset.empty:
+            df = pd.concat([tagged_subset, untagged_subset])
         else:
-            stmt = stmt.where(
-                in_op(ProjectTaggedDataUnit.tag_hash, selected_tag_hashes),
-            )
-        no_data_tags = sess.exec(stmt).all()
-    no_tag_data_identifiers = [f"{label_hash}_{du_hash}_{frame:05d}" for label_hash, du_hash, frame in no_data_tags]
-    out = df[df.data_row_id.isin(set(no_tag_data_identifiers))]
-    return out
+            df = tagged_subset
+    return df
 
 
 def filter_object_classes(to_filter: pd.DataFrame, classes: List[str], scope: Optional[MetricScope] = None):
