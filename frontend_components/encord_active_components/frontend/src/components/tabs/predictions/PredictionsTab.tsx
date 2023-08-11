@@ -41,7 +41,7 @@ export function PredictionsTab(
   useEffect(() => {
     if (
       allPredictionOptions &&
-      allPredictionOptions?.find((v) => v.value === predictionHash)
+      !allPredictionOptions?.find((v) => v.value === predictionHash)
     ) {
       setPredictionHash(allPredictionOptions[0].value);
     }
