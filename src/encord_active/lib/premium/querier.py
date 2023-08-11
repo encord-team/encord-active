@@ -33,10 +33,19 @@ class Querier:
 
         data = query.dict()
         data.pop("image")
+        ids = set(data.pop("identifiers", []))
+
         response = requests.post(f"{self.api_url}/{endpoint}", params=params, data=data, files=files, timeout=timeout)
         if response.status_code != 200:
             return None
-        return response.json()
+
+        result = response.json()
+        if len(ids):
+            result["result_identifiers"] = list(
+                filter(lambda id_value: id_value["identifier"] in ids, result["result_identifiers"])
+            )
+
+        return result
 
     def post_data(
         self, endpoint: str = "", data: Optional[dict] = None, timeout: Optional[float] = None
