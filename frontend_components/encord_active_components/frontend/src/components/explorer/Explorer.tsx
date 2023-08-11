@@ -585,7 +585,6 @@ export const Explorer = ({
               >
                 {pageItems.map((id) => (
                   <GalleryItem
-                    scope={scope}
                     selectedMetric={selectedMetric}
                     key={id}
                     itemId={id}
@@ -875,7 +874,6 @@ const ItemPreview = ({
 };
 
 const GalleryItem = ({
-  scope,
   itemId,
   selected,
   selectedMetric,
@@ -884,7 +882,6 @@ const GalleryItem = ({
   onShowSimilar,
   iou,
 }: {
-  scope: Scope;
   itemId: string;
   selected: boolean;
   selectedMetric?: Metric;
@@ -979,8 +976,7 @@ const GalleryItem = ({
               <FaEdit />
             </button>
           </div>
-          {scope !== "data" &&
-          (data.metadata.labelClass || data.metadata.annotator) ? (
+          {data.metadata.labelClass || data.metadata.annotator ? (
             <div className="flex flex-col">
               <span className="flex items-center gap-1">
                 <VscSymbolClass />

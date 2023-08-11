@@ -177,12 +177,13 @@ def to_item(
 
     object_predictions = []
     classification_predictions = []
-    if "iou" in row:
-        object_predictions = build_item_object_predictions(
-            row, project_file_structure, metadata, img_w, img_h, object_hash
-        )
-    else:
-        classification_predictions = build_item_classification_predictions(row, project_file_structure, metadata)
+    if "is_true_positive" in row:
+        if "iou" in row:
+            object_predictions = build_item_object_predictions(
+                row, project_file_structure, metadata, img_w, img_h, object_hash
+            )
+        else:
+            classification_predictions = build_item_classification_predictions(row, project_file_structure, metadata)
 
     return {
         "id": identifier,
