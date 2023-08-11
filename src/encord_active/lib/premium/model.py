@@ -18,8 +18,8 @@ class TextQuery(SubsetQueryDefinition):
 
 
 class CLIPQuery(SubsetQueryDefinition):
-    text: str | None
-    image: bytes | None
+    text: Optional[str]
+    image: Optional[bytes]
 
 
 class SearchResponse(BaseModel):

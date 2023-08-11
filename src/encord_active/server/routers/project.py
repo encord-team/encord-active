@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Annotated, Dict, List, Optional, Union, cast
 from uuid import UUID
 
-import orjson
 import pandas as pd
 from cachetools import LRUCache, cached
 from encord.orm.project import (
@@ -513,8 +512,8 @@ def search(
     project: ProjectFileStructureDep,
     type: Annotated[SearchType, Form()],
     filters: Annotated[str, Form()] = "",
-    query: Annotated[str | None, Form()] = None,
-    image: Annotated[UploadFile | None, File()] = None,
+    query: Annotated[Optional[str], Form()] = None,
+    image: Annotated[Optional[UploadFile], File()] = None,
     scope: Annotated[Optional[MetricScope], Form()] = None,
 ):
     if not (query or (image is not None)):
