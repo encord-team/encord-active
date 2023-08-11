@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
+from sqlalchemy import Numeric
 from sqlalchemy.sql.functions import count as sql_count_raw
 from sqlalchemy.sql.functions import max as sql_max_raw
 from sqlalchemy.sql.functions import min as sql_min_raw
@@ -66,7 +67,9 @@ def get_metric_or_enum(
     if metric is not None:
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
-            group_attr = raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits)
+            group_attr = raw_metric_attr if round_digits is None else func.ROUND(
+                raw_metric_attr.cast(Numeric), round_digits
+            )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
@@ -75,7 +78,9 @@ def get_metric_or_enum(
         elif metric.type == MetricType.UFLOAT:
             # FIXME: work for different distributions (currently ONLY aspect ratio)
             #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
-            group_attr = raw_metric_attr if round_digits is None else func.round(raw_metric_attr, round_digits)
+            group_attr = raw_metric_attr if round_digits is None else func.ROUND(
+                raw_metric_attr.cast(Numeric), round_digits
+            )
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,

@@ -131,18 +131,24 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
 
 def metric_field_type_normal(nullable: bool = True, override_min: int = 0) -> float:
     return Field(
-        ge=override_min,
-        le=0,
+        # ge=override_min,
+        # le=0,
         sa_column=Column(REAL, nullable=nullable),
     )
 
 
 def metric_field_type_positive_integer(nullable: bool = True) -> int:
-    return Field(ge=0, sa_column=Column(INT, nullable=nullable))
+    return Field(
+        # ge=0,
+        sa_column=Column(INT, nullable=nullable)
+    )
 
 
 def metric_field_type_positive_float(nullable: bool = True) -> float:
-    return Field(ge=0, sa_column=Column(REAL, nullable=nullable))
+    return Field(
+        # ge=0,
+        sa_column=Column(REAL, nullable=nullable)
+    )
 
 
 def field_type_char8(primary_key: bool = False, nullable: bool = False) -> str:
@@ -602,9 +608,13 @@ def get_engine(
     override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
     create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
-    connect_args = {"check_same_thread": False} if concurrent else {}
     path = path.expanduser().resolve()
     engine_url = override_db if override_db is not None else f"sqlite:///{path}"
+    connect_args = {
+        "check_same_thread": False
+    } if concurrent and engine_url.startswith("sqlite:/") else {}
+
+    # Create the engine connection
     print(f"Connection to database: {engine_url}")
     engine = create_engine(engine_url, connect_args=connect_args)
     path_key = path.as_posix()
