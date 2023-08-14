@@ -1,6 +1,7 @@
 import inspect
 import logging
 import os
+from copy import deepcopy
 from importlib import import_module
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple, Type, Union
@@ -155,7 +156,7 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
     stats_observers = [StatisticsObserver() for _ in metrics]
     for csv_w, stats in zip(csv_writers, stats_observers):
         csv_w.metric_writer.attach(stats)
-    for data_unit, image in iterator.iterate():
+    for _, image in iterator.iterate():
         if image is None:
             continue
         try:
@@ -171,9 +172,12 @@ def _execute_simple_metrics(cache_dir: Path, iterator: Iterator, metrics: list[S
     for csv_w, metric in zip(csv_writers, metrics):
         csv_w.write()
         meta_file = csv_w.filename.parent / f"{csv_w.filename.stem}.meta.json"
-        metric.metadata.title = f"{metric.metadata.title} Average"
+        metadata = deepcopy(metric.metadata)
+
+        metadata.title = f"{metric.metadata.title} Average"
+        metadata.embedding_type = EmbeddingType.VIDEO
         with meta_file.open("w") as f:
-            f.write(metric.metadata.json())
+            f.write(metadata.json())
 
 
 @logger.catch()
