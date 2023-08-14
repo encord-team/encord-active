@@ -119,8 +119,8 @@ Check that you have the correct ssh key set up and available projects on [blue]h
 NOTE: this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.
         """
     ):
-        untoched_data = list(filter(lambda x: x.label_hash is None, project.list_label_rows_v2()))
-        collect_async(lambda x: x.initialise_labels(), untoched_data, desc="Preparing uninitialized label rows")
+        untouched_data = list(filter(lambda x: x.label_hash is None, project.list_label_rows_v2()))
+        collect_async(lambda x: x.initialise_labels(), untouched_data, desc="Preparing uninitialized label rows")
         project.refetch_data()
         rich.print()
 
