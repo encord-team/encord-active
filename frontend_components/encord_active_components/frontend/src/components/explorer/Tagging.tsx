@@ -1,5 +1,5 @@
 import { Select, SelectProps } from "antd";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
@@ -20,27 +20,33 @@ const taggingDisabledReasons = {
 
 export const useAllTags = (itemSet?: Set<string>) => {
   const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
-
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),
+    selectedTags: { data: [] as string[], label: [] as string[] },
     isLoading,
     taggedItems,
   };
 
   if (isLoading) return defaultAllTags;
 
-  return [...taggedItems]
-    .filter(([id, _]) => (itemSet ? itemSet.has(id) : true))
-    .map(([_, tags]) => tags)
-    .reduce(
-      (allTags, { data, label }) => (
-        data.forEach(allTags.allDataTags.add, allTags.allDataTags),
-        label.forEach(allTags.allLabelTags.add, allTags.allLabelTags),
-        allTags
+  const dataItemSet = useMemo(
+    () =>
+      new Set(
+        [...(itemSet || [])].map((id) => id.split("_").slice(0, 3).join("_")),
       ),
-      defaultAllTags,
-    );
+    [itemSet],
+  );
+
+  return [...taggedItems].reduce((result, [id, { data, label }]) => {
+    data.forEach(result.allDataTags.add, result.allDataTags);
+    label.forEach(result.allLabelTags.add, result.allLabelTags);
+
+    if (itemSet?.has(id)) result.selectedTags.label.push(...label);
+    if (dataItemSet.has(id)) result.selectedTags.data.push(...data);
+
+    return result;
+  }, defaultAllTags);
 };
 
 export const TaggingDropdown = ({
@@ -81,9 +87,7 @@ export const BulkTaggingForm = ({
   items: string[];
   allowTaggingAnnotations: boolean;
 }) => {
-  const { allDataTags, allLabelTags, isLoading, taggedItems } = useAllTags(
-    new Set(items),
-  );
+  const { selectedTags, isLoading, taggedItems } = useAllTags(new Set(items));
   const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
 
   return (
@@ -130,13 +134,13 @@ export const BulkTaggingForm = ({
           ),
         )
       }
-      seletedTags={{ data: [...allDataTags], label: [...allLabelTags] }}
+      selectedTags={selectedTags}
     />
   );
 };
 
 export const TaggingForm = ({
-  seletedTags: selectedTags,
+  selectedTags,
   className,
   controlled = false,
   loading = false,
@@ -147,7 +151,7 @@ export const TaggingForm = ({
   allowTaggingAnnotations: allowTaggingAnnotatoins = false,
   ...rest
 }: {
-  seletedTags: GroupedTags;
+  selectedTags: GroupedTags;
   controlled?: boolean;
   loading?: boolean;
   onChange?: (tags: GroupedTags) => void;

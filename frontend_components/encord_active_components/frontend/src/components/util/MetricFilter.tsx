@@ -395,8 +395,6 @@ export function MetricFilter<
             ? metric.title
             : getEnumName(filterKey, enumFilter ?? { type: "ontology" });
 
-        console.log(metricBounds);
-
         return (
           <Row align="middle" key={`row_filter_${filterKey}`}>
             <Button
@@ -443,9 +441,9 @@ export function MetricFilter<
                   metricFilters != null
                     ? [metricFilters[0], metricFilters[1]]
                     : [
-                        toFixedNumber(metricBounds.min, 2),
-                        toFixedNumber(metricBounds.max, 2),
-                      ]
+                      toFixedNumber(metricBounds.min, 2),
+                      toFixedNumber(metricBounds.max, 2),
+                    ]
                 }
                 onChange={(newRange: [number, number]) =>
                   setFilters(updateValue(filterKey, newRange, "metricFilters"))

@@ -836,7 +836,6 @@ const ItemPreview = ({
   const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spinner />;
-  console.log({ allowTaggingAnnotations });
 
   const { description, ...metrics } = data.metadata.metrics;
   const { editUrl } = data;
@@ -867,7 +866,7 @@ const ItemPreview = ({
           >
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
-              seletedTags={data.tags}
+              selectedTags={data.tags}
               tabIndex={0}
               allowTaggingAnnotations={allowTaggingAnnotations}
             />
