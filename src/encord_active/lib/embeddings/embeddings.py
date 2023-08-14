@@ -362,7 +362,6 @@ def create_video_embeddings_from_frame_embeddings(iterator: Iterator, video_labe
         .reset_index()
     )
     result_df = result_df.merge(avg_embeddings, on="label_row")
-    __import__("ipdb").set_trace()  # TODO check columns
     result_df["embedding"] = result_df["embedding_y"]
     result_df = result_df.drop(columns=["embedding_x", "embedding_y"])
 
@@ -390,11 +389,11 @@ def create_video_embeddings_from_frame_embeddings(iterator: Iterator, video_labe
         .reset_index()
     )
 
-    frameX = image_embeddings_reduced_filtered.groupby(["lr_du_hash"]).size().reset_index(name="frame_count")
-    frameX["frameX"] = (frameX["frame_count"] // 2).astype(str)
+    frame_x = image_embeddings_reduced_filtered.groupby(["lr_du_hash"]).size().reset_index(name="frame_count")
+    frame_x["frame"] = frame_x.frame_count.map(lambda cnt: f"{cnt//2:05d}")
 
-    video_df = pd.merge(avg_values, frameX, on=["lr_du_hash"])
-    video_df[Embedding2DSchema.identifier] = video_df["lr_du_hash"] + "_" + video_df["frameX"]
+    video_df = pd.merge(avg_values, frame_x, on=["lr_du_hash"])
+    video_df[Embedding2DSchema.identifier] = video_df["lr_du_hash"] + "_" + video_df["frame"]
 
     # Drop unnecessary columns and rename the desired columns
     video_df = video_df[[Embedding2DSchema.identifier, Embedding2DSchema.x, Embedding2DSchema.y]]
