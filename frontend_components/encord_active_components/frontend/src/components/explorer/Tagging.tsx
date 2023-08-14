@@ -7,6 +7,7 @@ import { TbPolygon } from "react-icons/tb";
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
 import { Spinner } from "./Spinner";
+import { takeDataId } from "./id";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -31,10 +32,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
   if (isLoading) return defaultAllTags;
 
   const dataItemSet = useMemo(
-    () =>
-      new Set(
-        [...(itemSet || [])].map((id) => id.split("_").slice(0, 3).join("_")),
-      ),
+    () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
     [itemSet],
   );
 
@@ -99,12 +97,17 @@ export const BulkTaggingForm = ({
       onSelect={(scope, selected) =>
         mutate(
           items.map((id) => {
-            const itemTags = taggedItems.get(id);
+            const { label } = taggedItems.get(id) || defaultTags;
+            const { data } = taggedItems.get(takeDataId(id)) || defaultTags;
+
+            const groupedTags = { data, label };
+
             return {
               id,
-              groupedTags: itemTags
-                ? { ...itemTags, [scope]: [...itemTags[scope], selected] }
-                : { ...defaultTags, [scope]: [selected] },
+              groupedTags: {
+                ...groupedTags,
+                [scope]: [...groupedTags[scope], selected],
+              },
             };
           }),
         )
