@@ -165,22 +165,31 @@ def query_metric_attr_summary(
         )
     metric_q1 = (
         sess.exec(
-            select(metric_attr).where(*where, is_not(metric_attr, None)).offset(
-                metric_count // 4).order_by(metric_attr).limit(1)
+            select(metric_attr)
+            .where(*where, is_not(metric_attr, None))
+            .offset(metric_count // 4)
+            .order_by(metric_attr)
+            .limit(1)
         ).first()
         or 0
     )
     metric_q2 = (
         sess.exec(
-            select(metric_attr).where(*where, is_not(metric_attr, None)).offset(
-                metric_count // 2).order_by(metric_attr).limit(1)
+            select(metric_attr)
+            .where(*where, is_not(metric_attr, None))
+            .offset(metric_count // 2)
+            .order_by(metric_attr)
+            .limit(1)
         ).first()
         or 0
     )
     metric_q3 = (
         sess.exec(
-            select(metric_attr).where(*where, is_not(metric_attr, None)).offset(
-                (metric_count * 3) // 4).order_by(metric_attr).limit(1)
+            select(metric_attr)
+            .where(*where, is_not(metric_attr, None))
+            .offset((metric_count * 3) // 4)
+            .order_by(metric_attr)
+            .limit(1)
         ).first()
         or 0
     )
