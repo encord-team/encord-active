@@ -47,7 +47,7 @@ import {
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import { Popover, Button } from "antd";
+import { Popover } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
@@ -123,12 +123,12 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
@@ -419,9 +419,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -447,8 +447,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm
@@ -894,7 +894,7 @@ const ItemPreview = ({
           <TagList tags={data.tags} />
         </div>
         <div className="w-fit inline-block relative">
-          <ImageWithPolygons item={data} />
+          <ImageWithPolygons item={data} showVideoControls={true} />
         </div>
       </div>
     </div>
@@ -1052,8 +1052,12 @@ const pointsRecordToPolygonPoints = (
 const ImageWithPolygons = ({
   item,
   className,
+  showVideoControls = false,
   ...rest
-}: { item: Item } & JSX.IntrinsicElements["figure"]) => {
+}: {
+  item: Item;
+  showVideoControls?: boolean;
+} & JSX.IntrinsicElements["figure"]) => {
   const {
     ref: image,
     width: imageWidth,
@@ -1100,7 +1104,7 @@ const ImageWithPolygons = ({
           className="object-contain rounded transition-opacity"
           src={imgSrcUrl}
           muted
-          controls={false}
+          controls={showVideoControls}
           onLoadedMetadata={() => {
             const videoRef = video.current;
             if (videoRef != null) {
