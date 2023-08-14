@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type
 
 import encord.exceptions
 import rich
@@ -16,6 +16,8 @@ from encord_active.lib.labels.ontology import get_nested_radio_and_checklist_has
 from encord_active.lib.metrics.execute import run_metrics
 from encord_active.lib.metrics.io import fill_metrics_meta_with_builtin_metrics
 from encord_active.lib.metrics.metadata import update_metrics_meta
+from encord_active.lib.metrics.metric import Metric, SimpleMetric
+from encord_active.lib.metrics.semantic.image_singularity import ImageSingularity
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 PROJECT_HASH_REGEX = r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})"

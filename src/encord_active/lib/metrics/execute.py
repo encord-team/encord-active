@@ -10,10 +10,13 @@ from loguru import logger
 from encord_active.lib.common.data_utils import convert_image_bgr
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.embeddings.embeddings import (
+    create_video_embeddings_from_frame_embeddings,
+)
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import Metric, SimpleMetric, StatsMetadata
-from encord_active.lib.metrics.types import EmbeddingType
+from encord_active.lib.metrics.types import DataType, EmbeddingType
 from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVAvgScoreWriter, CSVMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
@@ -190,10 +193,13 @@ def execute_metrics(
     else:
         cache_dir = data_dir
 
+    # metrics = [m for m in selected_metrics if isinstance(m, Metric)]
+    # if metrics:
+    #     _execute_metrics(cache_dir, iterator, metrics)
     simple_metrics = [m for m in selected_metrics if isinstance(m, SimpleMetric)]
-    metrics = [m for m in selected_metrics if isinstance(m, Metric)]
-
-    if metrics:
-        _execute_metrics(cache_dir, iterator, metrics)
     if simple_metrics:
         _execute_simple_metrics(cache_dir, iterator, simple_metrics)
+
+    video_hashes = [lh for lh, lr in iterator.label_rows.items() if lr["data_type"] == "video"]
+    if video_hashes:
+        create_video_embeddings_from_frame_embeddings(iterator, video_hashes)

@@ -30,3 +30,4 @@ class EmbeddingType(str, Enum):
     OBJECT = "object"
     HU_MOMENTS = "hu_moments"
     IMAGE = "image"
+    VIDEO = "video"
