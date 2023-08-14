@@ -354,5 +354,6 @@ imports.prof
 ci-tests
 
 
-# Encord active sqlite database instance.
-encord-active.sqlite
+# any sqlite database instance.
+*.sqlite
+
