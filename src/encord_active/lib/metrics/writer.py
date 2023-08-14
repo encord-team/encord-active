@@ -95,7 +95,7 @@ class CSVAvgScoreWriter(CSVWriter):
             if len(values) < 2:
                 return
 
-            key = self.get_identifier(None, label_hash, du_hash, 0)
+            key = self.get_identifier(labels=None, label_hash=label_hash, du_hash=du_hash, frame=0)
             row = {
                 "identifier": key,
                 "score": sum(values) / len(values),
