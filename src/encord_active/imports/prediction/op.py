@@ -124,7 +124,7 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
     # Store to the database
     with Session(engine) as sess:
         sess.add(prediction.prediction)
-        sess.add(new_collaborators)
+        sess.add_all(new_collaborators)
         sess.add_all(prediction_analytics)
         sess.add_all(prediction_analytics_extra)
         sess.add_all(prediction_analytics_false_negatives)

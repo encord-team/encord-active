@@ -12,6 +12,7 @@ from encord_active.db.models import (
 )
 
 from .op import ProjectImportSpec
+from ..local_files import get_data_uri
 
 
 def import_encord(
@@ -35,6 +36,7 @@ def import_encord(
     # Iter label rows
     project_data_list: List[ProjectDataMetadata] = []
     project_du_list: List[ProjectDataUnitMetadata] = []
+    du_hash_local_storage = {}
     for label_row in tqdm(label_rows, desc="Importing Label Rows"):
         label_row_json = label_row.to_encord_dict()
         data_hash = uuid.UUID(label_row_json["data_hash"])
@@ -59,15 +61,36 @@ def import_encord(
         data_unit_list_json = label_row_json["data_units"]
         for du_key, data_unit_json in data_unit_list_json.items():
             labels_json = data_unit_json["labels"]
+            du_hash = uuid.UUID(data_unit_json["data_hash"])
+            data_uri = None
+            if store_data_locally and du_hash in du_hash_local_storage:
+                data_uri = du_hash_local_storage[du_hash]
+            elif store_data_locally:
+                video, images = encord_project.get_data(str(data_hash), get_signed_url=True)
+                for image in images or []:
+                    du_hash_local_storage[uuid.UUID(image["data_hash"])] = get_data_uri(
+                        url_or_path=str(image["file_link"]),
+                        store_data_locally=True,
+                        store_symlinks=False,
+                        database_dir=database_dir
+                    )
+                if video is not None:
+                    du_hash_local_storage[data_hash] = get_data_uri(
+                        url_or_path=str(video["file_link"]),
+                        store_data_locally=True,
+                        store_symlinks=False,
+                        database_dir=database_dir
+                    )
+                data_uri = du_hash_local_storage[du_hash]
             project_du_list.append(
                 ProjectDataUnitMetadata(
                     project_hash=project_hash,
-                    du_hash=uuid.UUID(data_unit_json["data_hash"]),
+                    du_hash=du_hash,
                     frame=int(du_key) if is_video else 0,
                     data_hash=data_hash,
                     width=int(data_unit_json.get("width", 0) or width),
                     height=int(data_unit_json.get("height", 0) or height),
-                    data_uri=None,
+                    data_uri=data_uri,
                     data_uri_is_video=is_video,
                     objects=labels_json.get("objects", []),
                     classifications=labels_json.get("classifications", []),
