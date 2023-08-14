@@ -274,7 +274,12 @@ def generate_classification_embeddings(
 
 
 def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: bool = False) -> List[LabelEmbedding]:
-    if embedding_type not in [EmbeddingType.CLASSIFICATION, EmbeddingType.IMAGE, EmbeddingType.OBJECT]:
+    if embedding_type not in [
+        EmbeddingType.CLASSIFICATION,
+        EmbeddingType.IMAGE,
+        EmbeddingType.OBJECT,
+        EmbeddingType.VIDEO,
+    ]:
         raise Exception(f"Undefined embedding type '{embedding_type}' for get_embeddings method")
 
     pfs = ProjectFileStructure(iterator.cache_dir)
@@ -289,6 +294,9 @@ def get_embeddings(iterator: Iterator, embedding_type: EmbeddingType, *, force: 
             with open(embedding_path, "rb") as f:
                 embeddings = pickle.load(f)
         except FileNotFoundError:
+            if embedding_type == EmbeddingType.VIDEO:
+                raise ValueError("We're not equipped to generate video embeddings atm")
+
             logger.info(f"{embedding_path} not found. Generating embeddings...")
             embeddings = generate_embeddings(iterator, embedding_type, embedding_path)
             generate_2d_embedding_data(embedding_type, pfs, embeddings)
@@ -321,82 +329,33 @@ def create_video_embeddings_from_frame_embeddings(iterator: Iterator, video_labe
     """
     This function will utilize the already calculated frame-level embeddings of the videos.
     """
-    video_embeddings_path = iterator.project.file_structure.get_embeddings_file(EmbeddingType.VIDEO, reduced=False)
-    video_embeddings_reduced_path = iterator.project.file_structure.get_embeddings_file(
-        EmbeddingType.VIDEO, reduced=True
-    )
-    if (
-        video_embeddings_path.is_file()
-        and video_embeddings_path.stat().st_size > 0
-        and video_embeddings_reduced_path.is_file()
-        and video_embeddings_reduced_path.stat().st_size > 0
-    ):
+    emb_path = iterator.project.file_structure.get_embeddings_file(EmbeddingType.VIDEO, reduced=False)
+    emb_path_2d = iterator.project.file_structure.get_embeddings_file(EmbeddingType.VIDEO, reduced=True)
+    if emb_path.is_file() and emb_path.stat().st_size > 0 and emb_path_2d.is_file() and emb_path_2d.stat().st_size > 0:
         return
 
-    get_embeddings(iterator, EmbeddingType.IMAGE)
+    # High-dim embeddings
+    image_emb = pd.DataFrame(get_embeddings(iterator, EmbeddingType.IMAGE))
+    emb_filtered = image_emb[image_emb["label_row"].isin(video_label_hashes)]
 
-    # === 1. Process full embeddings ===
-    image_embeddings = pd.DataFrame(
-        pickle.loads(
-            iterator.project.file_structure.get_embeddings_file(EmbeddingType.IMAGE, reduced=False).read_bytes()
-        )
-    )
+    groups = emb_filtered.groupby("label_row")
+    grouped_emb = groups.first().drop(columns=["embedding"])
+    grouped_emb.frame = 0
+    grouped_emb = grouped_emb.join(groups.embedding.mean()).reset_index()
 
-    image_embeddings_filtered = image_embeddings[image_embeddings["label_row"].isin(video_label_hashes)]
+    emb_path.write_bytes(pickle.dumps(grouped_emb.to_dict(orient="records")))
 
-    df_max_frame = image_embeddings_filtered.groupby("label_row")["frame"].max().reset_index()
-    df_max_frame["mid_frame"] = (df_max_frame["frame"] + 1) // 2
+    # 2d embeddings
+    img_emb_path_2d = iterator.project_file_structure.get_embeddings_file(EmbeddingType.IMAGE, reduced=True)
 
-    result_df = pd.merge(
-        image_embeddings_filtered,
-        df_max_frame[["label_row", "mid_frame"]],
-        left_on=["label_row", "frame"],
-        right_on=["label_row", "mid_frame"],
-        how="inner",
-    )
-    result_df = result_df.drop(columns=["mid_frame"])
+    img_emb_2d = pd.DataFrame(pickle.loads(img_emb_path_2d.read_bytes()))
+    img_emb_2d["label_row"] = img_emb_2d.identifier.str.slice(0, 36)
 
-    avg_embeddings = (
-        image_embeddings_filtered.groupby("label_row")["embedding"]
-        .agg(lambda x: np.mean(np.stack(x), axis=0))
-        .reset_index()
-    )
-    result_df = result_df.merge(avg_embeddings, on="label_row")
-    result_df["embedding"] = result_df["embedding_y"]
-    result_df = result_df.drop(columns=["embedding_x", "embedding_y"])
+    groups = img_emb_2d[img_emb_2d["label_row"].isin(video_label_hashes)].groupby("label_row")
+    grouped_2d = groups.first().drop(columns=["x", "y"])
+    grouped_2d = grouped_2d.join(groups.agg(x=("x", "mean"), y=("y", "mean"))).reset_index()
+    grouped_2d = grouped_2d.drop(columns="label_row")
+    grouped_2d.identifier = grouped_2d.identifier.str.slice(0, 73) + "_00000"
+    grouped_2d.label = "Video Emb."
 
-    video_embeddings_path.write_bytes(pickle.dumps(result_df))
-
-    # === 2. Process reduced embeddings ===
-    image_embeddings_reduced = pd.DataFrame(
-        pickle.loads(
-            iterator.project.file_structure.get_embeddings_file(EmbeddingType.IMAGE, reduced=True).read_bytes()
-        )
-    )
-
-    # Separate label_row for filtering
-    image_embeddings_reduced["label_row"] = image_embeddings_reduced[Embedding2DSchema.identifier].str.split("_").str[0]
-    image_embeddings_reduced_filtered = image_embeddings_reduced[
-        image_embeddings_reduced["label_row"].isin(video_label_hashes)
-    ]
-
-    image_embeddings_reduced_filtered["lr_du_hash"] = image_embeddings_reduced_filtered[
-        Embedding2DSchema.identifier
-    ].str.slice(0, 73)
-    avg_values = (
-        image_embeddings_reduced_filtered.groupby(["lr_du_hash"])[[Embedding2DSchema.x, Embedding2DSchema.y]]
-        .mean()
-        .reset_index()
-    )
-
-    frame_x = image_embeddings_reduced_filtered.groupby(["lr_du_hash"]).size().reset_index(name="frame_count")
-    frame_x["frame"] = frame_x.frame_count.map(lambda cnt: f"{cnt//2:05d}")
-
-    video_df = pd.merge(avg_values, frame_x, on=["lr_du_hash"])
-    video_df[Embedding2DSchema.identifier] = video_df["lr_du_hash"] + "_" + video_df["frame"]
-
-    # Drop unnecessary columns and rename the desired columns
-    video_df = video_df[[Embedding2DSchema.identifier, Embedding2DSchema.x, Embedding2DSchema.y]]
-    video_df[Embedding2DSchema.label] = "No label"
-
-    video_embeddings_reduced_path.write_bytes(pickle.dumps(video_df.to_dict(orient="list")))
+    emb_path_2d.write_bytes(pickle.dumps(grouped_2d.to_dict(orient="list")))

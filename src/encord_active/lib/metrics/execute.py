@@ -11,9 +11,11 @@ from loguru import logger
 from encord_active.lib.common.data_utils import convert_image_bgr
 from encord_active.lib.common.iterator import DatasetIterator, Iterator
 from encord_active.lib.common.writer import StatisticsObserver
+from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.embeddings.embeddings import (
     create_video_embeddings_from_frame_embeddings,
 )
+from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.classification import ClassificationType
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.metric import Metric, SimpleMetric, StatsMetadata
@@ -22,6 +24,7 @@ from encord_active.lib.metrics.utils import get_embedding_type
 from encord_active.lib.metrics.writer import CSVAvgScoreWriter, CSVMetricWriter
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.metadata import fetch_encord_project_instance
+from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 logger = logger.opt(colors=True)
 
@@ -207,3 +210,4 @@ def execute_metrics(
     video_hashes = [lh for lh, lr in iterator.label_rows.items() if lr["data_type"] == "video"]
     if video_hashes:
         create_video_embeddings_from_frame_embeddings(iterator, video_hashes)
+        EmbeddingIndex.from_project(iterator.project_file_structure, EmbeddingType.VIDEO)
