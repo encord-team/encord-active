@@ -426,12 +426,13 @@ def quickstart(
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    from encord_active.cli.utils.server import launch_server_app
+    # from encord_active.cli.utils.server import launch_server_app
 
     # from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
     # project_name = "quickstart"
+    raise ValueError("IMPLEMENT THIS FUNCTION")
     # FIXME: download quickstart via new 'pre-built' project.
-    launch_server_app(database_dir)
+    # launch_server_app(database_dir)
 
 
 @cli.command(rich_help_panel="Resources")

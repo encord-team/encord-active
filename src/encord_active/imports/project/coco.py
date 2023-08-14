@@ -15,9 +15,9 @@ from encord_active.db.models import (
 )
 
 from ...db.enums import AnnotationType
+from ..local_files import get_data_uri
 from ..util import append_object_to_list
 from .op import ProjectImportSpec
-from .util import get_data_uri
 
 
 class CoCoFileInfo(BaseModel):
@@ -238,6 +238,9 @@ def import_coco_ontology(
     return ontology_structure.to_dict(), id_mapping
 
 
+COCO_FILE_DOMAIN = uuid.UUID("99be3b7a-314b-4237-9a3f-982177550ddf")
+
+
 def import_coco(
     database_dir: Path,
     annotations_file_path: Path,
@@ -246,7 +249,7 @@ def import_coco(
     store_symlinks: bool,
 ) -> ProjectImportSpec:
     coco_file: CoCoFileSpec = CoCoFileSpec.parse_file(annotations_file_path)
-    project_hash = uuid.uuid4()
+    project_hash = uuid.uuid5(COCO_FILE_DOMAIN, annotations_file_path.read_text(encoding="utf-8"))
     dataset_hash = uuid.uuid4()
     dataset_title = ""
 

@@ -1,49 +1,78 @@
+import uuid
 from pathlib import Path
-from typing import Dict
+from typing import Optional
 
 import typer
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
-from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.common.data_utils import download_file, file_path_to_url
-from encord_active.lib.db.connection import PrismaConnection
-from encord_active.lib.project import ProjectFileStructure
+from encord_active.cli.common import (
+    TYPER_ENCORD_DATABASE_DIR,
+    select_project_hash_from_name,
+)
+from encord_active.lib.encord.utils import get_encord_project
 
 project_cli = typer.Typer(rich_markup_mode="markdown")
 
 
 @project_cli.command(name="download-data", short_help="Download all data locally for improved responsiveness.")
-@ensure_project()
 def download_data(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
 ) -> None:
     """
     Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.
     """
-    project_file_structure = ProjectFileStructure(target)
-    project_file_structure.local_data_store.mkdir(exist_ok=True)
-    with PrismaConnection(project_file_structure) as conn:
-        batch_updates: Dict[str, str] = {}
-        for label in tqdm(project_file_structure.iter_labels(cache_db=conn), desc="Downloading project data locally"):
-            data_units = label.get_label_row_json(cache_db=conn).get("data_units")
-            for db in label.iter_data_unit():
-                du = data_units.get(db.du_hash, {"data_title": ""})
-                file_path = (project_file_structure.local_data_store / db.du_hash).with_suffix(
-                    Path(du["data_title"]).suffix
-                )
-                data_uri = file_path_to_url(file_path, project_dir=project_file_structure.project_dir)
-                download_file(
-                    db.signed_url,
-                    project_file_structure.project_dir,
-                    file_path,
-                    cache=False,  # Disable cache symlink tricks
-                )
-                batch_updates[db.du_hash] = data_uri
-        with conn.batch_() as batcher:
-            for du_hash, local_uri in batch_updates.items():
-                batcher.dataunit.update_many(
-                    where={
-                        "data_hash": du_hash,
-                    },
-                    data={"data_uri": local_uri},
-                )
+    from sqlalchemy.sql.operators import is_, like_op
+    from sqlmodel import Session, select
+
+    from encord_active.db.models import Project, ProjectDataUnitMetadata, get_engine
+    from encord_active.imports.local_files import download_to_local_file, get_local_file
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+        if project is None:
+            raise ValueError(f"Project with hash: {project_hash} does not exist")
+        encord_project = None
+        if project.project_remote_ssh_key_path is not None:
+            encord_project = get_encord_project(
+                ssh_key_path=project.project_remote_ssh_key_path, project_hash=str(project_hash)
+            )
+        to_download = sess.exec(
+            select(ProjectDataUnitMetadata).where(
+                ProjectDataUnitMetadata.project_hash == project_hash,
+                is_(ProjectDataUnitMetadata.data_uri, None)
+                | like_op(ProjectDataUnitMetadata.data_uri, "http://%")
+                | like_op(ProjectDataUnitMetadata.data_uri, "https://%"),
+            )
+        ).fetchall()
+        for du in tqdm(to_download, desc="Downloading data to local disc"):
+            if du.data_uri is not None:
+                url = du.data_uri
+            elif encord_project is not None:
+                video, images = encord_project.get_data(du.data_hash, get_signed_url=True)
+                if video is not None:
+                    url = str(video["file_link"])
+                    du.data_uri_is_video = True
+                else:
+                    url_found = None
+                    for image in images:
+                        du_hash = uuid.UUID(image["data_hash"])
+                        if du_hash == du.du_hash:
+                            url_found = str(image["file_link"])
+                            du.data_uri_is_video = False
+                    if url_found is None:
+                        raise ValueError(f"Encord data_hash does not have du_hash: {du.data_hash} => {du.du_hash}")
+                    url = url_found
+            else:
+                raise ValueError(f"Data unit hash has not uri yet not an encord remote project")
+            du.data_uri = download_to_local_file(
+                database_dir=database_dir,
+                local_file=get_local_file(database_dir),
+                url=url,
+            )
+            sess.add(du)
+        sess.commit()
