@@ -51,9 +51,9 @@ def download_data(
         ).fetchall()
         for du in tqdm(to_download, desc="Downloading data to local disc"):
             if du.data_uri is not None:
-                url = du.data_uri
+                url: str = du.data_uri
             elif encord_project is not None:
-                video, images = encord_project.get_data(du.data_hash, get_signed_url=True)
+                video, images = encord_project.get_data(str(du.data_hash), get_signed_url=True)
                 if video is not None:
                     url = str(video["file_link"])
                     du.data_uri_is_video = True

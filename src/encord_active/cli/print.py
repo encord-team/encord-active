@@ -97,7 +97,7 @@ def print_data_mapping(
     """
     [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`.
     """
-    from sqlalchemy.sql.operators import is_not, not_like_op
+    from sqlalchemy.sql.operators import is_not
     from sqlmodel import Session, select
 
     from encord_active.db.models import Project, ProjectDataUnitMetadata, get_engine

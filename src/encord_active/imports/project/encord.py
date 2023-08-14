@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import encord
 from tqdm import tqdm
@@ -11,8 +11,8 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
 )
 
-from .op import ProjectImportSpec
 from ..local_files import get_data_uri
+from .op import ProjectImportSpec
 
 
 def import_encord(
@@ -36,7 +36,7 @@ def import_encord(
     # Iter label rows
     project_data_list: List[ProjectDataMetadata] = []
     project_du_list: List[ProjectDataUnitMetadata] = []
-    du_hash_local_storage = {}
+    du_hash_local_storage: Dict[uuid.UUID, str] = {}
     for label_row in tqdm(label_rows, desc="Importing Label Rows"):
         label_row_json = label_row.to_encord_dict()
         data_hash = uuid.UUID(label_row_json["data_hash"])
@@ -72,14 +72,14 @@ def import_encord(
                         url_or_path=str(image["file_link"]),
                         store_data_locally=True,
                         store_symlinks=False,
-                        database_dir=database_dir
+                        database_dir=database_dir,
                     )
                 if video is not None:
                     du_hash_local_storage[data_hash] = get_data_uri(
                         url_or_path=str(video["file_link"]),
                         store_data_locally=True,
                         store_symlinks=False,
-                        database_dir=database_dir
+                        database_dir=database_dir,
                     )
                 data_uri = du_hash_local_storage[du_hash]
             project_du_list.append(

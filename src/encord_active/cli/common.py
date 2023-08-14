@@ -70,7 +70,7 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
                 rich.print("No project was selected.")
                 raise typer.Abort()
             else:
-                project_uuid_str = project_name_uuid_str.split(":")[-1].trim()
+                project_uuid_str = project_name_uuid_str.split(":")[-1].strip()
                 return uuid.UUID(project_uuid_str)
 
     rich.print("Failed to select a project.")
