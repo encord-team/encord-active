@@ -89,14 +89,15 @@ export function ChartDistributionBar(props: {
       if (median !== undefined) {
         getFill = (score) => (score < median.count ? "#ef4444" : "#ffa600");
       }
-    } else {
-      const enumEntry = metricsSummary.enums[selectedProperty];
+      const enumEntry = selectedProperty != null ? metricsSummary.enums[selectedProperty] : null;
       if (enumEntry != null && "values" in enumEntry) {
         keyValues = enumEntry.values;
       }
+    } else {
       results.sort((a, b) => Number(a.group) - Number(b.group));
     }
     const getGroupName = (group: string | number): string => {
+      console.log('ke', keyValues, selectedProperty, group);
       if (selectedProperty === "feature_hash") {
         return featureHashMap[group]?.name ?? group;
       } else {

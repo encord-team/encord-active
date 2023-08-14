@@ -95,8 +95,8 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
         enum_type=EnumType.ENUM,
         title="Manual Annotation",
         values={
-            "False": "Automated Annotation",
-            "True": "Manual Annotation",
+            "0": "Automated Annotation",
+            "1": "Manual Annotation",
         },
     ),
 }
