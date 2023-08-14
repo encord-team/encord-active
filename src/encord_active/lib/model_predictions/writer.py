@@ -534,31 +534,26 @@ class PredictionWriter:
         self.uuids.add(object_hash)
         return object_hash
 
-    def __add_classification_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
+    def __add_classification_prediction(
+        self, prediction: Prediction, label_hash: str, data_hash: str, frame: int
+    ) -> None:
         class_id = self.classification_class_id_lookup.get(prediction.classification)
         if class_id is None:
             raise AttributeError(
                 f"classification_class_id_lookup does not have the classification key: '{prediction.classification}'"
             )
 
-        _frame = 0
-        if not prediction.frame:  # Try to infer frame number from data hash.
-            label_row = self.project.label_rows[label_hash]
-            data_unit = label_row["data_units"][data_hash]
-            if "data_sequence" in data_unit:
-                _frame = int(data_unit["data_sequence"])
-
         self.predictions.append(
             ClassificationPredictionEntry(
-                identifier=f"{label_hash}_{data_hash}_{_frame:05d}",
-                url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}",
-                img_id=get_image_identifier(data_hash, _frame),
+                identifier=f"{label_hash}_{data_hash}_{frame:05d}",
+                url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{frame}",
+                img_id=get_image_identifier(data_hash, frame),
                 class_id=class_id,
                 confidence=prediction.confidence,
             )
         )
 
-    def __add_object_prediction(self, prediction: Prediction, label_hash: str, data_hash: str) -> None:
+    def __add_object_prediction(self, prediction: Prediction, label_hash: str, data_hash: str, frame: int) -> None:
         rle = None
         du = self.project.label_rows[label_hash]["data_units"][data_hash]
 
@@ -612,13 +607,6 @@ class PredictionWriter:
                 f"You've passed a {ptype.value} but the provided class id is of type " f"{ontology_object.shape}"
             )
 
-        _frame = 0
-        if not prediction.frame:  # Try to infer frame number from data hash.
-            label_row = self.project.label_rows[label_hash]
-            data_unit = label_row["data_units"][data_hash]
-            if "data_sequence" in data_unit:
-                _frame = int(data_unit["data_sequence"])
-
         object_hash = self.__get_unique_object_hash()
 
         if class_id is None:
@@ -630,9 +618,9 @@ class PredictionWriter:
 
         self.predictions.append(
             PredictionEntry(
-                identifier=f"{label_hash}_{data_hash}_{_frame:05d}_{object_hash}",
-                url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{_frame}",
-                img_id=get_image_identifier(data_hash, _frame),
+                identifier=f"{label_hash}_{data_hash}_{frame:05d}_{object_hash}",
+                url=f"{BASE_URL}{self.project.label_row_metas[self.lr_lookup[data_hash]].data_hash}&{self.project.project_hash}/{frame}",
+                img_id=get_image_identifier(data_hash, frame),
                 class_id=class_id,
                 confidence=prediction.confidence,
                 x1=x1,
@@ -656,9 +644,17 @@ class PredictionWriter:
             logger.warning(f"Couldn't match data hash `{data_hash}` to any label row")
             return
 
+        frame = prediction.frame
+        if frame is None:  # Try to infer frame number from data hash.
+            frame = 0
+            label_row = self.project.label_rows[label_hash]
+            data_unit = label_row["data_units"][data_hash]
+            if "data_sequence" in data_unit:
+                frame = int(data_unit["data_sequence"])
+
         if prediction.classification:
-            self.__add_classification_prediction(prediction, label_hash, data_hash)
+            self.__add_classification_prediction(prediction, label_hash, data_hash, frame)
         elif prediction.object:
-            self.__add_object_prediction(prediction, label_hash, data_hash)
+            self.__add_object_prediction(prediction, label_hash, data_hash, frame)
         else:
             raise ValueError("Prediction must have exactly one of `object` or `classification`")
