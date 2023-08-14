@@ -1,4 +1,4 @@
-from typing import List, Set, TypedDict
+from typing import List, TypedDict
 
 from encord_active.lib.common.iterator import DatasetIterator
 from encord_active.lib.db.connection import DBConnection

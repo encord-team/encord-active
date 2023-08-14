@@ -1,11 +1,11 @@
 import json
 import uuid
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Union
 
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.sql.operators import eq, in_op, or_
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
 from encord_active.db.models import (
     ProjectDataMetadata,
@@ -96,9 +96,9 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
     df = to_filter.copy()
 
     def _filter_tags_table(
-        tags_table: Type[ProjectTaggedDataUnit] | Type[ProjectTaggedAnnotation],
+        tags_table: Union[Type[ProjectTaggedDataUnit], Type[ProjectTaggedAnnotation]],
         tags: list[Tag],
-        untagged_name: str | None,
+        untagged_name: Optional[str],
     ) -> set[str]:
         is_annotations = ProjectTaggedAnnotation == tags_table
         with Session(engine) as sess:
@@ -115,7 +115,7 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
             if is_annotations:
                 column_selection.append(ProjectTaggedAnnotation.object_hash)
             stmt = (
-                select(*column_selection)
+                select(*column_selection)  # type: ignore
                 .join(
                     tags_table,
                     (tags_table.du_hash == ProjectDataUnitMetadata.du_hash)

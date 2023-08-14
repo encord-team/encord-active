@@ -51,7 +51,7 @@ from encord_active.lib.common.utils import (
     partial_column,
 )
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
-from encord_active.lib.db.helpers.tags import GroupedTags, Tag
+from encord_active.lib.db.helpers.tags import GroupedTags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
@@ -187,7 +187,7 @@ def tagged_items(project: ProjectFileStructureDep):
             key = f"{label_hash}_{du_hash}_{frame:05d}"
             identifier_tags.setdefault(key, GroupedTags(data=[], label=[]))["data"].append(tag)
         label_tags = sess.exec(
-            select(
+            select(  # type: ignore
                 ProjectDataMetadata.label_hash,
                 ProjectTaggedAnnotation.du_hash,
                 ProjectTaggedAnnotation.frame,
