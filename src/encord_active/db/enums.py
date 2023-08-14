@@ -52,6 +52,30 @@ def annotation_type_from_str(value: str) -> AnnotationType:
 
 AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
 
+
+class DataType(enum.IntEnum):
+    IMAGE = 0
+    IMAGE_GROUP = 1
+    VIDEO = 2
+
+    def __str__(self) -> str:
+        return self.name.lower()
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+_DATA_TYPE_LOOKUP: Dict[str, DataType] = {
+    "image": DataType.IMAGE,
+    "img_group": DataType.IMAGE_GROUP,
+    "video": DataType.VIDEO,
+}
+
+
+def data_type_from_str(value: str) -> DataType:
+    return _DATA_TYPE_LOOKUP[value]
+
+
 DataEnums: Dict[str, EnumDefinition] = {}
 AnnotationEnums: Dict[str, EnumDefinition] = {
     "feature_hash": EnumDefinition(

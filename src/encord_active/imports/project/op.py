@@ -41,11 +41,12 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
     res = metric_engine.execute_from_db(
         project.project_data_list,
         project.project_du_list,
+        [],
         database_dir,
         project_hash,
         project.project.project_remote_ssh_key_path,
     )
-    data_analytics, data_analytics_extra, annotation_analytics, annotation_analytics_extra = res
+    data_analytics, data_analytics_extra, annotation_analytics, annotation_analytics_extra, new_collaborators = res
 
     # Execute embedding reduction.
 
@@ -56,6 +57,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
             sess.add(project.project_import_meta)
         sess.add_all(project.project_data_list)
         sess.add_all(project.project_du_list)
+        sess.add_all(new_collaborators)
         sess.commit()
         sess.add_all(data_analytics)
         sess.add_all(data_analytics_extra)

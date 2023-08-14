@@ -11,6 +11,7 @@ from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.models import (
     Project,
+    ProjectCollaborator,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectPrediction,
@@ -62,6 +63,9 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
         project_du_meta_list = sess.exec(
             select(ProjectDataUnitMetadata).where(ProjectDataUnitMetadata.project_hash == project_hash)
         ).fetchall()
+        project_collaborator_list = sess.exec(
+            select(ProjectCollaborator).where(ProjectCollaborator.project_hash == project_hash)
+        ).fetchall()
 
     prediction_data_metadata = [
         ProjectDataMetadata(
@@ -109,16 +113,18 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
         data_meta=prediction_data_metadata,
         ground_truth_annotation_meta=project_du_meta_list,
         predicted_annotation_meta=prediction_data_unit_metadata,
+        collaborators=project_collaborator_list,
         database_dir=database_dir,
         project_hash=project_hash,
         prediction_hash=prediction_hash,
         project_ssh_path=project.project_remote_ssh_key_path,
     )
-    prediction_analytics, prediction_analytics_extra, prediction_analytics_false_negatives = res
+    prediction_analytics, prediction_analytics_extra, prediction_analytics_false_negatives, new_collaborators = res
 
     # Store to the database
     with Session(engine) as sess:
         sess.add(prediction.prediction)
+        sess.add(new_collaborators)
         sess.add_all(prediction_analytics)
         sess.add_all(prediction_analytics_extra)
         sess.add_all(prediction_analytics_false_negatives)

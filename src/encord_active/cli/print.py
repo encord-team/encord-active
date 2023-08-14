@@ -66,7 +66,7 @@ def print_ontology(
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
-            raise ValueError(f"Project hash does not exist")
+            raise ValueError(f"Project hash does not exist: {project_hash}")
     project_ontology = project.project_ontology
 
     ontology_structure = OntologyStructure.from_dict(project_ontology)

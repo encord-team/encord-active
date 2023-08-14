@@ -68,7 +68,7 @@ def download_data(
                         raise ValueError(f"Encord data_hash does not have du_hash: {du.data_hash} => {du.du_hash}")
                     url = url_found
             else:
-                raise ValueError(f"Data unit hash has not uri yet not an encord remote project")
+                raise ValueError(f"Data unit hash has not uri yet not an encord remote project: {du.du_hash}")
             du.data_uri = download_to_local_file(
                 database_dir=database_dir,
                 local_file=get_local_file(database_dir),

@@ -34,6 +34,7 @@ from encord_active.db.models import (
     AnnotationType,
     ProjectAnnotationAnalytics,
     ProjectAnnotationAnalyticsExtra,
+    ProjectCollaborator,
     ProjectDataAnalytics,
     ProjectDataAnalyticsExtra,
     ProjectDataMetadata,
@@ -77,6 +78,7 @@ class SimpleExecutor(Executor):
         self,
         data_meta: List[ProjectDataMetadata],
         du_meta: List[ProjectDataUnitMetadata],
+        collaborators: List[ProjectCollaborator],
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_path: Optional[str],
@@ -85,6 +87,7 @@ class SimpleExecutor(Executor):
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectCollaborator],
     ]:
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in du_meta:
@@ -96,13 +99,14 @@ class SimpleExecutor(Executor):
             project_hash=project_hash,
             project_ssh_path=project_ssh_path,
         )
-        return self._pack_output(project_hash=project_hash)
+        return self._pack_output(project_hash=project_hash, collaborators=collaborators)
 
     def execute_prediction_from_db(
         self,
         data_meta: List[ProjectDataMetadata],
         ground_truth_annotation_meta: List[ProjectDataUnitMetadata],
         predicted_annotation_meta: List[ProjectDataUnitMetadata],
+        collaborators: List[ProjectCollaborator],
         database_dir: Path,
         project_hash: uuid.UUID,
         prediction_hash: uuid.UUID,
@@ -111,6 +115,7 @@ class SimpleExecutor(Executor):
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
         List[ProjectPredictionAnalyticsFalseNegatives],
+        List[ProjectCollaborator],
     ]:
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in predicted_annotation_meta:
@@ -124,7 +129,9 @@ class SimpleExecutor(Executor):
             project_ssh_path=project_ssh_path,
             gt_lookup=gt_lookup,
         )
-        return self._pack_prediction(project_hash=project_hash, prediction_hash=prediction_hash)
+        return self._pack_prediction(
+            project_hash=project_hash, prediction_hash=prediction_hash, collaborators=collaborators
+        )
 
     def execute(
         self,
@@ -997,20 +1004,45 @@ class SimpleExecutor(Executor):
             return {"keys": [[str(kv) if isinstance(kv, uuid.UUID) else kv for kv in k] for k in v.metric_keys]}
         return v
 
+    @classmethod
+    def _get_user_uuid(
+        cls,
+        email: str,
+        lookup: Dict[str, uuid.UUID],
+        new_user_uuid: List[ProjectCollaborator],
+        project_hash: uuid.UUID,
+    ) -> uuid.UUID:
+        if email in lookup:
+            return lookup[email]
+        else:
+            user_hash = uuid.uuid4()
+            lookup[email] = user_hash
+            new_user_uuid.append(
+                ProjectCollaborator(
+                    project_hash=project_hash,
+                    user_hash=user_hash,
+                    user_email=email,
+                )
+            )
+            return user_hash
+
     def _pack_output(
         self,
         project_hash: uuid.UUID,
+        collaborators: List[ProjectCollaborator],
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectCollaborator],
     ]:
         data_analysis = []
         data_analysis_extra = []
         annotation_analysis = []
         annotation_analysis_extra = []
-
+        new_collaborators: List[ProjectCollaborator] = []
+        user_email_lookup = {collab.user_email: collab.user_hash for collab in collaborators}
         for (du_hash, frame), data_deps in self.data_metrics.items():
             analysis_values, extra_values = self._validate_pack_deps(
                 data_deps,
@@ -1057,7 +1089,9 @@ class SimpleExecutor(Executor):
                     object_hash=annotation_hash,
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    annotation_email=annotation_email,
+                    annotation_user=self._get_user_uuid(
+                        str(annotation_email), user_email_lookup, new_collaborators, project_hash
+                    ),
                     annotation_manual=annotation_manual,
                     **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
@@ -1072,19 +1106,24 @@ class SimpleExecutor(Executor):
                 )
             )
 
-        return data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra
+        return data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra, new_collaborators
 
     def _pack_prediction(
-        self, project_hash: uuid.UUID, prediction_hash: uuid.UUID
+        self,
+        project_hash: uuid.UUID,
+        prediction_hash: uuid.UUID,
+        collaborators: List[ProjectCollaborator],
     ) -> Tuple[
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
         List[ProjectPredictionAnalyticsFalseNegatives],
+        List[ProjectCollaborator],
     ]:
         prediction_analysis = []
         prediction_analysis_extra = []
         prediction_false_negatives = []
-
+        user_email_lookup = {collab.user_email: collab.user_hash for collab in collaborators}
+        new_collaborators: List[ProjectCollaborator] = []
         for (du_hash, frame, annotation_hash), annotation_deps in self.annotation_metrics.items():
             feature_hash = annotation_deps.pop("feature_hash")
             annotation_type = annotation_deps.pop("annotation_type")
@@ -1105,7 +1144,9 @@ class SimpleExecutor(Executor):
                     object_hash=annotation_hash,
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    annotation_email=annotation_email,
+                    annotation_user=self._get_user_uuid(
+                        str(annotation_email), user_email_lookup, new_collaborators, project_hash
+                    ),
                     annotation_manual=annotation_manual,
                     **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
@@ -1133,4 +1174,4 @@ class SimpleExecutor(Executor):
                 )
             )
 
-        return prediction_analysis, prediction_analysis_extra, prediction_false_negatives
+        return prediction_analysis, prediction_analysis_extra, prediction_false_negatives, new_collaborators
