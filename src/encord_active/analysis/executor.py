@@ -607,14 +607,33 @@ class SimpleExecutor(Executor):
                 # Calculate iou & best_match & best_match_feature_hash
                 best_iou: float = 0.0
                 best_iou_match: Optional[Tuple[str, str]] = None
-                if annotation_meta.mask is None:
+                if annotation_meta.mask is None or annotation_meta.bounding_box is None:
                     # classification
                     for gt_hash, gt_meta in current_frame_gt.items():
                         if gt_meta.feature_hash == annotation_meta.feature_hash:
                             best_iou = 1.0
                             best_iou_match = (gt_hash, gt_meta.feature_hash)
                 else:
-                    pass
+                    # object iou match
+                    best_iou = 0.0
+                    best_iou_match = None
+                    b1x1, b1y1, b1x2, b1y2 = annotation_meta.bounding_box
+                    for gt_hash, gt_meta in current_frame_gt.items():
+                        if gt_meta.mask is None or gt_meta.bounding_box is None:
+                            continue
+                        b2x1, b2y1, b2x2, b2y2 = gt_meta.bounding_box
+                        # Quick bb-bb intersection test to avoid expensive calculation when not needed.
+                        if b2x1 > b1x2 or b2x2 < b1x1 or b2y1 > b1y2 or b2y2 < b1y1:
+                            intersect = 0.0  # Quick bb-collision exclude
+                        else:
+                            intersect = float((annotation_meta.mask & gt_meta.mask).sum().item())
+                        if intersect == 0.0:
+                            iou = 0.0
+                        else:
+                            iou = intersect / float((annotation_meta.mask | gt_meta.mask).sum().item())
+                        if iou > best_iou:
+                            best_iou = iou
+                            best_iou_match = (gt_hash, gt_meta.feature_hash)
                 annotation_result = annotation_results_deps[annotation_hash]
                 annotation_result["iou"] = best_iou
                 if best_iou_match is None:
@@ -1097,6 +1116,7 @@ class SimpleExecutor(Executor):
                     du_hash=du_hash,
                     frame=frame,
                     object_hash=annotation_hash,
+                    annotation_bytes=b"",  # FIXME: how should prediction metadata be stored!?
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )

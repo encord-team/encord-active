@@ -64,8 +64,10 @@ def import_coco_result(
                 classifications=[],
             )
         predicted_data_unit = du_prediction_list[du_hash, 0]
-        if predict.category_id not in feature_hash_map:
-            print(f"WARNING: category_id={predict.category_id} is not in the project ontology, skipping prediction")
+        if (predict.category_id + 1) not in feature_hash_map:
+            print(
+                f"WARNING: category_id={predict.category_id} (+1) is not in the project ontology, skipping prediction"
+            )
             continue
         annotation_type, ontology_object = feature_hash_map[predict.category_id + 1]
         bitmask = coco_str_to_bitmask(

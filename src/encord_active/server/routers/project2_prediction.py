@@ -58,6 +58,15 @@ router = APIRouter(
 )
 
 
+def remove_nan_inf(v: float, inf: float = 100_000.0) -> float:
+    if math.isnan(v):
+        return 0.0
+    elif math.isinf(v):
+        return inf if v > 0.0 else -inf
+    else:
+        return v
+
+
 # FIXME: verify project_hash <=> prediction hash is allowed to access
 
 # FIXME: for group by filter_hash queries, what is the correct behaviour r.e case where no value exists for that feature
@@ -345,10 +354,10 @@ def get_project_prediction_summary(
                     {",".join(
                         [   
                         f'''
-                        corr(
+                        coalesce(corr(
                             cast(cast((iou >= :iou and match_duplicate_iou < :iou) as integer) as real),
                             {metric_name}
-                        )
+                        ), 0.0)
                         '''
                         for metric_name in metric_names
                         ]
@@ -364,7 +373,7 @@ def get_project_prediction_summary(
             ).first()
             or []
         )
-        correlations = {name: value for name, value in zip(metric_names, correlation_result)}
+        correlations = {name: remove_nan_inf(value, inf=1.0) for name, value in zip(metric_names, correlation_result)}
 
     # Precision recall curves
     prs = {}
@@ -436,7 +445,7 @@ def get_project_prediction_summary(
         )
         importance[metric_name] = float(importance_regression[0])
 
-    return {
+    v = {
         "classification_only": is_classification,
         "num_frames": num_frames or 0,
         "mAP": sum(pr["ap"] for pr in precision_recall.values()) / max(len(precision_recall), 1),
@@ -453,6 +462,8 @@ def get_project_prediction_summary(
         "fp": false_positive_count_map,
         "fn": false_negative_count_map,
     }
+    print(v)
+    return v
 
 
 @router.get("/analytics/{prediction_domain}/distribution")

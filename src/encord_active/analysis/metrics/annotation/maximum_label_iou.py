@@ -44,7 +44,7 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
             obj_iou_values = []
             b1x1, b1y1, b1x2, b1y2 = obj_bb1
             for obj_hash2, obj_mask2, obj_bb2 in objs:
-                if obj_mask1 == obj_hash2:
+                if obj_hash1 == obj_hash2:
                     continue
                 k = (obj_hash1, obj_hash2) if obj_hash1 < obj_hash2 else (obj_hash2, obj_hash1)
                 if k in calculated_iou:

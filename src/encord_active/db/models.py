@@ -106,7 +106,7 @@ class ProjectDataMetadata(SQLModel, table=True):
 
 class ProjectDataUnitMetadata(SQLModel, table=True):
     __tablename__ = "active_project_data_units"
-    project_hash: UUID = Field(primary_key=True, foreign_key=Project.project_hash)
+    project_hash: UUID = Field(primary_key=True)
     du_hash: UUID = Field(primary_key=True)
     frame: int = Field(primary_key=True, ge=0)
     data_hash: UUID
