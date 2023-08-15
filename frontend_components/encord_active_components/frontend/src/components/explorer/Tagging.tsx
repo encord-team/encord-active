@@ -24,27 +24,43 @@ export const useAllTags = (itemSet?: Set<string>) => {
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),
-    selectedTags: { data: [] as string[], label: [] as string[] },
+    selectedTags: { data: new Set<string>(), label: new Set<string>() },
     isLoading,
     taggedItems,
   };
 
-  if (isLoading) return defaultAllTags;
+  if (isLoading)
+    return {
+      ...defaultAllTags,
+      selectedTags: {
+        data: [...defaultAllTags.selectedTags.data],
+        label: [...defaultAllTags.selectedTags.label],
+      },
+    };
 
   const dataItemSet = useMemo(
     () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
     [itemSet],
   );
 
-  return [...taggedItems].reduce((result, [id, { data, label }]) => {
+  const allTags = [...taggedItems].reduce((result, [id, { data, label }]) => {
     data.forEach(result.allDataTags.add, result.allDataTags);
     label.forEach(result.allLabelTags.add, result.allLabelTags);
 
-    if (itemSet?.has(id)) result.selectedTags.label.push(...label);
-    if (dataItemSet.has(id)) result.selectedTags.data.push(...data);
+    if (itemSet?.has(id))
+      data.forEach(result.selectedTags.label.add, result.selectedTags.label);
+    if (dataItemSet.has(id))
+      data.forEach(result.selectedTags.data.add, result.selectedTags.data);
 
     return result;
   }, defaultAllTags);
+  return {
+    ...allTags,
+    selectedTags: {
+      data: [...allTags.selectedTags.data],
+      label: [...allTags.selectedTags.label],
+    },
+  };
 };
 
 export const TaggingDropdown = ({
