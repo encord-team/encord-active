@@ -438,6 +438,7 @@ export const Explorer = ({
             <SimilarityItem
               itemId={similarityItem}
               onClose={() => setSimilarityItem(null)}
+              selectedMetric={selectedMetric}
             />
           )}
           <div className="flex w-full gap-2 flex-col flex-wrap">
@@ -791,9 +792,11 @@ const Embeddings = ({
 const SimilarityItem = ({
   itemId,
   onClose,
+  selectedMetric,
 }: {
   itemId: string;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
+  selectedMetric?: Metric;
 }) => {
   const { data, isLoading } = useApi().fetchItem(itemId);
 
@@ -803,7 +806,11 @@ const SimilarityItem = ({
     <div className="flex flex-col gap-2">
       <h1 className="text-lg">Similar items</h1>
       <div className="group max-w-xs relative">
-        <ImageWithPolygons className="group-hover:opacity-20" item={data} />
+        <ImageWithPolygons
+          className="group-hover:opacity-20"
+          item={data}
+          selectedMetric={selectedMetric}
+        />
         <button
           onClick={onClose}
           className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
@@ -966,7 +973,11 @@ const GalleryItem = ({
           )}
         </div>
         <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
-          <ImageWithPolygons className="group-hover:opacity-30" item={data} />
+          <ImageWithPolygons
+            className="group-hover:opacity-30"
+            item={data}
+            selectedMetric={selectedMetric}
+          />
           <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
             <button
               onClick={(e) => onExpand?.(e)}
@@ -1053,10 +1064,12 @@ const ImageWithPolygons = ({
   item,
   className,
   showVideoControls = false,
+  selectedMetric,
   ...rest
 }: {
   item: Item;
   showVideoControls?: boolean;
+  selectedMetric?: Metric;
 } & JSX.IntrinsicElements["figure"]) => {
   const {
     ref: image,
@@ -1108,7 +1121,13 @@ const ImageWithPolygons = ({
           onLoadedMetadata={() => {
             const videoRef = video.current;
             if (videoRef != null) {
-              videoRef.currentTime = item.videoTimestamp || 0;
+              const videoTimestamp =
+                selectedMetric &&
+                  selectedMetric.embeddingType == "video" &&
+                  !!item.videoTimestamp
+                  ? videoRef.duration / 2
+                  : item.videoTimestamp || 0;
+              videoRef.currentTime = videoTimestamp;
             }
           }}
         />
