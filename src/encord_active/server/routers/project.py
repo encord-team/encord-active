@@ -181,8 +181,9 @@ def tagged_items(project: ProjectFileStructureDep):
                 ProjectDataUnitMetadata.project_hash == project_hash,
                 ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
                 ProjectDataUnitMetadata.du_hash == ProjectTaggedDataUnit.du_hash,
+                ProjectDataUnitMetadata.frame == ProjectTaggedDataUnit.frame,
             )
-        )
+        ).all()
         for label_hash, du_hash, frame, tag in data_tags:
             key = f"{label_hash}_{du_hash}_{frame:05d}"
             identifier_tags.setdefault(key, GroupedTags(data=[], label=[]))["data"].append(tag)
@@ -200,8 +201,9 @@ def tagged_items(project: ProjectFileStructureDep):
                 ProjectDataUnitMetadata.project_hash == project_hash,
                 ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
                 ProjectDataUnitMetadata.du_hash == ProjectTaggedAnnotation.du_hash,
+                ProjectDataUnitMetadata.frame == ProjectTaggedAnnotation.frame,
             )
-        )
+        ).all()
         for label_hash, du_hash, frame, annotation_hash, tag in label_tags:
             data_key = f"{label_hash}_{du_hash}_{frame:05d}"
             label_key = f"{data_key}_{annotation_hash}"
