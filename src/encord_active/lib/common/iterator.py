@@ -86,7 +86,6 @@ class DatasetIterator(Iterator):
                     self.num_frames = len(label_row.data_units)
                     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
                     for data_unit in data_units:
-
                         if self._skip_labeled_data:
                             du_label = data_unit.get("labels", {})
                             if du_label.get("objects", []) != [] or du_label.get("classifications", []) != []:
@@ -127,6 +126,7 @@ class DatasetIterator(Iterator):
                     if video_metadata is None:
                         continue  # SKIP
 
+                    fps = self.project.label_row_metas[label_hash].frames_per_second or 1
                     # Create temporary folder containing the video
                     with tempfile.TemporaryDirectory() as working_dir:
                         working_path = Path(working_dir)
@@ -142,8 +142,8 @@ class DatasetIterator(Iterator):
                         fake_data_unit = deepcopy(data_unit)
 
                         for frame_id in range(len(list(video_images_dir.glob("*_*.*")))):
-                            self.frame = frame_id
-                            fake_data_unit["labels"] = data_unit["labels"].get(str(frame_id), {})
+                            self.frame = int(frame_id * fps)
+                            fake_data_unit["labels"] = data_unit["labels"].get(str(self.frame), {})
 
                             if self._skip_labeled_data:
                                 if (
