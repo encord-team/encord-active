@@ -58,10 +58,10 @@ const SummaryQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> = {
 };
 
 const StatisticQueryOptions: Pick<UseQueryOptions, "staleTime" | "cacheTime"> =
-  {
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    cacheTime: 1000 * 60 * 5, // 5 minutes
-  };
+{
+  staleTime: 1000 * 60 * 5, // 5 minutes
+  cacheTime: 1000 * 60 * 5, // 5 minutes
+};
 
 class IntegratedAPI implements QueryAPI {
   private readonly projects: Readonly<
@@ -109,7 +109,6 @@ class IntegratedAPI implements QueryAPI {
           description: project.description,
         }));
       results.sort((a, b) => (a.title < b.title ? -1 : 1));
-      console.log(results);
 
       return [results.slice(offset, offset + limit), results.length];
     }, [projects, offset, limit]);
@@ -352,10 +351,8 @@ class IntegratedAPI implements QueryAPI {
       () =>
         axios
           .get(
-            `${baseURL}/analysis/${
-              objectHash == null ? "data" : "annotations"
-            }/similarity/${duHash}/${frame}/${
-              objectHash == null ? "" : objectHash
+            `${baseURL}/analysis/${objectHash == null ? "data" : "annotations"
+            }/similarity/${duHash}/${frame}/${objectHash == null ? "" : objectHash
             }?embedding=embedding_clip`,
           )
           // eslint-disable-next-line

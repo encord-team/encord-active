@@ -17,3 +17,6 @@ export const splitId = (id: string): IdParts => {
     objectHash: obj ?? null,
   };
 };
+
+export const takeDataId = (id: string): string =>
+  id.split("_").slice(0, 3).join("_");

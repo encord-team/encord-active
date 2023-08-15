@@ -1,5 +1,5 @@
 import { Select, SelectProps } from "antd";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
@@ -7,6 +7,7 @@ import { TbPolygon } from "react-icons/tb";
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
 import { Spinner } from "./Spinner";
+import { takeDataId } from "./id";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -20,27 +21,30 @@ const taggingDisabledReasons = {
 
 export const useAllTags = (itemSet?: Set<string>) => {
   const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
-
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),
+    selectedTags: { data: [] as string[], label: [] as string[] },
     isLoading,
     taggedItems,
   };
 
   if (isLoading) return defaultAllTags;
 
-  return [...taggedItems]
-    .filter(([id, _]) => (itemSet ? itemSet.has(id) : true))
-    .map(([_, tags]) => tags)
-    .reduce(
-      (allTags, { data, label }) => (
-        data.forEach(allTags.allDataTags.add, allTags.allDataTags),
-        label.forEach(allTags.allLabelTags.add, allTags.allLabelTags),
-        allTags
-      ),
-      defaultAllTags,
-    );
+  const dataItemSet = useMemo(
+    () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
+    [itemSet],
+  );
+
+  return [...taggedItems].reduce((result, [id, { data, label }]) => {
+    data.forEach(result.allDataTags.add, result.allDataTags);
+    label.forEach(result.allLabelTags.add, result.allLabelTags);
+
+    if (itemSet?.has(id)) result.selectedTags.label.push(...label);
+    if (dataItemSet.has(id)) result.selectedTags.data.push(...data);
+
+    return result;
+  }, defaultAllTags);
 };
 
 export const TaggingDropdown = ({
@@ -74,10 +78,14 @@ export const TaggingDropdown = ({
   );
 };
 
-export const BulkTaggingForm = ({ items }: { items: string[] }) => {
-  const { allDataTags, allLabelTags, isLoading, taggedItems } = useAllTags(
-    new Set(items),
-  );
+export const BulkTaggingForm = ({
+  items,
+  allowTaggingAnnotations,
+}: {
+  items: string[];
+  allowTaggingAnnotations: boolean;
+}) => {
+  const { selectedTags, isLoading, taggedItems } = useAllTags(new Set(items));
   const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
 
   return (
@@ -85,15 +93,21 @@ export const BulkTaggingForm = ({ items }: { items: string[] }) => {
       loading={isLoading || isMutating}
       controlled={true}
       allowClear={false}
+      allowTaggingAnnotations={allowTaggingAnnotations}
       onSelect={(scope, selected) =>
         mutate(
           items.map((id) => {
-            const itemTags = taggedItems.get(id);
+            const { label } = taggedItems.get(id) || defaultTags;
+            const { data } = taggedItems.get(takeDataId(id)) || defaultTags;
+
+            const groupedTags = { data, label };
+
             return {
               id,
-              groupedTags: itemTags
-                ? { ...itemTags, [scope]: [...itemTags[scope], selected] }
-                : { ...defaultTags, [scope]: [selected] },
+              groupedTags: {
+                ...groupedTags,
+                [scope]: [...groupedTags[scope], selected],
+              },
             };
           }),
         )
@@ -123,13 +137,13 @@ export const BulkTaggingForm = ({ items }: { items: string[] }) => {
           ),
         )
       }
-      seletedTags={{ data: [...allDataTags], label: [...allLabelTags] }}
+      selectedTags={selectedTags}
     />
   );
 };
 
 export const TaggingForm = ({
-  seletedTags: selectedTags,
+  selectedTags,
   className,
   controlled = false,
   loading = false,
@@ -137,17 +151,20 @@ export const TaggingForm = ({
   onSelect,
   onDeselect,
   allowClear = true,
+  allowTaggingAnnotations: allowTaggingAnnotatoins = false,
   ...rest
 }: {
-  seletedTags: GroupedTags;
+  selectedTags: GroupedTags;
   controlled?: boolean;
   loading?: boolean;
   onChange?: (tags: GroupedTags) => void;
   onDeselect?: (scope: keyof GroupedTags, tag: string) => void;
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
+  allowTaggingAnnotations?: boolean;
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
-  const { data: allTags } = useApi().fetchProjectTags();
+  const { allDataTags, allLabelTags } = useAllTags();
+  const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
   const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
     TAG_GROUPS[0],
@@ -188,6 +205,7 @@ export const TaggingForm = ({
             className={classy({
               "!hidden": value !== selectedTab.value,
             })}
+            disabled={value == "label" && !allowTaggingAnnotatoins}
             mode="tags"
             placeholder="Tags"
             allowClear={allowClear}

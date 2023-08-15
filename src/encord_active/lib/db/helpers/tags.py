@@ -1,4 +1,4 @@
-from typing import List, Set, TypedDict
+from typing import List, TypedDict
 
 from encord_active.lib.common.iterator import DatasetIterator
 from encord_active.lib.db.connection import DBConnection
@@ -10,28 +10,6 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 class GroupedTags(TypedDict):
     data: List[str]
     label: List[str]
-
-
-def scoped_tags(tags: List[Tag], scopes: Set[TagScope]) -> List[Tag]:
-    return [tag for tag in tags if tag.scope in scopes]
-
-
-def all_tags(project_file_structure: ProjectFileStructure) -> List[Tag]:
-    with DBConnection(project_file_structure) as conn:
-        tag_list = MergedMetrics(conn).all(columns=["tags"])["tags"].values
-    return list({tag for tag_list in tag_list for tag in tag_list})
-
-
-def to_grouped_tags(tags: List[Tag]) -> GroupedTags:
-    grouped_tags = GroupedTags(data=[], label=[])
-
-    for name, scope in tags:
-        if scope == TagScope.DATA:
-            grouped_tags["data"].append(name)
-        elif scope == TagScope.LABEL:
-            grouped_tags["label"].append(name)
-
-    return grouped_tags
 
 
 def from_grouped_tags(tags: GroupedTags) -> tuple[List[Tag], List[Tag]]:

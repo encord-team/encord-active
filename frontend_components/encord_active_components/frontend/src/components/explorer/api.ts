@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 import { z } from "zod";
 import { apiUrl } from "../../constants";
+import { takeDataId } from "./id";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
@@ -314,10 +315,6 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       const response = await fetcher(url).then((res) => res.json());
       return z.boolean().parse(response);
     },
-    fetchProjectTags: async () =>
-      GroupedTagsSchema.parse(
-        await (await fetcher(`${apiUrl}/projects/${projectHash}/tags`)).json(),
-      ),
     updateItemTags: async (
       itemTags: { id: string; groupedTags: GroupedTags }[],
     ) => {
@@ -377,87 +374,14 @@ export const useApi = () => {
       (...args: Parameters<API["updateItemTags"]>) =>
         api.updateItemTags(...args),
       {
-        onMutate: async (itemTagsList) => {
-          Promise.all(
-            itemTagsList.map(({ id }) =>
-              queryClient.cancelQueries({ queryKey: ["item", id] }),
-            ),
-          );
-          const previousItems = itemTagsList.map((itemTags) => {
-            const itemKey = [projectHash, "item", itemTags.id];
-            const previousItem = queryClient.getQueryData(itemKey) as Item;
-            queryClient.setQueryData(itemKey, {
-              ...previousItem,
-              tags: itemTags.groupedTags,
-            });
-            return previousItem;
-          });
-
-          const taggedItemsQueryKey = [projectHash, "tagged_items"];
-          await queryClient.cancelQueries(taggedItemsQueryKey);
-          const previousTaggedItems = queryClient.getQueryData(
-            taggedItemsQueryKey,
-          ) as Awaited<ReturnType<API["fetchedTaggedItems"]>>;
-          const nextTaggedItems = new Map(previousTaggedItems);
-          itemTagsList.forEach(({ id, groupedTags }) =>
-            nextTaggedItems.set(id, groupedTags),
-          );
-          queryClient.setQueryData(taggedItemsQueryKey, nextTaggedItems);
-
-          const tagsQueryKey = [projectHash, "tags"];
-          await queryClient.cancelQueries(tagsQueryKey);
-          const previousTags = queryClient.getQueryData(
-            tagsQueryKey,
-          ) as GroupedTags;
-          const nextTags = itemTagsList.reduce(
-            (nextTags, { groupedTags }) => {
-              groupedTags.data.forEach(nextTags.data.add, nextTags.data);
-              groupedTags.label.forEach(nextTags.label.add, nextTags.label);
-              return nextTags;
-            },
-            { data: new Set<string>(), label: new Set<string>() },
-          );
-          queryClient.setQueryData(tagsQueryKey, {
-            data: [...nextTags.data],
-            label: [...nextTags.label],
-          });
-
-          return {
-            previousTaggedItems,
-            previousItems,
-            previousTags,
-          };
-        },
-        onError: (_, __, context) => {
-          context?.previousItems.forEach((item) =>
-            queryClient.setQueryData([projectHash, "item", item.id], item),
-          );
-          queryClient.setQueryData(
-            [projectHash, "tagged_items"],
-            context?.previousTaggedItems,
-          );
-          queryClient.setQueryData(
-            [projectHash, "tags"],
-            context?.previousTags,
-          );
-        },
-        onSettled: (_, __, variables) => {
-          variables.forEach(({ id }) =>
-            queryClient.invalidateQueries({
-              queryKey: [projectHash, "item", id],
-            }),
-          );
+        onSettled: () => {
+          queryClient.invalidateQueries({ queryKey: [projectHash, "item"] });
           queryClient.invalidateQueries({
             queryKey: [projectHash, "tagged_items"],
           });
-          queryClient.invalidateQueries({ queryKey: [projectHash, "tags"] });
         },
       },
     ),
-    fetchProjectTags: () =>
-      useQuery([projectHash, "tags"], api.fetchProjectTags, {
-        initialData: defaultTags,
-      }),
     fetchTaggedItems: () =>
       useQuery([projectHash, "tagged_items"], api.fetchedTaggedItems, {
         initialData: new Map<string, GroupedTags>(),
