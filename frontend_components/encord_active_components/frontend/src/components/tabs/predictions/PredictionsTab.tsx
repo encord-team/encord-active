@@ -40,7 +40,7 @@ export function PredictionsTab(
   // Auto-select prediction if one exists & unselect if an invalid prediction hash is selected;
   useEffect(() => {
     if (
-      allPredictionOptions &&
+      allPredictionOptions?.length &&
       !allPredictionOptions?.find((v) => v.value === predictionHash)
     ) {
       setPredictionHash(allPredictionOptions[0].value);
