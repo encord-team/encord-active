@@ -75,7 +75,7 @@ inquirerpy = "^0.3.4"
 umap-learn = "^0.5.3"
 llvmlite = "^0.40.0"                                  # Pinning, as lower versions conflict with other libs
 # Encord-active-components (strict version match)
-encord-active-components = "^0.0.32"
+encord-active-components = "^0.0.33"
 # NOTE: comment line above and uncomment the line below to setup local development
 # encord-active-components = { path = "./frontend_components", develop=true }
 # End of encord-active-components
