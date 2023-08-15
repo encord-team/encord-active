@@ -17,6 +17,7 @@ from encord_active.db.models import (
     ProjectEmbeddingReduction,
     ProjectPrediction,
     ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsExtra,
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectPredictionAnalyticsReduced,
     ProjectTag,
@@ -78,6 +79,7 @@ def delete_project_from_db(engine: Engine, project_hash: uuid.UUID, error_on_mis
                 Union[
                     ProjectPrediction,
                     ProjectPredictionAnalytics,
+                    ProjectPredictionAnalyticsExtra,
                     ProjectPredictionAnalyticsReduced,
                     ProjectPredictionAnalyticsFalseNegatives,
                 ]
@@ -85,7 +87,7 @@ def delete_project_from_db(engine: Engine, project_hash: uuid.UUID, error_on_mis
         ] = [
             ProjectPrediction,
             ProjectPredictionAnalytics,
-            # ProjectPredictionAnalyticsExtra, FIXME: add when this column is added
+            ProjectPredictionAnalyticsExtra,
             ProjectPredictionAnalyticsReduced,
             ProjectPredictionAnalyticsFalseNegatives,
         ]

@@ -1,6 +1,16 @@
+from pathlib import Path
+from typing import Optional
+
+import rich
 import typer
 from loguru import logger
-from rich.table import box
+from rich.table import Table, box
+
+from encord_active.cli.common import (
+    TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PROJECT_NAME,
+    select_project_hash_from_name,
+)
 
 metric_cli = typer.Typer(rich_markup_mode="markdown")
 logger = logger.opt(colors=True)
@@ -84,29 +94,45 @@ def add_metrics(
         rich.print("[yellow]Errors were found. Not all metrics were successfully added.[/yellow]")
     else:
         rich.print("[green]Successfully added all metrics.[/green]")
+'''
 
 
 @metric_cli.command(name="list", short_help="List metrics.")
-@ensure_project()
 def list_metrics(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
-):
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+) -> None:
     """
     List metrics in the project, including editables.
 
     Metrics are listed in a case-insensitive sorted order.
     """
-    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
-    sorted_titles = sorted(metrics_meta.keys(), key=lambda x: x.lower())
+    from encord_active.db.metrics import AnnotationMetrics, DataMetrics
+
+    data_metrics = DataMetrics  # FIXME: change to custom metric supporting lookup
+    annotation_metrics = AnnotationMetrics
+    sorted_metrics = sorted((data_metrics | annotation_metrics).items(), key=lambda x: x[1].title)
 
     table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0)
     table.add_column("Metric Title")
-    table.add_column("Editable metric location")
-    for title in sorted_titles:
-        table.add_row(title, metrics_meta[title]["location"])
+    table.add_column("Data")
+    table.add_column("Annotation")
+    table.add_column("Custom")
+    for metric_key, metric in sorted_metrics:
+        _bool = {
+            True: rich.table.Text("Y", style="GREEN"),
+            False: rich.table.Text("N", style="RED"),
+        }
+        table.add_row(
+            metric.title,
+            _bool[metric_key in data_metrics],
+            _bool[metric_key in annotation_metrics],
+            _bool[False],
+        )
     rich.print(table)
 
 
+'''
 @metric_cli.command(name="remove", short_help="Remove metrics.")
 @ensure_project()
 def remove_metrics(
@@ -132,101 +158,69 @@ def remove_metrics(
 
     # update metric dependencies in metrics_meta.json
     update_metrics_meta(project_file_structure, metrics_meta)
+'''
 
 
 @metric_cli.command(name="run", short_help="Run metrics.")
-@ensure_project()
 def run_metrics(
-    metric_title: Optional[list[str]] = typer.Argument(None, help="Title of the metric. Can be used multiple times."),
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
-    run_all: bool = typer.Option(False, "--all", help="Run all metrics."),
-    fuzzy: bool = typer.Option(
-        False, help="Enable fuzzy search in the selection. (press [TAB] or [SPACE] to select more than one) 🪄"
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ):
     """Run metrics on project data and labels."""
-    from InquirerPy import inquirer as i
-    from InquirerPy.base.control import Choice
-
-    from encord_active.lib.metrics.execute import execute_metrics
-    from encord_active.lib.metrics.io import get_metrics
-
-    project_file_structure = ProjectFileStructure(target)
-    metrics_meta = fetch_metrics_meta(project_file_structure)
-    metrics = get_metrics([(m_title, m_meta["location"]) for m_title, m_meta in metrics_meta.items()])
-    if run_all:  # User chooses to run all available metrics
-        selected_metrics = metrics
-
-    # (interactive) User chooses some metrics via CLI prompt selection
-    elif not metric_title:
-        choices = list(map(lambda m: Choice(m, name=m.metadata.title), metrics))
-        Options = TypedDict("Options", {"message": str, "choices": list[Choice], "vi_mode": bool})
-        options: Options = {
-            "message": "What metrics would you like to run?\n> Press [TAB] or [SPACE] to select more than one.",
-            "choices": choices,
-            "vi_mode": True,
-        }
-
-        if fuzzy:
-            selected_metrics = i.fuzzy(**options, multiselect=True).execute()
-        else:
-            selected_metrics = i.checkbox(**options).execute()
-
-    # (non-interactive) User chooses some metrics via CLI argument
-    else:
-        metric_title_to_cls = {m.metadata.title: m for m in metrics}
-        used_metric_titles = set()
-        selected_metrics = []
-        unknown_metric_titles = []
-        for title in metric_title:
-            if title in used_metric_titles:  # ignore repeated metric titles in the CLI argument
-                continue
-            used_metric_titles.add(title)
-
-            metric_cls = metric_title_to_cls.get(title, None)
-            if metric_cls is None:  # unknown and/or wrong metric title in user selection
-                unknown_metric_titles.append(title)
-            else:
-                selected_metrics.append(metric_cls)
-
-        if len(unknown_metric_titles) > 0:
-            rich.print("No available metric with this title:")
-            for title in unknown_metric_titles:
-                rich.print(f"[yellow]{title}[/yellow]")
-            raise typer.Abort()
-
-    execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
-    with DBConnection(project_file_structure) as conn:
-        MergedMetrics(conn).replace_all(build_merged_metrics(project_file_structure.metrics))
+    raise ValueError("Not yet implemented")
 
 
 @metric_cli.command(name="show", short_help="Show information about available metrics.")
-@ensure_project()
 def show_metrics(
-    metric_title: list[str] = typer.Argument(..., help="Title of the metric. Can be used multiple times."),
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
-):
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+) -> None:
     """Show information about one or more available metrics in the project."""
+    from sqlmodel import Session
 
-    metrics_meta = fetch_metrics_meta(ProjectFileStructure(target))
+    from encord_active.db.models import get_engine
+    from encord_active.server.routers.queries.domain_query import (
+        TABLES_ANNOTATION,
+        TABLES_DATA,
+    )
+    from encord_active.server.routers.queries.metric_query import query_attr_summary
 
-    not_found_metrics = [title for title in metric_title if title not in metrics_meta]
-    if len(not_found_metrics) > 0:
-        rich.print("[yellow]WARNING: Package(s) not found:", ", ".join(not_found_metrics))
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
 
-    first = True
-    hidden_properties = {"stats", "long_description"}
-    for title in metric_title:
-        if title in metrics_meta:
-            if not first:
-                print("---")
-            print(
-                *(
-                    f"{_property.replace('_', ' ').capitalize()}: {value}"
-                    for _property, value in metrics_meta[title].items()
-                    if _property not in hidden_properties
-                ),
-                sep="\n",
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        for table_name, tables in [("Data", TABLES_DATA), ("Annotation", TABLES_ANNOTATION)]:
+            summary = query_attr_summary(
+                sess=sess,
+                tables=tables,
+                project_filters={"project_hash": [project_hash]},
+                filters=None,
             )
-            first = False
-'''
+            metrics = (tables.annotation or tables.data).metrics
+            summary_metrics = list(summary.metrics.items())
+            summary_metrics.sort(key=lambda x: metrics[x[0]].title)
+            table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0, title=f"{table_name} Metric Summary")
+            table.add_column("Metric Title")
+            table.add_column("Min")
+            table.add_column("Q1")
+            table.add_column("Median")
+            table.add_column("Q3")
+            table.add_column("Max")
+            table.add_column("Moderate Outlier")
+            table.add_column("Severe Outlier")
+            table.add_column("Samples")
+            for metric_key, metric_summary in summary_metrics:
+                if metric_summary.count > 0:
+                    table.add_row(
+                        metrics[metric_key].title,
+                        str(metric_summary.min),
+                        str(metric_summary.q1),
+                        str(metric_summary.median),
+                        str(metric_summary.q3),
+                        str(metric_summary.max),
+                        str(metric_summary.moderate),
+                        str(metric_summary.severe),
+                        str(metric_summary.count),
+                    )
+            rich.print(table)

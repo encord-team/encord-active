@@ -5,6 +5,8 @@ import torchvision.ops.boxes
 from astroid import Dict
 from clip import load as clip_load
 from torchvision.transforms import InterpolationMode
+
+torchvision.disable_beta_transforms_warning()
 from torchvision.transforms.v2 import CenterCrop, Compose, Normalize, Resize
 
 from encord_active.analysis.base import BaseFrameInput, BaseFrameOutput

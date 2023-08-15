@@ -9,6 +9,7 @@ from rich.markup import escape
 
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PROJECT_NAME,
     select_project_hash_from_name,
 )
 from encord_active.cli.config import app_config
@@ -46,7 +47,7 @@ def print_encord_projects(
 @print_cli.command(name="ontology")
 def print_ontology(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ):
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
@@ -91,7 +92,7 @@ def print_ontology(
 @print_cli.command(name="data-mapping")
 def print_data_mapping(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
     limit: Optional[int] = typer.Option(None, help="Limit the result to the first `limit` data hashes"),
 ):
     """

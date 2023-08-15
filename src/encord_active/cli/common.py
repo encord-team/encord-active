@@ -1,10 +1,11 @@
 import uuid
 from pathlib import Path
+from typing import Optional
 
 import rich
 import typer
 
-TYPER_ENCORD_DATABASE_DIR = typer.Option(
+TYPER_ENCORD_DATABASE_DIR: Path = typer.Option(
     Path.cwd(),
     "--target",  # "--database-dir",
     "-t",  # "-d",
@@ -12,9 +13,13 @@ TYPER_ENCORD_DATABASE_DIR = typer.Option(
     file_okay=False,
 )
 
-TYPER_ENCORD_PROJECT_HASH = typer.Argument(
+TYPER_ENCORD_PROJECT_HASH: uuid.UUID = typer.Argument(
     ...,
 )
+
+TYPER_SELECT_PROJECT_NAME: Optional[str] = typer.Option(None, help="Name of the chosen project.")
+
+TYPER_SELECT_PREDICTION_NAME: Optional[str] = typer.Option(None, help="Name of the chosen prediction.")
 
 
 def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid.UUID:
@@ -74,4 +79,32 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
                 return uuid.UUID(project_uuid_str)
 
     rich.print("Failed to select a project.")
+    raise typer.Abort()
+
+
+def select_prediction_hash_from_name(database_dir: Path, project_hash: uuid.UUID, prediction_name: str) -> uuid.UUID:
+    try:
+        # Check if this is actually a uuid.
+        return uuid.UUID(prediction_name)
+    except ValueError:
+        pass
+
+    from sqlmodel import Session, select
+
+    from encord_active.db.models import ProjectPrediction, get_engine
+
+    #
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        # Exact search
+        unique_prediction = sess.exec(
+            select(ProjectPrediction.prediction_hash).where(
+                ProjectPrediction.name == prediction_name, ProjectPrediction.project_hash == project_hash
+            )
+        ).fetchall()
+        if len(unique_prediction) == 1:
+            return unique_prediction[0]
+
+    rich.print("Failed to select a prediction.")
     raise typer.Abort()

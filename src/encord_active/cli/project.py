@@ -2,11 +2,16 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+import rich
 import typer
+from rich.panel import Panel
 from tqdm import tqdm
 
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PREDICTION_NAME,
+    TYPER_SELECT_PROJECT_NAME,
+    select_prediction_hash_from_name,
     select_project_hash_from_name,
 )
 from encord_active.lib.encord.utils import get_encord_project
@@ -17,7 +22,7 @@ project_cli = typer.Typer(rich_markup_mode="markdown")
 @project_cli.command(name="download-data", short_help="Download all data locally for improved responsiveness.")
 def download_data(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ) -> None:
     """
     Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.
@@ -76,3 +81,85 @@ def download_data(
             )
             sess.add(du)
         sess.commit()
+
+
+@project_cli.command(name="delete-prediction", short_help="Delete a prediction from the project")
+def delete_prediction(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    prediction_name: Optional[str] = TYPER_SELECT_PREDICTION_NAME,
+) -> None:
+    from encord_active.db.models import get_engine
+    from encord_active.db.scripts.delete_prediction import delete_prediction_from_db
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    prediction_hash = select_prediction_hash_from_name(database_dir, project_hash, prediction_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    try:
+        delete_prediction_from_db(
+            engine=engine,
+            project_hash=project_hash,
+            prediction_hash=prediction_hash,
+            error_on_missing=True,
+        )
+    except ValueError as e:
+        rich.print(
+            Panel(
+                f"Could not delete prediction {project_hash} - not present in database\nError = {e}",
+                title=":fire: No files found from data glob :fire:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        raise typer.Abort()
+    else:
+        rich.print(
+            Panel(
+                "Project prediction deleted from database",
+                expand=False,
+                style="green",
+            )
+        )
+
+
+@project_cli.command(name="delete", short_help="Delete a prediction from the project")
+def delete_project(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+) -> None:
+    """
+    Delete a project from the encord active instance.
+    """
+    from encord_active.db.models import get_engine
+    from encord_active.db.scripts.delete_project import delete_project_from_db
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    try:
+        delete_project_from_db(
+            engine=engine,
+            project_hash=project_hash,
+            error_on_missing=True,
+        )
+    except ValueError as e:
+        rich.print(
+            Panel(
+                f"Could not delete project {project_hash} - not present in database\nError = {e}",
+                title=":fire: No files found from data glob :fire:",
+                expand=False,
+                style="yellow",
+            )
+        )
+        raise typer.Abort()
+    else:
+        rich.print(
+            Panel(
+                "Project deleted from database",
+                expand=False,
+                style="green",
+            )
+        )

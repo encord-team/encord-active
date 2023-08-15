@@ -1,5 +1,4 @@
 import json
-import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -13,7 +12,8 @@ from typer.core import TyperGroup
 
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
-    TYPER_ENCORD_PROJECT_HASH,
+    TYPER_SELECT_PROJECT_NAME,
+    select_project_hash_from_name,
 )
 from encord_active.cli.project import project_cli
 
@@ -27,7 +27,6 @@ from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import ensure_project
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
@@ -84,7 +83,7 @@ cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold]
 @cli.command()
 def download(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ):
     """
     [green bold]Download[/green bold] a sandbox dataset to get started 📁
@@ -383,10 +382,10 @@ Consider removing the directory or setting the `--name` option.
 
 
 @cli.command(name="refresh")
-@ensure_project()
 def refresh(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_hash: uuid.UUID = TYPER_ENCORD_PROJECT_HASH,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    force: bool = typer.Option(False, help="Force full refresh of the project"),
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
@@ -398,13 +397,17 @@ def refresh(
     3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
     """
     try:
-        # this is implemented as delete + re-import of project_hash
-        # FIXME: actually implement this
-        raise ValueError("Stub deleted")
+        from encord_active.imports.op import refresh_encord_project
+
+        project_hash = select_project_hash_from_name(database_dir, project_name or "")
+        changes = refresh_encord_project(database_dir=database_dir, encord_project_hash=project_hash, force=force)
     except Exception as e:
         rich.print(f"[red] ERROR: The data sync failed. Log: {e}.")
     else:
-        rich.print("[green]Data and labels successfully synced from the remote project[/green]")
+        if not changes:
+            rich.print("[green]No changes detected, already synced with the remote project[/green]")
+        else:
+            rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
 @cli.command(name="start")

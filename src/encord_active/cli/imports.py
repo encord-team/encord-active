@@ -8,6 +8,7 @@ from rich.markup import escape
 
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PROJECT_NAME,
     select_project_hash_from_name,
 )
 from encord_active.cli.config import app_config
@@ -19,7 +20,7 @@ import_cli = typer.Typer(rich_markup_mode="markdown")
 @import_cli.command(name="predictions")
 def import_predictions(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = typer.Option(None, help="Name of the chosen project."),
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
     predictions_path: Path = typer.Argument(..., help="Path to a predictions file.", dir_okay=False, exists=True),
     coco: bool = typer.Option(False, help="Import a COCO results format file."),
     prediction_name: str = typer.Option("Prediction", help="Name of the prediction"),
