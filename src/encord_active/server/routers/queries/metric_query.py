@@ -243,7 +243,7 @@ def query_attr_summary(
     project_filters: ProjectFilters,
     filters: Optional[search_query.SearchFilters],
 ) -> QuerySummary:
-    domain_tables = tables.annotation or tables.data
+    domain_tables = tables.primary
     where = search_query.search_filters(
         tables=tables,
         base="analytics",
@@ -285,7 +285,7 @@ def query_attr_distribution(
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
 ) -> QueryDistribution:
-    domain_tables = tables.annotation or tables.data
+    domain_tables = tables.primary
     attr = get_metric_or_enum(
         sess.bind,  # type: ignore
         domain_tables.analytics,
@@ -339,7 +339,7 @@ def query_attr_scatter(
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
 ) -> QueryScatter:
-    domain_tables = tables.annotation or tables.data
+    domain_tables = tables.primary
     x_attr = get_metric_or_enum(
         sess.bind, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
     )

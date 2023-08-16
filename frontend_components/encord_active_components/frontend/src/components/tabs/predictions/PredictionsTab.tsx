@@ -9,7 +9,8 @@ export function PredictionsTab(
   props: {
     queryAPI: QueryAPI;
     projectHash: string;
-    metricsSummary: ProjectMetricSummary;
+    dataMetricsSummary: ProjectMetricSummary;
+    annotationMetricsSummary: ProjectMetricSummary;
     featureHashMap: Record<
       string,
       { readonly color: string; readonly name: string }
@@ -19,7 +20,8 @@ export function PredictionsTab(
   const {
     queryAPI,
     projectHash,
-    metricsSummary,
+    dataMetricsSummary,
+    annotationMetricsSummary,
     featureHashMap,
     remoteProject,
     setSelectedProjectHash,
@@ -79,7 +81,7 @@ export function PredictionsTab(
                   projectHash={projectHash}
                   predictionHash={predictionHash}
                   queryAPI={queryAPI}
-                  metricsSummary={metricsSummary}
+                  metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
               ),
@@ -92,7 +94,7 @@ export function PredictionsTab(
                   projectHash={projectHash}
                   predictionHash={predictionHash}
                   queryAPI={queryAPI}
-                  metricsSummary={metricsSummary}
+                  metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
               ),
@@ -105,7 +107,8 @@ export function PredictionsTab(
                   projectHash={projectHash}
                   scope={"prediction"}
                   featureHashMap={featureHashMap}
-                  metricsSummary={metricsSummary}
+                  dataMetricsSummary={dataMetricsSummary}
+                  annotationMetricsSummary={annotationMetricsSummary}
                   queryAPI={queryAPI}
                   setSelectedProjectHash={setSelectedProjectHash}
                   remoteProject={remoteProject}

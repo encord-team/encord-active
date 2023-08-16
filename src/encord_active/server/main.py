@@ -7,14 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
-from encord_active.cli.utils.decorators import find_child_projects, is_project
-from encord_active.lib.metrics.types import EmbeddingType
-from encord_active.lib.model_predictions.reader import read_prediction_files
-from encord_active.lib.model_predictions.writer import MainPredictionType
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.lib.project.sandbox_projects.sandbox_projects import IMAGES_PATH
 from encord_active.server.dependencies import verify_premium, verify_token
-from encord_active.server.utils import get_similarity_finder
 
 from .routers import project, project2
 from .settings import Env, get_settings
@@ -67,22 +61,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    root_path = get_settings().SERVER_START_PATH
-    paths = [root_path] if is_project(root_path) else find_child_projects(root_path)
-
-    for path in paths:
-        project_file_structure = ProjectFileStructure(path)
-        for prediction_type in MainPredictionType:
-            try:
-                read_prediction_files(project_file_structure, prediction_type)
-            except:
-                pass
-        for embedding_type in EmbeddingType:
-            try:
-                get_similarity_finder(embedding_type, project_file_structure)
-            except:
-                pass
-
     if not is_dev:
         webbrowser.open(get_settings().API_URL, new=0, autoraise=True)
 

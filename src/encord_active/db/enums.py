@@ -2,6 +2,8 @@ import enum
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+from encord_active.lib.metrics.types import AnnotationType
+
 
 class EnumType(enum.Enum):
     ONTOLOGY = "ontology"
@@ -27,27 +29,20 @@ class AnnotationType(enum.IntEnum):
     SKELETON = 6  # "skeleton"
     BITMASK = 7  # "bitmask"
 
+    @classmethod
+    def _missing_(cls, value: object) -> "AnnotationType":
+        if isinstance(value, str):
+            v_upper = value.upper()
+            for v in cls:
+                if v.name == v_upper:
+                    return v
+        raise ValueError(f"Unknown AnnotationType: {value}")
+
     def __str__(self) -> str:
         return self.name.lower()
 
     def __repr__(self) -> str:
         return self.__str__()
-
-
-_ANNOTATION_TYPE_LOOKUP: Dict[str, AnnotationType] = {
-    "classification": AnnotationType.CLASSIFICATION,
-    "bounding_box": AnnotationType.BOUNDING_BOX,
-    "rotatable_bounding_box": AnnotationType.ROTATABLE_BOUNDING_BOX,
-    "point": AnnotationType.POINT,
-    "polyline": AnnotationType.POLYLINE,
-    "polygon": AnnotationType.POLYGON,
-    "skeleton": AnnotationType.SKELETON,
-    "bitmask": AnnotationType.BITMASK,
-}
-
-
-def annotation_type_from_str(value: str) -> AnnotationType:
-    return _ANNOTATION_TYPE_LOOKUP[value]
 
 
 AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
@@ -58,22 +53,20 @@ class DataType(enum.IntEnum):
     IMAGE_GROUP = 1
     VIDEO = 2
 
+    @classmethod
+    def _missing_(cls, value: object) -> "DataType":
+        if isinstance(value, str):
+            v_upper = value.upper()
+            for v in cls:
+                if v.name == v_upper:
+                    return v
+        raise ValueError(f"Unknown DataType: {value}")
+
     def __str__(self) -> str:
         return self.name.lower()
 
     def __repr__(self) -> str:
         return self.__str__()
-
-
-_DATA_TYPE_LOOKUP: Dict[str, DataType] = {
-    "image": DataType.IMAGE,
-    "img_group": DataType.IMAGE_GROUP,
-    "video": DataType.VIDEO,
-}
-
-
-def data_type_from_str(value: str) -> DataType:
-    return _DATA_TYPE_LOOKUP[value]
 
 
 DataEnums: Dict[str, EnumDefinition] = {}

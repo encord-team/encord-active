@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from encord.objects import Object, OntologyStructure
 from pydantic import BaseModel, parse_file_as
 
-from encord_active.db.enums import AnnotationType, annotation_type_from_str
+from encord_active.db.enums import AnnotationType
 from encord_active.db.models import ProjectPrediction
 from encord_active.imports.prediction.op import (
     PredictionImportSpec,
@@ -47,7 +47,7 @@ def import_coco_result(
     ontology_structure = OntologyStructure.from_dict(ontology)
     feature_hash_map: Dict[int, Tuple[AnnotationType, Object]] = {}
     for obj in ontology_structure.objects:
-        feature_hash_map[obj.uid] = annotation_type_from_str(obj.shape.value), obj
+        feature_hash_map[obj.uid] = AnnotationType(obj.shape.value), obj
 
     # Generate image reverse lookup dictionary.
 

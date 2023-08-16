@@ -32,9 +32,9 @@ from starlette.status import HTTP_403_FORBIDDEN
 
 from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.server import ensure_safe_project
+from encord_active.db.metrics import DataMetrics
 from encord_active.db.models import (
     Project,
-    ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectTag,
     ProjectTaggedAnnotation,
@@ -160,14 +160,12 @@ def read_item_ids(
     return ORJSONResponse(res[["id", "value"]].to_dict("records"))
 
 
-@router.get("/{project}/tagged_items")
-def tagged_items(project: ProjectFileStructureDep):
-    project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
+@router.get("/{project_hash}/tagged_items")
+def tagged_items(project_hash: uuid.UUID):
     identifier_tags: dict[str, GroupedTags] = {}
     with Session(engine) as sess:
         data_tags = sess.exec(
             select(
-                ProjectDataMetadata.label_hash,
                 ProjectTaggedDataUnit.du_hash,
                 ProjectTaggedDataUnit.frame,
                 ProjectTag.name,
@@ -175,19 +173,16 @@ def tagged_items(project: ProjectFileStructureDep):
                 ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash,
                 ProjectTaggedDataUnit.project_hash == project_hash,
                 ProjectTag.project_hash == project_hash,
-                ProjectDataMetadata.project_hash == project_hash,
                 ProjectDataUnitMetadata.project_hash == project_hash,
-                ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
                 ProjectDataUnitMetadata.du_hash == ProjectTaggedDataUnit.du_hash,
                 ProjectDataUnitMetadata.frame == ProjectTaggedDataUnit.frame,
             )
         ).all()
-        for label_hash, du_hash, frame, tag in data_tags:
-            key = f"{label_hash}_{du_hash}_{frame:05d}"
+        for du_hash, frame, tag in data_tags:
+            key = f"{du_hash}_{frame}"
             identifier_tags.setdefault(key, GroupedTags(data=[], label=[]))["data"].append(tag)
         label_tags = sess.exec(
-            select(  # type: ignore
-                ProjectDataMetadata.label_hash,
+            select(
                 ProjectTaggedAnnotation.du_hash,
                 ProjectTaggedAnnotation.frame,
                 ProjectTaggedAnnotation.object_hash,
@@ -197,7 +192,6 @@ def tagged_items(project: ProjectFileStructureDep):
                 ProjectTaggedAnnotation.project_hash == project_hash,
                 ProjectTag.project_hash == project_hash,
                 ProjectDataUnitMetadata.project_hash == project_hash,
-                ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
                 ProjectDataUnitMetadata.du_hash == ProjectTaggedAnnotation.du_hash,
                 ProjectDataUnitMetadata.frame == ProjectTaggedAnnotation.frame,
             )
@@ -425,11 +419,24 @@ def get_similar_items(
 
 @router.get("/{project}/metrics")
 def get_available_metrics(
-    project: ProjectFileStructureDep,
+    project: uuid.UUID,
     scope: Optional[MetricScope] = None,
     prediction_type: Optional[MainPredictionType] = None,
     prediction_outcome: Optional[Union[ClassificationOutcomeType, ObjectDetectionOutcomeType]] = None,
 ):
+    # FIXME: end-point is compatability hack, fix in explorer rewrite.
+    from .project2_analysis import AnalysisDomain, metric_summary
+
+    data_summary = metric_summary(project, AnalysisDomain.Data)
+    data_metrics = [
+        {
+            "name": f"Frame: {metric.title}",
+            "embeddingType": "embedding_clip",
+            "range": Range(min=data_summary.metrics[metric_key].min, max=data_summary.metrics[metric_key].max),
+        }
+        for metric_key, metric in DataMetrics
+    ]
+
     if scope == MetricScope.PREDICTION:
         if prediction_type is None:
             raise ValueError("Prediction metrics requires prediction type")

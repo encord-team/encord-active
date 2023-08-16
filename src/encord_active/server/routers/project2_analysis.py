@@ -2,7 +2,7 @@ import functools
 import math
 import uuid
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter
@@ -49,6 +49,23 @@ def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
         return TABLES_ANNOTATION
 
 
+def _pack_id(du_hash: uuid.UUID, frame: int, annotation_hash: Optional[str] = None) -> str:
+    if annotation_hash is not None:
+        return f"{du_hash}_{frame}"
+    else:
+        return f"{du_hash}_{frame}_{annotation_hash}"
+
+
+def _unpack_id(ident: str) -> Tuple[uuid.UUID, int, Optional[str]]:
+    values = ident.split("_")
+    if len(values) == 2:
+        du_hash_str, frame_str = values
+        annotation_hash = None
+    else:
+        du_hash_str, frame_str, annotation_hash = values
+    return uuid.UUID(du_hash_str), int(frame_str), annotation_hash
+
+
 @router.get("/summary")
 def metric_summary(
     project_hash: uuid.UUID,
@@ -67,15 +84,9 @@ def metric_summary(
         )
 
 
-class AnalysisSearchEntry(BaseModel):
-    du_hash: uuid.UUID
-    frame: int
-    annotation_hash: Optional[str] = None
-
-
 class AnalysisSearch(BaseModel):
     truncated: bool
-    results: List[AnalysisSearchEntry]
+    results: List[str]
 
 
 @router.get("/search")
@@ -89,7 +100,7 @@ def metric_search(
     limit: int = 1000,
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
-    base_table = tables.annotation or tables.data
+    base_table = tables.primary
     where = search_query.search_filters(
         tables=tables,
         base="analytics",  # FIXME: this should select the best base table (reduction if no analytics filters)
@@ -119,7 +130,7 @@ def metric_search(
     return AnalysisSearch(
         truncated=truncated,
         results=[
-            AnalysisSearchEntry(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
+            _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
             for result in search_results[:-1]
         ],
     )
@@ -174,7 +185,7 @@ class Query2DEmbedding(BaseModel):
     embeddings2d: List[metric_query.QueryScatter]
 
 
-@router.get("/2d_embeddings/{reduction_hash}/summary")
+@router.get("/reductions/{reduction_hash}/summary")
 def get_2d_embedding_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
@@ -183,7 +194,7 @@ def get_2d_embedding_summary(
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
 ) -> Query2DEmbedding:
     tables = _get_metric_domain_tables(domain)
-    domain_tables = tables.annotation or tables.data
+    domain_tables = tables.primary
     # FIXME: reduction_hash search filters will not work as they are on the wrong reduction_hash.
     #  Will work correctly IFF reduction hash filtering only happens on the same reduction hash
     where = search_query.search_filters(
@@ -221,7 +232,7 @@ def get_2d_embedding_summary(
 @functools.lru_cache(maxsize=2)
 def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> similarity_query.SimilarityQuery:
     tables = _get_metric_domain_tables(domain)
-    base_domain: DomainTables = tables.annotation or tables.data
+    base_domain: DomainTables = tables.primary
     with Session(engine) as sess:
         query = select(
             base_domain.metadata.embedding_clip,
@@ -245,9 +256,9 @@ def search_similarity(
     frame: int,
     embedding: str,
     object_hash: Optional[str] = None,
-):
+) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
-    base_domain = tables.annotation or tables.data
+    base_domain = tables.primary
     if embedding != "embedding_clip":
         raise ValueError("Unsupported embedding")
     join_attr_set = {
@@ -285,7 +296,7 @@ def compare_metric_dissimilarity(
     compare_project_hash: uuid.UUID,
 ) -> MetricDissimilarityResult:
     tables = _get_metric_domain_tables(domain)
-    base_domain = tables.annotation or tables.data
+    base_domain = tables.primary
     dissimilarity = {}
     with Session(engine) as sess:
         for metric_name in base_domain.metrics.keys():

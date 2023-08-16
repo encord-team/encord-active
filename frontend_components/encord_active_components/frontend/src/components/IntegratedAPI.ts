@@ -276,7 +276,7 @@ class IntegratedAPI implements QueryAPI {
         axios
           .get(`${baseURL}/analysis/${analysisDomain}/search`, {
             params: {
-              filters,
+              filters: JSON.stringify(filters),
               order_by: orderBy,
               desc,
             },

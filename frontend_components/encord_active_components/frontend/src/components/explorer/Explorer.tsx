@@ -12,7 +12,6 @@ import { RiUserLine } from "react-icons/ri";
 import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 import { Spinner } from "./Spinner";
-import { useAllTags } from "../explorer/Tagging";
 import { useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
@@ -48,7 +47,7 @@ import {
   DefaultFilters,
 } from "../util/MetricFilter";
 import { Popover, Button } from "antd";
-import { ProjectMetricSummary, QueryAPI } from "../Types";
+import {ProjectAnalysisDomain, ProjectMetricSummary, QueryAPI} from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { apiUrl, env, local } from "../../constants";
@@ -57,7 +56,8 @@ import { useAuth } from "../../authContext";
 
 export type Props = {
   projectHash: string;
-  metricsSummary: ProjectMetricSummary;
+  dataMetricsSummary: ProjectMetricSummary;
+  annotationMetricsSummary: ProjectMetricSummary;
   scope: Scope;
   queryAPI: QueryAPI;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
@@ -70,19 +70,28 @@ export const Explorer = ({
   scope,
   queryAPI,
   featureHashMap,
-  metricsSummary,
+  dataMetricsSummary,
+  annotationMetricsSummary,
   setSelectedProjectHash,
   remoteProject,
 }: Props) => {
   const [itemSet, setItemSet] = useState(new Set<string>());
-  const [isAscending, setIsAscending] = useState(true);
 
+
+  // Item selected for extra analysis operations
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
+
+  // Selection
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
-  const [selectedMetric, setSelectedMetric] = useState<Metric>();
-  const [allowTaggingAnnotations, setAllowTaggingAnnotations] =
-    useState<boolean>(false);
+  const [selectedMetric, setSelectedMetric] = useState<
+  {
+    domain: "data" | "annotation";
+    metric_key: string;
+  } | undefined>();
+
+  // Prediction filters
+  const [isAscending, setIsAscending] = useState(true);
   const [predictionType, setPredictionType] = useState<
     PredictionType | undefined
   >();
@@ -90,54 +99,40 @@ export const Explorer = ({
     PredictionOutcome | undefined
   >();
   const [iou, setIou] = useState<number | undefined>();
-
-  const [newFilters, setNewFilters] = useState<FilterState>(DefaultFilters);
+  const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
+  const [annotationFilters, setAnnotationFilters] = useState<FilterState>(DefaultFilters);
 
   const rawFilters = useMemo(() => {
-    const range = Object.fromEntries(
-      Object.entries(newFilters.metricFilters).map(([k, [min, max]]) => [
-        k,
-        { min, max },
-      ]),
-    );
-    let tagData: string[] = [];
-    let tagLabel: string[] = [];
-    let labelClass = undefined;
-    Object.entries(newFilters.enumFilters).forEach(([kEnum, kValues]) => {
-      if (kEnum == "label_tags") {
-        tagLabel = [...kValues];
-      } else if (kEnum == "data_tags") {
-        tagData = [...kValues];
-      } else if (kEnum == "feature_hash") {
-        labelClass = [...kValues];
-      } else {
-        throw Error("Unknown Enum Filter");
-      }
-    });
+    const analysisDomain: ProjectAnalysisDomain = "data";
     return {
-      range: range,
-      tags: {
-        data: tagData,
-        label: tagLabel,
+      analysisDomain,
+      filters: {
+        data: {
+          metrics: dataFilters.metricFilters,
+          enums: dataFilters.enumFilters,
+          reduction: null,
+          tags: null,
+        },
+        annotation: {
+          metrics: dataFilters.metricFilters,
+          enums: dataFilters.enumFilters,
+          reduction: null,
+          tags: null,
+        },
       },
-      object_classes: labelClass,
-      ...(scope === "prediction" && predictionType
-        ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
-        : {}),
-    } as Filters;
-  }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
+      orderBy: null,
+      desc: false,
+      iou,
+      predictionOutcome,
+      predictionType,
+    }
+  }, [dataFilters, annotationFilters, predictionType, predictionOutcome, iou]);
 
   const filters = useDebounce(rawFilters, 500);
 
   useEffect(() => {
     setPage(1);
-  }, [JSON.stringify(filters)]);
+  }, [filters]);
 
   const apiContext = useContext(ApiContext);
   const { token } = useAuth();
@@ -156,99 +151,53 @@ export const Explorer = ({
     api.fetchHasPremiumFeatures,
     { staleTime: Infinity },
   );
+  /*
   const { data: hasSimilaritySearch } = useQuery(
     sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
     () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
     { enabled: !!selectedMetric, staleTime: Infinity },
   );
+  */
+  const hasSimilaritySearch = false;
 
+  const similarItems: string[] | undefined = undefined;
+  const isLoadingSimilarItems = false;
+  /*
+  FIXME:
   const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
     sift([projectHash, scope, "similarities", similarityItem]),
     () =>
       api.fetchSimilarItems(
         similarityItem!,
-        scope === "prediction" ? "image" : selectedMetric?.embeddingType!,
+        "embedding_clip",
       ),
     { enabled: !!similarityItem && !!selectedMetric },
-  );
+  );*/
 
-  const { data: sortedItems, isFetching: isLoadingSortedItems } = useQuery(
-    sift([
-      projectHash,
-      "item_ids",
-      scope,
-      selectedMetric?.name,
-      JSON.stringify(filters),
-      [...itemSet],
-    ]),
-    () =>
-      api.fetchProjectItemIds(scope, selectedMetric?.name!, filters, itemSet),
-    {
-      enabled: !!selectedMetric && predictionTypeFound,
-      staleTime: Infinity,
-    },
+  const {
+    data: dataMetricRanges, isLoading: isLoadingDataMetrics
+  } = queryAPI.useProjectAnalysisSummary(
+    projectHash,
+    "data",
   );
-  const { data: metrics, isFetching: isLoadingMetrics } = useQuery(
-    [
-      projectHash,
-      scope,
-      "metrics",
-      JSON.stringify(filters?.prediction_filters),
-    ],
-    () => api.fetchProjectMetrics(scope, predictionType, predictionOutcome),
+  const {
+    data: annotationMetricRanges, isLoading: isLoadingAnnotationMetrics
+  } = queryAPI.useProjectAnalysisSummary(
+    projectHash,
+    "annotation",
+  );
+  const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
+  const { data: sortedItems, isLoading: isLoadingSortedItems } = queryAPI.useProjectAnalysisSearch(
+    projectHash,
+    filters.analysisDomain,
+    filters.filters,
+    filters.orderBy,
+    filters.desc,
     {
       enabled: predictionTypeFound,
-      staleTime: Infinity,
     },
-  );
+  )
 
-  const { allDataTags, allLabelTags } = useAllTags();
-  const filterMetricSummary = useMemo((): ProjectMetricSummary => {
-    const metricSummary: Record<
-      string,
-      ProjectMetricSummary["metrics"][string]
-    > = {};
-    if (metrics != null) {
-      metrics.data.forEach(({ name }) => {
-        metricSummary[name] = {
-          title: name,
-          short_desc: "",
-          long_desc: "",
-          type: name === "Blur" ? "sfloat" : "ufloat",
-        };
-      });
-      metrics.annotation.forEach(({ name }) => {
-        metricSummary[name] = {
-          title: name,
-          short_desc: "",
-          long_desc: "",
-          type: name === "Blur" ? "sfloat" : "ufloat",
-        };
-      });
-      metrics.prediction.forEach(({ name }) => {
-        metricSummary[name] = {
-          title: name,
-          short_desc: "",
-          long_desc: "",
-          type: "ufloat",
-        };
-      });
-    }
-    const labelValues = Object.fromEntries(
-      [...allLabelTags, "Untagged annotations"].map((v) => [v, v]),
-    );
-    const dataValues = Object.fromEntries(
-      [...allDataTags, "Untagged frames"].map((v) => [v, v]),
-    );
-    return {
-      metrics: metricSummary,
-      enums: {
-        label_tags: { type: "enum", title: "Label Tags", values: labelValues },
-        data_tags: { type: "enum", title: "Data Tags", values: dataValues },
-        feature_hash: { type: "ontology", title: "Ontology" },
-      },
-    };
-  }, [metricsSummary, metrics, allDataTags, allLabelTags]);
   const filterLabelClassMap = useMemo(() => {
     const res = Object.fromEntries(
       Object.values(featureHashMap).map((v) => [v.name, v]),
@@ -260,34 +209,42 @@ export const Explorer = ({
     return res;
   }, [featureHashMap]);
 
-  const withSortOrder = useMemo(
-    () =>
-      isAscending ? sortedItems || [] : [...(sortedItems || [])].reverse(),
-    [isAscending, sortedItems],
-  );
+  const withSortOrder: readonly string[] = sortedItems?.results ?? [];
 
+  /*
+  FIXME: implement
   const {
     search,
     setSearch,
     result: searchResults,
     loading: searching,
   } = useSearch(scope, filters, api.searchInProject);
+  */
+  const search: any = (v: any) => {};
+  const setSearch = () => {};
+  const searchResults: undefined | { snippet: string | null; ids: string[] } = undefined;
+  const searching = false;
 
+  /*
+  FIXME:
   const resetable =
     itemSet.size ||
     searchResults?.ids.length ||
     similarItems?.length ||
     !isEmpty(filters.range) ||
     !isEmpty([...filters.tags?.data, ...filters.tags?.label]);
+   */
+  const resetable = true;
   const reset = (clearFilters: boolean = true) => {
     setItemSet(new Set());
-    setSearch(undefined);
+    //FIXME: setSearch(undefined);
     setSimilarityItem(null);
-    if (clearFilters) setNewFilters(DefaultFilters);
+    if (clearFilters) setDataFilters(DefaultFilters);
+    if (clearFilters) setAnnotationFilters(DefaultFilters);
     setPage(1);
   };
 
-  const itemsToRender =
+  const itemsToRender: string[] =
     similarItems ?? searchResults?.ids ?? withSortOrder.map(({ id }) => id);
 
   const { pageSize, pageItems, page, setPage, setPageSize } =
@@ -303,14 +260,24 @@ export const Explorer = ({
   };
 
   const closePreview = () => setPreviewedItem(null);
-  const showSimilarItems = (itemId: string) => (
-    closePreview(), setPage(1), setSimilarityItem(itemId)
-  );
-  const totalMetricsCount = metrics ? Object.values(metrics).flat().length : 0;
+  const showSimilarItems = (itemId: string) => {
+    closePreview();
+    setPage(1);
+    setSimilarityItem(itemId);
+  }
 
-  const onMetricSelected = (newMetric: Metric) => {
-    if (!metrics || !selectedMetric) return;
-
+  const onMetricSelected = (newMetric: string) => {
+    const [domain, metricKey] = newMetric.split("-", 1);
+    let analysisDomain;
+    if (domain === "data-") {
+      analysisDomain = "data"
+    } else if (domain === "annotation-") {
+      analysisDomain = "annotation"
+    } else {
+      throw Error(domain)
+    }
+    /*
+    FIXME:
     const usedScopes = Object.entries(metrics)
       .map(([_, scopedMetrics]) => scopedMetrics.map((metric) => metric.name))
       .filter(
@@ -321,29 +288,22 @@ export const Explorer = ({
     if (usedScopes.length !== 1) {
       reset(false);
     }
-    setSelectedMetric(newMetric);
+    */
+    setSelectedMetric({domain: analysisDomain, metric_key: metricKey});
   };
-  useEffect(() => {
-    if (!metrics) {
-      setAllowTaggingAnnotations(false);
-      return;
-    }
-
+  const allowTaggingAnnotations = useMemo(() => {
     if (!selectedMetric) {
-      setAllowTaggingAnnotations(false);
+      return false;
     } else {
-      setAllowTaggingAnnotations(
-        metrics.annotation
-          .map(({ name }) => name)
-          .includes(selectedMetric.name),
-      );
+      return selectedMetric.domain === "annotation";
     }
   }, [selectedMetric]);
 
   useEffect(() => {
-    if (!selectedMetric && metrics && totalMetricsCount > 0)
-      setSelectedMetric(metrics.data[0]);
-  }, [totalMetricsCount]);
+    if (!selectedMetric) {
+      setSelectedMetric({domain: "data", metric_key: "metric_random"});
+    }
+  }, [selectedMetric]);
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -377,6 +337,7 @@ export const Explorer = ({
   const close = () => setOpen(undefined);
   return (
     <>
+      {/* FIXME: uncomment
       <CreateSubsetModal
         open={open == "subset"}
         close={close}
@@ -385,6 +346,7 @@ export const Explorer = ({
         filters={filters}
         ids={[...itemSet]}
       />
+      */}
       <UploadToEncordModal
         open={open === "upload"}
         close={close}
@@ -413,12 +375,12 @@ export const Explorer = ({
           )}
         >
           {/* TODO: move model predictions embeddings plot to FE */}
-          {selectedMetric && (
+          {selectedMetric && false && (
             <Embeddings
               isloadingItems={isLoadingSortedItems}
               idValues={
                 (scope === "prediction"
-                  ? sortedItems?.map(({ id, ...item }) => ({
+                  ? sortedItems?.results?.map(({ id, ...item }) => ({
                       ...item,
                       id: id.slice(0, id.lastIndexOf("_")),
                     }))
@@ -456,35 +418,43 @@ export const Explorer = ({
                   allowTaggingAnnotations={allowTaggingAnnotations}
                 />
               </TaggingDropdown>
-              {metrics && !!totalMetricsCount && (
+              {(
                 <label className="input-group  w-auto">
                   <select
                     onChange={(event) =>
-                      onMetricSelected(JSON.parse(event.target.value) as Metric)
+                      onMetricSelected(event.target.value)
                     }
                     className="select select-bordered focus:outline-none"
                     disabled={!!similarItems?.length}
                   >
-                    {Object.entries(metrics).map(
-                      ([scope, scopedMetrics]) =>
-                        !!scopedMetrics.length && (
-                          <optgroup
-                            key={scope}
-                            label={`${capitalize(scope)} Metrics`}
+                    <optgroup
+                      label="Data Metrics"
+                    >
+                      {Object.entries(annotationMetricsSummary.metrics).map(
+                        ([metricKey, metric]) => (
+                          <option
+                            key={`data-${metricKey}`}
+                            value={`data-${metricKey}`}
                           >
-                            {metrics[scope as keyof typeof metrics].map(
-                              (metric) => (
-                                <option
-                                  key={`${scope}-${metric.name}`}
-                                  value={JSON.stringify(metric)}
-                                >
-                                  {metric.name}
-                                </option>
-                              ),
-                            )}
-                          </optgroup>
+                            {metric.title}
+                          </option>
                         ),
-                    )}
+                      )}
+                    </optgroup>
+                    <optgroup
+                      label="Annotation Metrics"
+                    >
+                      {Object.entries(dataMetricsSummary.metrics).map(
+                        ([metricKey, metric]) => (
+                          <option
+                            key={`annotation-${metricKey}`}
+                            value={`annotation-${metricKey}`}
+                          >
+                            {metric.title}
+                          </option>
+                        ),
+                      )}
+                    </optgroup>
                   </select>
                   <label
                     className={classy("btn swap swap-rotate", {
@@ -502,12 +472,12 @@ export const Explorer = ({
                   </label>
                 </label>
               )}
-              {!similarityItem && scope !== "prediction" && (
+              {/* FIXME: !similarityItem && scope !== "prediction" && (
                 <MetricDistributionTiny
                   values={sortedItems || []}
                   setSeletedIds={(ids) => setItemSet(new Set(ids))}
                 />
-              )}
+              ) */}
               {scope === "prediction" && (
                 <PredictionFilters
                   predictionType={predictionType}
@@ -531,20 +501,31 @@ export const Explorer = ({
                   placement="bottomLeft"
                   content={
                     <MetricFilter
-                      filters={newFilters}
-                      setFilters={setNewFilters}
-                      metricsSummary={filterMetricSummary}
-                      metricRanges={Object.fromEntries(
-                        Object.values(metrics || {})
-                          .flat()
-                          ?.map(({ name, range }) => [name, range]) ?? [],
-                      )}
+                      filters={dataFilters}
+                      setFilters={setDataFilters}
+                      metricsSummary={dataMetricsSummary}
+                      metricRanges={dataMetricRanges?.metrics}
                       featureHashMap={filterLabelClassMap}
                     />
                   }
                   trigger="click"
                 >
-                  <button className="btn btn-ghost">Filters</button>
+                  <button className="btn btn-ghost">Data Filters</button>
+                </Popover>
+                <Popover
+                  placement="bottomLeft"
+                  content={
+                    <MetricFilter
+                      filters={annotationFilters}
+                      setFilters={setAnnotationFilters}
+                      metricsSummary={annotationMetricsSummary}
+                      metricRanges={annotationMetricRanges?.metrics}
+                      featureHashMap={filterLabelClassMap}
+                    />
+                  }
+                  trigger="click"
+                >
+                  <button className="btn btn-ghost">Annotation Filters</button>
                 </Popover>
                 <button
                   className={classy("btn btn-ghost gap-2", {

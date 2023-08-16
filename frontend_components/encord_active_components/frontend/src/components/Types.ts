@@ -180,11 +180,7 @@ export type ProjectAnalysisCompareMetricDissimilarity = {
 
 export type ProjectSearchResult = {
   readonly truncated: boolean;
-  readonly results: ReadonlyArray<{
-    readonly du_hash: string;
-    readonly frame: number;
-    readonly object_hash?: string;
-  }>;
+  readonly results: ReadonlyArray<string>;
 };
 
 type Point = {

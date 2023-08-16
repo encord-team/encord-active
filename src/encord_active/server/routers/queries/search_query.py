@@ -4,6 +4,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Union
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as
 from sqlalchemy.sql.operators import between_op, in_op
+from sqlmodel import select
 
 from encord_active.server.routers.queries.domain_query import (
     AnalyticsTable,
@@ -24,7 +25,7 @@ class DomainSearchFilters(BaseModel):
     metrics: Dict[str, Tuple[float, float]]
     enums: Dict[str, List[str]]
     reduction: Optional[Embedding2DFilter]
-    tags: Optional[List[str]]
+    tags: Optional[List[uuid.UUID]]
 
 
 class SearchFilters(BaseModel):
@@ -57,13 +58,24 @@ def search_filters(
     project_filters: ProjectFilters,
 ) -> list:
     filters: list = []
-    if tables.annotation is None:
+    if tables.primary.domain == "data":
         base_table = tables.data.analytics if base == "analytics" else tables.data.reduction
         _project_filters(table=base_table, project_filters=project_filters, filters=filters)
         # Data only.
         if search is not None:
             if search.annotation is not None:
-                raise ValueError("Annotation queries are not supported in the raw data domain")
+                exists_filters = []
+                _append_filters(
+                    tables=tables.annotation,
+                    search=search.annotation,
+                    base_table=base_table,
+                    filters=exists_filters
+                )
+                if len(exists_filters) > 0:
+                    filters.append(select(1).where(
+                        *exists_filters,
+                        *[getattr(base_table, "du_hash")]
+                    ).exists())
             if search.data is not None:
                 _append_filters(
                     tables=tables.data,

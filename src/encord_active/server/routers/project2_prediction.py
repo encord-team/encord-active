@@ -27,7 +27,7 @@ from encord_active.db.models import (
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
-    TABLES_PREDICTION_FN,
+    TABLES_ANNOTATION,
     TABLES_PREDICTION_TP_FP,
 )
 from encord_active.server.routers.queries.metric_query import (
@@ -564,7 +564,7 @@ def prediction_metric_performance(
         },
     )
     where_fn = search_query.search_filters(
-        tables=TABLES_PREDICTION_FN,
+        tables=TABLES_ANNOTATION,
         base="analytics",
         search=filters,
         project_filters={

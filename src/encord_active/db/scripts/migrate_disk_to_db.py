@@ -10,7 +10,7 @@ from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
 from sqlmodel import Session
 
-from encord_active.db.enums import annotation_type_from_str
+from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataAnnotationSharedMetrics,
@@ -879,7 +879,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                             f"Duplicate object_hash={object_hash} in du_hash={du_hash}, frame={data_unit.frame}"
                         )
                     object_hashes_seen.add(object_hash)
-                    annotation_type = annotation_type_from_str(str(obj["shape"]))
+                    annotation_type = AnnotationType(str(obj["shape"]))
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,

@@ -39,11 +39,13 @@ class DomainTables(BaseModel):
     join: TableJoinLiterals
     metrics: Dict[str, MetricDefinition]
     enums: Dict[str, EnumDefinition]
+    domain: Literal["data", "annotation"]
 
 
 class Tables(BaseModel):
     data: DomainTables
-    annotation: Optional[DomainTables]
+    annotation: DomainTables
+    primary: DomainTables
 
 
 _DOMAIN_ANNOTATION = DomainTables(
@@ -54,6 +56,7 @@ _DOMAIN_ANNOTATION = DomainTables(
     join=["du_hash", "frame", "object_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
+    domain="annotation",
 )
 _DOMAIN_DATA = DomainTables(
     analytics=ProjectDataAnalytics,
@@ -63,6 +66,7 @@ _DOMAIN_DATA = DomainTables(
     join=["du_hash", "frame"],
     metrics=DataMetrics,
     enums=DataEnums,
+    domain="data"
 )
 
 _DOMAIN_PREDICTION_TP_FP = DomainTables(
@@ -73,6 +77,7 @@ _DOMAIN_PREDICTION_TP_FP = DomainTables(
     join=["du_hash", "frame", "object_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
+    domain="annotation"
 )
 
 _DOMAIN_PREDICTION_FN_FIXME = DomainTables(  # FIXME: whole table is mostly wrong - we want to make decision on table
@@ -84,15 +89,18 @@ _DOMAIN_PREDICTION_FN_FIXME = DomainTables(  # FIXME: whole table is mostly wron
     join=["du_hash", "frame", "object_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
+    domain="annotation",
 )
 
 TABLES_DATA = Tables(
     data=_DOMAIN_DATA,
-    annotation=None,
+    annotation=_DOMAIN_DATA,
+    primary=_DOMAIN_DATA,
 )
 TABLES_ANNOTATION = Tables(
     data=_DOMAIN_DATA,
     annotation=_DOMAIN_ANNOTATION,
+    primary=_DOMAIN_ANNOTATION
 )
 
 # FIXME: this is incorrect (join prediction against project hash is harder)
@@ -103,8 +111,5 @@ TABLES_PREDICTION_TP_FP = Tables(
     # FIXME: join behaviour when switching between prediction_hash, annotation_hash
     #  needs to be optimized beyond requiring both for proper join behaviour
     annotation=_DOMAIN_PREDICTION_TP_FP,
+    primary=_DOMAIN_PREDICTION_TP_FP,
 )
-
-# FIXME: we may aim to implement search over false negative metrics via join against annotations table
-#  as we would otherwise be duplicating the requests.
-TABLES_PREDICTION_FN = Tables(data=_DOMAIN_DATA, annotation=_DOMAIN_PREDICTION_FN_FIXME)

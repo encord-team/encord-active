@@ -132,7 +132,8 @@ export function ProjectPage(props: {
             <ApiContext.Provider value={api}>
               <Explorer
                 projectHash={projectHash}
-                metricsSummary={projectSummary.global}
+                dataMetricsSummary={projectSummary.data}
+                annotationMetricsSummary={projectSummary.annotations}
                 scope={"data"}
                 queryAPI={queryAPI}
                 featureHashMap={featureHashMap}
