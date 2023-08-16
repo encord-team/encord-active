@@ -3,6 +3,7 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack workspace</a> |
 <a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Channel</a>
 </p>
 
@@ -10,19 +11,38 @@
   <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
 </h1>
 
-<div align="center">
-
-[![PRs-Welcome][contribute-image]][contribute-url]
-![Licence][license-image]
-[![PyPi project][pypi-package-image]][pypi-package]
-![PyPi version][pypi-version-image]
-[![Open In Colab][colab-image]][colab-notebook]
-![downloads-badge][downloads-badge]
-
-[![docs][docs-image]][encord-active-docs]
-[!["Join us on Discord"][discord-image]][join-discord]
-[![Twitter Follow][twitter-image]][twitter-url]
-
+<div style="display: flex; justify-content: space-between;">
+  <div style="flex: 1; padding: 10px;">
+    <a href="https://docs.encord.com/docs/active-overview" target="_blank" style="text-decoration:none">
+      <img alt="Documentation" src="https://img.shields.io/badge/docs-Online-blue">
+    </a>
+    <a href="https://github.com/encord-team/encord-notebooks" target="_blank" style="text-decoration:none">
+      <img alt="Encord Notebooks" src="https://img.shields.io/badge/Encord_Notebooks-blue?logo=github&label=&labelColor=181717">
+    </a>
+    <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank" style="text-decoration:none">
+      <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+    </a>
+    <a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank" style="text-decoration:none">
+      <img alt="Join us on Slack" src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white">
+    </a>
+    <a href="https://discord.gg/TU6yT7Uvx3" target="_blank" style="text-decoration:none">
+      <img alt="Join us on Discord" src="https://img.shields.io/badge/Discord-Chat-blue?logo=discord&amp;logoColor=7289DA">
+    </a>
+    <a href="https://twitter.com/encord_team" target="_blank" style="text-decoration:none">
+      <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&amp;style=social">
+    </a>
+  </div>
+  <div style="flex: 1; padding: 10px;">
+    <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/encord-active">
+    <a href="https://pypi.org/project/encord-active/" target="_blank" style="text-decoration:none">
+      <img alt="PyPi project" src="https://img.shields.io/pypi/v/encord-active">
+    </a>
+    <a href="https://docs.encord.com/docs/active-contributing" target="_blank" style="text-decoration:none">
+      <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-Welcome-blue">
+    </a>
+    <img alt="Licence" src="https://img.shields.io/github/license/encord-team/encord-active">
+    <img alt="Downloads" src="https://static.pepy.tech/badge/encord-active">
+  </div>
 </div>
 
 ## ❓ What is Encord Active?
@@ -186,13 +206,15 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
-| Data   |     | Labels          |     | Project sizes |               |
-| ------ | --- | --------------- | --- | ------------- | ------------- |
-| `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 50.000        |
-| `png`  | ✅  | Polygons        | ✅  | Videos        | 50.000 frames |
-| `tiff` | ✅  | Segmentation    | ✅  |               |               |
-| `mp4`  | ✅  | Classifications | ✅  |               |               |
-|        |     | Polylines       | 🟡  |               |               |
+| Data Types |     | Labels          |     | Project sizes |               |
+|------------|-----|-----------------|-----|---------------|---------------|
+| `jpg`      | ✅   | Bounding Boxes  | ✅   | Images        | 25.000        |
+| `png`      | ✅   | Polygons        | ✅   | Videos \*     | 25.000 frames |
+| `tiff`     | ✅   | Segmentations   | ✅   |               |               |
+| `mp4` \*   | ✅   | Classifications | ✅   |               |               |
+|            |     | Polylines       | 🟡  |               |               |
+
+\* Requires an Encord Annotate account
 
 ## 🧑🏽‍💻Development
 
