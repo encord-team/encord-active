@@ -26,7 +26,7 @@ target_metadata = SQLModel.metadata
 target_metadata.naming_convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "ck": "ck_%(constraint_name)s",
     "fk": "fk_%(table_name)s_%(column_0_name)" "s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
@@ -50,6 +50,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -71,12 +73,23 @@ def run_migrations_online() -> None:
     if db_path:
         ini_section["sqlalchemy.url"] = db_path
 
+    use_meta = context.get_x_argument(as_dictionary=True).get("dangerousUseMetadata") == "1"
+
     # Run migration online
     connectable = engine_from_config(
         ini_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
+    if use_meta:
+        print("DANGEROUS: Generating direct SQLModel schema for correctness checks, do not run this against production")
+        continue_value = input("Continue: y?: ")
+        if continue_value not in ["y", "yes"]:
+            return
+        print("Generating database directly from metadata")
+        SQLModel.metadata.create_all(connectable)
+        return
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)

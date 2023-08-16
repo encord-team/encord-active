@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -62,7 +63,7 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
             [x * width, y2 * height],
         ]
         return torch.tensor(data, dtype=torch.float32)
-    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+    elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
         raise ValueError("Unsupported annotation type rot bounding box")
     elif annotation_type == AnnotationType.POINT:
         point = obj["point"]["0"]
@@ -78,13 +79,22 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
 
 
 def obj_to_mask(
-    device: Device, annotation_type: AnnotationType, img_w: int, img_h: int, points: Optional[PointTensor]
+    device: Device, annotation_type: AnnotationType, obj: dict, img_w: int, img_h: int, points: Optional[PointTensor]
 ) -> Optional[MaskTensor]:
     # TODO fix me
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
     elif annotation_type == AnnotationType.BITMASK:
-        raise ValueError("Bitmask object shape is not supported")
+        from pycocotools import mask
+
+        bitmask = mask.decode(
+            {
+                "counts": obj["bitmask"],  # FIXME: check, is our bitmask format the same as the coco format?
+                "size": [img_w, img_h],
+            }
+        )
+        tensor = torch.from_numpy(bitmask)
+        return tensor.T  # Convert to height, width format
     elif points is None:
         raise ValueError("BUG: points value not passed as argument for annotation type containing points")
     elif annotation_type == AnnotationType.POLYGON:
@@ -98,7 +108,7 @@ def obj_to_mask(
         return bounding_box_mask(
             device, Point(*[int(round(x)) for x in array[0]]), Point(*[int(round(x)) for x in array[2]]), img_w, img_h
         )
-    elif annotation_type == AnnotationType.ROT_BOUNDING_BOX:
+    elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
         raise ValueError("Rotated bounding box shape is not supported")
     elif annotation_type == AnnotationType.POINT:
         x, y = points.cpu().numpy().tolist()
@@ -117,7 +127,9 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
     Applies Laplacian kernel over Image
     """
     channels_as_batch = image.float()
-    return conv2d(channels_as_batch, weight=_laplacian_kernel, padding=1)
+    channel_count = image.shape[-3]
+    kernel = _laplacian_kernel.repeat(channel_count, 1, 1, 1).to(image.device)
+    return conv2d(channels_as_batch, weight=kernel, padding=1, groups=channel_count)
 
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
@@ -125,11 +137,9 @@ def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTenso
     # TODO: Implement the winding algorithm in torch instead for performance
     mask = np.zeros((height, width), dtype=np.uint8)
     points = coordinates.cpu().numpy().round(0).astype(np.int32)
-    # FIXME: broken!!! cv2.fillPoly(mask, [points], 1)
+    cv2.fillPoly(mask, [points], 1)
     for x, y in points:
         mask[min(y, height - 1), min(x, width - 1)] = 1
-    # mask = cv2.fillPoly(mask, points, 1)
-    # FIXME: this is broken!!
     return torch.tensor(mask).bool()
 
 
@@ -150,28 +160,6 @@ def point_mask(device: Device, x: float, y: float, width: int, height: int) -> M
     y_i = round(y * height)
     mask[min(y_i, height - 1), min(x_i, width - 1)] = True
     return mask  # type: ignore
-
-
-def mask_to_box_extremes(mask: MaskTensor) -> tuple[Point, Point]:
-    # FIXME: convert to torchvision.op.masks_to_boxes (& we expose bb's as an input now, this function
-    #  should never be used) !!!
-    """
-    Returns top_left and bottom_right point that includes `True` values.
-    Make sure to not miss +1 index errors here. If you want to crop an
-    image, for example, you would do
-    ```
-    tl, br = mask_box(mask)
-    crop = img[:, tl.y:br.y+1, tl.x:br.x+1]
-    ```
-    """
-    yx_coords = torch.stack(torch.where(mask)).T  # [n, 2]
-    # FIXME: cast to support mps backend - check perf & maybe remove in future
-    yx_coords = yx_coords.type(torch.int32)
-    y_min, x_min = torch.min(yx_coords, 0).values
-    y_max, x_max = torch.max(yx_coords, 0).values
-
-    # FIXME: deprecate with torchvision masks_to_boxes
-    return Point(x_min, y_min), Point(x_max, y_max)
 
 
 def image_width(image: Union[ImageTensor, MaskTensor, ImageBatchTensor, MaskBatchTensor]) -> int:

@@ -9,6 +9,7 @@ from encord_active.analysis.metric import (
     OneImageMetric,
 )
 from encord_active.analysis.types import (
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
@@ -37,15 +38,13 @@ class HSVColorMetric(OneImageMetric):
         )
         self.hue_query = hue_query * 2 * torch.pi
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
+        # NOTE: ephemeral image is un-sized with mask applied already.
         hsv_image = deps["ephemeral_hsv_image"]
         if not isinstance(hsv_image, torch.Tensor):
             raise ValueError("missing hsv image")
-
-        if mask is None:
-            hsv_pixels = hsv_image.reshape(3, -1)
-        else:
-            hsv_pixels = hsv_image[:, mask]
 
         # FIXME: (see dist code in batched - unused), (more efficient, float % is slow)
         #  FIXME: should we consider the s & v channels, Black should not be considered very 'red'?
@@ -53,7 +52,7 @@ class HSVColorMetric(OneImageMetric):
         hue_values = hsv_image[0]
         dists1 = (hue_values - self.hue_query) % 1.0
         dists2 = (self.hue_query - hue_values) % 1.0
-        return torch.minimum(dists1, dists2).mean() * 2
+        return torch.minimum(dists1, dists2).mean().cpu() * 2
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

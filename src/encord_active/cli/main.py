@@ -11,9 +11,12 @@ from rich.markup import escape
 from rich.panel import Panel
 from typer.core import TyperGroup
 
+from encord_active.cli.common import (
+    TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PROJECT_NAME,
+    select_project_hash_from_name,
+)
 from encord_active.cli.project import project_cli
-from encord_active.cli.utils.server import ensure_safe_project
-from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 
 load_dotenv()
 
@@ -25,11 +28,9 @@ from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
 from encord_active.cli.print import print_cli
-from encord_active.cli.utils.decorators import ensure_project, find_child_projects
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib import constants as ea_constants
 from encord_active.lib.common.module_loading import ModuleLoadError
-from encord_active.lib.project.metadata import fetch_project_meta
 
 
 class OrderedPanelGroup(TyperGroup):
@@ -82,10 +83,8 @@ cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold]
 
 @cli.command()
 def download(
-    project_name: str = typer.Option(None, help="Name of the chosen project."),
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ):
     """
     [green bold]Download[/green bold] a sandbox dataset to get started 📁
@@ -99,6 +98,8 @@ def download(
         fetch_prebuilt_project_size,
     )
 
+    # FIXME: re-implement as sql scripts that can be executed w/ (project_hash, prediction_hash).
+
     if project_name is not None and project_name not in available_prebuilt_projects():
         rich.print("No such project in prebuilt projects.")
         raise typer.Abort()
@@ -106,12 +107,14 @@ def download(
     if not project_name:
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
-        downloaded = {fetch_project_meta(project_path)["project_hash"] for project_path in find_child_projects(target)}
-        for project_name, data in available_prebuilt_projects().items():
-            if data["hash"] in downloaded:
+        downloaded_project_hashes: Set[str] = set()  # FIXME: calculate this value
+        for prebuilt_project_name, data in available_prebuilt_projects().items():
+            if data["hash"] in downloaded_project_hashes:
                 continue
-            project_size = fetch_prebuilt_project_size(project_name)
-            modified_project_name = project_name + (f" ({project_size} MB)" if project_size is not None else "")
+            project_size = fetch_prebuilt_project_size(prebuilt_project_name)
+            modified_project_name = prebuilt_project_name + (
+                f" ({project_size} MB)" if project_size is not None else ""
+            )
             project_names_with_storage.append(modified_project_name)
 
         if not project_names_with_storage:
@@ -124,15 +127,10 @@ def download(
             raise typer.Abort()
         project_name = answer.split(" ", maxsplit=1)[0]
 
+    raise ValueError("Project path not known")
+
     # create project folder
-    project_dir = target / project_name
-    project_dir.mkdir(exist_ok=True)
-
-    from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
-
-    project_path = fetch_prebuilt_project(project_name, project_dir)
-    ensure_safe_project(project_path)
-    success_with_vizualise_command(project_path, "Successfully downloaded sandbox dataset. ")
+    # success_with_vizualise_command("NULL", "Successfully downloaded sandbox dataset. ")
 
 
 @cli.command(
@@ -385,15 +383,16 @@ Consider removing the directory or setting the `--name` option.
 
 
 @cli.command(name="refresh")
-@ensure_project()
 def refresh(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
     include_unlabeled: bool = typer.Option(
         False,
         "--include-unlabeled",
         "-i",
         help="Include unlabeled data. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
     ),
+    force: bool = typer.Option(False, help="Force full refresh of the project"),
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
@@ -404,64 +403,28 @@ def refresh(
     2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
     3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
     """
-    from encord_active.lib.db.connection import DBConnection
-    from encord_active.lib.metrics.types import EmbeddingType
-    from encord_active.lib.project import Project
-
     try:
-        project = Project(target)
-        state = project.refresh(initialize_label_rows=include_unlabeled)
+        from encord_active.imports.op import refresh_encord_project
 
-        from encord_active.lib.metrics.execute import (
-            execute_metrics,
-            get_metrics_by_embedding_type,
+        project_hash = select_project_hash_from_name(database_dir, project_name or "")
+        changes = refresh_encord_project(
+            database_dir=database_dir,
+            encord_project_hash=project_hash,
+            include_unlabeled=include_unlabeled,
+            force=force,
         )
-
-        embedding_types_to_update = list(
-            filter(
-                None,
-                [
-                    EmbeddingType.IMAGE if state.data_changed else None,
-                    EmbeddingType.OBJECT if state.labels_changed and state.has_objects else None,
-                    EmbeddingType.CLASSIFICATION if state.labels_changed and state.has_classifications else None,
-                ],
-            )
-        )
-        for et in embedding_types_to_update:
-            emb_file = project.file_structure.get_embeddings_file(et)
-            if emb_file.is_file():
-                emb_file.unlink()
-
-            emb_file_2d = project.file_structure.get_embeddings_file(et, reduced=True)
-            if emb_file_2d.is_file():
-                emb_file_2d.unlink()
-
-            EmbeddingIndex.remove_index(project.file_structure, et)
-
-        metrics_to_execute = list(chain(*[get_metrics_by_embedding_type(et) for et in embedding_types_to_update]))
-        execute_metrics(metrics_to_execute, data_dir=target, use_cache_only=True)
-        with DBConnection(project.file_structure) as conn:
-            from encord_active.lib.db.merged_metrics import (
-                MergedMetrics,
-                build_merged_metrics,
-            )
-
-            MergedMetrics(conn).replace_all(build_merged_metrics(project.file_structure.metrics))
-        ensure_safe_project(target)
-
-    except AttributeError as e:
-        rich.print(f"[orange1]{e}[/orange1]")
     except Exception as e:
         rich.print(f"[red]ERROR: The data sync failed. Log: {e}.")
     else:
-        rich.print("[green]Data and labels successfully synced from the remote project[/green]")
+        if not changes:
+            rich.print("[green]No changes detected, already synced with the remote project[/green]")
+        else:
+            rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
 @cli.command(name="start")
 def start(
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     port: int = typer.Option(8000, help="Bind app to this port", envvar="PORT"),
 ):
     """
@@ -469,28 +432,22 @@ def start(
     """
     from encord_active.cli.utils.server import launch_server_app
 
-    launch_server_app(target, port)
+    launch_server_app(database_dir, port)
 
 
 @cli.command()
 def quickstart(
-    target: Path = typer.Option(
-        Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     port: int = typer.Option(8000, help="Bind app to this port", envvar="PORT"),
 ):
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    from encord_active.cli.utils.server import launch_server_app
-    from encord_active.lib.project.sandbox_projects import fetch_prebuilt_project
-
-    project_name = "quickstart"
-    project_dir = target / project_name
-    project_dir.mkdir(exist_ok=True)
-
-    fetch_prebuilt_project(project_name, project_dir)
-    launch_server_app(project_dir, port)
+    # from encord_active.cli.utils.server import launch_server_app
+    # project_name = "quickstart"
+    raise ValueError("IMPLEMENT THIS FUNCTION")
+    # FIXME: download quickstart via new 'pre-built' project.
+    # launch_server_app(database_dir, port)
 
 
 @cli.command(rich_help_panel="Resources")

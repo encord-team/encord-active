@@ -21,7 +21,7 @@ from encord_active.db.metrics import MetricType
 class DistanceToBorderMetric(OneObjectMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_label_border_closeness",  # FIXME: rename ident to something better??
+            ident="metric_border_relative",  # FIXME: rename ident to something better??
             long_name="Distance in pixels to the border",
             desc="",
             metric_type=MetricType.NORMAL,
@@ -29,24 +29,21 @@ class DistanceToBorderMetric(OneObjectMetric):
 
     def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResult:
         # FIXME: make relative?? (NORMAL metrics are better)
-        points = annotation.points
+        bb = annotation.bounding_box
         mask = annotation.mask
         # FIXME: change to use bounding box!! (should give same answer).
-        if points is not None and mask is not None:
+        if mask is not None and bb is not None:
             w = image_width(mask)
             h = image_height(mask)
-            sf = torch.tensor([[w, h]])
-            points_sf = points / sf
-            x_min, y_min = points_sf.min(0).values.cpu()
-            x_max, y_max = 1.0 - points_sf.max(0).values.cpu()
-            return min(x_min, x_max, y_min, y_max)
-        elif mask is None and points is None:
-            # FIXME: does not handle bitmask correctly!?
-            # Classification (distance = 0) FIXME: correct fallback or should this be NULL?!
-            return 0.0
+            x1, y1, x2, y2 = bb.type(torch.int32).tolist()
+            dx1 = float(x1 / w)
+            dx2 = float((w - (x2 + 1)) / w)
+            dy1 = float(y1 / h)
+            dy2 = float((h - (y2 + 1)) / h)
+            return min(dx1, dx2, dy1, dy2)
         else:
-            # FIXME: implement (use bounding box).
-            raise ValueError("Border closeness not supported for bitmasks yet!")
+            # Classification
+            return 0.0
 
     def calculate_batched(
         self,

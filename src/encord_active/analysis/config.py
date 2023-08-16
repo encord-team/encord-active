@@ -6,6 +6,7 @@ import torch
 from .base import BaseEvaluation
 from .conversions.grayscale import RGBToGray
 from .conversions.hsv import RGBToHSV
+from .conversions.laplacian import RGBToLaplacian
 from .embedding import NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
@@ -119,8 +120,9 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         HuMomentEmbeddings(),
         # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Image transformations
-        RGBToHSV(),
+        RGBToLaplacian(),
         RGBToGray(),
+        RGBToHSV(),
         # Unified Image or Annotation Feature Metrics
         AspectRatioMetric(),  # metric_aspect_ratio
         AreaMetric(),  # metric_area
@@ -136,18 +138,18 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         # Annotation only metrics
         AreaRelativeMetric(),  # metric_area_relative
         MaximumLabelIOUMetric(),  # metric_max_iou
-        DistanceToBorderMetric(),  # metric_label_border_closeness
+        DistanceToBorderMetric(),  # metric_border_relative
         # Annotation based Frame Metrics
         ObjectCountMetric(),  # metric_object_count
         ObjectDensityMetric(),  # metric_object_density ("Frame object density")
         # ?????
         # FIXME: metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
-        # FIXME: metric_label_inconsistent_classification_and_track ("Inconsistent Object Classification and Track IDs")
+        # FIXME: metric_label_inconsistent_class_or_track ("Inconsistent Object Classification and Track IDs")
         # FIXME: metric_label_shape_outlier ("Shape outlier detection")
         # FIXME: metric_seq_occlusion_detection (ALSO - MISSING COLUMN NAME, WILL NEED ALEMBIC MIGRATION)
         # Temporal metrics
         # FIXME: DISABLED TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
-        # FIXME: DISABLED TemporalMissingObjectsAndWrongTracks(),  # metric_label_missing_or_broken_tracks ("Missing Objects and Broken Tracks")
+        # FIXME: DISABLED TemporalMissingObjectsAndWrongTracks(),  # metric_missing_or_broken_track ("Missing Objects and Broken Tracks")
     ]
     derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]] = [
         # Derive properties from embedding
