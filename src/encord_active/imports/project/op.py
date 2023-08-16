@@ -1,19 +1,29 @@
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
 
+import numpy as np
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
+from encord_active.analysis.reductions.op import (
+    apply_embedding_reduction,
+    create_reduction,
+    serialize_reduction,
+)
 from encord_active.db.models import (
+    EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
     ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsReduced,
     ProjectCollaborator,
     ProjectDataAnalytics,
     ProjectDataAnalyticsExtra,
+    ProjectDataAnalyticsReduced,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectImportMetadata,
@@ -55,6 +65,57 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
     data_analytics, data_analytics_extra, annotation_analytics, annotation_analytics_extra, new_collaborators = res
 
     # Execute embedding reduction.
+    reduction_total_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = []
+    reduction_total_samples.extend(data_analytics_extra)
+    reduction_total_samples.extend(annotation_analytics_extra)
+    reduction_train_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = random.choices(
+        reduction_total_samples, k=min(len(reduction_total_samples), 10_000)
+    )
+    reduction_train_samples.sort(
+        key=lambda x: (x.du_hash, x.frame, x.object_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
+    )
+    reduction = create_reduction(
+        EmbeddingReductionType.UMAP,
+        train_samples=[
+            np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in reduction_train_samples
+        ],
+    )
+    project_reduction = serialize_reduction(
+        reduction,
+        name="Default CLIP",
+        description="",
+        project_hash=project_hash,
+    )
+    reduced_data_clip_raw = apply_embedding_reduction(
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in data_analytics_extra], reduction
+    )
+    reduced_data_clip = [
+        ProjectDataAnalyticsReduced(
+            reduction_hash=project_reduction.reduction_hash,
+            project_hash=project_hash,
+            du_hash=extra.du_hash,
+            frame=extra.frame,
+            x=x,
+            y=y,
+        )
+        for (extra, (x, y)) in zip(data_analytics_extra, reduced_data_clip_raw)
+    ]
+    reduced_annotation_clip_raw = apply_embedding_reduction(
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in annotation_analytics_extra],
+        reduction,
+    )
+    reduced_annotation_clip = [
+        ProjectAnnotationAnalyticsReduced(
+            reduction_hash=project_reduction.reduction_hash,
+            project_hash=project_hash,
+            du_hash=extra.du_hash,
+            frame=extra.frame,
+            object_hash=extra.object_hash,
+            x=x,
+            y=y,
+        )
+        for (extra, (x, y)) in zip(annotation_analytics_extra, reduced_annotation_clip_raw)
+    ]
 
     # Populate the database.
     with Session(engine) as sess:
@@ -64,11 +125,14 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         sess.add_all(project.project_data_list)
         sess.add_all(project.project_du_list)
         sess.add_all(new_collaborators)
+        sess.add(project_reduction)
         sess.commit()
         sess.add_all(data_analytics)
         sess.add_all(data_analytics_extra)
         sess.add_all(annotation_analytics)
         sess.add_all(annotation_analytics_extra)
+        sess.add_all(reduced_data_clip)
+        sess.add_all(reduced_annotation_clip)
         sess.commit()
 
 
