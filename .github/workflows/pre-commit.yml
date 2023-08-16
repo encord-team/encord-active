@@ -15,6 +15,10 @@ jobs:
       - uses: actions/checkout@v3
       - name: Setup root poetry environment
         uses: ./.github/actions/setup-root-poetry-environment
+      - name: Setup frontend node modules
+        uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "18.x"
       - name: Run linting, type checking and testing
         uses: pre-commit/action@v3.0.0
         with:

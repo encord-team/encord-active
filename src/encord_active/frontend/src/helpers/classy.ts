@@ -15,7 +15,7 @@ export type Classes = ClassLike | ClassLike[] | ClassRecord;
  * classy(styles.foo, globalClasses, className, { disabled, invalid });
  * // 'foo-1g4k53 global-1 global-2 className disabled'
  */
-export const classy = (...classes: Classes[]) =>
+export const classy = (...classes: Classes[]): string =>
   classes
     .flat(10)
     .flatMap((cl) => (cl instanceof Object ? getTruthyKeys(cl) : cl))

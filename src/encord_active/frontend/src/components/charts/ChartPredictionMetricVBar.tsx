@@ -10,17 +10,23 @@ import {
 } from "recharts";
 import { scaleLinear } from "d3-scale";
 import { useMemo } from "react";
-import { ProjectMetricSummary } from "../Types";
 import { formatTooltip } from "../util/Formatter";
+import {
+  PredictionSummaryResult,
+  ProjectDomainSummary,
+} from "../../openapi/api";
 
 export function ChartPredictionMetricVBar(props: {
-  data: Readonly<Record<string, number>> | undefined;
+  data:
+    | PredictionSummaryResult["importance"]
+    | PredictionSummaryResult["correlation"]
+    | undefined;
   predictionMetric:
     | "importance"
     | "correlations"
     | "feature-precision"
     | "feature-recall";
-  metricsSummary?: ProjectMetricSummary;
+  metricsSummary?: ProjectDomainSummary;
   featureHashMap?: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -40,7 +46,7 @@ export function ChartPredictionMetricVBar(props: {
       }
       return { group, score };
     });
-    sortedData.sort((a, b) => b.score - a.score);
+    sortedData.sort((a, b) => Number(b.score) - Number(a.score));
     return sortedData;
   }, [data, featureHashMap, metricsSummary]);
 
@@ -49,7 +55,11 @@ export function ChartPredictionMetricVBar(props: {
       predictionMetric === "correlations"
         ? scaleLinear([-1.0, 1.0], ["#ef4444", "#22c55e"])
         : scaleLinear([0.0, 1], ["#7bfdee", "#0000ef"]);
-    return barData.map((data) => ({ ...data, fill: getColor(data.score) }));
+
+    return barData.map((data) => ({
+      ...data,
+      fill: getColor(data.score ?? 0.0),
+    }));
   }, [barData, predictionMetric]);
 
   let chartName = "Unknown";
@@ -68,7 +78,11 @@ export function ChartPredictionMetricVBar(props: {
       width="100%"
       height={100 + Math.max(30 * barData.length, 30)}
     >
-      <BarChart data={formattedBarData} layout="vertical" className="active-chart">
+      <BarChart
+        data={formattedBarData}
+        layout="vertical"
+        className="active-chart"
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <YAxis
           name={metricsSummary != null ? "Metric" : "Class"}

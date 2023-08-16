@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import {
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -10,20 +11,20 @@ import {
   YAxis,
 } from "recharts";
 import { scaleLinear } from "d3-scale";
-import {
-  ProjectAnalysisDomain, ProjectAnalysisSummary,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { formatTooltip } from "../util/Formatter";
+import { useProjectAnalysisMetricScatter } from "../../hooks/queries/useProjectAnalysisMetricScatter";
+import {
+  AnalysisDomain,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../openapi/api";
 
 export function ChartMetricCompareScatter(props: {
-  metricsSummary: ProjectMetricSummary;
-  analysisSummary?: undefined | ProjectAnalysisSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  analysisSummary?: undefined | QuerySummary;
+  analysisDomain: AnalysisDomain;
   projectHash: string;
   compareProjectHash?: string | undefined;
-  queryAPI: QueryAPI;
   allowTrend?: boolean;
 }) {
   const {
@@ -31,25 +32,28 @@ export function ChartMetricCompareScatter(props: {
     analysisSummary,
     analysisDomain,
     projectHash,
-    queryAPI,
     allowTrend,
     compareProjectHash,
   } = props;
   const [xMetric, setXMetric] = useState<undefined | string>();
   const [yMetric, setYMetric] = useState<undefined | string>();
   const [showTrend, setShowTrend] = useState<boolean>(true);
-  const sampledState = queryAPI.useProjectAnalysisMetricScatter(
+  const sampledState = useProjectAnalysisMetricScatter(
     projectHash,
     analysisDomain,
     xMetric ?? "",
     yMetric ?? "",
+    undefined,
+    undefined,
     { enabled: xMetric !== undefined && yMetric !== undefined }
   );
-  const compareSampledState = queryAPI.useProjectAnalysisMetricScatter(
+  const compareSampledState = useProjectAnalysisMetricScatter(
     compareProjectHash ?? "",
     analysisDomain,
     xMetric ?? "",
     yMetric ?? "",
+    undefined,
+    undefined,
     {
       enabled:
         xMetric !== undefined &&
@@ -60,22 +64,23 @@ export function ChartMetricCompareScatter(props: {
   const sampledData = sampledState.data;
   const compareSampledData =
     compareProjectHash != null ? compareSampledState.data : null;
-  const metricOptions = useMemo(() => {
-    return Object.entries(metricsSummary.metrics).filter(
-        ([metricKey]) => {
+  const metricOptions = useMemo(
+    () =>
+      Object.entries(metricsSummary.metrics)
+        .filter(([metricKey]) => {
           if (analysisSummary == null) {
             return true;
           }
           const value = analysisSummary.metrics[metricKey];
+
           return value == null || value.count > 0;
-        }
-    ).map(
-    ([metricKey, metricData]) => ({
-      value: metricKey,
-      label: metricData.title,
-    })
+        })
+        .map(([metricKey, metricData]) => ({
+          value: metricKey,
+          label: metricData?.title ?? metricKey,
+        })),
+    [metricsSummary, analysisSummary]
   );
-  }, [metricsSummary, analysisSummary]);
   useEffect(() => {
     const metrics = new Set(metricOptions.map((v) => v.value));
     let chosenXMetric = xMetric;
@@ -90,13 +95,14 @@ export function ChartMetricCompareScatter(props: {
         setYMetric(metricOptions[1]?.value);
       }
     }
-  }, [metricOptions, xMetric, yMetric])
+  }, [metricOptions, xMetric, yMetric]);
 
   const data = useMemo(() => {
     if (sampledData == null) {
       return null;
     }
     const getFill = scaleLinear([1, 100], ["#9090ff", "#000000"]);
+
     return sampledData.samples.map((sample) => ({
       ...sample,
       fill: getFill(sample.n),
@@ -107,9 +113,19 @@ export function ChartMetricCompareScatter(props: {
     <>
       <Space align="center" wrap>
         <Typography.Text strong>X Metric: </Typography.Text>
-        <Select value={xMetric} onChange={setXMetric} options={metricOptions} style={{width: 265}}/>
+        <Select
+          value={xMetric}
+          onChange={setXMetric}
+          options={metricOptions}
+          className="w-64"
+        />
         <Typography.Text strong>Y Metric: </Typography.Text>
-        <Select value={yMetric} onChange={setYMetric} options={metricOptions} style={{width: 265}}/>
+        <Select
+          value={yMetric}
+          onChange={setYMetric}
+          options={metricOptions}
+          className="w-64"
+        />
         {allowTrend ? (
           <>
             <Typography.Text strong>Show trend: </Typography.Text>
@@ -151,6 +167,7 @@ export function ChartMetricCompareScatter(props: {
           {data != null ? (
             <Scatter
               data={data}
+              name="This Project"
               fill="#8884d8"
               isAnimationActive={false}
               line={showTrend}
@@ -160,12 +177,14 @@ export function ChartMetricCompareScatter(props: {
           {compareSampledData != null ? (
             <Scatter
               data={compareSampledData.samples}
+              name="Comparison Project"
               fill="#fd0a5a"
               isAnimationActive={false}
               line={showTrend}
               lineType="fitting"
             />
           ) : null}
+          {compareProjectHash != null ? <Legend /> : null}
         </ScatterChart>
       </ResponsiveContainer>
     </>

@@ -1,3 +1,4 @@
+import math
 from typing import Optional, cast
 
 import torch
@@ -33,7 +34,11 @@ class ContrastMetric(OneImageMetric):
     ) -> MetricResult:
         # Max-std : [0, 255] = 255/2 = 127.5
         grayscale_image = cast(torch.Tensor, deps["ephemeral_grayscale_image"])
-        return torch.std(grayscale_image.type(torch.float32)).cpu() / 127.5
+        v = torch.std(grayscale_image.type(torch.float32)).cpu() / 127.5
+        if math.isnan(v):
+            # this return NaN if the tensor is size 1. Return 0 for this case.
+            return 0.0
+        return v
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]

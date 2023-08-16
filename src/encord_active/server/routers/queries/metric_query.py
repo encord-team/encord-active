@@ -1,17 +1,15 @@
 import dataclasses
 import math
+from enum import IntEnum
 from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Numeric
-from sqlalchemy.engine import Engine
-from sqlalchemy.sql.functions import count as sql_count_raw
-from sqlalchemy.sql.functions import max as sql_max_raw
-from sqlalchemy.sql.functions import min as sql_min_raw
-from sqlalchemy.sql.functions import sum as sql_sum_raw
+from sqlalchemy import Numeric, literal
+from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
+from sqlmodel.sql.expression import Select
 
 from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType
@@ -24,10 +22,12 @@ from encord_active.server.routers.queries.domain_query import (
 
 # Type hints
 TType = TypeVar("TType")
-sql_count: Callable[[], int] = sql_count_raw  # type: ignore
-sql_min: Callable[[TType], TType] = sql_min_raw  # type: ignore
-sql_max: Callable[[TType], TType] = sql_max_raw  # type: ignore
-sql_sum: Callable[[TType], TType] = sql_sum_raw  # type: ignore
+sql_count: Callable[[], int] = func.COUNT  # type: ignore
+sql_min: Callable[[TType], TType] = func.MIN  # type: ignore
+sql_max: Callable[[TType], TType] = func.MAX  # type: ignore
+sql_sum: Callable[[TType], TType] = func.SUM  # type: ignore
+sql_avg: Callable[[TType], TType] = func.AVG  # type: ignore
+sql_coalesce: Callable[[Optional[TType], TType], TType] = func.COALESCE  # type: ignore
 
 """
 Severe IQR Scale factor for iqr range
@@ -47,17 +47,56 @@ class AttrMetadata:
     metric_type: Optional[MetricType]
 
 
+class AnalysisBuckets(IntEnum):
+    B10 = 10
+    B100 = 100
+    B1000 = 1000
+
+
 def literal_bucket_depends(default: int) -> Literal[10, 100, 1000]:
     def _parse_buckets(
-        buckets: Literal["10", "100", "1000"] = Query(default, alias="buckets")
+        buckets: AnalysisBuckets = Query(AnalysisBuckets(default), alias="buckets")
     ) -> Literal[10, 100, 1000]:
-        return int(buckets)  # type: ignore
+        return int(buckets.value)  # type: ignore
 
     return Depends(_parse_buckets, use_cache=False)
 
 
+def get_normal_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optional[Literal[10, 100, 1000]]) -> float:
+    round_digits = None if buckets is None else int(math.log10(buckets))
+    if dialect.name == "sqlite":
+        return metric_attr if round_digits is None else func.ROUND(metric_attr, round_digits)  # type: ignore
+    else:
+        return metric_attr if round_digits is None else metric_attr.cast(Numeric(1 + round_digits, round_digits))  # type: ignore
+
+
+def get_float_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optional[Literal[10, 100, 1000]]) -> float:
+    # FIXME: work for different distributions (currently ONLY aspect ratio)
+    #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
+    round_digits = None if buckets is None else int(math.log10(buckets))
+    return metric_attr if metric_attr is None else func.ROUND(metric_attr.cast(Numeric(20, 10)), round_digits)  # type: ignore
+
+
+def float_attr_bucket_bounds_group(
+    metric_attr: float, buckets: Optional[Literal[10, 100, 1000]], bounds: Tuple[float, float]
+) -> float:
+    if buckets is None:
+        return metric_attr
+    bound_min, bound_max = bounds
+    bound_range = bound_max - bound_min
+    bound_steps = bound_range / float(buckets)
+    if bound_steps == 0.0:
+        return func.ROUND(metric_attr - bound_min)  # type: ignore
+    return func.ROUND((metric_attr - bound_min) / bound_steps)  # type: ignore
+
+
+def get_int_attr_bucket(dialect: Dialect, metric_attr: int, buckets: Optional[Literal[10, 100, 1000]]) -> int:
+    # FIXME: work for different distributions
+    return metric_attr
+
+
 def get_metric_or_enum(
-    engine: Engine,
+    dialect: Dialect,
     table: AnalyticsTable,
     attr_name: str,
     metrics: Dict[str, MetricDefinition],
@@ -65,53 +104,26 @@ def get_metric_or_enum(
     buckets: Optional[Literal[10, 100, 1000]] = None,
 ) -> AttrMetadata:
     metric = metrics.get(attr_name, None)
-    round_digits = None if buckets is None else int(math.log10(buckets))
     if metric is not None:
         raw_metric_attr = getattr(table, attr_name)
         if metric.type == MetricType.NORMAL:
-            if engine.dialect == "sqlite":
-                group_attr = raw_metric_attr if round_digits is None else func.ROUND(raw_metric_attr, round_digits)
-            else:
-                group_attr = (
-                    raw_metric_attr
-                    if round_digits is None
-                    else raw_metric_attr.cast(Numeric(1 + round_digits, round_digits))
-                )
+            group_attr = get_normal_attr_bucket(dialect, raw_metric_attr, buckets)
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.UFLOAT:
-            # FIXME: work for different distributions (currently ONLY aspect ratio)
-            #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
-            group_attr = (
-                raw_metric_attr
-                if round_digits is None
-                else func.ROUND(raw_metric_attr.cast(Numeric(20, 10)), round_digits)
-            )
+            group_attr = get_float_attr_bucket(dialect, raw_metric_attr, buckets)
             return AttrMetadata(
                 group_attr=group_attr,  # type: ignore
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
         elif metric.type == MetricType.UINT:
-            # FIXME: width / height / area / object_count
-            #  we currently assume that this will naturally group into sane values
-            #  so no post-processing is done here.
-            #  may be worth considering rounding to nearest 10 or 100 or selecting 0 -> max to dynamically select?
+            group_attr = get_int_attr_bucket(dialect, raw_metric_attr, buckets)
             return AttrMetadata(
-                group_attr=raw_metric_attr,
-                filter_attr=raw_metric_attr,
-                metric_type=metric.type,
-            )
-        elif metric.type == MetricType.RANK:
-            # FIXME: currently image difficulty - try and see if this metric type can be removed.
-            # rank_attr = func.row_number().over(
-            #     order_by=raw_metric_attr,
-            # )
-            return AttrMetadata(
-                group_attr=raw_metric_attr,
+                group_attr=group_attr,
                 filter_attr=raw_metric_attr,
                 metric_type=metric.type,
             )
@@ -152,17 +164,6 @@ def query_metric_attr_summary(
     metric_count, metric_min, metric_max = sess.exec(
         select(sql_count(), sql_min(metric_attr), sql_max(metric_attr)).where(*where, is_not(metric_attr, None))
     ).first() or (0, 0, 0)
-    if metric.type == MetricType.RANK:
-        return QueryMetricSummary(
-            min=0,
-            q1=metric_count // 4,
-            median=metric_count // 2,
-            q3=(metric_count * 3) // 4,
-            max=metric_count,
-            count=metric_count,
-            moderate=0,
-            severe=0,
-        )
     metric_q1 = (
         sess.exec(
             select(metric_attr)
@@ -231,10 +232,14 @@ def query_metric_attr_summary(
     )
 
 
+class QueryEnumSummary(BaseModel):
+    count: int
+
+
 class QuerySummary(BaseModel):
     count: int
     metrics: Dict[str, QueryMetricSummary]
-    enums: Dict[str, None]
+    enums: Dict[str, QueryEnumSummary]
 
 
 def query_attr_summary(
@@ -242,14 +247,15 @@ def query_attr_summary(
     tables: Tables,
     project_filters: ProjectFilters,
     filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list] = None,
 ) -> QuerySummary:
-    domain_tables = tables.annotation or tables.data
+    domain_tables = tables.primary
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",
+        base=domain_tables.analytics,
         search=filters,
         project_filters=project_filters,
-    )
+    ) + (extra_where or [])
     count: int = sess.exec(select(sql_count()).where(*where)).first() or 0
     metrics = {
         metric_name: query_metric_attr_summary(
@@ -264,17 +270,51 @@ def query_attr_summary(
     return QuerySummary(
         count=count,
         metrics={k: v for k, v in metrics.items() if v is not None},
-        enums={k: None for k, e in domain_tables.enums.items()},  # FIXME: implement properly
+        enums={k: QueryEnumSummary(count=count) for k, e in domain_tables.enums.items()},  # FIXME: implement properly
     )
 
 
 class QueryDistributionGroup(BaseModel):
-    group: Union[float, str, bool]
+    group: str
     count: int
 
 
 class QueryDistribution(BaseModel):
     results: List[QueryDistributionGroup]
+
+
+def select_for_query_attr_distribution(
+    dialect: Dialect,
+    tables: Tables,
+    project_filters: ProjectFilters,
+    attr_name: str,
+    buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list],
+) -> "Select[Tuple[Union[int, float], int]]":
+    domain_tables = tables.primary
+    attr = get_metric_or_enum(
+        dialect,
+        domain_tables.analytics,
+        attr_name,
+        domain_tables.metrics,
+        domain_tables.enums,
+        buckets=buckets,
+    )
+    where = search_query.search_filters(
+        tables=tables,
+        base=domain_tables.analytics,
+        search=filters,
+        project_filters=project_filters,
+    )
+    return (
+        select(
+            attr.group_attr.label("g"),  # type: ignore
+            sql_count().label("n"),  # type: ignore
+        )
+        .where(*where, is_not(attr.filter_attr, None), *(extra_where or []))
+        .group_by("g")
+    )
 
 
 def query_attr_distribution(
@@ -284,35 +324,22 @@ def query_attr_distribution(
     attr_name: str,
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list] = None,
 ) -> QueryDistribution:
-    domain_tables = tables.annotation or tables.data
-    attr = get_metric_or_enum(
-        sess.bind,  # type: ignore
-        domain_tables.analytics,
-        attr_name,
-        domain_tables.metrics,
-        domain_tables.enums,
-        buckets=buckets,
-    )
-    where = search_query.search_filters(
+    grouping_query = select_for_query_attr_distribution(
+        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
-        base="analytics",
-        search=filters,
         project_filters=project_filters,
-    )
-    grouping_query = (
-        select(
-            attr.group_attr.label("g"),  # type: ignore
-            sql_count(),
-        )
-        .where(*where, is_not(attr.filter_attr, None))
-        .group_by("g")
+        attr_name=attr_name,
+        buckets=buckets,
+        filters=filters,
+        extra_where=extra_where,
     )
     grouping_results = sess.exec(grouping_query).fetchall()
     return QueryDistribution(
         results=[
             QueryDistributionGroup(
-                group=grouping,
+                group=int(grouping) if isinstance(grouping, bool) else grouping,
                 count=count,
             )
             for grouping, count in grouping_results
@@ -330,6 +357,40 @@ class QueryScatter(BaseModel):
     samples: List[QueryScatterPoint]
 
 
+def select_for_query_attr_scatter(
+    dialect: Dialect,
+    tables: Tables,
+    project_filters: ProjectFilters,
+    x_metric_name: str,
+    y_metric_name: str,
+    buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list],
+) -> "Select[Tuple[float, float, int]]":
+    domain_tables = tables.primary
+    x_attr = get_metric_or_enum(
+        dialect, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
+    )
+    y_attr = get_metric_or_enum(
+        dialect, domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
+    )
+    where = search_query.search_filters(
+        tables=tables,
+        base=domain_tables.analytics,
+        search=filters,
+        project_filters=project_filters,
+    )
+    return (
+        select(
+            x_attr.group_attr.label("x"),  # type: ignore
+            y_attr.group_attr.label("y"),  # type: ignore
+            sql_count().label("n"),  # type: ignore
+        )
+        .where(*where, is_not(x_attr.filter_attr, None), is_not(x_attr.filter_attr, None), *(extra_where or []))
+        .group_by("x", "y")
+    )
+
+
 def query_attr_scatter(
     sess: Session,
     tables: Tables,
@@ -338,32 +399,17 @@ def query_attr_scatter(
     y_metric_name: str,
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list] = None,
 ) -> QueryScatter:
-    domain_tables = tables.annotation or tables.data
-    x_attr = get_metric_or_enum(
-        sess.bind, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
-    )
-    y_attr = get_metric_or_enum(
-        sess.bind, domain_tables.analytics, y_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
-    )
-    where = search_query.search_filters(
+    scatter_query = select_for_query_attr_scatter(
+        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
-        base="analytics",
-        search=filters,
         project_filters=project_filters,
-    )
-    scatter_query = (
-        select(
-            x_attr.group_attr.label("x"),  # type: ignore
-            y_attr.group_attr.label("y"),  # type: ignore
-            sql_count(),
-        )
-        .where(
-            *where,
-            is_not(x_attr.filter_attr, None),
-            is_not(x_attr.filter_attr, None),
-        )
-        .group_by("x", "y")
+        x_metric_name=x_metric_name,
+        y_metric_name=y_metric_name,
+        buckets=buckets,
+        filters=filters,
+        extra_where=extra_where,
     )
     scatter_results = sess.exec(scatter_query).fetchall()
 
@@ -372,4 +418,131 @@ def query_attr_scatter(
     )
 
 
-TSearch = TypeVar("TSearch", bound=Tuple)
+class Query2DEmbeddingScatterPoint(BaseModel):
+    x: float
+    y: float
+    fh: str
+    fhn: int
+    n: int
+
+
+class Query2DEmbedding(BaseModel):
+    count: int
+    reductions: List[Query2DEmbeddingScatterPoint]
+
+
+TExtraSelect = TypeVar("TExtraSelect", bound=tuple)
+
+
+def select_bounds_for_query_reduction_scatter(
+    tables: Tables,
+    project_filters: ProjectFilters,
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list],
+) -> "Select[Tuple[float, float, float, float]]":
+    domain_tables = tables.primary
+    where = search_query.search_filters(
+        tables=tables,
+        base=domain_tables.reduction,
+        search=filters,
+        project_filters=project_filters,
+    )
+    return select(
+        sql_coalesce(sql_min(domain_tables.reduction.x), 0.0),
+        sql_coalesce(sql_max(domain_tables.reduction.x), 1.0),
+        sql_coalesce(sql_min(domain_tables.reduction.y), 0.0),
+        sql_coalesce(sql_max(domain_tables.reduction.y), 1.0),
+    ).where(
+        *where,
+        *(extra_where or []),
+    )
+
+
+def select_for_query_reduction_scatter(
+    tables: Tables,
+    project_filters: ProjectFilters,
+    bounds: Tuple[float, float, float, float],
+    buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list],
+    extra_select: TExtraSelect,
+) -> "Select[Tuple[float, float, int, int, int, str]]":
+    domain_tables = tables.primary
+    x_min, x_max, y_min, y_max = bounds
+    x_group = float_attr_bucket_bounds_group(domain_tables.reduction.x, buckets, (x_min, x_max))
+    y_group = float_attr_bucket_bounds_group(domain_tables.reduction.y, buckets, (y_min, y_max))
+    where = search_query.search_filters(
+        tables=tables,
+        base=domain_tables.reduction,
+        search=filters,
+        project_filters=project_filters,
+        force_join=[tables.annotation.analytics] if tables.annotation == domain_tables else [],
+    )
+    return (
+        select(  # type: ignore
+            sql_avg(domain_tables.reduction.x).label("xv"),  # type: ignore
+            sql_avg(domain_tables.reduction.y).label("xv"),  # type: ignore
+            x_group.label("xg"),  # type: ignore
+            y_group.label("yg"),  # type: ignore
+            sql_count().label("n"),  # type: ignore
+            tables.annotation.analytics.feature_hash.label("fh")  # type: ignore
+            if tables.annotation == domain_tables
+            else literal("").label("fh"),
+            *extra_select,
+        )
+        .where(
+            *where,
+            *(extra_where or []),
+        )
+        .group_by("xg", "yg", "fh")
+    )
+
+
+def query_reduction_scatter(
+    sess: Session,
+    tables: Tables,
+    project_filters: ProjectFilters,
+    buckets: Literal[10, 100, 1000],
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list] = None,
+) -> Query2DEmbedding:
+    bounds = sess.exec(
+        select_bounds_for_query_reduction_scatter(
+            tables=tables,
+            project_filters=project_filters,
+            filters=filters,
+            extra_where=extra_where,
+        )
+    ).first()
+    if bounds is None:
+        return Query2DEmbedding(count=0, reductions=[])
+    query: "Select[Tuple[float, float, int, int, int, str]]" = select_for_query_reduction_scatter(  # type: ignore
+        tables=tables,
+        project_filters=project_filters,
+        buckets=buckets,
+        bounds=bounds,
+        filters=filters,
+        extra_where=extra_where,
+        extra_select=tuple(),
+    )
+    results = sess.exec(query).fetchall()
+    results_dedup: Dict[Tuple[int, int], Tuple[float, float, str, int, int]] = {}
+    for x, y, xg, yg, n, l in results:
+        ex_av, ey_av, el, elc, en = results_dedup.setdefault((xg, yg), (0.0, 0.0, "", 0, 0))
+        n_total = en + n
+        x_av = ((ex_av * en) + (x * n)) / n_total
+        y_av = ((ey_av * en) + (y * n)) / n_total
+        if n > elc or (n == elc and str(l) >= str(el)):
+            results_dedup[(xg, yg)] = (x_av, y_av, l, n, n_total)
+        else:
+            results_dedup[(xg, yg)] = (x_av, y_av, el, elc, n_total)
+
+    return Query2DEmbedding(
+        count=sum(n for x, y, xg, yg, n, l in results),
+        reductions=[
+            Query2DEmbeddingScatterPoint(
+                x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, fh=fh, fhn=fhn, n=n
+            )
+            for x, y, fh, fhn, n in results_dedup.values()
+        ],
+    )

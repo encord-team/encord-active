@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Annotated, Dict, NamedTuple, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
 
-from encord_active.db.models import AnnotationType
+from encord_active.db.enums import AnnotationType
 
 
 class Point(NamedTuple):
@@ -27,8 +28,15 @@ class AnnotationMetadata:
     bounding_box: Optional[BoundingBoxTensor]
 
 
+class EmbeddingDistanceMetric(IntEnum):
+    RANDOM = 0
+    EUCLIDEAN = 1
+    COSINE = 2
+
+
 @dataclass(frozen=True)
 class NearestNeighbors:
+    embedding_type: EmbeddingDistanceMetric
     metric_deps: list[MetricDependencies]
     metric_keys: list[Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]]
     similarities: list[float]

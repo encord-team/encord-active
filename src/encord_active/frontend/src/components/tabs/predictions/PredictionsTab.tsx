@@ -1,15 +1,16 @@
-import {useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
 import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
 import { Explorer, Props as ExplorerProps } from "../../explorer";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { useProjectListPredictions } from "../../../hooks/queries/useProjectListPredictions";
 
 export function PredictionsTab(
   props: {
-    queryAPI: QueryAPI;
     projectHash: string;
-    metricsSummary: ProjectMetricSummary;
+    dataMetricsSummary: ProjectDomainSummary;
+    annotationMetricsSummary: ProjectDomainSummary;
     featureHashMap: Record<
       string,
       { readonly color: string; readonly name: string }
@@ -17,16 +18,16 @@ export function PredictionsTab(
   } & Pick<ExplorerProps, "remoteProject" | "setSelectedProjectHash">
 ) {
   const {
-    queryAPI,
     projectHash,
-    metricsSummary,
+    dataMetricsSummary,
+    annotationMetricsSummary,
     featureHashMap,
     remoteProject,
     setSelectedProjectHash,
   } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
-  const { data: allPredictions } =
-    queryAPI.useProjectListPredictions(projectHash);
+  const { data: allPredictions } = useProjectListPredictions(projectHash);
+
   const allPredictionOptions = useMemo(
     () =>
       allPredictions?.results?.map((prediction) => ({
@@ -48,26 +49,32 @@ export function PredictionsTab(
   }, [predictionHash, allPredictionOptions]);
 
   // No prediction can be selected
-  if (allPredictionOptions != null && allPredictionOptions.length === 0 && predictionHash == null) {
-      return <Typography.Title>No Predictions for Active Project</Typography.Title>
+  if (
+    allPredictionOptions != null &&
+    allPredictionOptions.length === 0 &&
+    predictionHash == null
+  ) {
+    return (
+      <Typography.Title>No Predictions for Active Project</Typography.Title>
+    );
   }
 
   return (
     <>
-        {allPredictionOptions != null && allPredictionOptions.length > 1 ? (
-            <>
-                <Space align="center" wrap>
-                    <Typography.Text strong>Prediction: </Typography.Text>
-                    <Select
-                      value={predictionHash}
-                      options={allPredictionOptions ?? []}
-                      onChange={setPredictionHash}
-                      style={{width: 300}}
-                    />
-                </Space>
-                <Divider />
-            </>
-        ) : null}
+      {allPredictionOptions != null && allPredictionOptions.length > 1 ? (
+        <>
+          <Space align="center" wrap>
+            <Typography.Text strong>Prediction: </Typography.Text>
+            <Select
+              value={predictionHash}
+              options={allPredictionOptions ?? []}
+              onChange={setPredictionHash}
+              className="w-80"
+            />
+          </Space>
+          <Divider />
+        </>
+      ) : null}
       {predictionHash === undefined ? null : (
         <Tabs
           items={[
@@ -78,8 +85,7 @@ export function PredictionsTab(
                 <PredictionSummaryTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryAPI={queryAPI}
-                  metricsSummary={metricsSummary}
+                  metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
               ),
@@ -91,8 +97,7 @@ export function PredictionsTab(
                 <PredictionsMetricPerformanceTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryAPI={queryAPI}
-                  metricsSummary={metricsSummary}
+                  metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
               ),
@@ -103,10 +108,10 @@ export function PredictionsTab(
               children: (
                 <Explorer
                   projectHash={projectHash}
-                  scope={"prediction"}
+                  predictionHash={predictionHash}
                   featureHashMap={featureHashMap}
-                  metricsSummary={metricsSummary}
-                  queryAPI={queryAPI}
+                  dataMetricsSummary={dataMetricsSummary}
+                  annotationMetricsSummary={annotationMetricsSummary}
                   setSelectedProjectHash={setSelectedProjectHash}
                   remoteProject={remoteProject}
                 />

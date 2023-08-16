@@ -5,9 +5,10 @@ from shapely.geometry import Polygon
 
 from encord_active.analysis.metric import (
     MetricDependencies,
+    MetricResultOptionalAnnotation,
     TemporalObjectByFrameMetric,
 )
-from encord_active.analysis.types import AnnotationMetadata, MetricResult
+from encord_active.analysis.types import AnnotationMetadata
 from encord_active.db.metrics import MetricType
 from encord_active.lib.common.utils import get_polygon
 
@@ -37,9 +38,9 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
         annotation_deps: dict[str, MetricDependencies],
         prev_annotations: Optional[Dict[str, AnnotationMetadata]],
         next_annotations: Optional[Dict[str, AnnotationMetadata]],
-    ) -> Dict[str, MetricResult]:
+    ) -> Dict[str, MetricResultOptionalAnnotation]:
         # FIXME: implement properly
-        annotation_res: Dict[str, MetricResult] = {}
+        annotation_res: Dict[str, MetricResultOptionalAnnotation] = {}
         if prev_annotations is None or next_annotations is None:
             return {annotation_hash: 1.0 for annotation_hash in annotations.keys()}
         for next_annotation_hash, next_annotation_meta in next_annotations.items():

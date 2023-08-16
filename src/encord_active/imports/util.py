@@ -3,8 +3,11 @@ from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Union
 
 import cv2
+import numpy as np
 import pytz
 import torch
+from encord.objects import Object
+from pycocotools import mask
 from torchvision.ops import masks_to_boxes
 
 from encord_active.db.enums import AnnotationType
@@ -19,15 +22,26 @@ def get_timestamp():
     return new_timezone_timestamp.strftime(DATETIME_STRING_FORMAT)
 
 
+_name_key_overrides: Dict[AnnotationType, str] = {
+    AnnotationType.BOUNDING_BOX: "boundingBox",
+    AnnotationType.ROTATABLE_BOUNDING_BOX: "rotatableBoundingBox",
+}
+
+
 def append_object_to_list(
     object_list: List[dict],
     annotation_type: AnnotationType,
     shape_data_list: Sequence[Union[Dict[str, float], Dict[str, Dict[str, float]], str]],
-    ontology_object,
+    ontology_object: Object,
     confidence: Optional[float],
     object_hash: Optional[str],
+    email: str = "coco-import@encord.com",
 ) -> None:
     timestamp: str = get_timestamp()
+    if AnnotationType(ontology_object.shape.value.lower()) != annotation_type:
+        raise ValueError(
+            f"Inconsistent generated encord ontology: {AnnotationType(ontology_object.shape)} != {annotation_type}"
+        )
     for shape_data_entry in shape_data_list:
         object_list.append(
             {
@@ -35,23 +49,21 @@ def append_object_to_list(
                 "color": ontology_object.color,
                 "value": "_".join(ontology_object.name.lower().split()),
                 "createdAt": timestamp,
-                "createdBy": "robot@encord.com",
+                "createdBy": email,
                 "confidence": confidence or 1.0,
                 "objectHash": object_hash or str(uuid.uuid4())[:8],
                 "featureHash": ontology_object.feature_node_hash,
                 "lastEditedAt": timestamp,
-                "lastEditedBy": "robot@encord.com",
+                "lastEditedBy": email,
                 "shape": str(annotation_type),
                 "manualAnnotation": False,
                 "reviews": [],
-                str(annotation_type): shape_data_entry,
+                str(_name_key_overrides.get(annotation_type, annotation_type)): shape_data_entry,
             }
         )
 
 
 def coco_str_to_bitmask(rle: str, width: int, height: int) -> torch.Tensor:
-    from pycocotools import mask
-
     bitmask = mask.decode({"counts": rle, "size": [width, height]})
     tensor = torch.from_numpy(bitmask)
     return tensor.T  # Convert to height, width format
@@ -69,7 +81,10 @@ def bitmask_to_bounding_box(bitmask: torch.Tensor) -> Dict[str, float]:
 
 
 def bitmask_to_rotatable_bounding_box(bitmask: torch.Tensor) -> Dict[str, float]:
-    raise ValueError
+    print("WARNING: Bitmask to rot bb conversion is not currently supported - useing bb conversion")
+    bb = bitmask_to_bounding_box(bitmask)
+    bb["theta"] = 0
+    return bb
 
 
 def bitmask_to_polygon(bitmask: torch.Tensor) -> List[Dict[str, Dict[str, float]]]:
@@ -89,12 +104,22 @@ def bitmask_to_polygon(bitmask: torch.Tensor) -> List[Dict[str, Dict[str, float]
     return poly_dict_list
 
 
-def bitmask_to_encord_str(bitmask: torch.Tensor) -> str:
-    from pycocotools import mask
-
+def bitmask_to_encord_dict(bitmask: torch.Tensor) -> dict:
     res = mask.encode(bitmask.T.numpy())
-    return res["counts"].decode("utf-8")
+
+    return {
+        "rleString": res["counts"].decode("utf-8"),
+        "width": res["size"][0],
+        "height": res["size"][1],
+        "top": 0,
+        "left": 0,
+    }
 
 
 def polygon_to_bitmask(polygon: Dict[str, Dict[str, float]], width: int, height: int) -> torch.Tensor:
-    raise ValueError
+    raw_mask = np.zeros((width, height), dtype=np.uint8)
+    raw_points = np.array(
+        [[float(polygon[str(i)]["x"]) * width, float(polygon[str(i)]["y"]) * height] for i in range(len(polygon))]
+    ).astype(np.int32)
+    cv2.fillPoly(raw_mask, [raw_points], 1)
+    return torch.tensor(raw_mask).bool()

@@ -1,14 +1,13 @@
 import { Form, Input, Modal } from "antd";
-import { QueryAPI } from "../../Types";
+import { useProjectMutationUploadToEncord } from "../../../hooks/mutation/useProjectMutationUploadToEncord";
 
 export function UploadToEncordModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
   setSelectedProjectHash: (key: string | undefined) => void;
-  queryAPI: QueryAPI;
 }) {
-  const { open, close, projectHash, queryAPI, setSelectedProjectHash } = props;
+  const { open, close, projectHash, setSelectedProjectHash } = props;
   const [form] = Form.useForm<{
     dataset_title: string;
     dataset_description?: string | undefined;
@@ -18,10 +17,7 @@ export function UploadToEncordModal(props: {
     ontology_description?: string | undefined;
   }>();
 
-  const mutateCreateSubset = queryAPI.useProjectMutationUploadToEncord(
-    projectHash,
-    { onSuccess: close, onSettled: setSelectedProjectHash }
-  );
+  const mutateCreateSubset = useProjectMutationUploadToEncord(projectHash);
 
   return (
     <Modal
@@ -31,17 +27,18 @@ export function UploadToEncordModal(props: {
       onCancel={close}
       okButtonProps={{
         loading: mutateCreateSubset.isLoading,
-        style: { backgroundColor: "#5555ff" }
+        style: { backgroundColor: "#5555ff" },
       }}
       cancelButtonProps={{ disabled: mutateCreateSubset.isLoading }}
       onOk={() => {
         form
           .validateFields()
           .then((fields) =>
-            mutateCreateSubset.mutate({
+            mutateCreateSubset.mutateAsync({
               ...fields,
             })
           )
+          .then((a) => setSelectedProjectHash(a.data))
           .catch(() => undefined);
       }}
     >

@@ -1,0 +1,37 @@
+# Files we don't want prettier to format for us (initially lifted from .gitignore)
+.git-blame-ignore-revs
+# File formats
+*.sh
+*.svg
+*.png
+*.ico
+*.py
+
+.nvmrc
+.env
+.idea
+
+# Self
+.prettierignore
+.gitignore
+.npmrc
+
+
+# CI pipelines
+.github/
+gha-creds-*.json
+
+# Firebase cache dir
+.firebase/
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Build & Text
+/coverage
+/build
+/dist
+.env.*
+/node_modules/

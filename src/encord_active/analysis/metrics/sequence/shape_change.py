@@ -12,7 +12,7 @@ from encord_active.db.metrics import MetricType
 class TemporalShapeChange(TemporalOneObjectMetric):
     def __init__(self):
         super().__init__(
-            ident="metric_label_poly_similarity",
+            ident="metric_polygon_similarity",
             long_name="Shape Outlier",
             desc="",
             metric_type=MetricType.NORMAL,

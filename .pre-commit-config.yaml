@@ -1,6 +1,27 @@
 repos:
   - repo: local
     hooks:
+      - id: prettier
+        name: prettier
+        entry: python pre-commit-npm.py run prettier:fix
+        types_or: [javascript, json]
+        language: system
+        pass_filenames: false
+
+      - id: eslint
+        name: eslint
+        entry: python pre-commit-npm.py run lint:es:fix
+        types_or: [javascript, json]
+        language: system
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc
+        entry: python pre-commit-npm.py run tsc
+        types_or: [javascript, json]
+        language: system
+        pass_filenames: false
+
       - id: black
         name: black
         entry: poetry run black --config=pyproject.toml

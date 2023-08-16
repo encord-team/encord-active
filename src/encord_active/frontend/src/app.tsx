@@ -1,59 +1,39 @@
-import { Alert } from "antd";
-import { useState } from "react";
-import { useAuth } from "./authContext";
-import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
+import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
+import { Navigate, Route, Routes, useNavigate } from "react-router";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
-import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
-import { Spinner } from "./components/explorer/Spinner";
 
-export const App = () => {
-  const { data: projects, isLoading, error } = useProjectsList();
-  const [selectedProjectHash, setSelectedProjectHash] = useState<
-    string | undefined
-  >();
-  const { token } = useAuth();
-  const queryAPI = useIntegratedAPI(token, projects ?? {});
+export function App() {
+  // FIXME: make variable conditionally loaded from parent
+  const encordDomain = "https://app.encord.com";
 
-  if (isLoading)
-    return (
-      <div className="w-full h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
-  if (error?.response && "detail" in error.response?.data)
-    return (
-      <Alert
-        message={`${error.response.statusText} - ${error?.response.data.detail}`}
-        type="error"
-      />
-    );
-
-  if (!projects) throw "something bad happened";
-
-  const projectList = Object.values(projects);
+  const navigate = useNavigate();
+  const selectProject = (projectHash?: string) =>
+    navigate(projectHash ? `/projects/${projectHash}` : "/");
 
   return (
-    <div className="p-12 bg-white">
-      {selectedProjectHash ? (
-        <ErrorBoundary
-          message={
-            "An error occurred rendering the project: " + selectedProjectHash
-          }
-        >
-          <ProjectPage
-            queryAPI={queryAPI}
-            projectHash={selectedProjectHash}
-            projects={Object.values(projects)}
-            setSelectedProjectHash={setSelectedProjectHash}
-          />
-        </ErrorBoundary>
-      ) : (
-        <ProjectsPage
-          projects={projectList}
-          onSelectLocalProject={setSelectedProjectHash}
+    <div className="bg-white p-12">
+      <Routes>
+        <Route
+          path="/"
+          element={<ProjectsPage onSelectLocalProject={selectProject} />}
         />
-      )}
+        <Route
+          path="/projects/:projectHash"
+          element={<Navigate to="./summary" replace />}
+        />
+        <Route
+          path="/projects/:projectHash/:tab/:previewItem?"
+          element={
+            <ErrorBoundary message="An error occurred rendering the project">
+              <ProjectPage
+                encordDomain={encordDomain}
+                setSelectedProjectHash={selectProject}
+              />
+            </ErrorBoundary>
+          }
+        />
+      </Routes>
     </div>
   );
-};
+}

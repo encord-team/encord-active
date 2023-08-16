@@ -23,7 +23,7 @@ class ImageUniqueness(DerivedMetric):
         if annotation is not None:
             return None
         # FIXME: validate normalisation of this value (is 1.0 distance clamp reasonable??)
-        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
+        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest_cosine"])
         if len(nearest_neighbours.similarities) == 0:
             return 1.0
         else:

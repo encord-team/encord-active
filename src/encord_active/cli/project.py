@@ -4,9 +4,12 @@ from typing import Optional
 
 import rich
 import typer
+from encord import EncordUserClient
+from encord.http.constants import RequestsSettings
 from rich.panel import Panel
 from tqdm import tqdm
 
+from encord_active.cli.app_config import app_config
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
     TYPER_SELECT_PREDICTION_NAME,
@@ -14,7 +17,6 @@ from encord_active.cli.common import (
     select_prediction_hash_from_name,
     select_project_hash_from_name,
 )
-from encord_active.lib.encord.utils import get_encord_project
 
 project_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -42,10 +44,12 @@ def download_data(
         if project is None:
             raise ValueError(f"Project with hash: {project_hash} does not exist")
         encord_project = None
-        if project.project_remote_ssh_key_path is not None:
-            encord_project = get_encord_project(
-                ssh_key_path=project.project_remote_ssh_key_path, project_hash=str(project_hash)
+        if project.remote:
+            encord_client = EncordUserClient.create_with_ssh_private_key(
+                app_config.get_or_query_ssh_key().read_text("utf-8"),
+                requests_settings=RequestsSettings(max_retries=5),
             )
+            encord_project = encord_client.get_project(str(project_hash))
         to_download = sess.exec(
             select(ProjectDataUnitMetadata).where(
                 ProjectDataUnitMetadata.project_hash == project_hash,
@@ -163,3 +167,29 @@ def delete_project(
                 style="green",
             )
         )
+
+
+@project_cli.command("serialize")
+def serialize_project(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    export_folder_name: str = typer.Option(
+        None,
+        "--export_folder-name",
+        "-e",
+        help="Export folder name",
+    ),
+) -> None:
+    """
+    Serialize the whole project state
+    """
+    from encord_active.db.models import get_engine
+    from encord_active.exports.serialize import serialize_whole_project_state
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+
+    export_folder = Path.cwd() / (export_folder_name if export_folder_name is not None else f"export-{project_hash}")
+    serialize_whole_project_state(engine, database_dir, project_hash, export_folder)

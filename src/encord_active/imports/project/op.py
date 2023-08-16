@@ -26,6 +26,7 @@ from encord_active.db.models import (
     ProjectDataAnalyticsReduced,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectEmbeddingIndex,
     ProjectImportMetadata,
     ProjectPrediction,
 )
@@ -39,7 +40,7 @@ class ProjectImportSpec:
     project_du_list: List[ProjectDataUnitMetadata]
 
 
-def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec) -> None:
+def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec, ssh_key: str) -> None:
     """
     Imports a project-spec into active.
     """
@@ -60,19 +61,27 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         [],
         database_dir,
         project_hash,
-        project.project.project_remote_ssh_key_path,
+        ssh_key if project.project.remote else None,
     )
-    data_analytics, data_analytics_extra, annotation_analytics, annotation_analytics_extra, new_collaborators = res
+    (
+        data_analytics,
+        data_analytics_extra,
+        data_analytics_derived,
+        annotation_analytics,
+        annotation_analytics_extra,
+        annotation_analytics_derived,
+        new_collaborators,
+    ) = res
 
     # Execute embedding reduction.
     reduction_total_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = []
     reduction_total_samples.extend(data_analytics_extra)
     reduction_total_samples.extend(annotation_analytics_extra)
     reduction_train_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = random.choices(
-        reduction_total_samples, k=min(len(reduction_total_samples), 10_000)
+        reduction_total_samples, k=min(len(reduction_total_samples), 50_000)
     )
     reduction_train_samples.sort(
-        key=lambda x: (x.du_hash, x.frame, x.object_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
+        key=lambda x: (x.du_hash, x.frame, x.annotation_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
     )
     reduction = create_reduction(
         EmbeddingReductionType.UMAP,
@@ -110,35 +119,48 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
             project_hash=project_hash,
             du_hash=extra.du_hash,
             frame=extra.frame,
-            object_hash=extra.object_hash,
+            annotation_hash=extra.annotation_hash,
             x=x,
             y=y,
         )
         for (extra, (x, y)) in zip(annotation_analytics_extra, reduced_annotation_clip_raw)
     ]
 
+    embedding_index = ProjectEmbeddingIndex(
+        project_hash=project_hash,
+        data_index_dirty=True,
+        data_index_name=None,
+        data_index_compiled=None,
+        annotation_index_dirty=True,
+        annotation_index_name=None,
+        annotation_index_compiled=None,
+    )
+
     # Populate the database.
     with Session(engine) as sess:
-        sess.add(project.project)
-        if project.project_import_meta is not None:
-            sess.add(project.project_import_meta)
-        sess.add_all(project.project_data_list)
-        sess.add_all(project.project_du_list)
-        sess.add_all(new_collaborators)
-        sess.add(project_reduction)
-        sess.commit()
-        sess.add_all(data_analytics)
-        sess.add_all(data_analytics_extra)
-        sess.add_all(annotation_analytics)
-        sess.add_all(annotation_analytics_extra)
-        sess.add_all(reduced_data_clip)
-        sess.add_all(reduced_annotation_clip)
-        sess.commit()
+        with sess.begin():
+            sess.bulk_save_objects([project.project])
+            if project.project_import_meta is not None:
+                sess.add(project.project_import_meta)
+            sess.bulk_save_objects(project.project_data_list)
+            sess.bulk_save_objects(project.project_du_list)
+            sess.bulk_save_objects(new_collaborators)
+            sess.bulk_save_objects([project_reduction])
+            sess.bulk_save_objects([embedding_index])
+            sess.add_all(data_analytics)
+            sess.add_all(data_analytics_extra)
+            sess.add_all(data_analytics_derived)
+            sess.add_all(annotation_analytics)
+            sess.add_all(annotation_analytics_extra)
+            sess.add_all(annotation_analytics_derived)
+            sess.add_all(reduced_data_clip)
+            sess.add_all(reduced_annotation_clip)
 
 
 def refresh_project(
     engine: Engine,
     database_dir: Path,
+    ssh_key: str,
     upsert: ProjectImportSpec,
     force: bool = False,
 ) -> bool:
@@ -225,16 +247,24 @@ def refresh_project(
         collaborators=collaborators,
         database_dir=database_dir,
         project_hash=project_hash,
-        project_ssh_path=upsert.project.project_remote_ssh_key_path,
+        project_ssh_key=ssh_key if upsert.project.remote else None,
     )
-    data_analysis_new, data_analysis_new_extra, annotate_analysis_new, annotate_analysis_new_extra, collab_new = res
+    (
+        data_analysis_new,
+        data_analysis_new_extra,
+        data_analysis_new_derived,
+        annotate_analysis_new,
+        annotate_analysis_new_extra,
+        annotation_analysis_new_derived,
+        collab_new,
+    ) = res
 
     with Session(engine) as sess:
         # Sync collab & project metadata
         sess.add_all(collab_new)
-        existing_project.project_ontology = upsert.project.project_ontology
-        existing_project.project_name = upsert.project.project_name
-        existing_project.project_description = upsert.project.project_description
+        existing_project.ontology = upsert.project.ontology
+        existing_project.name = upsert.project.name
+        existing_project.description = upsert.project.description
         sess.add(existing_project)
         sess.commit()
 

@@ -23,7 +23,7 @@ load_dotenv()
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
 import encord_active.db.models as __fixme_debugging
 import encord_active.lib.db  # pylint: disable=unused-import
-from encord_active.cli.app_config import APP_NAME
+from encord_active.cli.app_config import APP_NAME, app_config
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
@@ -407,11 +407,9 @@ def refresh(
         from encord_active.imports.op import refresh_encord_project
 
         project_hash = select_project_hash_from_name(database_dir, project_name or "")
+        ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
         changes = refresh_encord_project(
-            database_dir=database_dir,
-            encord_project_hash=project_hash,
-            include_unlabeled=include_unlabeled,
-            force=force,
+            database_dir=database_dir, encord_project_hash=project_hash, include_unlabeled=include_unlabeled, force=force, ssh_key=ssh_key
         )
     except Exception as e:
         rich.print(f"[red]ERROR: The data sync failed. Log: {e}.")

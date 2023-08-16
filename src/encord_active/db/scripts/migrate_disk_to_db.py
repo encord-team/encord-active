@@ -10,7 +10,7 @@ from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
 from sqlmodel import Session
 
-from encord_active.db.enums import annotation_type_from_str
+from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataAnnotationSharedMetrics,
@@ -19,7 +19,6 @@ from encord_active.db.metrics import (
     MetricType,
 )
 from encord_active.db.models import (
-    AnnotationType,
     EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
@@ -82,10 +81,10 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Area - Absolute": "metric_area",
     "Object Area - Relative": "metric_area_relative",
     "Object Aspect Ratio": "metric_aspect_ratio",
-    "Polygon Shape Similarity": "metric_label_poly_similarity",
+    "Polygon Shape Similarity": "metric_polygon_similarity",
     "Random Values on Objects": "metric_random",
     "Image-level Annotation Quality": "metric_annotation_quality",
-    "Shape outlier detection": "metric_label_shape_outlier",
+    "Shape outlier detection": "metric_shape_outlier",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.
@@ -143,7 +142,7 @@ def _assign_metrics(
             # more complete. As had to increase the value from 1020
             # due to larger values being returned from the metric.
             score = math.sqrt(score) / (8.0 * 255.0)
-        elif metric_column_name == "metric_label_shape_outlier":
+        elif metric_column_name == "metric_shape_outlier":
             # NOTE: guesswork, not based on any analysis of hu moments
             score = score / 10000.0
             pass
@@ -264,7 +263,7 @@ def _load_embeddings_2d(
                             project_hash=project_hash,
                             du_hash=du_hash,
                             frame=frame,
-                            object_hash=annotation_hash,
+                            annotation_hash=annotation_hash,
                             reduction_hash=reduction_hash,
                             x=x,
                             y=y,
@@ -301,10 +300,10 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
     else:
 
         def confidence_compare_key(m_obj: ProjectPredictionAnalytics):
-            return m_obj.metric_confidence, m_obj.iou, m_obj.object_hash
+            return m_obj.metric_confidence, m_obj.iou, m_obj.annotation_hash
 
         def iou_compare_key(m_obj: ProjectPredictionAnalytics) -> Tuple[float, float, str]:
-            return m_obj.iou, m_obj.metric_confidence, m_obj.object_hash
+            return m_obj.iou, m_obj.metric_confidence, m_obj.annotation_hash
 
         # Consider each candidate in confidence order:
         # max-confidence: always the TP if it matches (if iou is valid and hence not null)
@@ -419,7 +418,7 @@ def __prediction_iou_bound_false_negative(
         prediction_hash=prediction_hash,
         du_hash=du_hash,
         frame=frame,
-        object_hash=annotation_hash,
+        annotation_hash=annotation_hash,
         iou_threshold=iou_threshold,
         **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
     )
@@ -704,7 +703,7 @@ def __migrate_predictions(
                 prediction_hash=prediction_hash,
                 du_hash=du_hash,
                 frame=frame,
-                object_hash=object_hash,
+                annotation_hash=object_hash,
                 # Prediction metadata
                 project_hash=project_hash,
                 feature_hash=feature_hash,
@@ -712,7 +711,7 @@ def __migrate_predictions(
                 iou=iou,
                 annotation_type=annotation_type,
                 # Ground truth match metadata
-                match_object_hash=match_object_hash,
+                match_annotation_hash=match_object_hash,
                 match_feature_hash=match_feature_hash,
                 match_duplicate_iou=_PREDICTION_MATCH_IOU_ALWAYS_FP,  # Never match, overriden if match_object_hash is set.
                 # Metrics
@@ -725,7 +724,7 @@ def __migrate_predictions(
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=object_hash,
+                    annotation_hash=object_hash,
                     # Extra annotation
                     annotation_bytes=annotation_array.tobytes(),
                 )
@@ -774,7 +773,7 @@ def __migrate_predictions(
                 prediction_hash=prediction_hash,
                 du_hash=missing_du_hash,
                 frame=missing_frame,
-                object_hash=missing_annotation_hash,
+                annotation_hash=missing_annotation_hash,
                 iou_threshold=-1.0,  # Always a false negative
                 **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
             )
@@ -814,10 +813,10 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
         ontology_dict = json.loads(pfs.ontology.read_text(encoding="utf-8"))
         project = Project(
             project_hash=project_hash,
-            project_name=project_meta["project_title"],
-            project_description=project_meta.get("project_description", ""),
-            project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
-            project_ontology=ontology_dict,
+            name=project_meta["project_title"],
+            description=project_meta.get("project_description", ""),
+            remote=project_meta.get("has_remote", False),
+            ontology=ontology_dict,
         )
         valid_classify_child_feature_hashes = __list_valid_child_feature_hashes(ontology_dict)
         label_rows = conn.labelrow.find_many(
@@ -879,7 +878,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                             f"Duplicate object_hash={object_hash} in du_hash={du_hash}, frame={data_unit.frame}"
                         )
                     object_hashes_seen.add(object_hash)
-                    annotation_type = annotation_type_from_str(str(obj["shape"]))
+                    annotation_type = AnnotationType(str(obj["shape"]))  # type: ignore
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,
@@ -946,7 +945,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                 raise ValueError(
                     f"Validation failure: prisma db missed data units for label row: \n"
                     f"For: {project_data_meta.label_hash}/{expected_data_units}\n"
-                    f"Label row JSON: {project_data_meta.label_row_json}\n"
+                    f"Label row JSON: {project_data_meta}\n"
                     f"Prisma DB State: {label_row}\n"
                 )
             project_data_meta.frames_per_second = fps
@@ -993,7 +992,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                         project_hash=project_hash,
                         du_hash=du_hash,
                         frame=frame,
-                        object_hash=object_hash_opt,
+                        annotation_hash=object_hash_opt,
                         tag_hash=tag_uuid,
                     )
                 )
@@ -1038,7 +1037,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                                 project_hash=project_hash,
                                 du_hash=du_hash,
                                 frame=frame,
-                                object_hash=annotation_hash,
+                                annotation_hash=annotation_hash,
                                 tag_hash=tag_uuid,
                             )
                         )
@@ -1186,7 +1185,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
-            object_hash=object_hash,
+            annotation_hash=object_hash,
             **assert_valid_args(ProjectAnnotationAnalytics, metrics),
         )
         for (du_hash, frame, object_hash), metrics in annotation_metrics.items()
@@ -1197,7 +1196,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
-            object_hash=object_hash,
+            annotation_hash=object_hash,
             metric_metadata=metric_metadata,
             **assert_valid_args(ProjectAnnotationAnalyticsExtra, embeddings),
         )

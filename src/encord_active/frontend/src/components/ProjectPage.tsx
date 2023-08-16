@@ -1,45 +1,48 @@
-import { useEffect, useMemo, useState } from "react";
-import { Tabs } from "antd";
+import { useEffect, useMemo } from "react";
+import { Spin, Tabs } from "antd";
+import { useNavigate, useParams } from "react-router";
 import {
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
-  QueryAPI,
+  ProjectOntology,
 } from "./Types";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
-import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
-import { getApi, ApiContext } from "./explorer/api";
-import { useAuth } from "../authContext";
-import { Spinner } from "./explorer/Spinner";
+import { loadingIndicator } from "./Spin";
+import { useProjectSummary } from "../hooks/queries/useProjectSummary";
+import { useProjectHash } from "../hooks/useProjectHash";
 
 export function ProjectPage(props: {
-  queryAPI: QueryAPI;
-  projectHash: string;
-  editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
-  projects: readonly IntegratedProjectMetadata[];
 }) {
-  const {
-    queryAPI,
-    projectHash,
-    projects,
-    setSelectedProjectHash: setSelectedProject,
-  } = props;
-  const [activeTab, setActiveTab] = useState<string>("1");
-  const { data: projectSummary, isError } =
-    queryAPI.useProjectSummary(projectHash);
+  const projectHash = useProjectHash();
+  const { setSelectedProjectHash, encordDomain } = props;
+
+  const navigate = useNavigate();
+  const { tab } = useParams();
+
+  if (!tab) {
+    throw Error("Missing `tab` path parameter");
+  }
+
+  const { data: projectSummary, isError } = useProjectSummary(projectHash);
+
+  const editUrl =
+    projectSummary === undefined || projectSummary.local_project
+      ? undefined
+      : (dataHash: string, projectHash: string, frame: number): string =>
+          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
     if (isError) {
-      setSelectedProject(undefined);
+      setSelectedProjectHash(undefined);
     }
-  }, [isError]);
+  }, [isError, setSelectedProjectHash]);
 
   const featureHashMap = useMemo(() => {
     const featureHashMap: Record<
@@ -51,7 +54,7 @@ export function ProjectPage(props: {
     }
     const procAttribute = (
       a: OntologyObjectAttribute | OntologyObjectAttributeOptions,
-      color: string,
+      color: string
     ) => {
       if ("name" in a) {
         featureHashMap[a.featureNodeHash] = {
@@ -71,7 +74,9 @@ export function ProjectPage(props: {
         }
       }
     };
-    projectSummary.ontology.objects.forEach((o) => {
+    const ontology: ProjectOntology =
+      projectSummary.ontology as ProjectOntology;
+    ontology.objects.forEach((o) => {
       featureHashMap[o.featureNodeHash] = {
         color: o.color,
         name: o.name ?? o.featureNodeHash,
@@ -80,7 +85,7 @@ export function ProjectPage(props: {
         o.attributes.forEach((a) => procAttribute(a, o.color));
       }
     });
-    projectSummary.ontology.classifications.forEach((o) => {
+    ontology.classifications.forEach((o) => {
       featureHashMap[o.featureNodeHash] = {
         color: o.color,
         name: o.name ?? o.featureNodeHash,
@@ -92,12 +97,9 @@ export function ProjectPage(props: {
     return featureHashMap;
   }, [projectSummary]);
 
-  const { token } = useAuth();
-  const api = getApi(projectHash, token);
-
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
-    return <Spinner />;
+    return <Spin indicator={loadingIndicator} />;
   }
 
   const remoteProject = !projectSummary.local_project;
@@ -106,20 +108,17 @@ export function ProjectPage(props: {
     <Tabs
       tabBarExtraContent={
         <ProjectSelector
-          projects={projects}
           selectedProjectHash={projectHash}
-          onViewAllProjects={() => setSelectedProject(undefined)}
-          onSelectedProjectChange={setSelectedProject}
+          setSelectedProjectHash={setSelectedProjectHash}
         />
       }
       items={[
         {
           label: "Summary",
-          key: "1",
+          key: "summary",
           children: (
             <SummaryView
               projectHash={projectHash}
-              queryAPI={queryAPI}
               projectSummary={projectSummary}
               featureHashMap={featureHashMap}
             />
@@ -127,53 +126,48 @@ export function ProjectPage(props: {
         },
         {
           label: "Explorer",
-          key: "2",
+          key: "explorer",
           children: (
-            <ApiContext.Provider value={api}>
-              <Explorer
-                projectHash={projectHash}
-                metricsSummary={projectSummary.global}
-                scope={"data"}
-                queryAPI={queryAPI}
-                featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProject}
-                remoteProject={remoteProject}
-                /* metricRanges={projectSummary.data?.metrics} */
-              />
-            </ApiContext.Provider>
+            <Explorer
+              projectHash={projectHash}
+              predictionHash={undefined}
+              dataMetricsSummary={projectSummary.data}
+              annotationMetricsSummary={projectSummary.annotation}
+              editUrl={editUrl}
+              featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProjectHash}
+              remoteProject={remoteProject}
+            />
           ),
         },
         {
           label: "Predictions",
-          key: "3",
+          key: "predictions",
           children: (
-            <ApiContext.Provider value={api}>
-              <PredictionsTab
-                projectHash={projectHash}
-                queryAPI={queryAPI}
-                metricsSummary={projectSummary.annotations}
-                featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProject}
-                remoteProject={remoteProject}
-              />
-            </ApiContext.Provider>
+            <PredictionsTab
+              projectHash={projectHash}
+              annotationMetricsSummary={projectSummary.annotation}
+              dataMetricsSummary={projectSummary.data}
+              featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProjectHash}
+              remoteProject={remoteProject}
+            />
           ),
         },
         {
           label: "Project Comparison",
-          key: "4",
+          key: "comparison",
           children: (
             <ProjectComparisonTab
               projectHash={projectHash}
-              queryAPI={queryAPI}
               dataMetricsSummary={projectSummary.data}
-              annotationMetricsSummary={projectSummary.annotations}
+              annotationMetricsSummary={projectSummary.annotation}
             />
           ),
         },
       ]}
-      activeKey={activeTab}
-      onChange={setActiveTab}
+      activeKey={tab}
+      onChange={(key) => navigate(`../${key}`, { relative: "path" })}
     />
   );
 }

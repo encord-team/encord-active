@@ -1,18 +1,21 @@
 import functools
-import math
 import uuid
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
-from sqlalchemy import func
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
-from encord_active.server.routers.project2_engine import engine
+from encord_active.server.dependencies import (
+    DataOrAnnotateItem,
+    dep_engine_readonly,
+    parse_data_or_annotate_item,
+)
 from encord_active.server.routers.queries import (
     metric_query,
     search_query,
@@ -49,11 +52,29 @@ def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
         return TABLES_ANNOTATION
 
 
+def _pack_id(du_hash: uuid.UUID, frame: int, annotation_hash: Optional[str] = None) -> str:
+    if annotation_hash is None:
+        return f"{du_hash}_{frame}"
+    else:
+        return f"{du_hash}_{frame}_{annotation_hash}"
+
+
+def _unpack_id(ident: str) -> Tuple[uuid.UUID, int, Optional[str]]:
+    values = ident.split("_")
+    if len(values) == 2:
+        du_hash_str, frame_str = values
+        annotation_hash = None
+    else:
+        du_hash_str, frame_str, annotation_hash = values
+    return uuid.UUID(du_hash_str), int(frame_str), annotation_hash
+
+
 @router.get("/summary")
-def metric_summary(
+def route_project_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QuerySummary:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -67,37 +88,30 @@ def metric_summary(
         )
 
 
-class AnalysisSearchEntry(BaseModel):
-    du_hash: uuid.UUID
-    frame: int
-    annotation_hash: Optional[str] = None
-
-
 class AnalysisSearch(BaseModel):
     truncated: bool
-    results: List[AnalysisSearchEntry]
+    results: List[str]
 
 
 @router.get("/search")
-def metric_search(
+def route_project_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     order_by: Optional[str] = None,
     desc: bool = False,
-    offset: int = 0,
-    limit: int = 1000,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(1000, le=1000),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
-    base_table = tables.annotation or tables.data
+    base_table = tables.primary
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",  # FIXME: this should select the best base table (reduction if no analytics filters)
+        base=base_table.analytics,
         search=filters,
         project_filters={"project_hash": [project_hash]},
     )
-    print(f"Filter debugging =>: {filters}")
-    print(f"Where debugging =>: {where}")
 
     with Session(engine) as sess:
         query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
@@ -106,33 +120,31 @@ def metric_search(
             if order_by in base_table.metrics or order_by in base_table.enums:
                 order_by_attr = getattr(base_table.analytics, order_by)
                 if desc:
-                    order_by_attr.desc()
+                    order_by_attr = order_by_attr.desc()
                 query = query.order_by(order_by_attr)
 
         # + 1 to detect truncation.
         query = query.offset(offset).limit(limit + 1)
-        print(f"DEBUGGING: {query}")
         search_results = sess.exec(query).fetchall()
 
-    truncated = len(search_results) == limit + 1
-
     return AnalysisSearch(
-        truncated=truncated,
+        truncated=len(search_results) == limit + 1,
         results=[
-            AnalysisSearchEntry(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
-            for result in search_results[:-1]
+            _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
+            for result in search_results[:limit]
         ],
     )
 
 
 @router.get("/scatter")
-def scatter_2d_data_metric(
+def route_project_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     x_metric: str,
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(1000),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryScatter:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -148,12 +160,13 @@ def scatter_2d_data_metric(
 
 
 @router.get("/distribution")
-def get_metric_distribution(
+def route_project_distribution(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryDistribution:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -169,98 +182,69 @@ def get_metric_distribution(
         )
 
 
-class Query2DEmbedding(BaseModel):
-    count: int
-    embeddings2d: List[metric_query.QueryScatter]
-
-
-@router.get("/2d_embeddings/{reduction_hash}/summary")
-def get_2d_embedding_summary(
+@router.get("/reductions/{reduction_hash}/summary")
+def route_project_reduction_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-) -> Query2DEmbedding:
+    engine: Engine = Depends(dep_engine_readonly),
+) -> metric_query.Query2DEmbedding:
     tables = _get_metric_domain_tables(domain)
-    domain_tables = tables.annotation or tables.data
-    # FIXME: reduction_hash search filters will not work as they are on the wrong reduction_hash.
-    #  Will work correctly IFF reduction hash filtering only happens on the same reduction hash
-    where = search_query.search_filters(
-        tables=tables,
-        base="reduction",
-        search=filters,
-        project_filters={
-            "project_hash": [project_hash],
-        },
-    )
     with Session(engine) as sess:
-        round_digits = None if buckets is None else int(math.log10(buckets))
-        query = (
-            select(  # type: ignore
-                func.round(domain_tables.reduction.x, round_digits),
-                func.round(domain_tables.reduction.y, round_digits),
-                func.count(),
-            )
-            .where(
-                domain_tables.reduction.reduction_hash == reduction_hash,
-                *where,
-            )
-            .group_by(
-                func.round(domain_tables.reduction.x, round_digits),
-                func.round(domain_tables.reduction.y, round_digits),
-            )
+        return metric_query.query_reduction_scatter(
+            sess=sess,
+            tables=tables,
+            project_filters={"project_hash": [project_hash], "reduction_hash": [reduction_hash]},
+            buckets=buckets,
+            filters=filters,
         )
-        results = sess.exec(query)
-    return Query2DEmbedding(
-        count=sum(n for x, y, n in results),
-        embeddings2d=[metric_query.QueryScatter(x=x, y=y, n=n) for x, y, n in results],
-    )
 
 
 @functools.lru_cache(maxsize=2)
-def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> similarity_query.SimilarityQuery:
+def _get_similarity_query(
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    engine: Engine,
+) -> similarity_query.SimilarityQuery:
     tables = _get_metric_domain_tables(domain)
-    base_domain: DomainTables = tables.annotation or tables.data
+    base_domain: DomainTables = tables.primary
     with Session(engine) as sess:
-        query = select(
-            base_domain.metadata.embedding_clip,
-            *[getattr(base_domain.metadata, join_attr) for join_attr in base_domain.join],
-        ).where(
+        query = select(base_domain.metadata.embedding_clip, *base_domain.select_args(base_domain.metadata)).where(
             # FIXME: will break for nearest embedding on predictions
             base_domain.metadata.project_hash == project_hash,  # type: ignore
             is_not(base_domain.metadata.embedding_clip, None),
         )
         results = sess.exec(query).fetchall()
-    embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results]
-    return similarity_query.SimilarityQuery(embeddings, results)
+    embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results if e is not None]  # type: ignore
+    return similarity_query.SimilarityQuery(embeddings, [rest for _em, *rest in results])  # type: ignore
 
 
-@router.get("/similarity/{du_hash}/{frame}/{object_hash}")
-@router.get("/similarity/{du_hash}/{frame}/")
-def search_similarity(
+@router.get("/similarity/{item}")
+def route_project_similarity_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
-    du_hash: uuid.UUID,
-    frame: int,
-    embedding: str,
-    object_hash: Optional[str] = None,
-):
+    embedding: Literal["embedding_clip"],
+    similarity_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item),
+    engine: Engine = Depends(dep_engine_readonly),
+) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
-    base_domain = tables.annotation or tables.data
+    limit = 50
+    base_domain = tables.primary
     if embedding != "embedding_clip":
         raise ValueError("Unsupported embedding")
     join_attr_set = {
-        "du_hash": du_hash,
-        "frame": frame,
+        "du_hash": similarity_item.du_hash,
+        "frame": similarity_item.frame,
     }
-    if object_hash is not None:
-        join_attr_set["object_hash"] = object_hash
+    if similarity_item.annotation_hash is not None:
+        join_attr_set["annotation_hash"] = similarity_item.annotation_hash
+
     with Session(engine) as sess:
         src_embedding = sess.exec(
             select(base_domain.metadata.embedding_clip).where(
-                # FIXME: prediction needs separate join!
-                base_domain.metadata.project_hash == project_hash,  # type: ignore
+                base_domain.metadata.project_hash == project_hash,
                 *[
                     getattr(base_domain.metadata, join_attr) == join_attr_set[join_attr]
                     for join_attr in base_domain.join
@@ -270,8 +254,34 @@ def search_similarity(
         if src_embedding is None:
             raise ValueError("Source entry does not exist or missing embedding")
 
-    similarity_query_impl = _get_similarity_query(project_hash, domain)
-    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=50)
+        if engine.dialect.name == "postgresql":
+            pg_query = (
+                select(
+                    base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
+                    *base_domain.select_args(base_domain.metadata),
+                )
+                .where(
+                    base_domain.metadata.project_hash == project_hash,
+                    functools.reduce(
+                        lambda a, b: a | b,
+                        [
+                            getattr(base_domain.metadata, join_attr) != join_attr_set[join_attr]
+                            for join_attr in base_domain.join
+                        ],
+                    ),
+                )
+                .order_by("similarity")
+                .limit(limit)
+            )
+            pg_results = sess.exec(pg_query).fetchall()
+            return [
+                similarity_query.pack_similarity_result(tuple(similarity_item), similarity)  # type: ignore
+                for similarity, *similarity_item in pg_results
+            ]
+
+    # Return via fallback methods (sqlite & similar)
+    similarity_query_impl = _get_similarity_query(project_hash, domain, engine)
+    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=limit, item=similarity_item)
 
 
 class MetricDissimilarityResult(BaseModel):
@@ -279,13 +289,14 @@ class MetricDissimilarityResult(BaseModel):
 
 
 @router.get("/project_compare/metric_dissimilarity")
-def compare_metric_dissimilarity(
+def route_project_compare_metric_dissimilarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     compare_project_hash: uuid.UUID,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> MetricDissimilarityResult:
     tables = _get_metric_domain_tables(domain)
-    base_domain = tables.annotation or tables.data
+    base_domain = tables.primary
     dissimilarity = {}
     with Session(engine) as sess:
         for metric_name in base_domain.metrics.keys():

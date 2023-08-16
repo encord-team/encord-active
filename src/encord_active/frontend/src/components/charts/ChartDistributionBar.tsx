@@ -10,19 +10,22 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  ProjectAnalysisDomain, ProjectAnalysisSummary,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { formatTooltip } from "../util/Formatter";
+import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import {
+  AnalysisDomain,
+  ProjectCollaboratorEntry,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../openapi/api";
+import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 
 export function ChartDistributionBar(props: {
-  metricsSummary: ProjectMetricSummary;
-  analysisSummary?: undefined | ProjectAnalysisSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  analysisSummary?: undefined | QuerySummary;
+  analysisDomain: AnalysisDomain;
   projectHash: string;
-  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -30,7 +33,6 @@ export function ChartDistributionBar(props: {
 }) {
   const {
     projectHash,
-    queryAPI,
     metricsSummary,
     analysisSummary,
     analysisDomain,
@@ -39,38 +41,51 @@ export function ChartDistributionBar(props: {
   const [showQuartiles, setShowQuartiles] = useState(false);
 
   const allProperties = useMemo(() => {
-    const properties = Object.entries(metricsSummary.metrics).filter(
-        ([metricKey]) => {
-          if (analysisSummary == null) {
-            return true;
-          }
-          const value = analysisSummary.metrics[metricKey];
-          return value == null || value.count > 0;
+    const properties = Object.entries(metricsSummary.metrics)
+      .filter(([metricKey]) => {
+        if (analysisSummary == null) {
+          return true;
         }
-    ).map(
-      ([metricKey, metric]) => ({
-        label: metric.title,
-        value: metricKey,
+        const value = analysisSummary.metrics[metricKey];
+
+        return value == null || value.count > 0;
       })
-    );
-    Object.entries(metricsSummary.enums).forEach(([enumName, enumMeta]) => {
-      properties.push({
-        label: enumMeta.title,
-        value: enumName,
+      .map(([metricKey, metric]) => ({
+        label: metric?.title ?? metricKey,
+        value: metricKey,
+      }));
+    Object.entries(metricsSummary.enums)
+      .filter(([_, enumMeta]) => enumMeta?.type !== "tags")
+      .forEach(([enumName, enumMeta]) => {
+        properties.push({
+          label: enumMeta?.title ?? enumName,
+          value: enumName,
+        });
       });
-    });
     return properties;
   }, [metricsSummary, analysisSummary]);
   const [selectedProperty, setSelectedProperty] = useState<
     undefined | string
   >();
 
-  const groupingData = queryAPI.useProjectAnalysisDistribution(
+  const groupingData = useProjectAnalysisDistribution(
     projectHash,
     analysisDomain,
     selectedProperty ?? "",
+    undefined,
+    undefined,
     { enabled: selectedProperty !== undefined }
   );
+  const { data: collaborators } = useProjectListCollaborators(projectHash, {
+    enabled: selectedProperty === "annotation_user_id",
+  });
+  const collaboratorsMap = useMemo(() => {
+    const map: Record<string, ProjectCollaboratorEntry> = {};
+    collaborators?.forEach((v) => {
+      map[v.id] = v;
+    });
+    return map;
+  }, [collaborators]);
 
   const isMetric =
     selectedProperty !== undefined &&
@@ -82,43 +97,59 @@ export function ChartDistributionBar(props: {
     }
     let getFill: (score: number) => string = () => "#ffa600";
     const results = [...groupingData.data.results];
-    let keyValues: Readonly<Record<string, string>> = {};
+    let keyValues: Readonly<Record<string, string | undefined>> | undefined;
     if (!isMetric) {
       results.sort((a, b) => b.count - a.count);
       const median = results[(results.length / 2) | 0];
       if (median !== undefined) {
-        getFill = (score) => (score <= (median.count / 2.0) ? "#ef4444" : "#ffa600");
+        getFill = (score) =>
+          score <= median.count / 2.0 ? "#ef4444" : "#ffa600";
       }
-      const enumEntry = selectedProperty != null ? metricsSummary.enums[selectedProperty] : null;
-      if (enumEntry != null && "values" in enumEntry) {
+      const enumEntry =
+        selectedProperty != null
+          ? metricsSummary.enums[selectedProperty]
+          : null;
+      if (enumEntry != null) {
         keyValues = enumEntry.values;
       }
     } else {
       results.sort((a, b) => Number(a.group) - Number(b.group));
     }
-    const getGroupName = (group: string | number): string => {
-      console.log('ke', keyValues, selectedProperty, group);
+    const getGroupName = (group: string | number): string | number => {
       if (selectedProperty === "feature_hash") {
         return featureHashMap[group]?.name ?? group;
-      } else {
+      } else if (selectedProperty === "annotation_user_id") {
+        return collaboratorsMap[group]?.email ?? group;
+      } else if (keyValues != null) {
         return keyValues[group] ?? group;
+      } else {
+        return group;
       }
-    }
+    };
+
     return results.map((grouping) => ({
       ...grouping,
-      group: getGroupName(grouping.group),
+      group: getGroupName(isMetric ? Number(grouping.group) : grouping.group),
       fill: getFill(grouping.count),
     }));
-  }, [featureHashMap, groupingData.data, isMetric, selectedProperty]);
+  }, [
+    featureHashMap,
+    groupingData.data,
+    isMetric,
+    selectedProperty,
+    metricsSummary.enums,
+    collaboratorsMap,
+  ]);
 
   const lookupGrouping = (value: number) =>
     Number(
       barData.find((candidate) => Number(candidate.group) >= value)?.group
     );
 
-  const allMetricsSummary = queryAPI.useProjectAnalysisSummary(
+  const allMetricsSummary = useProjectAnalysisSummary(
     projectHash,
     analysisDomain,
+    undefined,
     { enabled: isMetric && showQuartiles }
   );
   const metadata =
@@ -132,8 +163,8 @@ export function ChartDistributionBar(props: {
       allProperties.findIndex((value) => value.value === selectedProperty) ===
         -1
     ) {
-      const hasFeatureHash = allProperties
-          .find((value) => value.value === "feature_hash") != null;
+      const hasFeatureHash =
+        allProperties.find((value) => value.value === "feature_hash") != null;
       const chosenProperty = allProperties[allProperties.length - 1];
       if (hasFeatureHash) {
         setSelectedProperty("feature_hash");
@@ -144,37 +175,42 @@ export function ChartDistributionBar(props: {
   }, [selectedProperty, allProperties]);
 
   // Correct layout for reference line
-  const referenceLines = (metadata: ProjectAnalysisSummary["metrics"][string]) => {
-    const lineQ1 = lookupGrouping(metadata.q1);
-    const lineMedian = lookupGrouping(metadata.median);
-    const lineQ3 = lookupGrouping(metadata.q3);
+  const referenceLines = (metadata: QuerySummary["metrics"][string]) => {
+    const lineQ1 = lookupGrouping(metadata?.q1 ?? 0.0);
+    const lineMedian = lookupGrouping(metadata?.median ?? 0.0);
+    const lineQ3 = lookupGrouping(metadata?.q3 ?? 0.0);
+
     return (
       <>
         <ReferenceLine
-          label={"Q1"+(lineQ1 === lineMedian ? (", Median"+(lineQ3 === lineMedian ? ", Q3" : "")) : "")}
+          label={`Q1${
+            lineQ1 === lineMedian
+              ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
+              : ""
+          }`}
           stroke="black"
           strokeDasharray="3 3"
           x={lineQ1}
         />
         {lineQ1 !== lineMedian ? (
-            <ReferenceLine
-              label={"Median"+(lineQ3 === lineMedian ? ", Q3" : "")}
-              stroke="black"
-              strokeDasharray="3 3"
-              x={lineMedian}
-            />
+          <ReferenceLine
+            label={`Median${lineQ3 === lineMedian ? ", Q3" : ""}`}
+            stroke="black"
+            strokeDasharray="3 3"
+            x={lineMedian}
+          />
         ) : null}
         {lineMedian !== lineQ3 ? (
-            <ReferenceLine
-              label="Q3"
-              stroke="black"
-              strokeDasharray="3 3"
-              x={lineQ3}
-            />
+          <ReferenceLine
+            label="Q3"
+            stroke="black"
+            strokeDasharray="3 3"
+            x={lineQ3}
+          />
         ) : null}
       </>
     );
-  }
+  };
 
   return (
     <>
@@ -184,7 +220,7 @@ export function ChartDistributionBar(props: {
           value={selectedProperty}
           onChange={setSelectedProperty}
           options={allProperties}
-          style={{width: 265}}
+          className="w-64"
         />
         {!isMetric ? null : (
           <>
@@ -201,10 +237,19 @@ export function ChartDistributionBar(props: {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="group"
-            type={isMetric && barData.length > 1  ? "number" : "category"}
-            domain={isMetric && barData.length > 1 ? [barData[0].group, barData[barData.length - 1].group] : undefined}
+            type={isMetric && barData.length > 1 ? "number" : "category"}
+            domain={
+              isMetric && barData.length > 1
+                ? [barData[0].group, barData[barData.length - 1].group]
+                : undefined
+            }
             padding="no-gap"
-            label={{ value: "Metrics", angle: 0, position: "insideBottom", offset: -3, }}
+            label={{
+              value: "Metrics",
+              angle: 0,
+              position: "insideBottom",
+              offset: -3,
+            }}
           />
           <YAxis
             label={{
@@ -215,7 +260,9 @@ export function ChartDistributionBar(props: {
           />
           <Tooltip formatter={formatTooltip} />
           <Bar dataKey="count" isAnimationActive={false} />
-          {metadata === undefined || !showQuartiles ? null : referenceLines(metadata)}
+          {metadata === undefined || !showQuartiles
+            ? null
+            : referenceLines(metadata)}
         </BarChart>
       </ResponsiveContainer>
     </>

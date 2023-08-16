@@ -197,7 +197,7 @@ def show_metrics(
                 project_filters={"project_hash": [project_hash]},
                 filters=None,
             )
-            metrics = (tables.annotation or tables.data).metrics
+            metrics = tables.primary.metrics
             summary_metrics = list(summary.metrics.items())
             summary_metrics.sort(key=lambda x: metrics[x[0]].title)
             table = Table(box=SIMPLE_HEAD_BOX, show_edge=False, padding=0, title=f"{table_name} Metric Summary")

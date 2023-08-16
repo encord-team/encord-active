@@ -46,10 +46,7 @@ class BaseConverter(BaseEvaluation, metaclass=ABCMeta):
                     annotation_image = image[y1 : y2 + 1, x1 : x2 + 1]
                     mask = v.mask[y1 : y2 + 1, x1 : x2 + 1]
                     annotations[k] = torch.masked_select(annotation_image, mask)
-        return BaseFrameOutput(
-            image=image,
-            annotations=annotations,
-        )
+        return BaseFrameOutput(image=image, image_comment=None, annotations=annotations, annotation_comments={})
 
     def raw_calculate_batch(
         self,

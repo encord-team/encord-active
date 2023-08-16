@@ -7,7 +7,7 @@ from .base import BaseEvaluation
 from .conversions.grayscale import RGBToGray
 from .conversions.hsv import RGBToHSV
 from .conversions.laplacian import RGBToLaplacian
-from .embedding import NearestImageEmbeddingQuery
+from .embedding import EmbeddingDistanceMetric, NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
 from .metric import DerivedMetric, RandomSamplingQuery
@@ -118,7 +118,6 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         # Generate embeddings
         ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
         HuMomentEmbeddings(),
-        # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Image transformations
         RGBToLaplacian(),
         RGBToGray(),
@@ -153,7 +152,25 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
     ]
     derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]] = [
         # Derive properties from embedding
-        NearestImageEmbeddingQuery("derived_clip_nearest", "embedding_clip"),
+        NearestImageEmbeddingQuery(
+            "derived_clip_nearest_cosine",
+            "embedding_clip",
+            max_neighbors=50,
+            similarity=EmbeddingDistanceMetric.COSINE,
+            same_feature_hash=False,
+        ),
+        NearestImageEmbeddingQuery(
+            "derived_clip_nearest_cosine",
+            "embedding_clip",
+            max_neighbors=50,
+            similarity=EmbeddingDistanceMetric.COSINE,
+            same_feature_hash=False,
+        ),
+        RandomSamplingQuery(
+            "derived_random_samples",
+            limit=50,
+            same_feature_hash=False,
+        ),
     ]
     derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY

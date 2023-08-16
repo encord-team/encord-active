@@ -1,8 +1,9 @@
-import {Checkbox, Col, Divider, Row, Select, Slider, Typography} from "antd";
-import {useEffect, useMemo, useState} from "react";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
+import { Checkbox, Col, Divider, Row, Select, Slider, Typography } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
-import {useDebounce} from "usehooks-ts";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { useProjectPredictionMetricPerformance } from "../../../hooks/queries/useProjectPredictionMetricPerformance";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -20,29 +21,22 @@ const bucketOptions: { label: number; value: number }[] = [
 ];
 
 export function PredictionsMetricPerformanceTab(props: {
-  metricsSummary: ProjectMetricSummary;
+  metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    metricsSummary,
-    projectHash,
-    predictionHash,
-    queryAPI,
-    featureHashMap,
-  } = props;
+  const { metricsSummary, projectHash, predictionHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);
   const [selectedMetric, setSelectedMetric] = useState<undefined | string>();
   const metricOptions = useMemo(
     () =>
       Object.entries(metricsSummary.metrics).map(([metricKey, metric]) => ({
         value: metricKey,
-        label: metric.title,
+        label: metric?.title ?? metricKey,
       })),
     [metricsSummary]
   );
@@ -52,24 +46,26 @@ export function PredictionsMetricPerformanceTab(props: {
 
   useEffect(() => {
     if (selectedMetric == null) {
-      const exists = metricOptions.find(({value}) => "metric_confidence") != null;
+      const exists =
+        metricOptions.find(({ value }) => "metric_confidence") != null;
       if (exists) {
         setSelectedMetric("metric_confidence");
       }
     }
-  }, [selectedMetric, metricOptions])
+  }, [selectedMetric, metricOptions]);
 
   const rawQueryState = useMemo(
-      () => ({ bucketCount, iou, selectedMetric }),
-      [bucketCount, iou, selectedMetric]
+    () => ({ bucketCount, iou, selectedMetric }),
+    [bucketCount, iou, selectedMetric]
   );
   const debounceQueryState = useDebounce(rawQueryState);
-  const queryPerformance = queryAPI.useProjectPredictionMetricPerformance(
+  const queryPerformance = useProjectPredictionMetricPerformance(
     projectHash,
     predictionHash,
-    debounceQueryState.bucketCount,
     debounceQueryState.iou,
     debounceQueryState.selectedMetric ?? "",
+    debounceQueryState.bucketCount as 1000 | 100 | 10 | undefined,
+    undefined,
     { enabled: debounceQueryState.selectedMetric != null }
   );
 
@@ -82,8 +78,10 @@ export function PredictionsMetricPerformanceTab(props: {
     [featureHashMap]
   );
 
-  const scoreLabel = selectedMetric == null ? "No Metric Selected" :
-    metricsSummary.metrics[selectedMetric]?.title ?? "Unknown";
+  const scoreLabel =
+    selectedMetric == null
+      ? "No Metric Selected"
+      : metricsSummary.metrics[selectedMetric]?.title ?? "Unknown";
 
   return (
     <>
@@ -97,7 +95,7 @@ export function PredictionsMetricPerformanceTab(props: {
               min={0}
               max={1}
               step={0.01}
-              style={{ width: 300 }}
+              className="w-80"
             />
           </Row>
         </Col>
@@ -108,7 +106,7 @@ export function PredictionsMetricPerformanceTab(props: {
             value={selectedMetric}
             onChange={setSelectedMetric}
             options={metricOptions}
-            style={{ width: 300 }}
+            className="w-80"
             bordered={false}
           />
         </Col>
@@ -124,16 +122,16 @@ export function PredictionsMetricPerformanceTab(props: {
       </Row>
       <Row align="middle">
         <Col span={8}>
-        <Typography.Text strong>Class:</Typography.Text>
-        <Select
-          mode="multiple"
-          allowClear
-          value={classList}
-          onChange={setClassList}
-          options={classOptions}
-          style={{ width: "50%" }}
-          bordered={false}
-        />
+          <Typography.Text strong>Class:</Typography.Text>
+          <Select
+            mode="multiple"
+            allowClear
+            value={classList}
+            onChange={setClassList}
+            options={classOptions}
+            style={{ width: "50%" }}
+            bordered={false}
+          />
         </Col>
         <Col span={8}>
           <Typography.Text strong>Show Distribution: </Typography.Text>

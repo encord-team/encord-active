@@ -6,42 +6,29 @@ import {
   FullscreenOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import { isEmpty } from "radash";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
-import {
-  ProjectAnalysisDomain,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { ChartDistributionBar } from "../charts/ChartDistributionBar";
 import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
-import { isEmpty } from "radash";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
 
-const AnalysisDomainToName: Record<ProjectAnalysisDomain, string> = {
+const AnalysisDomainToName: Record<AnalysisDomain, string> = {
   data: "Frames",
   annotation: "Annotations",
 };
 
 export function SummaryTab(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
-  metricsSummary: ProjectMetricSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  analysisDomain: AnalysisDomain;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    projectHash,
-    queryAPI,
-    metricsSummary,
-    analysisDomain,
-    featureHashMap,
-  } = props;
-  const summary = queryAPI.useProjectAnalysisSummary(
-    projectHash,
-    analysisDomain
-  );
+  const { projectHash, metricsSummary, analysisDomain, featureHashMap } = props;
+  const summary = useProjectAnalysisSummary(projectHash, analysisDomain);
   const { data } = summary;
 
   // Derived: Total outliers
@@ -51,14 +38,15 @@ export function SummaryTab(props: {
         return [0, 0, 0];
       }
       const severe = Object.values(data.metrics)
-        .map((metric) => metric.severe)
+        .map((metric) => metric?.severe ?? 0)
         .reduce((a, b) => a + b);
       const moderate = Object.values(data.metrics)
-        .map((metric) => metric.moderate)
+        .map((metric) => metric?.moderate ?? 0)
         .reduce((a, b) => a + b);
       const metrics = Object.values(data.metrics).filter(
-        (metric) => metric.severe > 0 || metric.moderate > 0
+        (metric) => (metric?.severe ?? 0) > 0 || (metric?.moderate ?? 0) > 0
       ).length;
+
       return [severe, moderate, metrics];
     }, [data]);
 
@@ -72,7 +60,7 @@ export function SummaryTab(props: {
   }
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }}>
+    <Space direction="vertical" className="w-full">
       <Row wrap justify="space-evenly">
         <Card bordered={false} loading={data == null}>
           <Statistic
@@ -114,14 +102,16 @@ export function SummaryTab(props: {
           />
         </Card>
         {data == null ||
-        ("metric_width" in data.metrics && "metric_height" in data.metrics && data.metrics["metric_height"].count > 0) ? (
+        ("metric_width" in data.metrics &&
+          "metric_height" in data.metrics &&
+          (data.metrics.metric_height?.count ?? 0) > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"
               value={
                 data == null
                   ? ""
-                  : `${data.metrics["metric_width"]?.median}x${data.metrics["metric_height"]?.median}`
+                  : `${data.metrics.metric_width?.median}x${data.metrics.metric_height?.median}`
               }
               prefix={<FullscreenOutlined />}
             />
@@ -152,7 +142,6 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryAPI={queryAPI}
           allowTrend
         />
       </Card>
@@ -165,7 +154,6 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryAPI={queryAPI}
           featureHashMap={featureHashMap}
         />
       </Card>

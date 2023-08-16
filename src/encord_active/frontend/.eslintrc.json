@@ -1,0 +1,91 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": 2021,
+    "sourceType": "module",
+    "project": ["./tsconfig.json"]
+  },
+  "extends": [
+    "airbnb",
+    "airbnb/hooks",
+    "airbnb-typescript",
+    "react-app",
+    "eslint:recommended",
+    "plugin:jsx-a11y/recommended",
+    "prettier"
+  ],
+  "env": {
+    "browser": true,
+    "es6": true,
+    "node": true
+  },
+  "ignorePatterns": ["build/", "crates/", "node_modules/"],
+  "globals": {
+    "expect": true,
+    "cy": true,
+    "Cypress": true,
+    "JSX": "readonly"
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "no-use-before-define": "off",
+    "no-console": "error",
+    "curly": ["error", "all"],
+    "padding-line-between-statements": [
+      "error",
+      {
+        "blankLine": "always",
+        "prev": "const",
+        "next": "return"
+      }
+    ],
+    "import/prefer-default-export": "off",
+    "prefer-destructuring": [
+      "warn",
+      {
+        "array": false,
+        "object": true
+      },
+      {
+        "enforceForRenamedProperties": false
+      }
+    ],
+    "react/require-default-props": "off",
+    "radix": "off",
+    "no-else-return": "off",
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": true
+      }
+    ],
+    "react/jsx-props-no-spreading": [
+      "error",
+      {
+        "custom": "ignore"
+      }
+    ],
+    "no-lonely-if": "off",
+    "no-bitwise": "off",
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "variable",
+        "format": ["camelCase", "PascalCase", "UPPER_CASE", "snake_case"]
+      }
+    ],
+    "react-hooks/exhaustive-deps": "error",
+    "no-param-reassign": [
+      "error",
+      {
+        "props": false
+      }
+    ],
+    "@typescript-eslint/no-shadow": "off",
+    "@typescript-eslint/ban-types": "error"
+  }
+}

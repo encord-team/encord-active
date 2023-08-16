@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from encord.objects import Object, OntologyStructure
 from pydantic import BaseModel, parse_file_as
 
-from encord_active.db.enums import AnnotationType, annotation_type_from_str
+from encord_active.db.enums import AnnotationType
 from encord_active.db.models import ProjectPrediction
 from encord_active.imports.prediction.op import (
     PredictionImportSpec,
@@ -14,7 +14,7 @@ from encord_active.imports.prediction.op import (
 from encord_active.imports.util import (
     append_object_to_list,
     bitmask_to_bounding_box,
-    bitmask_to_encord_str,
+    bitmask_to_encord_dict,
     bitmask_to_polygon,
     bitmask_to_rotatable_bounding_box,
     coco_str_to_bitmask,
@@ -47,7 +47,7 @@ def import_coco_result(
     ontology_structure = OntologyStructure.from_dict(ontology)
     feature_hash_map: Dict[int, Tuple[AnnotationType, Object]] = {}
     for obj in ontology_structure.objects:
-        feature_hash_map[obj.uid] = annotation_type_from_str(obj.shape.value), obj
+        feature_hash_map[obj.uid] = AnnotationType(obj.shape.value), obj
 
     # Generate image reverse lookup dictionary.
 
@@ -81,7 +81,7 @@ def import_coco_result(
         elif annotation_type == AnnotationType.POLYGON:
             shape_dict_list = list(bitmask_to_polygon(bitmask))
         elif annotation_type == AnnotationType.BITMASK:
-            shape_dict_list = [bitmask_to_encord_str(bitmask)]
+            shape_dict_list = [bitmask_to_encord_dict(bitmask)]
             # FIXME: bug -
             print("WARNING - skipping bitmask prediction, due to bugged implementation")
             continue
@@ -103,6 +103,7 @@ def import_coco_result(
             prediction_hash=prediction_hash,
             name=prediction_name,
             project_hash=project_hash,
+            external_project_hash=None,
         ),
         du_prediction_list=list(du_prediction_list.values()),
     )

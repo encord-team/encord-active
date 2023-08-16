@@ -1,4 +1,3 @@
-import json
 import math
 import uuid
 from typing import Dict, List, Literal, Optional, Tuple
@@ -11,6 +10,7 @@ from sklearn.feature_selection import (
     mutual_info_regression as sklearn_mutual_info_regression,
 )
 from sqlalchemy import Float, Integer, bindparam, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
@@ -23,11 +23,19 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
+    ProjectPredictionDataMetadata,
+    ProjectPredictionDataUnitMetadata,
 )
-from encord_active.server.routers.project2_engine import engine
+from encord_active.db.util.char8 import Char8
+from encord_active.server.dependencies import (
+    DataItem,
+    dep_engine_readonly,
+    parse_data_item,
+)
+from encord_active.server.routers import project2_prediction_analysis
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
-    TABLES_PREDICTION_FN,
+    TABLES_ANNOTATION,
     TABLES_PREDICTION_TP_FP,
 )
 from encord_active.server.routers.queries.metric_query import (
@@ -42,7 +50,9 @@ from encord_active.server.routers.queries.search_query import (
 )
 
 
-def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
+def dep_check_project_prediction_hash_match(
+    project_hash: uuid.UUID, prediction_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
+):
     with Session(engine) as sess:
         exists = (
             sess.exec(
@@ -57,8 +67,10 @@ def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash
 
 
 router = APIRouter(
-    prefix="/{project_hash}/predictions/{prediction_hash}", dependencies=[Depends(check_project_prediction_hash_match)]
+    prefix="/{project_hash}/predictions/{prediction_hash}",
+    dependencies=[Depends(dep_check_project_prediction_hash_match)],
 )
+router.include_router(project2_prediction_analysis.router)
 
 
 def remove_nan_inf(v: float, inf: float = 100_000.0) -> float:
@@ -119,15 +131,16 @@ class PredictionSummaryResult(BaseModel):
 
 
 @router.get("/summary")
-def get_project_prediction_summary(
+def route_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-):
+    engine: Engine = Depends(dep_engine_readonly),
+) -> PredictionSummaryResult:
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
-        base="analytics",
+        base=ProjectPredictionAnalytics,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
@@ -137,6 +150,7 @@ def get_project_prediction_summary(
     # FIXME: fn_where needs separate set of queries as this is implemented as a side table join.
     # FIXME: performance improvements are possible
     guid = GUID()
+    char8 = Char8()
     with Session(engine) as sess:
         range_annotation_types = sess.exec(
             select(  # type: ignore
@@ -266,7 +280,7 @@ def get_project_prediction_summary(
 
     # Calculate correlation for metrics
     metric_names = [key for key, value in AnnotationMetrics.items()]
-    if engine.dialect == "sqlite":
+    if engine.dialect.name == "sqlite":
         # Horrible implementation for use by sqlite.
         # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
         metric_stats = sess.execute(
@@ -289,7 +303,7 @@ def get_project_prediction_summary(
                     f"as var_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                FROM active_project_prediction_analytics, (
+                FROM prediction_analytics, (
                     SELECT
                         avg(
                             iou >= :iou and
@@ -299,7 +313,7 @@ def get_project_prediction_summary(
                     f"avg({metric_name}) as e_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                     FROM active_project_prediction_analytics
+                     FROM prediction_analytics
                      WHERE prediction_hash = :prediction_hash
                 )
                 WHERE prediction_hash = :prediction_hash
@@ -342,7 +356,7 @@ def get_project_prediction_summary(
                             '''
                         for metric_name in valid_metric_stat_names
                     ])}
-                    FROM active_project_prediction_analytics
+                    FROM prediction_analytics
                     WHERE prediction_hash = :prediction_hash
                     """
                 ),
@@ -372,7 +386,7 @@ def get_project_prediction_summary(
                         for metric_name in metric_names
                         ]
                     )}
-                FROM active_project_prediction_analytics
+                FROM prediction_analytics
                 WHERE prediction_hash = :prediction_hash
                 """
                 ),
@@ -410,7 +424,7 @@ def get_project_prediction_summary(
                         )) OVER (
                             ORDER BY PR.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_count
-                    FROM active_project_prediction_analytics PR
+                    FROM prediction_analytics PR
                     WHERE PR.prediction_hash = :prediction_hash
                     AND PR.feature_hash = :feature_hash
                     ORDER BY PR.metric_confidence DESC
@@ -426,7 +440,7 @@ def get_project_prediction_summary(
             params={
                 "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
                 "iou": iou,
-                "feature_hash": feature_hash,
+                "feature_hash": char8.process_bind_param(feature_hash, engine.dialect),
                 "r_divisor": true_positive_count_map.get(feature_hash, 0)
                 + false_negative_count_map.get(feature_hash, 0),
             },
@@ -487,53 +501,6 @@ def get_project_prediction_summary(
     )
 
 
-@router.get("/analytics/{prediction_domain}/distribution")
-def prediction_metric_distribution(
-    prediction_hash: uuid.UUID,
-    group: str,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
-    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-) -> metric_query.QueryDistribution:
-    # FIXME: prediction_domain!!! (this & scatter) both need it implemented
-    # FIXME: how to do we want to support fp-tp-fn split (2-group, 3-group)?
-    # FIXME:  or try to support unified?
-    with Session(engine) as sess:
-        return metric_query.query_attr_distribution(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            attr_name=group,
-            buckets=buckets,
-            filters=filters,
-        )
-
-
-@router.get("/analytics/{prediction_domain}/scatter")
-def prediction_metric_scatter(
-    prediction_hash: uuid.UUID,
-    x_metric: str,
-    y_metric: str,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
-    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-) -> metric_query.QueryScatter:
-    with Session(engine) as sess:
-        return metric_query.query_attr_scatter(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            x_metric_name=x_metric,
-            y_metric_name=y_metric,
-            buckets=buckets,
-            filters=filters,
-        )
-
-
 class QueryMetricPerformanceEntry(BaseModel):
     m: float
     a: float
@@ -546,17 +513,18 @@ class QueryMetricPerformance(BaseModel):
 
 
 @router.get("/metric_performance")
-def prediction_metric_performance(
+def route_prediction_metric_performance(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     iou: float,
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
-        base="analytics",
+        base=ProjectPredictionAnalytics,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
@@ -564,8 +532,8 @@ def prediction_metric_performance(
         },
     )
     where_fn = search_query.search_filters(
-        tables=TABLES_PREDICTION_FN,
-        base="analytics",
+        tables=TABLES_ANNOTATION,
+        base=ProjectPredictionAnalyticsFalseNegatives,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
@@ -573,7 +541,7 @@ def prediction_metric_performance(
     )
     with Session(engine) as sess:
         metric_attr = metric_query.get_metric_or_enum(
-            engine=engine,
+            dialect=engine.dialect,
             table=ProjectPredictionAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
@@ -616,7 +584,7 @@ def prediction_metric_performance(
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr = metric_query.get_metric_or_enum(
-            engine=engine,
+            dialect=engine.dialect,
             table=ProjectAnnotationAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
@@ -658,35 +626,65 @@ def prediction_metric_performance(
     )
 
 
-@router.get("/search")
-def prediction_search(
-    iou: float,
-    metric_filters: str,
-    enum_filters: str,
-):
-    metric_filters_dict = json.loads(metric_filters)
-    enum_filters_dict = json.loads(enum_filters)
-    # Some enums have special meaning.
-    include_prediction_tp = True
-    include_prediction_fp = True
-    include_prediction_fn = True
-    if "prediction_type" in enum_filters_dict:
-        filters = set(enum_filters_dict.pop("prediction_type"))
-        include_prediction_tp = "tp" in filters
-        include_prediction_fp = "fp" in filters
-        include_prediction_fn = "fn" in filters
-    include_prediction_hashes = enum_filters_dict.pop("prediction_hash", None)
-    include_data = True
-    include_annotations = True
-
-    return None
+class PredictionItem(BaseModel):
+    annotation_metrics: Dict[str, Dict[str, Optional[float]]]
+    objects: list[dict]
+    classifications: list[dict]
+    label_hash: uuid.UUID
 
 
-@router.get("/preview/{du_hash/{frame}/{annotation_hash}")
-def get_prediction_item(
-    du_hash: uuid.UUID,
-    frame: int,
-    annotation_hash: Optional[str] = None,
-):
-    # FIXME: return required metadata to correctly view the associated value.
-    return None
+def _sanitise_nan(value: Optional[float]) -> Optional[float]:
+    if value is None or math.isnan(value):
+        return None
+    return value
+
+
+@router.get("/preview/{data_item}")
+def route_prediction_data_item(
+    project_hash: uuid.UUID,
+    prediction_hash: uuid.UUID,
+    item_details: DataItem = Depends(parse_data_item),
+    engine: Engine = Depends(dep_engine_readonly),
+) -> PredictionItem:
+    du_hash = item_details.du_hash
+    frame = item_details.frame
+    with Session(engine) as sess:
+        du_meta = sess.exec(
+            select(ProjectPredictionDataUnitMetadata).where(
+                ProjectPredictionDataUnitMetadata.project_hash == project_hash,
+                ProjectPredictionDataUnitMetadata.prediction_hash == prediction_hash,
+                ProjectPredictionDataUnitMetadata.du_hash == du_hash,
+                ProjectPredictionDataUnitMetadata.frame == frame,
+            )
+        ).first()
+        if du_meta is None:
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataUnitMeta")
+        data_meta = sess.exec(
+            select(ProjectPredictionDataMetadata).where(
+                ProjectPredictionDataMetadata.project_hash == project_hash,
+                ProjectPredictionDataMetadata.prediction_hash == prediction_hash,
+                ProjectPredictionDataMetadata.data_hash == du_meta.data_hash,
+            )
+        ).first()
+        if data_meta is None:
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataMeta")
+        annotation_analytics_list = sess.exec(
+            select(ProjectPredictionAnalytics).where(
+                ProjectPredictionAnalytics.project_hash == project_hash,
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                ProjectPredictionAnalytics.du_hash == du_hash,
+                ProjectPredictionAnalytics.frame == frame,
+            )
+        ).fetchall()
+
+    return PredictionItem(
+        annotation_metrics={
+            annotation_analytics.annotation_hash: {
+                k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
+            }
+            for annotation_analytics in annotation_analytics_list
+        },
+        objects=du_meta.objects,
+        classifications=du_meta.classifications,
+        label_hash=data_meta.label_hash,
+    )

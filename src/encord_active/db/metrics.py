@@ -1,8 +1,14 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, Type, TypeVar
+from typing import Callable, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
 from pydantic import BaseModel
+from sqlmodel import CheckConstraint, ForeignKeyConstraint, Index
+
+"""
+Number of custom metrics supported for each table
+"""
+CUSTOM_METRIC_COUNT: int = 4
 
 
 class MetricType(Enum):
@@ -14,8 +20,6 @@ class MetricType(Enum):
     """ Positive integer >= 0 """
     UFLOAT = "ufloat"
     """ Positive float >= 0 """
-    RANK = "rank"
-    """ Float value where the value is the relative order"""
 
 
 @dataclass
@@ -112,7 +116,7 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         title="Image Difficulty",
         short_desc="",
         long_desc="",
-        type=MetricType.RANK,  # FIXME: attempt to convert this to normal metric!!
+        type=MetricType.NORMAL,
     ),
     "metric_image_uniqueness": MetricDefinition(
         title="Image Uniqueness",
@@ -130,9 +134,9 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         type=MetricType.NORMAL,
     ),
     "metric_max_iou": MetricDefinition(
-        title="Label Duplicates",
+        title="Annotation Duplicates",
         short_desc="",
-        long_desc="",
+        long_desc="The maximum iou collision with another annotation",
         type=MetricType.NORMAL,
     ),
     "metric_border_relative": MetricDefinition(
@@ -141,7 +145,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_poly_similarity": MetricDefinition(
+    "metric_polygon_similarity": MetricDefinition(
         title="Polygon Similarity",
         short_desc="",
         long_desc="",
@@ -165,7 +169,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_shape_outlier": MetricDefinition(
+    "metric_shape_outlier": MetricDefinition(
         title="Shape Outlier",
         short_desc="",
         long_desc="",
@@ -212,3 +216,27 @@ def assert_cls_metrics_match(
         return cls
 
     return wrapper
+
+
+def define_metric_indices(
+    metric_prefix: str,
+    metrics: Dict[str, MetricDefinition],
+    extra: Iterable[Union[Index, CheckConstraint, ForeignKeyConstraint]],
+    add_constraints: bool = True,
+    grouping: str = "project_hash",
+) -> Tuple[Union[Index, CheckConstraint, ForeignKeyConstraint], ...]:
+    values: List[Union[Index, CheckConstraint, ForeignKeyConstraint]] = [
+        Index(f"ix_{metric_prefix}_ph_{metric_name.replace('metric_', 'mtc_')}", grouping, metric_name)
+        for metric_name, metric_metadata in metrics.items()
+    ]
+    if add_constraints:
+        for metric_name, metric_metadata in metrics.items():
+            name = f"{metric_prefix}_{metric_name.replace('metric_', 'mtc_')}"
+            if metric_metadata.type == MetricType.NORMAL:
+                values.append(CheckConstraint(f"{metric_name} BETWEEN 0.0 AND 1.0", name=name))
+            elif metric_metadata.type == MetricType.UINT:
+                values.append(CheckConstraint(f"{metric_name} >= 0", name=name))
+            elif metric_metadata.type == MetricType.UFLOAT:
+                values.append(CheckConstraint(f"{metric_name} >= 0.0", name=name))
+    values = values + list(extra)
+    return tuple(values)

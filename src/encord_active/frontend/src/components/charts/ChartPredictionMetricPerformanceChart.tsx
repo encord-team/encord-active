@@ -10,7 +10,15 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useMemo, useState } from "react";
-import {featureHashToColor, formatTooltip, formatTooltipLabel} from "../util/Formatter";
+import {
+  featureHashToColor,
+  formatTooltip,
+  formatTooltipLabel,
+} from "../util/Formatter";
+import {
+  QueryMetricPerformance,
+  QueryMetricPerformanceEntry,
+} from "../../openapi/api";
 
 /**
  * Returns data for the average over the input data.
@@ -18,74 +26,45 @@ import {featureHashToColor, formatTooltip, formatTooltipLabel} from "../util/For
  */
 function getDataAverage(
   data: Readonly<
-    Record<
-      string,
-      ReadonlyArray<{
-        readonly m: number;
-        readonly n: number;
-        readonly a: number;
-      }>
-    >
+    Record<string, readonly Readonly<QueryMetricPerformanceEntry>[] | undefined>
   >
-): ReadonlyArray<{
-  readonly m: number;
-  readonly n: number;
-  readonly a: number;
-}> {
+): readonly Readonly<QueryMetricPerformanceEntry>[] {
   const lookup: Record<string, { m: number; n: number; as: number }> = {};
   Object.values(data).forEach((array) => {
-    array.forEach((entry) => {
+    (array ?? []).forEach((entry) => {
       const value = lookup[entry.m];
       if (value !== undefined) {
         value.n += entry.n;
-        value.as += (entry.a * entry.n);
+        value.as += entry.a * entry.n;
       } else {
         lookup[entry.m] = { m: entry.m, n: entry.n, as: entry.a * entry.n };
       }
     });
   });
 
-  return Object.values(lookup).map(
-    ({as, n, m}) => ({m, n, a: as / n})
-  );
+  return Object.values(lookup).map(({ as, n, m }) => ({ m, n, a: as / n }));
 }
 
 /**
- * Post-process the data to scale it correctly (n is not scaled by SUM{n})
+ * Post-process the data to sort order issues.
  * @param selectedData
  */
 function tidyData(
-  selectedData: ReadonlyArray<{
-    readonly m: number;
-    readonly n: number;
-    readonly a: number;
-  }>
-): [
-  Array<{ readonly m: number; readonly n: number; readonly a: number }>,
-  number | null
-] {
-  const maxN = selectedData.map((v) => v.n).reduce((a, b) => Math.max(a, b), 0);
-  const scaled = selectedData.map((entry) => ({ ...entry, n: entry.n / maxN }));
-  scaled.sort((a, b) => a.m - b.m);
+  selectedData: readonly Readonly<QueryMetricPerformanceEntry>[]
+): [readonly Readonly<QueryMetricPerformanceEntry>[], number | null] {
+  const sorted = [...selectedData];
+  sorted.sort((a, b) => a.m - b.m);
   const referenceY =
     selectedData.length === 0
       ? null
       : selectedData.map((v) => v.a).reduce((a, b) => a + b) /
         selectedData.length;
-  return [scaled, referenceY];
+
+  return [sorted, referenceY];
 }
 
 export function ChartPredictionMetricPerformanceChart(props: {
-  data: Readonly<
-    Record<
-      string,
-      ReadonlyArray<{
-        readonly m: number;
-        readonly n: number;
-        readonly a: number;
-      }>
-    >
-  >;
+  data: QueryMetricPerformance["precision"] | QueryMetricPerformance["fns"];
   selectedClass: ReadonlyArray<string> | undefined;
   classDecomposition: boolean | "auto";
   featureHashMap: Record<
@@ -125,7 +104,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
       const filteredEntries = Object.entries(filteredData);
 
       filteredEntries.forEach(([featureHash, featureBarData]) => {
-        const [tidyBarData, tidyRef] = tidyData(featureBarData);
+        const [tidyBarData, tidyRef] = tidyData(featureBarData ?? []);
         references[featureHash] = tidyRef;
         tidyBarData.forEach((entry) => {
           let state = lookup[entry.m];
@@ -148,8 +127,8 @@ export function ChartPredictionMetricPerformanceChart(props: {
           if (state === undefined) {
             throw Error("Average metric performance has bad m group");
           }
-          state["n"] = entry.n;
-          state["a"] = entry.a;
+          state.n = entry.n;
+          state.a = entry.a;
         });
       }
 
@@ -162,7 +141,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
       const filteredEntries = Object.entries(filteredData);
       if (Object.keys(filteredData).length === 1) {
         const [featureHash, data] = filteredEntries[0] ?? ["", []];
-        const [featureBar, featureRef] = tidyData(data);
+        const [featureBar, featureRef] = tidyData(data ?? []);
         const formattedBar: ({ m: number } & Record<string, number>)[] =
           featureBar.map((entry) => ({
             m: entry.m,
@@ -170,16 +149,15 @@ export function ChartPredictionMetricPerformanceChart(props: {
             [`${featureHash}a`]: entry.a,
           }));
         const featureRefs: Record<string, number | null> = { "": featureRef };
+
         return [formattedBar, featureRefs, [featureHash]];
       } else {
         // No decomposition, average selected classes and return the result.
         const selectedData = getDataAverage(filteredData);
-        const [avgBar, avgRef]: [
-          ({ m: number } & Record<string, number>)[],
-          number | null
-        ] = tidyData(selectedData);
+        const [avgBar, avgRef] = tidyData(selectedData);
         const refs: Record<string, number | null> = { "": avgRef };
-        return [avgBar, refs, [""]];
+
+        return [[...avgBar], refs, [""]];
       }
     }
   }, [data, selectedClass, classDecomposition]);
@@ -192,15 +170,26 @@ export function ChartPredictionMetricPerformanceChart(props: {
         <XAxis
           dataKey="m"
           type={barCharts.length > 1 ? "number" : "category"}
-          domain={barCharts.length > 1 ? [barCharts[0].m, barCharts[barCharts.length -1].m] : undefined}
+          domain={
+            barCharts.length > 1
+              ? [barCharts[0].m, barCharts[barCharts.length - 1].m]
+              : undefined
+          }
           padding="no-gap"
-          label={{ value: scoreLabel, angle: 0, position: "insideBottom", offset: -3 }}
+          label={{
+            value: scoreLabel,
+            angle: 0,
+            position: "insideBottom",
+            offset: -3,
+          }}
           tickFormatter={(value: number) => value.toFixed(2)}
         />
         <YAxis
+          yAxisId="performance"
           type="number"
           tickFormatter={(value: number) => value.toFixed(3)}
         />
+        <YAxis yAxisId="samples" type="number" orientation="right" />
         {barGroups.map((feature) => {
           const referenceY = barRefs[feature];
           const groupName =
@@ -219,6 +208,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
             hoverKeyword === undefined || hoverKeyword === `${feature}a`
               ? 1.0
               : 0.1;
+
           return (
             <>
               {showDistributionBar ? (
@@ -226,6 +216,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                   name={`${groupName} Samples`}
                   key={`${feature}n`}
                   dataKey={`${feature}n`}
+                  yAxisId="samples"
                   fill={color}
                   fillOpacity={opacityBar}
                 />
@@ -234,6 +225,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                 name={`${groupName} Performance`}
                 key={`${feature}a`}
                 dataKey={`${feature}a`}
+                yAxisId="performance"
                 fill={color}
                 fillOpacity={opacityLine}
                 stroke={color}
@@ -244,6 +236,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                 <ReferenceLine
                   name={`${groupName} Average Performance`}
                   key={`${feature}p`}
+                  yAxisId="performance"
                   y={referenceY}
                   fill={color}
                   stroke={color}

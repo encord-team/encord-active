@@ -1,20 +1,30 @@
+import math
 import uuid
-from typing import Dict, List, Literal, Optional, Set, Tuple, TypedDict
+from pathlib import Path
+from typing import Dict, List, Literal, Optional, Set, Tuple
 
+import encord
 from cachetools import TTLCache, cached
-from encord.objects import OntologyStructure
-from fastapi import APIRouter, HTTPException
+from encord.http.constants import RequestsSettings
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
-from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
-from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
+from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
+from encord_active.db.metrics import (
+    AnnotationMetrics,
+    DataMetrics,
+    MetricDefinition,
+    MetricType,
+)
 from encord_active.db.models import (
     AnnotationType,
     EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
+    ProjectCollaborator,
     ProjectDataAnalytics,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
@@ -24,17 +34,28 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
+from encord_active.db.queries.tags import (
+    select_frame_data_tags,
+    select_frame_label_tags,
+)
 from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
+)
+from encord_active.server.dependencies import (
+    DataItem,
+    dep_database_dir,
+    dep_engine,
+    dep_engine_readonly,
+    dep_ssh_key,
+    parse_data_item,
 )
 from encord_active.server.routers import (
     project2_actions,
     project2_analysis,
     project2_prediction,
+    project2_tags,
 )
-from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries.metric_query import sql_count
 from encord_active.server.settings import get_settings
 
@@ -45,136 +66,177 @@ router = APIRouter(
 router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
 router.include_router(project2_actions.router)
+router.include_router(project2_tags.router)
 
 
-class ProjectStats(TypedDict):
-    dataUnits: int
-    labels: int
-    classes: int
-
-
-class ProjectReturn(TypedDict):
+class ProjectSearchEntry(BaseModel):
+    project_hash: uuid.UUID
     title: str
     description: str
-    projectHash: uuid.UUID
-    imageUrl: str
-    imageUrlTimestamp: Optional[float]
-    downloaded: bool
     sandbox: bool
-    stats: Optional[ProjectStats]
 
 
-def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[Tuple[str, float]]:
-    with Session(engine) as sess:
-        data_units = sess.exec(
-            select(ProjectDataUnitMetadata).where(ProjectDataUnitMetadata.project_hash == project_hash).limit(100)
-        ).fetchall()
-        for data_unit in data_units:
-            if not data_unit:
-                break
-            preview = display_preview(project_hash=project_hash, du_hash=data_unit.du_hash, frame=data_unit.frame)
-            return preview["url"], preview["timestamp"]
-    return None
+class ProjectSandboxEntry(BaseModel):
+    project_hash: uuid.UUID
+    title: str
+    description: str
+
+    sandbox_url: str
+    data_count: int
+    annotation_count: int
+    class_count: int
+
+
+class ProjectSearchResult(BaseModel):
+    projects: List[ProjectSearchEntry]
+    sandbox_projects: List[ProjectSandboxEntry]
 
 
 @router.get("")
-@cached(cache=TTLCache(maxsize=1, ttl=60 * 1))  # 1 minute TTL Cache
-def get_all_projects() -> Dict[str, ProjectReturn]:
-    # FIXME: revert back to this code!
-    # with Session(engine) as sess:
-    #  projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
-    # return {
-    #     project_hash: {
-    #         "title": title,
-    #         "description": description,
-    #     }
-    #     for project_hash, title, description in projects
-    # }
-    sandbox_projects = {}
-    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
-        project_hash_uuid = uuid.UUID(data["hash"])
-        sandbox_projects[str(project_hash_uuid)] = ProjectReturn(
-            title=name,
-            description="",
-            projectHash=project_hash_uuid,
-            stats=data["stats"],
-            downloaded=False,
-            imageUrl=f"/ea-sandbox-static/{data['image_filename']}",
-            imageUrlTimestamp=None,
-            sandbox=True,
-        )
-
+def route_list_projects(engine: Engine = Depends(dep_engine_readonly)) -> ProjectSearchResult:
+    # Load existing projects
+    projects: List[ProjectSearchEntry] = []
+    project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
     with Session(engine) as sess:
-        db_projects = sess.exec(
-            select(Project.project_hash, Project.project_name, Project.project_description, Project.project_ontology)
+        project_res = sess.exec(
+            select(Project.project_hash, Project.name, Project.description).order_by(
+                Project.name,
+            )
         ).fetchall()
-        data_count = sess.exec(
-            select(ProjectDataMetadata.project_hash, sql_count()).group_by(ProjectDataMetadata.project_hash)
-        ).fetchall()
-        data_count_dict = {p: c for p, c in data_count}
-        annotation_count = sess.exec(
-            select(ProjectAnnotationAnalytics.project_hash, sql_count()).group_by(
-                ProjectAnnotationAnalytics.project_hash
+        for project_hash, title, description in project_res:
+            entry = ProjectSearchEntry(project_hash=project_hash, title=title, description=description, sandbox=False)
+            projects.append(entry)
+            project_dict[project_hash] = entry
+
+    # Load sandbox projects
+    sandbox_projects: List[ProjectSandboxEntry] = []
+    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
+        project_hash = uuid.UUID(data["hash"])
+        if project_hash in project_dict:
+            project_dict[project_hash].sandbox = True
+            continue
+        sandbox_projects.append(
+            ProjectSandboxEntry(
+                project_hash=project_hash,
+                title=name,
+                description="",
+                sandbox_url=f"/ea-sandbox-static/{data['image_filename']}",
+                data_count=data["stats"]["dataUnits"],
+                annotation_count=data["stats"]["labels"],
+                class_count=data["stats"]["classes"],
             )
         )
-        annotation_count_dict = {p: c for p, c in annotation_count}
-    projects = {}
-    for project_hash, title, description, ontology in db_projects:
-        if str(project_hash) in sandbox_projects:
-            sandbox_projects[str(project_hash)]["downloaded"] = True
-            # TODO: remove me when we can download sandbox projects from the UI
-            sandbox_projects[str(project_hash)]["sandbox"] = False
-            continue
-        url_timestamp = _get_first_image_with_polygons_url(project_hash)
-        url: Optional[str] = None
-        timestamp: Optional[float] = None
-        if url_timestamp is not None:
-            url, timestamp = url_timestamp
-        ontology = OntologyStructure.from_dict(ontology)
-        label_classes = len(ontology.objects) + len(ontology.classifications)  # type: ignore
-        projects[str(project_hash)] = ProjectReturn(
-            title=title,
-            description=description,
-            projectHash=project_hash,
-            stats=ProjectStats(
-                dataUnits=data_count_dict.get(project_hash, 0),
-                labels=annotation_count_dict.get(project_hash, 0),
-                classes=label_classes,
-            ),
-            downloaded=True,
-            imageUrl=url or "",
-            imageUrlTimestamp=timestamp,
-            sandbox=False,
-        )
-    return {**projects, **sandbox_projects}
+    sandbox_projects.sort(key=lambda s: s.title)
+
+    return ProjectSearchResult(projects=projects, sandbox_projects=sandbox_projects)
 
 
-def _metric_summary(metrics: Dict[str, MetricDefinition], fixme_exclude: Optional[Set[str]] = None):
+class ProjectMetadata(BaseModel):
+    data_count: int
+    annotation_count: int
+    class_count: int
+
+
+@router.get("/{project_hash}/metadata")
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minute TTL Cache
+def route_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> ProjectMetadata:
+    with Session(engine) as sess:
+        ontology = sess.exec(select(Project.ontology).where(Project.project_hash == project_hash)).first()
+        if ontology is None:
+            raise HTTPException(status_code=404, detail="Project does not exist")
+        data_count = sess.exec(select(sql_count()).where(ProjectDataMetadata.project_hash == project_hash)).first()
+        annotation_count = sess.exec(
+            select(sql_count()).where(ProjectAnnotationAnalytics.project_hash == project_hash)
+        ).first()
+        preview_by_annotate = sess.exec(
+            select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
+            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+            .order_by(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
+            .limit(1)
+        ).first()
+        if preview_by_annotate is None:
+            preview_by_annotate = sess.exec(
+                select(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame)
+                .where(ProjectDataAnalytics.project_hash == project_hash)
+                .order_by(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame)
+                .limit(1)
+            ).first()
+
+        if preview_by_annotate is None:
+            raise HTTPException(status_code=404, detail="Project contains no data")
+        preview_du_hash, preview_frame = preview_by_annotate
+
+    return ProjectMetadata(
+        data_count=data_count,
+        annotation_count=annotation_count,
+        class_count=len(ontology["objects"]) + len(ontology["classifications"]),
+        # preview_du_hash=preview_du_hash,
+        # preview_frame=preview_frame,
+    )
+
+
+class MetricSummary(BaseModel):
+    title: str
+    short_desc: str
+    long_desc: str
+    type: MetricType
+
+
+def _metric_summary(
+    metrics: Dict[str, MetricDefinition], fixme_exclude: Optional[Set[str]] = None
+) -> Dict[str, MetricSummary]:
     return {
-        metric_name: {
-            "title": metric.title,
-            "short_desc": metric.short_desc,
-            "long_desc": metric.long_desc,
-            "type": metric.type.value,
-        }
+        metric_name: MetricSummary(
+            title=metric.title,
+            short_desc=metric.short_desc,
+            long_desc=metric.long_desc,
+            type=metric.type,
+        )
         for metric_name, metric in metrics.items()
         if fixme_exclude is None or metric_name not in fixme_exclude
     }
 
 
-def _enum_summary(enums: Dict[str, EnumDefinition]):
+class EnumSummary(BaseModel):
+    title: str
+    values: Optional[dict[str, str]]
+    type: EnumType
+
+
+def _enum_summary(enums: Dict[str, EnumDefinition]) -> Dict[str, EnumSummary]:
     return {
-        enum_name: {
-            "title": enum.title,
-            "values": enum.values,
-            "type": enum.enum_type.value,
-        }
+        enum_name: EnumSummary(
+            title=enum.title,
+            values=enum.values,
+            type=enum.enum_type,
+        )
         for enum_name, enum in enums.items()
     }
 
 
+class ProjectDomainSummary(BaseModel):
+    metrics: Dict[str, MetricSummary]
+    enums: Dict[str, EnumSummary]
+
+
+class ProjectSummary(BaseModel):
+    name: str
+    description: str
+    ontology: dict
+    local_project: bool
+    data: ProjectDomainSummary
+    annotation: ProjectDomainSummary
+    du_count: int
+    frame_count: int
+    annotation_count: int
+    classification_count: int
+    data_annotation: ProjectDomainSummary
+    tags: Dict[uuid.UUID, str]
+    preview: Optional[str]
+
+
 @router.get("/{project_hash}/summary")
-def get_project_summary(project_hash: uuid.UUID):
+def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> ProjectSummary:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
@@ -183,14 +245,20 @@ def get_project_summary(project_hash: uuid.UUID):
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
         preview = sess.exec(
-            select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
-            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
+            select(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame)
+            .where(ProjectDataAnalytics.project_hash == project_hash)
+            .order_by(
+                ProjectDataAnalytics.metric_object_count.desc(),  # type: ignore
+                ProjectDataAnalytics.du_hash,
+                ProjectDataAnalytics.frame,
+            )
             .limit(1)
         ).first()
         if preview is None:
             preview = sess.exec(
                 select(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
                 .where(ProjectDataUnitMetadata.project_hash == project_hash)
+                .order_by(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
                 .limit(1)
             ).first()
 
@@ -214,47 +282,32 @@ def get_project_summary(project_hash: uuid.UUID):
             )
         ).first()
 
-    return {
-        "name": project.project_name,
-        "description": project.project_description,
-        "ontology": project.project_ontology,
-        "local_project": project.project_remote_ssh_key_path is None,
-        "data": {
-            "metrics": _metric_summary(DataMetrics),
-            "enums": _enum_summary(DataEnums),
-        },
-        "annotations": {
-            "metrics": _metric_summary(
+    return ProjectSummary(
+        name=project.name,
+        description=project.description,
+        ontology=project.ontology,
+        local_project=not project.remote,
+        data=ProjectDomainSummary(
+            metrics=_metric_summary(DataMetrics),
+            enums=_enum_summary(DataEnums),
+        ),
+        annotation=ProjectDomainSummary(
+            metrics=_metric_summary(
                 AnnotationMetrics,
-                # Metrics only generated by WIP new computation engine. So exclude
-                #  while only displaying migrated metrics
-                # FIXME: remove this in the future when new computation engine is ready to land
-                # fixme_exclude={
-                #    "metric_width",
-                #    "metric_height",
-                #    "metric_area",
-                #    "metric_aspect_ratio",
-                #    "metric_brightness",
-                #    "metric_contrast",
-                #    "metric_sharpness",
-                #    "metric_red",
-                #    "metric_green",
-                #    "metric_blue",
-                # },
             ),
-            "enums": _enum_summary(AnnotationEnums),
-        },
-        "du_count": du_count,
-        "frame_count": frame_count,
-        "annotation_count": annotation_count,
-        "classification_count": classification_count,
-        "global": {
-            "metrics": _metric_summary(AnnotationMetrics | DataMetrics),
-            "enums": _enum_summary(AnnotationEnums | DataEnums),
-        },
-        "tags": {tag.tag_hash: tag.name for tag in tags},
-        "preview": {"du_hash": preview[0], "frame": preview[1]} if preview is not None else None,
-    }
+            enums=_enum_summary(AnnotationEnums),
+        ),
+        du_count=du_count,
+        frame_count=frame_count,
+        annotation_count=annotation_count,
+        classification_count=classification_count,
+        data_annotation=ProjectDomainSummary(
+            metrics=_metric_summary(AnnotationMetrics | DataMetrics),
+            enums=_enum_summary(AnnotationEnums | DataEnums),
+        ),
+        tags={tag.tag_hash: tag.name for tag in tags},
+        preview=f"{preview[0]}_{preview[1]}" if preview is not None else None,
+    )
 
 
 class ProjectList2DEmbeddingReductionResultEntry(BaseModel):
@@ -270,7 +323,9 @@ class ProjectList2DEmbeddingReductionResult(BaseModel):
 
 
 @router.get("/{project_hash}/reductions")
-def list_supported_2d_embedding_reductions(project_hash: uuid.UUID) -> ProjectList2DEmbeddingReductionResult:
+def route_project_list_reductions(
+    project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
+) -> ProjectList2DEmbeddingReductionResult:
     with Session(engine) as sess:
         r = sess.exec(
             select(ProjectEmbeddingReduction).where(ProjectEmbeddingReduction.project_hash == project_hash)
@@ -287,7 +342,13 @@ def list_supported_2d_embedding_reductions(project_hash: uuid.UUID) -> ProjectLi
 
 
 @router.get("/{project_hash}/files/{du_hash}/{frame}")
-def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) -> FileResponse:
+def route_project_raw_file(
+    project_hash: uuid.UUID,
+    du_hash: uuid.UUID,
+    frame: int,
+    engine: Engine = Depends(dep_engine_readonly),
+    database_dir: Path = Depends(dep_database_dir),
+) -> FileResponse:
     with Session(engine) as sess:
         query = select(ProjectDataUnitMetadata.data_uri,).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
@@ -296,109 +357,83 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) ->
         )
         data_uri = sess.exec(query).first()
         if data_uri is not None:
-            settings = get_settings()
-            root_path = settings.SERVER_START_PATH.expanduser().resolve()
-            url_path = url_to_file_path(data_uri, root_path)
+            url_path = url_to_file_path(data_uri, database_dir)
             if url_path is not None:
+                # FIXME: add not-modified case response (see StaticFiles)
                 return FileResponse(url_path)
         raise HTTPException(status_code=404, detail="Project local file not found")
 
 
-@router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
-def display_preview(
-    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None
-):  # FIXME: type
-    objects: List[dict] = []
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 60 * 5 (s) = 5 min
+def _cache_encord_user_client(ssh_key: str) -> encord.EncordUserClient:
+    return encord.EncordUserClient.create_with_ssh_private_key(
+        ssh_key,
+        requests_settings=RequestsSettings(max_retries=5),
+    )
+
+
+@cached(cache=TTLCache(maxsize=50, ttl=60 * 5))  # 60 * 5 (s) = 5 min
+def _cache_encord_project(ssh_key: str, project_hash: uuid.UUID) -> encord.Project:
+    return _cache_encord_user_client(ssh_key).get_project(str(project_hash))
+
+
+@cached(cache=TTLCache(maxsize=50_000, ttl=60 * 30))  # 60 * 30 (s) = 30 min
+def _cache_encord_img_lookup(
+    ssh_key: str,
+    project_hash: uuid.UUID,
+    data_hash: uuid.UUID,
+) -> Dict[uuid.UUID, str]:
+    encord_project = _cache_encord_project(ssh_key, project_hash)
+    video, images = encord_project.get_data(str(data_hash), get_signed_url=True)
+    encord_url_dict = {}
+    for image in images or []:
+        encord_url_dict[uuid.UUID(image["data_hash"])] = str(image["file_link"])
+    if video is not None:
+        encord_url_dict[data_hash] = str(video["file_link"])
+    return encord_url_dict
+
+
+class ProjectItemTags(BaseModel):
+    data: List[ProjectTag]
+    label: Dict[str, List[ProjectTag]]
+
+
+class ProjectItem(BaseModel):
+    data_metrics: Dict[str, Optional[float]]
+    annotation_metrics: Dict[str, Dict[str, Optional[float]]]
+    objects: list[dict]
+    classifications: list[dict]
+    dataset_title: str
+    dataset_hash: uuid.UUID
+    data_title: str
+    data_hash: uuid.UUID
+    label_hash: uuid.UUID
+    num_frames: int
+    frames_per_second: Optional[float]
+    data_type: str
+    url: str
+    timestamp: Optional[float]
+    tags: ProjectItemTags
+
+
+def _sanitise_nan(value: Optional[float]) -> Optional[float]:
+    if value is None or math.isnan(value):
+        return None
+    return value
+
+
+@router.get("/{project_hash}/item/{data_item}/")
+def route_project_data_item(
+    project_hash: uuid.UUID,
+    item_details: DataItem = Depends(parse_data_item),
+    engine: Engine = Depends(dep_engine_readonly),
+    ssh_key: str = Depends(dep_ssh_key),
+    database_dir: Path = Depends(dep_database_dir),
+) -> ProjectItem:
+    du_hash = item_details.du_hash
+    frame = item_details.frame
     with Session(engine) as sess:
-        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
-        query = select(
-            ProjectDataUnitMetadata.data_uri,
-            ProjectDataUnitMetadata.data_uri_is_video,
-            ProjectDataUnitMetadata.objects,
-            ProjectDataUnitMetadata.data_hash,
-        ).where(
-            ProjectDataUnitMetadata.project_hash == project_hash,
-            ProjectDataUnitMetadata.du_hash == du_hash,
-            ProjectDataUnitMetadata.frame == frame,
-        )
-        result = sess.exec(query).fetchone()
-        if result is None:
-            raise ValueError("Missing project data unit metadata")
-        uri, uri_is_video, objects, data_hash = result  # type: ignore
-        data_metadata = sess.exec(
-            select(ProjectDataMetadata.label_hash, ProjectDataMetadata.frames_per_second).where(
-                ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == data_hash
-            )
-        ).first()
-        if data_metadata is None:
-            raise ValueError("Missing project data metadata")
-        label_hash, frames_per_second = data_metadata
-        if label_hash is None:
-            raise ValueError("Missing label_hash")
-
-        if object_hash is None:
-            query_tags = (
-                select(
-                    ProjectTag,
-                )
-                .where(
-                    ProjectTaggedDataUnit.project_hash == project_hash,
-                    ProjectTaggedDataUnit.du_hash == du_hash,
-                    ProjectTaggedDataUnit.frame == frame,
-                )
-                .join(ProjectTaggedDataUnit, ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash)
-            )
-        else:
-            query_tags = (
-                select(
-                    ProjectTag,
-                )
-                .where(
-                    ProjectTaggedAnnotation.project_hash == project_hash,
-                    ProjectTaggedAnnotation.du_hash == du_hash,
-                    ProjectTaggedAnnotation.frame == frame,
-                    ProjectTaggedAnnotation.object_hash == object_hash,
-                )
-                .join(ProjectTaggedAnnotation, ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash)
-            )
-        result_tags = sess.exec(query_tags).fetchall()
-    if object_hash is not None:
-        objects = [obj for obj in objects if obj["objectHash"] == object_hash]
-        if len(objects) == 0:
-            raise ValueError("ObjectHash does not exist at that frame")
-    if uri is not None:
-        settings = get_settings()
-        root_path = settings.SERVER_START_PATH.expanduser().resolve()
-        url_path = url_to_file_path(uri, root_path)
-        if url_path is not None:
-            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
-    elif project is not None and project.project_remote_ssh_key_path is not None:
-        encord_project = get_encord_project(
-            ssh_key_path=project.project_remote_ssh_key_path, project_hash=str(project_hash)
-        )
-        uri = encord_project.get_label_row(str(label_hash), get_signed_url=True,)["data_units"][
-            str(du_hash)
-        ]["data_link"]
-    else:
-        raise ValueError(f"Cannot resolve project url: {project_hash} / {label_hash} / {du_hash}")
-
-    timestamp = None
-    if uri_is_video:
-        if frames_per_second is None:
-            raise ValueError("Video defined but missing valid frames_per_second")
-        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
-
-    return {"url": uri, "timestamp": timestamp, "objects": objects, "tags": [tag.tag_hash for tag in result_tags]}
-
-
-@router.get("/{project_hash}/preview/{du_hash}/{frame}/")
-def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
-    return display_preview(project_hash, du_hash, frame)
-
-
-@router.get("/{project_hash}/item/{du_hash}/{frame}/")
-def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
-    with Session(engine) as sess:
+        project_remote = sess.exec(select(Project.remote).where(Project.project_hash == project_hash)).first()
         du_meta = sess.exec(
             select(ProjectDataUnitMetadata).where(
                 ProjectDataUnitMetadata.project_hash == project_hash,
@@ -407,14 +442,14 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: typ
             )
         ).first()
         if du_meta is None:
-            raise ValueError("Invalid request")
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataUnitMeta")
         data_meta = sess.exec(
             select(ProjectDataMetadata).where(
                 ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == du_meta.data_hash
             )
         ).first()
         if data_meta is None:
-            raise ValueError("Invalid request")
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataMeta")
         du_analytics = sess.exec(
             select(ProjectDataAnalytics).where(
                 ProjectDataAnalytics.project_hash == project_hash,
@@ -422,36 +457,66 @@ def item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: typ
                 ProjectDataAnalytics.frame == frame,
             )
         ).first()
-        object_analytics = sess.exec(
+        annotation_analytics_list = sess.exec(
             select(ProjectAnnotationAnalytics).where(
                 ProjectAnnotationAnalytics.project_hash == project_hash,
                 ProjectAnnotationAnalytics.du_hash == du_hash,
                 ProjectAnnotationAnalytics.frame == frame,
             )
         ).fetchall()
+
+        data_tags = sess.exec(select_frame_data_tags(project_hash, du_hash, frame)).fetchall()
+        label_tags: Dict[str, List[ProjectTag]] = {}
+        for tag, annotation_hash in sess.exec(select_frame_label_tags(project_hash, du_hash, frame)).fetchall():
+            label_tags.setdefault(annotation_hash, []).append(tag)
+
     if du_meta is None or du_analytics is None:
         raise ValueError
-    obj_metrics = {o.object_hash: o for o in object_analytics or []}
 
-    return {
-        "metrics": {k: getattr(du_analytics, k) for k in DataMetrics},
-        "objects": [
-            {
-                **obj,
-                "metrics": {k: getattr(obj_metrics[obj["objectHash"]], k) for k in AnnotationMetrics},
-                "tags": [],
+    uri = du_meta.data_uri
+    uri_is_video = du_meta.data_uri_is_video
+    frames_per_second = data_meta.frames_per_second
+    if uri is not None:
+        url_path = url_to_file_path(uri, database_dir)
+        if url_path is not None:
+            uri = f"/api/projects_v2/{project_hash}/files/{du_hash}/{frame}"
+    elif project_remote:
+        uri = _cache_encord_img_lookup(
+            ssh_key=ssh_key,
+            project_hash=project_hash,
+            data_hash=du_meta.data_hash,
+        )[du_hash]
+    else:
+        raise ValueError(f"Cannot resolve project url: {project_hash} / {du_hash}")
+
+    timestamp = None
+    if uri_is_video:
+        if frames_per_second is None:
+            raise ValueError("Video defined but missing valid frames_per_second")
+        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
+
+    return ProjectItem(
+        data_metrics={k: _sanitise_nan(getattr(du_analytics, k)) for k in DataMetrics},
+        annotation_metrics={
+            annotation_analytics.annotation_hash: {
+                k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
             }
-            for obj in du_meta.objects
-        ],
-        "dataset_title": data_meta.dataset_title,
-        "dataset_hash": data_meta.dataset_hash,
-        "data_title": data_meta.data_title,
-        "data_hash": data_meta.data_hash,
-        "label_hash": data_meta.label_hash,
-        "num_frames": data_meta.num_frames,
-        "frames_per_second": data_meta.frames_per_second,
-        "data_type": data_meta.data_type,
-    }
+            for annotation_analytics in annotation_analytics_list
+        },
+        objects=du_meta.objects,
+        classifications=du_meta.classifications,
+        dataset_title=data_meta.dataset_title,
+        dataset_hash=data_meta.dataset_hash,
+        data_title=data_meta.data_title,
+        data_hash=data_meta.data_hash,
+        label_hash=data_meta.label_hash,
+        num_frames=data_meta.num_frames,
+        frames_per_second=data_meta.frames_per_second,
+        data_type=data_meta.data_type,
+        url=uri,
+        timestamp=timestamp,
+        tags=ProjectItemTags(data=data_tags, label=label_tags),
+    )
 
 
 class ListProjectPredictionResultEntry(BaseModel):
@@ -465,15 +530,16 @@ class ListProjectPredictionResult(BaseModel):
 
 
 @router.get("/{project_hash}/predictions")
-def list_project_predictions(
+def route_project_list_predictions(
     project_hash: uuid.UUID,
     offset: Optional[int] = None,
     limit: Optional[int] = None,
     order_by: Optional[Literal[""]] = None,
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> ListProjectPredictionResult:
     with Session(engine) as sess:
         predictions = sess.exec(
-            select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash)
+            select(ProjectPrediction).where(ProjectPrediction.project_hash == project_hash).offset(offset).limit(limit)
         ).fetchall()
     return ListProjectPredictionResult(
         total=len(predictions),
@@ -484,11 +550,32 @@ def list_project_predictions(
     )
 
 
-@router.post("/{project_hash}/create/tag/data")
-def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], name: str) -> None:
-    tag_hash = uuid.uuid4()
+class ProjectCollaboratorEntry(BaseModel):
+    email: str
+    id: int
+
+
+@router.get("/{project_hash}/collaborators")
+def route_project_list_collaborators(
+    project_hash: uuid.UUID,
+    engine: Engine = Depends(dep_engine_readonly),
+) -> List[ProjectCollaboratorEntry]:
     with Session(engine) as sess:
-        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
+        collaborators = sess.exec(
+            select(ProjectCollaborator).where(ProjectCollaborator.project_hash == project_hash)
+        ).fetchall()
+    return [ProjectCollaboratorEntry(email=c.user_email, id=c.user_id) for c in collaborators]
+
+
+@router.post("/{project_hash}/create/tag")
+def route_project_action_tag_items(
+    project_hash: uuid.UUID, tagged_items: List[str], tag_name: str, engine: Engine = Depends(dep_engine)
+) -> None:
+    tag_hash = uuid.uuid4()
+    data: List[Tuple[uuid.UUID, int]] = []
+    annotations: List[Tuple[uuid.UUID, int, str]] = []
+    with Session(engine) as sess:
+        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=tag_name))
         tags = [
             ProjectTaggedDataUnit(project_hash=project_hash, du_hash=du_hash, frame=frame, tag_hash=tag_hash)
             for du_hash, frame in data
@@ -496,17 +583,17 @@ def create_data_tag(project_hash: uuid.UUID, data: List[Tuple[uuid.UUID, int]], 
         sess.add_all(tags)
         sess.commit()
 
-
-@router.post("/{project_hash}/create/tag/annotation")
-def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.UUID, int, str]], name: str) -> None:
-    tag_hash = uuid.uuid4()
     with Session(engine) as sess:
-        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
-        tags = [
+        sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=tag_name))
+        tags2 = [
             ProjectTaggedAnnotation(
-                project_hash=project_hash, du_hash=du_hash, frame=frame, object_hash=object_hash, tag_hash=tag_hash
+                project_hash=project_hash,
+                du_hash=du_hash,
+                frame=frame,
+                annotation_hash=annotation_hash,
+                tag_hash=tag_hash,
             )
-            for du_hash, frame, object_hash in annotations
+            for du_hash, frame, annotation_hash in annotations
         ]
-        sess.add_all(tags)
+        sess.add_all(tags2)
         sess.commit()

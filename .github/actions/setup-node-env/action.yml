@@ -1,0 +1,29 @@
+name: 'Setup and Install node modules'
+description: 'Setting up node env and installing node modules'
+
+inputs:
+  node-version:
+    description: "Node Version for the env"
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    #- name: Cache node modules
+    #  id: cache-npm
+    #  uses: actions/cache@v3
+    #  with:
+    #    path: ./src/encord_active/frontend/node_modules
+    #    key: node-build-cache-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+    # - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+      working-directory: ./src/encord_active/frontend/

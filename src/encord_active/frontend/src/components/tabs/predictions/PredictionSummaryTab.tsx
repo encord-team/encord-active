@@ -1,52 +1,51 @@
 import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
-import {useMemo, useState} from "react";
+import { useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBar";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionRecallCurve } from "../../charts/ChartPredictionRecallCurve";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { useProjectPredictionSummary } from "../../../hooks/queries/useProjectPredictionSummary";
 
 export function PredictionSummaryTab(props: {
-  metricsSummary: ProjectMetricSummary;
+  metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: QueryAPI;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    metricsSummary,
-    predictionHash,
-    projectHash,
-    queryAPI,
-    featureHashMap,
-  } = props;
+  const { metricsSummary, predictionHash, projectHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);
   const debounceIOU = useDebounce(iou, 1000);
 
-  const { data: predictionSummaryData } = queryAPI.useProjectPredictionSummary(
+  const { data: predictionSummaryData } = useProjectPredictionSummary(
     projectHash,
     predictionHash,
     debounceIOU
   );
 
-  const classificationOnlyProject = predictionSummaryData?.classification_only !== false;
+  const classificationOnlyProject =
+    predictionSummaryData?.classification_only !== false;
 
-  const [predictionSummaryPrecisions, predictionSummaryRecalls] = useMemo(() => {
-    if (predictionSummaryData == null) {
-      return [undefined, undefined];
-    }
-    const p = Object.entries(predictionSummaryData?.feature_properties)
-      .map(([k, v]) => [k, v.ap]);
-    const r = Object.entries(predictionSummaryData?.feature_properties)
-      .map(([k, v]) => [k, v.ar]);
-    return [Object.fromEntries(p), Object.fromEntries(r)];
-  }, [predictionSummaryData]);
+  const [predictionSummaryPrecisions, predictionSummaryRecalls] =
+    useMemo(() => {
+      if (predictionSummaryData == null) {
+        return [undefined, undefined];
+      }
+      const p = Object.entries(
+        predictionSummaryData?.feature_properties ?? {}
+      ).map(([k, v]) => [k, v?.ap ?? 0.0]);
+      const r = Object.entries(
+        predictionSummaryData?.feature_properties ?? {}
+      ).map(([k, v]) => [k, v?.ar ?? 0.0]);
+
+      return [Object.fromEntries(p), Object.fromEntries(r)];
+    }, [predictionSummaryData]);
 
   return (
     <>
-       {classificationOnlyProject ? null : (
+      {classificationOnlyProject ? null : (
         <>
           <Row align="middle">
             <Typography.Text strong>IOU:</Typography.Text>
@@ -56,11 +55,11 @@ export function PredictionSummaryTab(props: {
               min={0}
               max={1}
               step={0.01}
-              style={{ width: 300 }}
+              className="w-80"
             />
           </Row>
           <Divider />
-         </>
+        </>
       )}
       <Row wrap justify="space-evenly">
         {classificationOnlyProject ? (
@@ -80,10 +79,12 @@ export function PredictionSummaryTab(props: {
             <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="Accuracy"
-                value={(predictionSummaryData?.classification_accuracy ?? 0).toFixed(3)}
+                value={(
+                  predictionSummaryData?.classification_accuracy ?? 0
+                ).toFixed(3)}
               />
             </Card>
-             <Card bordered={false} loading={predictionSummaryData == null}>
+            <Card bordered={false} loading={predictionSummaryData == null}>
               <Statistic
                 title="F1"
                 value={(predictionSummaryData?.mF1 ?? 0).toFixed(3)}
@@ -109,38 +110,58 @@ export function PredictionSummaryTab(props: {
             </Card>
           </>
         ) : (
-            <>
-                <Card bordered={false} loading={predictionSummaryData == null}>
-                  <Statistic
-                    title={<div>mAP<sup>@IOU={iou}</sup></div>}
-                    value={(predictionSummaryData?.mAP ?? 0).toFixed(3)}
-                  />
-                </Card>
-                <Card bordered={false} loading={predictionSummaryData == null}>
-                  <Statistic
-                    title={<div>mAR<sup>@IOU={iou}</sup></div>}
-                    value={(predictionSummaryData?.mR ?? 0).toFixed(3)}
-                  />
-                </Card>
-              <Card bordered={false} loading={predictionSummaryData == null}>
-                <Statistic
-                  title={<div>TP<sup>@IOU={iou}</sup></div>}
-                  value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
-                />
-              </Card>
-              <Card bordered={false} loading={predictionSummaryData == null}>
-                <Statistic
-                  title={<div>FP<sup>@IOU={iou}</sup></div>}
-                  value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
-                />
-              </Card>
-              <Card bordered={false} loading={predictionSummaryData == null}>
-                <Statistic
-                  title={<div>FN<sup>@IOU={iou}</sup></div>}
-                  value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
-                />
-              </Card>
-            </>
+          <>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title={
+                  <div>
+                    mAP<sup>@IOU={iou}</sup>
+                  </div>
+                }
+                value={(predictionSummaryData?.mAP ?? 0).toFixed(3)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title={
+                  <div>
+                    mAR<sup>@IOU={iou}</sup>
+                  </div>
+                }
+                value={(predictionSummaryData?.mR ?? 0).toFixed(3)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title={
+                  <div>
+                    TP<sup>@IOU={iou}</sup>
+                  </div>
+                }
+                value={(predictionSummaryData?.tTP ?? 0).toFixed(0)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title={
+                  <div>
+                    FP<sup>@IOU={iou}</sup>
+                  </div>
+                }
+                value={(predictionSummaryData?.tFP ?? 0).toFixed(0)}
+              />
+            </Card>
+            <Card bordered={false} loading={predictionSummaryData == null}>
+              <Statistic
+                title={
+                  <div>
+                    FN<sup>@IOU={iou}</sup>
+                  </div>
+                }
+                value={(predictionSummaryData?.tFN ?? 0).toFixed(0)}
+              />
+            </Card>
+          </>
         )}
         <Card bordered={false} loading={predictionSummaryData == null}>
           <Statistic

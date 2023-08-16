@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { Tabs } from "antd";
-import { QueryAPI, ProjectSummary } from "../Types";
 import { SummaryTab } from "./SummaryTab";
+import { ProjectSummary } from "../../openapi/api";
 
 export function SummaryView(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
   projectSummary: ProjectSummary;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const { queryAPI, projectSummary, projectHash, featureHashMap } = props;
+  const { projectSummary, projectHash, featureHashMap } = props;
   const [currentTab, setCurrentTab] = useState<string>("0");
 
   return (
@@ -24,9 +23,8 @@ export function SummaryView(props: {
           children: (
             <SummaryTab
               projectHash={projectHash}
-              queryAPI={queryAPI}
               metricsSummary={projectSummary.data}
-              analysisDomain={"data"}
+              analysisDomain="data"
               featureHashMap={featureHashMap}
             />
           ),
@@ -37,9 +35,8 @@ export function SummaryView(props: {
           children: (
             <SummaryTab
               projectHash={projectHash}
-              queryAPI={queryAPI}
-              metricsSummary={projectSummary.annotations}
-              analysisDomain={"annotation"}
+              metricsSummary={projectSummary.annotation}
+              analysisDomain="annotation"
               featureHashMap={featureHashMap}
             />
           ),
