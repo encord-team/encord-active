@@ -13,6 +13,7 @@ from encord_active.cli.common import (
 )
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.prints import success_with_vizualise_command
+from encord_active.lib.encord.utils import get_encord_projects
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -100,6 +101,38 @@ def import_project(
     project_hash = uuid.uuid4()
     if encord_project_hash is not None:
         project_hash = uuid.UUID(encord_project_hash)
+    else:
+        import rich
+        from InquirerPy import inquirer as i
+        from InquirerPy.base.control import Choice
+        from rich.panel import Panel
+
+        ssh_key_path = app_config.get_or_query_ssh_key()
+        projects = get_encord_projects(ssh_key_path)
+        if not projects:
+            rich.print(
+                Panel(
+                    """
+Couldn't find any projects to import.
+Check that you have the correct ssh key set up and available projects on [blue]https://app.encord.com/projects[/blue].
+                    """,
+                    title="⚡️ [red]Failed to find projects[/red] ⚡️",
+                    style="yellow",
+                    expand=False,
+                )
+            )
+            exit()
+
+        choices = list(map(lambda p: Choice(p.project_hash, name=p.title), projects))
+        project_hash = uuid.UUID(
+            i.fuzzy(
+                message="What project would you like to import?",
+                choices=choices,
+                vi_mode=True,
+                multiselect=False,
+                instruction="💡 Type a (fuzzy) search query to find the project you want to import.",
+            ).execute()
+        )
 
     if coco:
         from encord_active.imports.op import import_coco_project
