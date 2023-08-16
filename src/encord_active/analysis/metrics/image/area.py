@@ -9,6 +9,7 @@ from encord_active.analysis.metric import (
     OneImageMetric,
 )
 from encord_active.analysis.types import (
+    BoundingBoxTensor,
     ImageBatchTensor,
     ImageTensor,
     MaskTensor,
@@ -29,11 +30,14 @@ class AreaMetric(OneImageMetric):
             metric_type=MetricType.UINT,
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
         if mask is None:
             return float(image_width(image)) * float(image_height(image))
         else:
-            return float(torch.sum(mask.long()).item())
+            return cast(torch.Tensor, deps["ephemeral_grayscale_image"]).shape[0]
+            # return float(torch.sum(mask.long()).item())
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
@@ -57,7 +61,9 @@ class AreaRelativeMetric(OneImageMetric):  # FIXME: OneObjectMetric
             metric_type=MetricType.NORMAL,
         )
 
-    def calculate(self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
+    ) -> MetricResult:
         if mask is None:
             return None
         else:

@@ -1,15 +1,19 @@
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set
 
 import rich
 import typer
 from rich.markup import escape
 
+from encord_active.cli.common import (
+    TYPER_ENCORD_DATABASE_DIR,
+    TYPER_SELECT_PROJECT_NAME,
+    select_project_hash_from_name,
+)
 from encord_active.cli.config import app_config
-from encord_active.cli.utils.decorators import ensure_project
-from encord_active.lib.project import ProjectFileStructure
+from encord_active.lib.common.data_utils import url_to_file_path
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -41,36 +45,32 @@ def print_encord_projects(
 
 
 @print_cli.command(name="ontology")
-@ensure_project()
 def print_ontology(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
 ):
     """
     [bold]Prints[/bold] an ontology mapping between the class name to the `featureNodeHash` JSON format.
     """
     from encord.ontology import OntologyStructure
-    from rich.panel import Panel
+    from sqlmodel import Session, select
 
+    from encord_active.db.models import Project, get_engine
     from encord_active.lib.model_predictions.writer import (
         iterate_classification_attribute_options,
     )
 
-    fs = ProjectFileStructure(target)
-    if not fs.ontology.is_file():
-        rich.print(
-            Panel(
-                """
-Couldn't identify a project ontology. The reason for this may be that you have a very old project. Please try re-importing the project.
-                """,
-                title=":exclamation: :exclamation: ",
-                style="yellow",
-                expand=False,
-            )
-        )
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+        if project is None:
+            raise ValueError(f"Project hash does not exist: {project_hash}")
+    project_ontology = project.project_ontology
 
-        raise typer.Exit()
-
-    ontology_structure = OntologyStructure.from_dict(json.loads(fs.ontology.read_text()))
+    ontology_structure = OntologyStructure.from_dict(project_ontology)
 
     classifications = {
         option.value: hashes.dict()
@@ -90,28 +90,52 @@ Couldn't identify a project ontology. The reason for this may be that you have a
 
 
 @print_cli.command(name="data-mapping")
-@ensure_project()
 def print_data_mapping(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to a local project.", file_okay=False),
-    limit: int = typer.Option(None, help="Limit the result to the first `limit` data hashes"),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    limit: Optional[int] = typer.Option(None, help="Limit the result to the first `limit` data hashes"),
 ):
     """
     [bold]Prints[/bold] a mapping between `data_hashes` and their corresponding `filename`.
     """
+    from sqlalchemy.sql.operators import is_not
+    from sqlmodel import Session, select
+
+    from encord_active.db.models import Project, ProjectDataUnitMetadata, get_engine
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+        if project is None:
+            raise ValueError(f"Project with hash: {project_hash} does not exist")
+        local_files = sess.exec(
+            select(ProjectDataUnitMetadata)
+            .where(ProjectDataUnitMetadata.project_hash == project_hash, is_not(ProjectDataUnitMetadata.data_uri, None))
+            .order_by(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
+            .limit(limit)
+        ).fetchall()
     mapping: Dict[str, str] = {}
-    project_file_structure = ProjectFileStructure(target)
+    local_files_seen: Set[str] = set()
 
-    for label_row_structure in project_file_structure.iter_labels():
-        label_row = label_row_structure.label_row_json
-        mapping = {
-            **mapping,
-            **{data_hash: value["data_title"] for data_hash, value in label_row["data_units"].items()},
-        }
-        if limit and len(mapping) > limit:
+    for local_file in local_files:
+        if limit is not None and len(mapping) >= limit:
             break
-
-    if limit and limit < len(mapping):
-        mapping = {k: v for i, (k, v) in enumerate(mapping.items()) if i < limit}
+        if local_file.data_uri is None:
+            continue
+        if local_file.data_uri in local_files_seen:
+            continue
+        local_files_seen.add(local_file.data_uri)
+        map_url_str = local_file.data_uri
+        opt_path = url_to_file_path(local_file.data_uri, database_dir)
+        if opt_path is not None:
+            if opt_path.is_relative_to(database_dir):
+                map_url_str = opt_path.relative_to(database_dir).as_posix()
+            else:
+                map_url_str = opt_path.as_posix()
+        mapping[str(local_file.du_hash)] = map_url_str
 
     json_mapping = json.dumps(mapping, indent=2)
 

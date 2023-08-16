@@ -52,9 +52,9 @@ export function PredictionsMetricPerformanceTab(props: {
 
   useEffect(() => {
     if (selectedMetric == null) {
-      const exists = metricOptions.find(({value}) => "metric_label_confidence") != null;
+      const exists = metricOptions.find(({value}) => "metric_confidence") != null;
       if (exists) {
-        setSelectedMetric("metric_label_confidence");
+        setSelectedMetric("metric_confidence");
       }
     }
   }, [selectedMetric, metricOptions])
