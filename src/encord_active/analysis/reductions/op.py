@@ -70,6 +70,8 @@ def create_reduction(
 
 
 def apply_embedding_reduction(embeddings: List[np.ndarray], reduction: ReductionType) -> List[Tuple[float, float]]:
+    if len(embeddings) == 0:
+        return []
     if isinstance(reduction, umap.UMAP):
         transformed = reduction.transform(np.stack(embeddings))
         return [(float(x), float(y)) for x, y in transformed]
