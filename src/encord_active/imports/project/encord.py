@@ -42,8 +42,6 @@ def import_encord(
         data_hash = uuid.UUID(label_row_json["data_hash"])
         data_type = str(label_row_json["data_type"])
         is_video = data_type == "video"
-        width = label_row_json.get("width", 0)
-        height = label_row_json.get("height", 0)
         project_data_list.append(
             ProjectDataMetadata(
                 project_hash=project_hash,
@@ -59,6 +57,8 @@ def import_encord(
             )
         )
         data_unit_list_json = label_row_json["data_units"]
+        video_width = None
+        video_height = None
         for du_key, data_unit_json in data_unit_list_json.items():
             labels_json = data_unit_json["labels"]
             du_hash = uuid.UUID(data_unit_json["data_hash"])
@@ -82,29 +82,46 @@ def import_encord(
                         database_dir=database_dir,
                     )
                 data_uri = du_hash_local_storage[du_hash]
-            project_du_list.append(
-                ProjectDataUnitMetadata(
-                    project_hash=project_hash,
-                    du_hash=du_hash,
-                    frame=int(du_key) if is_video else 0,
-                    data_hash=data_hash,
-                    width=int(data_unit_json.get("width", 0) or width),
-                    height=int(data_unit_json.get("height", 0) or height),
-                    data_uri=data_uri,
-                    data_uri_is_video=is_video,
-                    objects=labels_json.get("objects", []),
-                    classifications=labels_json.get("classifications", []),
+            if is_video:
+                video_width = int(data_unit_json["width"])
+                video_height = int(data_unit_json["height"])
+                for frame, frame_labels_json in labels_json.items():
+                    ProjectDataUnitMetadata(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=int(frame),
+                        data_hash=data_hash,
+                        width=video_width,
+                        height=video_height,
+                        data_uri=data_uri,
+                        data_uri_is_video=True,
+                        objects=frame_labels_json.get("objects", []),
+                        classifications=frame_labels_json.get("classifications", []),
+                    )
+            else:
+                project_du_list.append(
+                    ProjectDataUnitMetadata(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
+                        frame=0,
+                        data_hash=data_hash,
+                        width=int(data_unit_json["width"]),
+                        height=int(data_unit_json["height"]),
+                        data_uri=data_uri,
+                        data_uri_is_video=False,
+                        objects=labels_json.get("objects", []),
+                        classifications=labels_json.get("classifications", []),
+                    )
                 )
-            )
         # Video needs special case handling to populate all frames that were missed.
-        if data_type == "video":
+        if is_video:
             video_json = data_unit_list_json[str(data_hash)]
-            video_fps = video_json["video_fps"]
+            video_fps = video_json["data_fps"]
             video_duration = video_json["data_duration"]
             video_frames = max(int(round(video_fps * video_duration)), 0)
             project_data_list[-1].frames_per_second = video_fps
             project_data_list[-1].num_frames = video_frames
-            if width is None or height is None:
+            if video_width is None or video_height is None:
                 raise ValueError(f"Video import failure, missing width or height: {label_row_json}")
             for i in range(0, video_frames):
                 if str(i) not in data_unit_list_json:
@@ -114,8 +131,8 @@ def import_encord(
                             du_hash=data_hash,
                             frame=i,
                             data_hash=data_hash,
-                            width=int(width),
-                            height=int(height),
+                            width=video_width,
+                            height=video_height,
                             data_uri=None,
                             data_uri_is_video=is_video,
                             objects=[],
