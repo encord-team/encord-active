@@ -379,6 +379,9 @@ export const useApi = () => {
           queryClient.invalidateQueries({
             queryKey: [projectHash, "tagged_items"],
           });
+          queryClient.invalidateQueries({
+            queryKey: [projectHash, "item_ids"],
+          });
         },
       },
     ),
