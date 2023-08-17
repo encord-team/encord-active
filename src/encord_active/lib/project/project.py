@@ -3,7 +3,9 @@ from __future__ import annotations
 import itertools
 import json
 import logging
+import os
 import tempfile
+import uuid
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
@@ -23,6 +25,7 @@ from PIL import Image
 
 from encord_active.cli.config import app_config
 from encord_active.lib.common.data_utils import (
+    Directory,
     collect_async,
     count_frames,
     download_file,
@@ -438,29 +441,32 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
     if label_row.data_type == "video":
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
-        with tempfile.TemporaryDirectory() as video_dir:
-            if store_data_locally:
-                video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
-                    Path(du["data_title"]).suffix
-                )
-                data_uri = file_path_to_url(video_path, project_dir=project_file_structure.project_dir)
-                download_file(
-                    du["data_link"],
-                    project_file_structure.project_dir,
-                    video_path,
-                    cache=False,  # Disable cache symlink tricks
-                )
-            else:
-                video_path = Path(video_dir) / du["data_title"]
-                data_uri = None
-                download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
-                project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
-            num_frames = count_frames(video_path)
-            frames_per_second = get_frames_per_second(video_path)
-            video_images = Path(video_dir) / "images"
-            extract_frames(video_path, video_images, data_hash)
-            image_path = next(video_images.iterdir())
-            image = Image.open(image_path)
+        video_dir = f"{Directory('tmp_video').name}/{uuid.uuid4()}"
+        os.makedirs(video_dir, exist_ok=True)
+        if store_data_locally:
+            video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
+                Path(du["data_title"]).suffix
+            )
+            data_uri = file_path_to_url(video_path, project_dir=project_file_structure.project_dir)
+            download_file(
+                du["data_link"],
+                project_file_structure.project_dir,
+                video_path,
+                cache=False,  # Disable cache symlink tricks
+            )
+        else:
+            video_path: Path = Path(video_dir) / du["data_title"]
+            if not video_path.parent.is_dir():
+                video_path.parent.mkdir(exist_ok=True)
+            data_uri = None
+            download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+            project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
+        num_frames = count_frames(video_path)
+        frames_per_second = get_frames_per_second(video_path)
+        video_images = Path(video_dir) / "images"
+        extract_frames(video_path, video_images, data_hash)
+        image_path = next(video_images.iterdir())
+        image = Image.open(image_path)
 
         # 'create_many' behaviour is not available for SQLite in prisma, so batch creation is the way to go
         with PrismaConnection(project_file_structure) as conn:

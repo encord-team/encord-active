@@ -2,8 +2,8 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 from io import BytesIO
@@ -17,15 +17,25 @@ from encord.exceptions import EncordException, UnknownException
 from PIL import Image
 from tqdm.auto import tqdm
 
-_EXTRACT_FRAMES_CACHE: Dict[str, int] = {}
-_EXTRACT_FRAMES_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
+_EXTRACT_FRAMES_CACHE: Dict[str, str] = {}
+
+
+class Directory:
+    def __init__(self, subdir: str) -> None:
+        base = "/Users/fhv/data/iterative_data_delete_me"
+        self.name = f"{base}/{subdir}"
+        Path(self.name).mkdir(exist_ok=True)
+
+
+_d = Directory("extract_frames")
+_EXTRACT_FRAMES_FOLDER: Directory = _d
 
 
 def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
     if data_hash not in _EXTRACT_FRAMES_CACHE:
         while True:
             try:
-                cache_id = len(_EXTRACT_FRAMES_CACHE)
+                cache_id = str(uuid.uuid4())
                 tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
                 tempdir.mkdir()
                 break
@@ -88,14 +98,14 @@ def get_frames_per_second(video_file_name: Path) -> float:
     return float(output_str)
 
 
-_DOWNLOAD_CACHE: Dict[str, int] = {}
-_DOWNLOAD_CACHE_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
+_DOWNLOAD_CACHE: Dict[str, str] = {}
+_DOWNLOAD_CACHE_FOLDER = Directory("download")
 
 
 def _add_to_cache(key: str) -> Path:
     if key in _DOWNLOAD_CACHE:
         raise RuntimeError(f"Duplicate cache write for : {key}")
-    new_id = len(_DOWNLOAD_CACHE)
+    new_id = str(uuid.uuid4())
     _DOWNLOAD_CACHE[key] = new_id
     path = Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{new_id}"
     if path.exists():
