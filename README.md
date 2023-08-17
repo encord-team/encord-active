@@ -3,8 +3,7 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Slack workspace</a> |
-<a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Channel</a>
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Join our Community</a> |
 </p>
 
 <h1 align="center">
@@ -23,10 +22,7 @@
       <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
     </a>
     <a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank" style="text-decoration:none">
-      <img alt="Join us on Slack" src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white">
-    </a>
-    <a href="https://discord.gg/TU6yT7Uvx3" target="_blank" style="text-decoration:none">
-      <img alt="Join us on Discord" src="https://img.shields.io/badge/Discord-Chat-blue?logo=discord&amp;logoColor=7289DA">
+      <img alt="Join us on Slack" src="https://img.shields.io/badge/Join_Our_Community-4A154B?label=&logo=slack&logoColor=white">
     </a>
     <a href="https://twitter.com/encord_team" target="_blank" style="text-decoration:none">
       <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&amp;style=social">
@@ -226,7 +222,7 @@ If you need help or guidance feel free to ping us in our  **[Slack workspace][sl
 
 ## 👪 Community and support
 
-Join our channels on [Slack][slack-join] and [Discord][join-discord] to connect with the team behind Encord Active.
+[Join our community on Slack][slack-join] to connect with the team behind Encord Active.
 Also, feel free to [suggest improvements or report problems][report-issue] via GitHub issues.
 
 ## 🎇 Contributions
@@ -257,7 +253,6 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication
 [homepage-visual]: https://raw.githubusercontent.com/encord-team/encord-active/main/homepage_visual.png
-[join-discord]: https://discord.gg/TU6yT7Uvx3
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
 [slack-join]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
