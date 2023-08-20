@@ -22,7 +22,7 @@ _EXTRACT_FRAMES_CACHE: Dict[str, str] = {}
 
 class Directory:
     def __init__(self, subdir: str) -> None:
-        base = "/Users/fhv/data/iterative_data_delete_me"
+        base = "/home/jupyter/iterative_cache"
         self.name = f"{base}/{subdir}"
         Path(self.name).mkdir(exist_ok=True)
 
