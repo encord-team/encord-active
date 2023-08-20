@@ -31,23 +31,38 @@ _d = Directory("extract_frames")
 _EXTRACT_FRAMES_FOLDER: Directory = _d
 
 
-def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
-    if data_hash not in _EXTRACT_FRAMES_CACHE:
-        while True:
-            try:
-                cache_id = str(uuid.uuid4())
-                tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
-                tempdir.mkdir()
-                break
-            except FileExistsError:
-                time.sleep(0.001)
-                pass
+def extract_frames(
+    video_file_name: Path,
+    img_dir: Path,
+    data_hash: str,
+    symlink_folder: bool = True,
+    expected_frames: Optional[int] = None,
+) -> None:
+    cache_id = data_hash
+    tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
 
-        try:
-            _extract_frames(video_file_name, tempdir, data_hash)
-        except Exception:
-            shutil.rmtree(tempdir, ignore_errors=True)
-            raise
+    if data_hash not in _EXTRACT_FRAMES_CACHE:
+        extract = not (
+            img_dir.is_dir()
+            and (
+                expected_frames is None
+                or len(list(img_dir.iterdir())) in {expected_frames, expected_frames + 1, expected_frames - 1}
+            )
+        )
+        if extract:
+            while True:
+                try:
+                    tempdir.mkdir(exist_ok=True)
+                    break
+                except FileExistsError:
+                    time.sleep(0.001)
+                    pass
+
+            try:
+                _extract_frames(video_file_name, tempdir, data_hash)
+            except Exception:
+                shutil.rmtree(tempdir, ignore_errors=True)
+                raise
         _EXTRACT_FRAMES_CACHE[data_hash] = cache_id
     # Symlink everything in the temporary directory, do not do duplicate work
     read_cache_id = _EXTRACT_FRAMES_CACHE[data_hash]
@@ -102,14 +117,24 @@ _DOWNLOAD_CACHE: Dict[str, str] = {}
 _DOWNLOAD_CACHE_FOLDER = Directory("download")
 
 
+def _try_get_cache_id(key: str) -> str:
+    q1 = ".com"
+    q2 = "?"
+    if q1 not in key or q2 not in key:
+        print(f"Failed to get deterministic cache file name for key {key}")
+        return str(uuid.uuid4())
+    else:
+        return key[key.index(q1) + len(q1) : key.index(q2)].replace("/", "_")
+
+
 def _add_to_cache(key: str) -> Path:
     if key in _DOWNLOAD_CACHE:
         raise RuntimeError(f"Duplicate cache write for : {key}")
-    new_id = str(uuid.uuid4())
+    new_id = _try_get_cache_id(key)
     _DOWNLOAD_CACHE[key] = new_id
     path = Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{new_id}"
-    if path.exists():
-        raise RuntimeError(f"Local temp-file cache bug: {key}")
+    # if path.exists():
+    #     raise RuntimeError(f"Local temp-file cache bug: {key}")
     return path
 
 
@@ -126,6 +151,12 @@ def _get_from_cache(key: str) -> Optional[Path]:
     cache_id = _DOWNLOAD_CACHE.get(key, None)
     if cache_id is not None:
         return Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{cache_id}"
+    else:
+        deterministic_id = _try_get_cache_id(key)
+        path = Path(_DOWNLOAD_CACHE_FOLDER.name) / f"cache_{deterministic_id}"
+        if path.is_file():
+            _DOWNLOAD_CACHE[key] = deterministic_id
+            return path
     return None
 
 

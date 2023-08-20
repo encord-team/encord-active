@@ -4,8 +4,6 @@ import itertools
 import json
 import logging
 import os
-import tempfile
-import uuid
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
@@ -27,7 +25,6 @@ from encord_active.cli.config import app_config
 from encord_active.lib.common.data_utils import (
     Directory,
     collect_async,
-    count_frames,
     download_file,
     extract_frames,
     file_path_to_url,
@@ -421,11 +418,32 @@ def download_label_row_and_data(
 
 
 def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectFileStructure) -> List[bool]:
+    collect_async(
+        partial(download_video, project_file_structure=project_file_structure),
+        filter(lambda lr: lr.data_type == "video", label_rows),
+        desc="Pre-downloading videos",
+    )
     return collect_async(
         partial(split_lr_video, project_file_structure=project_file_structure),
         filter(lambda lr: lr.data_type == "video", label_rows),
         desc="Splitting videos into frames",
     )
+
+
+def download_video(label_row: LabelRow, project_file_structure: ProjectFileStructure):
+    if label_row.data_type == "video":
+        data_hash = list(label_row.data_units.keys())[0]
+        du = label_row.data_units[data_hash]
+        video_dir = f"{Directory('tmp_video').name}/{data_hash}"
+        os.makedirs(video_dir, exist_ok=True)
+        # removed if condition store locally
+
+        video_path: Path = Path(video_dir) / du["data_title"]
+        if not video_path.parent.is_dir():
+            video_path.parent.mkdir(exist_ok=True)
+
+        download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
+        project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
 
 
 def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStructure) -> bool:
@@ -441,7 +459,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
     if label_row.data_type == "video":
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
-        video_dir = f"{Directory('tmp_video').name}/{uuid.uuid4()}"
+        video_dir = f"{Directory('tmp_video').name}/{data_hash}"
         os.makedirs(video_dir, exist_ok=True)
         if store_data_locally:
             video_path = (project_file_structure.local_data_store / data_hash).with_suffix(
@@ -461,10 +479,13 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
             data_uri = None
             download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
             project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
-        num_frames = count_frames(video_path)
+        expected_frames = int(du["data_duration"])
         frames_per_second = get_frames_per_second(video_path)
         video_images = Path(video_dir) / "images"
-        extract_frames(video_path, video_images, data_hash)
+
+        extract_frames(video_path, video_images, data_hash, expected_frames=expected_frames)
+        num_frames = len([f for f in video_images.iterdir() if f.suffix == ".png"])
+
         image_path = next(video_images.iterdir())
         image = Image.open(image_path)
 
@@ -476,7 +497,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                         data={
                             "data_hash": du["data_hash"],
                             "data_title": du["data_title"],
-                            "frame": frame_num,
+                            "frame": frame_num * frames_per_second,
                             "lr_data_hash": label_row.data_hash,
                             "width": image.width,
                             "height": image.height,

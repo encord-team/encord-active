@@ -126,7 +126,6 @@ class DatasetIterator(Iterator):
                     if video_metadata is None:
                         continue  # SKIP
 
-                    fps = self.project.label_row_metas[label_hash].frames_per_second or 1
                     # Create temporary folder containing the video
                     with tempfile.TemporaryDirectory() as working_dir:
                         working_path = Path(working_dir)
@@ -142,7 +141,7 @@ class DatasetIterator(Iterator):
                         fake_data_unit = deepcopy(data_unit)
 
                         for frame_id in range(len(list(video_images_dir.glob("*_*.*")))):
-                            self.frame = int(frame_id * fps)
+                            self.frame = int(frame_id * video_metadata.frames_per_second)
                             fake_data_unit["labels"] = data_unit["labels"].get(str(self.frame), {})
 
                             if self._skip_labeled_data:
