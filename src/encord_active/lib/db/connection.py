@@ -39,7 +39,7 @@ class PrismaConnection:
         if self.cache_db is not None:
             return self.cache_db
 
-        self.db = Prisma(datasource=self.datasource)
+        self.db = Prisma(datasource=self.datasource, connect_timeout=200)
         self.db.connect(timeout=60_000)
         return self.db
 
