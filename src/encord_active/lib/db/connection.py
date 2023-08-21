@@ -40,7 +40,7 @@ class PrismaConnection:
             return self.cache_db
 
         self.db = Prisma(datasource=self.datasource)
-        self.db.connect()
+        self.db.connect(timeout=60_000)
         return self.db
 
     def __exit__(self, type, value, traceback):
