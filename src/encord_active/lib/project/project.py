@@ -505,6 +505,15 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                             "data_uri": data_uri,
                         }
                     )
-                batcher.commit()
+                try:
+                    batcher.commit()
+                except:
+                    print("Adding batch of du frames failed")
+                    print(f"du: {du['data_hash']}")
+                    print(f"num_frames: {num_frames}")
+                    print(f"data_title: {du['data_title']}")
+                    print(f"video_images: {video_images}")
+                    print(f"video_path: {video_path}")
+                    raise
         return True
     return False
