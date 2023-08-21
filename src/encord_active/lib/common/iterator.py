@@ -71,7 +71,12 @@ class DatasetIterator(Iterator):
         self._skip_labeled_data = skip_labeled_data
         self.length = reduce(
             lambda s, lr: s
-            + sum(map(lambda du: 1 if "objects" in du["labels"] else len(du["labels"]), lr["data_units"].values())),
+            + sum(
+                map(
+                    lambda du: 1 if "objects" in du["labels"] else int(du.get("data_duration")),
+                    lr["data_units"].values(),
+                )
+            ),
             self.label_rows.values(),
             0,
         )

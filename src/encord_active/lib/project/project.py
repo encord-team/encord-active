@@ -497,7 +497,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                         data={
                             "data_hash": du["data_hash"],
                             "data_title": du["data_title"],
-                            "frame": frame_num * frames_per_second,
+                            "frame": int(frame_num * frames_per_second),
                             "lr_data_hash": label_row.data_hash,
                             "width": image.width,
                             "height": image.height,
