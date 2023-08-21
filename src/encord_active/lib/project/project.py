@@ -423,11 +423,11 @@ def split_lr_videos(label_rows: List[LabelRow], project_file_structure: ProjectF
         filter(lambda lr: lr.data_type == "video", label_rows),
         desc="Pre-downloading videos",
     )
-    return collect_async(
-        partial(split_lr_video, project_file_structure=project_file_structure),
-        filter(lambda lr: lr.data_type == "video", label_rows),
-        desc="Splitting videos into frames",
-    )
+    results = []
+    from tqdm import tqdm
+
+    for label_row in filter(lambda lr: lr.data_type == "video", tqdm(label_rows, desc="Splitting videos into frames")):
+        results.append(split_lr_video(label_row, project_file_structure))
 
 
 def download_video(label_row: LabelRow, project_file_structure: ProjectFileStructure):
