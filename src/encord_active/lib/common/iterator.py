@@ -153,10 +153,15 @@ class DatasetIterator(Iterator):
                                     continue
 
                             image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_id}.*"), None)
+
+                            img = None
                             if image_path:
-                                yield fake_data_unit, Image.open(image_path)
-                            else:
-                                yield fake_data_unit, None
+                                try:
+                                    img = Image.open(image_path)
+                                except:
+                                    pass
+
+                            yield fake_data_unit, img
                             pbar.update(1)
 
                 else:
