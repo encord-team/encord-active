@@ -42,13 +42,14 @@ def extract_frames(
     tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
 
     if data_hash not in _EXTRACT_FRAMES_CACHE:
-        extract = not (
-            img_dir.is_dir()
-            and (
-                expected_frames is None
-                or len(list(img_dir.iterdir())) in {expected_frames, expected_frames + 1, expected_frames - 1}
-            )
-        )
+        extract = True
+        if tempdir.is_dir() and expected_frames is not None:
+            num_files = len([f for f in tempdir.iterdir() if f.suffix == ".png"])
+            if num_files in {expected_frames, expected_frames + 1, expected_frames - 1}:
+                extract = False
+            else:
+                print(f"Extracting frames after finding {num_files} which is too different from {expected_frames}")
+
         if extract:
             while True:
                 try:
