@@ -171,6 +171,9 @@ def download_file(
     if destination.is_file():
         return destination
 
+    if not destination.parent.exists():
+        destination.parent.mkdir(parents=True)
+
     url_path = url_to_file_path(url, project_dir)
     if url_path is not None:
         if cache:
