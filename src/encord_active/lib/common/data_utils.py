@@ -23,7 +23,6 @@ _EXTRACT_FRAMES_CACHE: Dict[str, str] = {}
 class Directory:
     def __init__(self, subdir: str) -> None:
         base = os.environ.get("EA_CACHE_BASE", "/home/jupyter/iterative_cache")
-        print(base)
         self.name = f"{base}/{subdir}"
         Path(self.name).mkdir(exist_ok=True)
 
