@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdOutlineNavigateBefore, MdOutlineNavigateNext } from "react-icons/md";
 import { classy } from "../../helpers/classy";
 
-const pageSizes = [20, 40, 60, 80] as const;
+const pageSizes = [15, 30, 45, 60] as const;
 const defaultPageSize = pageSizes[0];
 export type PageSize = (typeof pageSizes)[number];
 
