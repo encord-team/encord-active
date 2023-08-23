@@ -1,10 +1,16 @@
 import json
+import sys
 import uuid
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
+from urllib.parse import parse_qs, urlparse
 
+import requests
 from cachetools import LRUCache, cached
+from dateutil import parser as date_parser
+from loguru import logger
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -15,6 +21,7 @@ from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import GroupedTags
 from encord_active.lib.db.merged_metrics import MergedMetrics
 from encord_active.lib.embeddings.utils import SimilaritiesFinder
+from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.labels.object import ObjectShape
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
@@ -29,6 +36,13 @@ from encord_active.lib.project.project_file_structure import (
     ProjectFileStructure,
 )
 from encord_active.server.dependencies import ProjectFileStructureDep
+
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<e>{time}</e> | <m>{level}</m> | {message} | <e><d>{extra}</d></e>",
+    colorize=True,
+)
 
 
 class Metadata(TypedDict):
@@ -62,8 +76,43 @@ def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
 
 
+def _responds_with_200(url: str) -> bool:
+    try:
+        with requests.get(url, stream=True) as res:
+            logger.debug(f"Status code: {res.status_code} reason: {res.reason}")
+            return res.status_code == 200
+    except Exception as e:
+        logger.warning(f"Failed 200-response-test with exception {e}")
+        return False
+
+
+def _is_expired(url: str):
+    params = parse_qs(urlparse(url).query)
+    # TODO: support azure
+    with logger.contextualize(params=params.keys()):
+        for provider in ["Goog", "Amz"]:
+            expire_key = f"X-{provider}-Expires"
+            date_key = f"X-{provider}-Date"
+            if not (expire_key in params and date_key in params):
+                continue
+
+            signature_date = params[date_key][0]
+            valid_for = float(params[expire_key][0])
+            parsed_date = date_parser.parse(signature_date)
+            diff = datetime.now(parsed_date.tzinfo) - parsed_date
+            logger.debug(f"Checking if {diff.total_seconds()} >= {valid_for}")
+            url_expired = diff.total_seconds() >= valid_for
+            return url_expired or not _responds_with_200(url)
+
+    return True
+
+
 def _get_url(
-    project_hash: uuid.UUID, label_row_structure: LabelRowStructure, du_hash: str, frame: str
+    project_hash: uuid.UUID,
+    label_row_structure: LabelRowStructure,
+    du_hash: str,
+    frame: str,
+    ssh_key_path: Optional[str] = None,
 ) -> Optional[Tuple[str, Optional[float]]]:
     data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
         label_row_structure.iter_data_unit(du_hash, None), None
@@ -73,6 +122,13 @@ def _get_url(
         if data_opt.data_type == "video":
             timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
+        if _is_expired(data_opt.signed_url) and ssh_key_path is not None:
+            logger.info(f"Resigning url for data hash {data_opt.du_hash}")
+            remote_project = get_encord_project(ssh_key_path, str(project_hash))
+            video, _ = remote_project.get_data(du_hash, get_signed_url=True)
+            if video is not None:
+                signed_url = video["file_link"]
+                label_row_structure.project.cached_signed_urls[data_opt.du_hash] = signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
             url_frame = 0 if data_opt.data_type == "video" else frame
@@ -147,7 +203,9 @@ def to_item(
     )
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame)
+    url = _get_url(
+        uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame, project_meta["ssh_key_path"]
+    )
 
     label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]
