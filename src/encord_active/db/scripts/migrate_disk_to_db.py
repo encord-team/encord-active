@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import numpy as np
 from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
+from loguru import logger
 from sqlmodel import Session
 
 from encord_active.db.metrics import (
@@ -898,10 +899,11 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                 for classify in classifications:
                     classification_hash = str(classify["classificationHash"])
                     if classification_hash in object_hashes_seen:
-                        raise ValueError(
+                        logger.warning(
                             f"Duplicate object_hash/classification_hash={classification_hash} "
                             f"in du_hash={du_hash}, frame={data_unit.frame}"
                         )
+                        continue
                     object_hashes_seen.add(classification_hash)
                     data_to_classifications.setdefault((du_hash, data_unit.frame), []).append(classification_hash)
                     annotation_metrics[(du_hash, data_unit.frame, classification_hash)] = {
