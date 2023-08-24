@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional, Type
 
@@ -95,6 +96,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
     ontology = OntologyStructure.from_dict(project.ontology)
     option_hashes_to_tag = suggest_tagging_data(ontology)
 
+    sampling_rate = float(os.environ.get("EA_SAMPLING_RATE", 1 / 3))
     meta_data = {
         "project_title": project.title,
         "project_description": project.description,
@@ -103,6 +105,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
         "has_remote": True,
         "nested_attributes_as_tags": bool(option_hashes_to_tag),
         "store_data_locally": store_data_locally,
+        "sampling_rate": sampling_rate,
     }
     yaml_str = yaml.dump(meta_data)
     project_file_structure.project_meta.write_text(yaml_str, encoding="utf-8")

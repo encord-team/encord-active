@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from abc import abstractmethod
 from collections.abc import Sized
@@ -69,11 +70,12 @@ class DatasetIterator(Iterator):
         super().__init__(cache_dir, subset_size, **kwargs)
         self.key = ""
         self._skip_labeled_data = skip_labeled_data
+        sampling_rate = float(os.environ.get("EA_SAMPLING_RATE", 1 / 3))
         self.length = reduce(
             lambda s, lr: s
             + sum(
                 map(
-                    lambda du: 1 if "objects" in du["labels"] else int(du.get("data_duration")),
+                    lambda du: 1 if "objects" in du["labels"] else int(du.get("data_duration") * sampling_rate),
                     lr["data_units"].values(),
                 )
             ),
@@ -82,6 +84,7 @@ class DatasetIterator(Iterator):
         )
 
     def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
+        sampling_rate = float(os.environ.get("EA_SAMPLING_RATE", 1 / 3))
         with PrismaConnection(self.project_file_structure) as cache_db:
             pbar = tqdm(total=self.length, desc=desc, leave=False)
             for label_hash, label_row in self.label_rows.items():
@@ -141,13 +144,13 @@ class DatasetIterator(Iterator):
                             project_dir=self.project_file_structure.project_dir,
                             destination=video_path,
                         )
-                        expected_frames = int(data_unit.get("data_duration"))
+                        expected_frames = int(data_unit.get("data_duration") * sampling_rate)
                         extract_frames(video_path, video_images_dir, self.du_hash, expected_frames=expected_frames)
 
                         fake_data_unit = deepcopy(data_unit)
 
                         for frame_id in range(len(list(video_images_dir.glob("*_*.*")))):
-                            self.frame = int(frame_id * video_metadata.frames_per_second)
+                            self.frame = int(frame_id * video_metadata.frames_per_second / sampling_rate)
                             fake_data_unit["labels"] = data_unit["labels"].get(str(self.frame), {})
 
                             if self._skip_labeled_data:

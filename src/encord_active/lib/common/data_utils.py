@@ -49,6 +49,7 @@ def extract_frames(
                 extract = False
             else:
                 print(f"Extracting frames after finding {num_files} which is too different from {expected_frames}")
+                shutil.rmtree(tempdir, ignore_errors=True)
 
         if extract:
             while True:
@@ -78,8 +79,9 @@ def extract_frames(
 
 def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
     # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
+    sampling_rate = float(os.environ.get("EA_SAMPLING_RATE", 1 / 3))
     img_dir.mkdir(parents=True, exist_ok=True)
-    command = f'ffmpeg -vsync 0 -i "{video_file_name}" -vf fps=1 -frame_pts 1 {img_dir}/{data_hash}_%d.png -hide_banner'
+    command = f'ffmpeg -vsync 0 -i "{video_file_name}" -vf fps={sampling_rate} -frame_pts 1 {img_dir}/{data_hash}_%d.png -hide_banner'
     if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False).returncode != 0:
         raise RuntimeError(
             "Failed to split the video into multiple image files. Please ensure that you have FFMPEG "

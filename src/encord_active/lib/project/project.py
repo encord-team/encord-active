@@ -456,6 +456,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
     :param project_file_structure: The directory of the project.
     :return: Whether the label row had a video to split.
     """
+    sampling_rate = float(os.environ.get("EA_SAMPLING_RATE", 1 / 3))
     if label_row.data_type == "video":
         data_hash = list(label_row.data_units.keys())[0]
         du = label_row.data_units[data_hash]
@@ -479,7 +480,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
             data_uri = None
             download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
             project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
-        expected_frames = int(du["data_duration"])
+        expected_frames = int(du["data_duration"] * sampling_rate)
         frames_per_second = get_frames_per_second(video_path)
         video_images = Path(video_dir) / "images"
 
@@ -497,7 +498,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                         data={
                             "data_hash": du["data_hash"],
                             "data_title": du["data_title"],
-                            "frame": int(frame_num * frames_per_second),
+                            "frame": int(frame_num * frames_per_second / sampling_rate),
                             "lr_data_hash": label_row.data_hash,
                             "width": image.width,
                             "height": image.height,
