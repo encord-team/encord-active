@@ -123,12 +123,12 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
@@ -419,9 +419,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -447,8 +447,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm
@@ -1084,13 +1084,15 @@ const ImageWithPolygons = ({
     );
   }, [width, height, item.id]);
 
+  const invalidateURLMutation = useApi().invalidateItemURL(item.id);
+
   const itemUrl = item.url.startsWith("http")
     ? item.url
     : `${apiUrl}${item.url}`;
 
   const { data: imgSrcUrl, isLoading } = useImageSrc(itemUrl);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading || invalidateURLMutation.isLoading) return <Spinner />;
 
   return (
     <figure {...rest} className={classy("relative", className)}>
@@ -1107,6 +1109,10 @@ const ImageWithPolygons = ({
               videoRef.currentTime = item.videoTimestamp || 0;
             }
           }}
+          onError={(evt) => {
+            invalidateURLMutation.mutate();
+            evt.preventDefault();
+          }}
         />
       ) : (
         <img
@@ -1114,6 +1120,10 @@ const ImageWithPolygons = ({
           className="object-contain rounded transition-opacity"
           alt=""
           src={imgSrcUrl}
+          onError={(evt) => {
+            invalidateURLMutation.mutate();
+            evt.preventDefault();
+          }}
         />
       )}
       {width && height && polygons.length > 0 && (

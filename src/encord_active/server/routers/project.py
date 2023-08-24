@@ -306,6 +306,13 @@ class ItemTags(BaseModel):
     grouped_tags: GroupedTags
 
 
+@router.post("/{project}/reset_signed_url/{id:path}")
+def reset_signed_url(project: ProjectFileStructureDep, id: str):
+    _, du_hash, *_ = id.split("_")
+    if du_hash in project.cached_signed_urls:
+        del project.cached_signed_urls[du_hash]
+
+
 @router.put("/{project}/item_tags")
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with Session(engine) as sess:
