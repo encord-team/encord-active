@@ -703,6 +703,7 @@ def search(
     query: Annotated[Optional[str], Form()] = None,
     image: Annotated[Optional[UploadFile], File()] = None,
     scope: Annotated[Optional[MetricScope], Form()] = None,
+    limit: Annotated[Optional[int], Form()] = None,
 ):
     if not (query or (image is not None)):
         raise HTTPException(status_code=422, detail="Invalid query. Either `query` or `image` should be specified")
@@ -711,6 +712,15 @@ def search(
         _filters = Filters.parse_raw(filters)
     else:
         _filters = Filters()
+
+    if limit is None:
+        limit = -1
+    else:
+        if limit <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid query. `limit` should be a positive integer or not set (for all results)",
+            )
 
     querier = get_querier(project)
 
@@ -722,10 +732,10 @@ def search(
             image_bytes = None
             if image is not None:
                 image_bytes = image.file.read()
-            _query = CLIPQuery(text=query, image=image_bytes, limit=-1, identifiers=ids)
+            _query = CLIPQuery(text=query, image=image_bytes, limit=limit, identifiers=ids)
             result = querier.search_semantics(_query)
         else:
-            text_query = TextQuery(text=query, limit=-1, identifiers=ids)
+            text_query = TextQuery(text=query, limit=limit, identifiers=ids)
             result = querier.search_with_code(text_query)
             if result:
                 snippet = result.snippet
