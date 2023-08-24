@@ -87,7 +87,7 @@ encord-active quickstart
 or you can use <a href="https://hub.docker.com/r/encord/encord-active"><img src="https://www.docker.com/wp-content/uploads/2022/03/horizontal-logo-monochromatic-white.png" height="20"/></a>:
 
 ```shell
-docker run -it --rm -p 8501:8501 -p 8502:8502 -v ${PWD}:/data encord/encord-active quickstart
+docker run -it --rm -p 8000:8000 -v ${PWD}:/data encord/encord-active quickstart
 ```
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
@@ -124,7 +124,7 @@ encord-active start
 ```
 
 The app should then open in the browser.
-If not, navigate to [`localhost:8501`](http://localhost:8501).
+If not, navigate to [`localhost:8000`](http://localhost:8000).
 Our [docs][encord-active-docs] contain more information about what you can see in the page.
 
 ## <img width="24" height="24" src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_icon.png"/> Import your dataset
