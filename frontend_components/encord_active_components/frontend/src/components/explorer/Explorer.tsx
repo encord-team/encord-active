@@ -1101,13 +1101,15 @@ const ImageWithPolygons = ({
     );
   }, [width, height, item.id]);
 
+  const invalidateURLMutation = useApi().invalidateItemURL(item.id);
+
   const itemUrl = item.url.startsWith("http")
     ? item.url
     : `${apiUrl}${item.url}`;
 
   const { data: imgSrcUrl, isLoading } = useImageSrc(itemUrl);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading || invalidateURLMutation.isLoading) return <Spinner />;
 
   return (
     <figure {...rest} className={classy("relative", className)}>
@@ -1129,6 +1131,10 @@ const ImageWithPolygons = ({
                   : item.videoTimestamp || 0;
               videoRef.currentTime = videoTimestamp;
             }
+          }}
+          onError={(evt) => {
+            invalidateURLMutation.mutate();
+            evt.preventDefault();
           }}
         />
       ) : (
