@@ -3,26 +3,42 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://discord.gg/TU6yT7Uvx3" target="_blank">Discord Channel</a>
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Join our Community</a> |
 </p>
 
 <h1 align="center">
   <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
 </h1>
 
-<div align="center">
-
-[![PRs-Welcome][contribute-image]][contribute-url]
-![Licence][license-image]
-[![PyPi project][pypi-package-image]][pypi-package]
-![PyPi version][pypi-version-image]
-[![Open In Colab][colab-image]][colab-notebook]
-![downloads-badge][downloads-badge]
-
-[![docs][docs-image]][encord-active-docs]
-[!["Join us on Discord"][discord-image]][join-discord]
-[![Twitter Follow][twitter-image]][twitter-url]
-
+<div style="display: flex; justify-content: space-between;">
+  <div style="flex: 1; padding: 10px;">
+    <a href="https://docs.encord.com/docs/active-overview" target="_blank" style="text-decoration:none">
+      <img alt="Documentation" src="https://img.shields.io/badge/docs-Online-blue">
+    </a>
+    <a href="https://github.com/encord-team/encord-notebooks" target="_blank" style="text-decoration:none">
+      <img alt="Encord Notebooks" src="https://img.shields.io/badge/Encord_Notebooks-blue?logo=github&label=&labelColor=181717">
+    </a>
+    <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank" style="text-decoration:none">
+      <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+    </a>
+    <a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank" style="text-decoration:none">
+      <img alt="Join us on Slack" src="https://img.shields.io/badge/Join_Our_Community-4A154B?label=&logo=slack&logoColor=white">
+    </a>
+    <a href="https://twitter.com/encord_team" target="_blank" style="text-decoration:none">
+      <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&amp;style=social">
+    </a>
+  </div>
+  <div style="flex: 1; padding: 10px;">
+    <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/encord-active">
+    <a href="https://pypi.org/project/encord-active/" target="_blank" style="text-decoration:none">
+      <img alt="PyPi project" src="https://img.shields.io/pypi/v/encord-active">
+    </a>
+    <a href="https://docs.encord.com/docs/active-contributing" target="_blank" style="text-decoration:none">
+      <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-Welcome-blue">
+    </a>
+    <img alt="Licence" src="https://img.shields.io/github/license/encord-team/encord-active">
+    <img alt="Downloads" src="https://static.pepy.tech/badge/encord-active">
+  </div>
 </div>
 
 ## ❓ What is Encord Active?
@@ -88,7 +104,7 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ## 🔖 Documentation
 
-Our full documentation is available [here](https://docs.encord.com/docs/active-overview). In particular, we recommend checking out:
+Our full documentation is available [here][encord-active-docs]. In particular, we recommend checking out:
 
 - [Getting Started](https://docs.encord.com/docs/active-getting-started)
 - [Imports](https://docs.encord.com/docs/active-import)
@@ -96,7 +112,7 @@ Our full documentation is available [here](https://docs.encord.com/docs/active-o
 - [User Guides](https://docs.encord.com/docs/active-user-guide)
 - [CLI Documentation](https://docs.encord.com/docs/active-cli)
 
-## ⬇️  Download a sandbox dataset
+## ⬇️ Download a sandbox dataset
 
 Another way to quickly get familiar with Encord Active is to download a dataset from its sandbox.
 The download command will ask which pre-built dataset to use and will download it into a new directory in the current working directory.
@@ -171,7 +187,7 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 
 ### Core features:
 
-- [Data Exploration](https://docs.encord.com/docs/active-exploring-data-distribution)
+- [Data Exploration](https://docs.encord.com/docs/active-exploring-data-and-label-distributions)
 - [Data Outlier detection](https://docs.encord.com/docs/active-identify-outliers#data-outliers)
 - [Label Outlier detection](https://docs.encord.com/docs/active-identify-outliers#label-outliers)
 - [Object Detection/segmentation Model Decomposition](https://docs.encord.com/docs/active-evaluate-detection-models)
@@ -179,38 +195,41 @@ Encord Active ships with 25+ metrics and more are coming; [contributions][contri
 - [Similarity Search](https://docs.encord.com/docs/active-exploring-image-similarity)
 - [Data & Label Tagging](https://docs.encord.com/docs/active-tagging)
 - [Visualize TP/FP/FN](https://docs.encord.com/docs/active-evaluate-detection-models#exploring-the-individual-samples)
-- [COCO Exports](https://docs.encord.com/docs/active-exporting#generate-coco-file)
 - And much more!
 
 Visit our [documentation][encord-active-docs] to learn more.
 
 ### Supported data:
 
-| Data   |     | Labels          |     | Project sizes |               |
-| ------ | --- | --------------- | --- | ------------- | ------------- |
-| `jpg`  | ✅  | Bounding Boxes  | ✅  | Images        | 50.000        |
-| `png`  | ✅  | Polygons        | ✅  | Videos        | 50.000 frames |
-| `tiff` | ✅  | Segmentation    | ✅  |               |               |
-| `mp4`  | ✅  | Classifications | ✅  |               |               |
-|        |     | Polylines       | 🟡  |               |               |
+| Data Types |     | Labels          |     | Project sizes |               |
+|------------|-----|-----------------|-----|---------------|---------------|
+| `jpg`      | ✅   | Bounding Boxes  | ✅   | Images        | 25.000        |
+| `png`      | ✅   | Polygons        | ✅   | Videos \*     | 25.000 frames |
+| `tiff`     | ✅   | Segmentations   | ✅   |               |               |
+| `mp4` \*   | ✅   | Classifications | ✅   |               |               |
+|            |     | Polylines       | 🟡  |               |               |
+
+\* Requires an Encord Annotate account
 
 ## 🧑🏽‍💻Development
 
 ### 🛠 Build your own quality metrics
 
-Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic. If you need help or guidance feel free to ping us in the **[Discord channel](https://discord.gg/TU6yT7Uvx3)**!
+Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧.
+See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic.
+
+If you need help or guidance feel free to ping us in our  **[Slack workspace][slack-join]**!
 
 ## 👪 Community and support
 
-Join our channel on [Discord][join-discord] to connect with the team behind Encord Active.
-
+[Join our community on Slack][slack-join] to connect with the team behind Encord Active.
 Also, feel free to [suggest improvements or report problems][report-issue] via GitHub issues.
 
 ## 🎇 Contributions
 
-If you're using Encord Active in your organization, please try to add your company name to the [ADOPTERS.md][adopters]. It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+If you're using Encord Active in your organization, please try to add your company name to the [ADOPTERS.md][adopters]. It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
 
-If you want to share your custom metrics or improve the tool, please see our [contributing docs][contribute-url].
+If you want to share your custom metrics or improve the tool, please see our [contributing docs][contribute-url].
 
 ### 🦸 Contributors
 
@@ -225,12 +244,8 @@ If you want to share your custom metrics or improve the tool, please see our [c
 This repository is published under the Apache 2.0 licence.
 
 [adopters]: https://github.com/encord-team/encord-active/blob/main/ADOPTERS.md
-[colab-image]: https://colab.research.google.com/assets/colab-badge.svg
 [colab-notebook]: https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing
-[contribute-image]: https://img.shields.io/badge/PRs-welcome-blue.svg
 [contribute-url]: https://docs.encord.com/docs/active-contributing
-[docs-image]: https://img.shields.io/badge/docs-online-blue
-[downloads-badge]: https://static.pepy.tech/badge/encord-active
 [encord-active-docs-init]: https://docs.encord.com/docs/active-quick-import
 [encord-active-docs-workflow]: https://docs.encord.com/docs/active-workflows
 [encord-active-docs-write-metric]: https://docs.encord.com/docs/active-write-custom-quality-metrics
@@ -238,14 +253,6 @@ This repository is published under the Apache 2.0 licence.
 [encord-active-landing]: https://encord.com/encord-active/
 [encord-docs-ssh]: https://docs.encord.com/docs/annotate-public-keys#set-up-public-key-authentication
 [homepage-visual]: https://raw.githubusercontent.com/encord-team/encord-active/main/homepage_visual.png
-[join-discord]: https://discord.gg/TU6yT7Uvx3
-[license-image]: https://img.shields.io/github/license/encord-team/encord-active
-[new-issue]: https://github.com/encord-team/encord-active/issues/new
-[pypi-package-image]: https://img.shields.io/pypi/v/encord-active
-[pypi-package]: https://www.piwheels.org/project/encord-active/
-[pypi-version-image]: https://img.shields.io/pypi/pyversions/encord-active
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
-[discord-image]: https://shields.io/badge/Discord-chat-blue?logo=discord&logoColor=white
-[twitter-image]: https://img.shields.io/twitter/follow/encord_team?label=%40encord_team&style=social
-[twitter-url]: https://twitter.com/encord_team
+[slack-join]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
