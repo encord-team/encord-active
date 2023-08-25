@@ -443,7 +443,7 @@ export const useApi = () => {
             const newInvalidatedUrls = new Map(invalidatedUrls.entries());
             newInvalidatedUrls.set(id, ts);
             setInvalidatedUrls(newInvalidatedUrls);
-            queryClient.refetchQueries({
+            queryClient.invalidateQueries({
               queryKey: [projectHash, "item", args[0]],
             });
           },
