@@ -212,12 +212,11 @@ function updateKey<
     // Check if an enum
     const newEnumSummary = metricsSummary.enums[newKey];
     if (newEnumSummary != null && !(newKey in old.enumFilters)) {
-      const newValues = getEnumList(newEnumSummary, featureHashMap);
       return {
         ...renamed,
         enumFilters: {
           ...renamed.enumFilters,
-          [newKey]: newValues,
+          [newKey]: [],
         },
       };
     }
@@ -270,14 +269,13 @@ function addNewEntry<
       ([candidate]) => !(candidate in old.enumFilters),
     );
     if (newEnumEntry != null) {
-      const [newEnumKey, newEnumSummary] = newEnumEntry;
-      const enumValues = getEnumList(newEnumSummary, featureHashMap);
+      const [newEnumKey] = newEnumEntry;
       return {
         ...old,
         ordering: [...old.ordering, newEnumKey],
         enumFilters: {
           ...old.enumFilters,
-          [newEnumKey]: enumValues,
+          [newEnumKey]: [],
         },
       };
     }
