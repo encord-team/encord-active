@@ -2,7 +2,18 @@ import json
 import shutil
 import uuid
 from enum import Enum
-from typing import Annotated, Dict, List, Optional, Union, cast
+from functools import partial
+from typing import (
+    Annotated,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypedDict,
+    Union,
+    cast,
+    overload,
+)
 from uuid import UUID
 
 import pandas as pd
@@ -27,6 +38,8 @@ from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
 from pydantic import BaseModel
+from sqlalchemy import delete, text, tuple_
+from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 from starlette.status import HTTP_403_FORBIDDEN
@@ -306,6 +319,39 @@ class ItemTags(BaseModel):
     grouped_tags: GroupedTags
 
 
+@overload
+def _get_selector(item: ItemTags, annotation_hash: Literal[False]) -> Optional[tuple[uuid.UUID, int]]:
+    ...
+
+
+@overload
+def _get_selector(item: ItemTags, annotation_hash: Literal[True]) -> Optional[tuple[uuid.UUID, int, str]]:
+    ...
+
+
+def _get_selector(
+    item: ItemTags, annotation_hash: bool = False
+) -> Optional[Union[tuple[uuid.UUID, int], tuple[uuid.UUID, int, str]]]:
+    _, du_hash_str, frame_str, *annotation_hashes = item.id.split("_")
+    base = (uuid.UUID(du_hash_str), int(frame_str))
+    if annotation_hash:
+        if not annotation_hashes:
+            return None
+        return (*base, annotation_hashes[0])
+    return base
+
+
+class DataTagAdd(TypedDict):
+    project_hash: str
+    du_hash: str
+    frame: int
+    tag_hash: str
+
+
+class AnnotationTagAdd(DataTagAdd):
+    object_hash: str
+
+
 @router.put("/{project}/item_tags")
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with Session(engine) as sess:
@@ -335,23 +381,56 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
             project_tags[name] = new_tag_hash
             return new_tag_hash
 
+        data_selectors = set(filter(None, map(partial(_get_selector, annotation_hash=False), payload)))
+        existing_data_tag_tuples = sess.exec(
+            select(ProjectTaggedDataUnit.du_hash, ProjectTaggedDataUnit.frame, ProjectTaggedDataUnit.tag_hash).where(
+                ProjectTaggedDataUnit.project_hash == project_hash,
+                in_op(tuple_(ProjectTaggedDataUnit.du_hash, ProjectTaggedDataUnit.frame), data_selectors),
+            )
+        ).all()
+        existing_data_tags: dict[tuple[uuid.UUID, int], set[uuid.UUID]] = {}
+        for du_hash, frame, tag_hash in existing_data_tag_tuples:
+            existing_data_tags.setdefault((du_hash, frame), set()).add(tag_hash)
+
+        label_selectors = set(filter(None, map(partial(_get_selector, annotation_hash=True), payload)))
+        existing_label_tag_tuples = sess.exec(
+            select(
+                ProjectTaggedAnnotation.du_hash,
+                ProjectTaggedAnnotation.frame,
+                ProjectTaggedAnnotation.object_hash,
+                ProjectTaggedAnnotation.tag_hash,
+            ).where(
+                ProjectTaggedAnnotation.project_hash == project_hash,
+                in_op(
+                    tuple_(
+                        ProjectTaggedAnnotation.du_hash,
+                        ProjectTaggedAnnotation.frame,
+                        ProjectTaggedAnnotation.object_hash,
+                    ),
+                    label_selectors,
+                ),
+            )
+        ).all()
+        existing_label_tags: dict[tuple[uuid.UUID, int, str], set[uuid.UUID]] = {}
+        for du_hash, frame, object_hash, tag_hash in existing_label_tag_tuples:
+            existing_label_tags.setdefault((du_hash, frame, object_hash), set()).add(tag_hash)
+
         data_exists = set()
         label_exists = set()
+
+        data_tags_to_add: list[DataTagAdd] = []
+        data_tags_to_remove: set[tuple[uuid.UUID, int, uuid.UUID]] = set()  # du_hash, frame, tag_hash
+        annotation_tags_to_add: list[AnnotationTagAdd] = []
+        annotation_tags_to_remove: set[
+            tuple[uuid.UUID, int, str, uuid.UUID]
+        ] = set()  # du_hash, frame, object_hash, tag_hash
+
         for item in payload:
             data_tag_list = item.grouped_tags["data"]
             annotation_tag_list = item.grouped_tags["label"]
             _, du_hash_str, frame_str, *annotation_hashes = item.id.split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)
-            existing_data_tags = set(
-                sess.exec(
-                    select(ProjectTaggedDataUnit.tag_hash).where(
-                        ProjectTaggedDataUnit.project_hash == project_hash,
-                        ProjectTaggedDataUnit.du_hash == du_hash,
-                        ProjectTaggedDataUnit.frame == frame,
-                    )
-                ).all()
-            )
             new_data_tag_uuids: set[UUID] = set()
             for data_tag in data_tag_list:
                 tag_hash = _get_or_create_tag_hash(data_tag)
@@ -360,38 +439,20 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                     continue
                 data_exists.add(dup_key)
                 new_data_tag_uuids.add(tag_hash)
-                if tag_hash in existing_data_tags:
+                if tag_hash in existing_data_tags.get((du_hash, frame), set()):
                     continue
-                sess.add(
-                    ProjectTaggedDataUnit(
-                        project_hash=project_hash,
-                        du_hash=du_hash,
+                data_tags_to_add.append(
+                    DataTagAdd(
+                        project_hash=project_hash.hex,
+                        du_hash=du_hash.hex,
                         frame=frame,
-                        tag_hash=tag_hash,
+                        tag_hash=tag_hash.hex,
                     )
                 )
-            for tag_hash in existing_data_tags.difference(new_data_tag_uuids):
-                data_tag_to_delete = sess.exec(
-                    select(ProjectTaggedDataUnit).where(
-                        ProjectTaggedDataUnit.project_hash == project_hash,
-                        ProjectTaggedDataUnit.du_hash == du_hash,
-                        ProjectTaggedDataUnit.frame == frame,
-                        ProjectTaggedDataUnit.tag_hash == tag_hash,
-                    )
-                ).first()
-                sess.delete(data_tag_to_delete)
+            for tag_hash in existing_data_tags.get((du_hash, frame), set()).difference(new_data_tag_uuids):
+                data_tags_to_remove.add((du_hash, frame, tag_hash))
 
             for annotation_hash in annotation_hashes:
-                existing_label_tags = set(
-                    sess.exec(
-                        select(ProjectTaggedAnnotation.tag_hash).where(
-                            ProjectTaggedAnnotation.project_hash == project_hash,
-                            ProjectTaggedAnnotation.du_hash == du_hash,
-                            ProjectTaggedAnnotation.frame == frame,
-                            ProjectTaggedAnnotation.object_hash == annotation_hash,
-                        )
-                    )
-                )
                 new_label_tag_uuids: set[UUID] = set()
                 for annotation_tag in annotation_tag_list:
                     tag_hash = _get_or_create_tag_hash(annotation_tag)
@@ -400,28 +461,66 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                         continue
                     new_label_tag_uuids.add(tag_hash)
                     label_exists.add(dup_key2)
-                    if tag_hash in existing_label_tags:
+                    if tag_hash in existing_label_tags.get((du_hash, frame, annotation_hash), set()):
                         continue
-                    sess.add(
-                        ProjectTaggedAnnotation(
-                            project_hash=project_hash,
-                            du_hash=du_hash,
+                    annotation_tags_to_add.append(
+                        AnnotationTagAdd(
+                            project_hash=project_hash.hex,
+                            du_hash=du_hash.hex,
                             frame=frame,
+                            tag_hash=tag_hash.hex,
                             object_hash=annotation_hash,
-                            tag_hash=tag_hash,
                         )
                     )
-                for tag_hash in existing_label_tags.difference(new_label_tag_uuids):
-                    tag_to_remove = sess.exec(
-                        select(ProjectTaggedAnnotation).where(
-                            ProjectTaggedAnnotation.project_hash == project_hash,
-                            ProjectTaggedAnnotation.du_hash == du_hash,
-                            ProjectTaggedAnnotation.frame == frame,
-                            ProjectTaggedAnnotation.object_hash == annotation_hash,
-                            ProjectTaggedAnnotation.tag_hash == tag_hash,
-                        )
-                    ).first()
-                    sess.delete(tag_to_remove)
+
+                for tag_hash in existing_label_tags.get((du_hash, frame, annotation_hash), set()).difference(
+                    new_label_tag_uuids
+                ):
+                    annotation_tags_to_remove.add((du_hash, frame, annotation_hash, tag_hash))
+
+        # Delete left over data and annotation tags
+        if data_tags_to_add:
+            sess.execute(
+                text(
+                    f"INSERT INTO {ProjectTaggedDataUnit.__tablename__} (project_hash, du_hash, frame, tag_hash) VALUES (:project_hash, :du_hash, :frame, :tag_hash)"
+                ),
+                data_tags_to_add,
+            )
+        if annotation_tags_to_add:
+            sess.execute(
+                text(
+                    f"INSERT INTO {ProjectTaggedAnnotation.__tablename__} (project_hash, du_hash, frame, object_hash, tag_hash) VALUES (:project_hash, :du_hash, :frame, :object_hash, :tag_hash)"
+                ),
+                data_tags_to_add,
+            )
+        if data_tags_to_remove:
+            sess.execute(
+                delete(ProjectTaggedDataUnit).where(
+                    ProjectTaggedDataUnit.project_hash == project_hash,
+                    in_op(
+                        tuple_(
+                            ProjectTaggedDataUnit.du_hash, ProjectTaggedDataUnit.frame, ProjectTaggedDataUnit.tag_hash
+                        ),
+                        data_tags_to_remove,
+                    ),
+                )
+            )
+
+        if annotation_tags_to_remove:
+            sess.execute(
+                delete(ProjectTaggedAnnotation).where(
+                    ProjectTaggedAnnotation.project_hash == project_hash,
+                    in_op(
+                        tuple_(
+                            ProjectTaggedAnnotation.du_hash,
+                            ProjectTaggedAnnotation.frame,
+                            ProjectTaggedAnnotation.object_hash,
+                            ProjectTaggedAnnotation.tag_hash,
+                        ),
+                        annotation_tags_to_remove,
+                    ),
+                )
+            )
         sess.commit()
 
 
