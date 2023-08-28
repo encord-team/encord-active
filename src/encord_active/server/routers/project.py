@@ -318,23 +318,29 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with Session(engine) as sess:
         project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
 
+        project_tags = {
+            r[0]: r[1]
+            for r in sess.exec(
+                select(ProjectTag.name, ProjectTag.tag_hash).where(ProjectTag.project_hash == project_hash)
+            ).all()
+        }
+
         def _get_or_create_tag_hash(name: str) -> uuid.UUID:
-            tag_hash_candidate = sess.exec(
-                select(ProjectTag.tag_hash).where(ProjectTag.project_hash == project_hash, ProjectTag.name == name)
-            ).first()
-            if tag_hash_candidate is not None:
-                return tag_hash_candidate
-            else:
-                new_tag_hash = uuid.uuid4()
-                sess.add(
-                    ProjectTag(
-                        tag_hash=new_tag_hash,
-                        project_hash=project_hash,
-                        name=name,
-                        description="",
-                    )
+            tag_hash = project_tags.get(name)
+            if tag_hash is not None:
+                return tag_hash
+
+            new_tag_hash = uuid.uuid4()
+            sess.add(
+                ProjectTag(
+                    tag_hash=new_tag_hash,
+                    project_hash=project_hash,
+                    name=name,
+                    description="",
                 )
-                return new_tag_hash
+            )
+            project_tags[name] = new_tag_hash
+            return new_tag_hash
 
         data_exists = set()
         label_exists = set()
