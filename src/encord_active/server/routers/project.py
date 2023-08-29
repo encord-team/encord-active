@@ -38,7 +38,7 @@ from fastapi.responses import ORJSONResponse
 from natsort import natsorted
 from pandera.typing import DataFrame
 from pydantic import BaseModel
-from sqlalchemy import delete, text, tuple_
+from sqlalchemy import delete, tuple_
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
@@ -341,17 +341,6 @@ def _get_selector(
     return base
 
 
-class DataTagAdd(TypedDict):
-    project_hash: str
-    du_hash: str
-    frame: int
-    tag_hash: str
-
-
-class AnnotationTagAdd(DataTagAdd):
-    object_hash: str
-
-
 @router.put("/{project}/item_tags")
 def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
     with Session(engine) as sess:
@@ -418,9 +407,9 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
         data_exists = set()
         label_exists = set()
 
-        data_tags_to_add: list[DataTagAdd] = []
+        data_tags_to_add: list[ProjectTaggedDataUnit] = []
         data_tags_to_remove: set[tuple[uuid.UUID, int, uuid.UUID]] = set()  # du_hash, frame, tag_hash
-        annotation_tags_to_add: list[AnnotationTagAdd] = []
+        annotation_tags_to_add: list[ProjectTaggedAnnotation] = []
         annotation_tags_to_remove: set[
             tuple[uuid.UUID, int, str, uuid.UUID]
         ] = set()  # du_hash, frame, object_hash, tag_hash
@@ -442,11 +431,11 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                 if tag_hash in existing_data_tags.get((du_hash, frame), set()):
                     continue
                 data_tags_to_add.append(
-                    DataTagAdd(
-                        project_hash=project_hash.hex,
-                        du_hash=du_hash.hex,
+                    ProjectTaggedDataUnit(
+                        project_hash=project_hash,
+                        du_hash=du_hash,
                         frame=frame,
-                        tag_hash=tag_hash.hex,
+                        tag_hash=tag_hash,
                     )
                 )
             data_tags_to_remove.update(
@@ -470,11 +459,11 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                     if tag_hash in existing_label_tags.get((du_hash, frame, annotation_hash), set()):
                         continue
                     annotation_tags_to_add.append(
-                        AnnotationTagAdd(
-                            project_hash=project_hash.hex,
-                            du_hash=du_hash.hex,
+                        ProjectTaggedAnnotation(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
                             frame=frame,
-                            tag_hash=tag_hash.hex,
+                            tag_hash=tag_hash,
                             object_hash=annotation_hash,
                         )
                     )
@@ -492,19 +481,9 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
 
         # Delete left over data and annotation tags
         if data_tags_to_add:
-            sess.execute(
-                text(
-                    f"INSERT INTO {ProjectTaggedDataUnit.__tablename__} (project_hash, du_hash, frame, tag_hash) VALUES (:project_hash, :du_hash, :frame, :tag_hash)"
-                ),
-                data_tags_to_add,
-            )
+            sess.add_all(data_tags_to_add)
         if annotation_tags_to_add:
-            sess.execute(
-                text(
-                    f"INSERT INTO {ProjectTaggedAnnotation.__tablename__} (project_hash, du_hash, frame, object_hash, tag_hash) VALUES (:project_hash, :du_hash, :frame, :object_hash, :tag_hash)"
-                ),
-                annotation_tags_to_add,
-            )
+            sess.add_all(annotation_tags_to_add)
         if data_tags_to_remove:
             sess.execute(
                 delete(ProjectTaggedDataUnit).where(
