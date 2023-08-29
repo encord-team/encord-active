@@ -449,8 +449,14 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                         tag_hash=tag_hash.hex,
                     )
                 )
-            for tag_hash in existing_data_tags.get((du_hash, frame), set()).difference(new_data_tag_uuids):
-                data_tags_to_remove.add((du_hash, frame, tag_hash))
+            data_tags_to_remove.update(
+                set(
+                    [
+                        (du_hash, frame, tag_hash)
+                        for tag_hash in existing_data_tags.get((du_hash, frame), set()).difference(new_data_tag_uuids)
+                    ]
+                )
+            )
 
             for annotation_hash in annotation_hashes:
                 new_label_tag_uuids: set[UUID] = set()
@@ -473,10 +479,16 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                         )
                     )
 
-                for tag_hash in existing_label_tags.get((du_hash, frame, annotation_hash), set()).difference(
-                    new_label_tag_uuids
-                ):
-                    annotation_tags_to_remove.add((du_hash, frame, annotation_hash, tag_hash))
+                annotation_tags_to_remove.update(
+                    set(
+                        [
+                            (du_hash, frame, annotation_hash, tag_hash)
+                            for tag_hash in existing_label_tags.get(
+                                (du_hash, frame, annotation_hash), set()
+                            ).difference(new_label_tag_uuids)
+                        ]
+                    )
+                )
 
         # Delete left over data and annotation tags
         if data_tags_to_add:
@@ -491,7 +503,7 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                 text(
                     f"INSERT INTO {ProjectTaggedAnnotation.__tablename__} (project_hash, du_hash, frame, object_hash, tag_hash) VALUES (:project_hash, :du_hash, :frame, :object_hash, :tag_hash)"
                 ),
-                data_tags_to_add,
+                annotation_tags_to_add,
             )
         if data_tags_to_remove:
             sess.execute(
