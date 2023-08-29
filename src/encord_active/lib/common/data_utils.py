@@ -22,13 +22,9 @@ _EXTRACT_FRAMES_CACHE: Dict[str, str] = {}
 
 class Directory:
     def __init__(self, subdir: str) -> None:
-        base = os.environ.get("EA_CACHE_BASE", "/home/jupyter/iterative_cache")
+        base = os.environ.get("EA_CACHE_BASE", "/tmp/ea")
         self.name = f"{base}/{subdir}"
-        Path(self.name).mkdir(exist_ok=True)
-
-
-_d = Directory("extract_frames")
-_EXTRACT_FRAMES_FOLDER: Directory = _d
+        Path(self.name).mkdir(exist_ok=True, parents=True)
 
 
 def extract_frames(
@@ -38,8 +34,9 @@ def extract_frames(
     symlink_folder: bool = True,
     expected_frames: Optional[int] = None,
 ) -> None:
+    _extract_frames_folder: Directory = Directory("extract_frames")
     cache_id = data_hash
-    tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{cache_id}"
+    tempdir = Path(_extract_frames_folder.name) / f"extra_cache_{cache_id}"
 
     if data_hash not in _EXTRACT_FRAMES_CACHE:
         extract = True
@@ -68,7 +65,7 @@ def extract_frames(
         _EXTRACT_FRAMES_CACHE[data_hash] = cache_id
     # Symlink everything in the temporary directory, do not do duplicate work
     read_cache_id = _EXTRACT_FRAMES_CACHE[data_hash]
-    read_tempdir = Path(_EXTRACT_FRAMES_FOLDER.name) / f"extra_cache_{read_cache_id}"
+    read_tempdir = Path(_extract_frames_folder.name) / f"extra_cache_{read_cache_id}"
     if symlink_folder:
         img_dir.symlink_to(read_tempdir, target_is_directory=True)
     else:
