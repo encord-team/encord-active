@@ -1,4 +1,5 @@
 import json
+import sys
 import uuid
 from datetime import datetime
 from functools import partial
@@ -6,8 +7,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 from urllib.parse import parse_qs, urlparse
 
+import requests
 from cachetools import LRUCache, cached
 from dateutil import parser as date_parser
+from loguru import logger
 from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
@@ -33,6 +36,14 @@ from encord_active.lib.project.project_file_structure import (
     ProjectFileStructure,
 )
 from encord_active.server.dependencies import ProjectFileStructureDep
+
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<blue>{time}</blue> | <magenta>{level}</magenta> | {message} | <green>{extra}</green>",
+    colorize=True,
+    level="DEBUG",
+)
 
 
 class Metadata(TypedDict):
@@ -66,16 +77,36 @@ def read_class_idx(predictions_dir: Path):
     return _read_class_idx(predictions_dir)
 
 
+def _responds_with_200(url: str) -> bool:
+    logger.debug("Checking url: {url}")
+    with logger.contextualize(url=url):
+        try:
+            with requests.get(url, stream=True) as res:
+                logger.debug(f"Status code: {res.status_code} reason: {res.reason}", res=vars(res))
+                return res.status_code == 200
+        except Exception as e:
+            logger.warning(f"Failed with an exception {e}")
+            return False
+
+
 def _is_expired(url: str):
     params = parse_qs(urlparse(url).query)
     # TODO: support azure
-    for provider in ["Goog", "Amz"]:
-        if f"X-{provider}-Exprires" in params and f"X-{provider}-Date":
-            signature_date = params["X-Goog-Date"][0]
-            valid_for = float(params["X-Goog-Exprires"][0])
+    with logger.contextualize(params=params.keys()):
+        for provider in ["Goog", "Amz"]:
+            expire_key = f"X-{provider}-Expires"
+            date_key = f"X-{provider}-Date"
+            if not (expire_key in params and date_key in params):
+                continue
+
+            signature_date = params[date_key][0]
+            valid_for = float(params[expire_key][0])
             parsed_date = date_parser.parse(signature_date)
             diff = datetime.now(parsed_date.tzinfo) - parsed_date
-            return diff.total_seconds() >= valid_for
+            logger.debug(f"Checking if {diff.total_seconds()} >= {valid_for}")
+            url_expired = diff.total_seconds() >= valid_for
+            return url_expired or not _responds_with_200(url)
+
     return True
 
 
@@ -95,10 +126,12 @@ def _get_url(
             timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
         if _is_expired(data_opt.signed_url) and ssh_key_path is not None:
+            logger.info(f"Resigning url for data hash {data_opt.du_hash}")
             remote_project = get_encord_project(ssh_key_path, str(project_hash))
             video, _ = remote_project.get_data(du_hash, get_signed_url=True)
             if video is not None:
                 signed_url = video["file_link"]
+                label_row_structure.project.cached_signed_urls[data_opt.du_hash] = signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
             url_frame = 0 if data_opt.data_type == "video" else frame

@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext } from "react";
 import { z } from "zod";
 import { apiUrl } from "../../constants";
-import { takeDataId } from "./id";
 
 export const PointSchema = z.object({ x: z.number(), y: z.number() });
 
@@ -267,14 +266,6 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       ).json();
       return IdValueSchema.array().parse(result);
     },
-    requestResetSignedURL: async (id: string) => {
-      await fetcher(
-        `${apiUrl}/projects/${projectHash}/reset_signed_url/${encodeURIComponent(
-          id,
-        )}`,
-        { method: "POST" },
-      );
-    },
     fetchProjectItem: async (id: string, iou?: number) => {
       const queryParams = new URLSearchParams({
         ...(iou != null ? { iou: iou.toString() } : {}),
@@ -368,9 +359,6 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
 };
 
 export const useApi = () => {
-  const [invalidatedUrls, setInvalidatedUrls] = useState(
-    new Map<string, number>(),
-  );
   const apiContext = useContext(ApiContext);
 
   if (!apiContext)
@@ -420,34 +408,6 @@ export const useApi = () => {
         [projectHash, "available_prediction_types"],
         () => api.fetchAvailablePredictionTypes(...args),
         { staleTime: Infinity },
-      ),
-    invalidateItemURL: (...args: Parameters<API["fetchProjectItem"]>) =>
-      useMutation(
-        [projectHash, "invalidate_query", ...args],
-        () => {
-          const id = args[0];
-
-          const oldTs = invalidatedUrls.get(id);
-          if (oldTs && Date.now() - oldTs < 1000 * 60 * 10)
-            return new Promise(() => undefined);
-
-          return api.requestResetSignedURL(args[0]);
-        },
-        {
-          onSettled: () => {
-            const id = args[0];
-            const oldTs = invalidatedUrls.get(id);
-            const ts = Date.now();
-            if (oldTs && ts - oldTs < 1000 * 60 * 10) return;
-
-            const newInvalidatedUrls = new Map(invalidatedUrls.entries());
-            newInvalidatedUrls.set(id, ts);
-            setInvalidatedUrls(newInvalidatedUrls);
-            queryClient.invalidateQueries({
-              queryKey: [projectHash, "item", args[0]],
-            });
-          },
-        },
       ),
   };
 };
