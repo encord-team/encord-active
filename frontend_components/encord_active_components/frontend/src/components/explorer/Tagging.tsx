@@ -48,7 +48,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
     label.forEach(result.allLabelTags.add, result.allLabelTags);
 
     if (itemSet?.has(id))
-      data.forEach(result.selectedTags.label.add, result.selectedTags.label);
+      label.forEach(result.selectedTags.label.add, result.selectedTags.label);
     if (dataItemSet.has(id))
       data.forEach(result.selectedTags.data.add, result.selectedTags.data);
 

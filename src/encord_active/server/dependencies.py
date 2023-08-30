@@ -37,15 +37,15 @@ async def get_project_file_structure(project: str) -> ProjectFileStructure:
         return ProjectFileStructure(get_settings().SERVER_START_PATH / project)
 
     with Session(engine) as sess:
-        db_project = sess.exec(select(Project).where(Project.project_hash == uuid.UUID(project))).first()
+        db_project = sess.exec(
+            select(Project.project_name, Project.project_hash).where(Project.project_hash == uuid.UUID(project))
+        ).first()
         if not db_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Project: {project} wasn't found in the DB"
             )
 
-        return _try_find_project(
-            get_settings().SERVER_START_PATH, db_project.project_name, str(db_project.project_hash)
-        )
+        return _try_find_project(get_settings().SERVER_START_PATH, db_project[0], str(db_project[1]))
 
 
 ProjectFileStructureDep = Annotated[ProjectFileStructure, Depends(get_project_file_structure)]
