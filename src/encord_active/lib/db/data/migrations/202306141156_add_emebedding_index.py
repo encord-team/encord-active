@@ -12,11 +12,12 @@ def project_has_embedding_type(pfs: ProjectFileStructure, et: EmbeddingType):
     ontology = orjson.loads(pfs.ontology.read_text())  # pylint: disable=no-member
     if et == EmbeddingType.OBJECT:
         return bool(ontology.get("objects", []))
-    if et == EmbeddingType.OBJECT:
+    if et == EmbeddingType.CLASSIFICATION:
         return bool(ontology.get("classifications", []))
 
 
 def up(pfs: ProjectFileStructure):
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]:
         if project_has_embedding_type(pfs, embedding_type):
-            EmbeddingIndex.from_project(pfs, embedding_type)
+            # EmbeddingIndex.from_project(pfs, embedding_type)
+            pass
