@@ -1,6 +1,5 @@
 import orjson
 
-from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
