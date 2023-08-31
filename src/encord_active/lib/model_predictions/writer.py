@@ -310,7 +310,7 @@ class PredictionWriter:
         self.object_labels: List[LabelEntry] = []
         self.classification_labels: List[ClassificationLabelEntry] = []
         valid_feature_node_hashes = {
-            attr.feature_node_hash
+            (clf.feature_node_hash, attr.feature_node_hash)
             for clf in self.project.ontology.classifications
             for attr in clf.attributes
             if isinstance(attr, RadioAttribute)
@@ -319,22 +319,30 @@ class PredictionWriter:
         def append_classification_label(du_hash: str, frame: int, classification_dict: dict, answers_dict: dict):
             label_hash = self.lr_lookup[du_hash]
 
-            if classification_dict["featureHash"] not in valid_feature_node_hashes:
-                return None
-
             classification = LabelClassification(**classification_dict)
-
             classification_answers = answers_dict.get(classification.classificationHash, {}).get("classifications", [])
             if not classification_answers:
                 return None
-            elif len(classification_answers) > 1:
-                logger.error(
-                    f'Found multiple classifications for label row "{label_hash}" and classification hash "{classification.classificationHash}'
-                )
 
-            classification_answer = ClassificationAnswer.parse_obj(classification_answers[0])
+            # Try find the top level one corresponding to a radio button
+            classification_answer: Optional[ClassificationAnswer] = None
+            for clf_answer_dict in classification_answers:
+                try:
+                    classification_answer_candidate = ClassificationAnswer.parse_obj(clf_answer_dict)
+                except:
+                    continue
+
+                key = (classification.featureHash, classification_answer_candidate.featureHash)
+                if key in valid_feature_node_hashes:
+                    classification_answer = classification_answer_candidate
+                    break
+
+            if classification_answer is None:
+                return
+
             class_id = self.get_classification_class_id(classification, classification_answer)
             if class_id is None:  # Ignore unwanted classes (defined by what is in `self.object_class_id_lookup`)
+                print("Returning because there are more options")
                 return
 
             label_entry = ClassificationLabelEntry(
