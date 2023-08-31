@@ -1,5 +1,6 @@
 import orjson
 
+from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
@@ -18,5 +19,4 @@ def project_has_embedding_type(pfs: ProjectFileStructure, et: EmbeddingType):
 def up(pfs: ProjectFileStructure):
     for embedding_type in [EmbeddingType.IMAGE, EmbeddingType.OBJECT, EmbeddingType.CLASSIFICATION]:
         if project_has_embedding_type(pfs, embedding_type):
-            # EmbeddingIndex.from_project(pfs, embedding_type)
-            pass
+            EmbeddingIndex.from_project(pfs, embedding_type)
