@@ -61,7 +61,7 @@ KITTI_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.(?:txt
 PNG_FILE_NAME_REGEX = r"^(?P<data_unit_title>.*?)(?:__(?P<frame>\d+))?\.png$"
 
 
-def import_predictions(project: Project, predictions: list[Prediction]):
+def import_predictions(project: Project, predictions: list[Prediction], run_metrics: bool = True):
     """
     Import predictions from Encord's Prediction class format into the specified Encord Active project.
 
@@ -91,12 +91,13 @@ def import_predictions(project: Project, predictions: list[Prediction]):
         for pred in predictions:
             writer.add_prediction(pred)
 
-    run_all_prediction_metrics(
-        data_dir=project.file_structure.project_dir,
-        iterator_cls=PredictionIterator,
-        use_cache_only=True,
-        prediction_type=prediction_type,
-    )
+    if run_metrics:
+        run_all_prediction_metrics(
+            data_dir=project.file_structure.project_dir,
+            iterator_cls=PredictionIterator,
+            use_cache_only=True,
+            prediction_type=prediction_type,
+        )
 
 
 def import_coco_predictions(
