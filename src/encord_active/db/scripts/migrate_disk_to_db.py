@@ -1057,7 +1057,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
         metric_column_name = WELL_KNOWN_METRICS[metric.name]
         if metric_column_name == "$SKIP":
             continue
-        metric_df = load_metric_dataframe(metric, normalize=False).to_dict(orient="records")
+        metric_df = load_metric_dataframe(metric, normalize=False).reset_index().to_dict(orient="records")
         for metric_entry in metric_df:
             label_hash, du_hash_str, frame_str, *object_hash_list = metric_entry["identifier"].split("_")
             du_hash = uuid.UUID(du_hash_str)

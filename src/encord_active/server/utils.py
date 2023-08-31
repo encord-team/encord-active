@@ -40,7 +40,7 @@ from encord_active.server.dependencies import ProjectFileStructureDep
 logger.remove()
 logger.add(
     sys.stderr,
-    format="<blue>{time}</blue> | <magenta>{level}</magenta> | {message} | <green>{extra}</green>",
+    format="<e>{time}</e> | <m>{level}</m> | {message} | <e><d>{extra}</d></e>",
     colorize=True,
     level="DEBUG",
 )

@@ -66,6 +66,7 @@ from encord_active.lib.common.utils import (
 from encord_active.lib.db.connection import DBConnection, PrismaConnection
 from encord_active.lib.db.helpers.tags import GroupedTags
 from encord_active.lib.db.merged_metrics import MergedMetrics
+from encord_active.lib.db.predictions import Prediction
 from encord_active.lib.embeddings.dimensionality_reduction import get_2d_embedding_data
 from encord_active.lib.embeddings.types import Embedding2DSchema, Embedding2DScoreSchema
 from encord_active.lib.encord.actions import (
@@ -119,6 +120,7 @@ from encord_active.server.dependencies import (
     engine,
     verify_premium,
 )
+from encord_active.server.routers import project_predictions
 from encord_active.server.routers.project2 import get_all_projects
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
@@ -132,6 +134,7 @@ router = APIRouter(
     prefix="/projects",
     tags=["projects"],
 )
+router.include_router(project_predictions.router)
 
 
 @router.post("/{project}/item_ids_by_metric", response_class=ORJSONResponse)
