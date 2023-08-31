@@ -74,10 +74,17 @@ class FrameClassification(BaseModel):
         frozen = True
 
 
-class Prediction(BaseModel):
+class PredictionBase(BaseModel):
     data_hash: str
     frame: Optional[int] = 0
     confidence: float
+
+
+class ClassificationPrediction(PredictionBase):
+    classification: FrameClassification
+
+
+class Prediction(PredictionBase):
     object: Optional[ObjectDetection] = None
     classification: Optional[FrameClassification] = None
 

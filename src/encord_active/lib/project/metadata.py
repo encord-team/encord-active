@@ -15,6 +15,7 @@ class ProjectMeta(TypedDict):
     has_remote: Optional[bool]
     data_version: int
     store_data_locally: bool
+    sampling_rate: Optional[float]
 
 
 class ProjectNotFound(Exception):
