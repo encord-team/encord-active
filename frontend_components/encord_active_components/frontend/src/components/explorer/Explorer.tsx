@@ -19,7 +19,6 @@ import { useDebounce } from "usehooks-ts";
 import {
   ApiContext,
   classificationsPredictionOutcomes,
-  Filters,
   getApi,
   IdValue,
   Item,
@@ -53,6 +52,29 @@ import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { apiUrl, env, local } from "../../constants";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { useAuth } from "../../authContext";
+
+export type InternalFilters = {
+  analysisDomain: "data" | "annotation";
+  filters: {
+    data: {
+      metrics: Readonly<Record<string, readonly [number, number]>>,
+      enums:  Readonly<Record<string, readonly string[]>>,
+      reduction: null,
+      tags: null | string[],
+    },
+    annotation: {
+      metrics: Readonly<Record<string, readonly [number, number]>>,
+      enums:  Readonly<Record<string, readonly string[]>>,
+      reduction: null,
+      tags: null | string[],
+    },
+  },
+  orderBy: null | string,
+  desc: boolean,
+  iou: number | undefined,
+  predictionOutcome: PredictionOutcome | undefined,
+  predictionType: "object" | "classification" | undefined,
+};
 
 export type Props = {
   projectHash: string;
@@ -102,7 +124,7 @@ export const Explorer = ({
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   const [annotationFilters, setAnnotationFilters] = useState<FilterState>(DefaultFilters);
 
-  const rawFilters = useMemo(() => {
+  const rawFilters: InternalFilters = useMemo(() => {
     const analysisDomain: ProjectAnalysisDomain = "data";
     return {
       analysisDomain,
@@ -128,7 +150,7 @@ export const Explorer = ({
     }
   }, [dataFilters, annotationFilters, predictionType, predictionOutcome, iou]);
 
-  const filters = useDebounce(rawFilters, 500);
+  const filters: InternalFilters = useDebounce(rawFilters, 500);
 
   useEffect(() => {
     setPage(1);
@@ -268,7 +290,7 @@ export const Explorer = ({
 
   const onMetricSelected = (newMetric: string) => {
     const [domain, metricKey] = newMetric.split("-", 1);
-    let analysisDomain;
+    let analysisDomain: "data" | "annotation";
     if (domain === "data-") {
       analysisDomain = "data"
     } else if (domain === "annotation-") {
@@ -377,6 +399,8 @@ export const Explorer = ({
           {/* TODO: move model predictions embeddings plot to FE */}
           {selectedMetric && false && (
             <Embeddings
+              queryApi={queryAPI}
+              projectHash={projectHash}
               isloadingItems={isLoadingSortedItems}
               idValues={
                 (scope === "prediction"
@@ -387,12 +411,11 @@ export const Explorer = ({
                   : sortedItems) || []
               }
               filters={filters}
-              embeddingType={
-                scope === "prediction" ? "image" : selectedMetric.embeddingType
-              }
-              onSelectionChange={(selection) => (
-                setPage(1), setItemSet(new Set(selection.map(({ id }) => id)))
-              )}
+              embeddingType="embedding_clip"
+              onSelectionChange={(selection) => {
+                setPage(1);
+                setItemSet(new Set(selection.map(({ id }) => id)));
+              }}
               onReset={() => setItemSet(new Set())}
             />
           )}
@@ -716,6 +739,8 @@ const PredictionFilters = ({
 };
 
 const Embeddings = ({
+  queryApi,
+  projectHash,
   isloadingItems,
   idValues,
   filters,
@@ -723,18 +748,33 @@ const Embeddings = ({
   onSelectionChange,
   onReset,
 }: {
+  queryApi: QueryAPI;
+  projectHash: string;
   isloadingItems: boolean;
   idValues: IdValue[];
-  filters: Filters;
+  filters: InternalFilters;
   embeddingType: Metric["embeddingType"];
   onSelectionChange: Parameters<
     typeof ScatteredEmbeddings
   >[0]["onSelectionChange"];
   onReset: () => void;
 }) => {
-  const { isLoading, data: scatteredEmbeddings } = useApi().fetch2DEmbeddings(
-    embeddingType,
-    filters,
+  const {
+    data: reductionHashes,
+  } = queryApi.useProjectListEmbeddingReductions(projectHash);
+  const reductionHash: string | undefined = useMemo(
+    () => Object.keys(reductionHashes?.results ?? {})[0],
+    [reductionHashes]
+  );
+  const {
+    isLoading,
+    data: scatteredEmbeddings
+  } = queryApi.useProjectAnalysisReducedEmbeddings(
+    projectHash,
+    filters.analysisDomain,
+    reductionHash ?? "",
+    filters.filters,
+    { enabled: reductionHash != null}
   );
 
   const filtered = useMemo(() => {

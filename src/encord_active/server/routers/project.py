@@ -262,25 +262,27 @@ def append_tags_to_row(project: ProjectFileStructureDep, row: dict):
     row["tags"] = {"data": data_tags, "label": label_tags}
 
 
-@router.get("/{project}/items/{id:path}")
-def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = None):
+@router.get("/{project_hash}/items/{id:path}")
+def read_item(project_hash: uuid.UUID, id: str, iou: Optional[float] = None):
     lr_hash, du_hash, frame, *object_hash = id.split("_")
+    du_hash_uuid, frame_int = uuid.UUID(du_hash), int(frame)
 
-    row = get_model_prediction_by_id(project, id, iou)
+    with Session(engine) as sess:
+        extra = None
+        try:
+            args = [project_hash, du_hash_uuid, frame_int]
+            if not object_hash:
+                item = sess.exec(select_data_analytics(*args)).one()
+            else:
+                args.append(object_hash[0])
+                try:
+                    item, extra = sess.exec(select_prediction_analytics_with_extra(*args)).one()
+                except NoResultFound:
+                    item = sess.exec(select_annotation_analytics(*args)).one()
+        except Exception:
+            raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project.project_hash}"')
 
-    if row:
-        return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)
-
-    with DBConnection(project) as conn:
-        rows = MergedMetrics(conn).get_row(id).dropna(axis=1).to_dict("records")
-
-        if not rows:
-            raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project}"')
-
-        row = rows[0]
-
-    append_tags_to_row(project, row)
-    return to_item(row, project, lr_hash, du_hash, frame)
+        return {"id": id, **build_item(sess, project, item, extra, iou).dict()}
 
 
 class ItemTags(BaseModel):

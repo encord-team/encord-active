@@ -174,6 +174,15 @@ export type ProjectAnalysisDistribution = {
       }>;
 };
 
+export type ProjectAnalysisReductionResult = {
+  readonly count: number;
+  readonly reductions: Array<{
+    readonly x: number;
+    readonly y: number;
+    readonly n: number;
+  }>;
+};
+
 export type ProjectAnalysisCompareMetricDissimilarity = {
   readonly results: Readonly<Record<string, number>>;
 };
@@ -396,6 +405,13 @@ export interface QueryAPI {
     metricOrEnum: string,
     options?: Pick<UseQueryOptions, "enabled">,
   ): UseQueryResult<ProjectAnalysisDistribution>;
+    useProjectAnalysisReducedEmbeddings(
+    projectHash: string,
+    analysisDomain: ProjectAnalysisDomain,
+    reductionHash: string,
+    filters: SearchFilters,
+    options?: Pick<UseQueryOptions, "enabled">,
+  ): UseQueryResult<ProjectAnalysisReductionResult>;
   useProjectAnalysisCompareMetricDissimilarity(
     projectHash: string,
     analysisDomain: ProjectAnalysisDomain,

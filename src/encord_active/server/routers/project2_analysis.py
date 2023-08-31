@@ -8,7 +8,7 @@ import numpy as np
 from fastapi import APIRouter
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
-from sqlalchemy import func
+from sqlalchemy import func, Numeric, Integer
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
@@ -182,7 +182,7 @@ def get_metric_distribution(
 
 class Query2DEmbedding(BaseModel):
     count: int
-    embeddings2d: List[metric_query.QueryScatter]
+    reductions: List[metric_query.QueryScatterPoint]
 
 
 @router.get("/reductions/{reduction_hash}/summary")
@@ -206,11 +206,12 @@ def get_2d_embedding_summary(
         },
     )
     with Session(engine) as sess:
+        # FIXME: support variable bucketing.
         round_digits = None if buckets is None else int(math.log10(buckets))
         query = (
             select(  # type: ignore
-                func.round(domain_tables.reduction.x, round_digits),
-                func.round(domain_tables.reduction.y, round_digits),
+                func.round(domain_tables.reduction.x).cast(Integer).label("xv"),
+                func.round(domain_tables.reduction.y).cast(Integer).label("yv"),
                 func.count(),
             )
             .where(
@@ -218,14 +219,16 @@ def get_2d_embedding_summary(
                 *where,
             )
             .group_by(
-                func.round(domain_tables.reduction.x, round_digits),
-                func.round(domain_tables.reduction.y, round_digits),
+                "xv",
+                "yv",
             )
         )
-        results = sess.exec(query)
+        print(f"DEBUGGING REDUCTION: {query}")
+        results = sess.exec(query).fetchall()
+        print(f"DEBUG SMORE: {results}")
     return Query2DEmbedding(
         count=sum(n for x, y, n in results),
-        embeddings2d=[metric_query.QueryScatter(x=x, y=y, n=n) for x, y, n in results],
+        embeddings2d=[metric_query.QueryScatterPoint(x=x, y=y, n=n) for x, y, n in results],
     )
 
 

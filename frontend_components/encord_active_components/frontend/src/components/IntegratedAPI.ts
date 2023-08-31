@@ -16,7 +16,7 @@ import {
   PredictionView,
   ProjectAnalysisCompareMetricDissimilarity,
   ProjectAnalysisDistribution,
-  ProjectAnalysisDomain,
+  ProjectAnalysisDomain, ProjectAnalysisReductionResult,
   ProjectAnalysisScatter,
   ProjectAnalysisSummary,
   ProjectEmbeddingReductions,
@@ -218,6 +218,35 @@ class IntegratedAPI implements QueryAPI {
           // eslint-disable-next-line
           .then((res) => res.data as any),
       { ...options, ...StatisticQueryOptions },
+    );
+  };
+
+  useProjectAnalysisReducedEmbeddings = (
+    projectHash: string,
+    analysisDomain: ProjectAnalysisDomain,
+    reductionHash: string,
+    filters: SearchFilters,
+    options: Pick<UseQueryOptions, "enabled"> = {},
+  ): UseQueryResult<ProjectAnalysisReductionResult> => {
+    const baseURL = this.getBaseUrl(projectHash, options.enabled);
+    return useQuery(
+      [
+        "ACTIVE:useProjectAnalysisReducedEmbeddings",
+        projectHash,
+        analysisDomain,
+        reductionHash,
+        filters,
+      ],
+      () =>
+        axios
+          .get(`${baseURL}/analysis/${analysisDomain}/reductions/${reductionHash}/summary`, {
+            params: {
+              filters: JSON.stringify(filters),
+            },
+          })
+          // eslint-disable-next-line
+          .then((res) => res.data as any),
+      {...options, ...StatisticQueryOptions},
     );
   };
 
