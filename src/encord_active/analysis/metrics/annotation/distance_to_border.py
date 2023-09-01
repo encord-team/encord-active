@@ -21,9 +21,9 @@ from encord_active.db.metrics import MetricType
 class DistanceToBorderMetric(OneObjectMetric):
     def __init__(self) -> None:
         super().__init__(
-            ident="metric_border_relative",  # FIXME: rename ident to something better??
-            long_name="Distance in pixels to the border",
-            desc="",
+            ident="metric_distance_to_border_relative",
+            long_name="Closest distance to border relatively",
+            desc="Returns the relative closest distance to any border.",
             metric_type=MetricType.NORMAL,
         )
 
