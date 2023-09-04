@@ -153,7 +153,6 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
                     in_op(tags_table.tag_hash, selected_tag_hashes),
                 )
 
-            logger.debug(stmt)
             tagged_rows = sess.exec(stmt).all()
             if is_annotations:
                 data_identifiers = set(
@@ -175,11 +174,10 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
     if data_tags:
         logger.debug("Filtering data tags", data_tags=data_tags)
         identifiers = _filter_tags_table(ProjectTaggedDataUnit, data_tags, UNTAGGED_FRAMES_LABEL)
-        logger.debug("Identitiers", identifiers=identifiers)
         df = df[df.data_row_id.isin(identifiers)]
 
     if label_tags:
-        logger.debug("Filtering data tags", data_tags=data_tags)
+        logger.debug("Filtering label tags", label_tags=label_tags)
         search_tags = [t for t in label_tags]
         untagged_subset = None
         if UNTAGGED_ANNOTATIONS_LABEL in [t.name for t in search_tags]:

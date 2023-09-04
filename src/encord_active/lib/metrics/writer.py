@@ -41,7 +41,6 @@ class CSVMetricWriter(CSVWriter):
         annotator: Optional[str] = None,
         key: Optional[str] = None,  # TODO obsolete parameter, remove from metrics first
     ):
-        logger.debug("Metric writer writing score", score=score, filename=self.filename)
         if not isinstance(score, (float, int)):
             raise TypeError("score must be a float or int")
         if isinstance(labels, list) and len(labels) == 0:
@@ -95,9 +94,7 @@ class CSVVideoAverageWrapper(CSVWriter):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.writer.writeheader()
-        logger.debug("records", records=self.records)
         for (lh, dh), vals in self.records.items():
-            logger.debug(lh, dh, vals)
             if len(vals) < 1:
                 return
             key = self.get_identifier(labels=None, label_hash=lh, du_hash=dh, frame=0)
@@ -113,7 +110,6 @@ class CSVVideoAverageWrapper(CSVWriter):
             self.writer.writerow(row)
 
         self.csv_file.flush()
-        logger.debug(f"Flushing", self.wrapped_writer.filename)
         return super().__exit__(exc_type, exc_val, exc_tb)
 
     def write(
@@ -121,7 +117,6 @@ class CSVVideoAverageWrapper(CSVWriter):
         score: Union[float, int],
         key: Optional[str] = None,
     ):
-        logger.debug("Video writer", score=score, key=key)
         if key is not None and len(key) > 0:
             label_hash, du_hash, *_ = key.split("_")
             self.records.setdefault((label_hash, du_hash), []).append(score)
