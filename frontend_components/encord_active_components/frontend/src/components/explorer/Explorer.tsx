@@ -47,13 +47,14 @@ import {
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import { Popover, Button } from "antd";
+import { Popover } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { apiUrl, env, local } from "../../constants";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { useAuth } from "../../authContext";
+import { useDisplaySettings } from "./useDisplaySettings";
 
 export type Props = {
   projectHash: string;
@@ -77,6 +78,7 @@ export const Explorer = ({
   const [itemSet, setItemSet] = useState(new Set<string>());
   const [isAscending, setIsAscending] = useState(true);
 
+  const { showAnnotations, toggleShowAnnotations } = useDisplaySettings();
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
@@ -123,12 +125,12 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
@@ -419,9 +421,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -447,8 +449,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm
@@ -527,6 +529,15 @@ export const Explorer = ({
                 disabled={!hasPremiumFeatures}
               />
               <div className="flex gap-2 flex-wrap">
+                <label className="btn swap">
+                  <input
+                    defaultChecked={showAnnotations}
+                    onChange={() => toggleShowAnnotations()}
+                    type="checkbox"
+                  />
+                  <div className="swap-on">Hide Annotations</div>
+                  <div className="swap-off">Show Annotations</div>
+                </label>
                 <Popover
                   placement="bottomLeft"
                   content={
@@ -1070,6 +1081,8 @@ const ImageWithPolygons = ({
     Pick<ItemLabelObject, "points" | "boundingBoxPoints" | "shape" | "color">[]
   >([]);
 
+  const { showAnnotations } = useDisplaySettings();
+
   useEffect(() => {
     if (width == null || height == null) return;
     const objects = getObjects(item);
@@ -1116,7 +1129,7 @@ const ImageWithPolygons = ({
           src={imgSrcUrl}
         />
       )}
-      {width && height && polygons.length > 0 && (
+      {showAnnotations && width && height && polygons.length > 0 && (
         <svg className="absolute w-full h-full top-0 right-0">
           {polygons.map(
             ({ points, boundingBoxPoints, color, shape }, index) => {
