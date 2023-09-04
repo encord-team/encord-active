@@ -47,14 +47,12 @@ def find_unique_and_valid_attributes(
     project: ProjectFileStructure, predictions: list[ClassificationPrediction]
 ) -> set[tuple[str, str]]:
     classifications = orjson.loads(project.ontology.read_text()).get("classifications", [])
-    logger.debug("classifications", classifications=classifications)
     radio_attributes = {
         (clf["featureNodeHash"], attr["featureNodeHash"])
         for clf in classifications
         for attr in clf.get("attributes", [])
         if attr["type"] == "radio"
     }
-    logger.debug("radio attributes", radio_attributes=radio_attributes)
     res = set(
         (
             (p.classification.feature_hash, p.classification.attribute_hash)
@@ -143,16 +141,19 @@ class ClassificationModelConfidenceMetric(Metric):
         logger.debug(f"Found {len(valid_frames)} frames and {len(du_to_lh)} label hashes")
 
         cnt = 0
+        used_label_hashes = set()
         for pred in tqdm(self.predictions, desc="Reading predictions"):
             pred_du_hash = uuid.UUID(pred.data_hash)
             if (pred_du_hash, pred.frame) not in valid_frames:
-                # logger.debug("Skipping prediction", pred=pred, valid_frames=valid_frames)
                 continue
-            key = f"{du_to_lh[uuid.UUID(pred.data_hash)]}_{pred_du_hash}_{pred.frame:05d}"
-            logger.debug("Writing score", key=key)
+            lh = du_to_lh.get(uuid.UUID(pred.data_hash))
+            if lh is None:
+                continue
+            used_label_hashes.add(lh)
+            key = f"{lh}_{pred_du_hash}_{pred.frame:05d}"
             writer.write(pred.confidence, key=key)
             cnt += 1
-        logger.debug(f"Assigned {cnt} scores")
+        logger.debug(f"Assigned {cnt} scores to {len(used_label_hashes)} label hashes")
 
 
 @router.post("/classification")
@@ -162,10 +163,10 @@ def add_predictions(
     predictions: Annotated[List[ClassificationPrediction], Body()],
 ):
     with logger.contextualize(project=project.project_dir, model_name=model_name):
-        logger.debug("starting")
+        logger.debug("starting classification import")
         for clf, attr in find_unique_and_valid_attributes(project, predictions):
             metric = ClassificationModelConfidenceMetric(clf, attr, project, predictions, model_name=model_name)
-            logger.debug("Running metric for {metric.metadata.title}")
+            logger.debug(f"Running metric for {metric.metadata.title}")
             metric_name = metric.metadata.get_unique_name()
             with CSVMetricWriter(project.project_dir, None, prefix=metric_name) as wrapped:  # type: ignore
                 wrapped_observer = StatisticsObserver()
@@ -187,9 +188,11 @@ def add_predictions(
                     wrapper_meta_file.write_text(metadata.json())
 
         # app_import_predictions(_project, predictions, run_metrics=False)
+        logger.debug("Initializing merged metrics")
         initialize_merged_metrics(
             project
         )  # This might work but not sure if it's enough might need to use `ensure_safe_project`?
         # migrate_disk_to_db(project, delete_existing_project=True)
+        logger.debug("Clearing cache")
         load_project_metrics.cache_clear()
         filtered_merged_metrics.cache_clear()
