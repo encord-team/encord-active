@@ -123,7 +123,7 @@ pyinstrument = "^4.5.0"
 
 [tool.poe.tasks]
 importtime = { shell = "python -X importtime -c 'import encord_active.cli.main' 2> imports.prof && python -m tuna imports.prof" }
-torch-linux = 'python -m pip install torch==2.0.1+cpu torchvision==0.15.2+cpu -f https://download.pytorch.org/whl/torch_stable.html'
+torch-linux = 'python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu'
 
 [tool.prisma]
 use_global_node = false
