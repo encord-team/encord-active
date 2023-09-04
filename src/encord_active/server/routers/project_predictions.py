@@ -115,10 +115,7 @@ class ClassificationModelConfidenceMetric(Metric):
                 sess.exec(
                     select(
                         ProjectDataUnitMetadata.du_hash,
-                        sql_cast(
-                            ProjectDataUnitMetadata.frame * ProjectDataMetadata.frames_per_second / self.sampling_rate,
-                            sqlalchemy.Integer,
-                        ),
+                        ProjectDataUnitMetadata.frame,
                     )
                     .join(
                         ProjectDataMetadata, onclause=ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash
@@ -147,10 +144,11 @@ class ClassificationModelConfidenceMetric(Metric):
 
         cnt = 0
         for pred in tqdm(self.predictions, desc="Reading predictions"):
-            if (uuid.UUID(pred.data_hash), pred.frame) not in valid_frames:
+            pred_du_hash = uuid.UUID(pred.data_hash)
+            if (pred_du_hash, pred.frame) not in valid_frames:
                 # logger.debug("Skipping prediction", pred=pred, valid_frames=valid_frames)
                 continue
-            key = f"{du_to_lh[uuid.UUID(pred.data_hash)]}_{pred.data_hash}_{pred.frame:05d}"
+            key = f"{du_to_lh[uuid.UUID(pred.data_hash)]}_{pred_du_hash}_{pred.frame:05d}"
             logger.debug("Writing score", key=key)
             writer.write(pred.confidence, key=key)
             cnt += 1
