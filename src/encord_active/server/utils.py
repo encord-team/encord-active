@@ -115,7 +115,6 @@ def _get_url(
     label_row_structure: LabelRowStructure,
     du_hash: str,
     frame: str,
-    ssh_key_path: Optional[str] = None,
 ) -> Optional[Tuple[str, Optional[float]]]:
     data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
         label_row_structure.iter_data_unit(du_hash, None), None
@@ -125,13 +124,6 @@ def _get_url(
         if data_opt.data_type == "video":
             timestamp = (float(int(frame)) + 0.5) / data_opt.frames_per_second
         signed_url = data_opt.signed_url
-        if _is_expired(data_opt.signed_url) and ssh_key_path is not None:
-            logger.info(f"Resigning url for data hash {data_opt.du_hash}")
-            remote_project = get_encord_project(ssh_key_path, str(project_hash))
-            video, _ = remote_project.get_data(du_hash, get_signed_url=True)
-            if video is not None:
-                signed_url = video["file_link"]
-                label_row_structure.project.cached_signed_urls[data_opt.du_hash] = signed_url
         file_path = url_to_file_path(signed_url, label_row_structure.project.project_dir)
         if file_path is not None:
             url_frame = 0 if data_opt.data_type == "video" else frame
@@ -206,9 +198,7 @@ def to_item(
     )
 
     label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(
-        uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame, project_meta["ssh_key_path"]
-    )
+    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame)
 
     label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]
