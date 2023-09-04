@@ -42,4 +42,4 @@ class NearestNeighborAgreement(DerivedMetric):
             matches = [m * (t / total_bias) for m, t in zip(matches, raw_bias)]
             return min(sum(matches), 1.0)
         else:
-            return sum(matches) / len(matches)
+            return min(sum(matches) / len(matches), 1.0)
