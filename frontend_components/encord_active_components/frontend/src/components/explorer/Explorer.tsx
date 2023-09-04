@@ -956,7 +956,6 @@ const GalleryItem = ({
         />
         {selectedMetric && (
           <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
-            <span>{metricName}:</span>
             <span>{displayValue}</span>
           </div>
         )}
@@ -990,7 +989,7 @@ const GalleryItem = ({
       </label>
       <div className="divider m-0"></div>
       <div className="card-body p-2">
-        <div className="card-actions flex">
+        <div className="card-actions flex items-center">
           <div className="btn-group">
             <button
               className="btn btn-ghost gap-2 tooltip tooltip-right"
@@ -1027,6 +1026,12 @@ const GalleryItem = ({
               </span>
             </div>
           ) : null}
+          <span className="flex-grow"></span>
+          <div className="card-actions justify-center">
+            <div className="tooltip" data-tip="Metric value">
+              <div className="badge badge-neutral">{displayValue}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
