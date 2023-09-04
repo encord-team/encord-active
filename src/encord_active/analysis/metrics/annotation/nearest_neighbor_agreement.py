@@ -40,6 +40,6 @@ class NearestNeighborAgreement(DerivedMetric):
             raw_bias = [1.0 / max(s, 0.01) for s in nearest_neighbours.similarities]
             total_bias = sum(raw_bias)
             matches = [m * (t / total_bias) for m, t in zip(matches, raw_bias)]
-            return sum(matches)
+            return min(sum(matches), 1.0)
         else:
             return sum(matches) / len(matches)
