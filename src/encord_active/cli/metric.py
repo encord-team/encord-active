@@ -8,7 +8,6 @@ from rich.table import Table, box
 
 from encord_active.cli.utils.decorators import ensure_project
 from encord_active.lib.db.connection import DBConnection
-from encord_active.lib.db.merged_metrics import MergedMetrics, build_merged_metrics
 from encord_active.lib.metrics.metadata import fetch_metrics_meta, update_metrics_meta
 from encord_active.lib.project import ProjectFileStructure
 
@@ -206,6 +205,11 @@ def run_metrics(
 
     execute_metrics(selected_metrics, data_dir=target, use_cache_only=True)
     with DBConnection(project_file_structure) as conn:
+        from encord_active.lib.db.merged_metrics import (
+            MergedMetrics,
+            build_merged_metrics,
+        )
+
         MergedMetrics(conn).replace_all(build_merged_metrics(project_file_structure.metrics))
 
 
