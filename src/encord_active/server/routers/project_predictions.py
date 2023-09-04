@@ -114,12 +114,7 @@ class ClassificationModelConfidenceMetric(Metric):
                     select(
                         ProjectDataUnitMetadata.du_hash,
                         ProjectDataUnitMetadata.frame,
-                    )
-                    .join(
-                        ProjectDataMetadata, onclause=ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash
-                    )
-                    .where(
-                        ProjectDataMetadata.project_hash == self.project_hash,
+                    ).where(
                         ProjectDataUnitMetadata.project_hash == self.project_hash,
                     )
                 ).all()
