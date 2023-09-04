@@ -29,7 +29,7 @@ from encord_active.lib.metrics.writer import CSVMetricWriter, CSVVideoAverageWra
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.dependencies import ProjectFileStructureDep, engine
 from encord_active.server.routers.project2_engine import engine
-from encord_active.server.utils import load_project_metrics
+from encord_active.server.utils import filtered_merged_metrics, load_project_metrics
 
 logger.remove()
 logger.add(
@@ -194,3 +194,4 @@ def add_predictions(
         )  # This might work but not sure if it's enough might need to use `ensure_safe_project`?
         # migrate_disk_to_db(project, delete_existing_project=True)
         load_project_metrics.cache_clear()
+        filtered_merged_metrics.cache_clear()
