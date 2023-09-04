@@ -14,7 +14,13 @@ import { env } from "./constants";
 import { AuthContext, createAuthContext } from "./authContext";
 import "antd/dist/antd.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const Root = () => (
   <QueryClientProvider client={queryClient}>
