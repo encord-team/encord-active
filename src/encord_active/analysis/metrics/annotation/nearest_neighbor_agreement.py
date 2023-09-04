@@ -28,9 +28,8 @@ class NearestNeighborAgreement(DerivedMetric):
         # calculate
         nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
         if len(nearest_neighbours.similarities) == 0:
-            # No nearest neighbours for agreement, hence score of 0
-            # FIXME: what should the default score be?
-            return 0.0
+            # No nearest neighbours for agreement, hence score of 1
+            return 1.0
 
         feature_hash: str = cast(str, deps["feature_hash"])
         matches = [float(dep["feature_hash"] == feature_hash) for dep in nearest_neighbours.metric_deps]
