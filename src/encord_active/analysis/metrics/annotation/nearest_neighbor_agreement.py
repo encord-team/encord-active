@@ -41,6 +41,6 @@ class NearestNeighborAgreement(DerivedMetric):
             raw_bias = [1.0 / max(s, 0.001) for s in nearest_neighbours.similarities]
             total_bias = sum(raw_bias)
             matches = [m * (t / total_bias) for m, t in zip(matches, raw_bias)]
-        score = sum(matches) / len(matches)
-        # print(f"Debug NN Agreement: {nearest_neighbours.similarities} / {matches} => {score}")
-        return score
+            return sum(matches)
+        else:
+            return sum(matches) / len(matches)
