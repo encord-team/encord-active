@@ -1,8 +1,10 @@
 import json
+import sys
 import uuid
 from typing import List, Optional, Type, Union
 
 import pandas as pd
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.sql.operators import eq, in_op, or_
 from sqlmodel import Session, select
@@ -21,6 +23,15 @@ from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.dependencies import engine
+
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<e>{time}</e> | <m>{level}</m> | {message} | <e><d>{extra}</d></e>",
+    colorize=True,
+    level="DEBUG",
+)
+
 
 UNTAGGED_FRAMES_LABEL = "Untagged frames"
 UNTAGGED_ANNOTATIONS_LABEL = "Untagged annotations"
@@ -52,39 +63,40 @@ class Filters(BaseModel):
 
 
 def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure, scope: Optional[MetricScope] = None):
-    project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
-    filtered = df.copy()
-    identifier_split = filtered.index.str.split("_", n=3)
-    filtered["data_row_id"] = identifier_split.str[0:3].str.join("_")
-    filtered["is_label_metric"] = identifier_split.str.len() > 3
+    with logger.contextualize(filters=filters.json()):
+        project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
+        filtered = df.copy()
+        identifier_split = filtered.index.str.split("_", n=3)
+        filtered["data_row_id"] = identifier_split.str[0:3].str.join("_")
+        filtered["is_label_metric"] = identifier_split.str.len() > 3
 
-    if filters.tags is not None and filters.tags:
-        data_tags, label_tags = from_grouped_tags(filters.tags)
-        filtered = filter_tags(project_hash, filtered, data_tags, label_tags)
+        if filters.tags is not None and filters.tags:
+            data_tags, label_tags = from_grouped_tags(filters.tags)
+            filtered = filter_tags(project_hash, filtered, data_tags, label_tags)
 
-    if filters.object_classes is not None:
-        filtered = filter_object_classes(filtered, filters.object_classes, scope)
+        if filters.object_classes is not None:
+            filtered = filter_object_classes(filtered, filters.object_classes, scope)
 
-    if filters.workflow_stages is not None:
-        filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
+        if filters.workflow_stages is not None:
+            filtered = filter_workflow_stages(filtered, filters.workflow_stages, pfs)
 
-    for column, categorical_filter in filters.categorical.items():
-        if column in filtered:
-            non_applicable = filtered[pd.isna(filtered[column])]
-            filtered = filtered[filtered[column].isin(categorical_filter)]
-            filtered = add_non_applicable(filtered, non_applicable)
+        for column, categorical_filter in filters.categorical.items():
+            if column in filtered:
+                non_applicable = filtered[pd.isna(filtered[column])]
+                filtered = filtered[filtered[column].isin(categorical_filter)]
+                filtered = add_non_applicable(filtered, non_applicable)
 
-    for column, range_filter in list(filters.range.items()) + list(filters.datetime_range.items()):
-        if column in filtered:
-            non_applicable = filtered[pd.isna(filtered[column])]
-            filtered = filtered.loc[filtered[column].between(range_filter.min, range_filter.max)]
-            filtered = add_non_applicable(filtered, non_applicable)
+        for column, range_filter in list(filters.range.items()) + list(filters.datetime_range.items()):
+            if column in filtered:
+                non_applicable = filtered[pd.isna(filtered[column])]
+                filtered = filtered.loc[filtered[column].between(range_filter.min, range_filter.max)]
+                filtered = add_non_applicable(filtered, non_applicable)
 
-    for column, text_filter in filters.text.items():
-        if column in filtered:
-            filtered = filtered[filtered[column].astype(str).str.contains(text_filter)]
+        for column, text_filter in filters.text.items():
+            if column in filtered:
+                filtered = filtered[filtered[column].astype(str).str.contains(text_filter)]
 
-    filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
+        filtered.drop(columns=["data_row_id", "is_label_metric"], inplace=True)
 
     return filtered
 
@@ -141,6 +153,7 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
                     in_op(tags_table.tag_hash, selected_tag_hashes),
                 )
 
+            logger.debug(stmt)
             tagged_rows = sess.exec(stmt).all()
             if is_annotations:
                 data_identifiers = set(
@@ -160,10 +173,13 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
                 return data_identifiers
 
     if data_tags:
+        logger.debug("Filtering data tags", data_tags=data_tags)
         identifiers = _filter_tags_table(ProjectTaggedDataUnit, data_tags, UNTAGGED_FRAMES_LABEL)
+        logger.debug("Identitiers", identifiers=identifiers)
         df = df[df.data_row_id.isin(identifiers)]
 
     if label_tags:
+        logger.debug("Filtering data tags", data_tags=data_tags)
         search_tags = [t for t in label_tags]
         untagged_subset = None
         if UNTAGGED_ANNOTATIONS_LABEL in [t.name for t in search_tags]:
