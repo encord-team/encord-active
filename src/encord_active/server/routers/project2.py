@@ -4,7 +4,7 @@ from typing import Dict, List, Literal, Optional, Set, Tuple, TypedDict
 import cachetools
 from cachetools import TTLCache, cached, LRUCache
 from encord.objects import OntologyStructure
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
@@ -30,6 +30,7 @@ from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
 )
+from encord_active.server.dependencies import DataOrAnnotateItem, parse_data_or_annotate_item, DataItem, parse_data_item
 from encord_active.server.routers import (
     project2_actions,
     project2_analysis,
@@ -301,6 +302,7 @@ def display_raw_file(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) ->
             root_path = settings.SERVER_START_PATH.expanduser().resolve()
             url_path = url_to_file_path(data_uri, root_path)
             if url_path is not None:
+                # FIXME: add not-modified case response (see StaticFiles)
                 return FileResponse(url_path)
         raise HTTPException(status_code=404, detail="Project local file not found")
 
@@ -323,10 +325,14 @@ def _cache_encord_img_lookup(
     return encord_url_dict
 
 
-@router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
+@router.get("/{project_hash}/preview/{item}")
 def display_preview(
-    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, annotation_hash: Optional[str] = None
+    project_hash: uuid.UUID,
+    preview_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item)
 ):  # FIXME: type
+    du_hash = preview_item.du_hash
+    frame = preview_item.frame
+    annotation_hash = preview_item.annotation_hash
     objects: List[dict] = []
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
@@ -407,13 +413,10 @@ def display_preview(
     return {"url": uri, "timestamp": timestamp, "objects": objects, "tags": [tag.tag_hash for tag in result_tags]}
 
 
-@router.get("/{project_hash}/preview/{du_hash}/{frame}/")
-def display_preview_data(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
-    return display_preview(project_hash, du_hash, frame)
-
-
-@router.get("/{project_hash}/item/{du_hash}/{frame}/")
-def project_item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FIXME: type
+@router.get("/{project_hash}/item/{data_item}/")
+def project_item(project_hash: uuid.UUID, item_details: DataItem = Depends(parse_data_item)):
+    du_hash = item_details.du_hash
+    frame = item_details.frame
     with Session(engine) as sess:
         du_meta = sess.exec(
             select(ProjectDataUnitMetadata).where(

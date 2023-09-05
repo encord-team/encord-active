@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Dict, List, Literal, Optional, Type, Union, Tuple
 
 from pydantic import BaseModel
 
@@ -40,6 +40,14 @@ class DomainTables(BaseModel):
     metrics: Dict[str, MetricDefinition]
     enums: Dict[str, EnumDefinition]
     domain: Literal["data", "annotation"]
+
+    def select_args(
+        self, table: Union[AnalyticsTable, MetadataTable, ReductionTable]
+    ) -> Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]:
+        return tuple([  # type: ignore
+            getattr(table, arg)
+            for arg in self.join
+        ])
 
 
 class Tables(BaseModel):

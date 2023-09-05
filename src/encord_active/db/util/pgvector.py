@@ -1,7 +1,8 @@
 from typing import Union
 
 import numpy as np
-from sqlalchemy import TypeDecorator
+from psycopg2.extensions import Binary
+from sqlalchemy import TypeDecorator, Float
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import UserDefinedType, BINARY
@@ -18,6 +19,16 @@ class PGVectorRaw(UserDefinedType):
 
     def get_col_spec(self, **kwargs) -> str:
         return f"VECTOR({self.dim})"
+
+    class comparator_factory(UserDefinedType.Comparator):
+        def l2_distance(self, other):
+            return self.op('<->', return_type=Float)(other)
+
+        def max_inner_product(self, other):
+            return self.op('<#>', return_type=Float)(other)
+
+        def cosine_distance(self, other):
+            return self.op('<=>', return_type=Float)(other)
 
 
 class PGVector(TypeDecorator):
@@ -65,14 +76,17 @@ class PGVector(TypeDecorator):
             return process_fallback
 
     def result_processor(self, dialect: Dialect, coltype):
-        result_processor = BINARY().bind_processor(dialect)
+        result_processor = BINARY().result_processor(dialect, coltype)
 
-        def process(value: Union[np.ndarray, str, bytes]) -> bytes:
+        def process(value: Union[np.ndarray, str, bytes, Binary]) -> bytes:
             if isinstance(value, str):
                 np_value = np.array(value[1:-1].split(','), dtype=np.float64)
             elif isinstance(value, np.ndarray):
                 np_value = value
+            elif isinstance(value, bytes):
+                np_value = np.frombuffer(value, dtype=np.float64)
             else:
-                np_value = np.frombuffer(result_processor(value), dtype=np.float64)
+                result_value = result_processor(value)
+                np_value = np.frombuffer(result_value, dtype=np.float64)
             return np_value.tobytes(order='C')
         return process

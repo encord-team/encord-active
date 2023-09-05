@@ -1,11 +1,12 @@
 import uuid
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import decode
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from encord_active.db.models import Project, get_engine
@@ -17,6 +18,44 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
 engine = get_engine(engine_path, concurrent=True)
+
+
+class DataItem(BaseModel):
+    du_hash: uuid.UUID
+    frame: int
+
+    def pack(self) -> str:
+        return f"{self.du_hash}_{self.frame}"
+
+
+class DataOrAnnotateItem(BaseModel):
+    du_hash: uuid.UUID
+    frame: int
+    annotation_hash: Optional[str]
+
+    def pack(self) -> str:
+        if self.annotation_hash is None:
+            return f"{self.du_hash}_{self.frame}"
+        return f"{self.du_hash}_{self.frame}_{self.annotation_hash}"
+
+
+def parse_data_item(data_item: str) -> DataItem:
+    segments = data_item.split("_")
+    if len(segments) != 2:
+        raise ValueError(f"DataItem expects 2 segments: {data_item}")
+    du_hash, frame = segments
+    return DataItem(du_hash=uuid.UUID(du_hash), frame=int(frame))
+
+
+def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
+    segments = item.split("_")
+    if len(segments) > 3 or len(segments) < 2:
+        raise ValueError(f"Item expects 2 segments: {item}")
+    du_hash, frame = segments[:2]
+    annotation_hash = None if len(segments) == 2 else segments[2]
+    if annotation_hash is not None and len(annotation_hash) != 8:
+        raise ValueError(f"Item annotation_hash should be exactly 8 characters")
+    return DataOrAnnotateItem(du_hash=uuid.UUID(du_hash), frame=int(frame), annotation_hash=annotation_hash)
 
 
 @lru_cache

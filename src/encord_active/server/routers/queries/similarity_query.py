@@ -5,20 +5,20 @@ import numpy as np
 from pydantic import BaseModel
 from pynndescent import NNDescent
 
+from encord_active.server.dependencies import DataOrAnnotateItem
+
 
 class SimilarityResult(BaseModel):
-    du_hash: uuid.UUID
-    frame: int
-    annotation_hash: Optional[str]
+    item: str
     similarity: float
 
 
-def _similarity_result(k: Tuple[uuid.UUID, int, Optional[str]], s: float) -> SimilarityResult:
-    du_hash, frame, annotation_hash = k
+def pack_similarity_result(k: Tuple[uuid.UUID, int, Optional[str]], s: float) -> SimilarityResult:
+    du_hash, frame, *annotation_hash_opt = k
+    annotation_hash = annotation_hash_opt[0] if len(annotation_hash_opt) > 0 else None
+    item = DataOrAnnotateItem(du_hash=du_hash, frame=frame, annotation_hash=annotation_hash).pack()
     return SimilarityResult(
-        du_hash=du_hash,
-        frame=frame,
-        annotation_hash=annotation_hash,
+        item=item,
         similarity=s,
     )
 
@@ -47,4 +47,4 @@ class SimilarityQuery:
             similarities = np.linalg.norm(offsets, axis=1)
             indices = np.argsort(similarities)[:k]
             distances = similarities[indices]
-        return [_similarity_result(self.results[idx], similarity) for idx, similarity in zip(indices, distances)]
+        return [pack_similarity_result(self.results[idx], similarity) for idx, similarity in zip(indices, distances)]

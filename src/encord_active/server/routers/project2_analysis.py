@@ -5,13 +5,14 @@ from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
 from sqlalchemy import func, Numeric, Integer
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
+from encord_active.server.dependencies import DataOrAnnotateItem, parse_data_or_annotate_item
 from encord_active.server.routers.project2_engine import engine
 from encord_active.server.routers.queries import (
     metric_query,
@@ -245,7 +246,7 @@ def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> si
     with Session(engine) as sess:
         query = select(
             base_domain.metadata.embedding_clip,
-            *[getattr(base_domain.metadata, join_attr) for join_attr in base_domain.join],
+            *base_domain.select_args(base_domain.metadata)
         ).where(
             # FIXME: will break for nearest embedding on predictions
             base_domain.metadata.project_hash == project_hash,  # type: ignore
@@ -256,31 +257,31 @@ def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> si
     return similarity_query.SimilarityQuery(embeddings, results)
 
 
-@router.get("/similarity/{du_hash}/{frame}/{annotation_hash}")
-@router.get("/similarity/{du_hash}/{frame}/")
+@router.get("/similarity/{item}")
 def search_similarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
-    du_hash: uuid.UUID,
-    frame: int,
-    embedding: str,
-    annotation_hash: Optional[str] = None,
+    embedding: Literal["embedding_clip"],
+    similarity_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item),
 ) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
+    limit = 50
     base_domain = tables.primary
     if embedding != "embedding_clip":
         raise ValueError("Unsupported embedding")
     join_attr_set = {
-        "du_hash": du_hash,
-        "frame": frame,
+        "du_hash": similarity_item.du_hash,
+        "frame": similarity_item.frame,
     }
-    if annotation_hash is not None:
-        join_attr_set["annotation_hash"] = annotation_hash
+    if similarity_item.annotation_hash is not None:
+        join_attr_set["annotation_hash"] = similarity_item.annotation_hash
+
     with Session(engine) as sess:
         src_embedding = sess.exec(
-            select(base_domain.metadata.embedding_clip).where(
-                # FIXME: prediction needs separate join!
-                base_domain.metadata.project_hash == project_hash,  # type: ignore
+            select(
+                base_domain.metadata.embedding_clip
+            ).where(
+                base_domain.metadata.project_hash == project_hash,
                 *[
                     getattr(base_domain.metadata, join_attr) == join_attr_set[join_attr]
                     for join_attr in base_domain.join
@@ -290,8 +291,28 @@ def search_similarity(
         if src_embedding is None:
             raise ValueError("Source entry does not exist or missing embedding")
 
+        if engine.dialect.name == 'postgresql':
+            pg_query = select(
+                base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
+                *base_domain.select_args(base_domain.metadata),
+            ).where(
+                base_domain.metadata.project_hash == project_hash,
+                functools.reduce(lambda a, b: a | b, [
+                    getattr(base_domain.metadata, join_attr) != join_attr_set[join_attr]
+                    for join_attr in base_domain.join
+                ])
+            ).order_by(
+                "similarity"
+            ).limit(limit)
+            pg_results = sess.exec(pg_query).fetchall()
+            return [
+                similarity_query.pack_similarity_result(tuple(similarity_item), similarity)
+                for similarity, *similarity_item in pg_results
+            ]
+
+    # Return via fallback methods (sqlite & similar)
     similarity_query_impl = _get_similarity_query(project_hash, domain)
-    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=50)
+    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=limit)
 
 
 class MetricDissimilarityResult(BaseModel):
