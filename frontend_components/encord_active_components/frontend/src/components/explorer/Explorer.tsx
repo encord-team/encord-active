@@ -13,7 +13,7 @@ import { useDebounce } from "usehooks-ts";
 import {
   ApiContext,
   getApi,
-  Item, PredictionOutcome,
+  Item,
   useApi,
 } from "./api";
 import { Assistant } from "./Assistant";
@@ -29,7 +29,7 @@ import {
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import {Button, List, Popover, Select, Space, Spin} from "antd";
+import {Button, List, Popover, Select, Slider, Space, Spin} from "antd";
 import {ProjectAnalysisDomain, ProjectMetricSummary, QueryAPI} from "../Types";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { env, local } from "../../constants";
@@ -91,6 +91,18 @@ export const Explorer = ({
   // Item selected for extra analysis operations
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
+
+  // Select reduction hash
+  const {
+    data: reductionHashes,
+  } = queryAPI.useProjectListEmbeddingReductions(projectHash);
+  const reductionHash: string | undefined = useMemo(
+    () => reductionHashes === undefined
+        || reductionHashes.results.length === 0
+        ? undefined : reductionHashes.results[0].hash,
+    [reductionHashes]
+  );
+
 
   // Selection
   const [selectedItems, setSelectedItems] = useState(new Set<string>());
@@ -295,6 +307,7 @@ export const Explorer = ({
       <ExplorerEmbeddings
         queryApi={queryAPI}
         projectHash={projectHash}
+        reductionHash={reductionHash}
         filters={filters}
         setEmbeddingSelection={() => {/*FIXME*/}}
       />
@@ -326,9 +339,12 @@ export const Explorer = ({
       )}
       {scope === "prediction" && (
         <PredictionFilters
-          onOutcomeChange={setPredictionOutcome}
-          onIouChange={setIou}
           disabled={!!similarityItem}
+          iou={iou}
+          setIou={setIou}
+          predictionOutcome={predictionOutcome}
+          isClassificationOnly={false}
+          setPredictionOutcome={setPredictionOutcome}
         />
       )}
       <Assistant
@@ -486,57 +502,46 @@ export const Explorer = ({
     </div>
   );
 };
-
-const ALL_PREDICTION_OUTCOMES = "All Prediction Outcomes";
-
 const PredictionFilters = ({
-  onOutcomeChange,
-  onIouChange,
-  disabled = false,
+  iou,
+  setIou,
+  predictionOutcome,
+  setPredictionOutcome,
+  isClassificationOnly,
+  disabled,
 }: {
-  onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
   iou: number;
-  onIouChange?: (iou: number) => void;
-  disabled?: boolean;
+  setIou: (iou: number) => void;
+  predictionOutcome: "fp" | "fn" | "tp";
+  setPredictionOutcome: (outcome: "fp" | "fn" | "tp") => void;
+  isClassificationOnly: boolean;
+  disabled: boolean;
 }) => {
-
-  const [drag, setDrag] = useState(false);
-
   return (
     <div className="flex gap-2">
-      <select
+      <Select
         disabled={disabled}
-        className="select select-bordered w-full max-w-xs"
-        onChange={({ target: { value } }) =>
-          onOutcomeChange(
-            value === ALL_PREDICTION_OUTCOMES
-              ? undefined
-              : (value as PredictionOutcome),
-          )
-        }
-      >
-        {[ALL_PREDICTION_OUTCOMES, ...outcomes].map((outcome) => (
-          <option key={outcome}>{outcome}</option>
-        ))}
-      </select>
-      {predictionType === "object" && (
-        <div className="form-control w-full max-w-xs min-w-[256px]">
-          <label>
-            <span>IOU: {iou}</span>
-          </label>
-          <input
-            disabled={disabled}
-            type="range"
-            min={0.01}
-            max={1}
-            step={0.01}
-            defaultValue={iou}
-            onMouseUp={() => setDrag(false)}
-            onMouseDown={() => setDrag(true)}
-            onChange={({ target: { value } }) => setIou(parseFloat(value))}
-            className="range range-xs"
-          />
-        </div>
+        onChange={setPredictionOutcome}
+        value={predictionOutcome}
+        options={[{
+          key: "fp",
+          label: "False Positive"
+        },{
+          key: "tp",
+          label: "True Positive"
+        },{
+          key: "fn",
+          label: "False Negative"
+        }]}
+      />
+      {!isClassificationOnly && (
+        <Slider
+          value={iou}
+          onChange={setIou}
+          min={0.0}
+          max={0.0}
+          step={0.01}
+        />
       )}
     </div>
   );
@@ -586,7 +591,7 @@ const ItemPreview = ({
   projectHash: string,
   id: string;
   similaritySearchDisabled: boolean;
-  scope: "prediction" | "annotation";
+  scope: "prediction" | "analytics";
   onClose: () => void;
   onShowSimilar: () => void;
   iou?: number;

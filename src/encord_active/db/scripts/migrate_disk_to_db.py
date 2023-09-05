@@ -264,7 +264,7 @@ def _load_embeddings_2d(
                             project_hash=project_hash,
                             du_hash=du_hash,
                             frame=frame,
-                            object_hash=annotation_hash,
+                            annotation_hash=annotation_hash,
                             reduction_hash=reduction_hash,
                             x=x,
                             y=y,
@@ -419,7 +419,7 @@ def __prediction_iou_bound_false_negative(
         prediction_hash=prediction_hash,
         du_hash=du_hash,
         frame=frame,
-        object_hash=annotation_hash,
+        annotation_hash=annotation_hash,
         iou_threshold=iou_threshold,
         **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
     )
@@ -704,7 +704,7 @@ def __migrate_predictions(
                 prediction_hash=prediction_hash,
                 du_hash=du_hash,
                 frame=frame,
-                object_hash=object_hash,
+                annotation_hash=object_hash,
                 # Prediction metadata
                 project_hash=project_hash,
                 feature_hash=feature_hash,
@@ -712,7 +712,7 @@ def __migrate_predictions(
                 iou=iou,
                 annotation_type=annotation_type,
                 # Ground truth match metadata
-                match_object_hash=match_object_hash,
+                match_annotation_hash=match_object_hash,
                 match_feature_hash=match_feature_hash,
                 match_duplicate_iou=_PREDICTION_MATCH_IOU_ALWAYS_FP,  # Never match, overriden if match_object_hash is set.
                 # Metrics
@@ -725,7 +725,7 @@ def __migrate_predictions(
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=object_hash,
+                    annotation_hash=object_hash,
                     # Extra annotation
                     annotation_bytes=annotation_array.tobytes(),
                 )
@@ -774,7 +774,7 @@ def __migrate_predictions(
                 prediction_hash=prediction_hash,
                 du_hash=missing_du_hash,
                 frame=missing_frame,
-                object_hash=missing_annotation_hash,
+                annotation_hash=missing_annotation_hash,
                 iou_threshold=-1.0,  # Always a false negative
                 **assert_valid_args(ProjectPredictionAnalyticsFalseNegatives, missing_annotation_metrics),
             )
@@ -993,7 +993,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                         project_hash=project_hash,
                         du_hash=du_hash,
                         frame=frame,
-                        object_hash=object_hash_opt,
+                        annotation_hash=object_hash_opt,
                         tag_hash=tag_uuid,
                     )
                 )
@@ -1038,7 +1038,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                                 project_hash=project_hash,
                                 du_hash=du_hash,
                                 frame=frame,
-                                object_hash=annotation_hash,
+                                annotation_hash=annotation_hash,
                                 tag_hash=tag_uuid,
                             )
                         )
@@ -1186,7 +1186,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
-            object_hash=object_hash,
+            annotation_hash=object_hash,
             **assert_valid_args(ProjectAnnotationAnalytics, metrics),
         )
         for (du_hash, frame, object_hash), metrics in annotation_metrics.items()
@@ -1197,7 +1197,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
             project_hash=project_hash,
             du_hash=du_hash,
             frame=frame,
-            object_hash=object_hash,
+            annotation_hash=object_hash,
             metric_metadata=metric_metadata,
             **assert_valid_args(ProjectAnnotationAnalyticsExtra, embeddings),
         )

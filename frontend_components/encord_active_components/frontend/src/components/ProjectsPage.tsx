@@ -168,9 +168,9 @@ const ProjectCard = ({
   setSelectedProjectHash: (projectHash: string) => void;
 }) => {
   const video = useRef<HTMLVideoElement>(null);
-  const { data: imgSrcUrl, isLoading } = useImageSrc(project.imageUrl);
+  const imgSrcUrl = useImageSrc(project.imageUrl);
 
-  if (isLoading) return <Spin indicator={loadingIndicator} />;
+  if (imgSrcUrl === undefined) return <Spin indicator={loadingIndicator} />;
 
   return (
     <Card

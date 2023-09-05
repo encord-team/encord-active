@@ -31,7 +31,6 @@ from encord_active.analysis.util.torch import (
     pillow_to_tensor,
 )
 from encord_active.db.models import (
-    AnnotationType,
     ProjectAnnotationAnalytics,
     ProjectAnnotationAnalyticsExtra,
     ProjectCollaborator,
@@ -644,11 +643,11 @@ class SimpleExecutor(Executor):
                 annotation_result = annotation_results_deps[annotation_hash]
                 annotation_result["iou"] = best_iou
                 if best_iou_match is None:
-                    annotation_result["match_object_hash"] = None
+                    annotation_result["match_annotation_hash"] = None
                     annotation_result["match_feature_hash"] = None
                     annotation_result["match_duplicate_iou"] = 1.0  # Always false positive
                 else:
-                    annotation_result["match_object_hash"] = best_iou_match[0]
+                    annotation_result["match_annotation_hash"] = best_iou_match[0]
                     annotation_result["match_feature_hash"] = best_iou_match[1]
                     if best_iou_match[1] == annotation_meta.feature_hash:
                         gt_iou_threshold = min_iou_threshold_map.get(best_iou_match[0], -1.0)
@@ -993,7 +992,7 @@ class SimpleExecutor(Executor):
                     embedding_len = 512
                 if v.shape[0] != embedding_len:
                     raise ValueError(f"Embedding has wrong length: {v.shape} != {embedding_len or 'Unknown'}")
-                return v.cpu().numpy().tobytes()
+                return v.cpu().numpy().astype(np.float64).tobytes()
             return v.item()
         elif isinstance(v, NearestNeighbors):
             return {
@@ -1005,26 +1004,26 @@ class SimpleExecutor(Executor):
         return v
 
     @classmethod
-    def _get_user_uuid(
+    def _get_user_id(
         cls,
         email: str,
-        lookup: Dict[str, uuid.UUID],
+        lookup: Dict[str, int],
         new_user_uuid: List[ProjectCollaborator],
         project_hash: uuid.UUID,
-    ) -> uuid.UUID:
+    ) -> int:
         if email in lookup:
             return lookup[email]
         else:
-            user_hash = uuid.uuid4()
-            lookup[email] = user_hash
+            user_id = len(lookup)
+            lookup[email] = user_id
             new_user_uuid.append(
                 ProjectCollaborator(
                     project_hash=project_hash,
-                    user_hash=user_hash,
+                    user_id=user_id,
                     user_email=email,
                 )
             )
-            return user_hash
+            return user_id
 
     def _pack_output(
         self,
@@ -1042,7 +1041,7 @@ class SimpleExecutor(Executor):
         annotation_analysis = []
         annotation_analysis_extra = []
         new_collaborators: List[ProjectCollaborator] = []
-        user_email_lookup = {collab.user_email: collab.user_hash for collab in collaborators}
+        user_email_lookup = {collab.user_email: collab.user_id for collab in collaborators}
         for (du_hash, frame), data_deps in self.data_metrics.items():
             analysis_values, extra_values = self._validate_pack_deps(
                 data_deps,
@@ -1086,10 +1085,10 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=annotation_hash,
+                    annotation_hash=annotation_hash,
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    annotation_user=self._get_user_uuid(
+                    annotation_user_id=self._get_user_id(
                         str(annotation_email), user_email_lookup, new_collaborators, project_hash
                     ),
                     annotation_manual=annotation_manual,
@@ -1101,7 +1100,7 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=annotation_hash,
+                    annotation_hash=annotation_hash,
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
@@ -1122,7 +1121,7 @@ class SimpleExecutor(Executor):
         prediction_analysis = []
         prediction_analysis_extra = []
         prediction_false_negatives = []
-        user_email_lookup = {collab.user_email: collab.user_hash for collab in collaborators}
+        user_email_lookup = {collab.user_email: collab.user_id for collab in collaborators}
         new_collaborators: List[ProjectCollaborator] = []
         for (du_hash, frame, annotation_hash), annotation_deps in self.annotation_metrics.items():
             feature_hash = annotation_deps.pop("feature_hash")
@@ -1133,7 +1132,7 @@ class SimpleExecutor(Executor):
                 annotation_deps,
                 ProjectPredictionAnalytics,
                 ProjectPredictionAnalyticsExtra,
-                {"iou", "match_object_hash", "match_feature_hash", "match_duplicate_iou"},
+                {"iou", "match_annotation_hash", "match_feature_hash", "match_duplicate_iou"},
             )
             prediction_analysis.append(
                 ProjectPredictionAnalytics(
@@ -1141,10 +1140,10 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=annotation_hash,
+                    annotation_hash=annotation_hash,
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
-                    annotation_user=self._get_user_uuid(
+                    annotation_user_id=self._get_user_id(
                         str(annotation_email), user_email_lookup, new_collaborators, project_hash
                     ),
                     annotation_manual=annotation_manual,
@@ -1156,7 +1155,7 @@ class SimpleExecutor(Executor):
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=annotation_hash,
+                    annotation_hash=annotation_hash,
                     annotation_bytes=b"",  # FIXME: how should prediction metadata be stored!?
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
@@ -1168,7 +1167,7 @@ class SimpleExecutor(Executor):
                     prediction_hash=prediction_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    object_hash=annotation_hash,
+                    annotation_hash=annotation_hash,
                     iou_threshold=iou_threshold,
                     feature_hash=feature_hash,
                 )

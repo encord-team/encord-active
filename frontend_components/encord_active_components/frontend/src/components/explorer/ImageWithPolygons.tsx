@@ -52,9 +52,9 @@ export function ImageWithPolygons(props: {
     ? preview.url
     : `${apiUrl}${preview.url}`;
 
-  const { data: imgSrcUrl, isLoading } = useImageSrc(itemUrl);
+  const imgSrcUrl = useImageSrc(itemUrl);
 
-  if (isLoading) return <Spin indicator={loadingIndicator} />;
+  if (imgSrcUrl === undefined) return <Spin indicator={loadingIndicator} />;
 
   return (
     <figure className={classy("relative", className)}>

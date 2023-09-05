@@ -72,7 +72,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         reduction_total_samples, k=min(len(reduction_total_samples), 10_000)
     )
     reduction_train_samples.sort(
-        key=lambda x: (x.du_hash, x.frame, x.object_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
+        key=lambda x: (x.du_hash, x.frame, x.annotation_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
     )
     reduction = create_reduction(
         EmbeddingReductionType.UMAP,
@@ -110,7 +110,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
             project_hash=project_hash,
             du_hash=extra.du_hash,
             frame=extra.frame,
-            object_hash=extra.object_hash,
+            annotation_hash=extra.annotation_hash,
             x=x,
             y=y,
         )

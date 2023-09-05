@@ -325,7 +325,7 @@ def _cache_encord_img_lookup(
 
 @router.get("/{project_hash}/preview/{du_hash}/{frame}/{object_hash}")
 def display_preview(
-    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: Optional[str] = None
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, annotation_hash: Optional[str] = None
 ):  # FIXME: type
     objects: List[dict] = []
     with Session(engine) as sess:
@@ -334,6 +334,7 @@ def display_preview(
             ProjectDataUnitMetadata.data_uri,
             ProjectDataUnitMetadata.data_uri_is_video,
             ProjectDataUnitMetadata.objects,
+            ProjectDataUnitMetadata.classifications,
             ProjectDataUnitMetadata.data_hash,
         ).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
@@ -343,7 +344,7 @@ def display_preview(
         result = sess.exec(query).fetchone()
         if result is None:
             raise ValueError("Missing project data unit metadata")
-        uri, uri_is_video, objects, data_hash = result  # type: ignore
+        uri, uri_is_video, objects, classifications, data_hash = result  # type: ignore
         frames_per_second_list = sess.exec(
             select(ProjectDataMetadata.frames_per_second).where(
                 ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == data_hash
@@ -353,7 +354,7 @@ def display_preview(
             raise ValueError("Missing project data metadata")
         frames_per_second = frames_per_second_list[0]
 
-        if object_hash is None:
+        if annotation_hash is None:
             query_tags = (
                 select(
                     ProjectTag,
@@ -374,13 +375,13 @@ def display_preview(
                     ProjectTaggedAnnotation.project_hash == project_hash,
                     ProjectTaggedAnnotation.du_hash == du_hash,
                     ProjectTaggedAnnotation.frame == frame,
-                    ProjectTaggedAnnotation.object_hash == object_hash,
+                    ProjectTaggedAnnotation.annotation_hash == annotation_hash,
                 )
                 .join(ProjectTaggedAnnotation, ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash)
             )
         result_tags = sess.exec(query_tags).fetchall()
-    if object_hash is not None:
-        objects = [obj for obj in objects if obj["objectHash"] == object_hash]
+    if annotation_hash is not None:
+        objects = [obj for obj in objects if obj["objectHash"] == annotation_hash]
         if len(objects) == 0:
             raise ValueError("ObjectHash does not exist at that frame")
     if uri is not None:
@@ -446,10 +447,12 @@ def project_item(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):  # FI
         ).fetchall()
     if du_meta is None or du_analytics is None:
         raise ValueError
-    obj_metrics = {o.object_hash: o for o in object_analytics or []}
+    obj_metrics = {o.annotation_hash: o for o in object_analytics or []}
 
     return {
         "metrics": {k: getattr(du_analytics, k) for k in DataMetrics},
+        "objects": du_meta.objects,
+        "classifications": du_meta.classifications,
         #"objects": [
         #    {
         #        **obj,
@@ -527,9 +530,10 @@ def create_annotation_tag(project_hash: uuid.UUID, annotations: List[Tuple[uuid.
         sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=name))
         tags = [
             ProjectTaggedAnnotation(
-                project_hash=project_hash, du_hash=du_hash, frame=frame, object_hash=object_hash, tag_hash=tag_hash
+                project_hash=project_hash, du_hash=du_hash, frame=frame,
+                annotation_hash=annotation_hash, tag_hash=tag_hash
             )
-            for du_hash, frame, object_hash in annotations
+            for du_hash, frame, annotation_hash in annotations
         ]
         sess.add_all(tags)
         sess.commit()

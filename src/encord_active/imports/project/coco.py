@@ -1,5 +1,6 @@
 import math
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -239,7 +240,7 @@ def import_coco_ontology(
 
 
 COCO_FILE_DOMAIN = uuid.UUID("99be3b7a-314b-4237-9a3f-982177550ddf")
-
+COCO_DATASET_DOMAIN = uuid.UUID("d9ee9a72-fe37-4081-a3b7-47965b280428")
 
 def import_coco(
     database_dir: Path,
@@ -250,8 +251,12 @@ def import_coco(
 ) -> ProjectImportSpec:
     coco_file: CoCoFileSpec = CoCoFileSpec.parse_file(annotations_file_path)
     project_hash = uuid.uuid5(COCO_FILE_DOMAIN, annotations_file_path.read_text(encoding="utf-8"))
-    dataset_hash = uuid.uuid4()
-    dataset_title = ""
+    dataset_hash = uuid.uuid5(COCO_DATASET_DOMAIN, annotations_file_path.read_text(encoding="utf-8"))
+    dataset_title = coco_file.info.description
+    try:
+        coco_timestamp = datetime.fromisoformat(coco_file.info.date_created)
+    except ValueError:
+        coco_timestamp = datetime.strptime(coco_file.info.date_created, "%Y/%m/%d")
 
     # Generate 'ontology' for coco
     shape_dict = infer_coco_shape(coco_file)
@@ -282,11 +287,17 @@ def import_coco(
 
         # CoCo spec
         objects = []
+        object_answers = {}
         classifications = []
         for annotation in annotations_map[image.id]:
             coco_objects, is_object = import_coco_annotation(annotation, image, annotation_id_map)
             if is_object:
                 objects.extend(coco_objects)
+                for obj in coco_objects:
+                    object_answers[obj["objectHash"]] = {
+                        "classifications": [],
+                        "objectHash": obj["objectHash"],
+                    }
             else:
                 classifications.extend(coco_objects)
 
@@ -306,30 +317,10 @@ def import_coco(
                 dataset_title=dataset_title,
                 data_title=image.file_name,
                 data_type="image",
-                label_row_json=label_utilities.construct_answer_dictionaries(
-                    {
-                        "label_hash": str(label_hash),
-                        "dataset_hash": str(dataset_hash),
-                        "dataset_title": dataset_title,
-                        "data_title": image.file_name,
-                        "data_type": "image",
-                        "data_units": {
-                            str(data_hash): {
-                                "data_hash": str(data_hash),
-                                "data_title": image.file_name,
-                                "data_type": f"image/{image_data_type}",
-                                "data_sequence": 0,
-                                "labels": {"objects": objects, "classifications": classifications},
-                                "width": 512,
-                                "height": 512,
-                            }
-                        },
-                        "object_answers": {},
-                        "classification_answers": {},
-                        "object_actions": {},
-                        "label_status": "NOT_LABELLED",
-                    }
-                ),
+                created_at=coco_timestamp,
+                last_edited_at=coco_timestamp,
+                object_answers=object_answers,
+                classification_answers={},
             )
         )
         project_du_list.append(
@@ -342,6 +333,8 @@ def import_coco(
                 height=image.height,
                 data_uri=data_uri,
                 data_uri_is_video=False,
+                data_title=image.file_name,
+                data_type=f"image/{image_data_type}",
                 objects=objects,
                 classifications=classifications,
             )

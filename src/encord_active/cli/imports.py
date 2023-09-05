@@ -101,7 +101,7 @@ def import_project(
     project_hash = uuid.uuid4()
     if encord_project_hash is not None:
         project_hash = uuid.UUID(encord_project_hash)
-    else:
+    elif not coco:
         import rich
         from InquirerPy import inquirer as i
         from InquirerPy.base.control import Choice

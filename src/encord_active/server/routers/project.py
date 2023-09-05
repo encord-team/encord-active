@@ -187,7 +187,7 @@ def tagged_items(project_hash: uuid.UUID):
             select(
                 ProjectTaggedAnnotation.du_hash,
                 ProjectTaggedAnnotation.frame,
-                ProjectTaggedAnnotation.object_hash,
+                ProjectTaggedAnnotation.annotation_hash,
                 ProjectTag.name,
             ).where(
                 ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
@@ -245,7 +245,7 @@ def append_tags_to_row(project: ProjectFileStructureDep, row: dict):
                         ProjectTaggedAnnotation.project_hash == project_hash,
                         ProjectTaggedAnnotation.du_hash == du_hash,
                         ProjectTaggedAnnotation.frame == frame,
-                        ProjectTaggedAnnotation.object_hash == annotation_hash,
+                        ProjectTaggedAnnotation.annotation_hash == annotation_hash,
                         ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
                     )
                 ).all()
@@ -368,7 +368,7 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                             ProjectTaggedAnnotation.project_hash == project_hash,
                             ProjectTaggedAnnotation.du_hash == du_hash,
                             ProjectTaggedAnnotation.frame == frame,
-                            ProjectTaggedAnnotation.object_hash == annotation_hash,
+                            ProjectTaggedAnnotation.annotation_hash == annotation_hash,
                         )
                     )
                 )
@@ -387,7 +387,7 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                             project_hash=project_hash,
                             du_hash=du_hash,
                             frame=frame,
-                            object_hash=annotation_hash,
+                            annotation_hash=annotation_hash,
                             tag_hash=tag_hash,
                         )
                     )
@@ -397,7 +397,7 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
                             ProjectTaggedAnnotation.project_hash == project_hash,
                             ProjectTaggedAnnotation.du_hash == du_hash,
                             ProjectTaggedAnnotation.frame == frame,
-                            ProjectTaggedAnnotation.object_hash == annotation_hash,
+                            ProjectTaggedAnnotation.annotation_hash == annotation_hash,
                             ProjectTaggedAnnotation.tag_hash == tag_hash,
                         )
                     ).first()

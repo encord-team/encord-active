@@ -80,14 +80,14 @@ def search_filters(
 
     # Compile into sql
     compiled_filters = filters.pop(base, [])
-    base_is_annotation = getattr(base, "object_hash", None) is not None
+    base_is_annotation = getattr(base, "annotation_hash", None) is not None
     exists_filters = []
     for sql_table, sql_filters in filters.items():
-        sql_table_is_annotation = getattr(sql_table, "object_hash", None) is not None
+        sql_table_is_annotation = getattr(sql_table, "annotation_hash", None) is not None
         sql_filters.append(base.du_hash == sql_table.du_hash)
         sql_filters.append(base.frame == sql_table.frame)
         if sql_table_is_annotation and sql_table_is_annotation:
-            sql_filters.append(base.object_hash == sql_table.object_hash)
+            sql_filters.append(base.annotation_hash == sql_table.annotation_hash)
         # Append to filters
         if sql_table_is_annotation and not base_is_annotation:
             # Data Result & Annotation Filter -> use Exists

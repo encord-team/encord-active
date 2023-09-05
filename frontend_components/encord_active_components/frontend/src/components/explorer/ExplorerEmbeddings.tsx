@@ -1,8 +1,7 @@
-import { useMemo } from "react";
+import * as React from "react";
 import {
   BiInfoCircle,
 } from "react-icons/bi";
-import { Spinner } from "./Spinner";
 import {ScatteredEmbeddings } from "./ExplorerCharts";
 import {QueryAPI} from "../Types";
 import {InternalFilters} from "./Explorer";
@@ -12,6 +11,7 @@ import {loadingIndicator} from "../Spin";
 export function ExplorerEmbeddings(props: {
   queryApi: QueryAPI;
   projectHash: string;
+  reductionHash: string | undefined;
   filters: InternalFilters;
   setEmbeddingSelection: (bounds: {
     x1: number;
@@ -23,18 +23,10 @@ export function ExplorerEmbeddings(props: {
   const {
     queryApi,
     projectHash,
+    reductionHash,
     filters,
     setEmbeddingSelection,
   } = props;
-  const {
-    data: reductionHashes,
-  } = queryApi.useProjectListEmbeddingReductions(projectHash);
-  const reductionHash: string | undefined = useMemo(
-    () => reductionHashes === undefined
-        || reductionHashes.results.length === 0
-        ? undefined : reductionHashes.results[0].hash,
-    [reductionHashes]
-  );
   const {
     isLoading,
     data: scatteredEmbeddings
@@ -57,14 +49,13 @@ export function ExplorerEmbeddings(props: {
     <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
       {isLoading ? (
         <div className="absolute" style={{left: "50%"}}>
-          <Spin indicator={loadingIndicator}/>
+          <Spin indicator={loadingIndicator} tip="Loading Embedding Plot"/>
         </div>
       ) : (
         <ScatteredEmbeddings
           reductionScatter={scatteredEmbeddings}
-          predictionType={filters.predictionType}
           setEmbeddingSelection={setEmbeddingSelection}
-          onReset={() => setEmbeddingSelection()}
+          onReset={() => setEmbeddingSelection(undefined)}
         />
       )}
     </div>

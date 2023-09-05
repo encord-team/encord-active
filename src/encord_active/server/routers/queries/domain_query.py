@@ -26,7 +26,7 @@ ReductionTable = Type[
 ]
 MetadataTable = Type[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectPredictionAnalyticsExtra]]
 TagTable = Type[Union[ProjectTaggedDataUnit, ProjectTaggedAnnotation]]
-TableJoinLiterals = List[Literal["du_hash", "frame", "object_hash"]]
+TableJoinLiterals = List[Literal["du_hash", "frame", "annotation_hash"]]
 
 ProjectFilters = Dict[Literal["project_hash", "prediction_hash"], List[uuid.UUID]]
 
@@ -53,7 +53,7 @@ _DOMAIN_ANNOTATION = DomainTables(
     metadata=ProjectAnnotationAnalyticsExtra,
     reduction=ProjectAnnotationAnalyticsReduced,
     tag=ProjectTaggedAnnotation,
-    join=["du_hash", "frame", "object_hash"],
+    join=["du_hash", "frame", "annotation_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
     domain="annotation",
@@ -74,7 +74,7 @@ _DOMAIN_PREDICTION_TP_FP = DomainTables(
     metadata=ProjectPredictionAnalyticsExtra,
     reduction=ProjectPredictionAnalyticsReduced,
     tag=ProjectTaggedDataUnit,  # FIXME: wrong table - define project tagged
-    join=["du_hash", "frame", "object_hash"],
+    join=["du_hash", "frame", "annotation_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
     domain="annotation"
@@ -86,7 +86,7 @@ _DOMAIN_PREDICTION_FN_FIXME = DomainTables(  # FIXME: whole table is mostly wron
     metadata=ProjectAnnotationAnalyticsExtra,
     reduction=ProjectAnnotationAnalyticsReduced,
     tag=ProjectTaggedAnnotation,  # FIXME: change everything.
-    join=["du_hash", "frame", "object_hash"],
+    join=["du_hash", "frame", "annotation_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
     domain="annotation",

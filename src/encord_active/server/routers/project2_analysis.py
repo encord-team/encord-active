@@ -256,7 +256,7 @@ def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> si
     return similarity_query.SimilarityQuery(embeddings, results)
 
 
-@router.get("/similarity/{du_hash}/{frame}/{object_hash}")
+@router.get("/similarity/{du_hash}/{frame}/{annotation_hash}")
 @router.get("/similarity/{du_hash}/{frame}/")
 def search_similarity(
     project_hash: uuid.UUID,
@@ -264,7 +264,7 @@ def search_similarity(
     du_hash: uuid.UUID,
     frame: int,
     embedding: str,
-    object_hash: Optional[str] = None,
+    annotation_hash: Optional[str] = None,
 ) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.primary
@@ -274,8 +274,8 @@ def search_similarity(
         "du_hash": du_hash,
         "frame": frame,
     }
-    if object_hash is not None:
-        join_attr_set["object_hash"] = object_hash
+    if annotation_hash is not None:
+        join_attr_set["annotation_hash"] = annotation_hash
     with Session(engine) as sess:
         src_embedding = sess.exec(
             select(base_domain.metadata.embedding_clip).where(
