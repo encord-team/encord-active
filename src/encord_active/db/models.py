@@ -5,10 +5,13 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
-from sqlalchemy import INT, JSON, REAL, SMALLINT, CheckConstraint, Column, BigInteger, Integer, Boolean, TIMESTAMP
+from sqlalchemy import INT, JSON, REAL, SMALLINT, CheckConstraint, Column, BigInteger, Integer, Boolean, TIMESTAMP, \
+    event
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 from sqlmodel.sql.sqltypes import GUID, AutoString
+from psycopg2.extensions import connection as pg_connection
+from sqlite3 import Connection as SqliteConnection
 
 from encord_active.db.enums import AnnotationType, AnnotationTypeMaxValue
 from encord_active.db.metrics import (
@@ -673,6 +676,19 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
 
 
 _init_metadata: Set[str] = set()
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_fk_pragma(
+    dbapi_connection: Union[pg_connection, SqliteConnection],
+    connection_record: None,
+) -> None:
+    # For sqlite - enable foreign_keys support
+    #  (otherwise we need to use complex delete statements)
+    if isinstance(dbapi_connection, SqliteConnection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def get_engine(
