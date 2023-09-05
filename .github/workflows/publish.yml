@@ -19,6 +19,14 @@ jobs:
           token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
           ref: main
 
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - run: npm install && npm run build
+        working-directory: ./src/encord_active/frontend
+
       - name: Setup root poetry environment
         uses: ./.github/actions/setup-root-poetry-environment
 

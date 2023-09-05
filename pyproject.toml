@@ -33,7 +33,7 @@ keywords = [
 readme = "README.md"
 repository = "https://github.com/encord-team/encord-active"
 
-include = ['.env']
+include = ['.env', "src/encord_active/frontend/dist/**/*"]
 
 packages = [{ include = "encord_active", from = "src" }]
 
@@ -74,11 +74,6 @@ ipywidgets = { version = "^8.0.4", optional = true }
 inquirerpy = "^0.3.4"
 umap-learn = "^0.5.3"
 llvmlite = "^0.40.0"                                  # Pinning, as lower versions conflict with other libs
-# Encord-active-components (strict version match)
-encord-active-components = "0.0.34"
-# NOTE: comment line above and uncomment the line below to setup local development
-# encord-active-components = { path = "./frontend_components", develop=true }
-# End of encord-active-components
 prisma = "^0.8.2"
 fastapi = "^0.95.2"
 uvicorn = { extras = ["standard"], version = "^0.21.1" }

@@ -844,17 +844,6 @@ requests = ">=2.25.0,<3.0.0"
 tqdm = ">=4.32.1,<5.0.0"
 
 [[package]]
-name = "encord-active-components"
-version = "0.0.34"
-description = "Frontend components used by Encord Active"
-optional = false
-python-versions = ">=3.9, !=2.7.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*, !=3.8.*"
-files = [
-    {file = "encord_active_components-0.0.34-py3-none-any.whl", hash = "sha256:f6b295a4773670b862d4e38a26c1e3c98a458a49896953354a0ce813702f504b"},
-    {file = "encord_active_components-0.0.34.tar.gz", hash = "sha256:9e3175e5562e542a48421a7a83389d523266717537133c44b2271679e12e1218"},
-]
-
-[[package]]
 name = "executing"
 version = "1.2.0"
 description = "Get the currently executing AST node of a frame, and other information"
@@ -5166,4 +5155,4 @@ notebooks = ["ipywidgets", "jupyterlab"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "d3b98dabd4e14509369b002a08ba55c4e32e5bd95d4daf622b117da3b96fb9c2"
+content-hash = "b2e962857f73a5f3cfaac8dc8d2889626c0b673cdb377ebeef39405950f9b4db"
