@@ -12,7 +12,6 @@ from encord_active.lib.db.prisma_init import (
     generate_prisma_client,
 )
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
-from encord_active.lib.versioning.git import GitVersioner
 from encord_active.server.start_server import start
 
 
@@ -21,9 +20,6 @@ def ensure_safe_project(root_path: Path, final_data_version: Optional[int] = Non
 
     for path in paths:
         rich.print(f"[yellow]Migrating project at path: {path}...")
-        versioner = GitVersioner(path)
-        if versioner.available:
-            versioner.jump_to("latest")
         project_file_structure = ProjectFileStructure(path)
 
         from encord_active.lib.db.merged_metrics import (
