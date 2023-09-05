@@ -2,8 +2,6 @@ import sys
 from os import environ
 from pathlib import Path
 
-from torch import multiprocessing
-
 
 def start(path: Path, reload=False):
     from uvicorn import run
@@ -13,7 +11,7 @@ def start(path: Path, reload=False):
         "reload": reload,
         "port": environ.get("PORT"),
         "host": environ.get("HOST"),
-        "workers": (multiprocessing.cpu_count() * 2) + 1,
+        "workers": environ.get("WORKERS"),
     }
     if reload:
         server_watch_path = Path(__file__).parent.parent
