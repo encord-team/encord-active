@@ -5,8 +5,8 @@ from typing import Callable, Optional, TypedDict
 
 import requests
 import rich
-import typer
 from rich.markup import escape
+from rich.prompt import Confirm
 from tqdm.auto import tqdm
 
 from encord_active.cli.utils.server import ensure_safe_project
@@ -152,16 +152,30 @@ def fetch_response_content_length(r: requests.Response) -> Optional[int]:
 def fetch_prebuilt_project(
     project_name: str, out_dir: Path, *, unpack=True, progress_callback: Optional[Callable] = None
 ):
+    from encord_active.lib.project.project_file_structure import ProjectFileStructure
+
     url = available_prebuilt_projects()[project_name]["url"]
-    output_file_name = "prebuilt_project.zip"
-    output_file_path = out_dir / output_file_name
+    output_file_path = out_dir / "prebuilt_project.zip"
     rich.print(f"Output destination: {escape(out_dir.as_posix())}")
     out_dir.mkdir(exist_ok=True)
+    pfs = ProjectFileStructure(project_name)
 
-    if (out_dir / "project_meta.yaml").is_file():
-        redownload = typer.confirm("Do you want to re-download the project?")
+    if pfs.project_meta.is_file():
+        redownload = Confirm.ask("Do you want to re-download the project? [red]All existing tags will be removed[/red]")
+        print(f"redownload {redownload}")
         if not redownload:
             return out_dir
+        else:
+            import uuid
+
+            from encord_active.db.models import get_engine
+            from encord_active.db.scripts.delete_project import delete_project_from_db
+
+            engine_path = out_dir.parent / "encord-active.sqlite"
+            if engine_path.exists():
+                project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
+                engine = get_engine(engine_path, concurrent=True)
+                delete_project_from_db(engine, project_hash, error_on_missing=False)
 
     r = requests.get(url, stream=True)
     total_length = fetch_response_content_length(r) or 100
