@@ -11,7 +11,7 @@ from encord_active.server.routers.queries.domain_query import (
     DomainTables,
     ProjectFilters,
     ReductionTable,
-    Tables,
+    Tables, TagTable,
 )
 
 
@@ -53,121 +53,111 @@ SearchFiltersFastAPIDepends = Depends(parse_search_filters_fast_api, use_cache=F
 
 def search_filters(
     tables: Tables,
-    base: Literal["analytics", "reduction"],
+    base: Union[AnalyticsTable, ReductionTable, TagTable],
     search: Optional[SearchFilters],
     project_filters: ProjectFilters,
 ) -> list:
-    filters: list = []
-    if tables.primary.domain == "data":
-        base_table = tables.data.analytics if base == "analytics" else tables.data.reduction
-        _project_filters(table=base_table, project_filters=project_filters, filters=filters)
-        # Data only.
-        if search is not None:
-            if search.annotation is not None:
-                exists_filters = []
-                _append_filters(
-                    tables=tables.annotation,
-                    search=search.annotation,
-                    base_table=base_table,
-                    filters=exists_filters
-                )
-                if len(exists_filters) > 0:
-                    filters.append(select(1).where(
-                        *exists_filters,
-                        *[getattr(base_table, "du_hash")]
-                    ).exists())
-            if search.data is not None:
-                _append_filters(
-                    tables=tables.data,
-                    search=search.data,
-                    base_table=base_table,
-                    filters=filters,
-                )
-    else:
-        base_table = tables.annotation.analytics if base == "analytics" else tables.annotation.reduction
-        _project_filters(table=base_table, project_filters=project_filters, filters=filters)
-        # Data & Annotation
-        if search is not None:
-            if search.annotation is not None:
-                _append_filters(
-                    tables=tables.annotation,
-                    search=search.annotation,
-                    base_table=base_table,
-                    filters=filters,
-                )
-            if search.data is not None:
-                _append_filters(
-                    tables=tables.data,
-                    search=search.data,
-                    base_table=base_table,
-                    filters=filters,
-                )
+    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list] = {}
+    if search is not None:
+        if search.annotation is not None:
+            _append_filters(
+                tables=tables.annotation,
+                search=search.annotation,
+                filters=filters,
+            )
+        if search.data is not None:
+            _append_filters(
+                tables=tables.data,
+                search=search.data,
+                filters=filters,
+            )
+    for filter_table, filter_list in filters.items():
+        _project_filters(
+            table=filter_table,
+            project_filters=project_filters,
+            table_filters=filter_list,
+        )
 
-    return filters
+    # Compile into sql
+    compiled_filters = filters.pop(base, [])
+    base_is_annotation = getattr(base, "object_hash", None) is not None
+    exists_filters = []
+    for sql_table, sql_filters in filters.items():
+        sql_table_is_annotation = getattr(sql_table, "object_hash", None) is not None
+        sql_filters.append(base.du_hash == sql_table.du_hash)
+        sql_filters.append(base.frame == sql_table.frame)
+        if sql_table_is_annotation and sql_table_is_annotation:
+            sql_filters.append(base.object_hash == sql_table.object_hash)
+        # Append to filters
+        if sql_table_is_annotation and not base_is_annotation:
+            # Data Result & Annotation Filter -> use Exists
+            exists_filters.extend(sql_filters)
+        else:
+            compiled_filters.extend(sql_filters)
+
+    if len(exists_filters) > 0:
+        compiled_filters.append(
+            select(1).where(*exists_filters).exists()
+        )
+
+    return compiled_filters
 
 
 def _project_filters(
-    table: Union[AnalyticsTable, ReductionTable],
+    table: Union[AnalyticsTable, ReductionTable, TagTable],
     project_filters: ProjectFilters,
-    filters: list,
+    table_filters: list,
 ) -> None:
     for k, v in project_filters.items():
         opt_attr = getattr(table, k, None)
         if opt_attr is not None:
             if len(v) == 1:
-                filters.append(opt_attr == v[0])
+                table_filters.append(opt_attr == v[0])
             else:
-                filters.append(in_op(opt_attr, v))
+                table_filters.append(in_op(opt_attr, v))
 
 
 def _append_filters(
-    tables: DomainTables, search: DomainSearchFilters, base_table: Union[AnalyticsTable, ReductionTable], filters: list
+    tables: DomainTables,
+    search: DomainSearchFilters,
+    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]]
 ) -> None:
     # Metric filters
-    analytics_join = False
     if len(search.metrics) > 0:
-        if base_table != tables.analytics:
-            for j in tables.join:
-                filters.append(getattr(base_table, j) == getattr(tables.analytics, j))
-            analytics_join = True
+        metrics_list = filters.setdefault(tables.analytics, [])
         for metric_name, (filter_start, filter_end) in search.metrics.items():
             if metric_name not in tables.metrics:
                 raise ValueError(f"Invalid metric filter: {metric_name}")
             metric_attr = getattr(tables.analytics, metric_name)
             if filter_start == filter_end:
-                filters.append(metric_attr == filter_start)
+                metrics_list.append(metric_attr == filter_start)
             else:
-                filters.append(between_op(metric_attr, filter_start, filter_end))
+                metrics_list.append(between_op(metric_attr, filter_start, filter_end))
 
     # Enum filters
     if len(search.enums) > 0:
-        if base_table != tables.analytics and not analytics_join:
-            for j in tables.join:
-                filters.append(getattr(base_table, j) == getattr(tables.analytics, j))
+        enums_list = filters.setdefault(tables.analytics, [])
         for enum_name, enum_list in search.enums.items():
             if enum_name not in tables.enums:
                 raise ValueError(f"Invalid enum filter: {enum_name}")
             enum_attr = getattr(tables.analytics, enum_name)
             if len(enum_list) == 1:
-                filters.append(enum_attr == enum_list[0])
+                enums_list.append(enum_attr == enum_list[0])
             else:
-                filters.append(in_op(enum_attr, enum_list))
+                enums_list.append(in_op(enum_attr, enum_list))
 
     # Tag filters
     if search.tags is not None:
-        for j in tables.join:
-            filters.append(getattr(base_table, j) == getattr(tables.tag, j))
+        tag_list = filters.setdefault(tables.tag, [])
         if len(search.tags) == 1:
-            filters.append(tables.tag.tag_hash == search.tags[0])
+            tag_list.append(tables.tag.tag_hash == search.tags[0])
         else:
-            filters.append(in_op(tables.tag.tag_hash, search.tags))
+            tag_list.append(in_op(tables.tag.tag_hash, search.tags))
 
     # Embedding filters
     if search.reduction is not None:
-        if base_table != tables.reduction:
-            for j in tables.join:
-                filters.append(getattr(base_table, j) == getattr(tables.reduction, j))
+        reduction_list = filters.setdefault(tables.reduction, [])
         min_x, min_y = search.reduction.min
         max_x, max_y = search.reduction.max
-        filters.append(between_op(tables.reduction.x, min_x, max_x))
-        filters.append(between_op(tables.reduction.y, min_y, max_y))
+        reduction_list.append(between_op(tables.reduction.x, min_x, max_x))
+        reduction_list.append(between_op(tables.reduction.y, min_y, max_y))

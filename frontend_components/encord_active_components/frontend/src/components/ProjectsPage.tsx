@@ -14,7 +14,9 @@ import { useMutation } from "@tanstack/react-query";
 import { apiUrl, env } from "../constants";
 import axios from "axios";
 import { useImageSrc } from "../hooks/useImageSrc";
-import { Spinner } from "./explorer/Spinner";
+import {Card, Space, Spin} from "antd";
+import Meta from "antd/es/card/Meta";
+import {loadingIndicator} from "./Spin";
 
 const useDownloadProject = (options?: Parameters<typeof useMutation>[2]) =>
   useMutation(
@@ -63,19 +65,19 @@ export const ProjectsPage = ({
         </>
       )}
       <h2 className="font-light text-xl text-neutral-700">Your projects</h2>
-      <div className="flex flex-wrap gap-5">
+      <Space>
         {userProjects.length ? (
           userProjects.map((project) => (
             <ProjectCard
               key={project.projectHash}
               project={project}
-              onClick={() => onSelectLocalProject(project.projectHash)}
+              setSelectedProjectHash={onSelectLocalProject}
             />
           ))
         ) : (
           <ProjectNotFoundCard />
         )}
-      </div>
+      </Space>
       {/* TODO: temporarily hide sandbox projects  */}
       {false && env !== "production" && sandboxProjects.length && (
         <>
@@ -90,11 +92,12 @@ export const ProjectsPage = ({
                   key={project.projectHash}
                   project={project}
                   showDownloadedBadge={true}
-                  onClick={() =>
+                  setSelectedProjectHash={onSelectLocalProject}
+                  /*onClick={() =>
                     (project.downloaded ? onSelectLocalProject : download)(
                       project["projectHash"],
                     )
-                  }
+                  }*/
                 />
               ))}
           </div>
@@ -158,38 +161,49 @@ const NewProjectButton = ({
 const ProjectCard = ({
   project,
   showDownloadedBadge = false,
-  onClick,
+  setSelectedProjectHash,
 }: {
   project: IntegratedProjectMetadata;
   showDownloadedBadge?: boolean;
-  onClick: ButtonCardProps["onClick"];
+  setSelectedProjectHash: (projectHash: string) => void;
 }) => {
   const video = useRef<HTMLVideoElement>(null);
   const { data: imgSrcUrl, isLoading } = useImageSrc(project.imageUrl);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) return <Spin indicator={loadingIndicator} />;
 
   return (
-    <ButtonCard onClick={onClick}>
-      <figure className="max-h-36 rounded">
-        {project.imageUrlTimestamp != null && imgSrcUrl ? (
-          <video
-            src={imgSrcUrl}
-            muted
-            controls={false}
-            onLoadedMetadata={() => {
-              const videoRef = video.current;
-              if (videoRef != null) {
-                videoRef.currentTime = project.imageUrlTimestamp || 0;
-              }
-            }}
-          />
-        ) : (
-          <img src={imgSrcUrl ?? DEFAUL_PROJECT_IMAGE} alt={project.title} />
-        )}
-      </figure>
-      <div className="card-body w-full p-0 justify-between gap-1">
-        <h2 className="card-title text-sm line-clamp-2">{project.title}</h2>
+    <Card
+      hoverable
+      style={{ width: 240 }}
+      onClick={() => setSelectedProjectHash(project.projectHash)}
+      cover={
+        <figure className="max-h-36 rounded" style={{ width: 240, height: 165, objectFit: "cover"}}>
+          {project.imageUrlTimestamp != null && imgSrcUrl ? (
+            <video
+              src={imgSrcUrl}
+              muted
+              controls={false}
+              onLoadedMetadata={() => {
+                const videoRef = video.current;
+                if (videoRef != null) {
+                  videoRef.currentTime = project.imageUrlTimestamp || 0;
+                }
+              }}
+              style={{ width: 240, height: 165, objectFit: "cover"}}
+            />
+          ) : (
+            <img
+              src={imgSrcUrl ?? DEFAUL_PROJECT_IMAGE}
+              alt={project.title}
+              style={{ width: 240, height: 165, objectFit: "cover"}}
+            />
+          )}
+        </figure>
+      }
+    >
+      <Meta title={project.title} description={project.description}/>
+      <div className="card-body w-full p-0 justify-between gap-3">
         <div className="flex flex-col">
           <ProjectStat
             title={"Dataset"}
@@ -211,7 +225,7 @@ const ProjectCard = ({
       {showDownloadedBadge && project?.downloaded ? (
         <div className="badge absolute top-1">Downloaded</div>
       ) : null}
-    </ButtonCard>
+    </Card>
   );
 };
 const ProjectStat = ({
@@ -231,7 +245,7 @@ const ProjectStat = ({
 );
 
 const ProjectNotFoundCard = () => (
-  <ButtonCard>
+  <Card>
     <figure className="py-7">
       <img src={emptyUrl} alt="project-not-found" className="rounded" />
     </figure>
@@ -241,19 +255,6 @@ const ProjectNotFoundCard = () => (
         Import a project or select a sandbox project
       </p>
     </div>
-  </ButtonCard>
+  </Card>
 );
 
-type ButtonCardProps = Pick<
-  JSX.IntrinsicElements["button"],
-  "children" | "onClick"
->;
-const ButtonCard = ({ children, onClick }: ButtonCardProps) => (
-  <button
-    className="card card-bordered flex-nowrap btn btn-ghost normal-case text-start w-72 h-[17rem] bg-base-100 shadow-sm border-1 border-zinc-50 rounded-xl py-3 gap-2"
-    onClick={onClick}
-    disabled={!onClick}
-  >
-    {children}
-  </button>
-);

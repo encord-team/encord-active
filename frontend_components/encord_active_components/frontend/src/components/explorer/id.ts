@@ -1,20 +1,18 @@
 export type IdParts = {
-  labelRow: string;
-  data: string;
+  du_hash: string;
   frame: number;
-  objectHash: string | null;
+  annotation_hash: string | null;
 };
 
 export const splitId = (id: string): IdParts => {
-  const [lr, du, frame, obj] = id.split("_");
+  const [du, frame, obj] = id.split("_");
 
-  if (!lr || !du || !frame) throw `invalid id: ${id}`;
+  if (!du || !frame) throw `invalid id: ${id}`;
 
   return {
-    labelRow: lr,
-    data: du,
+    du_hash: du,
     frame: parseInt(frame),
-    objectHash: obj ?? null,
+    annotation_hash: obj ?? null,
   };
 };
 

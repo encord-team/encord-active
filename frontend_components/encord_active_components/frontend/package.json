@@ -19,7 +19,7 @@
     "@tailwindcss/line-clamp": "^0.4.2",
     "@tanstack/react-query": "^4.29.1",
     "@tanstack/react-query-devtools": "^4.29.19",
-    "antd": "^4.23.5",
+    "antd": "^5.8.6",
     "axios": "^1.4.0",
     "d3-array": "^3.2.3",
     "d3-hexbin": "^0.2.2",

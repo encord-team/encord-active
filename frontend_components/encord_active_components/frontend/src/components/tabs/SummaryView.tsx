@@ -38,7 +38,7 @@ export function SummaryView(props: {
             <SummaryTab
               projectHash={projectHash}
               queryAPI={queryAPI}
-              metricsSummary={projectSummary.annotations}
+              metricsSummary={projectSummary.annotation}
               analysisDomain={"annotation"}
               featureHashMap={featureHashMap}
             />

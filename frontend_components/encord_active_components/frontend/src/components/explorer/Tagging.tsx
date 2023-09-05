@@ -214,7 +214,7 @@ export const TaggingForm = ({
         ))}
       </div>
       <div ref={ref} tabIndex={-1} className="card-body">
-        {loading && <Spinner />}
+        {loading && <Spin indicator={loadingIndicator} />}
         {TAG_GROUPS.map(({ value }) => (
           <Select
             key={value}

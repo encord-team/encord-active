@@ -50,7 +50,7 @@ def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:
 
 
 def _pack_id(du_hash: uuid.UUID, frame: int, annotation_hash: Optional[str] = None) -> str:
-    if annotation_hash is not None:
+    if annotation_hash is None:
         return f"{du_hash}_{frame}"
     else:
         return f"{du_hash}_{frame}_{annotation_hash}"
@@ -103,7 +103,7 @@ def metric_search(
     base_table = tables.primary
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",  # FIXME: this should select the best base table (reduction if no analytics filters)
+        base=base_table.analytics,
         search=filters,
         project_filters={"project_hash": [project_hash]},
     )
@@ -199,7 +199,7 @@ def get_2d_embedding_summary(
     #  Will work correctly IFF reduction hash filtering only happens on the same reduction hash
     where = search_query.search_filters(
         tables=tables,
-        base="reduction",
+        base=domain_tables.reduction,
         search=filters,
         project_filters={
             "project_hash": [project_hash],
@@ -208,10 +208,16 @@ def get_2d_embedding_summary(
     with Session(engine) as sess:
         # FIXME: support variable bucketing.
         round_digits = None if buckets is None else int(math.log10(buckets))
+        if engine.dialect == "sqlite":
+            x_attr = func.round(domain_tables.reduction.x, round_digits)
+            y_attr = func.round(domain_tables.reduction.y, round_digits)
+        else:
+            x_attr = domain_tables.reduction.x.cast(Numeric(6 + round_digits, round_digits))
+            y_attr = domain_tables.reduction.y.cast(Numeric(6 + round_digits, round_digits))
         query = (
             select(  # type: ignore
-                func.round(domain_tables.reduction.x).cast(Integer).label("xv"),
-                func.round(domain_tables.reduction.y).cast(Integer).label("yv"),
+                x_attr.label("xv"),
+                y_attr.label("yv"),
                 func.count(),
             )
             .where(
@@ -228,7 +234,7 @@ def get_2d_embedding_summary(
         print(f"DEBUG SMORE: {results}")
     return Query2DEmbedding(
         count=sum(n for x, y, n in results),
-        embeddings2d=[metric_query.QueryScatterPoint(x=x, y=y, n=n) for x, y, n in results],
+        reductions=[metric_query.QueryScatterPoint(x=x, y=y, n=n) for x, y, n in results],
     )
 
 

@@ -1,11 +1,11 @@
-import { Alert } from "antd";
+import {Alert, Spin} from "antd";
 import { useState } from "react";
 import { useAuth } from "./authContext";
 import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
-import { Spinner } from "./components/explorer/Spinner";
+import {loadingIndicator} from "./components/Spin";
 
 export const App = () => {
   const { data: projects, isLoading, error } = useProjectsList();
@@ -17,9 +17,7 @@ export const App = () => {
 
   if (isLoading)
     return (
-      <div className="w-full h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
+      <Spin indicator={loadingIndicator} />
     );
   if (error?.response && "detail" in error.response?.data)
     return (

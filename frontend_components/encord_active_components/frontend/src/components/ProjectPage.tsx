@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Tabs } from "antd";
+import {Spin, Tabs} from "antd";
 import {
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
@@ -13,7 +13,7 @@ import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
-import { Spinner } from "./explorer/Spinner";
+import {loadingIndicator} from "./Spin";
 
 export function ProjectPage(props: {
   queryAPI: QueryAPI;
@@ -97,7 +97,7 @@ export function ProjectPage(props: {
 
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
-    return <Spinner />;
+    return <Spin indicator={loadingIndicator} />;
   }
 
   const remoteProject = !projectSummary.local_project;
@@ -108,8 +108,7 @@ export function ProjectPage(props: {
         <ProjectSelector
           projects={projects}
           selectedProjectHash={projectHash}
-          onViewAllProjects={() => setSelectedProject(undefined)}
-          onSelectedProjectChange={setSelectedProject}
+          setSelectedProjectHash={setSelectedProject}
         />
       }
       items={[
@@ -132,14 +131,14 @@ export function ProjectPage(props: {
             <ApiContext.Provider value={api}>
               <Explorer
                 projectHash={projectHash}
+                predictionHash={undefined}
                 dataMetricsSummary={projectSummary.data}
-                annotationMetricsSummary={projectSummary.annotations}
-                scope={"data"}
+                annotationMetricsSummary={projectSummary.annotation}
+                scope={"analysis"}
                 queryAPI={queryAPI}
                 featureHashMap={featureHashMap}
                 setSelectedProjectHash={setSelectedProject}
                 remoteProject={remoteProject}
-                /* metricRanges={projectSummary.data?.metrics} */
               />
             </ApiContext.Provider>
           ),
@@ -152,7 +151,8 @@ export function ProjectPage(props: {
               <PredictionsTab
                 projectHash={projectHash}
                 queryAPI={queryAPI}
-                metricsSummary={projectSummary.annotations}
+                annotationMetricsSummary={projectSummary.annotation}
+                dataMetricsSummary={projectSummary.data}
                 featureHashMap={featureHashMap}
                 setSelectedProjectHash={setSelectedProject}
                 remoteProject={remoteProject}
@@ -168,7 +168,7 @@ export function ProjectPage(props: {
               projectHash={projectHash}
               queryAPI={queryAPI}
               dataMetricsSummary={projectSummary.data}
-              annotationMetricsSummary={projectSummary.annotations}
+              annotationMetricsSummary={projectSummary.annotation}
             />
           ),
         },

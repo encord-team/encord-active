@@ -12,7 +12,7 @@ import {
 } from "react-router-dom";
 import { env } from "./constants";
 import { AuthContext, createAuthContext } from "./authContext";
-import "antd/dist/antd.css";
+import "antd/dist/reset.css";
 
 const queryClient = new QueryClient();
 

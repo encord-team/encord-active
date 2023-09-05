@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
 import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
-import { Spinner } from "./Spinner";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import {Spin} from "antd";
+import {loadingIndicator} from "../Spin";
 
 type SearchFn = API["searchInProject"];
 type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope" | "filters">;
@@ -85,7 +86,7 @@ export const Assistant = ({
                 "btn-disabled": isFetching || disabled,
               })}
             >
-              {isFetching ? <Spinner /> : <FaMagic className="text-base" />}
+              {isFetching ? <Spin indicator={loadingIndicator} /> : <FaMagic className="text-base" />}
             </button>
             <input
               name="query"

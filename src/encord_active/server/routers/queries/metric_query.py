@@ -246,7 +246,7 @@ def query_attr_summary(
     domain_tables = tables.primary
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",
+        base=domain_tables.analytics,
         search=filters,
         project_filters=project_filters,
     )
@@ -296,7 +296,7 @@ def query_attr_distribution(
     )
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",
+        base=domain_tables.analytics,
         search=filters,
         project_filters=project_filters,
     )
@@ -348,7 +348,7 @@ def query_attr_scatter(
     )
     where = search_query.search_filters(
         tables=tables,
-        base="analytics",
+        base=domain_tables.analytics,
         search=filters,
         project_filters=project_filters,
     )

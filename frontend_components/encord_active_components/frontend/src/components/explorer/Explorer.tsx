@@ -1,86 +1,76 @@
-import { useEffect, useMemo, useRef, useState, useContext } from "react";
+import { useMemo, useState, useContext } from "react";
 import {
   BiCloudUpload,
-  BiInfoCircle,
   BiSelectMultiple,
   BiWindows,
 } from "react-icons/bi";
-import { BsCardText } from "react-icons/bs";
-import { FaEdit, FaExpand } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
-import { RiUserLine } from "react-icons/ri";
 import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
-import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
-import { Spinner } from "./Spinner";
+import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
-import useResizeObserver from "use-resize-observer";
-import { classy } from "../../helpers/classy";
 import { useDebounce } from "usehooks-ts";
 import {
   ApiContext,
-  classificationsPredictionOutcomes,
   getApi,
-  IdValue,
-  Item,
-  Metric,
-  objectPredictionOutcomes,
-  PredictionOutcome,
-  PredictionType,
-  Scope,
+  Item, PredictionOutcome,
   useApi,
 } from "./api";
-import { Assistant, useSearch } from "./Assistant";
-import { MetricDistributionTiny, ScatteredEmbeddings } from "./Charts";
+import { Assistant } from "./Assistant";
 import { splitId } from "./id";
-import { Pagination, usePagination } from "./Pagination";
 import {
   BulkTaggingForm,
   TaggingDropdown,
   TaggingForm,
   TagList,
 } from "./Tagging";
-import { capitalize, isEmpty, sift } from "radash";
 import {
   FilterState,
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import { Popover, Button } from "antd";
+import {Button, List, Popover, Select, Space, Spin} from "antd";
 import {ProjectAnalysisDomain, ProjectMetricSummary, QueryAPI} from "../Types";
-import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
-import { apiUrl, env, local } from "../../constants";
-import { useImageSrc } from "../../hooks/useImageSrc";
+import { env, local } from "../../constants";
 import { useAuth } from "../../authContext";
+import {ExplorerEmbeddings} from "./ExplorerEmbeddings";
+import {CreateSubsetModal} from "../tabs/modals/CreateSubsetModal";
+import {MetricDistributionTiny} from "./ExplorerCharts";
+import {ExplorerGalleryItem} from "./ExplorerGalleryItem";
+import {HiOutlineTag} from "react-icons/hi";
+import {loadingIndicator} from "../Spin";
+import {ImageWithPolygons} from "./ImageWithPolygons";
 
 export type InternalFilters = {
-  analysisDomain: "data" | "annotation";
-  filters: {
-    data: {
-      metrics: Readonly<Record<string, readonly [number, number]>>,
-      enums:  Readonly<Record<string, readonly string[]>>,
-      reduction: null,
-      tags: null | string[],
+  readonly analysisDomain: "data" | "annotation";
+  readonly filters: {
+    readonly data: {
+      readonly metrics: Readonly<Record<string, readonly [number, number]>>,
+      readonly enums: Readonly<Record<string, readonly string[]>>,
+      readonly reduction: null,
+      readonly tags: null | readonly string[],
     },
-    annotation: {
-      metrics: Readonly<Record<string, readonly [number, number]>>,
-      enums:  Readonly<Record<string, readonly string[]>>,
-      reduction: null,
-      tags: null | string[],
+    readonly annotation: {
+      readonly metrics: Readonly<Record<string, readonly [number, number]>>,
+      readonly enums: Readonly<Record<string, readonly string[]>>,
+      readonly reduction: null,
+      readonly tags: null | readonly string[],
     },
   },
-  orderBy: null | string,
-  desc: boolean,
-  iou: number | undefined,
-  predictionOutcome: PredictionOutcome | undefined,
-  predictionType: "object" | "classification" | undefined,
+  readonly orderBy: string,
+  readonly desc: boolean,
+  readonly iou: number | undefined,
+  readonly predictionOutcome: "tp" | "fp" | "fn" | undefined,
+  readonly predictionHash: string | undefined,
 };
 
 export type Props = {
   projectHash: string;
+  predictionHash: string | undefined;
   dataMetricsSummary: ProjectMetricSummary;
   annotationMetricsSummary: ProjectMetricSummary;
-  scope: Scope;
+  scope: "analysis" | "prediction";
   queryAPI: QueryAPI;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
@@ -89,6 +79,7 @@ export type Props = {
 
 export const Explorer = ({
   projectHash,
+  predictionHash,
   scope,
   queryAPI,
   featureHashMap,
@@ -97,9 +88,6 @@ export const Explorer = ({
   setSelectedProjectHash,
   remoteProject,
 }: Props) => {
-  const [itemSet, setItemSet] = useState(new Set<string>());
-
-
   // Item selected for extra analysis operations
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
@@ -110,24 +98,31 @@ export const Explorer = ({
   {
     domain: "data" | "annotation";
     metric_key: string;
-  } | undefined>();
+  }>({
+    domain: "data", metric_key: "metric_random"
+  });
 
-  // Prediction filters
+  // Filter State
   const [isAscending, setIsAscending] = useState(true);
-  const [predictionType, setPredictionType] = useState<
-    PredictionType | undefined
-  >();
   const [predictionOutcome, setPredictionOutcome] = useState<
-    PredictionOutcome | undefined
-  >();
-  const [iou, setIou] = useState<number | undefined>();
+    "tp" | "fp" | "fn"
+  >("tp");
+  const [iou, setIou] = useState<number>(0.5);
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   const [annotationFilters, setAnnotationFilters] = useState<FilterState>(DefaultFilters);
+  const canResetFilters = predictionOutcome !== "tp" || iou !== 0.5
+    || dataFilters.ordering.length !== 0 || annotationFilters.ordering.length !== 0;
+  const resetAllFilters = () => {
+    setIsAscending(true);
+    setPredictionOutcome("tp");
+    setIou(0.5);
+    setDataFilters(DefaultFilters);
+    setAnnotationFilters(DefaultFilters);
+  }
 
   const rawFilters: InternalFilters = useMemo(() => {
-    const analysisDomain: ProjectAnalysisDomain = "data";
     return {
-      analysisDomain,
+      analysisDomain: selectedMetric.domain,
       filters: {
         data: {
           metrics: dataFilters.metricFilters,
@@ -136,43 +131,40 @@ export const Explorer = ({
           tags: null,
         },
         annotation: {
-          metrics: dataFilters.metricFilters,
-          enums: dataFilters.enumFilters,
+          metrics: annotationFilters.metricFilters,
+          enums: annotationFilters.enumFilters,
           reduction: null,
           tags: null,
         },
       },
-      orderBy: null,
-      desc: false,
+      orderBy: selectedMetric.metric_key,
+      desc: !isAscending,
       iou,
       predictionOutcome,
-      predictionType,
+      predictionHash,
     }
-  }, [dataFilters, annotationFilters, predictionType, predictionOutcome, iou]);
+  }, [selectedMetric, dataFilters, isAscending, annotationFilters, predictionHash, predictionOutcome, iou]);
 
   const filters: InternalFilters = useDebounce(rawFilters, 500);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filters]);
 
   const apiContext = useContext(ApiContext);
   const { token } = useAuth();
 
-  let api: ReturnType<typeof getApi>;
+  let apiLegacy: ReturnType<typeof getApi>;
   if (apiContext == null) {
-    api = getApi(projectHash, token);
+    apiLegacy = getApi(projectHash, token);
   } else {
-    api = apiContext;
+    apiLegacy = apiContext;
   }
-
-  const predictionTypeFound = scope !== "prediction" || predictionType != null;
 
   const { data: hasPremiumFeatures } = useQuery(
     ["hasPremiumFeatures"],
-    api.fetchHasPremiumFeatures,
+    apiLegacy.fetchHasPremiumFeatures,
     { staleTime: Infinity },
   );
+
+
+  //// START OF SIMILARITY SEARCH.
   /*
   const { data: hasSimilaritySearch } = useQuery(
     sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
@@ -181,21 +173,14 @@ export const Explorer = ({
   );
   */
   const hasSimilaritySearch = false;
+  const { data: similarItems, isLoading: isLoadingSimilarItemsRaw} = useQuery(
+    ["FIXME: IMPLEMENT PROPERLY"],
+    () => [] as string[],
+    { enabled: hasSimilaritySearch && similarityItem !== undefined }
+  );
+  const isLoadingSimilarItems = isLoadingSimilarItemsRaw && hasSimilaritySearch && similarityItem !== undefined;
 
-  const similarItems: string[] | undefined = undefined;
-  const isLoadingSimilarItems = false;
-  /*
-  FIXME:
-  const { data: similarItems, isFetching: isLoadingSimilarItems } = useQuery(
-    sift([projectHash, scope, "similarities", similarityItem]),
-    () =>
-      api.fetchSimilarItems(
-        similarityItem!,
-        "embedding_clip",
-      ),
-    { enabled: !!similarityItem && !!selectedMetric },
-  );*/
-
+  // Load metric ranges
   const {
     data: dataMetricRanges, isLoading: isLoadingDataMetrics
   } = queryAPI.useProjectAnalysisSummary(
@@ -216,22 +201,9 @@ export const Explorer = ({
     filters.orderBy,
     filters.desc,
     {
-      enabled: predictionTypeFound,
+      enabled: scope !== "prediction",
     },
   )
-
-  const filterLabelClassMap = useMemo(() => {
-    const res = Object.fromEntries(
-      Object.values(featureHashMap).map((v) => [v.name, v]),
-    );
-    res["No class"] = {
-      name: "No class",
-      color: "",
-    };
-    return res;
-  }, [featureHashMap]);
-
-  const withSortOrder: readonly string[] = sortedItems?.results ?? [];
 
   /*
   FIXME: implement
@@ -242,35 +214,17 @@ export const Explorer = ({
     loading: searching,
   } = useSearch(scope, filters, api.searchInProject);
   */
-  const search: any = (v: any) => {};
-  const setSearch = () => {};
-  const searchResults: undefined | { snippet: string | null; ids: string[] } = undefined;
+  const [premiumSearch, setPremiumSearch] = useState("");
+  const searchResults: undefined | { snippet: string | null; ids: string[] } = 1 == 1 ? undefined : { snippet: "", ids: []};
   const searching = false;
 
-  /*
-  FIXME:
-  const resetable =
-    itemSet.size ||
-    searchResults?.ids.length ||
-    similarItems?.length ||
-    !isEmpty(filters.range) ||
-    !isEmpty([...filters.tags?.data, ...filters.tags?.label]);
-   */
-  const resetable = true;
   const reset = (clearFilters: boolean = true) => {
-    setItemSet(new Set());
-    //FIXME: setSearch(undefined);
     setSimilarityItem(null);
-    if (clearFilters) setDataFilters(DefaultFilters);
-    if (clearFilters) setAnnotationFilters(DefaultFilters);
-    setPage(1);
+    if (clearFilters) resetAllFilters();
   };
 
-  const itemsToRender: string[] =
-    similarItems ?? searchResults?.ids ?? withSortOrder.map(({ id }) => id);
-
-  const { pageSize, pageItems, page, setPage, setPageSize } =
-    usePagination(itemsToRender);
+  const itemsToRender: readonly string[] =
+    similarItems ?? searchResults?.ids ?? sortedItems?.results ?? [];
 
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
@@ -284,48 +238,10 @@ export const Explorer = ({
   const closePreview = () => setPreviewedItem(null);
   const showSimilarItems = (itemId: string) => {
     closePreview();
-    setPage(1);
     setSimilarityItem(itemId);
   }
 
-  const onMetricSelected = (newMetric: string) => {
-    const [domain, metricKey] = newMetric.split("-", 1);
-    let analysisDomain: "data" | "annotation";
-    if (domain === "data-") {
-      analysisDomain = "data"
-    } else if (domain === "annotation-") {
-      analysisDomain = "annotation"
-    } else {
-      throw Error(domain)
-    }
-    /*
-    FIXME:
-    const usedScopes = Object.entries(metrics)
-      .map(([_, scopedMetrics]) => scopedMetrics.map((metric) => metric.name))
-      .filter(
-        (scopedMetricNames) =>
-          scopedMetricNames.includes(selectedMetric.name) ||
-          scopedMetricNames.includes(newMetric.name),
-      )!;
-    if (usedScopes.length !== 1) {
-      reset(false);
-    }
-    */
-    setSelectedMetric({domain: analysisDomain, metric_key: metricKey});
-  };
-  const allowTaggingAnnotations = useMemo(() => {
-    if (!selectedMetric) {
-      return false;
-    } else {
-      return selectedMetric.domain === "annotation";
-    }
-  }, [selectedMetric]);
-
-  useEffect(() => {
-    if (!selectedMetric) {
-      setSelectedMetric({domain: "data", metric_key: "metric_random"});
-    }
-  }, [selectedMetric]);
+  const allowTaggingAnnotations = selectedMetric?.domain === "annotation";
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -355,20 +271,20 @@ export const Explorer = ({
     isLoadingSimilarItems,
     searching,
   ]);
+
+  // Modal state
   const [open, setOpen] = useState<undefined | "subset" | "upload">();
   const close = () => setOpen(undefined);
+
   return (
-    <>
-      {/* FIXME: uncomment
+    <div>
       <CreateSubsetModal
         open={open == "subset"}
         close={close}
         projectHash={projectHash}
         queryAPI={queryAPI}
         filters={filters}
-        ids={[...itemSet]}
       />
-      */}
       <UploadToEncordModal
         open={open === "upload"}
         close={close}
@@ -376,330 +292,218 @@ export const Explorer = ({
         queryAPI={queryAPI}
         setSelectedProjectHash={setSelectedProjectHash}
       />
-      <div className="w-full">
-        {previewedItem && (
-          <ItemPreview
-            id={previewedItem}
-            similaritySearchDisabled={!hasSimilaritySearch}
-            scope={scope}
-            iou={iou}
-            onClose={closePreview}
-            onShowSimilar={() => showSimilarItems(previewedItem)}
-            allowTaggingAnnotations={allowTaggingAnnotations}
+      <ExplorerEmbeddings
+        queryApi={queryAPI}
+        projectHash={projectHash}
+        filters={filters}
+        setEmbeddingSelection={() => {/*FIXME*/}}
+      />
+      {previewedItem && (
+        <ItemPreview
+          queryAPI={queryAPI}
+          projectHash={projectHash}
+          id={previewedItem}
+          similaritySearchDisabled={!hasSimilaritySearch}
+          scope={scope}
+          iou={iou}
+          onClose={closePreview}
+          onShowSimilar={() => showSimilarItems(previewedItem)}
+          allowTaggingAnnotations={allowTaggingAnnotations}
+        />
+      )}
+      {similarityItem && (
+        <SimilarityItem
+          itemId={similarityItem}
+          onClose={() => setSimilarityItem(null)}
+        />
+      )}
+      {!similarityItem && scope !== "prediction" && (
+        <MetricDistributionTiny
+          projectHash={projectHash}
+          queryAPI={queryAPI}
+          filters={filters}
+        />
+      )}
+      {scope === "prediction" && (
+        <PredictionFilters
+          onOutcomeChange={setPredictionOutcome}
+          onIouChange={setIou}
+          disabled={!!similarityItem}
+        />
+      )}
+      <Assistant
+        defaultSearch={premiumSearch}
+        isFetching={searching}
+        setSearch={setPremiumSearch}
+        snippet={searchResults?.snippet}
+        disabled={!hasPremiumFeatures}
+      />
+      <Space wrap>
+        <Space.Compact size="large">
+          <Select
+            value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
+            onChange={(strKey: string) => {
+              const [domain, metric_key] = strKey.split("-");
+              setSelectedMetric({ domain: domain as "data" | "annotation", metric_key});
+            }}
+            style={{width: 300}}
+            options={[
+              {
+                label: 'Data Metrics',
+                options: Object.entries(dataMetricsSummary.metrics).map(([metricKey, metric]) => ({
+                  label: `D: ${metric.title}`,
+                  value: `data-${metricKey}`
+                })),
+              },
+              {
+                label: 'Annotation Metrics',
+                options: Object.entries(annotationMetricsSummary.metrics).map(([metricKey, metric]) => ({
+                  label: `A: ${metric.title}`,
+                  value: `annotation-${metricKey}`
+                })),
+              },
+            ]}
           />
-        )}
-        <div
-          className={classy(
-            "w-full flex flex-col gap-5 items-center pb-5 m-auto",
-            {
-              hidden: previewedItem,
-            },
-          )}
-        >
-          {/* TODO: move model predictions embeddings plot to FE */}
-          {selectedMetric && false && (
-            <Embeddings
-              queryApi={queryAPI}
-              projectHash={projectHash}
-              isloadingItems={isLoadingSortedItems}
-              idValues={
-                (scope === "prediction"
-                  ? sortedItems?.results?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
-                  : sortedItems) || []
-              }
-              filters={filters}
-              embeddingType="embedding_clip"
-              onSelectionChange={(selection) => {
-                setPage(1);
-                setItemSet(new Set(selection.map(({ id }) => id)));
-              }}
-              onReset={() => setItemSet(new Set())}
-            />
-          )}
-          {similarityItem && (
-            <SimilarityItem
-              itemId={similarityItem}
-              onClose={() => setSimilarityItem(null)}
-            />
-          )}
-          <div className="flex w-full gap-2 flex-col flex-wrap">
-            <div className="flex gap-2 flex-wrap">
-              <TaggingDropdown
-                disabledReason={
-                  scope === "prediction"
-                    ? scope
-                    : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
-                }
-              >
-                <BulkTaggingForm
-                  items={[...selectedItems]}
-                  allowTaggingAnnotations={allowTaggingAnnotations}
-                />
-              </TaggingDropdown>
-              {(
-                <label className="input-group  w-auto">
-                  <select
-                    onChange={(event) =>
-                      onMetricSelected(event.target.value)
-                    }
-                    className="select select-bordered focus:outline-none"
-                    disabled={!!similarItems?.length}
-                  >
-                    <optgroup
-                      label="Data Metrics"
-                    >
-                      {Object.entries(annotationMetricsSummary.metrics).map(
-                        ([metricKey, metric]) => (
-                          <option
-                            key={`data-${metricKey}`}
-                            value={`data-${metricKey}`}
-                          >
-                            {metric.title}
-                          </option>
-                        ),
-                      )}
-                    </optgroup>
-                    <optgroup
-                      label="Annotation Metrics"
-                    >
-                      {Object.entries(dataMetricsSummary.metrics).map(
-                        ([metricKey, metric]) => (
-                          <option
-                            key={`annotation-${metricKey}`}
-                            value={`annotation-${metricKey}`}
-                          >
-                            {metric.title}
-                          </option>
-                        ),
-                      )}
-                    </optgroup>
-                  </select>
-                  <label
-                    className={classy("btn swap swap-rotate", {
-                      "btn-disabled": !!similarItems?.length,
-                    })}
-                  >
-                    <input
-                      onChange={() => setIsAscending((prev) => !prev)}
-                      type="checkbox"
-                      disabled={!!similarItems?.length}
-                      defaultChecked={true}
-                    />
-                    <TbSortAscending className="swap-on text-base" />
-                    <TbSortDescending className="swap-off text-base" />
-                  </label>
-                </label>
-              )}
-              {/* FIXME: !similarityItem && scope !== "prediction" && (
-                <MetricDistributionTiny
-                  values={sortedItems || []}
-                  setSeletedIds={(ids) => setItemSet(new Set(ids))}
-                />
-              ) */}
-              {scope === "prediction" && (
-                <PredictionFilters
-                  predictionType={predictionType}
-                  setPredictionType={setPredictionType}
-                  onOutcomeChange={setPredictionOutcome}
-                  onIouChange={setIou}
-                  disabled={!!similarityItem}
-                />
-              )}
-            </div>
-            <div className="flex justify-between gap-2 flex-wrap">
-              <Assistant
-                defaultSearch={search}
-                isFetching={searching}
-                setSearch={setSearch}
-                snippet={searchResults?.snippet}
-                disabled={!hasPremiumFeatures}
+          <Button
+            onClick={() => setIsAscending(!isAscending)}
+            icon={isAscending ? <TbSortAscending/> : <TbSortDescending/>}
+          />
+          <Popover
+            placement="bottomLeft"
+            content={
+              <MetricFilter
+                filters={dataFilters}
+                setFilters={setDataFilters}
+                metricsSummary={dataMetricsSummary}
+                metricRanges={dataMetricRanges?.metrics}
+                featureHashMap={featureHashMap}
               />
-              <div className="flex gap-2 flex-wrap">
-                <Popover
-                  placement="bottomLeft"
-                  content={
-                    <MetricFilter
-                      filters={dataFilters}
-                      setFilters={setDataFilters}
-                      metricsSummary={dataMetricsSummary}
-                      metricRanges={dataMetricRanges?.metrics}
-                      featureHashMap={filterLabelClassMap}
-                    />
-                  }
-                  trigger="click"
-                >
-                  <button className="btn btn-ghost">Data Filters</button>
-                </Popover>
-                <Popover
-                  placement="bottomLeft"
-                  content={
-                    <MetricFilter
-                      filters={annotationFilters}
-                      setFilters={setAnnotationFilters}
-                      metricsSummary={annotationMetricsSummary}
-                      metricRanges={annotationMetricRanges?.metrics}
-                      featureHashMap={filterLabelClassMap}
-                    />
-                  }
-                  trigger="click"
-                >
-                  <button className="btn btn-ghost">Annotation Filters</button>
-                </Popover>
-                <button
-                  className={classy("btn btn-ghost gap-2", {
-                    "btn-disabled": !resetable,
-                  })}
-                  onClick={() => reset()}
-                >
-                  <MdFilterAltOff />
-                  Reset filters
-                </button>
-                <button
-                  className={classy("btn btn-ghost gap-2", {
-                    "btn-disabled": !selectedItems.size,
-                  })}
-                  onClick={() => setSelectedItems(new Set())}
-                >
-                  <VscClearAll />
-                  Clear selection ({selectedItems.size})
-                </button>
-                <button
-                  className="btn btn-ghost gap-2"
-                  onClick={() => setSelectedItems(new Set(itemsToRender))}
-                >
-                  <BiSelectMultiple />
-                  Select all ({itemsToRender.length})
-                </button>
-                {env !== "sandbox" && (
-                  <button
-                    className="btn btn-ghost gap-2"
-                    onClick={() => setOpen("subset")}
-                    disabled={!resetable}
-                  >
-                    <BiWindows />
-                    Create Project subset
-                  </button>
-                )}
-                {local && !remoteProject && (
-                  <button
-                    className="btn btn-ghost gap-2"
-                    onClick={() => setOpen("upload")}
-                    disabled={!!resetable}
-                  >
-                    <BiCloudUpload />
-                    Upload project
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          {!!loadingDescription ? (
-            <div className="h-32 flex items-center gap-2">
-              <Spinner />
-              <span className="text-xl">{loadingDescription}</span>
-            </div>
-          ) : itemsToRender.length ? (
-            <>
-              <form
-                onChange={({ target }) =>
-                  toggleImageSelection((target as HTMLInputElement).name)
-                }
-                onSubmit={(e) => e.preventDefault()}
-                className="w-full flex-1 grid gap-1 grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5"
-              >
-                {pageItems.map((id) => (
-                  <GalleryItem
-                    selectedMetric={selectedMetric}
-                    key={id}
-                    itemId={id}
-                    onExpand={() => setPreviewedItem(id)}
-                    similaritySearchDisabled={!hasSimilaritySearch}
-                    onShowSimilar={() => showSimilarItems(id)}
-                    selected={selectedItems.has(id)}
-                    iou={iou}
-                  />
-                ))}
-              </form>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                totalItems={itemsToRender.length}
-                onChange={setPage}
-                onChangePageSize={setPageSize}
+            }
+            trigger="click"
+          >
+            <Button>Data Filters</Button>
+          </Popover>
+          <Popover
+            placement="bottomLeft"
+            content={
+              <MetricFilter
+                filters={annotationFilters}
+                setFilters={setAnnotationFilters}
+                metricsSummary={annotationMetricsSummary}
+                metricRanges={annotationMetricRanges?.metrics}
+                featureHashMap={featureHashMap}
               />
-            </>
-          ) : (
-            <div className="h-32 flex items-center gap-2">
-              <TbMoodSad2 className="text-3xl" />
-              <span className="text-xl">No results</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+            }
+            trigger="click"
+          >
+            <Button>Annotation Filters</Button>
+          </Popover>
+          <Button
+            disabled={!canResetFilters}
+            onClick={() => reset()}
+            icon={<MdFilterAltOff />}
+          >
+            Reset filters
+          </Button>
+        </Space.Compact>
+        <Space.Compact size="large">
+          <Popover
+            placement="bottomRight"
+            content={
+              <BulkTaggingForm
+                items={[...selectedItems]}
+                allowTaggingAnnotations={allowTaggingAnnotations}
+              />
+            }
+            trigger="click"
+          >
+            <Button icon={<HiOutlineTag />} disabled={!selectedItems.size}>Tag</Button>
+          </Popover>
+          <Button
+            disabled={!selectedItems.size}
+            onClick={() => setSelectedItems(new Set())}
+            icon={<VscClearAll />}
+          >
+            Clear selection ({selectedItems.size})
+          </Button>
+          <Button
+            onClick={() => setSelectedItems(new Set(itemsToRender))}
+            disabled={itemsToRender.length === 0}
+            icon={<BiSelectMultiple />}
+          >
+            Select all ({itemsToRender.length})
+          </Button>
+        </Space.Compact>
+        <Space.Compact size="large">
+          <Button
+            onClick={() => setOpen("subset")}
+            disabled={!canResetFilters}
+            hidden={env === "sandbox"}
+            icon={<BiWindows />}
+          >
+            Create Project subset
+          </Button>
+          <Button
+            onClick={() => setOpen("upload")}
+            disabled={canResetFilters}
+            hidden={remoteProject || !local}
+            icon={<BiCloudUpload />}
+          >
+            Upload project
+          </Button>
+        </Space.Compact>
+      </Space>
+      <List
+        style={{marginTop: 10}}
+        dataSource={itemsToRender as string[]}
+        grid={{}}
+        loading={{
+          spinning: loadingDescription != "",
+          tip: loadingDescription,
+          indicator: loadingIndicator
+        }}
+        locale={{
+          emptyText: "No Results"
+        }}
+        pagination={{
+          defaultPageSize: 10,
+        }}
+        renderItem={(item: string) => {
+          return <ExplorerGalleryItem
+            projectHash={projectHash}
+            queryAPI={queryAPI}
+            selectedMetric={selectedMetric}
+            key={item}
+            itemId={item}
+            onExpand={() => setPreviewedItem(item)}
+            similaritySearchDisabled={!hasSimilaritySearch}
+            onShowSimilar={() => showSimilarItems(item)}
+            selected={selectedItems.has(item)}
+            iou={iou}
+          />
+        }}
+      />
+    </div>
   );
 };
 
 const ALL_PREDICTION_OUTCOMES = "All Prediction Outcomes";
 
 const PredictionFilters = ({
-  predictionType,
-  setPredictionType,
   onOutcomeChange,
   onIouChange,
   disabled = false,
 }: {
-  predictionType?: PredictionType;
-  setPredictionType: (type: PredictionType) => void;
   onOutcomeChange: (predictionOutcome?: PredictionOutcome) => void;
+  iou: number;
   onIouChange?: (iou: number) => void;
   disabled?: boolean;
 }) => {
-  const { data: predictionTypes, isLoading } =
-    useApi().fetchAvailablePredictionTypes();
 
-  const [iou, setIou] = useState(0.5);
   const [drag, setDrag] = useState(false);
-
-  useEffect(() => {
-    if (!predictionType && predictionTypes?.length)
-      setPredictionType(predictionTypes[0]);
-  }, [predictionTypes]);
-
-  useEffect(() => {
-    if (iou != null && !drag) onIouChange?.(iou);
-  }, [iou, drag]);
-
-  if (isLoading) return <Spinner />;
-  if (!predictionTypes?.length) return null;
-
-  const outcomes =
-    predictionType === "object"
-      ? objectPredictionOutcomes
-      : classificationsPredictionOutcomes;
 
   return (
     <div className="flex gap-2">
-      {predictionTypes?.length > 1 && (
-        <select
-          disabled={disabled}
-          className="select select-bordered w-full max-w-xs"
-          onChange={({ target: { value } }) =>
-            setPredictionType(value as PredictionType)
-          }
-        >
-          {predictionTypes.map((type) => (
-            <option key={type} value={type}>
-              {`${capitalize(type)} Predictions`}
-            </option>
-          ))}
-        </select>
-      )}
       <select
         disabled={disabled}
         className="select select-bordered w-full max-w-xs"
@@ -738,76 +542,7 @@ const PredictionFilters = ({
   );
 };
 
-const Embeddings = ({
-  queryApi,
-  projectHash,
-  isloadingItems,
-  idValues,
-  filters,
-  embeddingType,
-  onSelectionChange,
-  onReset,
-}: {
-  queryApi: QueryAPI;
-  projectHash: string;
-  isloadingItems: boolean;
-  idValues: IdValue[];
-  filters: InternalFilters;
-  embeddingType: Metric["embeddingType"];
-  onSelectionChange: Parameters<
-    typeof ScatteredEmbeddings
-  >[0]["onSelectionChange"];
-  onReset: () => void;
-}) => {
-  const {
-    data: reductionHashes,
-  } = queryApi.useProjectListEmbeddingReductions(projectHash);
-  const reductionHash: string | undefined = useMemo(
-    () => Object.keys(reductionHashes?.results ?? {})[0],
-    [reductionHashes]
-  );
-  const {
-    isLoading,
-    data: scatteredEmbeddings
-  } = queryApi.useProjectAnalysisReducedEmbeddings(
-    projectHash,
-    filters.analysisDomain,
-    reductionHash ?? "",
-    filters.filters,
-    { enabled: reductionHash != null}
-  );
 
-  const filtered = useMemo(() => {
-    const ids = new Set(idValues.map(({ id }) => id));
-    return scatteredEmbeddings?.filter(
-      ({ id }) => ids.has(id) || ids.has(id.slice(0, id.lastIndexOf("_"))),
-    );
-  }, [JSON.stringify(idValues), JSON.stringify(scatteredEmbeddings)]);
-
-  return !isLoading && !isloadingItems && !scatteredEmbeddings?.length ? (
-    <div className="alert shadow-lg h-fit">
-      <div>
-        <BiInfoCircle className="text-base" />
-        <span>2D embedding are not available for this project. </span>
-      </div>
-    </div>
-  ) : (
-    <div className="w-full flex  h-96 [&>*]:flex-1 items-center">
-      {isLoading || isloadingItems ? (
-        <div className="absolute" style={{ left: "50%" }}>
-          <Spinner />
-        </div>
-      ) : (
-        <ScatteredEmbeddings
-          embeddings={filtered || []}
-          onSelectionChange={onSelectionChange}
-          onReset={onReset}
-          predictionType={filters.prediction_filters?.type}
-        />
-      )}
-    </div>
-  );
-};
 
 const SimilarityItem = ({
   itemId,
@@ -837,6 +572,8 @@ const SimilarityItem = ({
 };
 
 const ItemPreview = ({
+  queryAPI,
+  projectHash,
   id,
   similaritySearchDisabled,
   scope,
@@ -845,21 +582,36 @@ const ItemPreview = ({
   onShowSimilar,
   allowTaggingAnnotations = false,
 }: {
+  queryAPI: QueryAPI,
+  projectHash: string,
   id: string;
   similaritySearchDisabled: boolean;
-  scope: Scope;
-  onClose: JSX.IntrinsicElements["button"]["onClick"];
-  onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  scope: "prediction" | "annotation";
+  onClose: () => void;
+  onShowSimilar: () => void;
   iou?: number;
   allowTaggingAnnotations: boolean;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(id, iou);
-  const { mutate } = useApi().itemTagsMutation;
+  const { du_hash, frame, annotation_hash} = splitId(id);
+  const { data: preview, isLoading } = queryAPI.useProjectItemPreview(
+    projectHash,
+    du_hash,
+    frame,
+    annotation_hash,
+  );
+  const { data: info } = queryAPI.useProjectItemDetails(
+    projectHash,
+    du_hash,
+    frame,
+  )
+  const mutate = () => console.log('fixme');
 
-  if (isLoading || !data) return <Spinner />;
+  if (isLoading || !preview) return <Spin indicator={loadingIndicator} />;
 
-  const { description, ...metrics } = data.metadata.metrics;
-  const { editUrl } = data;
+  /*const { description, ...metrics } = preview.metadata.metrics;
+  const { editUrl } = data;*/
+  const editUrl = "FIXME";
+  const description = "";
   return (
     <div className="w-full flex flex-col items-center gap-3 p-1">
       <div className="w-full flex justify-between">
@@ -887,7 +639,7 @@ const ItemPreview = ({
           >
             <TaggingForm
               onChange={(groupedTags) => mutate([{ id, groupedTags }])}
-              selectedTags={data.tags}
+              selectedTags={{ data: [], label: []}} // FIXME:
               tabIndex={0}
               allowTaggingAnnotations={allowTaggingAnnotations}
             />
@@ -902,7 +654,7 @@ const ItemPreview = ({
           <div className="flex flex-col">
             <div>
               <span>Title: </span>
-              <span>{data.dataTitle || "unknown"}</span>
+              <span>{info?.data_title ?? "unknown"}</span>
             </div>
             {description && (
               <div>
@@ -911,145 +663,26 @@ const ItemPreview = ({
               </div>
             )}
           </div>
-          <MetadataMetrics metrics={metrics} />
-          <TagList tags={data.tags} />
+          {/*<MetadataMetrics metrics={metrics} />
+          <TagList tags={data.tags} />*/}
         </div>
         <div className="w-fit inline-block relative">
-          <ImageWithPolygons item={data} />
+          <ImageWithPolygons className="" preview={preview} />
         </div>
       </div>
     </div>
   );
 };
 
-const GalleryItem = ({
-  itemId,
-  selected,
-  selectedMetric,
-  similaritySearchDisabled,
-  onExpand,
-  onShowSimilar,
-  iou,
-}: {
-  itemId: string;
-  selected: boolean;
-  selectedMetric?: Metric;
-  similaritySearchDisabled: boolean;
-  onExpand: JSX.IntrinsicElements["button"]["onClick"];
-  onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
-  iou?: number;
-}) => {
-  const { data, isLoading } = useApi().fetchItem(itemId, iou);
 
-  if (isLoading || !data)
-    return (
-      <div className="w-full h-full flex justify-center items-center min-h-[230px]">
-        <Spinner />
-      </div>
-    );
-
-  const [metricName, value] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) =>
-      metric.toLowerCase() === selectedMetric?.name.toLowerCase(),
-  ) || [selectedMetric?.name, ""];
-  const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
-  const displayValue =
-    intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
-  const { description } = data.metadata.metrics;
-  const { editUrl } = data;
-
-  return (
-    <div className="card relative align-middle bg-gray-100 form-control min-h-[230px]">
-      <label className="relative h-full group label cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
-        <input
-          name={itemId}
-          type="checkbox"
-          checked={selected}
-          readOnly
-          className="peer checkbox absolute left-2 top-2 checked:!opacity-100 group-hover:opacity-100"
-        />
-        {selectedMetric && (
-          <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
-            <span>{metricName}:</span>
-            <span>{displayValue}</span>
-          </div>
-        )}
-        <div className="absolute p-2 top-7 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-y-auto">
-          <TagList tags={data.tags} />
-          {description && (
-            <div className="flex flex-col">
-              <div className="inline-flex items-center gap-1">
-                <BsCardText className="text-base" />
-                <span>Description:</span>
-              </div>
-              <span>{description}</span>
-            </div>
-          )}
-        </div>
-        <div className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
-          <ImageWithPolygons className="group-hover:opacity-30" item={data} />
-          <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
-            <button
-              onClick={(e) => onExpand?.(e)}
-              className="btn btn-square z-20"
-            >
-              <FaExpand />
-            </button>
-          </div>
-        </div>
-      </label>
-      <div className="divider m-0"></div>
-      <div className="card-body p-2">
-        <div className="card-actions flex">
-          <div className="btn-group">
-            <button
-              className="btn btn-ghost gap-2 tooltip tooltip-right"
-              data-tip="Similar items"
-              disabled={similaritySearchDisabled}
-              onClick={onShowSimilar}
-            >
-              <MdImageSearch className="text-base" />
-            </button>
-            <button
-              className="btn btn-ghost gap-2 tooltip tooltip-right"
-              data-tip={
-                editUrl
-                  ? "Open in Encord Annotate"
-                  : "Upload to Encord to edit annotations"
-              }
-              onClick={() =>
-                editUrl ? window.open(editUrl.toString(), "_blank") : null
-              }
-              disabled={editUrl == null}
-            >
-              <FaEdit />
-            </button>
-          </div>
-          {data.metadata.labelClass || data.metadata.annotator ? (
-            <div className="flex flex-col">
-              <span className="flex items-center gap-1">
-                <VscSymbolClass />
-                {data.metadata.labelClass}
-              </span>
-              <span className="flex items-center gap-1">
-                <RiUserLine />
-                {data.metadata.annotator}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const getObjects = (item: Item) => {
-  const { objectHash } = splitId(item.id);
+  const { annotation_hash } = splitId(item.id);
   const object = item.labels.objects.find(
-    (object) => object.objectHash === objectHash,
+    (object) => object.objectHash === annotation_hash,
   );
   const prediction = item.predictions.objects.find(
-    (object) => object.objectHash === objectHash,
+    (object) => object.objectHash === annotation_hash,
   );
 
   if (object) return [object];
@@ -1070,139 +703,7 @@ const pointsRecordToPolygonPoints = (
     .map(({ x, y }) => `${x * width},${y * height}`)
     .join(" ");
 
-const ImageWithPolygons = ({
-  item,
-  className,
-  ...rest
-}: { item: Item } & JSX.IntrinsicElements["figure"]) => {
-  const {
-    ref: image,
-    width: imageWidth,
-    height: imageHeight,
-  } = useResizeObserver<HTMLImageElement>();
-  const video = useRef<HTMLVideoElement>(null);
-  const { width: videoWidth, height: videoHeight } =
-    useResizeObserver<HTMLVideoElement>({
-      ref: video,
-    });
-  const width = item.videoTimestamp != null ? videoWidth : imageWidth;
-  const height = item.videoTimestamp != null ? videoHeight : imageHeight;
-  const [polygons, setPolygons] = useState<
-    Pick<ItemLabelObject, "points" | "boundingBoxPoints" | "shape" | "color">[]
-  >([]);
 
-  useEffect(() => {
-    if (width == null || height == null) return;
-    const objects = getObjects(item);
-
-    setPolygons(
-      objects.map(({ points, color, shape, boundingBoxPoints }) => ({
-        color,
-        points,
-        shape,
-        boundingBoxPoints,
-      })),
-    );
-  }, [width, height, item.id]);
-
-  const itemUrl = item.url.startsWith("http")
-    ? item.url
-    : `${apiUrl}${item.url}`;
-
-  const { data: imgSrcUrl, isLoading } = useImageSrc(itemUrl);
-
-  if (isLoading) return <Spinner />;
-
-  return (
-    <figure {...rest} className={classy("relative", className)}>
-      {item.videoTimestamp != null ? (
-        <video
-          ref={video}
-          className="object-contain rounded transition-opacity"
-          src={imgSrcUrl}
-          muted
-          controls={false}
-          onLoadedMetadata={() => {
-            const videoRef = video.current;
-            if (videoRef != null) {
-              videoRef.currentTime = item.videoTimestamp || 0;
-            }
-          }}
-        />
-      ) : (
-        <img
-          ref={image}
-          className="object-contain rounded transition-opacity"
-          alt=""
-          src={imgSrcUrl}
-        />
-      )}
-      {width && height && polygons.length > 0 && (
-        <svg className="absolute w-full h-full top-0 right-0">
-          {polygons.map(
-            ({ points, boundingBoxPoints, color, shape }, index) => {
-              if (shape === "point" && points)
-                return (
-                  <g key={index}>
-                    <circle
-                      key={index + "_inner"}
-                      cx={points[0].x}
-                      cy={points[0].y}
-                      r="5px"
-                      fill={color}
-                    />
-                    <circle
-                      key={index + "_outer"}
-                      cx={points[0].x}
-                      cy={points[0].y}
-                      r="7px"
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="1px"
-                    />
-                  </g>
-                );
-              return (
-                <g key={index} fill={shape === "polyline" ? "none" : color}>
-                  {points && (
-                    <polygon
-                      key={index + "_polygon"}
-                      style={{
-                        fillOpacity: ".20",
-                        stroke: color,
-                        strokeWidth: "2px",
-                      }}
-                      points={pointsRecordToPolygonPoints(
-                        points,
-                        width,
-                        height,
-                      )}
-                    />
-                  )}
-                  {boundingBoxPoints && (
-                    <polygon
-                      key={index + "_box"}
-                      style={{
-                        fillOpacity: ".40",
-                        stroke: color,
-                        strokeWidth: "4px",
-                      }}
-                      points={pointsRecordToPolygonPoints(
-                        boundingBoxPoints,
-                        width,
-                        height,
-                      )}
-                    />
-                  )}
-                </g>
-              );
-            },
-          )}
-        </svg>
-      )}
-    </figure>
-  );
-};
 
 const MetadataMetrics = ({
   metrics,

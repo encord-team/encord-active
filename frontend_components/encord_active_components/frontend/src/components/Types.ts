@@ -100,7 +100,7 @@ export type ProjectSummary = {
   };
   readonly local_project: boolean;
   readonly data: ProjectMetricSummary;
-  readonly annotations: ProjectMetricSummary;
+  readonly annotation: ProjectMetricSummary;
   readonly global: ProjectMetricSummary;
   readonly du_count: number;
   readonly frame_count: number;
@@ -116,16 +116,12 @@ export type ProjectSummary = {
 };
 
 export type ProjectEmbeddingReductions = {
-  results: Readonly<
-    Record<
-      string,
-      {
-        readonly name: string;
-        readonly description: string;
-        readonly type: "umap";
-      }
-    >
-  >;
+  results: ReadonlyArray<{
+    readonly name: string;
+    readonly description: string;
+    readonly type: "umap";
+    readonly hash: string;
+  }>;
 };
 
 export type ProjectAnalysisDomain = "data" | "annotation";
@@ -405,7 +401,7 @@ export interface QueryAPI {
     metricOrEnum: string,
     options?: Pick<UseQueryOptions, "enabled">,
   ): UseQueryResult<ProjectAnalysisDistribution>;
-    useProjectAnalysisReducedEmbeddings(
+  useProjectAnalysisReducedEmbeddings(
     projectHash: string,
     analysisDomain: ProjectAnalysisDomain,
     reductionHash: string,

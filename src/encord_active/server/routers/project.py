@@ -40,6 +40,8 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
+from encord_active.db.queries.analytics import select_data_analytics, select_prediction_analytics_with_extra, \
+    select_annotation_analytics
 from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters, Range, apply_filters

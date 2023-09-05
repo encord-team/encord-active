@@ -1,16 +1,15 @@
 import { Form, Input, Modal } from "antd";
 import { QueryAPI } from "../../Types";
-import { Filters } from "../../explorer/api";
+import {InternalFilters} from "../../explorer";
 
 export function CreateSubsetModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
   queryAPI: QueryAPI;
-  filters: Filters;
-  ids: string[];
+  filters: InternalFilters;
 }) {
-  const { open, close, projectHash, queryAPI, filters, ids } = props;
+  const { open, close, projectHash, queryAPI, filters } = props;
   const [form] = Form.useForm<{
     project_title: string;
     project_description?: string | undefined;

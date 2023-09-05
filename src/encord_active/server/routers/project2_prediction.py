@@ -127,7 +127,7 @@ def get_project_prediction_summary(
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
-        base="analytics",
+        base=ProjectPredictionAnalytics,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
@@ -556,7 +556,7 @@ def prediction_metric_performance(
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
-        base="analytics",
+        base=ProjectPredictionAnalytics,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],
@@ -565,7 +565,7 @@ def prediction_metric_performance(
     )
     where_fn = search_query.search_filters(
         tables=TABLES_ANNOTATION,
-        base="analytics",
+        base=ProjectPredictionAnalyticsFalseNegatives,
         search=filters,
         project_filters={
             "prediction_hash": [prediction_hash],

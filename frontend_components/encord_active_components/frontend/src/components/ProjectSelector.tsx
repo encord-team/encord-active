@@ -1,18 +1,17 @@
 import { fork } from "radash";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
+import {Button, Select, Space} from "antd";
 
 export type Props = {
   projects: readonly IntegratedProjectMetadata[];
   selectedProjectHash: string;
-  onViewAllProjects: JSX.IntrinsicElements["button"]["onChange"];
-  onSelectedProjectChange: (projectHash: string) => void;
+  setSelectedProjectHash: (projectHash: string | undefined) => void;
 };
 
 export const ProjectSelector = ({
   projects,
   selectedProjectHash,
-  onViewAllProjects,
-  onSelectedProjectChange,
+  setSelectedProjectHash,
 }: Props) => {
   const [sandboxProjects, userProjects] = fork(
     projects.filter(({ downloaded }) => downloaded),
@@ -20,46 +19,31 @@ export const ProjectSelector = ({
   );
 
   return (
-    <div className="flex flex-col gap-5 pb-2 min-w-fit">
-      <div className="form-control">
-        <div className="input-group">
-          <button
-            className="btn normal-case justify-start"
-            onClick={onViewAllProjects}
-          >
-            View all projects
-          </button>
-          <select
-            className="select select-bordered focus:outline-none"
-            defaultValue={selectedProjectHash || "disabled"}
-            onChange={({ target: { value } }) => onSelectedProjectChange(value)}
-          >
-            {!selectedProjectHash && (
-              <option value="disabled" disabled>
-                Select a project
-              </option>
-            )}
-            {userProjects.length ? (
-              <optgroup label="User projects">
-                {userProjects.map(({ projectHash, title }) => (
-                  <option value={projectHash} key={projectHash}>
-                    {title}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {sandboxProjects.length ? (
-              <optgroup label="Sandbox projects">
-                {sandboxProjects.map(({ projectHash, title }) => (
-                  <option value={projectHash} key={projectHash}>
-                    {title}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-        </div>
-      </div>
-    </div>
+    <Space.Compact block size="large">
+      <Button onClick={() => setSelectedProjectHash(undefined)}>
+        View all projects
+      </Button>
+      <Select
+        value={selectedProjectHash}
+        onChange={(projectHash) => setSelectedProjectHash(projectHash)}
+        style={{maxWidth: 500}}
+        options={[
+          {
+            label: 'User Projects',
+            options: userProjects.map((project) => ({
+              label: project.title,
+              value: project.projectHash
+            })),
+          },
+          {
+            label: 'Sandbox Projects',
+            options: sandboxProjects.map((project) => ({
+              label: project.title,
+              value: project.projectHash
+            })),
+          },
+        ]}
+      />
+    </Space.Compact>
   );
 };
