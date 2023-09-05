@@ -28,9 +28,8 @@ class NearestNeighborAgreement(DerivedMetric):
         # calculate
         nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest_cosine"])
         if len(nearest_neighbours.similarities) == 0:
-            # No nearest neighbours for agreement, hence score of 0
-            # FIXME: what should the default score be?
-            return 0.0
+            # No nearest neighbours for agreement, hence score of 1
+            return 1.0
 
         feature_hash: str = cast(str, deps["feature_hash"])
         matches = [float(dep["feature_hash"] == feature_hash) for dep in nearest_neighbours.metric_deps]
@@ -38,9 +37,9 @@ class NearestNeighborAgreement(DerivedMetric):
         if similarity_sum > 0.0:
             # Weight by similarities
             # Relatively smaller values should contribute more to the total
-            raw_bias = [1.0 / max(s, 0.001) for s in nearest_neighbours.similarities]
+            raw_bias = [1.0 / max(s, 0.01) for s in nearest_neighbours.similarities]
             total_bias = sum(raw_bias)
             matches = [m * (t / total_bias) for m, t in zip(matches, raw_bias)]
-        score = sum(matches) / len(matches)
-        # print(f"Debug NN Agreement: {nearest_neighbours.similarities} / {matches} => {score}")
-        return score
+            return min(sum(matches), 1.0)
+        else:
+            return min(sum(matches) / len(matches), 1.0)
