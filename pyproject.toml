@@ -79,7 +79,6 @@ encord-active-components = "^0.0.33"
 # NOTE: comment line above and uncomment the line below to setup local development
 # encord-active-components = { path = "./frontend_components", develop=true }
 # End of encord-active-components
-gitpython = "^3.1.31"
 prisma = "^0.8.2"
 fastapi = "^0.95.2"
 uvicorn = { extras = ["standard"], version = "^0.21.1" }
