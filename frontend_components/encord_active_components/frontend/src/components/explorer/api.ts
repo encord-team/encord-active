@@ -355,6 +355,17 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
 
       return searchResultSchema.parse(await response.json());
     },
+    signUrl: async (projectHash: string, itemId: string) => {
+      const url = await (
+        await fetcher(
+          `${apiUrl}/projects/${projectHash}/sign_url/${encodeURIComponent(
+            itemId,
+          )}`,
+          { method: "POST" },
+        )
+      ).json();
+      return z.string().parse(url);
+    },
   };
 };
 
@@ -387,8 +398,10 @@ export const useApi = () => {
         initialData: new Map<string, GroupedTags>(),
       }),
     fetchItem: (...args: Parameters<API["fetchProjectItem"]>) =>
-      useQuery([projectHash, "item", ...args], () =>
-        api.fetchProjectItem(...args),
+      useQuery(
+        [projectHash, "item", ...args],
+        () => api.fetchProjectItem(...args),
+        { staleTime: Infinity },
       ),
     fetch2DEmbeddings: (
       embeddingType: Parameters<API["fetchProject2DEmbeddings"]>[0],
@@ -409,6 +422,7 @@ export const useApi = () => {
         () => api.fetchAvailablePredictionTypes(...args),
         { staleTime: Infinity },
       ),
+    signUrl: (id: string) => api.signUrl(projectHash, id),
   };
 };
 

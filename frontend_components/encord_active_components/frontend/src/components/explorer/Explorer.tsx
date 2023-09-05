@@ -13,7 +13,7 @@ import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll, VscSymbolClass } from "react-icons/vsc";
 import { Spinner } from "./Spinner";
 import { useAllTags } from "../explorer/Tagging";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import useResizeObserver from "use-resize-observer";
 import { classy } from "../../helpers/classy";
 import { useDebounce } from "usehooks-ts";
@@ -125,12 +125,12 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-          prediction_filters: {
-            type: predictionType,
-            outcome: predictionOutcome,
-            iou_threshold: iou,
-          },
-        }
+            prediction_filters: {
+              type: predictionType,
+              outcome: predictionOutcome,
+              iou_threshold: iou,
+            },
+          }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
@@ -421,9 +421,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                    ...item,
-                    id: id.slice(0, id.lastIndexOf("_")),
-                  }))
+                      ...item,
+                      id: id.slice(0, id.lastIndexOf("_")),
+                    }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -449,8 +449,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                      ? "missing-target"
-                      : undefined
+                    ? "missing-target"
+                    : undefined
                 }
               >
                 <BulkTaggingForm
@@ -1070,6 +1070,18 @@ const ImageWithPolygons = ({
     width: imageWidth,
     height: imageHeight,
   } = useResizeObserver<HTMLImageElement>();
+  const api = useApi();
+
+  const { mutate: signUrl } = useMutation(
+    ["signUrl", item],
+    () => api.signUrl(item.id),
+    {
+      onSuccess: (url) => {
+        if (video.current) video.current.src = url;
+      },
+    },
+  );
+
   const video = useRef<HTMLVideoElement>(null);
   const { width: videoWidth, height: videoHeight } =
     useResizeObserver<HTMLVideoElement>({
@@ -1111,6 +1123,7 @@ const ImageWithPolygons = ({
         <video
           ref={video}
           className="object-contain rounded transition-opacity"
+          preload="metadata"
           src={imgSrcUrl}
           muted
           controls={false}
@@ -1120,6 +1133,7 @@ const ImageWithPolygons = ({
               videoRef.currentTime = item.videoTimestamp || 0;
             }
           }}
+          onError={() => signUrl()}
         />
       ) : (
         <img
@@ -1127,6 +1141,7 @@ const ImageWithPolygons = ({
           className="object-contain rounded transition-opacity"
           alt=""
           src={imgSrcUrl}
+          onError={() => signUrl()}
         />
       )}
       {showAnnotations && width && height && polygons.length > 0 && (

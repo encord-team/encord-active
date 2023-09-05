@@ -23,6 +23,7 @@ from fastapi import (
     Form,
     HTTPException,
     UploadFile,
+    status,
 )
 from fastapi.responses import ORJSONResponse
 from natsort import natsorted
@@ -302,6 +303,28 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
 
     append_tags_to_row(project, row)
     return to_item(row, project, lr_hash, du_hash, frame)
+
+
+@router.post("/{project}/sign_url/{id}")
+def sign_url(project: ProjectFileStructureDep, id: str):
+    meta = project.load_project_meta()
+    remote_project = get_encord_project(meta["ssh_key_path"], meta["project_hash"])
+
+    label_hash, du_hash, _, *_ = id.split("_")
+    label_row_structure = project.label_row_structure(label_hash)
+
+    video, images = remote_project.get_data(du_hash, get_signed_url=True)
+    if video is not None:
+        signed_url = video["file_link"]
+    elif images is not None and len(images) == 1:
+        signed_url = images[0]["file_link"]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Not a valid entity for signed url"
+        )
+
+    label_row_structure.project.cached_signed_urls[du_hash] = signed_url
+    return signed_url
 
 
 class ItemTags(BaseModel):
