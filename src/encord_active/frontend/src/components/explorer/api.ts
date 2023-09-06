@@ -266,8 +266,13 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       ).json();
       return IdValueSchema.array().parse(result);
     },
-    fetchProjectItem: async (id: string, iou?: number) => {
+    fetchProjectItem: async (
+      id: string,
+      isPrediction = false,
+      iou?: number,
+    ) => {
       const queryParams = new URLSearchParams({
+        is_prediction: isPrediction.toString(),
         ...(iou != null ? { iou: iou.toString() } : {}),
       });
 
