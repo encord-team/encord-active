@@ -169,9 +169,10 @@ def to_item(
             if classifications and metadata["labelClass"]:
                 clf_instance = classifications[0]
                 question = clf_instance["name"]
-                clf_hash = clf_instance["classificationHash"]
-                classification = label_row["classification_answers"][clf_hash]["classifications"][0]
-                metadata["labelClass"] = f"{question}: {classification['answers'][0]['name']}"
+                if question == metadata["labelClass"]:
+                    clf_hash = clf_instance["classificationHash"]
+                    classification = label_row["classification_answers"][clf_hash]["classifications"][0]
+                    metadata["labelClass"] = f"{question}: {classification['answers'][0]['name']}"
         except:
             pass
 
