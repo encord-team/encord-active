@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useMemo } from "react";
 import { Card, Space, Row, Typography, Statistic, Divider } from "antd";
 import {
@@ -6,6 +7,7 @@ import {
   FullscreenOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import { isEmpty } from "radash";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
 import {
   ProjectAnalysisDomain,
@@ -14,7 +16,6 @@ import {
 } from "../Types";
 import { ChartDistributionBar } from "../charts/ChartDistributionBar";
 import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
-import { isEmpty } from "radash";
 
 const AnalysisDomainToName: Record<ProjectAnalysisDomain, string> = {
   data: "Frames",
@@ -59,6 +60,7 @@ export function SummaryTab(props: {
       const metrics = Object.values(data.metrics).filter(
         (metric) => metric.severe > 0 || metric.moderate > 0
       ).length;
+
       return [severe, moderate, metrics];
     }, [data]);
 
@@ -116,14 +118,14 @@ export function SummaryTab(props: {
         {data == null ||
         ("metric_width" in data.metrics &&
           "metric_height" in data.metrics &&
-          data.metrics["metric_height"].count > 0) ? (
+          data.metrics.metric_height.count > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"
               value={
                 data == null
                   ? ""
-                  : `${data.metrics["metric_width"]?.median}x${data.metrics["metric_height"]?.median}`
+                  : `${data.metrics.metric_width?.median}x${data.metrics.metric_height?.median}`
               }
               prefix={<FullscreenOutlined />}
             />

@@ -1,6 +1,7 @@
+import * as React from "react";
 import { fork } from "radash";
-import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { Button, Select, Space } from "antd";
+import { IntegratedProjectMetadata } from "./IntegratedAPI";
 
 export type Props = {
   projects: readonly IntegratedProjectMetadata[];
@@ -8,13 +9,13 @@ export type Props = {
   setSelectedProjectHash: (projectHash: string | undefined) => void;
 };
 
-export const ProjectSelector = ({
+export function ProjectSelector({
   projects,
   selectedProjectHash,
   setSelectedProjectHash,
-}: Props) => {
+}: Props) {
   const [sandboxProjects, userProjects] = fork(
-    projects.filter(({ downloaded }) => downloaded),
+    projects.filter(({ sandbox }) => sandbox),
     ({ sandbox }) => !!sandbox
   );
 
@@ -32,18 +33,18 @@ export const ProjectSelector = ({
             label: "User Projects",
             options: userProjects.map((project) => ({
               label: project.title,
-              value: project.projectHash,
+              value: project.project_hash,
             })),
           },
           {
             label: "Sandbox Projects",
             options: sandboxProjects.map((project) => ({
               label: project.title,
-              value: project.projectHash,
+              value: project.project_hash,
             })),
           },
         ]}
       />
     </Space.Compact>
   );
-};
+}

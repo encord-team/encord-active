@@ -21,6 +21,7 @@ export function formatTooltip<T, N>(value: T, name: N): [T | string, N] {
 export function formatTooltipLabel<T>(prefix?: string): (value: T) => string {
   return (value) => {
     const [t] = formatTooltip(value, null);
+
     return (prefix ?? "") + t;
   };
 }
@@ -30,9 +31,9 @@ export function formatTooltipLabel<T>(prefix?: string): (value: T) => string {
     License: Public domain. Attribution appreciated.
 */
 const cyrb53a = (str: string, seed: number = 0) => {
-  let h1 = 0xdeadbeef ^ seed,
-    h2 = 0x41c6ce57 ^ seed;
-  for (let i = 0; i < str.length; i++) {
+  let h1 = 0xdeadbeef ^ seed;
+    let h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i += 1) {
     const ch = str.charCodeAt(i);
     h1 = Math.imul(h1 ^ ch, 0x85ebca77);
     h2 = Math.imul(h2 ^ ch, 0xc2b2ae3d);
@@ -53,5 +54,6 @@ export function featureHashToColor(featureHash: string) {
   const h = (hash % 90) * 4;
   const s = ((((hash / 90) | 0) % 3) + 70) * 10;
   const l = ((((hash / 45) | 0) % 2) + 2) * 25;
+
   return `hsl(${h}, ${s}%, ${l}%)`;
 }

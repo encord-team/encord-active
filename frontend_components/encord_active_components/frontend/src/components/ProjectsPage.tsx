@@ -1,3 +1,10 @@
+import * as React from "react";
+import { fork } from "radash";
+import { useRef } from "react";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { Card, Space, Spin } from "antd";
+import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";
 import importUrl from "../../assets/import.svg";
 import encordImportUrl from "../../assets/encord-import.svg";
@@ -7,15 +14,9 @@ import classesUrl from "../../assets/classes.svg";
 import DEFAULT_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 
 import { classy } from "../helpers/classy";
-import { fork } from "radash";
-import { useRef } from "react";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
-import { useMutation } from "@tanstack/react-query";
 import { apiUrl, env } from "../constants";
-import axios from "axios";
 import { useImageSrc } from "../hooks/useImageSrc";
-import { Card, Space, Spin } from "antd";
-import Meta from "antd/es/card/Meta";
 import { loadingIndicator } from "./Spin";
 import { QueryAPI } from "./Types";
 
@@ -23,18 +24,20 @@ const useDownloadProject = (options?: Parameters<typeof useMutation>[2]) =>
   useMutation(
     ["useDownloadProject"],
     async (projectHash: string) =>
-      await axios.get(`${apiUrl}/projects/${projectHash}/download_sandbox`),
+      axios.get(`${apiUrl}/projects/${projectHash}/download_sandbox`),
     options
   );
 
 export type Props = {
   readonly projects: IntegratedProjectMetadata[];
+  queryAPI: QueryAPI;
   onSelectLocalProject: (projectHash: string) => void;
 };
-export const ProjectsPage = ({
+export function ProjectsPage({
   projects = [],
+  queryAPI,
   onSelectLocalProject,
-}: Props) => {
+}: Props) {
   const [sandboxProjects, userProjects] = fork(
     projects,
     ({ sandbox }) => !!sandbox
@@ -71,6 +74,7 @@ export const ProjectsPage = ({
           userProjects.map((project) => (
             <ProjectCard
               key={project.project_hash}
+              queryAPI={queryAPI}
               project={project}
               setSelectedProjectHash={onSelectLocalProject}
             />
@@ -92,13 +96,13 @@ export const ProjectsPage = ({
                 <ProjectCard
                   key={project.project_hash}
                   project={project}
-                  showDownloadedBadge={true}
+                  showDownloadedBadge
                   setSelectedProjectHash={onSelectLocalProject}
-                  /*onClick={() =>
+                  /* onClick={() =>
                     (project.downloaded ? onSelectLocalProject : download)(
                       project["projectHash"],
                     )
-                  }*/
+                  } */
                 />
               ))}
           </div>
@@ -106,9 +110,9 @@ export const ProjectsPage = ({
       )}
     </div>
   );
-};
+}
 
-const NewProjectButton = ({
+function NewProjectButton({
   title,
   description,
   iconUrl,
@@ -118,7 +122,7 @@ const NewProjectButton = ({
   description: string;
   iconUrl: string;
   onClick?: JSX.IntrinsicElements["button"]["onClick"];
-}) => {
+}) {
   const disabled = !onClick;
   const containerProps = disabled
     ? {
@@ -157,9 +161,9 @@ const NewProjectButton = ({
       </button>
     </div>
   );
-};
+}
 
-const ProjectCard = ({
+function ProjectCard({
   project,
   queryAPI,
   showDownloadedBadge = false,
@@ -169,7 +173,7 @@ const ProjectCard = ({
   queryAPI: QueryAPI;
   showDownloadedBadge?: boolean;
   setSelectedProjectHash: (projectHash: string) => void;
-}) => {
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const { data: projectSummary } = queryAPI.useProjectSummary(
     project.project_hash
@@ -177,8 +181,9 @@ const ProjectCard = ({
   const { data: previewItem } = queryAPI.useProjectItemPreview();
   const imgSrcUrl = useImageSrc(previewItem?.url);
 
-  if (imgSrcUrl === undefined || previewItem === undefined)
+  if (imgSrcUrl === undefined || previewItem === undefined) {
     return <Spin indicator={loadingIndicator} />;
+  }
 
   return (
     <Card
@@ -217,17 +222,17 @@ const ProjectCard = ({
       <div className="card-body w-full justify-between gap-3 p-0">
         <div className="flex flex-col">
           <ProjectStat
-            title={"Dataset"}
+            title="Dataset"
             value={project?.stats?.dataUnits}
             iconUrl={fileImageUrl}
           />
           <ProjectStat
-            title={"Annotations"}
+            title="Annotations"
             value={project?.stats?.labels}
             iconUrl={annotationsUrl}
           />
           <ProjectStat
-            title={"Classes"}
+            title="Classes"
             value={project?.stats?.classes}
             iconUrl={classesUrl}
           />
@@ -238,8 +243,8 @@ const ProjectCard = ({
       ) : null}
     </Card>
   );
-};
-const ProjectStat = ({
+}
+function ProjectStat({
   title,
   value,
   iconUrl,
@@ -247,24 +252,28 @@ const ProjectStat = ({
   title: string;
   value: number;
   iconUrl: string;
-}) => (
-  <div className="flex flex-row gap-1 text-xs">
-    <img src={iconUrl} />
-    <span className="font-normal text-neutral-400">{title}</span>
-    <span className="font-medium">{value}</span>
-  </div>
-);
-
-const ProjectNotFoundCard = () => (
-  <Card>
-    <figure className="py-7">
-      <img src={emptyUrl} alt="project-not-found" className="rounded" />
-    </figure>
-    <div className="card-body p-0">
-      <h2 className="card-title text-sm font-semibold">No projects found</h2>
-      <p className="text-xs font-normal text-neutral-400">
-        Import a project or select a sandbox project
-      </p>
+}) {
+  return (
+    <div className="flex flex-row gap-1 text-xs">
+      <img src={iconUrl} />
+      <span className="font-normal text-neutral-400">{title}</span>
+      <span className="font-medium">{value}</span>
     </div>
-  </Card>
-);
+  );
+}
+
+function ProjectNotFoundCard() {
+  return (
+    <Card>
+      <figure className="py-7">
+        <img src={emptyUrl} alt="project-not-found" className="rounded" />
+      </figure>
+      <div className="card-body p-0">
+        <h2 className="card-title text-sm font-semibold">No projects found</h2>
+        <p className="text-xs font-normal text-neutral-400">
+          Import a project or select a sandbox project
+        </p>
+      </div>
+    </Card>
+  );
+}

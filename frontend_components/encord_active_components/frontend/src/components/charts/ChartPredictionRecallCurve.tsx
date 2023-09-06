@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   CartesianGrid,
   Legend,
@@ -105,6 +106,7 @@ export function ChartPredictionRecallCurve(props: {
                 (featureHash === ""
                   ? "#8884d8"
                   : featureHashToColor(featureHash));
+
               return (
                 <Scatter
                   name={name}

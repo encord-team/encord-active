@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
@@ -111,7 +112,7 @@ export function PredictionsTab(
               children: (
                 <Explorer
                   projectHash={projectHash}
-                  scope={"prediction"}
+                  scope="prediction"
                   featureHashMap={featureHashMap}
                   dataMetricsSummary={dataMetricsSummary}
                   annotationMetricsSummary={annotationMetricsSummary}

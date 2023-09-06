@@ -7,7 +7,7 @@ export type IdParts = {
 export const splitId = (id: string): IdParts => {
   const [du, frame, obj] = id.split("_");
 
-  if (!du || !frame) throw `invalid id: ${id}`;
+  if (!du || !frame) {throw `invalid id: ${id}`;}
 
   return {
     du_hash: du,

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
@@ -45,6 +46,7 @@ export function PredictionSummaryTab(props: {
       const r = Object.entries(predictionSummaryData?.feature_properties).map(
         ([k, v]) => [k, v.ar]
       );
+
       return [Object.fromEntries(p), Object.fromEntries(r)];
     }, [predictionSummaryData]);
 

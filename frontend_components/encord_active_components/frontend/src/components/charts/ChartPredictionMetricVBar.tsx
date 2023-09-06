@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Bar,
   BarChart,
@@ -49,6 +50,7 @@ export function ChartPredictionMetricVBar(props: {
       predictionMetric === "correlations"
         ? scaleLinear([-1.0, 1.0], ["#ef4444", "#22c55e"])
         : scaleLinear([0.0, 1], ["#7bfdee", "#0000ef"]);
+
     return barData.map((data) => ({ ...data, fill: getColor(data.score) }));
   }, [barData, predictionMetric]);
 

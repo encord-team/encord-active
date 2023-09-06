@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Form, Input, Modal } from "antd";
 import { QueryAPI } from "../../Types";
 import { InternalFilters } from "../../explorer";

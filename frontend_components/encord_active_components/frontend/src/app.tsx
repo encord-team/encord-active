@@ -1,13 +1,14 @@
+import * as React from "react";
 import { Alert, Spin } from "antd";
 import { useState } from "react";
+import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { useAuth } from "./authContext";
 import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
-import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { loadingIndicator } from "./components/Spin";
 
-export const App = () => {
+export function App() {
   const { data: projects, isLoading, error } = useProjectsList();
   const [selectedProjectHash, setSelectedProjectHash] = useState<
     string | undefined
@@ -15,16 +16,16 @@ export const App = () => {
   const { token } = useAuth();
   const queryAPI = useIntegratedAPI(token, projects?.projects_dict ?? {});
 
-  if (isLoading) return <Spin indicator={loadingIndicator} />;
-  if (error?.response && "detail" in error.response?.data)
-    return (
+  if (isLoading) {return <Spin indicator={loadingIndicator} />;}
+  if (error?.response && "detail" in error?.response?.data)
+    {return (
       <Alert
         message={`${error.response.statusText} - ${error?.response.data.detail}`}
         type="error"
       />
-    );
+    );}
 
-  if (!projects) throw "something bad happened";
+  if (!projects) {throw "something bad happened";}
 
   const projectList = Object.values(projects);
 
@@ -33,7 +34,7 @@ export const App = () => {
       {selectedProjectHash ? (
         <ErrorBoundary
           message={
-            "An error occurred rendering the project: " + selectedProjectHash
+            `An error occurred rendering the project: ${  selectedProjectHash}`
           }
         >
           <ProjectPage
@@ -51,4 +52,4 @@ export const App = () => {
       )}
     </div>
   );
-};
+}

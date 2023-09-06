@@ -122,6 +122,7 @@ function deleteKey(
   return (old) => {
     const { [deleteKey]: deleted, ...newFilters } = old[filterType];
     const newOrdering = old.ordering.filter((elem) => elem !== deleteKey);
+
     return {
       ...old,
       ordering: newOrdering,
@@ -140,6 +141,7 @@ function updateValue<K extends FilterModes>(
       ...old[filterType],
       [updateKey]: updateValue,
     };
+
     return {
       ...old,
       [filterType]: newFilters,
@@ -198,6 +200,7 @@ function updateKey<
           newBounds.min,
           newBounds.max,
         ];
+
         return {
           ...renamed,
           metricFilters: {
@@ -213,6 +216,7 @@ function updateKey<
     const newEnumSummary = metricsSummary.enums[newKey];
     if (newEnumSummary != null && !(newKey in old.enumFilters)) {
       const newValues = getEnumList(newEnumSummary, featureHashMap);
+
       return {
         ...renamed,
         enumFilters: {
@@ -254,6 +258,7 @@ function addNewEntry<
           newBounds.min,
           newBounds.max,
         ];
+
         return {
           ...old,
           ordering: [...old.ordering, newMetricKey],
@@ -272,6 +277,7 @@ function addNewEntry<
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
       const enumValues = getEnumList(newEnumSummary, featureHashMap);
+
       return {
         ...old,
         ordering: [...old.ordering, newEnumKey],
@@ -334,6 +340,7 @@ export function MetricFilter<
     const metrics = Object.entries(rawMetricsSummary.metrics).filter(
       ([k]) => k in metricRanges
     );
+
     return { ...rawMetricsSummary, metrics: Object.fromEntries(metrics) };
   }, [metricRanges, rawMetricsSummary]);
 
@@ -356,6 +363,7 @@ export function MetricFilter<
         value: enumKey,
         label: getEnumName(enumKey, enumState),
       }));
+
     return [...metricOptions, ...enumOptions];
   }, [filters.ordering, metricsSummary]);
 

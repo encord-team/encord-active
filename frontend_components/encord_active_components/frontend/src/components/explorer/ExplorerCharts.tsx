@@ -34,7 +34,7 @@ export function MetricDistributionTiny(props: {
     []
   );
 
-  /*const customContent = useCallback<NonNullable<Tooltip["customContent"]>>(
+  /* const customContent = useCallback<NonNullable<Tooltip["customContent"]>>(
     (_, hoveredElements) => {
       if (!hoveredElements.length || !hoveredElements[0].data) return null;
       const { x0, x1 } = bins[hoveredElements[0].data.bin];
@@ -51,7 +51,7 @@ export function MetricDistributionTiny(props: {
       );
     },
     [bins]
-  );*/
+  ); */
 
   const data = useMemo(() => {
     const res = [...(distribution?.results ?? [])];
@@ -62,7 +62,7 @@ export function MetricDistributionTiny(props: {
   return (
     <Column
       className="max-h-12 w-64"
-      autoFit={true}
+      autoFit
       data={data}
       columnWidthRatio={1}
       yField="count"
@@ -82,9 +82,9 @@ export function MetricDistributionTiny(props: {
           : {}
       }
       onEvent={onEvent}
-      /*tooltip={{
+      /* tooltip={{
         customContent,
-      }}*/
+      }} */
     />
   );
 }

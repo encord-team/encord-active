@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Select, SelectProps } from "antd";
 import { useMemo, useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
@@ -6,7 +7,6 @@ import { TbPolygon } from "react-icons/tb";
 
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
-import { Spinner } from "./Spinner";
 import { takeDataId } from "./id";
 
 const TAG_GROUPS = [
@@ -29,7 +29,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
     taggedItems,
   };
 
-  if (isLoading)
+  if (isLoading) {
     return {
       ...defaultAllTags,
       selectedTags: {
@@ -37,6 +37,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
         label: [...defaultAllTags.selectedTags.label],
       },
     };
+  }
 
   const dataItemSet = useMemo(
     () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
@@ -47,13 +48,16 @@ export const useAllTags = (itemSet?: Set<string>) => {
     data.forEach(result.allDataTags.add, result.allDataTags);
     label.forEach(result.allLabelTags.add, result.allLabelTags);
 
-    if (itemSet?.has(id))
+    if (itemSet?.has(id)) {
       data.forEach(result.selectedTags.label.add, result.selectedTags.label);
-    if (dataItemSet.has(id))
+    }
+    if (dataItemSet.has(id)) {
       data.forEach(result.selectedTags.data.add, result.selectedTags.data);
+    }
 
     return result;
   }, defaultAllTags);
+
   return {
     ...allTags,
     selectedTags: {
@@ -63,19 +67,19 @@ export const useAllTags = (itemSet?: Set<string>) => {
   };
 };
 
-export const TaggingDropdown = ({
+export function TaggingDropdown({
   disabledReason,
   children,
   className,
   ...rest
 }: {
   disabledReason?: keyof typeof taggingDisabledReasons;
-} & JSX.IntrinsicElements["div"]) => {
+} & JSX.IntrinsicElements["div"]) {
   return (
     <div
       {...rest}
       className={classy(
-        "dropdown dropdown-bottom tooltip tooltip-right min-w-fit",
+        "dropdown-bottom dropdown tooltip tooltip-right min-w-fit",
         className
       )}
       data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
@@ -92,22 +96,22 @@ export const TaggingDropdown = ({
       {children}
     </div>
   );
-};
+}
 
-export const BulkTaggingForm = ({
+export function BulkTaggingForm({
   items,
   allowTaggingAnnotations,
 }: {
   items: string[];
   allowTaggingAnnotations: boolean;
-}) => {
+}) {
   const { selectedTags, isLoading, taggedItems } = useAllTags(new Set(items));
   const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
 
   return (
     <TaggingForm
       loading={isLoading || isMutating}
-      controlled={true}
+      controlled
       allowClear={false}
       allowTaggingAnnotations={allowTaggingAnnotations}
       onSelect={(scope, selected) =>
@@ -153,9 +157,9 @@ export const BulkTaggingForm = ({
       selectedTags={selectedTags}
     />
   );
-};
+}
 
-export const TaggingForm = ({
+export function TaggingForm({
   selectedTags,
   className,
   controlled = false,
@@ -175,7 +179,7 @@ export const TaggingForm = ({
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
   allowTaggingAnnotations?: boolean;
-} & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) => {
+} & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) {
   const { allDataTags, allLabelTags } = useAllTags();
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
@@ -185,7 +189,9 @@ export const TaggingForm = ({
 
   // NOTE: hack to prevent loosing focus when loading
   const ref = useRef<HTMLDivElement>(null);
-  if (loading) ref.current && ref.current.focus();
+  if (loading) {
+    ref.current && ref.current.focus();
+  }
 
   return (
     <div
@@ -201,7 +207,7 @@ export const TaggingForm = ({
           <a
             key={group.value}
             className={classy("tab tab-bordered gap-2", {
-              "tab-active": selectedTab.label == group.label,
+              "tab-active": selectedTab.label === group.label,
             })}
             onClick={() => setTab(group)}
           >
@@ -234,32 +240,34 @@ export const TaggingForm = ({
       </div>
     </div>
   );
-};
+}
 
-export const TagList = ({
+export function TagList({
   tags,
   className,
   ...rest
-}: { tags: GroupedTags } & JSX.IntrinsicElements["div"]) => (
-  <div {...rest} className={`flex flex-col gap-1 ${className}`}>
-    {TAG_GROUPS.map((group) => (
-      <div key={group.value}>
-        <div className="inline-flex items-center gap-1">
-          <group.Icon className="text-base" />
-          <span>{group.label} tags:</span>
+}: { tags: GroupedTags } & JSX.IntrinsicElements["div"]) {
+  return (
+    <div {...rest} className={`flex flex-col gap-1 ${className}`}>
+      {TAG_GROUPS.map((group) => (
+        <div key={group.value}>
+          <div className="inline-flex items-center gap-1">
+            <group.Icon className="text-base" />
+            <span>{group.label} tags:</span>
+          </div>
+          <div className="flex-wrap">
+            {tags[group.value].length ? (
+              tags[group.value].map((tag, index) => (
+                <span key={index} className="badge">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              <span>None</span>
+            )}
+          </div>
         </div>
-        <div className="flex-wrap">
-          {tags[group.value].length ? (
-            tags[group.value].map((tag, index) => (
-              <span key={index} className="badge">
-                {tag}
-              </span>
-            ))
-          ) : (
-            <span>None</span>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
-);
+      ))}
+    </div>
+  );
+}

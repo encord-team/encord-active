@@ -1,8 +1,9 @@
+import * as React from "react";
 import { Checkbox, Col, Divider, Row, Select, Slider, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useDebounce } from "usehooks-ts";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
-import { useDebounce } from "usehooks-ts";
 
 const bucketOptions: { label: number; value: number }[] = [
   {

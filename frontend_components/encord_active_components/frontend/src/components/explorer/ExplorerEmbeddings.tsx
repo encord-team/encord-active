@@ -1,9 +1,9 @@
 import * as React from "react";
 import { BiInfoCircle } from "react-icons/bi";
+import { Spin } from "antd";
 import { ScatteredEmbeddings } from "./ExplorerCharts";
 import { QueryAPI } from "../Types";
 import { InternalFilters } from "./Explorer";
-import { Spin } from "antd";
 import { loadingIndicator } from "../Spin";
 
 export function ExplorerEmbeddings(props: {

@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Bar,
   Line,
@@ -74,6 +75,7 @@ function tidyData(
       ? null
       : selectedData.map((v) => v.a).reduce((a, b) => a + b) /
         selectedData.length;
+
   return [scaled, referenceY];
 }
 
@@ -150,8 +152,8 @@ export function ChartPredictionMetricPerformanceChart(props: {
           if (state === undefined) {
             throw Error("Average metric performance has bad m group");
           }
-          state["n"] = entry.n;
-          state["a"] = entry.a;
+          state.n = entry.n;
+          state.a = entry.a;
         });
       }
 
@@ -172,6 +174,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
             [`${featureHash}a`]: entry.a,
           }));
         const featureRefs: Record<string, number | null> = { "": featureRef };
+
         return [formattedBar, featureRefs, [featureHash]];
       } else {
         // No decomposition, average selected classes and return the result.
@@ -181,6 +184,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
           number | null
         ] = tidyData(selectedData);
         const refs: Record<string, number | null> = { "": avgRef };
+
         return [avgBar, refs, [""]];
       }
     }
@@ -230,6 +234,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
             hoverKeyword === undefined || hoverKeyword === `${feature}a`
               ? 1.0
               : 0.1;
+
           return (
             <>
               {showDistributionBar ? (

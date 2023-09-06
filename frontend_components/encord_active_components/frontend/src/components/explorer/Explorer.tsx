@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useMemo, useState, useContext } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { FaEdit } from "react-icons/fa";
@@ -6,6 +7,8 @@ import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "usehooks-ts";
+import { Button, List, Popover, Select, Slider, Space, Spin } from "antd";
+import { HiOutlineTag } from "react-icons/hi";
 import { ApiContext, getApi, Item, useApi } from "./api";
 import { Assistant } from "./Assistant";
 import { splitId } from "./id";
@@ -20,7 +23,6 @@ import {
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import { Button, List, Popover, Select, Slider, Space, Spin } from "antd";
 import {
   ProjectAnalysisDomain,
   ProjectMetricSummary,
@@ -33,7 +35,6 @@ import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
 import { ExplorerGalleryItem } from "./ExplorerGalleryItem";
-import { HiOutlineTag } from "react-icons/hi";
 import { loadingIndicator } from "../Spin";
 import { ImageWithPolygons } from "./ImageWithPolygons";
 
@@ -67,22 +68,26 @@ export type Props = {
   annotationMetricsSummary: ProjectMetricSummary;
   scope: "analysis" | "prediction";
   queryAPI: QueryAPI;
+  editUrl?:
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
 };
 
-export const Explorer = ({
+export function Explorer({
   projectHash,
   predictionHash,
   scope,
   queryAPI,
+  editUrl,
   featureHashMap,
   dataMetricsSummary,
   annotationMetricsSummary,
   setSelectedProjectHash,
   remoteProject,
-}: Props) => {
+}: Props) {
   // Item selected for extra analysis operations
   const [previewedItem, setPreviewedItem] = useState<string | null>(null);
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
@@ -130,8 +135,7 @@ export const Explorer = ({
     setAnnotationFilters(DefaultFilters);
   };
 
-  const rawFilters: InternalFilters = useMemo(() => {
-    return {
+  const rawFilters: InternalFilters = useMemo(() => ({
       analysisDomain: selectedMetric.domain,
       filters: {
         data: {
@@ -152,8 +156,7 @@ export const Explorer = ({
       iou,
       predictionOutcome,
       predictionHash,
-    };
-  }, [
+    }), [
     selectedMetric,
     dataFilters,
     isAscending,
@@ -181,7 +184,7 @@ export const Explorer = ({
     { staleTime: Infinity }
   );
 
-  //// START OF SIMILARITY SEARCH.
+  /// / START OF SIMILARITY SEARCH.
   /*
   const { data: hasSimilaritySearch } = useQuery(
     sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
@@ -231,12 +234,12 @@ export const Explorer = ({
   */
   const [premiumSearch, setPremiumSearch] = useState("");
   const searchResults: undefined | { snippet: string | null; ids: string[] } =
-    1 == 1 ? undefined : { snippet: "", ids: [] };
+    1 === 1 ? undefined : { snippet: "", ids: [] };
   const searching = false;
 
   const reset = (clearFilters: boolean = true) => {
     setSimilarityItem(null);
-    if (clearFilters) resetAllFilters();
+    if (clearFilters) {resetAllFilters();}
   };
 
   const itemsToRender: readonly string[] =
@@ -245,8 +248,8 @@ export const Explorer = ({
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {next.delete(id);}
+      else {next.add(id);}
       return next;
     });
   };
@@ -278,9 +281,8 @@ export const Explorer = ({
         description: "Searching",
       },
     ];
-    return descriptions.reduce((res, item) => {
-      return !res && item.isLoading ? item.description : res;
-    }, "");
+
+    return descriptions.reduce((res, item) => !res && item.isLoading ? item.description : res, "");
   }, [
     isLoadingMetrics,
     isLoadingSortedItems,
@@ -314,7 +316,7 @@ export const Explorer = ({
         reductionHash={reductionHash}
         filters={filters}
         setEmbeddingSelection={() => {
-          /*FIXME*/
+          /* FIXME */
         }}
       />
       {previewedItem && (
@@ -499,8 +501,7 @@ export const Explorer = ({
         pagination={{
           defaultPageSize: 10,
         }}
-        renderItem={(item: string) => {
-          return (
+        renderItem={(item: string) => (
             <ExplorerGalleryItem
               projectHash={projectHash}
               queryAPI={queryAPI}
@@ -513,13 +514,12 @@ export const Explorer = ({
               selected={selectedItems.has(item)}
               iou={iou}
             />
-          );
-        }}
+          )}
       />
     </div>
   );
-};
-const PredictionFilters = ({
+}
+function PredictionFilters({
   iou,
   setIou,
   predictionOutcome,
@@ -533,7 +533,7 @@ const PredictionFilters = ({
   setPredictionOutcome: (outcome: "fp" | "fn" | "tp") => void;
   isClassificationOnly: boolean;
   disabled: boolean;
-}) => {
+}) {
   return (
     <div className="flex gap-2">
       <Select
@@ -560,18 +560,18 @@ const PredictionFilters = ({
       )}
     </div>
   );
-};
+}
 
-const SimilarityItem = ({
+function SimilarityItem({
   itemId,
   onClose,
 }: {
   itemId: string;
   onClose: JSX.IntrinsicElements["button"]["onClick"];
-}) => {
+}) {
   const { data, isLoading } = useApi().fetchItem(itemId);
 
-  if (isLoading || !data) return null;
+  if (isLoading || !data) {return null;}
 
   return (
     <div className="flex flex-col gap-2">
@@ -587,9 +587,9 @@ const SimilarityItem = ({
       </div>
     </div>
   );
-};
+}
 
-const ItemPreview = ({
+function ItemPreview({
   queryAPI,
   projectHash,
   id,
@@ -609,7 +609,7 @@ const ItemPreview = ({
   onShowSimilar: () => void;
   iou?: number;
   allowTaggingAnnotations: boolean;
-}) => {
+}) {
   const { du_hash, frame, annotation_hash } = splitId(id);
   const { data: preview, isLoading } = queryAPI.useProjectItemPreview(
     projectHash,
@@ -624,12 +624,13 @@ const ItemPreview = ({
   );
   const mutate = () => console.log("fixme");
 
-  if (isLoading || !preview) return <Spin indicator={loadingIndicator} />;
+  if (isLoading || !preview) {return <Spin indicator={loadingIndicator} />;}
 
-  /*const { description, ...metrics } = preview.metadata.metrics;
-  const { editUrl } = data;*/
+  /* const { description, ...metrics } = preview.metadata.metrics;
+  const { editUrl } = data; */
   const editUrl = "FIXME";
   const description = "";
+
   return (
     <div className="flex w-full flex-col items-center gap-3 p-1">
       <div className="flex w-full justify-between">
@@ -681,8 +682,8 @@ const ItemPreview = ({
               </div>
             )}
           </div>
-          {/*<MetadataMetrics metrics={metrics} />
-          <TagList tags={data.tags} />*/}
+          {/* <MetadataMetrics metrics={metrics} />
+          <TagList tags={data.tags} /> */}
         </div>
         <div className="relative inline-block w-fit">
           <ImageWithPolygons className="" preview={preview} />
@@ -690,7 +691,7 @@ const ItemPreview = ({
       </div>
     </div>
   );
-};
+}
 
 const getObjects = (item: Item) => {
   const { annotation_hash } = splitId(item.id);
@@ -701,7 +702,7 @@ const getObjects = (item: Item) => {
     (object) => object.objectHash === annotation_hash
   );
 
-  if (object) return [object];
+  if (object) {return [object];}
 
   return prediction
     ? [...item.labels.objects, prediction]
@@ -719,11 +720,11 @@ const pointsRecordToPolygonPoints = (
     .map(({ x, y }) => `${x * width},${y * height}`)
     .join(" ");
 
-const MetadataMetrics = ({
+function MetadataMetrics({
   metrics,
 }: {
   metrics: Item["metadata"]["metrics"];
-}) => {
+}) {
   const entries = Object.entries(metrics);
   entries.sort();
 
@@ -741,4 +742,4 @@ const MetadataMetrics = ({
       })}
     </div>
   );
-};
+}

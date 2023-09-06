@@ -1,11 +1,11 @@
-import { TagList } from "./Tagging";
+import * as React from "react";
 import { BsCardText } from "react-icons/bs";
 import { FaEdit, FaExpand } from "react-icons/fa";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
+import { Button, Card, Row } from "antd";
 import { QueryAPI } from "../Types";
-import { Button, Card, Col, Row, Space, Spin } from "antd";
 import { splitId } from "./id";
 import { ImageWithPolygons } from "./ImageWithPolygons";
 
@@ -92,7 +92,7 @@ export function ExplorerGalleryItem(props: {
             <span>{displayValue}</span>
           </div>
           <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
-            {/*<TagList tags={data.tags} />*/}
+            {/* <TagList tags={data.tags} /> */}
             {description && (
               <div className="flex flex-col">
                 <div className="inline-flex items-center gap-1">

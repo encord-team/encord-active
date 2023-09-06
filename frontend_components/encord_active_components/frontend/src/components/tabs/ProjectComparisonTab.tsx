@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Col, Divider, Row, Select, Typography } from "antd";
 import { useState } from "react";
 import { ProjectMetricSummary, QueryAPI } from "../Types";

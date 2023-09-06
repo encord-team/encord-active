@@ -184,7 +184,7 @@ export const defaultTags = { data: [], label: [] };
 
 export const getApi = (projectHash: string, authToken?: string | null) => {
   const updateOptions = (options: Parameters<typeof fetch>[1]) => {
-    if (!authToken) return options;
+    if (!authToken) {return options;}
 
     return {
       ...options,
@@ -225,6 +225,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
             body: JSON.stringify({ embedding_type, filters }),
           })
         ).json();
+
         return Item2DEmbeddingSchema.array().parse(response);
       } catch {
         return [];
@@ -242,6 +243,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       });
       const url = `${apiUrl}/projects/${projectHash}/metrics?${queryParams}`;
       const response = await (await fetcher(url)).json();
+
       return MetricDefinitionsSchema.parse(response);
     },
     fetchProjectItemIds: async (
@@ -264,6 +266,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
           }),
         })
       ).json();
+
       return IdValueSchema.array().parse(result);
     },
     fetchProjectItem: async (id: string, iou?: number) => {
@@ -278,6 +281,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
           )}?${queryParams}`
         )
       ).json();
+
       return ItemSchema.parse(item) as Item;
     },
     fetchedTaggedItems: async () =>
@@ -303,6 +307,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
         id
       )}?${queryParams}`;
       const response = await fetcher(url).then((res) => res.json());
+
       return z.string().array().parse(response);
     },
     fetchHasSimilaritySearch: async (
@@ -313,6 +318,7 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
       });
       const url = `${apiUrl}/projects/${projectHash}/has_similarity_search?${queryParams} `;
       const response = await fetcher(url).then((res) => res.json());
+
       return z.boolean().parse(response);
     },
     updateItemTags: async (
@@ -362,7 +368,7 @@ export const useApi = () => {
   const apiContext = useContext(ApiContext);
 
   if (!apiContext)
-    throw new Error("useApi has to be used within <ProjectContext.Provider>");
+    {throw new Error("useApi has to be used within <ProjectContext.Provider>");}
 
   const { projectHash, ...api } = apiContext;
 

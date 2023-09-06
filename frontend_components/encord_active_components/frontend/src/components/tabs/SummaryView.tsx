@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState } from "react";
 import { Tabs } from "antd";
 import { QueryAPI, ProjectSummary } from "../Types";
@@ -26,7 +27,7 @@ export function SummaryView(props: {
               projectHash={projectHash}
               queryAPI={queryAPI}
               metricsSummary={projectSummary.data}
-              analysisDomain={"data"}
+              analysisDomain="data"
               featureHashMap={featureHashMap}
             />
           ),
@@ -39,7 +40,7 @@ export function SummaryView(props: {
               projectHash={projectHash}
               queryAPI={queryAPI}
               metricsSummary={projectSummary.annotation}
-              analysisDomain={"annotation"}
+              analysisDomain="annotation"
               featureHashMap={featureHashMap}
             />
           ),

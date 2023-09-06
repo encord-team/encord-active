@@ -1,11 +1,12 @@
+import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
-import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Spin } from "antd";
+import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
+import { classy } from "../../helpers/classy";
 import { loadingIndicator } from "../Spin";
 
 type SearchFn = API["searchInProject"];
@@ -25,30 +26,31 @@ export const useSearch = (
   const { refetch, isFetching, data } = useQuery(
     [scope, "search", search?.type, search?.query],
     ({ signal }) => {
-      if (!search?.query) return null;
+      if (!search?.query) {return null;}
       client.cancelQueries(["search"]);
       const res = searchFn(
         { scope, filters, query: search.query, type: search.type },
         signal
       );
+
       return res;
     },
     { enabled: false }
   );
 
   useEffect(() => {
-    if (search) refetch();
-    else setResult(undefined);
+    if (search) {refetch();}
+    else {setResult(undefined);}
   }, [search]);
 
   useEffect(() => {
-    if (data) setResult(data);
+    if (data) {setResult(data);}
   }, [data]);
 
   return { search, setSearch, result, loading: isFetching };
 };
 
-export const Assistant = ({
+export function Assistant({
   defaultSearch,
   isFetching,
   snippet,
@@ -60,7 +62,7 @@ export const Assistant = ({
   snippet?: string | null;
   setSearch: (search: ScopelessSearch) => void;
   disabled?: boolean;
-}) => {
+}) {
   const [parent, _] = useAutoAnimate();
 
   return (
@@ -69,8 +71,8 @@ export const Assistant = ({
         className="flex w-full"
         onSubmit={(e) => {
           e.preventDefault();
-          const query = e.currentTarget["query"] satisfies HTMLInputElement;
-          const type = e.currentTarget["type"] satisfies HTMLInputElement;
+          const query = e.currentTarget.query satisfies HTMLInputElement;
+          const type = e.currentTarget.type satisfies HTMLInputElement;
           setSearch({ query: query.value, type: type.value as SearchType });
         }}
       >
@@ -126,4 +128,4 @@ export const Assistant = ({
       )}
     </div>
   );
-};
+}

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Spin, Tabs } from "antd";
 import {
@@ -26,6 +27,7 @@ export function ProjectPage(props: {
 }) {
   const {
     queryAPI,
+    editUrl,
     projectHash,
     projects,
     setSelectedProjectHash: setSelectedProject,
@@ -39,7 +41,7 @@ export function ProjectPage(props: {
     if (isError) {
       setSelectedProject(undefined);
     }
-  }, [isError]);
+  }, [isError, setSelectedProject]);
 
   const featureHashMap = useMemo(() => {
     const featureHashMap: Record<
@@ -134,8 +136,9 @@ export function ProjectPage(props: {
                 predictionHash={undefined}
                 dataMetricsSummary={projectSummary.data}
                 annotationMetricsSummary={projectSummary.annotation}
-                scope={"analysis"}
+                scope="analysis"
                 queryAPI={queryAPI}
+                editUrl={editUrl}
                 featureHashMap={featureHashMap}
                 setSelectedProjectHash={setSelectedProject}
                 remoteProject={remoteProject}

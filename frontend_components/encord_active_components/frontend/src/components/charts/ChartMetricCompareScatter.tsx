@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import {
@@ -61,20 +62,19 @@ export function ChartMetricCompareScatter(props: {
   const sampledData = sampledState.data;
   const compareSampledData =
     compareProjectHash != null ? compareSampledState.data : null;
-  const metricOptions = useMemo(() => {
-    return Object.entries(metricsSummary.metrics)
+  const metricOptions = useMemo(() => Object.entries(metricsSummary.metrics)
       .filter(([metricKey]) => {
         if (analysisSummary == null) {
           return true;
         }
         const value = analysisSummary.metrics[metricKey];
+
         return value == null || value.count > 0;
       })
       .map(([metricKey, metricData]) => ({
         value: metricKey,
         label: metricData.title,
-      }));
-  }, [metricsSummary, analysisSummary]);
+      })), [metricsSummary, analysisSummary]);
   useEffect(() => {
     const metrics = new Set(metricOptions.map((v) => v.value));
     let chosenXMetric = xMetric;
@@ -96,6 +96,7 @@ export function ChartMetricCompareScatter(props: {
       return null;
     }
     const getFill = scaleLinear([1, 100], ["#9090ff", "#000000"]);
+
     return sampledData.samples.map((sample) => ({
       ...sample,
       fill: getFill(sample.n),

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -46,6 +47,7 @@ export function ChartDistributionBar(props: {
           return true;
         }
         const value = analysisSummary.metrics[metricKey];
+
         return value == null || value.count > 0;
       })
       .map(([metricKey, metric]) => ({
@@ -107,6 +109,7 @@ export function ChartDistributionBar(props: {
         return keyValues[group] ?? group;
       }
     };
+
     return results.map((grouping) => ({
       ...grouping,
       group: getGroupName(grouping.group),
@@ -153,14 +156,15 @@ export function ChartDistributionBar(props: {
     const lineQ1 = lookupGrouping(metadata.q1);
     const lineMedian = lookupGrouping(metadata.median);
     const lineQ3 = lookupGrouping(metadata.q3);
+
     return (
       <>
         <ReferenceLine
           label={
-            "Q1" +
-            (lineQ1 === lineMedian
-              ? ", Median" + (lineQ3 === lineMedian ? ", Q3" : "")
-              : "")
+            `Q1${ 
+            lineQ1 === lineMedian
+              ? `, Median${  lineQ3 === lineMedian ? ", Q3" : ""}`
+              : ""}`
           }
           stroke="black"
           strokeDasharray="3 3"
@@ -168,7 +172,7 @@ export function ChartDistributionBar(props: {
         />
         {lineQ1 !== lineMedian ? (
           <ReferenceLine
-            label={"Median" + (lineQ3 === lineMedian ? ", Q3" : "")}
+            label={`Median${  lineQ3 === lineMedian ? ", Q3" : ""}`}
             stroke="black"
             strokeDasharray="3 3"
             x={lineMedian}

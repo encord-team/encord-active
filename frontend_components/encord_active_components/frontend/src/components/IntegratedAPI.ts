@@ -66,7 +66,7 @@ class IntegratedAPI implements QueryAPI {
   ) {
     this.projects = projects;
     if (token)
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      {axios.defaults.headers.common.Authorization = `Bearer ${token}`;}
   }
 
   private getBaseUrl(
@@ -104,6 +104,7 @@ class IntegratedAPI implements QueryAPI {
 
       return [results.slice(offset, offset + limit), results.length];
     }, [projects, offset, limit]);
+
     return useQuery(
       [this.projects, "ACTIVE:useListProjectViews", results, total],
       () => ({
@@ -118,6 +119,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectSummary", projectHash],
       // eslint-disable-next-line
@@ -131,6 +133,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectEmbeddingReductions> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectListEmbeddingReductions", projectHash],
       // eslint-disable-next-line
@@ -145,6 +148,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectAnalysisSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectAnalysisSummary", projectHash, analysisDomain],
       () =>
@@ -164,6 +168,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectAnalysisScatter> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectAnalysisMetricScatter",
@@ -193,6 +198,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectAnalysisDistribution> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectAnalysisDistribution",
@@ -221,6 +227,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectAnalysisReductionResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectAnalysisReducedEmbeddings",
@@ -252,6 +259,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectAnalysisCompareMetricDissimilarity> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectAnalysisCompareMetricDissimilarity",
@@ -287,6 +295,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectSearchResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectAnalysisSearch",
@@ -323,6 +332,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectPreviewItemResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectItemPreview", projectHash, duHash, frame, objectHash],
       () =>
@@ -345,6 +355,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectItemDetailedSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectItemDetails", projectHash, duHash, frame],
       () =>
@@ -364,6 +375,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectSimilarityResult> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectItemSimilarity",
@@ -400,6 +412,7 @@ class IntegratedAPI implements QueryAPI {
       "/projects/"
     );
     const queryClient = useQueryClient();
+
     return useMutation(
       ["ACTIVE:useProjectMutationCreateTag", projectHash],
       async (args: CreateSubsetMutationArguments) => {
@@ -454,6 +467,7 @@ class IntegratedAPI implements QueryAPI {
       "/projects/"
     );
     const queryClient = useQueryClient();
+
     return useMutation(
       ["ACTIVE:useProjectMutationUploadToEncord", projectHash],
       async (args: UploadToEncordMutationArguments) => {
@@ -489,6 +503,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<PaginationResult<PredictionView>> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectListPredictions", projectHash],
       () =>
@@ -505,6 +520,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectPredictionSummary> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       ["ACTIVE:useProjectPredictionSummary", projectHash, predictionHash, iou],
       () =>
@@ -526,6 +542,7 @@ class IntegratedAPI implements QueryAPI {
     options: Pick<UseQueryOptions, "enabled"> = {}
   ): UseQueryResult<ProjectMetricPerformance> => {
     const baseURL = this.getBaseUrl(projectHash, options.enabled);
+
     return useQuery(
       [
         "ACTIVE:useProjectPredictionMetricPerformance",
@@ -568,6 +585,7 @@ export function useProjectsList(): UseQueryResult<
       const projects_dict = Object.fromEntries(
         data.projects.map((v) => [v.project_hash, v])
       );
+
       return {
         projects: data.projects,
         projects_dict,
