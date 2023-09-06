@@ -401,7 +401,7 @@ class SimpleExecutor(Executor):
                 )
                 frame_input = self._get_frame_input(
                     image=image,
-                    du_meta=du_meta,
+                    du_meta=du_meta_job,
                 )
                 if gt is None:
                     gt_input = None
