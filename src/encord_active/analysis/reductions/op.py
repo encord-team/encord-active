@@ -2,6 +2,7 @@ import json
 import uuid
 from typing import List, Optional, Tuple, Union
 
+import math
 import numpy as np
 import umap
 
@@ -69,11 +70,17 @@ def create_reduction(
         raise ValueError(f"Unknown project reduction type: {reduction_type}")
 
 
+def _remove_nan(value: float) -> float:
+    if math.isnan(value):
+        return 0.0
+    return value
+
+
 def apply_embedding_reduction(embeddings: List[np.ndarray], reduction: ReductionType) -> List[Tuple[float, float]]:
     if len(embeddings) == 0:
         return []
     if isinstance(reduction, umap.UMAP):
         transformed = reduction.transform(np.stack(embeddings))
-        return [(float(x), float(y)) for x, y in transformed]
+        return [(_remove_nan(float(x)), _remove_nan(float(y))) for x, y in transformed]
     else:
         raise ValueError(f"Unknown project reduction type: {type(reduction)}")

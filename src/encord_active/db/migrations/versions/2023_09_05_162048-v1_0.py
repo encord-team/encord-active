@@ -209,7 +209,7 @@ def upgrade() -> None:
         sa.CheckConstraint("frame >= 0", name="project_prediction_frame_check"),
         sa.CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="project_prediction_iou"),
         sa.CheckConstraint(
-            "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0::real",
+            "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0",
             name="project_prediction_match_duplicate_iou",
         ),
         sa.ForeignKeyConstraint(

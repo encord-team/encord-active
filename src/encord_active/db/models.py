@@ -577,7 +577,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
         ),
         CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="project_prediction_iou"),
         CheckConstraint(
-            "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0::real",
+            "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0",
             name="project_prediction_match_duplicate_iou",
         ),
         CheckConstraint("frame >= 0", name="project_prediction_frame_check"),
