@@ -31,7 +31,7 @@ import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
-import { ProjectDomainSummary, SearchFilters } from "../../openapi/api";
+import { ProjectDomainSummary } from "../../openapi/api";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";

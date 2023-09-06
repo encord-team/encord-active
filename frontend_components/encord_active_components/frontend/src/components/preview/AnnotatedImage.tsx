@@ -10,9 +10,21 @@ export function AnnotatedImage(props: {
   item: ProjectItem;
   annotationHash: string | undefined;
   className?: string | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  fit?: boolean;
   children?: React.ReactNode | undefined;
 }) {
-  const { item, queryContext, className, annotationHash, children } = props;
+  const {
+    item,
+    queryContext,
+    className,
+    annotationHash,
+    children,
+    width,
+    height,
+    fit,
+  } = props;
   const {
     ref: image,
     width: imageWidth,
@@ -23,19 +35,38 @@ export function AnnotatedImage(props: {
     useResizeObserver<HTMLVideoElement>({
       ref: video,
     });
-  const width = item.timestamp != null ? videoWidth : imageWidth;
-  const height = item.timestamp != null ? videoHeight : imageHeight;
+  const contentWidth = item.timestamp != null ? videoWidth : imageWidth;
+  const contentHeight = item.timestamp != null ? videoHeight : imageHeight;
   const imageSrc = useImageSrc(queryContext, item.url);
 
+  const exactFit = width && height;
+  const contentStyle: React.CSSProperties = {
+    //width: fitWidth ? width : undefined,
+    //height: fitWidth ? undefined : height,
+    flexShrink: exactFit ? 0 : undefined,
+    minWidth: exactFit ? "100%" : undefined,
+    minHeight: exactFit ? "100%" : undefined,
+    position: exactFit ? "absolute" : undefined,
+    overflow: exactFit ? "hidden" : undefined,
+  };
+  const figureStyle: React.CSSProperties = {
+    display: exactFit ? "flex" : undefined,
+    justifyContent: exactFit ? "center" : undefined,
+    alignItems: exactFit ? "center" : undefined,
+    overflow: exactFit ? "hidden" : undefined,
+    width,
+    height,
+    position: "relative",
+  };
+
   return (
-    <figure
-      className={"relative" + (className === undefined ? "" : " " + className)}
-    >
+    <figure className={className} style={figureStyle}>
       {children}
       {item.timestamp != null ? (
         <video
           ref={video}
           className="rounded object-contain transition-opacity"
+          style={contentStyle}
           src={imageSrc}
           muted
           controls={false}
@@ -50,15 +81,17 @@ export function AnnotatedImage(props: {
         <img
           ref={image}
           className="rounded object-contain transition-opacity"
+          style={contentStyle}
           alt=""
           src={imageSrc}
         />
       )}
-      {item.objects.length > 0 && width && height ? (
+      {item.objects.length > 0 && contentWidth && contentHeight ? (
         <AnnotationRenderLayer
+          layout={width && height ? "relative" : "absolute"}
           objects={item.objects as AnnotationObject[]}
-          width={width}
-          height={height}
+          width={contentWidth}
+          height={contentHeight}
           annotationHash={annotationHash}
         />
       ) : null}
@@ -106,11 +139,12 @@ type AnnotationObject = AnnotationObjectCommon &
 
 function AnnotationRenderLayer(props: {
   objects: AnnotationObject[];
+  layout: "relative" | "absolute";
   width: number;
   height: number;
   annotationHash: string | undefined;
 }) {
-  const { objects, width, height, annotationHash } = props;
+  const { objects, layout, width, height, annotationHash } = props;
   console.log("render annotations", objects, annotationHash);
 
   const renderPolygon = (
@@ -121,7 +155,8 @@ function AnnotationRenderLayer(props: {
       <polygon
         key={poly.objectHash}
         style={{
-          fillOpacity: select ? "40%" : "10%",
+          fillOpacity: select && annotationHash !== undefined ? "50%" : "20%",
+          fill: poly.color,
           strokeOpacity: select ? "100%" : "40%",
           stroke: poly.color,
           strokeWidth: select ? "2px" : "1px",
@@ -183,7 +218,10 @@ function AnnotationRenderLayer(props: {
   };
 
   return (
-    <svg className="absolute top-0 right-0 h-full w-full">
+    <svg
+      className={`${layout} top-0 right-0 overflow-hidden`}
+      style={{ width, height }}
+    >
       {objects.map(renderObject)}
     </svg>
   );
