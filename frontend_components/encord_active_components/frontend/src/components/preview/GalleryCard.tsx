@@ -73,7 +73,8 @@ export function GalleryCard(props: {
       : projectSummaryForDomain[selectedMetric.metric_key]?.title ?? "unknown";
   //const displayValue =
   //  info == null ? NaN : info.metrics[selectedMetric.metric_key];
-  const displayValue = 0.5;
+  const displayValueRaw = preview === undefined ? NaN : preview.metrics[selectedMetric.metric_key] ?? NaN;
+  const displayValue = displayValueRaw.toFixed(4);
   const description = 4;
   const labelObject = useMemo(() => {
     if (annotationHash === undefined || preview === undefined) {
