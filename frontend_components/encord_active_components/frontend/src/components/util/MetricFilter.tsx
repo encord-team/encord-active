@@ -2,8 +2,12 @@ import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { Button, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
-import { ProjectMetricSummary } from "../Types";
-import { QuerySummary } from "../../openapi/api";
+import {
+  EnumSummary,
+  MetricSummary,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../openapi/api";
 
 export type FilterState = {
   readonly metricFilters: Readonly<Record<string, readonly [number, number]>>;
@@ -26,7 +30,7 @@ function getMetricBounds<
   }
 >(
   bounds: R,
-  metric: ProjectMetricSummary["metrics"][string]
+  metric: MetricSummary
 ): {
   min: number;
   max: number;
@@ -43,12 +47,6 @@ function getMetricBounds<
       min: 0.0,
       max: bounds.max,
       step: bounds.max / 100,
-    };
-  } else if (metric.type === "sfloat") {
-    return {
-      min: bounds.min,
-      max: bounds.max,
-      step: (bounds.max - bounds.min) / 100,
     };
   } else if (metric.type === "uint") {
     return {
@@ -68,7 +66,7 @@ function getMetricBounds<
 }
 
 function getEnumList(
-  enumSummary: ProjectMetricSummary["enums"][string],
+  enumSummary: EnumSummary,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -77,14 +75,14 @@ function getEnumList(
   if (enumSummary.type === "ontology") {
     return Object.keys(featureHashMap);
   } else if (enumSummary.type === "enum") {
-    return Object.keys(enumSummary.values);
+    return Object.keys(enumSummary.values ?? {});
   } else {
     throw Error("Unknown enum state");
   }
 }
 
 function getEnumOptions(
-  enumSummary: ProjectMetricSummary["enums"][string],
+  enumSummary: EnumSummary,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -96,18 +94,15 @@ function getEnumOptions(
       label: feature.name,
     }));
   } else if (enumSummary.type === "enum") {
-    return Object.entries(enumSummary.values).map(([value, label]) => ({
+    return Object.entries(enumSummary.values ?? {}).map(([value, label]) => ({
       value,
-      label,
+      label: label ?? value,
     }));
   }
   throw Error("Unknown enum state");
 }
 
-function getEnumName(
-  enumKey: string,
-  enumSummary: ProjectMetricSummary["enums"][string]
-): string {
+function getEnumName(enumKey: string, enumSummary: EnumSummary): string {
   if (enumKey === "feature_hash") {
     return "Label Class";
   } else if (enumSummary.type === "enum") {
@@ -150,16 +145,11 @@ function updateValue<K extends FilterModes>(
   };
 }
 
-function updateKey<
-  R extends {
-    min: number;
-    max: number;
-  }
->(
+function updateKey(
   oldKey: string,
   newKey: string,
-  metricsSummary: ProjectMetricSummary,
-  metricRanges: Record<string, R>,
+  metricsSummary: ProjectDomainSummary,
+  metricRanges: QuerySummary["metrics"] | undefined,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -194,7 +184,8 @@ function updateKey<
     // Check if a metric
     const newMetricSummary = metricsSummary.metrics[newKey];
     if (newMetricSummary != null) {
-      const newMetricRanges = metricRanges[newKey];
+      const newMetricRanges =
+        metricRanges === undefined ? undefined : metricRanges[newKey];
       if (newMetricRanges != null) {
         const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
         const newRange: readonly [number, number] = [
@@ -232,14 +223,9 @@ function updateKey<
   };
 }
 
-function addNewEntry<
-  R extends {
-    min: number;
-    max: number;
-  }
->(
-  metricsSummary: ProjectMetricSummary,
-  metricRanges: Record<string, R>,
+function addNewEntry(
+  metricsSummary: ProjectDomainSummary,
+  metricRanges: QuerySummary["metrics"] | undefined,
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -252,7 +238,8 @@ function addNewEntry<
     );
     if (newMetricEntry != null) {
       const [newMetricKey, newMetricSummary] = newMetricEntry;
-      const newMetricRanges = metricRanges[newMetricKey];
+      const newMetricRanges =
+        metricRanges === undefined ? undefined : metricRanges[newMetricKey];
       if (newMetricRanges != null && newMetricSummary != null) {
         const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
         const newRange: readonly [number, number] = [
@@ -277,16 +264,18 @@ function addNewEntry<
     );
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
-      const enumValues = getEnumList(newEnumSummary, featureHashMap);
+      if (newEnumSummary != undefined) {
+        const enumValues = getEnumList(newEnumSummary, featureHashMap);
 
-      return {
-        ...old,
-        ordering: [...old.ordering, newEnumKey],
-        enumFilters: {
-          ...old.enumFilters,
-          [newEnumKey]: enumValues,
-        },
-      };
+        return {
+          ...old,
+          ordering: [...old.ordering, newEnumKey],
+          enumFilters: {
+            ...old.enumFilters,
+            [newEnumKey]: enumValues,
+          },
+        };
+      }
     }
 
     // Failed to insert correctly.
@@ -300,7 +289,7 @@ const toFixedNumber = (number: number, precision: number) =>
 export function MetricFilter(props: {
   filters: FilterState;
   setFilters: (arg: FilterState | ((old: FilterState) => FilterState)) => void;
-  metricsSummary: ProjectMetricSummary;
+  metricsSummary: ProjectDomainSummary;
   metricRanges: QuerySummary["metrics"] | undefined;
   featureHashMap: Record<
     string,
@@ -351,13 +340,14 @@ export function MetricFilter(props: {
       .filter(([metricKey]) => !exists.has(metricKey))
       .map(([metricKey, metricState]) => ({
         value: metricKey,
-        label: metricState.title,
+        label: metricState?.title ?? metricKey,
       }));
     const enumOptions = Object.entries(metricsSummary.enums)
       .filter(([enumKey]) => !exists.has(enumKey))
       .map(([enumKey, enumState]) => ({
         value: enumKey,
-        label: getEnumName(enumKey, enumState),
+        label:
+          enumState !== undefined ? getEnumName(enumKey, enumState) : enumKey,
       }));
 
     return [...metricOptions, ...enumOptions];
@@ -397,7 +387,10 @@ export function MetricFilter(props: {
         const filterLabel =
           metric != null
             ? metric.title
-            : getEnumName(filterKey, enumFilter ?? { type: "ontology" });
+            : getEnumName(
+                filterKey,
+                enumFilter ?? { title: "Label Class", type: "ontology" }
+              );
 
         return (
           <Row align="middle" key={`row_filter_${filterKey}`}>
@@ -487,5 +480,3 @@ export function MetricFilter(props: {
     </>
   );
 }
-
-export default MetricFilter;

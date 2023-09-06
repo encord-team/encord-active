@@ -5,12 +5,12 @@ import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Row } from "antd";
-import { QueryAPI } from "../Types";
 import { splitId } from "./id";
 import { ImageWithPolygons } from "./ImageWithPolygons";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
 
 export function ExplorerGalleryItem(props: {
   projectHash: string;
@@ -34,19 +34,11 @@ export function ExplorerGalleryItem(props: {
     onShowSimilar,
     iou,
   } = props;
-  const { du_hash, frame, annotation_hash } = splitId(itemId);
-  const { data: preview, isLoading } = useProjectItemPreview(
+  const dataId = itemId.split("_").slice(0, 3).join("_");
+  const { data: preview, isLoading } = useProjectDataItem(
     queryContext,
     projectHash,
-    du_hash,
-    frame,
-    annotation_hash
-  );
-  const { data: info } = useProjectItemDetails(
-    queryContext,
-    projectHash,
-    du_hash,
-    frame
+    dataId
   );
   const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
   const projectSummaryForDomain =
@@ -69,9 +61,13 @@ export function ExplorerGalleryItem(props: {
   const { description } = data.metadata.metrics;
   const { editUrl } = data;
    */
-  const metricName = projectSummaryForDomain[selectedMetric.metric_key].title;
-  const displayValue =
-    info == null ? NaN : info.metrics[selectedMetric.metric_key];
+  const metricName =
+    projectSummaryForDomain === undefined
+      ? "unknown"
+      : projectSummaryForDomain[selectedMetric.metric_key]?.title ?? "unknown";
+  //const displayValue =
+  //  info == null ? NaN : info.metrics[selectedMetric.metric_key];
+  const displayValue = 0.5;
   const editUrl = "FIXME";
   const description = 4;
   const labelClass = "FIXME-LABEL-CLASS";
@@ -112,6 +108,7 @@ export function ExplorerGalleryItem(props: {
           <div className="flex h-full w-full items-center justify-center rounded bg-gray-100 p-1 outline-base-300 checked:transition-none peer-checked:opacity-100 peer-checked:outline  peer-checked:outline-4 peer-checked:outline-offset-[-4px]">
             {preview != null && (
               <ImageWithPolygons
+                queryContext={queryContext}
                 className="group-hover:opacity-30"
                 preview={preview}
               />

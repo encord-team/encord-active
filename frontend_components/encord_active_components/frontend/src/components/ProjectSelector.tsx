@@ -19,11 +19,7 @@ export function ProjectSelector({
   const { data: projectListData } = useProjectList(queryContext);
   const projects = projectListData?.projects ?? [];
   const [sandboxProjects, userProjects] = useMemo(
-    () =>
-      fork(
-        projects.filter(({ sandbox }) => sandbox),
-        ({ sandbox }) => !!sandbox
-      ),
+    () => fork(projects, ({ sandbox }) => !!sandbox),
     [projects]
   );
 

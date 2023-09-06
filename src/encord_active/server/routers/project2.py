@@ -487,14 +487,14 @@ def project_item(
             )
         ).first()
         if du_meta is None:
-            raise ValueError("Invalid request")
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataUnitMeta")
         data_meta = sess.exec(
             select(ProjectDataMetadata).where(
                 ProjectDataMetadata.project_hash == project_hash, ProjectDataMetadata.data_hash == du_meta.data_hash
             )
         ).first()
         if data_meta is None:
-            raise ValueError("Invalid request")
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataMeta")
         du_analytics = sess.exec(
             select(ProjectDataAnalytics).where(
                 ProjectDataAnalytics.project_hash == project_hash,

@@ -9,6 +9,7 @@ import { scaleLinear } from "d3-scale";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { ExplorerFilterState } from "./ExplorerTypes";
+import { Query2DEmbedding } from "../../openapi/api";
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
@@ -57,7 +58,7 @@ export function MetricDistributionTiny(props: {
 
   const data = useMemo(() => {
     const res = [...(distribution?.results ?? [])];
-    res.sort((a, b) => (a.group as number) - (b.group as number));
+    res.sort((a, b) => Number(a.group) - Number(b.group));
     return res as unknown as Record<string, any>[];
   }, [distribution]);
 
@@ -98,7 +99,7 @@ const HEX_BINS = 1000;
 const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export function ScatteredEmbeddings(props: {
-  reductionScatter: ProjectAnalysisReductionResult | undefined;
+  reductionScatter: Query2DEmbedding | undefined;
   setEmbeddingSelection: (
     bounds:
       | {

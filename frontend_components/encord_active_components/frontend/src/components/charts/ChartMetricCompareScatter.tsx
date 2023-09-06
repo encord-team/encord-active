@@ -82,7 +82,7 @@ export function ChartMetricCompareScatter(props: {
         })
         .map(([metricKey, metricData]) => ({
           value: metricKey,
-          label: metricData.title,
+          label: metricData?.title ?? metricKey,
         })),
     [metricsSummary, analysisSummary]
   );

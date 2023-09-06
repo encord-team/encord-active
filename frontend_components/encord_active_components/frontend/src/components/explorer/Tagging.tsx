@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Select, SelectProps } from "antd";
+import { Select, SelectProps, Spin } from "antd";
 import { useMemo, useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
@@ -8,6 +8,7 @@ import { TbPolygon } from "react-icons/tb";
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
 import { takeDataId } from "./id";
+import { loadingIndicator } from "../Spin";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -198,7 +199,7 @@ export function TaggingForm({
       {...rest}
       tabIndex={0}
       className={classy(
-        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
+        "card-compact card dropdown-content w-64 bg-base-100 p-2 text-primary-content shadow",
         className
       )}
     >

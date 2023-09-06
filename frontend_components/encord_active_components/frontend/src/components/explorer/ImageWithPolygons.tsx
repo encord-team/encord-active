@@ -5,14 +5,16 @@ import { Spin } from "antd";
 import { apiUrl } from "../../constants";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { classy } from "../../helpers/classy";
-import { ProjectPreviewItemResult } from "../Types";
 import { loadingIndicator } from "../Spin";
+import { QueryContext } from "../../hooks/Context";
+import { ProjectItem } from "../../openapi/api";
 
 export function ImageWithPolygons(props: {
-  preview: ProjectPreviewItemResult;
+  queryContext: QueryContext;
+  preview: ProjectItem;
   className: string;
 }) {
-  const { preview, className } = props;
+  const { preview, className, queryContext } = props;
   const {
     ref: image,
     width: imageWidth,
@@ -49,9 +51,11 @@ export function ImageWithPolygons(props: {
     ? preview.url
     : `${apiUrl}${preview.url}`;
 
-  const imgSrcUrl = useImageSrc(itemUrl);
+  const imgSrcUrl = useImageSrc(queryContext, itemUrl);
 
-  if (imgSrcUrl === undefined) {return <Spin indicator={loadingIndicator} />;}
+  if (imgSrcUrl === undefined) {
+    return <Spin indicator={loadingIndicator} />;
+  }
 
   return (
     <figure className={classy("relative", className)}>
@@ -81,18 +85,18 @@ export function ImageWithPolygons(props: {
         <svg className="absolute top-0 right-0 h-full w-full">
           {polygons.map(
             ({ points, boundingBoxPoints, color, shape }, index) => {
-              if (shape === "point" && points)
-                {return (
+              if (shape === "point" && points) {
+                return (
                   <g key={index}>
                     <circle
-                      key={`${index  }_inner`}
+                      key={`${index}_inner`}
                       cx={points[0].x}
                       cy={points[0].y}
                       r="5px"
                       fill={color}
                     />
                     <circle
-                      key={`${index  }_outer`}
+                      key={`${index}_outer`}
                       cx={points[0].x}
                       cy={points[0].y}
                       r="7px"
@@ -101,12 +105,13 @@ export function ImageWithPolygons(props: {
                       strokeWidth="1px"
                     />
                   </g>
-                );}
+                );
+              }
               return (
                 <g key={index} fill={shape === "polyline" ? "none" : color}>
                   {points && (
                     <polygon
-                      key={`${index  }_polygon`}
+                      key={`${index}_polygon`}
                       style={{
                         fillOpacity: ".20",
                         stroke: color,
@@ -121,7 +126,7 @@ export function ImageWithPolygons(props: {
                   )}
                   {boundingBoxPoints && (
                     <polygon
-                      key={`${index  }_box`}
+                      key={`${index}_box`}
                       style={{
                         fillOpacity: ".40",
                         stroke: color,

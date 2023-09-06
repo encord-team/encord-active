@@ -36,6 +36,7 @@ export function ExplorerEmbeddings(props: {
       projectHash,
       filters.analysisDomain,
       reductionHash ?? "",
+      undefined,
       filters.filters,
       { enabled: reductionHash != null }
     );

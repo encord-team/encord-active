@@ -39,6 +39,7 @@ import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysi
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
 import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { ExplorerFilterState } from "./ExplorerTypes";
+import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
 
 export type Props = {
   projectHash: string;
@@ -568,7 +569,7 @@ function SimilarityItem({
   onClose,
 }: {
   itemId: string;
-  onClose: JSX.IntrinsicElements["button"]["onClick"];
+  onClose: () => void;
 }) {
   const { data, isLoading } = useApi().fetchItem(itemId);
 
@@ -613,17 +614,11 @@ function ItemPreview({
   iou?: number;
   allowTaggingAnnotations: boolean;
 }) {
-  const { du_hash, frame, annotation_hash } = splitId(id);
-  const { data: preview, isLoading } = queryAPI.useProjectItemPreview(
+  const dataId = id.split("_").slice(0, 3).join("_");
+  const { data: preview, isLoading } = useProjectDataItem(
+    queryContext,
     projectHash,
-    du_hash,
-    frame,
-    annotation_hash
-  );
-  const { data: info } = queryAPI.useProjectItemDetails(
-    projectHash,
-    du_hash,
-    frame
+    dataId
   );
   const mutate = () => console.log("fixme");
 
@@ -678,7 +673,7 @@ function ItemPreview({
           <div className="flex flex-col">
             <div>
               <span>Title: </span>
-              <span>{info?.data_title ?? "unknown"}</span>
+              <span>{preview?.data_title ?? "unknown"}</span>
             </div>
             {description && (
               <div>

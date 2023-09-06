@@ -28,10 +28,7 @@ export type Props = {
 };
 export function ProjectsPage({ queryContext, onSelectLocalProject }: Props) {
   const { data: projects, isLoading } = useProjectList(queryContext);
-  const [_sandboxProjects, userProjects] = useMemo(
-    () => fork(projects?.projects ?? [], ({ sandbox }) => !!sandbox),
-    [projects]
-  );
+  const userProjects = projects?.projects ?? [];
 
   if (isLoading) {
     return <Spin indicator={loadingIndicator} />;

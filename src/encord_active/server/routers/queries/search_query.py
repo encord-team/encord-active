@@ -79,14 +79,20 @@ def search_filters(
                 filters=filters,
             )
     for filter_table, filter_list in filters.items():
-        _project_filters(
-            table=filter_table,
-            project_filters=project_filters,
-            table_filters=filter_list,
-        )
+        if filter_table != base:
+            _project_filters(
+                table=filter_table,
+                project_filters=project_filters,
+                table_filters=filter_list,
+            )
 
     # Compile into sql
     compiled_filters = filters.pop(base, [])
+    _project_filters(
+        table=base,
+        project_filters=project_filters,
+        table_filters=compiled_filters,
+    )
     base_is_annotation = getattr(base, "annotation_hash", None) is not None
     exists_filters = []
     for sql_table, sql_filters in filters.items():

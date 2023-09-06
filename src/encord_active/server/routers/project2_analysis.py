@@ -240,7 +240,7 @@ def get_2d_embedding_summary(
         print(f"DEBUG SMORE: {results}")
     return Query2DEmbedding(
         count=sum(n for x, y, n in results),
-        reductions=[metric_query.QueryScatterPoint(x=x, y=y, n=n) for x, y, n in results],
+        reductions=[metric_query.QueryScatterPoint(x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n) for x, y, n in results],
     )
 
 
