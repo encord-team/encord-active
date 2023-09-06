@@ -21,6 +21,7 @@ import { useProjectList } from "../hooks/queries/useListProjects";
 import { ProjectSearchEntry } from "../openapi/api";
 import { useProjectMetadata } from "../hooks/queries/useProjectMetadata";
 import { useProjectDataItem } from "../hooks/queries/useProjectItem";
+import { AnnotatedImage } from "./preview/AnnotatedImage";
 
 export type Props = {
   queryContext: QueryContext;
@@ -166,31 +167,11 @@ function ProjectCard({
       style={{ width: 240 }}
       onClick={() => setSelectedProjectHash(project.project_hash)}
       cover={
-        <figure
-          className="max-h-36 rounded"
-          style={{ width: 240, height: 165, objectFit: "cover" }}
-        >
-          {projectDataItem.timestamp != null && imgSrcUrl ? (
-            <video
-              src={imgSrcUrl}
-              muted
-              controls={false}
-              onLoadedMetadata={() => {
-                const videoRef = video.current;
-                if (videoRef != null) {
-                  videoRef.currentTime = projectDataItem.timestamp || 0;
-                }
-              }}
-              style={{ width: 240, height: 165, objectFit: "cover" }}
-            />
-          ) : (
-            <img
-              src={imgSrcUrl ?? DEFAULT_PROJECT_IMAGE}
-              alt={project.title}
-              style={{ width: 240, height: 165, objectFit: "cover" }}
-            />
-          )}
-        </figure>
+        <AnnotatedImage
+          queryContext={queryContext}
+          item={projectDataItem}
+          annotationHash={undefined}
+        />
       }
     >
       <Meta title={project.title} description={project.description} />

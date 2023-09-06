@@ -31,7 +31,6 @@ import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
 import { ExplorerGalleryItem } from "./ExplorerGalleryItem";
 import { loadingIndicator } from "../Spin";
-import { ImageWithPolygons } from "./ImageWithPolygons";
 import { ProjectDomainSummary, SearchFilters } from "../../openapi/api";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
@@ -40,6 +39,7 @@ import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysis
 import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
+import { AnnotatedImage } from "../preview/AnnotatedImage";
 
 export type Props = {
   projectHash: string;
@@ -501,7 +501,7 @@ export function Explorer({
           emptyText: "No Results",
         }}
         pagination={{
-          defaultPageSize: 10,
+          defaultPageSize: 20,
         }}
         renderItem={(item: string) => (
           <ExplorerGalleryItem
@@ -581,7 +581,7 @@ function SimilarityItem({
     <div className="flex flex-col gap-2">
       <h1 className="text-lg">Similar items</h1>
       <div className="group relative max-w-xs">
-        <ImageWithPolygons className="group-hover:opacity-20" item={data} />
+        <AnnotatedImage className="group-hover:opacity-20" item={data} />
         <button
           onClick={onClose}
           className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"

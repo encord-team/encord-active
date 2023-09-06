@@ -5,12 +5,11 @@ import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Row } from "antd";
-import { splitId } from "./id";
-import { ImageWithPolygons } from "./ImageWithPolygons";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
+import { AnnotatedImage } from "../preview/AnnotatedImage";
 
 export function ExplorerGalleryItem(props: {
   projectHash: string;
@@ -34,7 +33,8 @@ export function ExplorerGalleryItem(props: {
     onShowSimilar,
     iou,
   } = props;
-  const dataId = itemId.split("_").slice(0, 3).join("_");
+  const dataId = itemId.split("_").slice(0, 2).join("_");
+  const annotationHash: string | undefined = itemId.split("_")[2];
   const { data: preview, isLoading } = useProjectDataItem(
     queryContext,
     projectHash,
@@ -76,11 +76,12 @@ export function ExplorerGalleryItem(props: {
   return (
     <Card
       hoverable
-      style={{ width: 240 }}
+      style={{ width: 240, margin: 10 }}
       onClick={() => {}}
       loading={isLoading}
       bodyStyle={{ padding: 0 }}
       cover={
+        /*
         <label className="group label relative h-full cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
           <input
             name={itemId}
@@ -94,7 +95,7 @@ export function ExplorerGalleryItem(props: {
             <span>{displayValue}</span>
           </div>
           <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
-            {/* <TagList tags={data.tags} /> */}
+            {<TagList tags={data.tags} />}
             {description && (
               <div className="flex flex-col">
                 <div className="inline-flex items-center gap-1">
@@ -107,10 +108,11 @@ export function ExplorerGalleryItem(props: {
           </div>
           <div className="flex h-full w-full items-center justify-center rounded bg-gray-100 p-1 outline-base-300 checked:transition-none peer-checked:opacity-100 peer-checked:outline  peer-checked:outline-4 peer-checked:outline-offset-[-4px]">
             {preview != null && (
-              <ImageWithPolygons
+              <AnnotatedImage
                 queryContext={queryContext}
+                item={preview}
                 className="group-hover:opacity-30"
-                preview={preview}
+                annotationHash={undefined}
               />
             )}
             <div className="absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100">
@@ -123,6 +125,16 @@ export function ExplorerGalleryItem(props: {
             </div>
           </div>
         </label>
+      */ <div>
+          {preview != null && (
+            <AnnotatedImage
+              queryContext={queryContext}
+              item={preview}
+              className="group-hover:opacity-30"
+              annotationHash={annotationHash}
+            />
+          )}
+        </div>
       }
       actions={[
         <Button
