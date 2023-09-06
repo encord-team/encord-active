@@ -76,12 +76,13 @@ export function ItemPreviewModal(props: {
       title={preview?.data_title ?? ""}
       open={dataId !== undefined}
       onCancel={onClose}
+      width="95vw"
     >
       {preview === undefined ? (
         <Spin indicator={loadingIndicator} />
       ) : (
-        <Row>
-          <Col>
+        <Row className="vh-100 vw-100">
+          <Col span={12}>
             <Row>
               <Table
                 dataSource={metricsList}
@@ -90,7 +91,7 @@ export function ItemPreviewModal(props: {
               />
             </Row>
           </Col>
-          <Col>
+          <Col span={12}>
             <AnnotatedImage
               queryContext={queryContext}
               item={preview}

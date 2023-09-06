@@ -88,6 +88,7 @@ export function Explorer({
     domain: "data",
     metric_key: "metric_random",
   });
+  const [hideExtraAnnotations, setHideExtraAnnotations] = useState(false);
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -396,6 +397,9 @@ export function Explorer({
             onClick={() => setIsAscending(!isAscending)}
             icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
           />
+          <Button onClick={() => setHideExtraAnnotations((v) => !v)}>
+            {hideExtraAnnotations ? "Show annotations" : "Hide annotations"}
+          </Button>
           <Popover
             placement="bottomLeft"
             content={
@@ -510,7 +514,7 @@ export function Explorer({
             similaritySearchDisabled={!hasSimilaritySearch}
             onShowSimilar={() => showSimilarItems(item)}
             selected={selectedItems.has(item)}
-            iou={iou}
+            hideExtraAnnotations={hideExtraAnnotations}
             editUrl={editUrl}
           />
         )}

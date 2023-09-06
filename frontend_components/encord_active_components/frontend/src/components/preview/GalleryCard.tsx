@@ -20,10 +20,10 @@ export function GalleryCard(props: {
   onExpand: () => void;
   onClick: () => void;
   onShowSimilar: () => void;
-  iou?: number;
-  editUrl?:
+  editUrl:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
+  hideExtraAnnotations: boolean;
 }) {
   const {
     projectHash,
@@ -35,8 +35,8 @@ export function GalleryCard(props: {
     onExpand,
     onClick,
     onShowSimilar,
-    iou,
     editUrl,
+    hideExtraAnnotations,
   } = props;
   const dataId = itemId.split("_").slice(0, 2).join("_");
   const annotationHash: string | undefined =
@@ -117,6 +117,7 @@ export function GalleryCard(props: {
               item={preview}
               className="group-hover:opacity-30"
               annotationHash={annotationHash}
+              hideExtraAnnotations={hideExtraAnnotations}
             >
               <div className="absolute z-10 h-full w-full bg-gray-100 bg-opacity-70 opacity-0 hover:opacity-100">
                 <Checkbox

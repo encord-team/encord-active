@@ -9,6 +9,7 @@ export function AnnotatedImage(props: {
   queryContext: QueryContext;
   item: ProjectItem;
   annotationHash: string | undefined;
+  hideExtraAnnotations?: boolean | undefined;
   className?: string | undefined;
   width?: number | undefined;
   height?: number | undefined;
@@ -20,6 +21,7 @@ export function AnnotatedImage(props: {
     queryContext,
     className,
     annotationHash,
+    hideExtraAnnotations,
     children,
     width,
     height,
@@ -93,6 +95,7 @@ export function AnnotatedImage(props: {
           width={contentWidth}
           height={contentHeight}
           annotationHash={annotationHash}
+          hideExtraAnnotations={hideExtraAnnotations ?? false}
         />
       ) : null}
     </figure>
@@ -143,21 +146,45 @@ function AnnotationRenderLayer(props: {
   width: number;
   height: number;
   annotationHash: string | undefined;
+  hideExtraAnnotations: boolean;
 }) {
-  const { objects, layout, width, height, annotationHash } = props;
+  const {
+    objects,
+    layout,
+    width,
+    height,
+    annotationHash,
+    hideExtraAnnotations,
+  } = props;
+
+  const fillOpacity = (select: boolean | undefined): string => {
+    if (select === undefined) {
+      return "20%";
+    }
+    return select ? "60%" : "10%";
+  };
+
+  const strokeOpacity = (select: boolean | undefined): string => "100%";
+
+  const strokeWidth = (select: boolean | undefined): string => {
+    if (select === undefined) {
+      return "2px";
+    }
+    return select ? "4px" : "1px";
+  };
 
   const renderPolygon = (
     poly: AnnotationObjectCommon & AnnotationObjectPolygon,
-    select: boolean
+    select: boolean | undefined
   ) => (
     <polygon
       key={poly.objectHash}
       style={{
-        fillOpacity: select && annotationHash !== undefined ? "50%" : "20%",
+        fillOpacity: fillOpacity(select),
         fill: poly.color,
-        strokeOpacity: select ? "100%" : "40%",
+        strokeOpacity: strokeOpacity(select),
         stroke: poly.color,
-        strokeWidth: select ? "2px" : "1px",
+        strokeWidth: strokeWidth(select),
       }}
       points={Object.values(poly.polygon)
         .map(({ x, y }) => `${x * width},${y * height}`)
@@ -167,20 +194,27 @@ function AnnotationRenderLayer(props: {
 
   const renderPoint = (
     poly: AnnotationObjectCommon & AnnotationObjectPoint,
-    select: boolean
+    select: boolean | undefined
   ) => {
     const { x, y } = poly.point["0"];
 
     return (
       <g key={poly.objectHash}>
-        <circle cx={x * width} cy={y * height} r="5px" fill={poly.color} />
+        <circle
+          cx={x * width}
+          cy={y * height}
+          r="5px"
+          fill={poly.color}
+          fillOpacity={fillOpacity(select)}
+        />
         <circle
           cx={x * width}
           cy={y * height}
           r="7px"
           fill="none"
           stroke={poly.color}
-          strokeWidth="1px"
+          strokeWidth={strokeWidth(select)}
+          strokeOpacity={strokeOpacity(select)}
         />
       </g>
     );
@@ -188,22 +222,29 @@ function AnnotationRenderLayer(props: {
 
   const renderBoundingBox = (
     poly: AnnotationObjectCommon & AnnotationObjectAABB,
-    select: boolean
+    select: boolean | undefined
   ) => (
     <polygon
       key={poly.objectHash}
       style={{
-        fillOpacity: ".40",
+        fillOpacity: fillOpacity(select),
+        fill: poly.color,
+        strokeOpacity: strokeOpacity(select),
         stroke: poly.color,
-        strokeWidth: "4px",
+        strokeWidth: strokeWidth(select),
       }}
       points="" // FIXME:
     />
   );
 
   const renderObject = (object: AnnotationObject) => {
+    if (hideExtraAnnotations && object.objectHash !== annotationHash) {
+      return null;
+    }
     const select =
-      annotationHash === undefined || object.objectHash === annotationHash;
+      annotationHash === undefined
+        ? undefined
+        : object.objectHash === annotationHash;
     if (object.shape === "point") {
       return renderPoint(object, select);
     } else if (object.shape === "polygon") {
