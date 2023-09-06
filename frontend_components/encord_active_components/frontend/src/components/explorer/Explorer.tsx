@@ -29,7 +29,7 @@ import { useAuth } from "../../authContext";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
-import { ExplorerGalleryItem } from "./ExplorerGalleryItem";
+import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
 import { ProjectDomainSummary, SearchFilters } from "../../openapi/api";
 import { QueryContext } from "../../hooks/Context";
@@ -241,7 +241,7 @@ export function Explorer({
     sortedItems?.results ??
     [];
 
-  const toggleImageSelection = (id: Item["id"]) => {
+  const toggleImageSelection = (id: string) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -504,17 +504,19 @@ export function Explorer({
           defaultPageSize: 20,
         }}
         renderItem={(item: string) => (
-          <ExplorerGalleryItem
+          <GalleryCard
             projectHash={projectHash}
             queryContext={queryContext}
             selectedMetric={selectedMetric}
             key={item}
             itemId={item}
+            onClick={() => {}}
             onExpand={() => setPreviewedItem(item)}
             similaritySearchDisabled={!hasSimilaritySearch}
             onShowSimilar={() => showSimilarItems(item)}
             selected={selectedItems.has(item)}
             iou={iou}
+            editUrl={editUrl}
           />
         )}
       />

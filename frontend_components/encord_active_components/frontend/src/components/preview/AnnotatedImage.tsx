@@ -10,8 +10,9 @@ export function AnnotatedImage(props: {
   item: ProjectItem;
   annotationHash: string | undefined;
   className?: string | undefined;
+  children?: React.ReactNode | undefined;
 }) {
-  const { item, queryContext, className, annotationHash } = props;
+  const { item, queryContext, className, annotationHash, children } = props;
   const {
     ref: image,
     width: imageWidth,
@@ -30,6 +31,7 @@ export function AnnotatedImage(props: {
     <figure
       className={"relative" + (className === undefined ? "" : " " + className)}
     >
+      {children}
       {item.timestamp != null ? (
         <video
           ref={video}
