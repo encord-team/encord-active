@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com"];
+const NO_AUTH_PATTERNS = [
+  "ea-sandbox-static",
+  "storage.googleapis.com",
+  "s3.amazonaws.com",
+];
 
 export const useImageSrc = (url: string) =>
   useQuery([url], async () => {
