@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { scaleLinear } from "d3-scale";
 import {
-  ProjectAnalysisDomain, ProjectAnalysisSummary,
+  ProjectAnalysisDomain,
+  ProjectAnalysisSummary,
   ProjectMetricSummary,
   QueryAPI,
 } from "../Types";
@@ -61,20 +62,18 @@ export function ChartMetricCompareScatter(props: {
   const compareSampledData =
     compareProjectHash != null ? compareSampledState.data : null;
   const metricOptions = useMemo(() => {
-    return Object.entries(metricsSummary.metrics).filter(
-        ([metricKey]) => {
-          if (analysisSummary == null) {
-            return true;
-          }
-          const value = analysisSummary.metrics[metricKey];
-          return value == null || value.count > 0;
+    return Object.entries(metricsSummary.metrics)
+      .filter(([metricKey]) => {
+        if (analysisSummary == null) {
+          return true;
         }
-    ).map(
-    ([metricKey, metricData]) => ({
-      value: metricKey,
-      label: metricData.title,
-    })
-  );
+        const value = analysisSummary.metrics[metricKey];
+        return value == null || value.count > 0;
+      })
+      .map(([metricKey, metricData]) => ({
+        value: metricKey,
+        label: metricData.title,
+      }));
   }, [metricsSummary, analysisSummary]);
   useEffect(() => {
     const metrics = new Set(metricOptions.map((v) => v.value));
@@ -90,7 +89,7 @@ export function ChartMetricCompareScatter(props: {
         setYMetric(metricOptions[1]?.value);
       }
     }
-  }, [metricOptions, xMetric, yMetric])
+  }, [metricOptions, xMetric, yMetric]);
 
   const data = useMemo(() => {
     if (sampledData == null) {
@@ -107,9 +106,19 @@ export function ChartMetricCompareScatter(props: {
     <>
       <Space align="center" wrap>
         <Typography.Text strong>X Metric: </Typography.Text>
-        <Select value={xMetric} onChange={setXMetric} options={metricOptions} style={{width: 265}}/>
+        <Select
+          value={xMetric}
+          onChange={setXMetric}
+          options={metricOptions}
+          style={{ width: 265 }}
+        />
         <Typography.Text strong>Y Metric: </Typography.Text>
-        <Select value={yMetric} onChange={setYMetric} options={metricOptions} style={{width: 265}}/>
+        <Select
+          value={yMetric}
+          onChange={setYMetric}
+          options={metricOptions}
+          style={{ width: 265 }}
+        />
         {allowTrend ? (
           <>
             <Typography.Text strong>Show trend: </Typography.Text>

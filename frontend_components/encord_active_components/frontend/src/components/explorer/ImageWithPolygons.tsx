@@ -1,21 +1,18 @@
-import {Item} from "./api";
+import { Item } from "./api";
 import useResizeObserver from "use-resize-observer";
-import {useEffect, useRef, useState} from "react";
-import {apiUrl} from "../../constants";
-import {useImageSrc} from "../../hooks/useImageSrc";
-import {classy} from "../../helpers/classy";
-import {ProjectPreviewItemResult} from "../Types";
-import {Spin} from "antd";
-import {loadingIndicator} from "../Spin";
+import { useEffect, useRef, useState } from "react";
+import { apiUrl } from "../../constants";
+import { useImageSrc } from "../../hooks/useImageSrc";
+import { classy } from "../../helpers/classy";
+import { ProjectPreviewItemResult } from "../Types";
+import { Spin } from "antd";
+import { loadingIndicator } from "../Spin";
 
 export function ImageWithPolygons(props: {
   preview: ProjectPreviewItemResult;
   className: string;
-})  {
-  const {
-    preview,
-    className
-  } = props;
+}) {
+  const { preview, className } = props;
   const {
     ref: image,
     width: imageWidth,
@@ -61,7 +58,7 @@ export function ImageWithPolygons(props: {
       {preview.timestamp != null ? (
         <video
           ref={video}
-          className="object-contain rounded transition-opacity"
+          className="rounded object-contain transition-opacity"
           src={imgSrcUrl}
           muted
           controls={false}
@@ -75,13 +72,13 @@ export function ImageWithPolygons(props: {
       ) : (
         <img
           ref={image}
-          className="object-contain rounded transition-opacity"
+          className="rounded object-contain transition-opacity"
           alt=""
           src={imgSrcUrl}
         />
       )}
       {width && height && polygons.length > 0 && (
-        <svg className="absolute w-full h-full top-0 right-0">
+        <svg className="absolute top-0 right-0 h-full w-full">
           {polygons.map(
             ({ points, boundingBoxPoints, color, shape }, index) => {
               if (shape === "point" && points)
@@ -118,7 +115,7 @@ export function ImageWithPolygons(props: {
                       points={pointsRecordToPolygonPoints(
                         points,
                         width,
-                        height,
+                        height
                       )}
                     />
                   )}
@@ -133,16 +130,16 @@ export function ImageWithPolygons(props: {
                       points={pointsRecordToPolygonPoints(
                         boundingBoxPoints,
                         width,
-                        height,
+                        height
                       )}
                     />
                   )}
                 </g>
               );
-            },
+            }
           )}
         </svg>
       )}
     </figure>
   );
-};
+}

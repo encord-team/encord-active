@@ -1,14 +1,13 @@
-import {TagList} from "./Tagging";
-import {BsCardText} from "react-icons/bs";
-import {FaEdit, FaExpand} from "react-icons/fa";
-import {MdImageSearch} from "react-icons/md";
-import {VscSymbolClass} from "react-icons/vsc";
-import {RiUserLine} from "react-icons/ri";
-import {QueryAPI} from "../Types";
-import {Button, Card, Col, Row, Space, Spin} from "antd";
-import {splitId} from "./id";
-import {ImageWithPolygons} from "./ImageWithPolygons";
-
+import { TagList } from "./Tagging";
+import { BsCardText } from "react-icons/bs";
+import { FaEdit, FaExpand } from "react-icons/fa";
+import { MdImageSearch } from "react-icons/md";
+import { VscSymbolClass } from "react-icons/vsc";
+import { RiUserLine } from "react-icons/ri";
+import { QueryAPI } from "../Types";
+import { Button, Card, Col, Row, Space, Spin } from "antd";
+import { splitId } from "./id";
+import { ImageWithPolygons } from "./ImageWithPolygons";
 
 export function ExplorerGalleryItem(props: {
   projectHash: string;
@@ -32,7 +31,7 @@ export function ExplorerGalleryItem(props: {
     onShowSimilar,
     iou,
   } = props;
-  const { du_hash, frame, annotation_hash} = splitId(itemId);
+  const { du_hash, frame, annotation_hash } = splitId(itemId);
   const { data: preview, isLoading } = queryAPI.useProjectItemPreview(
     projectHash,
     du_hash,
@@ -42,13 +41,16 @@ export function ExplorerGalleryItem(props: {
   const { data: info } = queryAPI.useProjectItemDetails(
     projectHash,
     du_hash,
-    frame,
+    frame
   );
   const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
-  const projectSummaryForDomain = projectSummary == undefined ? {} : projectSummary[selectedMetric.domain].metrics;
+  const projectSummaryForDomain =
+    projectSummary == undefined
+      ? {}
+      : projectSummary[selectedMetric.domain].metrics;
   const { data: projectAnalysisSummary } = queryAPI.useProjectAnalysisSummary(
     projectHash,
-    selectedMetric.domain,
+    selectedMetric.domain
   );
   /*
   const [metricName, value] = Object.entries(data.metadata.metrics).find(
@@ -62,7 +64,8 @@ export function ExplorerGalleryItem(props: {
   const { editUrl } = data;
    */
   const metricName = projectSummaryForDomain[selectedMetric.metric_key].title;
-  const displayValue = info == null ? NaN : info.metrics[selectedMetric.metric_key];
+  const displayValue =
+    info == null ? NaN : info.metrics[selectedMetric.metric_key];
   const editUrl = "FIXME";
   const description = 4;
   const labelClass = "FIXME-LABEL-CLASS";
@@ -71,13 +74,12 @@ export function ExplorerGalleryItem(props: {
   return (
     <Card
       hoverable
-      style={{width: 240}}
-      onClick={() => {
-      }}
+      style={{ width: 240 }}
+      onClick={() => {}}
       loading={isLoading}
-      bodyStyle={{padding: 0}}
+      bodyStyle={{ padding: 0 }}
       cover={
-        <label className="relative h-full group label cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
+        <label className="group label relative h-full cursor-pointer p-0 not-last:z-10 not-last:opacity-0">
           <input
             name={itemId}
             type="checkbox"
@@ -85,32 +87,35 @@ export function ExplorerGalleryItem(props: {
             readOnly
             className="peer checkbox absolute left-2 top-2 checked:!opacity-100 group-hover:opacity-100"
           />
-          <div className="absolute top-2 group-hover:opacity-100 w-full flex justify-center gap-1">
+          <div className="absolute top-2 flex w-full justify-center gap-1 group-hover:opacity-100">
             <span>{metricName}:</span>
             <span>{displayValue}</span>
           </div>
-          <div
-            className="absolute p-2 top-7 pb-8 group-hover:opacity-100 w-full h-5/6 flex flex-col gap-3 overflow-y-auto">
+          <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
             {/*<TagList tags={data.tags} />*/}
             {description && (
               <div className="flex flex-col">
                 <div className="inline-flex items-center gap-1">
-                  <BsCardText className="text-base"/>
+                  <BsCardText className="text-base" />
                   <span>Description:</span>
                 </div>
                 <span>{description}</span>
               </div>
             )}
           </div>
-          <div
-            className="bg-gray-100 p-1 flex justify-center items-center w-full h-full peer-checked:opacity-100 peer-checked:outline peer-checked:outline-offset-[-4px] peer-checked:outline-4 outline-base-300  rounded checked:transition-none">
-            {preview != null && <ImageWithPolygons className="group-hover:opacity-30" preview={preview}/>}
-            <div className="absolute flex gap-2 top-1 right-1 opacity-0 group-hover:opacity-100">
+          <div className="flex h-full w-full items-center justify-center rounded bg-gray-100 p-1 outline-base-300 checked:transition-none peer-checked:opacity-100 peer-checked:outline  peer-checked:outline-4 peer-checked:outline-offset-[-4px]">
+            {preview != null && (
+              <ImageWithPolygons
+                className="group-hover:opacity-30"
+                preview={preview}
+              />
+            )}
+            <div className="absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100">
               <button
                 onClick={(e) => onExpand?.(e)}
                 className="btn btn-square z-20"
               >
-                <FaExpand/>
+                <FaExpand />
               </button>
             </div>
           </div>
@@ -122,26 +127,27 @@ export function ExplorerGalleryItem(props: {
           onClick={onShowSimilar}
           type="text"
           key="similarity-search"
-          icon={<MdImageSearch/>}
+          icon={<MdImageSearch />}
         />,
         <Button
           disabled={editUrl == null}
-          onClick={() => editUrl ? window.open(editUrl.toString(), "_blank") : null}
+          onClick={() =>
+            editUrl ? window.open(editUrl.toString(), "_blank") : null
+          }
           type="text"
           key="edit"
-          icon={<FaEdit/>}
+          icon={<FaEdit />}
         />,
       ]}
     >
       <Row>
-        <VscSymbolClass/>
+        <VscSymbolClass />
         {labelClass}
       </Row>
       <Row>
-        <RiUserLine/>
+        <RiUserLine />
         {annotator}
       </Row>
     </Card>
   );
-
 }

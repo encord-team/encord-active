@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
-from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition
-from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition
+from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
+from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition, MetricType
 from encord_active.db.models import (
     AnnotationType,
     EmbeddingReductionType,
@@ -49,130 +49,175 @@ router.include_router(project2_prediction.router)
 router.include_router(project2_actions.router)
 
 
-class ProjectStats(TypedDict):
-    dataUnits: int
-    labels: int
-    classes: int
-
-
-class ProjectReturn(TypedDict):
+class ProjectSearchEntry(BaseModel):
+    project_hash: uuid.UUID
     title: str
     description: str
-    projectHash: uuid.UUID
-    imageUrl: str
-    imageUrlTimestamp: Optional[float]
-    downloaded: bool
     sandbox: bool
-    stats: Optional[ProjectStats]
 
 
-def _get_first_image_with_polygons_url(project_hash: uuid.UUID) -> Optional[Tuple[str, float]]:
-    with Session(engine) as sess:
-        data_units = sess.exec(
-            select(ProjectDataUnitMetadata).where(ProjectDataUnitMetadata.project_hash == project_hash).limit(100)
-        ).fetchall()
-        for data_unit in data_units:
-            if not data_unit:
-                break
-            preview = display_preview(project_hash=project_hash, du_hash=data_unit.du_hash, frame=data_unit.frame)
-            return preview["url"], preview["timestamp"]
-    return None
+class ProjectSandboxEntry(BaseModel):
+    project_hash: uuid.UUID
+    title: str
+    description: str
+
+    sandbox_url: str
+    data_count: int
+    annotation_count: int
+    class_count: int
+
+
+class ProjectSearchResult(BaseModel):
+    projects: List[ProjectSearchEntry]
+    sandbox_projects: List[ProjectSandboxEntry]
 
 
 @router.get("")
-@cached(cache=TTLCache(maxsize=1, ttl=60 * 1))  # 1 minute TTL Cache
-def get_all_projects() -> Dict[str, ProjectReturn]:
-    # FIXME: revert back to this code!
-    # with Session(engine) as sess:
-    #  projects = sess.exec(select(Project.project_hash, Project.project_name, Project.project_description)).fetchall()
-    # return {
-    #     project_hash: {
-    #         "title": title,
-    #         "description": description,
-    #     }
-    #     for project_hash, title, description in projects
-    # }
-    sandbox_projects = {}
+def get_all_projects() -> ProjectSearchResult:
+    # Load existing projects
+    projects: List[ProjectSearchEntry] = []
+    project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
+    with Session(engine) as sess:
+        project_res = sess.exec(
+            select(Project.project_hash, Project.project_name, Project.project_description).order_by(
+                Project.project_name,
+            )
+        ).fetchall()
+        for project_hash, title, description in project_res:
+            entry = ProjectSearchEntry(
+                project_hash=project_hash,
+                title=title,
+                description=description,
+                sandbox=False
+            )
+            projects.append(entry)
+            project_dict[project_hash] = entry
+
+    # Load sandbox projects
+    sandbox_projects: List[ProjectSandboxEntry] = []
     for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
-        project_hash_uuid = uuid.UUID(data["hash"])
-        sandbox_projects[str(project_hash_uuid)] = ProjectReturn(
+        project_hash = uuid.UUID(data["hash"])
+        if project_hash in project_dict:
+            project_dict[project_hash].sandbox = True
+            continue
+        sandbox_projects.append(ProjectSandboxEntry(
+            project_hash=project_hash,
             title=name,
             description="",
-            projectHash=project_hash_uuid,
-            stats=data["stats"],
-            downloaded=False,
-            imageUrl=f"/ea-sandbox-static/{data['image_filename']}",
-            imageUrlTimestamp=None,
-            sandbox=True,
-        )
+            sandbox_url=f"/ea-sandbox-static/{data['image_filename']}",
+            data_count=data["stats"]["dataUnits"],
+            annotation_count=data["stats"]["labels"],
+            class_count=data["stats"]["classes"],
+        ))
+    sandbox_projects.sort(key=lambda s: s.title)
 
+    return ProjectSearchResult(projects=projects, sandbox_projects=sandbox_projects)
+
+
+class ProjectMetadata(BaseModel):
+    data_count: int
+    annotation_count: int
+    class_count: int
+    preview_du_hash: uuid.UUID
+    preview_frame: int
+
+
+@router.get("/{project_hash}/metadata")
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minute TTL Cache
+def get_project_metadata(project_hash: uuid.UUID) -> ProjectMetadata:
     with Session(engine) as sess:
-        db_projects = sess.exec(
-            select(Project.project_hash, Project.project_name, Project.project_description, Project.project_ontology)
-        ).fetchall()
+        ontology = sess.exec(
+            select(Project.project_ontology).where(Project.project_hash == project_hash)
+        ).first()
+        if ontology is None:
+            raise HTTPException(status_code=404, detail="Project does not exist")
         data_count = sess.exec(
-            select(ProjectDataMetadata.project_hash, sql_count()).group_by(ProjectDataMetadata.project_hash)
-        ).fetchall()
-        data_count_dict = {p: c for p, c in data_count}
+            select(sql_count()).where(ProjectDataMetadata.project_hash == project_hash)
+        ).first()
         annotation_count = sess.exec(
-            select(ProjectAnnotationAnalytics.project_hash, sql_count()).group_by(
-                ProjectAnnotationAnalytics.project_hash
+            select(sql_count()).where(
+                ProjectAnnotationAnalytics.project_hash == project_hash
             )
-        )
-        annotation_count_dict = {p: c for p, c in annotation_count}
-    projects = {}
-    for project_hash, title, description, ontology in db_projects:
-        if str(project_hash) in sandbox_projects:
-            sandbox_projects[str(project_hash)]["downloaded"] = True
-            # TODO: remove me when we can download sandbox projects from the UI
-            sandbox_projects[str(project_hash)]["sandbox"] = False
-            continue
-        url_timestamp = _get_first_image_with_polygons_url(project_hash)
-        url: Optional[str] = None
-        timestamp: Optional[float] = None
-        if url_timestamp is not None:
-            url, timestamp = url_timestamp
-        ontology = OntologyStructure.from_dict(ontology)
-        label_classes = len(ontology.objects) + len(ontology.classifications)  # type: ignore
-        projects[str(project_hash)] = ProjectReturn(
-            title=title,
-            description=description,
-            projectHash=project_hash,
-            stats=ProjectStats(
-                dataUnits=data_count_dict.get(project_hash, 0),
-                labels=annotation_count_dict.get(project_hash, 0),
-                classes=label_classes,
-            ),
-            downloaded=True,
-            imageUrl=url or "",
-            imageUrlTimestamp=timestamp,
-            sandbox=False,
-        )
-    return {**projects, **sandbox_projects}
+        ).first()
+        preview_by_annotate = sess.exec(
+            select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame).where(
+                ProjectAnnotationAnalytics.project_hash == project_hash
+            ).order_by(
+                ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame
+            ).limit(1)
+        ).first()
+        if preview_by_annotate is None:
+            preview_by_annotate = sess.exec(
+                select(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame).where(
+                    ProjectDataAnalytics.project_hash == project_hash
+                ).order_by(
+                    ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame
+                ).limit(1)
+            ).first()
 
+        if preview_by_annotate is None:
+            raise HTTPException(status_code=404, detail="Project contains no data")
+        preview_du_hash, preview_frame = preview_by_annotate
 
-def _metric_summary(metrics: Dict[str, MetricDefinition], fixme_exclude: Optional[Set[str]] = None):
+    return ProjectMetadata(
+        data_count=data_count,
+        annotation_count=annotation_count,
+        class_count=len(ontology["objects"]) + len(ontology["classifications"]),
+        preview_du_hash=preview_du_hash,
+        preview_frame=preview_frame,
+    )
+
+class MetricSummary(BaseModel):
+    title: str
+    short_desc: str
+    lon_desc: str
+    type: MetricType
+
+def _metric_summary(metrics: Dict[str, MetricDefinition], fixme_exclude: Optional[Set[str]] = None) -> Dict[str, MetricSummary]:
     return {
-        metric_name: {
-            "title": metric.title,
-            "short_desc": metric.short_desc,
-            "long_desc": metric.long_desc,
-            "type": metric.type.value,
-        }
+        metric_name: MetricSummary(
+            title=metric.title,
+            short_desc=metric.short_desc,
+            long_desc=metric.long_desc,
+            type=metric.type,
+        )
         for metric_name, metric in metrics.items()
         if fixme_exclude is None or metric_name not in fixme_exclude
     }
 
+class EnumSummary(BaseModel):
+    title: str
+    values: Optional[dict[str, str]]
+    type: EnumType
 
-def _enum_summary(enums: Dict[str, EnumDefinition]):
+def _enum_summary(enums: Dict[str, EnumDefinition]) -> Dict[str, EnumSummary]:
     return {
         enum_name: {
             "title": enum.title,
             "values": enum.values,
-            "type": enum.enum_type.value,
+            "type": enum.enum_type,
         }
         for enum_name, enum in enums.items()
     }
+
+class ProjectDomainSummary(BaseModel):
+    metrics: Dict[str, MetricSummary]
+    enums: Dict[str, EnumSummary]
+
+class ProjectSummary(BaseModel):
+    name: str
+    description: str
+    ontology: dict
+    local_project: bool
+    data: ProjectDomainSummary
+    annotation: ProjectDomainSummary
+    du_count: int
+    frame_count: int
+    annotation_count: int
+    classification_count: int
+    data_annotation: ProjectDomainSummary
+    tags: Dict[uuid.UUID, str]
+    preview: Optional[str]
 
 
 @router.get("/{project_hash}/summary")

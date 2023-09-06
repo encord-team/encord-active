@@ -10,7 +10,11 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useMemo, useState } from "react";
-import {featureHashToColor, formatTooltip, formatTooltipLabel} from "../util/Formatter";
+import {
+  featureHashToColor,
+  formatTooltip,
+  formatTooltipLabel,
+} from "../util/Formatter";
 
 /**
  * Returns data for the average over the input data.
@@ -38,16 +42,14 @@ function getDataAverage(
       const value = lookup[entry.m];
       if (value !== undefined) {
         value.n += entry.n;
-        value.as += (entry.a * entry.n);
+        value.as += entry.a * entry.n;
       } else {
         lookup[entry.m] = { m: entry.m, n: entry.n, as: entry.a * entry.n };
       }
     });
   });
 
-  return Object.values(lookup).map(
-    ({as, n, m}) => ({m, n, a: as / n})
-  );
+  return Object.values(lookup).map(({ as, n, m }) => ({ m, n, a: as / n }));
 }
 
 /**
@@ -192,9 +194,18 @@ export function ChartPredictionMetricPerformanceChart(props: {
         <XAxis
           dataKey="m"
           type={barCharts.length > 1 ? "number" : "category"}
-          domain={barCharts.length > 1 ? [barCharts[0].m, barCharts[barCharts.length -1].m] : undefined}
+          domain={
+            barCharts.length > 1
+              ? [barCharts[0].m, barCharts[barCharts.length - 1].m]
+              : undefined
+          }
           padding="no-gap"
-          label={{ value: scoreLabel, angle: 0, position: "insideBottom", offset: -3 }}
+          label={{
+            value: scoreLabel,
+            angle: 0,
+            position: "insideBottom",
+            offset: -3,
+          }}
           tickFormatter={(value: number) => value.toFixed(2)}
         />
         <YAxis

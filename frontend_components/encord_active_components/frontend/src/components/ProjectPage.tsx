@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {Spin, Tabs} from "antd";
+import { Spin, Tabs } from "antd";
 import {
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
@@ -13,7 +13,7 @@ import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
-import {loadingIndicator} from "./Spin";
+import { loadingIndicator } from "./Spin";
 
 export function ProjectPage(props: {
   queryAPI: QueryAPI;
@@ -51,7 +51,7 @@ export function ProjectPage(props: {
     }
     const procAttribute = (
       a: OntologyObjectAttribute | OntologyObjectAttributeOptions,
-      color: string,
+      color: string
     ) => {
       if ("name" in a) {
         featureHashMap[a.featureNodeHash] = {

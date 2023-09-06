@@ -6,23 +6,20 @@ import {
 } from "@ant-design/plots";
 import { useCallback, useMemo } from "react";
 import { scaleLinear } from "d3-scale";
-import {InternalFilters} from "./Explorer";
-import {ProjectAnalysisReductionResult, QueryAPI} from "../Types";
+import { InternalFilters } from "./Explorer";
+import { ProjectAnalysisReductionResult, QueryAPI } from "../Types";
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
   queryAPI: QueryAPI;
   filters: InternalFilters;
 }) {
-  const {
-    projectHash,
-    filters, queryAPI
-  } = props;
+  const { projectHash, filters, queryAPI } = props;
   const { data: distribution } = queryAPI.useProjectAnalysisDistribution(
     projectHash,
     filters.analysisDomain,
-    filters.orderBy,
-  )
+    filters.orderBy
+  );
 
   const onEvent = useCallback<NonNullable<ColumnConfig["onEvent"]>>(
     (_, { type, view }) => {
@@ -57,14 +54,14 @@ export function MetricDistributionTiny(props: {
   );*/
 
   const data = useMemo(() => {
-    const res = [...distribution?.results ?? []];
-    res.sort((a, b) => a.group as number - (b.group as number));
+    const res = [...(distribution?.results ?? [])];
+    res.sort((a, b) => (a.group as number) - (b.group as number));
     return res as unknown as Record<string, any>[];
-  }, [distribution])
+  }, [distribution]);
 
   return (
     <Column
-      className="w-64 max-h-12"
+      className="max-h-12 w-64"
       autoFit={true}
       data={data}
       columnWidthRatio={1}
@@ -73,7 +70,7 @@ export function MetricDistributionTiny(props: {
       xAxis={false}
       yAxis={false}
       brush={
-        (distribution?.results?.length ?? 0)> 1
+        (distribution?.results?.length ?? 0) > 1
           ? {
               enabled: true,
               type: "x-rect",
@@ -99,33 +96,31 @@ const HEX_BINS = 1000;
 const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export function ScatteredEmbeddings(props: {
-  reductionScatter: ProjectAnalysisReductionResult | undefined,
-  setEmbeddingSelection: (bounds: {
-    x1: number;
-    x2: number;
-    y1: number;
-    y2: number;
-  } | undefined) => void;
+  reductionScatter: ProjectAnalysisReductionResult | undefined;
+  setEmbeddingSelection: (
+    bounds:
+      | {
+          x1: number;
+          x2: number;
+          y1: number;
+          y2: number;
+        }
+      | undefined
+  ) => void;
   onReset: () => void;
 }) {
-  const {
-    reductionScatter,
-    setEmbeddingSelection,
-    onReset,
-  } = props;
+  const { reductionScatter, setEmbeddingSelection, onReset } = props;
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
-    (_, {type, view}) => {
+    (_, { type, view }) => {
       if (["mouseup", "legend-item:click"].includes(type)) {
-        const bbox = view.coordinateBBox
-        setEmbeddingSelection(
-          {
-            x1: bbox.x,
-            x2: bbox.x + bbox.width,
-            y1: bbox.y,
-            y2: bbox.y + bbox.height,
-          }
-        );
+        const bbox = view.coordinateBBox;
+        setEmbeddingSelection({
+          x1: bbox.x,
+          x2: bbox.x + bbox.width,
+          y1: bbox.y,
+          y2: bbox.y + bbox.height,
+        });
       } else if (type === "brush-reset-button:click") {
         onReset();
       }
@@ -137,14 +132,15 @@ export function ScatteredEmbeddings(props: {
     colorField: string;
     color?: Parameters<typeof Scatter>[0]["color"];
   }>(() => {
-    if (false) { // prediction
+    if (false) {
+      // prediction
       return {
         colorField: "score",
         color: (datum) => getColor(datum.score ?? 0),
       };
     }
 
-    return {colorField: "label"};
+    return { colorField: "label" };
   }, []);
 
   return (
@@ -160,22 +156,22 @@ export function ScatteredEmbeddings(props: {
       legend={{
         layout: "vertical",
         position: "right",
-        rail: {size: 20, defaultLength: 200},
+        rail: { size: 20, defaultLength: 200 },
         label: {
           formatter: fixedFormatter,
         },
       }}
-      pointStyle={{fillOpacity: 1}}
-      interactions={[{type: "reset-button", enable: false}]}
+      pointStyle={{ fillOpacity: 1 }}
+      interactions={[{ type: "reset-button", enable: false }]}
       brush={{
         enabled: true,
         mask: {
-          style: {fill: "rgba(255,0,0,0.15)"},
+          style: { fill: "rgba(255,0,0,0.15)" },
         },
       }}
       meta={{
-        x: {formatter: fixedFormatter},
-        y: {formatter: fixedFormatter},
+        x: { formatter: fixedFormatter },
+        y: { formatter: fixedFormatter },
       }}
       onEvent={onEvent}
     />

@@ -13,7 +13,7 @@ export const createAuthContext = () => {
 
   const [sessionToken, setSessionToken] = useSessionStorage<string | null>(
     "token",
-    null,
+    null
   );
 
   const queryToken = useMemo(() => searchParams.get("token"), []);

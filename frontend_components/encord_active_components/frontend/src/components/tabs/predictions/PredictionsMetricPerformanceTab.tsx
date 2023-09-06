@@ -1,8 +1,8 @@
-import {Checkbox, Col, Divider, Row, Select, Slider, Typography} from "antd";
-import {useEffect, useMemo, useState} from "react";
+import { Checkbox, Col, Divider, Row, Select, Slider, Typography } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
-import {useDebounce} from "usehooks-ts";
+import { useDebounce } from "usehooks-ts";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -52,16 +52,17 @@ export function PredictionsMetricPerformanceTab(props: {
 
   useEffect(() => {
     if (selectedMetric == null) {
-      const exists = metricOptions.find(({value}) => "metric_confidence") != null;
+      const exists =
+        metricOptions.find(({ value }) => "metric_confidence") != null;
       if (exists) {
         setSelectedMetric("metric_confidence");
       }
     }
-  }, [selectedMetric, metricOptions])
+  }, [selectedMetric, metricOptions]);
 
   const rawQueryState = useMemo(
-      () => ({ bucketCount, iou, selectedMetric }),
-      [bucketCount, iou, selectedMetric]
+    () => ({ bucketCount, iou, selectedMetric }),
+    [bucketCount, iou, selectedMetric]
   );
   const debounceQueryState = useDebounce(rawQueryState);
   const queryPerformance = queryAPI.useProjectPredictionMetricPerformance(
@@ -82,8 +83,10 @@ export function PredictionsMetricPerformanceTab(props: {
     [featureHashMap]
   );
 
-  const scoreLabel = selectedMetric == null ? "No Metric Selected" :
-    metricsSummary.metrics[selectedMetric]?.title ?? "Unknown";
+  const scoreLabel =
+    selectedMetric == null
+      ? "No Metric Selected"
+      : metricsSummary.metrics[selectedMetric]?.title ?? "Unknown";
 
   return (
     <>
@@ -124,16 +127,16 @@ export function PredictionsMetricPerformanceTab(props: {
       </Row>
       <Row align="middle">
         <Col span={8}>
-        <Typography.Text strong>Class:</Typography.Text>
-        <Select
-          mode="multiple"
-          allowClear
-          value={classList}
-          onChange={setClassList}
-          options={classOptions}
-          style={{ width: "50%" }}
-          bordered={false}
-        />
+          <Typography.Text strong>Class:</Typography.Text>
+          <Select
+            mode="multiple"
+            allowClear
+            value={classList}
+            onChange={setClassList}
+            options={classOptions}
+            style={{ width: "50%" }}
+            bordered={false}
+          />
         </Col>
         <Col span={8}>
           <Typography.Text strong>Show Distribution: </Typography.Text>

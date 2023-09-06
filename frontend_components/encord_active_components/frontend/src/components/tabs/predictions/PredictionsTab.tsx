@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
@@ -50,26 +50,32 @@ export function PredictionsTab(
   }, [predictionHash, allPredictionOptions]);
 
   // No prediction can be selected
-  if (allPredictionOptions != null && allPredictionOptions.length === 0 && predictionHash == null) {
-      return <Typography.Title>No Predictions for Active Project</Typography.Title>
+  if (
+    allPredictionOptions != null &&
+    allPredictionOptions.length === 0 &&
+    predictionHash == null
+  ) {
+    return (
+      <Typography.Title>No Predictions for Active Project</Typography.Title>
+    );
   }
 
   return (
     <>
-        {allPredictionOptions != null && allPredictionOptions.length > 1 ? (
-            <>
-                <Space align="center" wrap>
-                    <Typography.Text strong>Prediction: </Typography.Text>
-                    <Select
-                      value={predictionHash}
-                      options={allPredictionOptions ?? []}
-                      onChange={setPredictionHash}
-                      style={{width: 300}}
-                    />
-                </Space>
-                <Divider />
-            </>
-        ) : null}
+      {allPredictionOptions != null && allPredictionOptions.length > 1 ? (
+        <>
+          <Space align="center" wrap>
+            <Typography.Text strong>Prediction: </Typography.Text>
+            <Select
+              value={predictionHash}
+              options={allPredictionOptions ?? []}
+              onChange={setPredictionHash}
+              style={{ width: 300 }}
+            />
+          </Space>
+          <Divider />
+        </>
+      ) : null}
       {predictionHash === undefined ? null : (
         <Tabs
           items={[

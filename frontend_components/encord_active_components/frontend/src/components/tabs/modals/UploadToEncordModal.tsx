@@ -31,7 +31,7 @@ export function UploadToEncordModal(props: {
       onCancel={close}
       okButtonProps={{
         loading: mutateCreateSubset.isLoading,
-        style: { backgroundColor: "#5555ff" }
+        style: { backgroundColor: "#5555ff" },
       }}
       cancelButtonProps={{ disabled: mutateCreateSubset.isLoading }}
       onOk={() => {

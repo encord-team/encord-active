@@ -5,8 +5,8 @@ import { FaMagic } from "react-icons/fa";
 import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
 import { classy } from "../../helpers/classy";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import {Spin} from "antd";
-import {loadingIndicator} from "../Spin";
+import { Spin } from "antd";
+import { loadingIndicator } from "../Spin";
 
 type SearchFn = API["searchInProject"];
 type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope" | "filters">;
@@ -15,7 +15,7 @@ type Result = Awaited<ReturnType<SearchFn>>;
 export const useSearch = (
   scope: Scope,
   filters: Filters,
-  searchFn: SearchFn,
+  searchFn: SearchFn
 ) => {
   const client = useQueryClient();
 
@@ -29,11 +29,11 @@ export const useSearch = (
       client.cancelQueries(["search"]);
       const res = searchFn(
         { scope, filters, query: search.query, type: search.type },
-        signal,
+        signal
       );
       return res;
     },
-    { enabled: false },
+    { enabled: false }
   );
 
   useEffect(() => {
@@ -64,9 +64,9 @@ export const Assistant = ({
   const [parent, _] = useAutoAnimate();
 
   return (
-    <div ref={parent} className="flex flex-col gap-2 flex-1">
+    <div ref={parent} className="flex flex-1 flex-col gap-2">
       <form
-        className="w-full flex"
+        className="flex w-full"
         onSubmit={(e) => {
           e.preventDefault();
           const query = e.currentTarget["query"] satisfies HTMLInputElement;
@@ -86,7 +86,11 @@ export const Assistant = ({
                 "btn-disabled": isFetching || disabled,
               })}
             >
-              {isFetching ? <Spin indicator={loadingIndicator} /> : <FaMagic className="text-base" />}
+              {isFetching ? (
+                <Spin indicator={loadingIndicator} />
+              ) : (
+                <FaMagic className="text-base" />
+              )}
             </button>
             <input
               name="query"

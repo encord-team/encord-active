@@ -9,7 +9,7 @@ import {
   Scatter,
 } from "recharts";
 import { useMemo, useState } from "react";
-import {featureHashToColor, formatTooltip} from "../util/Formatter";
+import { featureHashToColor, formatTooltip } from "../util/Formatter";
 
 export function ChartPredictionRecallCurve(props: {
   data:
@@ -79,7 +79,13 @@ export function ChartPredictionRecallCurve(props: {
       <ScatterChart className="active-chart">
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="r" name="Recall" type="number" domain={[0.0, 1.0]} />
-        <YAxis dataKey="p" name="Precision" type="number" domain={[0.0, 1.0]} width={150}/>
+        <YAxis
+          dataKey="p"
+          name="Precision"
+          type="number"
+          domain={[0.0, 1.0]}
+          width={150}
+        />
         <Tooltip formatter={formatTooltip} labelFormatter={() => null} />
         <Legend
           onMouseEnter={(e: { value: string }) => setHoverKeyword(e.value)}
@@ -92,9 +98,13 @@ export function ChartPredictionRecallCurve(props: {
                 featureHashMap != null
                   ? featureHashMap[featureHash]?.name ?? featureHash
                   : featureHash;
-              const color = (featureHashMap != null
-                      ? featureHashMap[featureHash]?.color
-                      : null) ?? (featureHash === "" ? "#8884d8" : featureHashToColor(featureHash));
+              const color =
+                (featureHashMap != null
+                  ? featureHashMap[featureHash]?.color
+                  : null) ??
+                (featureHash === ""
+                  ? "#8884d8"
+                  : featureHashToColor(featureHash));
               return (
                 <Scatter
                   name={name}

@@ -1,6 +1,6 @@
 import { Form, Input, Modal } from "antd";
 import { QueryAPI } from "../../Types";
-import {InternalFilters} from "../../explorer";
+import { InternalFilters } from "../../explorer";
 
 export function CreateSubsetModal(props: {
   open: boolean;
@@ -19,7 +19,7 @@ export function CreateSubsetModal(props: {
 
   const mutateCreateSubset = queryAPI.useProjectMutationCreateSubset(
     projectHash,
-    { onSuccess: close },
+    { onSuccess: close }
   );
 
   return (
@@ -41,7 +41,7 @@ export function CreateSubsetModal(props: {
               ...fields,
               filters,
               ids,
-            }),
+            })
           )
           .catch(() => undefined);
       }}

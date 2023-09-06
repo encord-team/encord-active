@@ -68,7 +68,11 @@ export function ChartPredictionMetricVBar(props: {
       width="100%"
       height={100 + Math.max(30 * barData.length, 30)}
     >
-      <BarChart data={formattedBarData} layout="vertical" className="active-chart">
+      <BarChart
+        data={formattedBarData}
+        layout="vertical"
+        className="active-chart"
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <YAxis
           name={metricsSummary != null ? "Metric" : "Class"}

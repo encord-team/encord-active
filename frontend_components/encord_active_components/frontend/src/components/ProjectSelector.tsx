@@ -1,6 +1,6 @@
 import { fork } from "radash";
 import { IntegratedProjectMetadata } from "./IntegratedAPI";
-import {Button, Select, Space} from "antd";
+import { Button, Select, Space } from "antd";
 
 export type Props = {
   projects: readonly IntegratedProjectMetadata[];
@@ -26,20 +26,20 @@ export const ProjectSelector = ({
       <Select
         value={selectedProjectHash}
         onChange={(projectHash) => setSelectedProjectHash(projectHash)}
-        style={{maxWidth: 500}}
+        style={{ maxWidth: 500 }}
         options={[
           {
-            label: 'User Projects',
+            label: "User Projects",
             options: userProjects.map((project) => ({
               label: project.title,
-              value: project.projectHash
+              value: project.projectHash,
             })),
           },
           {
-            label: 'Sandbox Projects',
+            label: "Sandbox Projects",
             options: sandboxProjects.map((project) => ({
               label: project.title,
-              value: project.projectHash
+              value: project.projectHash,
             })),
           },
         ]}

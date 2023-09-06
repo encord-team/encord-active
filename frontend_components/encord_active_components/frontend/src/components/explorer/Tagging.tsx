@@ -40,7 +40,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
 
   const dataItemSet = useMemo(
     () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
-    [itemSet],
+    [itemSet]
   );
 
   const allTags = [...taggedItems].reduce((result, [id, { data, label }]) => {
@@ -75,8 +75,8 @@ export const TaggingDropdown = ({
     <div
       {...rest}
       className={classy(
-        "dropdown dropdown-bottom min-w-fit tooltip tooltip-right",
-        className,
+        "dropdown dropdown-bottom tooltip tooltip-right min-w-fit",
+        className
       )}
       data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
     >
@@ -125,32 +125,29 @@ export const BulkTaggingForm = ({
                 [scope]: [...groupedTags[scope], selected],
               },
             };
-          }),
+          })
         )
       }
       onDeselect={(scope, deselected) =>
         mutate(
-          items.reduce(
-            (payload, id) => {
-              const itemPreviousTags = taggedItems.get(id);
-              if (
-                itemPreviousTags &&
-                itemPreviousTags[scope].includes(deselected)
-              ) {
-                payload.push({
-                  id,
-                  groupedTags: {
-                    ...itemPreviousTags,
-                    [scope]: itemPreviousTags[scope].filter(
-                      (tag) => tag !== deselected,
-                    ),
-                  },
-                });
-              }
-              return payload;
-            },
-            [] as Parameters<typeof mutate>[0],
-          ),
+          items.reduce((payload, id) => {
+            const itemPreviousTags = taggedItems.get(id);
+            if (
+              itemPreviousTags &&
+              itemPreviousTags[scope].includes(deselected)
+            ) {
+              payload.push({
+                id,
+                groupedTags: {
+                  ...itemPreviousTags,
+                  [scope]: itemPreviousTags[scope].filter(
+                    (tag) => tag !== deselected
+                  ),
+                },
+              });
+            }
+            return payload;
+          }, [] as Parameters<typeof mutate>[0])
         )
       }
       selectedTags={selectedTags}
@@ -183,7 +180,7 @@ export const TaggingForm = ({
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
   const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
-    TAG_GROUPS[0],
+    TAG_GROUPS[0]
   );
 
   // NOTE: hack to prevent loosing focus when loading
@@ -195,8 +192,8 @@ export const TaggingForm = ({
       {...rest}
       tabIndex={0}
       className={classy(
-        "dropdown-content card card-compact w-64 p-2 shadow bg-base-100 text-primary-content",
-        className,
+        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
+        className
       )}
     >
       <div className="tabs flex justify-center bg-base-100">

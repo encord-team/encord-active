@@ -1,11 +1,11 @@
-import {Alert, Spin} from "antd";
+import { Alert, Spin } from "antd";
 import { useState } from "react";
 import { useAuth } from "./authContext";
 import { useIntegratedAPI, useProjectsList } from "./components/IntegratedAPI";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
-import {loadingIndicator} from "./components/Spin";
+import { loadingIndicator } from "./components/Spin";
 
 export const App = () => {
   const { data: projects, isLoading, error } = useProjectsList();
@@ -13,12 +13,9 @@ export const App = () => {
     string | undefined
   >();
   const { token } = useAuth();
-  const queryAPI = useIntegratedAPI(token, projects ?? {});
+  const queryAPI = useIntegratedAPI(token, projects?.projects_dict ?? {});
 
-  if (isLoading)
-    return (
-      <Spin indicator={loadingIndicator} />
-    );
+  if (isLoading) return <Spin indicator={loadingIndicator} />;
   if (error?.response && "detail" in error.response?.data)
     return (
       <Alert
@@ -32,7 +29,7 @@ export const App = () => {
   const projectList = Object.values(projects);
 
   return (
-    <div className="p-12 bg-white">
+    <div className="bg-white p-12">
       {selectedProjectHash ? (
         <ErrorBoundary
           message={
@@ -42,13 +39,13 @@ export const App = () => {
           <ProjectPage
             queryAPI={queryAPI}
             projectHash={selectedProjectHash}
-            projects={Object.values(projects)}
+            projects={projects.projects_list}
             setSelectedProjectHash={setSelectedProjectHash}
           />
         </ErrorBoundary>
       ) : (
         <ProjectsPage
-          projects={projectList}
+          projects={projects.projects_list}
           onSelectLocalProject={setSelectedProjectHash}
         />
       )}
