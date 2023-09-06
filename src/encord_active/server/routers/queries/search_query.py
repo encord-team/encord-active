@@ -11,7 +11,8 @@ from encord_active.server.routers.queries.domain_query import (
     DomainTables,
     ProjectFilters,
     ReductionTable,
-    Tables, TagTable,
+    Tables,
+    TagTable,
 )
 
 
@@ -109,9 +110,7 @@ def search_filters(
             compiled_filters.extend(sql_filters)
 
     if len(exists_filters) > 0:
-        compiled_filters.append(
-            select(1).where(*exists_filters).exists()
-        )
+        compiled_filters.append(select(1).where(*exists_filters).exists())
 
     return compiled_filters
 
@@ -133,7 +132,7 @@ def _project_filters(
 def _append_filters(
     tables: DomainTables,
     search: DomainSearchFilters,
-    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]]
+    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]],
 ) -> None:
     # Metric filters
     if len(search.metrics) > 0:

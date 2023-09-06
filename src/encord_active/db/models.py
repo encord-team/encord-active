@@ -2,16 +2,27 @@ import enum
 import os
 from datetime import datetime
 from pathlib import Path
+from sqlite3 import Connection as SqliteConnection
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
-from sqlalchemy import INT, JSON, REAL, SMALLINT, CheckConstraint, Column, BigInteger, Integer, Boolean, TIMESTAMP, \
-    event
+from psycopg2.extensions import connection as pg_connection
+from sqlalchemy import (
+    INT,
+    JSON,
+    REAL,
+    SMALLINT,
+    TIMESTAMP,
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Integer,
+    event,
+)
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 from sqlmodel.sql.sqltypes import GUID, AutoString
-from psycopg2.extensions import connection as pg_connection
-from sqlite3 import Connection as SqliteConnection
 
 from encord_active.db.enums import AnnotationType, AnnotationTypeMaxValue
 from encord_active.db.metrics import (
@@ -41,7 +52,9 @@ def fk_constraint(
 
 
 def field_uuid(primary_key: bool = False, unique: bool = False, nullable: bool = False) -> UUID:
-    return Field(primary_key=primary_key, unique=unique, sa_column=Column(GUID(), nullable=nullable, primary_key=primary_key))
+    return Field(
+        primary_key=primary_key, unique=unique, sa_column=Column(GUID(), nullable=nullable, primary_key=primary_key)
+    )
 
 
 def field_bool(nullable: bool = False) -> float:
@@ -81,6 +94,7 @@ EmbeddingVector = Union[list[float], bytes]
 
 def field_embedding_vector(dim: int, nullable: bool = False) -> EmbeddingVector:
     return Field(sa_column=Column(PGVector(dim), nullable=nullable))
+
 
 """
 Number of custom metrics supported for each table
@@ -157,7 +171,7 @@ class ProjectDataMetadata(SQLModel, table=True):
 
     __table_args__ = (
         fk_constraint(["project_hash"], Project, "project_data_project_fk"),
-        CheckConstraint("num_frames > 0", name="project_data_num_frames_ck")
+        CheckConstraint("num_frames > 0", name="project_data_num_frames_ck"),
     )
 
 
@@ -388,9 +402,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
         "annotate",
         AnnotationMetrics,
         [
-            fk_constraint(
-                ["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "label_project_data_fk"
-            ),
+            fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "label_project_data_fk"),
             fk_constraint(
                 ["project_hash", "annotation_user_id"],
                 ProjectCollaborator,

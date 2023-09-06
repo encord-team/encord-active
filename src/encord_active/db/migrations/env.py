@@ -38,7 +38,7 @@ def process_revision_directives(context, revision, directives):
     raise ValueError(f"{revision}, {directives}")
 
     # Use our-revision-id
-    migration_script.rev_id = '{0:04}'.format(new_rev_id)
+    migration_script.rev_id = "{0:04}".format(new_rev_id)
 
 
 def run_migrations_offline() -> None:

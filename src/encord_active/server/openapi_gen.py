@@ -10,6 +10,7 @@ def generate_openapi_fe_components() -> None:
     import subprocess
     import os
     from unittest.mock import MagicMock
+
     # Path lookup
     src_dir = Path(__file__).parent.parent.parent.resolve()
     fe_dir = src_dir.parent / "frontend_components" / "encord_active_components" / "frontend"
@@ -35,7 +36,7 @@ def generate_openapi_fe_components() -> None:
         "openapi-generator-cli.sh",
         "openapi_generator_cli.sh",
         "openapi-generator-cli",
-        "openapi_generator_cli"
+        "openapi_generator_cli",
     ]:
         openapi_gen_candidate = openapi_gen_root / name
         if openapi_gen_candidate.exists():
@@ -55,15 +56,15 @@ def generate_openapi_fe_components() -> None:
         "-g",
         "typescript-axios",
         "--additional-properties=nullSafeAdditionalProps=true,supportsES6=true,useUnionTypes=true",
-        "--enable-post-process-file"
+        "--enable-post-process-file",
     ]
     command_env = {
         **os.environ,
         "TS_POST_PROCESS_FILE": f"{prettier_module.as_posix()} --write",
-        "OPENAPI_GENERATOR_VERSION": "7.0.0"
+        "OPENAPI_GENERATOR_VERSION": "7.0.0",
     }
     print(f"Running openapi generator: {' '.join(command)}")
-    subprocess.run(' '.join(command), shell=True, check=True, env=command_env)
+    subprocess.run(" ".join(command), shell=True, check=True, env=command_env)
 
 
 if __name__ == "__main__":

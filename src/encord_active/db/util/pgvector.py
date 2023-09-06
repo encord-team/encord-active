@@ -7,7 +7,7 @@ from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import UserDefinedType, BINARY
 
-__all__ = ['PGVector']
+__all__ = ["PGVector"]
 
 
 class PGVectorRaw(UserDefinedType):
@@ -22,13 +22,13 @@ class PGVectorRaw(UserDefinedType):
 
     class comparator_factory(UserDefinedType.Comparator):
         def l2_distance(self, other):
-            return self.op('<->', return_type=Float)(other)
+            return self.op("<->", return_type=Float)(other)
 
         def max_inner_product(self, other):
-            return self.op('<#>', return_type=Float)(other)
+            return self.op("<#>", return_type=Float)(other)
 
         def cosine_distance(self, other):
-            return self.op('<=>', return_type=Float)(other)
+            return self.op("<=>", return_type=Float)(other)
 
 
 class PGVector(TypeDecorator):
@@ -60,10 +60,12 @@ class PGVector(TypeDecorator):
             if np_value.ndim != 1 or np_value.shape != (self.dim,):
                 raise ValueError(f"pgvector with wrong dimension: {np_value.shape}")
             return np_value
+
         if dialect.name == "postgresql":
+
             def process_pg(value: Union[np.ndarray, bytes]) -> str:
                 np_value = as_validated_ndarray(value)
-                return '[' + ','.join([str(float(v)) for v in np_value]) + ']'
+                return "[" + ",".join([str(float(v)) for v in np_value]) + "]"
 
             return process_pg
         else:
@@ -71,7 +73,7 @@ class PGVector(TypeDecorator):
 
             def process_fallback(value: Union[np.ndarray, bytes]) -> bytes:
                 np_value = as_validated_ndarray(value)
-                return bind_other(np_value.tobytes(order='C'))
+                return bind_other(np_value.tobytes(order="C"))
 
             return process_fallback
 
@@ -80,7 +82,7 @@ class PGVector(TypeDecorator):
 
         def process(value: Union[np.ndarray, str, bytes, Binary]) -> bytes:
             if isinstance(value, str):
-                np_value = np.array(value[1:-1].split(','), dtype=np.float64)
+                np_value = np.array(value[1:-1].split(","), dtype=np.float64)
             elif isinstance(value, np.ndarray):
                 np_value = value
             elif isinstance(value, bytes):
@@ -88,5 +90,6 @@ class PGVector(TypeDecorator):
             else:
                 result_value = result_processor(value)
                 np_value = np.frombuffer(result_value, dtype=np.float64)
-            return np_value.tobytes(order='C')
+            return np_value.tobytes(order="C")
+
         return process

@@ -5,12 +5,12 @@ Revises: bcfdfc2f498a
 Create Date: 2023-09-05 14:26:50.014633+01:00
 
 """
-from typing import Dict, Callable
+from typing import Callable, Dict
 
 import sqlalchemy as sa
 import sqlmodel
-from sqlmodel.sql.sqltypes import GUID, AutoString
 from alembic import op
+from sqlmodel.sql.sqltypes import GUID, AutoString
 
 from encord_active.db.util.char8 import Char8
 from encord_active.db.util.pgvector import PGVector
@@ -877,12 +877,7 @@ def downgrade() -> None:
     pass
 
 
-def _sqlite_migrate(
-    from_table: str,
-    to_table: str,
-    rename: Dict[str, str],
-    transform: Dict[str, Callable]
-) -> None:
+def _sqlite_migrate(from_table: str, to_table: str, rename: Dict[str, str], transform: Dict[str, Callable]) -> None:
     results = op.get_bind().execute(f"SELECT * FROM {from_table}").all()
     results_dict = [dict(r) for r in results]
     print(f"{from_table}")
@@ -945,6 +940,5 @@ def migrate_sqlite_database_to_new_schema():
     upgrade_annotation_types("active_project_analytics_annotation")
     upgrade_annotation_types("active_project_prediction_analytics")
     upgrade_annotation_types("active_project_prediction_analytics_false_negatives")
-
 
     # Drop all tables & indices.

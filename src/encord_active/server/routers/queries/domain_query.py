@@ -44,10 +44,7 @@ class DomainTables(BaseModel):
     def select_args(
         self, table: Union[AnalyticsTable, MetadataTable, ReductionTable]
     ) -> Union[Tuple[uuid.UUID, int], Tuple[uuid.UUID, int, str]]:
-        return tuple([  # type: ignore
-            getattr(table, arg)
-            for arg in self.join
-        ])
+        return tuple([getattr(table, arg) for arg in self.join])  # type: ignore
 
 
 class Tables(BaseModel):
@@ -74,7 +71,7 @@ _DOMAIN_DATA = DomainTables(
     join=["du_hash", "frame"],
     metrics=DataMetrics,
     enums=DataEnums,
-    domain="data"
+    domain="data",
 )
 
 _DOMAIN_PREDICTION_TP_FP = DomainTables(
@@ -85,7 +82,7 @@ _DOMAIN_PREDICTION_TP_FP = DomainTables(
     join=["du_hash", "frame", "annotation_hash"],
     metrics=AnnotationMetrics,
     enums=AnnotationEnums,
-    domain="annotation"
+    domain="annotation",
 )
 
 _DOMAIN_PREDICTION_FN_FIXME = DomainTables(  # FIXME: whole table is mostly wrong - we want to make decision on table
@@ -105,11 +102,7 @@ TABLES_DATA = Tables(
     annotation=_DOMAIN_DATA,
     primary=_DOMAIN_DATA,
 )
-TABLES_ANNOTATION = Tables(
-    data=_DOMAIN_DATA,
-    annotation=_DOMAIN_ANNOTATION,
-    primary=_DOMAIN_ANNOTATION
-)
+TABLES_ANNOTATION = Tables(data=_DOMAIN_DATA, annotation=_DOMAIN_ANNOTATION, primary=_DOMAIN_ANNOTATION)
 
 # FIXME: this is incorrect (join prediction against project hash is harder)
 # FIXME: change prediction_hash & project_hash to be more hardcoded!!

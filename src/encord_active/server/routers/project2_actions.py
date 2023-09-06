@@ -37,9 +37,7 @@ class CreateProjectSubsetPostAction(BaseModel):
 
 @router.post("/create_project_subset")
 def create_active_subset(
-    project_hash: uuid.UUID,
-    item: CreateProjectSubsetPostAction,
-    engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, item: CreateProjectSubsetPostAction, engine: Engine = Depends(dep_engine)
 ) -> None:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
@@ -190,9 +188,7 @@ class UploadProjectToEncordPostAction(BaseModel):
 
 @router.post("/upload_to_encord")
 def upload_project_to_encord(
-    project_hash: uuid.UUID,
-    item: UploadProjectToEncordPostAction,
-    engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, item: UploadProjectToEncordPostAction, engine: Engine = Depends(dep_engine)
 ) -> None:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()

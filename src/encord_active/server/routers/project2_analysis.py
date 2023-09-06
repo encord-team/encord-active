@@ -72,7 +72,7 @@ def metric_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> metric_query.QuerySummary:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -100,7 +100,7 @@ def metric_search(
     desc: bool = False,
     offset: int = 0,
     limit: int = 1000,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
     base_table = tables.primary
@@ -240,7 +240,10 @@ def get_2d_embedding_summary(
         print(f"DEBUG SMORE: {results}")
     return Query2DEmbedding(
         count=sum(n for x, y, n in results),
-        reductions=[metric_query.QueryScatterPoint(x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n) for x, y, n in results],
+        reductions=[
+            metric_query.QueryScatterPoint(x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n)
+            for x, y, n in results
+        ],
     )
 
 
@@ -253,10 +256,7 @@ def _get_similarity_query(
     tables = _get_metric_domain_tables(domain)
     base_domain: DomainTables = tables.primary
     with Session(engine) as sess:
-        query = select(
-            base_domain.metadata.embedding_clip,
-            *base_domain.select_args(base_domain.metadata)
-        ).where(
+        query = select(base_domain.metadata.embedding_clip, *base_domain.select_args(base_domain.metadata)).where(
             # FIXME: will break for nearest embedding on predictions
             base_domain.metadata.project_hash == project_hash,  # type: ignore
             is_not(base_domain.metadata.embedding_clip, None),
@@ -272,7 +272,7 @@ def search_similarity(
     domain: AnalysisDomain,
     embedding: Literal["embedding_clip"],
     similarity_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item),
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
     limit = 50
@@ -288,9 +288,7 @@ def search_similarity(
 
     with Session(engine) as sess:
         src_embedding = sess.exec(
-            select(
-                base_domain.metadata.embedding_clip
-            ).where(
+            select(base_domain.metadata.embedding_clip).where(
                 base_domain.metadata.project_hash == project_hash,
                 *[
                     getattr(base_domain.metadata, join_attr) == join_attr_set[join_attr]
@@ -301,19 +299,25 @@ def search_similarity(
         if src_embedding is None:
             raise ValueError("Source entry does not exist or missing embedding")
 
-        if engine.dialect.name == 'postgresql':
-            pg_query = select(
-                base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
-                *base_domain.select_args(base_domain.metadata),
-            ).where(
-                base_domain.metadata.project_hash == project_hash,
-                functools.reduce(lambda a, b: a | b, [
-                    getattr(base_domain.metadata, join_attr) != join_attr_set[join_attr]
-                    for join_attr in base_domain.join
-                ])
-            ).order_by(
-                "similarity"
-            ).limit(limit)
+        if engine.dialect.name == "postgresql":
+            pg_query = (
+                select(
+                    base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
+                    *base_domain.select_args(base_domain.metadata),
+                )
+                .where(
+                    base_domain.metadata.project_hash == project_hash,
+                    functools.reduce(
+                        lambda a, b: a | b,
+                        [
+                            getattr(base_domain.metadata, join_attr) != join_attr_set[join_attr]
+                            for join_attr in base_domain.join
+                        ],
+                    ),
+                )
+                .order_by("similarity")
+                .limit(limit)
+            )
             pg_results = sess.exec(pg_query).fetchall()
             return [
                 similarity_query.pack_similarity_result(tuple(similarity_item), similarity)
@@ -334,7 +338,7 @@ def compare_metric_dissimilarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     compare_project_hash: uuid.UUID,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> MetricDissimilarityResult:
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.primary

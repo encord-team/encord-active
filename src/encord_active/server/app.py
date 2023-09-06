@@ -32,7 +32,7 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
         get_settings().ALLOWED_ORIGIN,
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://localhost:5173/"
+        "http://localhost:5173/",
     ]
 
     is_dev = get_settings().ENV == Env.DEVELOPMENT
@@ -51,7 +51,9 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
             logger.error(f" {frontend_build_path} does not exist...")
             raise RuntimeError("Bad encord-active install, frontend-components are missing!!")
 
-        app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets")
+        app.mount(
+            "/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets"
+        )
 
         @app.get("/")
         @app.get("/index.html")

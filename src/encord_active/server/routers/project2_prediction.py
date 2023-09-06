@@ -45,9 +45,7 @@ from encord_active.server.routers.queries.search_query import (
 
 
 def dep_check_project_prediction_hash_match(
-    project_hash: uuid.UUID,
-    prediction_hash: uuid.UUID,
-    engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, prediction_hash: uuid.UUID, engine: Engine = Depends(dep_engine)
 ):
     with Session(engine) as sess:
         exists = (
@@ -64,7 +62,7 @@ def dep_check_project_prediction_hash_match(
 
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
-    dependencies=[Depends(dep_check_project_prediction_hash_match)]
+    dependencies=[Depends(dep_check_project_prediction_hash_match)],
 )
 
 
@@ -136,7 +134,7 @@ def get_project_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> PredictionSummaryResult:
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
@@ -571,7 +569,7 @@ def prediction_metric_performance(
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
