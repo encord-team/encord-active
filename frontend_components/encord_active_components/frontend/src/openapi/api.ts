@@ -564,7 +564,15 @@ export interface ProjectItem {
    * @type {{ [key: string]: number | undefined; }}
    * @memberof ProjectItem
    */
-  metrics: { [key: string]: number | undefined };
+  data_metrics: { [key: string]: number | undefined };
+  /**
+   *
+   * @type {{ [key: string]: { [key: string]: number | undefined; } | undefined; }}
+   * @memberof ProjectItem
+   */
+  annotation_metrics: {
+    [key: string]: { [key: string]: number | undefined } | undefined;
+  };
   /**
    *
    * @type {Array<object>}

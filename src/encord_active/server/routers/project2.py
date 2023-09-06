@@ -450,7 +450,8 @@ def display_preview(
 
 
 class ProjectItem(BaseModel):
-    metrics: Dict[str, Optional[float]]
+    data_metrics: Dict[str, Optional[float]]
+    annotation_metrics: Dict[str, Dict[str, Optional[float]]]
     objects: list[dict]
     classifications: list[dict]
     dataset_title: str
@@ -502,7 +503,7 @@ def project_item(
                 ProjectDataAnalytics.frame == frame,
             )
         ).first()
-        object_analytics = sess.exec(
+        annotation_analytics_list = sess.exec(
             select(ProjectAnnotationAnalytics).where(
                 ProjectAnnotationAnalytics.project_hash == project_hash,
                 ProjectAnnotationAnalytics.du_hash == du_hash,
@@ -536,7 +537,13 @@ def project_item(
         timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
 
     return ProjectItem(
-        metrics={k: getattr(du_analytics, k) for k in DataMetrics},
+        data_metrics={k: getattr(du_analytics, k) for k in DataMetrics},
+        annotation_metrics={
+            annotation_analytics.annotation_hash: {
+                k: getattr(annotation_analytics, k) for k in AnnotationMetrics
+            }
+            for annotation_analytics in annotation_analytics_list
+        },
         objects=du_meta.objects,
         classifications=du_meta.classifications,
         dataset_title=data_meta.dataset_title,

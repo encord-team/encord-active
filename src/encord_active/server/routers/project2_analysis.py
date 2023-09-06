@@ -120,7 +120,7 @@ def metric_search(
             if order_by in base_table.metrics or order_by in base_table.enums:
                 order_by_attr = getattr(base_table.analytics, order_by)
                 if desc:
-                    order_by_attr.desc()
+                    order_by_attr = order_by_attr.desc()
                 query = query.order_by(order_by_attr)
 
         # + 1 to detect truncation.

@@ -8,7 +8,7 @@ import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
-import { AnnotatedImage } from "../preview/AnnotatedImage";
+import { AnnotatedImage } from "./AnnotatedImage";
 import { useMemo } from "react";
 
 export function GalleryCard(props: {
@@ -40,7 +40,8 @@ export function GalleryCard(props: {
     editUrl,
   } = props;
   const dataId = itemId.split("_").slice(0, 2).join("_");
-  const annotationHash: string | undefined = itemId.split("_")[2];
+  const annotationHash: string | undefined =
+    selectedMetric.domain === "annotation" ? itemId.split("_")[2] : undefined;
   const { data: preview, isLoading } = useProjectDataItem(
     queryContext,
     projectHash,
@@ -56,25 +57,30 @@ export function GalleryCard(props: {
     projectHash,
     selectedMetric.domain
   );
-  /*
-  const [metricName, value] = Object.entries(data.metadata.metrics).find(
-    ([metric, _]) =>
-      metric.toLowerCase() === selectedMetric?.name.toLowerCase(),
-  ) || [selectedMetric?.name, ""];
-  const [intValue, floatValue] = [parseInt(value), parseFloat(value)];
-  const displayValue =
-    intValue === floatValue ? intValue : parseFloat(value).toFixed(4);
-  const { description } = data.metadata.metrics;
-  const { editUrl } = data;
-   */
+
+  // Metric name for order by metric
   const metricName =
     projectSummaryForDomain === undefined
       ? "unknown"
       : projectSummaryForDomain[selectedMetric.metric_key]?.title ?? "unknown";
-  //const displayValue =
-  //  info == null ? NaN : info.metrics[selectedMetric.metric_key];
-  const displayValue = 0.5;
-  const description = 4;
+
+  // Metric value for order by metric
+  const displayValueData =
+    preview === undefined
+      ? NaN
+      : preview.data_metrics[selectedMetric.metric_key] ?? NaN;
+  const displayValueAnnotationMetricsDict =
+    preview === undefined
+      ? {}
+      : preview.annotation_metrics[annotationHash ?? ""] ?? {};
+  const displayValueAnnotation =
+    displayValueAnnotationMetricsDict[selectedMetric.metric_key] ?? NaN;
+  const displayValue =
+    selectedMetric.domain === "annotation"
+      ? displayValueAnnotation
+      : displayValueData;
+
+  const description = "FIXME_DESCRIPTION";
   const labelObject = useMemo(() => {
     if (annotationHash === undefined || preview === undefined) {
       return undefined;
@@ -125,7 +131,7 @@ export function GalleryCard(props: {
                   onChange={() => {}}
                 />
                 <Typography.Text className="absolute top-2">
-                  {metricName}: {displayValue}
+                  {metricName}: {displayValue.toFixed(5)}
                 </Typography.Text>
                 <Button
                   className="absolute top-2 right-2 bg-white"
