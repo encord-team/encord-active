@@ -8,10 +8,13 @@ import { Button, Card, Row } from "antd";
 import { QueryAPI } from "../Types";
 import { splitId } from "./id";
 import { ImageWithPolygons } from "./ImageWithPolygons";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 
 export function ExplorerGalleryItem(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   itemId: string;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
@@ -22,7 +25,7 @@ export function ExplorerGalleryItem(props: {
 }) {
   const {
     projectHash,
-    queryAPI,
+    queryContext,
     itemId,
     selected,
     selectedMetric,
@@ -32,23 +35,26 @@ export function ExplorerGalleryItem(props: {
     iou,
   } = props;
   const { du_hash, frame, annotation_hash } = splitId(itemId);
-  const { data: preview, isLoading } = queryAPI.useProjectItemPreview(
+  const { data: preview, isLoading } = useProjectItemPreview(
+    queryContext,
     projectHash,
     du_hash,
     frame,
     annotation_hash
   );
-  const { data: info } = queryAPI.useProjectItemDetails(
+  const { data: info } = useProjectItemDetails(
+    queryContext,
     projectHash,
     du_hash,
     frame
   );
-  const { data: projectSummary } = queryAPI.useProjectSummary(projectHash);
+  const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
   const projectSummaryForDomain =
     projectSummary == undefined
       ? {}
       : projectSummary[selectedMetric.domain].metrics;
-  const { data: projectAnalysisSummary } = queryAPI.useProjectAnalysisSummary(
+  const { data: projectAnalysisSummary } = useProjectAnalysisSummary(
+    queryContext,
     projectHash,
     selectedMetric.domain
   );

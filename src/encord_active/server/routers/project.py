@@ -102,8 +102,6 @@ from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     fetch_prebuilt_project,
 )
 from encord_active.server.dependencies import (
-    ProjectFileStructureDep,
-    engine,
     verify_premium,
 )
 from encord_active.server.routers.project2 import get_all_projects
@@ -123,7 +121,7 @@ router = APIRouter(
 
 @router.post("/{project}/item_ids_by_metric", response_class=ORJSONResponse)
 def read_item_ids(
-    project: ProjectFileStructureDep,
+    project: int,
     scope: Annotated[MetricScope, Body()],
     sort_by_metric: Annotated[str, Body()],
     filters: Filters = Filters(),
@@ -216,7 +214,7 @@ def server_local_fs_file(project: uuid.UUID, lr_hash: str, du_hash: str, frame: 
     return display_raw_file(project_hash=project, du_hash=uuid.UUID(du_hash), frame=frame)
 
 
-def append_tags_to_row(project: ProjectFileStructureDep, row: dict):
+def append_tags_to_row(project: None, row: dict):
     project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
     _, du_hash_str, frame_str, *annotation_hashes = row["identifier"].split("_")
     du_hash = uuid.UUID(du_hash_str)
@@ -293,7 +291,7 @@ class ItemTags(BaseModel):
 
 
 @router.put("/{project}/item_tags")
-def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
+def tag_items(project: None, payload: List[ItemTags]):
     with Session(engine) as sess:
         project_hash = uuid.UUID(project.load_project_meta()["project_hash"])
 
@@ -406,14 +404,14 @@ def tag_items(project: ProjectFileStructureDep, payload: List[ItemTags]):
 
 
 @router.get("/{project}/has_similarity_search")
-def get_has_similarity_search(project: ProjectFileStructureDep, embedding_type: EmbeddingType):
+def get_has_similarity_search(project: None, embedding_type: EmbeddingType):
     finder = get_similarity_finder(embedding_type, project)
     return finder.index_available
 
 
 @router.get("/{project}/similarities/{id}")
 def get_similar_items(
-    project: ProjectFileStructureDep, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None
+    project: None, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None
 ):
     finder = get_similarity_finder(embedding_type, project)
     if embedding_type == EmbeddingType.IMAGE:
@@ -479,7 +477,7 @@ def get_available_metrics(
 
 
 @router.get("/{project}/prediction_types")
-def get_available_prediction_types(project: ProjectFileStructureDep):
+def get_available_prediction_types(project: None):
     if check_model_prediction_availability(project.predictions):
         return [
             MainPredictionType.OBJECT
@@ -496,7 +494,7 @@ def get_available_prediction_types(project: ProjectFileStructureDep):
 
 @router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
 def get_2d_embeddings(
-    project: ProjectFileStructureDep, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
+    project: None, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
 ):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
 
@@ -584,7 +582,7 @@ def get_ids(ids_column: IndexOrSeries, scope: Optional[MetricScope] = None):
 
 @router.post("/{project}/search", dependencies=[Depends(verify_premium)])
 def search(
-    project: ProjectFileStructureDep,
+    project: None,
     type: Annotated[SearchType, Form()],
     filters: Annotated[str, Form()] = "",
     query: Annotated[Optional[str], Form()] = None,
@@ -645,7 +643,7 @@ class CreateSubsetJSON(BaseModel):
 
 
 @router.post("/{project}/create_subset")
-def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateSubsetJSON):
+def create_subset(curr_project_structure: None, item: CreateSubsetJSON):
     if get_settings().ENV == "sandbox":
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN, detail="Subsetting is not allowed in the current environment"
@@ -860,7 +858,7 @@ class UploadToEncordModel(BaseModel):
 
 @router.post("/{project}/upload_to_encord")
 def upload_to_encord(
-    pfs: ProjectFileStructureDep,
+    pfs: None,
     item: UploadToEncordModel,
 ):
     if get_settings().ENV in ["sandbox", "production"]:

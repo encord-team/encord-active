@@ -11,20 +11,22 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  ProjectAnalysisDomain,
-  ProjectAnalysisSummary,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { formatTooltip } from "../util/Formatter";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import {
+  AnalysisDomain,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../openapi/api";
 
 export function ChartDistributionBar(props: {
-  metricsSummary: ProjectMetricSummary;
-  analysisSummary?: undefined | ProjectAnalysisSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  analysisSummary?: undefined | QuerySummary;
+  analysisDomain: AnalysisDomain;
   projectHash: string;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -32,7 +34,7 @@ export function ChartDistributionBar(props: {
 }) {
   const {
     projectHash,
-    queryAPI,
+    queryContext,
     metricsSummary,
     analysisSummary,
     analysisDomain,
@@ -51,12 +53,12 @@ export function ChartDistributionBar(props: {
         return value == null || value.count > 0;
       })
       .map(([metricKey, metric]) => ({
-        label: metric.title,
+        label: metric?.title ?? metricKey,
         value: metricKey,
       }));
     Object.entries(metricsSummary.enums).forEach(([enumName, enumMeta]) => {
       properties.push({
-        label: enumMeta.title,
+        label: enumMeta?.title ?? enumName,
         value: enumName,
       });
     });
@@ -66,10 +68,13 @@ export function ChartDistributionBar(props: {
     undefined | string
   >();
 
-  const groupingData = queryAPI.useProjectAnalysisDistribution(
+  const groupingData = useProjectAnalysisDistribution(
+    queryContext,
     projectHash,
     analysisDomain,
     selectedProperty ?? "",
+    undefined,
+    undefined,
     { enabled: selectedProperty !== undefined }
   );
 
@@ -83,7 +88,7 @@ export function ChartDistributionBar(props: {
     }
     let getFill: (score: number) => string = () => "#ffa600";
     const results = [...groupingData.data.results];
-    let keyValues: Readonly<Record<string, string>> = {};
+    let keyValues: Readonly<Record<string, string | undefined>> | undefined;
     if (!isMetric) {
       results.sort((a, b) => b.count - a.count);
       const median = results[(results.length / 2) | 0];
@@ -95,24 +100,26 @@ export function ChartDistributionBar(props: {
         selectedProperty != null
           ? metricsSummary.enums[selectedProperty]
           : null;
-      if (enumEntry != null && "values" in enumEntry) {
+      if (enumEntry != null) {
         keyValues = enumEntry.values;
       }
     } else {
       results.sort((a, b) => Number(a.group) - Number(b.group));
     }
-    const getGroupName = (group: string | number): string => {
+    const getGroupName = (group: string | number): string | number => {
       console.log("ke", keyValues, selectedProperty, group);
       if (selectedProperty === "feature_hash") {
         return featureHashMap[group]?.name ?? group;
-      } else {
+      } else if (keyValues !== undefined) {
         return keyValues[group] ?? group;
+      } else {
+        return group;
       }
     };
 
     return results.map((grouping) => ({
       ...grouping,
-      group: getGroupName(grouping.group),
+      group: getGroupName(isMetric ? Number(grouping.group) : grouping.group),
       fill: getFill(grouping.count),
     }));
   }, [featureHashMap, groupingData.data, isMetric, selectedProperty]);
@@ -122,9 +129,11 @@ export function ChartDistributionBar(props: {
       barData.find((candidate) => Number(candidate.group) >= value)?.group
     );
 
-  const allMetricsSummary = queryAPI.useProjectAnalysisSummary(
+  const allMetricsSummary = useProjectAnalysisSummary(
+    queryContext,
     projectHash,
     analysisDomain,
+    undefined,
     { enabled: isMetric && showQuartiles }
   );
   const metadata =
@@ -150,29 +159,26 @@ export function ChartDistributionBar(props: {
   }, [selectedProperty, allProperties]);
 
   // Correct layout for reference line
-  const referenceLines = (
-    metadata: ProjectAnalysisSummary["metrics"][string]
-  ) => {
-    const lineQ1 = lookupGrouping(metadata.q1);
-    const lineMedian = lookupGrouping(metadata.median);
-    const lineQ3 = lookupGrouping(metadata.q3);
+  const referenceLines = (metadata: QuerySummary["metrics"][string]) => {
+    const lineQ1 = lookupGrouping(metadata?.q1 ?? 0.0);
+    const lineMedian = lookupGrouping(metadata?.median ?? 0.0);
+    const lineQ3 = lookupGrouping(metadata?.q3 ?? 0.0);
 
     return (
       <>
         <ReferenceLine
-          label={
-            `Q1${ 
+          label={`Q1${
             lineQ1 === lineMedian
-              ? `, Median${  lineQ3 === lineMedian ? ", Q3" : ""}`
-              : ""}`
-          }
+              ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
+              : ""
+          }`}
           stroke="black"
           strokeDasharray="3 3"
           x={lineQ1}
         />
         {lineQ1 !== lineMedian ? (
           <ReferenceLine
-            label={`Median${  lineQ3 === lineMedian ? ", Q3" : ""}`}
+            label={`Median${lineQ3 === lineMedian ? ", Q3" : ""}`}
             stroke="black"
             strokeDasharray="3 3"
             x={lineMedian}

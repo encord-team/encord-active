@@ -8,12 +8,12 @@ import numpy as np
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
-from sqlalchemy import func, Numeric, Integer
+from sqlalchemy import func, Numeric
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
-from encord_active.server.dependencies import DataOrAnnotateItem, parse_data_or_annotate_item
-from encord_active.server.routers.project2_engine import engine
+from encord_active.server.dependencies import DataOrAnnotateItem, parse_data_or_annotate_item, dep_engine
 from encord_active.server.routers.queries import (
     metric_query,
     search_query,
@@ -72,6 +72,7 @@ def metric_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine)
 ) -> metric_query.QuerySummary:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -99,6 +100,7 @@ def metric_search(
     desc: bool = False,
     offset: int = 0,
     limit: int = 1000,
+    engine: Engine = Depends(dep_engine)
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
     base_table = tables.primary
@@ -145,6 +147,7 @@ def scatter_2d_data_metric(
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(1000),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryScatter:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -166,6 +169,7 @@ def get_metric_distribution(
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryDistribution:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -193,6 +197,7 @@ def get_2d_embedding_summary(
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine),
 ) -> Query2DEmbedding:
     tables = _get_metric_domain_tables(domain)
     domain_tables = tables.primary
@@ -240,7 +245,11 @@ def get_2d_embedding_summary(
 
 
 @functools.lru_cache(maxsize=2)
-def _get_similarity_query(project_hash: uuid.UUID, domain: AnalysisDomain) -> similarity_query.SimilarityQuery:
+def _get_similarity_query(
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    engine: Engine,
+) -> similarity_query.SimilarityQuery:
     tables = _get_metric_domain_tables(domain)
     base_domain: DomainTables = tables.primary
     with Session(engine) as sess:
@@ -263,6 +272,7 @@ def search_similarity(
     domain: AnalysisDomain,
     embedding: Literal["embedding_clip"],
     similarity_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item),
+    engine: Engine = Depends(dep_engine)
 ) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
     limit = 50
@@ -311,7 +321,7 @@ def search_similarity(
             ]
 
     # Return via fallback methods (sqlite & similar)
-    similarity_query_impl = _get_similarity_query(project_hash, domain)
+    similarity_query_impl = _get_similarity_query(project_hash, domain, engine)
     return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=limit)
 
 
@@ -324,6 +334,7 @@ def compare_metric_dissimilarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     compare_project_hash: uuid.UUID,
+    engine: Engine = Depends(dep_engine)
 ) -> MetricDissimilarityResult:
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.primary

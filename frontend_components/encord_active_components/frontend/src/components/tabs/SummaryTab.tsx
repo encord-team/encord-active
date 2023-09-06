@@ -9,24 +9,22 @@ import {
 } from "@ant-design/icons";
 import { isEmpty } from "radash";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
-import {
-  ProjectAnalysisDomain,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { ChartDistributionBar } from "../charts/ChartDistributionBar";
 import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
 
-const AnalysisDomainToName: Record<ProjectAnalysisDomain, string> = {
+const AnalysisDomainToName: Record<AnalysisDomain, string> = {
   data: "Frames",
   annotation: "Annotations",
 };
 
 export function SummaryTab(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
-  metricsSummary: ProjectMetricSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  queryContext: QueryContext;
+  metricsSummary: ProjectDomainSummary;
+  analysisDomain: AnalysisDomain;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -34,12 +32,13 @@ export function SummaryTab(props: {
 }) {
   const {
     projectHash,
-    queryAPI,
+    queryContext,
     metricsSummary,
     analysisDomain,
     featureHashMap,
   } = props;
-  const summary = queryAPI.useProjectAnalysisSummary(
+  const summary = useProjectAnalysisSummary(
+    queryContext,
     projectHash,
     analysisDomain
   );
@@ -52,13 +51,13 @@ export function SummaryTab(props: {
         return [0, 0, 0];
       }
       const severe = Object.values(data.metrics)
-        .map((metric) => metric.severe)
+        .map((metric) => metric?.severe ?? 0)
         .reduce((a, b) => a + b);
       const moderate = Object.values(data.metrics)
-        .map((metric) => metric.moderate)
+        .map((metric) => metric?.moderate ?? 0)
         .reduce((a, b) => a + b);
       const metrics = Object.values(data.metrics).filter(
-        (metric) => metric.severe > 0 || metric.moderate > 0
+        (metric) => (metric?.severe ?? 0) > 0 || (metric?.moderate ?? 0) > 0
       ).length;
 
       return [severe, moderate, metrics];
@@ -118,7 +117,7 @@ export function SummaryTab(props: {
         {data == null ||
         ("metric_width" in data.metrics &&
           "metric_height" in data.metrics &&
-          data.metrics.metric_height.count > 0) ? (
+          (data.metrics["metric_height"]?.count ?? 0) > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"
@@ -156,7 +155,7 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryAPI={queryAPI}
+          queryContext={queryContext}
           allowTrend
         />
       </Card>
@@ -169,7 +168,7 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryAPI={queryAPI}
+          queryContext={queryContext}
           featureHashMap={featureHashMap}
         />
       </Card>

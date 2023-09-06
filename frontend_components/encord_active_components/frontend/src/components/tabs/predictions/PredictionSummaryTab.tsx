@@ -3,14 +3,16 @@ import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBar";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionRecallCurve } from "../../charts/ChartPredictionRecallCurve";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { QueryContext } from "../../../hooks/Context";
+import { useProjectPredictionSummary } from "../../../hooks/queries/useProjectPredictionSummary";
 
 export function PredictionSummaryTab(props: {
-  metricsSummary: ProjectMetricSummary;
+  metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -20,13 +22,14 @@ export function PredictionSummaryTab(props: {
     metricsSummary,
     predictionHash,
     projectHash,
-    queryAPI,
+    queryContext,
     featureHashMap,
   } = props;
   const [iou, setIOU] = useState(0.5);
   const debounceIOU = useDebounce(iou, 1000);
 
-  const { data: predictionSummaryData } = queryAPI.useProjectPredictionSummary(
+  const { data: predictionSummaryData } = useProjectPredictionSummary(
+    queryContext,
     projectHash,
     predictionHash,
     debounceIOU
@@ -40,12 +43,12 @@ export function PredictionSummaryTab(props: {
       if (predictionSummaryData == null) {
         return [undefined, undefined];
       }
-      const p = Object.entries(predictionSummaryData?.feature_properties).map(
-        ([k, v]) => [k, v.ap]
-      );
-      const r = Object.entries(predictionSummaryData?.feature_properties).map(
-        ([k, v]) => [k, v.ar]
-      );
+      const p = Object.entries(
+        predictionSummaryData?.feature_properties ?? {}
+      ).map(([k, v]) => [k, v?.ap ?? 0.0]);
+      const r = Object.entries(
+        predictionSummaryData?.feature_properties ?? {}
+      ).map(([k, v]) => [k, v?.ar ?? 0.0]);
 
       return [Object.fromEntries(p), Object.fromEntries(r)];
     }, [predictionSummaryData]);

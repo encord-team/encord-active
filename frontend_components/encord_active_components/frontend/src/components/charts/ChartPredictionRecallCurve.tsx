@@ -11,17 +11,10 @@ import {
 } from "recharts";
 import { useMemo, useState } from "react";
 import { featureHashToColor, formatTooltip } from "../util/Formatter";
+import { PredictionSummaryResult } from "../../openapi/api";
 
 export function ChartPredictionRecallCurve(props: {
-  data:
-    | undefined
-    | Record<
-        string,
-        Array<{
-          readonly p: number;
-          readonly r: number;
-        }>
-      >;
+  data: PredictionSummaryResult["prs"] | undefined;
   featureHashMap?: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -37,7 +30,7 @@ export function ChartPredictionRecallCurve(props: {
       Object.entries(data).map(([key, values]) => {
         let prefixMaxP = 0.0;
         let maxR = 0.0;
-        let newValues = values.map(({ p, r }) => {
+        let newValues = (values ?? []).map(({ p, r }) => {
           prefixMaxP = Math.max(p, prefixMaxP);
           maxR = Math.max(r, maxR);
           return {

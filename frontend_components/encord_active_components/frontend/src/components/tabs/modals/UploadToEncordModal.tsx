@@ -1,15 +1,17 @@
 import * as React from "react";
 import { Form, Input, Modal } from "antd";
-import { QueryAPI } from "../../Types";
+import { QueryContext } from "../../../hooks/Context";
+import { useProjectMutationUploadToEncord } from "../../../hooks/mutation/useProjectMutationUploadToEncord";
 
 export function UploadToEncordModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
   setSelectedProjectHash: (key: string | undefined) => void;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
 }) {
-  const { open, close, projectHash, queryAPI, setSelectedProjectHash } = props;
+  const { open, close, projectHash, queryContext, setSelectedProjectHash } =
+    props;
   const [form] = Form.useForm<{
     dataset_title: string;
     dataset_description?: string | undefined;
@@ -19,9 +21,9 @@ export function UploadToEncordModal(props: {
     ontology_description?: string | undefined;
   }>();
 
-  const mutateCreateSubset = queryAPI.useProjectMutationUploadToEncord(
-    projectHash,
-    { onSuccess: close, onSettled: setSelectedProjectHash }
+  const mutateCreateSubset = useProjectMutationUploadToEncord(
+    queryContext,
+    projectHash
   );
 
   return (

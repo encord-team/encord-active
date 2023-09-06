@@ -1,17 +1,19 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
 import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
 import { Explorer, Props as ExplorerProps } from "../../explorer";
+import { QueryContext } from "../../../hooks/Context";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { useProjectListPredictions } from "../../../hooks/queries/useProjectListPredictions";
 
 export function PredictionsTab(
   props: {
-    queryAPI: QueryAPI;
+    queryContext: QueryContext;
     projectHash: string;
-    dataMetricsSummary: ProjectMetricSummary;
-    annotationMetricsSummary: ProjectMetricSummary;
+    dataMetricsSummary: ProjectDomainSummary;
+    annotationMetricsSummary: ProjectDomainSummary;
     featureHashMap: Record<
       string,
       { readonly color: string; readonly name: string }
@@ -19,7 +21,7 @@ export function PredictionsTab(
   } & Pick<ExplorerProps, "remoteProject" | "setSelectedProjectHash">
 ) {
   const {
-    queryAPI,
+    queryContext,
     projectHash,
     dataMetricsSummary,
     annotationMetricsSummary,
@@ -28,8 +30,11 @@ export function PredictionsTab(
     setSelectedProjectHash,
   } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
-  const { data: allPredictions } =
-    queryAPI.useProjectListPredictions(projectHash);
+  const { data: allPredictions } = useProjectListPredictions(
+    queryContext,
+    projectHash
+  );
+
   const allPredictionOptions = useMemo(
     () =>
       allPredictions?.results?.map((prediction) => ({
@@ -87,7 +92,7 @@ export function PredictionsTab(
                 <PredictionSummaryTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryAPI={queryAPI}
+                  queryContext={queryContext}
                   metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
@@ -100,7 +105,7 @@ export function PredictionsTab(
                 <PredictionsMetricPerformanceTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryAPI={queryAPI}
+                  queryContext={queryContext}
                   metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
@@ -112,11 +117,12 @@ export function PredictionsTab(
               children: (
                 <Explorer
                   projectHash={projectHash}
+                  predictionHash={predictionHash}
                   scope="prediction"
                   featureHashMap={featureHashMap}
                   dataMetricsSummary={dataMetricsSummary}
                   annotationMetricsSummary={annotationMetricsSummary}
-                  queryAPI={queryAPI}
+                  queryContext={queryContext}
                   setSelectedProjectHash={setSelectedProjectHash}
                   remoteProject={remoteProject}
                 />

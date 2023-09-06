@@ -11,21 +11,22 @@ import {
   YAxis,
 } from "recharts";
 import { scaleLinear } from "d3-scale";
-import {
-  ProjectAnalysisDomain,
-  ProjectAnalysisSummary,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { formatTooltip } from "../util/Formatter";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectAnalysisMetricScatter } from "../../hooks/queries/useProjectAnalysisMetricScatter";
+import {
+  AnalysisDomain,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../openapi/api";
 
 export function ChartMetricCompareScatter(props: {
-  metricsSummary: ProjectMetricSummary;
-  analysisSummary?: undefined | ProjectAnalysisSummary;
-  analysisDomain: ProjectAnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  analysisSummary?: undefined | QuerySummary;
+  analysisDomain: AnalysisDomain;
   projectHash: string;
   compareProjectHash?: string | undefined;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   allowTrend?: boolean;
 }) {
   const {
@@ -33,25 +34,31 @@ export function ChartMetricCompareScatter(props: {
     analysisSummary,
     analysisDomain,
     projectHash,
-    queryAPI,
+    queryContext,
     allowTrend,
     compareProjectHash,
   } = props;
   const [xMetric, setXMetric] = useState<undefined | string>();
   const [yMetric, setYMetric] = useState<undefined | string>();
   const [showTrend, setShowTrend] = useState<boolean>(true);
-  const sampledState = queryAPI.useProjectAnalysisMetricScatter(
+  const sampledState = useProjectAnalysisMetricScatter(
+    queryContext,
     projectHash,
     analysisDomain,
     xMetric ?? "",
     yMetric ?? "",
+    undefined,
+    undefined,
     { enabled: xMetric !== undefined && yMetric !== undefined }
   );
-  const compareSampledState = queryAPI.useProjectAnalysisMetricScatter(
+  const compareSampledState = useProjectAnalysisMetricScatter(
+    queryContext,
     compareProjectHash ?? "",
     analysisDomain,
     xMetric ?? "",
     yMetric ?? "",
+    undefined,
+    undefined,
     {
       enabled:
         xMetric !== undefined &&
@@ -62,19 +69,23 @@ export function ChartMetricCompareScatter(props: {
   const sampledData = sampledState.data;
   const compareSampledData =
     compareProjectHash != null ? compareSampledState.data : null;
-  const metricOptions = useMemo(() => Object.entries(metricsSummary.metrics)
-      .filter(([metricKey]) => {
-        if (analysisSummary == null) {
-          return true;
-        }
-        const value = analysisSummary.metrics[metricKey];
+  const metricOptions = useMemo(
+    () =>
+      Object.entries(metricsSummary.metrics)
+        .filter(([metricKey]) => {
+          if (analysisSummary == null) {
+            return true;
+          }
+          const value = analysisSummary.metrics[metricKey];
 
-        return value == null || value.count > 0;
-      })
-      .map(([metricKey, metricData]) => ({
-        value: metricKey,
-        label: metricData.title,
-      })), [metricsSummary, analysisSummary]);
+          return value == null || value.count > 0;
+        })
+        .map(([metricKey, metricData]) => ({
+          value: metricKey,
+          label: metricData.title,
+        })),
+    [metricsSummary, analysisSummary]
+  );
   useEffect(() => {
     const metrics = new Set(metricOptions.map((v) => v.value));
     let chosenXMetric = xMetric;

@@ -1,6 +1,7 @@
 import json
 import math
 import uuid
+from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
@@ -11,6 +12,7 @@ from sklearn.feature_selection import (
     mutual_info_regression as sklearn_mutual_info_regression,
 )
 from sqlalchemy import Float, Integer, bindparam, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
@@ -24,7 +26,7 @@ from encord_active.db.models import (
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
 )
-from encord_active.server.routers.project2_engine import engine
+from encord_active.server.dependencies import dep_engine
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
     TABLES_ANNOTATION,
@@ -42,7 +44,11 @@ from encord_active.server.routers.queries.search_query import (
 )
 
 
-def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash: uuid.UUID):
+def dep_check_project_prediction_hash_match(
+    project_hash: uuid.UUID,
+    prediction_hash: uuid.UUID,
+    engine: Engine = Depends(dep_engine)
+):
     with Session(engine) as sess:
         exists = (
             sess.exec(
@@ -57,8 +63,15 @@ def check_project_prediction_hash_match(project_hash: uuid.UUID, prediction_hash
 
 
 router = APIRouter(
-    prefix="/{project_hash}/predictions/{prediction_hash}", dependencies=[Depends(check_project_prediction_hash_match)]
+    prefix="/{project_hash}/predictions/{prediction_hash}",
+    dependencies=[Depends(dep_check_project_prediction_hash_match)]
 )
+
+
+class PredictionDomain(Enum):
+    TRUE_POSITIVE = "tp"
+    FALSE_POSITIVE = "fp"
+    FALSE_NEGATIVE = "fn"
 
 
 def remove_nan_inf(v: float, inf: float = 100_000.0) -> float:
@@ -123,7 +136,8 @@ def get_project_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-):
+    engine: Engine = Depends(dep_engine)
+) -> PredictionSummaryResult:
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
@@ -490,9 +504,11 @@ def get_project_prediction_summary(
 @router.get("/analytics/{prediction_domain}/distribution")
 def prediction_metric_distribution(
     prediction_hash: uuid.UUID,
+    prediction_domain: PredictionDomain,
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryDistribution:
     # FIXME: prediction_domain!!! (this & scatter) both need it implemented
     # FIXME: how to do we want to support fp-tp-fn split (2-group, 3-group)?
@@ -514,10 +530,12 @@ def prediction_metric_distribution(
 @router.get("/analytics/{prediction_domain}/scatter")
 def prediction_metric_scatter(
     prediction_hash: uuid.UUID,
+    prediction_domain: PredictionDomain,
     x_metric: str,
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryScatter:
     with Session(engine) as sess:
         return metric_query.query_attr_scatter(
@@ -553,6 +571,7 @@ def prediction_metric_performance(
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
+    engine: Engine = Depends(dep_engine)
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
@@ -660,10 +679,11 @@ def prediction_metric_performance(
 
 @router.get("/search")
 def prediction_search(
+    prediction_hash: uuid.UUID,
     iou: float,
     metric_filters: str,
     enum_filters: str,
-):
+) -> list[str]:
     metric_filters_dict = json.loads(metric_filters)
     enum_filters_dict = json.loads(enum_filters)
     # Some enums have special meaning.
@@ -682,11 +702,10 @@ def prediction_search(
     return None
 
 
-@router.get("/preview/{du_hash/{frame}/{annotation_hash}")
+@router.get("/preview/{item}")
 def get_prediction_item(
-    du_hash: uuid.UUID,
-    frame: int,
-    annotation_hash: Optional[str] = None,
-):
+    prediction_hash: uuid.UUID,
+    item: str,
+) -> None:
     # FIXME: return required metadata to correctly view the associated value.
     return None

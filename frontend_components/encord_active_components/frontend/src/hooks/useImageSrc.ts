@@ -1,18 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect, useMemo } from "react";
+import { QueryContext } from "./Context";
+import { apiUrl } from "../constants";
 
 const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com"];
 
-export function useImageSrc(url: string | undefined): string | undefined {
-  const requiresAuth: boolean = useMemo(() => !NO_AUTH_PATTERNS.some(
-      (pattern) => url === undefined || url.includes(pattern)
-    ), [url]);
+export function useImageSrc(
+  queryContext: QueryContext,
+  url: string | undefined
+): string | undefined {
+  const itemUrl =
+    url === undefined || url.startsWith("http") ? url : `${apiUrl}${url}`;
+
+  const requiresAuth: boolean = useMemo(
+    () =>
+      queryContext.usesAuth &&
+      !NO_AUTH_PATTERNS.some(
+        (pattern) => itemUrl === undefined || itemUrl.includes(pattern)
+      ),
+    [queryContext, itemUrl]
+  );
   const { data: queryBlob } = useQuery(
-    ["ImageSrcAuth", url],
+    ["ImageSrcAuth", itemUrl],
     async () => {
-      if (url === undefined) {return undefined;}
-      const res = await axios.get(url, { responseType: "blob" });
+      if (itemUrl === undefined) {
+        return undefined;
+      }
+      const res = await axios.get(itemUrl, { responseType: "blob" });
 
       return res.data as Blob | MediaSource;
     },
@@ -32,5 +47,5 @@ export function useImageSrc(url: string | undefined): string | undefined {
     }
     return undefined;
   }, [objectUrl]);
-  return requiresAuth ? objectUrl : url;
+  return requiresAuth ? objectUrl : itemUrl;
 }

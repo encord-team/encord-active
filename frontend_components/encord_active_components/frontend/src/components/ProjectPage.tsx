@@ -4,44 +4,40 @@ import { Spin, Tabs } from "antd";
 import {
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
-  QueryAPI,
+  ProjectOntology,
 } from "./Types";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
-import { IntegratedProjectMetadata } from "./IntegratedAPI";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
+import { QueryContext } from "../hooks/Context";
+import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 
 export function ProjectPage(props: {
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   projectHash: string;
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
   setSelectedProjectHash: (projectHash?: string) => void;
-  projects: readonly IntegratedProjectMetadata[];
 }) {
-  const {
-    queryAPI,
-    editUrl,
-    projectHash,
-    projects,
-    setSelectedProjectHash: setSelectedProject,
-  } = props;
+  const { queryContext, editUrl, projectHash, setSelectedProjectHash } = props;
   const [activeTab, setActiveTab] = useState<string>("1");
-  const { data: projectSummary, isError } =
-    queryAPI.useProjectSummary(projectHash);
+  const { data: projectSummary, isError } = useProjectSummary(
+    queryContext,
+    projectHash
+  );
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
     if (isError) {
-      setSelectedProject(undefined);
+      setSelectedProjectHash(undefined);
     }
-  }, [isError, setSelectedProject]);
+  }, [isError, setSelectedProjectHash]);
 
   const featureHashMap = useMemo(() => {
     const featureHashMap: Record<
@@ -73,7 +69,9 @@ export function ProjectPage(props: {
         }
       }
     };
-    projectSummary.ontology.objects.forEach((o) => {
+    const ontology: ProjectOntology =
+      projectSummary.ontology as ProjectOntology;
+    ontology.objects.forEach((o) => {
       featureHashMap[o.featureNodeHash] = {
         color: o.color,
         name: o.name ?? o.featureNodeHash,
@@ -82,7 +80,7 @@ export function ProjectPage(props: {
         o.attributes.forEach((a) => procAttribute(a, o.color));
       }
     });
-    projectSummary.ontology.classifications.forEach((o) => {
+    ontology.classifications.forEach((o) => {
       featureHashMap[o.featureNodeHash] = {
         color: o.color,
         name: o.name ?? o.featureNodeHash,
@@ -108,9 +106,9 @@ export function ProjectPage(props: {
     <Tabs
       tabBarExtraContent={
         <ProjectSelector
-          projects={projects}
+          queryContext={queryContext}
           selectedProjectHash={projectHash}
-          setSelectedProjectHash={setSelectedProject}
+          setSelectedProjectHash={setSelectedProjectHash}
         />
       }
       items={[
@@ -120,7 +118,7 @@ export function ProjectPage(props: {
           children: (
             <SummaryView
               projectHash={projectHash}
-              queryAPI={queryAPI}
+              queryContext={queryContext}
               projectSummary={projectSummary}
               featureHashMap={featureHashMap}
             />
@@ -137,10 +135,10 @@ export function ProjectPage(props: {
                 dataMetricsSummary={projectSummary.data}
                 annotationMetricsSummary={projectSummary.annotation}
                 scope="analysis"
-                queryAPI={queryAPI}
+                queryContext={queryContext}
                 editUrl={editUrl}
                 featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProject}
+                setSelectedProjectHash={setSelectedProjectHash}
                 remoteProject={remoteProject}
               />
             </ApiContext.Provider>
@@ -153,11 +151,11 @@ export function ProjectPage(props: {
             <ApiContext.Provider value={api}>
               <PredictionsTab
                 projectHash={projectHash}
-                queryAPI={queryAPI}
+                queryContext={queryContext}
                 annotationMetricsSummary={projectSummary.annotation}
                 dataMetricsSummary={projectSummary.data}
                 featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProject}
+                setSelectedProjectHash={setSelectedProjectHash}
                 remoteProject={remoteProject}
               />
             </ApiContext.Provider>
@@ -169,7 +167,7 @@ export function ProjectPage(props: {
           children: (
             <ProjectComparisonTab
               projectHash={projectHash}
-              queryAPI={queryAPI}
+              queryContext={queryContext}
               dataMetricsSummary={projectSummary.data}
               annotationMetricsSummary={projectSummary.annotation}
             />

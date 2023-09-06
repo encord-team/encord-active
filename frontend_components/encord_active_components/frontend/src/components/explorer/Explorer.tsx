@@ -3,7 +3,7 @@ import { useMemo, useState, useContext } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { FaEdit } from "react-icons/fa";
 import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
-import { TbMoodSad2, TbSortAscending, TbSortDescending } from "react-icons/tb";
+import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "usehooks-ts";
@@ -23,11 +23,6 @@ import {
   MetricFilter,
   DefaultFilters,
 } from "../util/MetricFilter";
-import {
-  ProjectAnalysisDomain,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { env, local } from "../../constants";
 import { useAuth } from "../../authContext";
@@ -37,37 +32,21 @@ import { MetricDistributionTiny } from "./ExplorerCharts";
 import { ExplorerGalleryItem } from "./ExplorerGalleryItem";
 import { loadingIndicator } from "../Spin";
 import { ImageWithPolygons } from "./ImageWithPolygons";
-
-export type InternalFilters = {
-  readonly analysisDomain: "data" | "annotation";
-  readonly filters: {
-    readonly data: {
-      readonly metrics: Readonly<Record<string, readonly [number, number]>>;
-      readonly enums: Readonly<Record<string, readonly string[]>>;
-      readonly reduction: null;
-      readonly tags: null | readonly string[];
-    };
-    readonly annotation: {
-      readonly metrics: Readonly<Record<string, readonly [number, number]>>;
-      readonly enums: Readonly<Record<string, readonly string[]>>;
-      readonly reduction: null;
-      readonly tags: null | readonly string[];
-    };
-  };
-  readonly orderBy: string;
-  readonly desc: boolean;
-  readonly iou: number | undefined;
-  readonly predictionOutcome: "tp" | "fp" | "fn" | undefined;
-  readonly predictionHash: string | undefined;
-};
+import { ProjectDomainSummary, SearchFilters } from "../../openapi/api";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
+import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
+import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
+import { ExplorerFilterState } from "./ExplorerTypes";
 
 export type Props = {
   projectHash: string;
   predictionHash: string | undefined;
-  dataMetricsSummary: ProjectMetricSummary;
-  annotationMetricsSummary: ProjectMetricSummary;
+  dataMetricsSummary: ProjectDomainSummary;
+  annotationMetricsSummary: ProjectDomainSummary;
   scope: "analysis" | "prediction";
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
@@ -80,7 +59,7 @@ export function Explorer({
   projectHash,
   predictionHash,
   scope,
-  queryAPI,
+  queryContext,
   editUrl,
   featureHashMap,
   dataMetricsSummary,
@@ -93,8 +72,10 @@ export function Explorer({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
 
   // Select reduction hash
-  const { data: reductionHashes } =
-    queryAPI.useProjectListEmbeddingReductions(projectHash);
+  const { data: reductionHashes } = useProjectListReductions(
+    queryContext,
+    projectHash
+  );
   const reductionHash: string | undefined = useMemo(
     () =>
       reductionHashes === undefined || reductionHashes.results.length === 0
@@ -135,7 +116,8 @@ export function Explorer({
     setAnnotationFilters(DefaultFilters);
   };
 
-  const rawFilters: InternalFilters = useMemo(() => ({
+  const rawFilters: ExplorerFilterState = useMemo(
+    () => ({
       analysisDomain: selectedMetric.domain,
       filters: {
         data: {
@@ -156,17 +138,19 @@ export function Explorer({
       iou,
       predictionOutcome,
       predictionHash,
-    }), [
-    selectedMetric,
-    dataFilters,
-    isAscending,
-    annotationFilters,
-    predictionHash,
-    predictionOutcome,
-    iou,
-  ]);
+    }),
+    [
+      selectedMetric,
+      dataFilters,
+      isAscending,
+      annotationFilters,
+      predictionHash,
+      predictionOutcome,
+      iou,
+    ]
+  );
 
-  const filters: InternalFilters = useDebounce(rawFilters, 500);
+  const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
 
   const apiContext = useContext(ApiContext);
   const { token } = useAuth();
@@ -193,11 +177,14 @@ export function Explorer({
   );
   */
   const hasSimilaritySearch = false;
-  const { data: similarItems, isLoading: isLoadingSimilarItemsRaw } = useQuery(
-    ["FIXME: IMPLEMENT PROPERLY"],
-    () => [] as string[],
-    { enabled: hasSimilaritySearch && similarityItem !== undefined }
-  );
+  const { data: similarItems, isLoading: isLoadingSimilarItemsRaw } =
+    useProjectAnalysisSimilaritySearch(
+      queryContext,
+      projectHash,
+      filters.analysisDomain,
+      similarityItem ?? "",
+      { enabled: hasSimilaritySearch && similarityItem !== undefined }
+    );
   const isLoadingSimilarItems =
     isLoadingSimilarItemsRaw &&
     hasSimilaritySearch &&
@@ -205,19 +192,22 @@ export function Explorer({
 
   // Load metric ranges
   const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
-    queryAPI.useProjectAnalysisSummary(projectHash, "data");
+    useProjectAnalysisSummary(queryContext, projectHash, "data");
   const {
     data: annotationMetricRanges,
     isLoading: isLoadingAnnotationMetrics,
-  } = queryAPI.useProjectAnalysisSummary(projectHash, "annotation");
+  } = useProjectAnalysisSummary(queryContext, projectHash, "annotation");
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
   const { data: sortedItems, isLoading: isLoadingSortedItems } =
-    queryAPI.useProjectAnalysisSearch(
+    useProjectAnalysisSearch(
+      queryContext,
       projectHash,
       filters.analysisDomain,
-      filters.filters,
       filters.orderBy,
       filters.desc,
+      0,
+      1000,
+      filters.filters,
       {
         enabled: scope !== "prediction",
       }
@@ -239,17 +229,25 @@ export function Explorer({
 
   const reset = (clearFilters: boolean = true) => {
     setSimilarityItem(null);
-    if (clearFilters) {resetAllFilters();}
+    if (clearFilters) {
+      resetAllFilters();
+    }
   };
 
   const itemsToRender: readonly string[] =
-    similarItems ?? searchResults?.ids ?? sortedItems?.results ?? [];
+    similarItems?.map((v) => v.item) ??
+    searchResults?.ids ??
+    sortedItems?.results ??
+    [];
 
   const toggleImageSelection = (id: Item["id"]) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {next.delete(id);}
-      else {next.add(id);}
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -282,7 +280,10 @@ export function Explorer({
       },
     ];
 
-    return descriptions.reduce((res, item) => !res && item.isLoading ? item.description : res, "");
+    return descriptions.reduce(
+      (res, item) => (!res && item.isLoading ? item.description : res),
+      ""
+    );
   }, [
     isLoadingMetrics,
     isLoadingSortedItems,
@@ -300,18 +301,18 @@ export function Explorer({
         open={open == "subset"}
         close={close}
         projectHash={projectHash}
-        queryAPI={queryAPI}
-        filters={filters}
+        queryContext={queryContext}
+        filters={filters.filters}
       />
       <UploadToEncordModal
         open={open === "upload"}
         close={close}
         projectHash={projectHash}
-        queryAPI={queryAPI}
+        queryContext={queryContext}
         setSelectedProjectHash={setSelectedProjectHash}
       />
       <ExplorerEmbeddings
-        queryApi={queryAPI}
+        queryContext={queryContext}
         projectHash={projectHash}
         reductionHash={reductionHash}
         filters={filters}
@@ -321,7 +322,7 @@ export function Explorer({
       />
       {previewedItem && (
         <ItemPreview
-          queryAPI={queryAPI}
+          queryContext={queryContext}
           projectHash={projectHash}
           id={previewedItem}
           similaritySearchDisabled={!hasSimilaritySearch}
@@ -341,7 +342,7 @@ export function Explorer({
       {!similarityItem && scope !== "prediction" && (
         <MetricDistributionTiny
           projectHash={projectHash}
-          queryAPI={queryAPI}
+          queryContext={queryContext}
           filters={filters}
         />
       )}
@@ -379,7 +380,7 @@ export function Explorer({
                 label: "Data Metrics",
                 options: Object.entries(dataMetricsSummary.metrics).map(
                   ([metricKey, metric]) => ({
-                    label: `D: ${metric.title}`,
+                    label: `D: ${metric?.title ?? metricKey}`,
                     value: `data-${metricKey}`,
                   })
                 ),
@@ -388,7 +389,7 @@ export function Explorer({
                 label: "Annotation Metrics",
                 options: Object.entries(annotationMetricsSummary.metrics).map(
                   ([metricKey, metric]) => ({
-                    label: `A: ${metric.title}`,
+                    label: `A: ${metric?.title ?? metricKey}`,
                     value: `annotation-${metricKey}`,
                   })
                 ),
@@ -502,19 +503,19 @@ export function Explorer({
           defaultPageSize: 10,
         }}
         renderItem={(item: string) => (
-            <ExplorerGalleryItem
-              projectHash={projectHash}
-              queryAPI={queryAPI}
-              selectedMetric={selectedMetric}
-              key={item}
-              itemId={item}
-              onExpand={() => setPreviewedItem(item)}
-              similaritySearchDisabled={!hasSimilaritySearch}
-              onShowSimilar={() => showSimilarItems(item)}
-              selected={selectedItems.has(item)}
-              iou={iou}
-            />
-          )}
+          <ExplorerGalleryItem
+            projectHash={projectHash}
+            queryContext={queryContext}
+            selectedMetric={selectedMetric}
+            key={item}
+            itemId={item}
+            onExpand={() => setPreviewedItem(item)}
+            similaritySearchDisabled={!hasSimilaritySearch}
+            onShowSimilar={() => showSimilarItems(item)}
+            selected={selectedItems.has(item)}
+            iou={iou}
+          />
+        )}
       />
     </div>
   );
@@ -571,7 +572,9 @@ function SimilarityItem({
 }) {
   const { data, isLoading } = useApi().fetchItem(itemId);
 
-  if (isLoading || !data) {return null;}
+  if (isLoading || !data) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -590,7 +593,7 @@ function SimilarityItem({
 }
 
 function ItemPreview({
-  queryAPI,
+  queryContext,
   projectHash,
   id,
   similaritySearchDisabled,
@@ -600,11 +603,11 @@ function ItemPreview({
   onShowSimilar,
   allowTaggingAnnotations = false,
 }: {
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   projectHash: string;
   id: string;
   similaritySearchDisabled: boolean;
-  scope: "prediction" | "analytics";
+  scope: "prediction" | "analysis";
   onClose: () => void;
   onShowSimilar: () => void;
   iou?: number;
@@ -624,7 +627,9 @@ function ItemPreview({
   );
   const mutate = () => console.log("fixme");
 
-  if (isLoading || !preview) {return <Spin indicator={loadingIndicator} />;}
+  if (isLoading || !preview) {
+    return <Spin indicator={loadingIndicator} />;
+  }
 
   /* const { description, ...metrics } = preview.metadata.metrics;
   const { editUrl } = data; */
@@ -702,7 +707,9 @@ const getObjects = (item: Item) => {
     (object) => object.objectHash === annotation_hash
   );
 
-  if (object) {return [object];}
+  if (object) {
+    return [object];
+  }
 
   return prediction
     ? [...item.labels.objects, prediction]

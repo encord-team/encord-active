@@ -1,8 +1,6 @@
 import * as React from "react";
 import { fork } from "radash";
-import { useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { useMemo, useRef } from "react";
 import { Card, Space, Spin } from "antd";
 import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";
@@ -14,35 +12,30 @@ import classesUrl from "../../assets/classes.svg";
 import DEFAULT_PROJECT_IMAGE from "../../assets/default_project_image.webp";
 
 import { classy } from "../helpers/classy";
-import { IntegratedProjectMetadata } from "./IntegratedAPI";
-import { apiUrl, env } from "../constants";
+import { env } from "../constants";
 import { useImageSrc } from "../hooks/useImageSrc";
 import { loadingIndicator } from "./Spin";
-import { QueryAPI } from "./Types";
-
-const useDownloadProject = (options?: Parameters<typeof useMutation>[2]) =>
-  useMutation(
-    ["useDownloadProject"],
-    async (projectHash: string) =>
-      axios.get(`${apiUrl}/projects/${projectHash}/download_sandbox`),
-    options
-  );
+import { QueryContext } from "../hooks/Context";
+import { useProjectSummary } from "../hooks/queries/useProjectSummary";
+import { useProjectList } from "../hooks/queries/useListProjects";
+import { ProjectSearchEntry } from "../openapi/api";
+import { useProjectMetadata } from "../hooks/queries/useProjectMetadata";
+import { useProjectDataItem } from "../hooks/queries/useProjectItem";
 
 export type Props = {
-  readonly projects: IntegratedProjectMetadata[];
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   onSelectLocalProject: (projectHash: string) => void;
 };
-export function ProjectsPage({
-  projects = [],
-  queryAPI,
-  onSelectLocalProject,
-}: Props) {
-  const [sandboxProjects, userProjects] = fork(
-    projects,
-    ({ sandbox }) => !!sandbox
+export function ProjectsPage({ queryContext, onSelectLocalProject }: Props) {
+  const { data: projects, isLoading } = useProjectList(queryContext);
+  const [_sandboxProjects, userProjects] = useMemo(
+    () => fork(projects?.projects ?? [], ({ sandbox }) => !!sandbox),
+    [projects]
   );
-  const { mutate: download, isLoading } = useDownloadProject();
+
+  if (isLoading) {
+    return <Spin indicator={loadingIndicator} />;
+  }
 
   return (
     <div className="flex h-max flex-col gap-5 p-5">
@@ -74,7 +67,7 @@ export function ProjectsPage({
           userProjects.map((project) => (
             <ProjectCard
               key={project.project_hash}
-              queryAPI={queryAPI}
+              queryContext={queryContext}
               project={project}
               setSelectedProjectHash={onSelectLocalProject}
             />
@@ -83,31 +76,6 @@ export function ProjectsPage({
           <ProjectNotFoundCard />
         )}
       </Space>
-      {/* TODO: temporarily hide sandbox projects  */}
-      {false && env !== "production" && sandboxProjects.length && (
-        <>
-          <h2 className="text-xl font-light text-neutral-700">
-            View a sandbox project
-          </h2>
-          <div className="flex flex-wrap gap-5">
-            {sandboxProjects
-              .sort((a, b) => -a.downloaded - -b.downloaded)
-              .map((project) => (
-                <ProjectCard
-                  key={project.project_hash}
-                  project={project}
-                  showDownloadedBadge
-                  setSelectedProjectHash={onSelectLocalProject}
-                  /* onClick={() =>
-                    (project.downloaded ? onSelectLocalProject : download)(
-                      project["projectHash"],
-                    )
-                  } */
-                />
-              ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -121,7 +89,7 @@ function NewProjectButton({
   title: string;
   description: string;
   iconUrl: string;
-  onClick?: JSX.IntrinsicElements["button"]["onClick"];
+  onClick?: () => void;
 }) {
   const disabled = !onClick;
   const containerProps = disabled
@@ -165,23 +133,33 @@ function NewProjectButton({
 
 function ProjectCard({
   project,
-  queryAPI,
+  queryContext,
   showDownloadedBadge = false,
   setSelectedProjectHash,
 }: {
-  project: IntegratedProjectMetadata;
-  queryAPI: QueryAPI;
+  project: ProjectSearchEntry;
+  queryContext: QueryContext;
   showDownloadedBadge?: boolean;
   setSelectedProjectHash: (projectHash: string) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const { data: projectSummary } = queryAPI.useProjectSummary(
+  const { data: projectMetadata } = useProjectMetadata(
+    queryContext,
     project.project_hash
   );
-  const { data: previewItem } = queryAPI.useProjectItemPreview();
-  const imgSrcUrl = useImageSrc(previewItem?.url);
+  const { data: projectSummary } = useProjectSummary(
+    queryContext,
+    project.project_hash
+  );
+  const { data: projectDataItem } = useProjectDataItem(
+    queryContext,
+    project.project_hash,
+    projectSummary?.preview ?? "",
+    { enabled: projectSummary !== undefined }
+  );
+  const imgSrcUrl = useImageSrc(queryContext, projectDataItem?.url);
 
-  if (imgSrcUrl === undefined || previewItem === undefined) {
+  if (imgSrcUrl === undefined || projectDataItem === undefined) {
     return <Spin indicator={loadingIndicator} />;
   }
 
@@ -195,7 +173,7 @@ function ProjectCard({
           className="max-h-36 rounded"
           style={{ width: 240, height: 165, objectFit: "cover" }}
         >
-          {previewItem.timestamp != null && imgSrcUrl ? (
+          {projectDataItem.timestamp != null && imgSrcUrl ? (
             <video
               src={imgSrcUrl}
               muted
@@ -203,7 +181,7 @@ function ProjectCard({
               onLoadedMetadata={() => {
                 const videoRef = video.current;
                 if (videoRef != null) {
-                  videoRef.currentTime = project.imageUrlTimestamp || 0;
+                  videoRef.currentTime = projectDataItem.timestamp || 0;
                 }
               }}
               style={{ width: 240, height: 165, objectFit: "cover" }}
@@ -223,22 +201,22 @@ function ProjectCard({
         <div className="flex flex-col">
           <ProjectStat
             title="Dataset"
-            value={project?.stats?.dataUnits}
+            value={projectMetadata?.data_count ?? 0}
             iconUrl={fileImageUrl}
           />
           <ProjectStat
             title="Annotations"
-            value={project?.stats?.labels}
+            value={projectMetadata?.annotation_count ?? 0}
             iconUrl={annotationsUrl}
           />
           <ProjectStat
             title="Classes"
-            value={project?.stats?.classes}
+            value={projectMetadata?.class_count ?? 0}
             iconUrl={classesUrl}
           />
         </div>
       </div>
-      {showDownloadedBadge && project?.downloaded ? (
+      {showDownloadedBadge && project?.sandbox ? (
         <div className="badge absolute top-1">Downloaded</div>
       ) : null}
     </Card>
@@ -255,7 +233,7 @@ function ProjectStat({
 }) {
   return (
     <div className="flex flex-row gap-1 text-xs">
-      <img src={iconUrl} />
+      <img src={iconUrl} alt={title} />
       <span className="font-normal text-neutral-400">{title}</span>
       <span className="font-medium">{value}</span>
     </div>

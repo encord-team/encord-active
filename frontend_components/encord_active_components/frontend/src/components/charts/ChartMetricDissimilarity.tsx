@@ -11,28 +11,27 @@ import {
 } from "recharts";
 import { useMemo } from "react";
 import { scaleLinear } from "d3-scale";
-import {
-  ProjectAnalysisDomain,
-  ProjectMetricSummary,
-  QueryAPI,
-} from "../Types";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectCompareDissimilarity } from "../../hooks/queries/useProjectCompareDissimilarity";
+import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
 
 export function ChartMetricDissimilarity(props: {
   projectHash: string;
   compareProjectHash: string;
-  analysisDomain: ProjectAnalysisDomain;
-  metricsSummary: ProjectMetricSummary;
-  queryAPI: QueryAPI;
+  analysisDomain: AnalysisDomain;
+  metricsSummary: ProjectDomainSummary;
+  queryContext: QueryContext;
 }) {
   const {
     projectHash,
     compareProjectHash,
     analysisDomain,
     metricsSummary,
-    queryAPI,
+    queryContext,
   } = props;
 
-  const { data } = queryAPI.useProjectAnalysisCompareMetricDissimilarity(
+  const { data } = useProjectCompareDissimilarity(
+    queryContext,
     projectHash,
     analysisDomain,
     compareProjectHash
@@ -47,10 +46,10 @@ export function ChartMetricDissimilarity(props: {
       ([metricKey, dissimilarity]) => ({
         metric: metricsSummary.metrics[metricKey]?.title ?? metricKey,
         dissimilarity,
-        fill: getColor(dissimilarity),
+        fill: getColor(dissimilarity ?? 0.0),
       })
     );
-    results.sort((a, b) => b.dissimilarity - a.dissimilarity);
+    results.sort((a, b) => (b.dissimilarity ?? 0.0) - (a.dissimilarity ?? 0.0));
     return results;
   }, [data, metricsSummary]);
 

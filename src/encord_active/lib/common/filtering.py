@@ -20,7 +20,6 @@ from encord_active.lib.db.tags import TagScope
 from encord_active.lib.metrics.utils import MetricScope
 from encord_active.lib.model_predictions.types import PredictionsFilters
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
-from encord_active.server.dependencies import engine
 
 UNTAGGED_FRAMES_LABEL = "Untagged frames"
 UNTAGGED_ANNOTATIONS_LABEL = "Untagged annotations"

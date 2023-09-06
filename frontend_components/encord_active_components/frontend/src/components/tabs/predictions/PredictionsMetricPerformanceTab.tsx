@@ -2,8 +2,10 @@ import * as React from "react";
 import { Checkbox, Col, Divider, Row, Select, Slider, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
-import { ProjectMetricSummary, QueryAPI } from "../../Types";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
+import { ProjectDomainSummary } from "../../../openapi/api";
+import { QueryContext } from "../../../hooks/Context";
+import { useProjectPredictionMetricPerformance } from "../../../hooks/queries/useProjectPredictionMetricPerformance";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -21,10 +23,10 @@ const bucketOptions: { label: number; value: number }[] = [
 ];
 
 export function PredictionsMetricPerformanceTab(props: {
-  metricsSummary: ProjectMetricSummary;
+  metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryAPI: QueryAPI;
+  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -34,7 +36,7 @@ export function PredictionsMetricPerformanceTab(props: {
     metricsSummary,
     projectHash,
     predictionHash,
-    queryAPI,
+    queryContext,
     featureHashMap,
   } = props;
   const [iou, setIOU] = useState(0.5);
@@ -43,7 +45,7 @@ export function PredictionsMetricPerformanceTab(props: {
     () =>
       Object.entries(metricsSummary.metrics).map(([metricKey, metric]) => ({
         value: metricKey,
-        label: metric.title,
+        label: metric?.title ?? metricKey,
       })),
     [metricsSummary]
   );
@@ -66,12 +68,14 @@ export function PredictionsMetricPerformanceTab(props: {
     [bucketCount, iou, selectedMetric]
   );
   const debounceQueryState = useDebounce(rawQueryState);
-  const queryPerformance = queryAPI.useProjectPredictionMetricPerformance(
+  const queryPerformance = useProjectPredictionMetricPerformance(
+    queryContext,
     projectHash,
     predictionHash,
-    debounceQueryState.bucketCount,
     debounceQueryState.iou,
     debounceQueryState.selectedMetric ?? "",
+    debounceQueryState.bucketCount as 1000 | 100 | 10 | undefined,
+    undefined,
     { enabled: debounceQueryState.selectedMetric != null }
   );
 

@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
 from encord.orm.project import (
     CopyDatasetAction,
@@ -7,8 +7,9 @@ from encord.orm.project import (
     CopyLabelsOptions,
     ReviewApprovalState,
 )
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, insert, select
 
@@ -18,7 +19,8 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
 )
 from encord_active.lib.encord.utils import get_encord_project
-from encord_active.server.routers.project2_engine import engine
+from encord_active.server.dependencies import dep_engine
+from encord_active.server.routers.queries.search_query import SearchFilters
 
 router = APIRouter(
     prefix="/{project_hash}/actions",
@@ -26,15 +28,19 @@ router = APIRouter(
 
 
 class CreateProjectSubsetPostAction(BaseModel):
-    project_name: str
-    project_description: str
-    dataset_name: str
-    dataset_description: str
-    du_hashes: List[str]
+    project_title: str
+    project_description: Optional[str]
+    dataset_title: str
+    dataset_description: Optional[str]
+    filters: SearchFilters
 
 
 @router.post("/create_project_subset")
-def create_active_subset(project_hash: uuid.UUID, item: CreateProjectSubsetPostAction) -> None:
+def create_active_subset(
+    project_hash: uuid.UUID,
+    item: CreateProjectSubsetPostAction,
+    engine: Engine = Depends(dep_engine)
+) -> None:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
@@ -174,16 +180,20 @@ print(f"debug: {debug}")
 
 
 class UploadProjectToEncordPostAction(BaseModel):
-    project_name: str
-    project_description: str
-    dataset_name: str
-    dataset_description: str
-    ontology_name: str
-    ontology_description: str
+    project_title: str
+    project_description: Optional[str]
+    dataset_title: str
+    dataset_description: Optional[str]
+    ontology_title: str
+    ontology_description: Optional[str]
 
 
 @router.post("/upload_to_encord")
-def upload_project_to_encord(project_hash: uuid.UUID, item: UploadProjectToEncordPostAction) -> None:
+def upload_project_to_encord(
+    project_hash: uuid.UUID,
+    item: UploadProjectToEncordPostAction,
+    engine: Engine = Depends(dep_engine)
+) -> None:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:

@@ -231,10 +231,14 @@ def query_metric_attr_summary(
     )
 
 
+class QueryEnumSummary(BaseModel):
+    count: int
+
+
 class QuerySummary(BaseModel):
     count: int
     metrics: Dict[str, QueryMetricSummary]
-    enums: Dict[str, None]
+    enums: Dict[str, QueryEnumSummary]
 
 
 def query_attr_summary(
@@ -264,12 +268,12 @@ def query_attr_summary(
     return QuerySummary(
         count=count,
         metrics={k: v for k, v in metrics.items() if v is not None},
-        enums={k: None for k, e in domain_tables.enums.items()},  # FIXME: implement properly
+        enums={k: QueryEnumSummary(count=count) for k, e in domain_tables.enums.items()},  # FIXME: implement properly
     )
 
 
 class QueryDistributionGroup(BaseModel):
-    group: Union[float, str, bool]
+    group: str
     count: int
 
 

@@ -16,6 +16,10 @@ import {
   formatTooltip,
   formatTooltipLabel,
 } from "../util/Formatter";
+import {
+  QueryMetricPerformance,
+  QueryMetricPerformanceEntry,
+} from "../../openapi/api";
 
 /**
  * Returns data for the average over the input data.
@@ -23,23 +27,12 @@ import {
  */
 function getDataAverage(
   data: Readonly<
-    Record<
-      string,
-      ReadonlyArray<{
-        readonly m: number;
-        readonly n: number;
-        readonly a: number;
-      }>
-    >
+    Record<string, readonly Readonly<QueryMetricPerformanceEntry>[] | undefined>
   >
-): ReadonlyArray<{
-  readonly m: number;
-  readonly n: number;
-  readonly a: number;
-}> {
+): readonly Readonly<QueryMetricPerformanceEntry>[] {
   const lookup: Record<string, { m: number; n: number; as: number }> = {};
   Object.values(data).forEach((array) => {
-    array.forEach((entry) => {
+    (array ?? []).forEach((entry) => {
       const value = lookup[entry.m];
       if (value !== undefined) {
         value.n += entry.n;
@@ -58,15 +51,8 @@ function getDataAverage(
  * @param selectedData
  */
 function tidyData(
-  selectedData: ReadonlyArray<{
-    readonly m: number;
-    readonly n: number;
-    readonly a: number;
-  }>
-): [
-  Array<{ readonly m: number; readonly n: number; readonly a: number }>,
-  number | null
-] {
+  selectedData: readonly Readonly<QueryMetricPerformanceEntry>[]
+): [readonly Readonly<QueryMetricPerformanceEntry>[], number | null] {
   const maxN = selectedData.map((v) => v.n).reduce((a, b) => Math.max(a, b), 0);
   const scaled = selectedData.map((entry) => ({ ...entry, n: entry.n / maxN }));
   scaled.sort((a, b) => a.m - b.m);
@@ -80,16 +66,7 @@ function tidyData(
 }
 
 export function ChartPredictionMetricPerformanceChart(props: {
-  data: Readonly<
-    Record<
-      string,
-      ReadonlyArray<{
-        readonly m: number;
-        readonly n: number;
-        readonly a: number;
-      }>
-    >
-  >;
+  data: QueryMetricPerformance["precision"] | QueryMetricPerformance["fns"];
   selectedClass: ReadonlyArray<string> | undefined;
   classDecomposition: boolean | "auto";
   featureHashMap: Record<
@@ -129,7 +106,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
       const filteredEntries = Object.entries(filteredData);
 
       filteredEntries.forEach(([featureHash, featureBarData]) => {
-        const [tidyBarData, tidyRef] = tidyData(featureBarData);
+        const [tidyBarData, tidyRef] = tidyData(featureBarData ?? []);
         references[featureHash] = tidyRef;
         tidyBarData.forEach((entry) => {
           let state = lookup[entry.m];
@@ -166,7 +143,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
       const filteredEntries = Object.entries(filteredData);
       if (Object.keys(filteredData).length === 1) {
         const [featureHash, data] = filteredEntries[0] ?? ["", []];
-        const [featureBar, featureRef] = tidyData(data);
+        const [featureBar, featureRef] = tidyData(data ?? []);
         const formattedBar: ({ m: number } & Record<string, number>)[] =
           featureBar.map((entry) => ({
             m: entry.m,
@@ -179,13 +156,10 @@ export function ChartPredictionMetricPerformanceChart(props: {
       } else {
         // No decomposition, average selected classes and return the result.
         const selectedData = getDataAverage(filteredData);
-        const [avgBar, avgRef]: [
-          ({ m: number } & Record<string, number>)[],
-          number | null
-        ] = tidyData(selectedData);
+        const [avgBar, avgRef] = tidyData(selectedData);
         const refs: Record<string, number | null> = { "": avgRef };
 
-        return [avgBar, refs, [""]];
+        return [[...avgBar], refs, [""]];
       }
     }
   }, [data, selectedClass, classDecomposition]);

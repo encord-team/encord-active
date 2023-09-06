@@ -28,7 +28,6 @@ from encord_active.lib.project.project_file_structure import (
     LabelRowStructure,
     ProjectFileStructure,
 )
-from encord_active.server.dependencies import ProjectFileStructureDep
 
 
 class Metadata(TypedDict):
@@ -45,7 +44,7 @@ def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricSc
 
 
 @cached(cache=LRUCache(maxsize=100))
-def get_similarity_finder(embedding_type: EmbeddingType, project: ProjectFileStructureDep):
+def get_similarity_finder(embedding_type: EmbeddingType, project: None):
     return SimilaritiesFinder(embedding_type, project)
 
 

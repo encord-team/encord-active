@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as
@@ -15,14 +15,21 @@ from encord_active.server.routers.queries.domain_query import (
 )
 
 
+class Range(BaseModel):
+    min: float
+    max: float
+
+
 class Embedding2DFilter(BaseModel):
     reduction_hash: uuid.UUID
-    min: Tuple[float, float]
-    max: Tuple[float, float]
+    minX: float
+    maxX: float
+    minY: float
+    maxY: float
 
 
 class DomainSearchFilters(BaseModel):
-    metrics: Dict[str, Tuple[float, float]]
+    metrics: Dict[str, Range]
     enums: Dict[str, List[str]]
     reduction: Optional[Embedding2DFilter]
     tags: Optional[List[uuid.UUID]]

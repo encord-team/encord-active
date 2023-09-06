@@ -1,23 +1,25 @@
 import * as React from "react";
 import { Col, Divider, Row, Select, Typography } from "antd";
 import { useState } from "react";
-import { ProjectMetricSummary, QueryAPI } from "../Types";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
 import { ChartMetricDissimilarity } from "../charts/ChartMetricDissimilarity";
+import { QueryContext } from "../../hooks/Context";
+import { ProjectDomainSummary } from "../../openapi/api";
+import { useProjectList } from "../../hooks/queries/useListProjects";
 
 export function ProjectComparisonTab(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
-  dataMetricsSummary: ProjectMetricSummary;
-  annotationMetricsSummary: ProjectMetricSummary;
+  queryContext: QueryContext;
+  dataMetricsSummary: ProjectDomainSummary;
+  annotationMetricsSummary: ProjectDomainSummary;
 }) {
   const {
     projectHash,
-    queryAPI,
+    queryContext,
     dataMetricsSummary,
     annotationMetricsSummary,
   } = props;
-  const allProjects = queryAPI.useListProjectViews("", 0, 100000);
+  const allProjects = useProjectList(queryContext);
   const [compareProjectHash, setCompareProjectHash] = useState<
     undefined | string
   >();
@@ -37,7 +39,7 @@ export function ProjectComparisonTab(props: {
               value={compareProjectHash}
               style={{ width: 300 }}
               options={
-                allProjects.data?.results
+                allProjects.data?.projects
                   ?.filter((project) => project.project_hash !== projectHash)
                   ?.map((project) => ({
                     label: project.title,
@@ -69,7 +71,7 @@ export function ProjectComparisonTab(props: {
             metricsSummary={metricsSummary}
             analysisDomain={domain}
             projectHash={projectHash}
-            queryAPI={queryAPI}
+            queryContext={queryContext}
             compareProjectHash={compareProjectHash}
           />
           <Divider>
@@ -78,7 +80,7 @@ export function ProjectComparisonTab(props: {
           <ChartMetricDissimilarity
             projectHash={projectHash}
             analysisDomain={domain}
-            queryAPI={queryAPI}
+            queryContext={queryContext}
             metricsSummary={metricsSummary}
             compareProjectHash={compareProjectHash}
           />

@@ -2,15 +2,16 @@ import * as React from "react";
 import { BiInfoCircle } from "react-icons/bi";
 import { Spin } from "antd";
 import { ScatteredEmbeddings } from "./ExplorerCharts";
-import { QueryAPI } from "../Types";
-import { InternalFilters } from "./Explorer";
 import { loadingIndicator } from "../Spin";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
+import { ExplorerFilterState } from "./ExplorerTypes";
 
 export function ExplorerEmbeddings(props: {
-  queryApi: QueryAPI;
+  queryContext: QueryContext;
   projectHash: string;
   reductionHash: string | undefined;
-  filters: InternalFilters;
+  filters: ExplorerFilterState;
   setEmbeddingSelection: (
     bounds:
       | {
@@ -23,14 +24,15 @@ export function ExplorerEmbeddings(props: {
   ) => void;
 }) {
   const {
-    queryApi,
+    queryContext,
     projectHash,
     reductionHash,
     filters,
     setEmbeddingSelection,
   } = props;
   const { isLoading, data: scatteredEmbeddings } =
-    queryApi.useProjectAnalysisReducedEmbeddings(
+    useProjectAnalysisReducedEmbeddings(
+      queryContext,
       projectHash,
       filters.analysisDomain,
       reductionHash ?? "",

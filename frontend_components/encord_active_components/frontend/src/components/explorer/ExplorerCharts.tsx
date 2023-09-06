@@ -6,16 +6,18 @@ import {
 } from "@ant-design/plots";
 import { useCallback, useMemo } from "react";
 import { scaleLinear } from "d3-scale";
-import { InternalFilters } from "./Explorer";
-import { ProjectAnalysisReductionResult, QueryAPI } from "../Types";
+import { QueryContext } from "../../hooks/Context";
+import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
+import { ExplorerFilterState } from "./ExplorerTypes";
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
-  queryAPI: QueryAPI;
-  filters: InternalFilters;
+  queryContext: QueryContext;
+  filters: ExplorerFilterState;
 }) {
-  const { projectHash, filters, queryAPI } = props;
-  const { data: distribution } = queryAPI.useProjectAnalysisDistribution(
+  const { projectHash, filters, queryContext } = props;
+  const { data: distribution } = useProjectAnalysisDistribution(
+    queryContext,
     projectHash,
     filters.analysisDomain,
     filters.orderBy

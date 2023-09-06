@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { Button, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { ProjectMetricSummary } from "../Types";
+import { QuerySummary } from "../../openapi/api";
 
 export type FilterState = {
   readonly metricFilters: Readonly<Record<string, readonly [number, number]>>;
@@ -296,16 +297,11 @@ function addNewEntry<
 const toFixedNumber = (number: number, precision: number) =>
   parseFloat(number.toFixed(precision));
 
-export function MetricFilter<
-  R extends {
-    min: number;
-    max: number;
-  }
->(props: {
+export function MetricFilter(props: {
   filters: FilterState;
   setFilters: (arg: FilterState | ((old: FilterState) => FilterState)) => void;
   metricsSummary: ProjectMetricSummary;
-  metricRanges: Record<string, R> | undefined;
+  metricRanges: QuerySummary["metrics"] | undefined;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }

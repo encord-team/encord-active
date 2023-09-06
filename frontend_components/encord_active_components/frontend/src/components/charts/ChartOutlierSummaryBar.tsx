@@ -10,11 +10,11 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo } from "react";
-import { ProjectAnalysisSummary, ProjectMetricSummary } from "../Types";
+import { ProjectDomainSummary, QuerySummary } from "../../openapi/api";
 
 export function ChartOutlierSummaryBar(props: {
-  summaryData: ProjectAnalysisSummary | undefined;
-  metricsSummary: ProjectMetricSummary;
+  summaryData: QuerySummary | undefined;
+  metricsSummary: ProjectDomainSummary;
 }) {
   const { metricsSummary, summaryData } = props;
 
@@ -26,8 +26,8 @@ export function ChartOutlierSummaryBar(props: {
     const filteredData = Object.entries(summaryData.metrics)
       .map(([metric, metricData]) => ({
         metric: metricsSummary.metrics[metric]?.title ?? null,
-        moderate: metricData.moderate,
-        severe: metricData.severe,
+        moderate: metricData?.moderate ?? 0,
+        severe: metricData?.severe ?? 0,
       }))
       .filter(({ moderate, severe }) => moderate + severe > 0);
 
