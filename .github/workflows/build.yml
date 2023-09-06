@@ -1,4 +1,4 @@
-name: Publish
+name: Build
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish Encord.Active
+    name: Build Encord.Active
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
