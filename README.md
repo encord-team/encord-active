@@ -3,11 +3,11 @@
 <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
-<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Join our Community</a> |
+<a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Join our Community</a>
 </p>
 
 <h1 align="center">
-  <a href="https://encord.com"><img src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
+  <a href="https://encord.com"><img src="https://storage.googleapis.com/docs-media.encord.com/static/img/icons/encord_active_logo.png" alt="Encord logo"/></a>
 </h1>
 
 <div style="display: flex; justify-content: space-between;">
@@ -92,7 +92,7 @@ docker run -it --rm -p 8000:8000 -v ${PWD}:/data encord/encord-active quickstart
 
 After opening the UI, we recommend you to head to the [workflow documentation][encord-active-docs-workflow] to see some common workflows.
 
-![projects page](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/projects-page.jpg)
+![projects page](https://storage.googleapis.com/docs-media.encord.com/static/img/projects-page.jpg)
 
 ## 💡 When to use Encord Active?
 
@@ -100,7 +100,7 @@ Encord Active helps you understand and improve your data, labels, and models at 
 
 Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
 
-![encord active diagram](https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/process-chart-ea.webp)
+![encord active diagram](https://storage.googleapis.com/docs-media.encord.com/static/img/process-chart-ea.webp)
 
 ## 🔖 Documentation
 
@@ -127,7 +127,7 @@ The app should then open in the browser.
 If not, navigate to [`localhost:8000`](http://localhost:8000).
 Our [docs][encord-active-docs] contain more information about what you can see in the page.
 
-## <img width="24" height="24" src="https://raw.githubusercontent.com/encord-team/encord-active/main/docs/static/img/icons/encord_icon.png"/> Import your dataset
+## <img width="24" height="24" src="https://storage.googleapis.com/docs-media.encord.com/static/img/icons/encord_icon.png"/> Import your dataset
 
 ### Quick import Dataset
 
