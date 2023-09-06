@@ -32,9 +32,7 @@ if is_dev:
     logger = logging.getLogger(__name__)
     logger.info("Make sure you run the frontend separately.")
 else:
-    import encord_active_components as frontend_components
-
-    frontend_build_path = Path(frontend_components.__file__).parent / "frontend" / "dist" / get_settings().ENV.value
+    frontend_build_path = Path(__file__).parent.parent / "frontend" / "dist" / get_settings().ENV.value
 
     if not frontend_build_path.exists() or not (frontend_build_path / "assets").exists():
         logger = logging.getLogger(__name__)
