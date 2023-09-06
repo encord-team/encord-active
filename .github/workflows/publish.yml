@@ -20,12 +20,17 @@ jobs:
           token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
           ref: main
 
+      - name: Set additional Environment variables
+        uses: ./.github/actions/write-env-vars
+        with:
+          secrets: ${{ toJSON(secrets) }}
+
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
 
-      - run: npm install && npm run build
+      - run: "npm install && npm run build"
         working-directory: ./src/encord_active/frontend
 
       - name: Setup root poetry environment

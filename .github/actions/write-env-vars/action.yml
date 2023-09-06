@@ -1,0 +1,17 @@
+name: "Write env vars"
+description: "Write all the env variables into the github actions context"
+
+inputs:
+  secrets:
+    description: "Pass secrets here"
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: "Write env vars"
+      run: |
+        echo VITE_ROLLBAR_ACCESS_TOKEN=${{ fromJSON(inputs.secrets).ROLLBAR_ACCESS_TOKEN }} >> $GITHUB_ENV
+        echo VITE_CODE_VERSION=${{ github.ref_name }} >> $GITHUB_ENV
+      shell: bash
