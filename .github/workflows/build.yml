@@ -1,0 +1,33 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: encord-active-${{ github.ref }}-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish Encord.Active
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
+          ref: main
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - run: npm install && npm run build
+        working-directory: ./src/encord_active/frontend
+
+      - name: Setup root poetry environment
+        uses: ./.github/actions/setup-root-poetry-environment
+
+      - name: Build
+        run: poetry build
