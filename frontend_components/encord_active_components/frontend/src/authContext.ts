@@ -4,7 +4,7 @@ import { useSessionStorage } from "usehooks-ts";
 
 export type AuthContextType = {
   token: string | null;
-}
+};
 
 export const AuthContext = createContext<AuthContextType>({
   token: null,
@@ -22,14 +22,16 @@ export function useCreateAuthContext(): AuthContextType {
     null
   );
 
-  const queryToken = useMemo(() => searchParams.get("token"), []);
+  const queryToken = useMemo(() => searchParams.get("token"), [searchParams]);
 
   useEffect(() => {
-    if (!queryToken) {return;}
+    if (!queryToken) {
+      return;
+    }
     setSessionToken(queryToken);
     searchParams.delete("token");
     setSearchParams(searchParams);
-  }, [queryToken]);
+  }, [queryToken, searchParams, setSearchParams, setSessionToken]);
 
   return { token: sessionToken ?? queryToken };
 }

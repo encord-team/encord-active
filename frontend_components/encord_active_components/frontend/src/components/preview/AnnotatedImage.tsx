@@ -1,8 +1,8 @@
-import { QueryContext } from "../../hooks/Context";
 import useResizeObserver from "use-resize-observer";
 import { useRef } from "react";
-import { ProjectItem } from "../../openapi/api";
 import * as React from "react";
+import { ProjectItem } from "../../openapi/api";
+import { QueryContext } from "../../hooks/Context";
 import { useImageSrc } from "../../hooks/useImageSrc";
 
 export function AnnotatedImage(props: {
@@ -39,10 +39,10 @@ export function AnnotatedImage(props: {
   const contentHeight = item.timestamp != null ? videoHeight : imageHeight;
   const imageSrc = useImageSrc(queryContext, item.url);
 
-  const exactFit = width && height;
+  const exactFit = width && height && fit;
   const contentStyle: React.CSSProperties = {
-    //width: fitWidth ? width : undefined,
-    //height: fitWidth ? undefined : height,
+    // width: fitWidth ? width : undefined,
+    // height: fitWidth ? undefined : height,
     flexShrink: exactFit ? 0 : undefined,
     minWidth: exactFit ? "100%" : undefined,
     minHeight: exactFit ? "100%" : undefined,
@@ -145,34 +145,32 @@ function AnnotationRenderLayer(props: {
   annotationHash: string | undefined;
 }) {
   const { objects, layout, width, height, annotationHash } = props;
-  console.log("render annotations", objects, annotationHash);
 
   const renderPolygon = (
     poly: AnnotationObjectCommon & AnnotationObjectPolygon,
     select: boolean
-  ) => {
-    return (
-      <polygon
-        key={poly.objectHash}
-        style={{
-          fillOpacity: select && annotationHash !== undefined ? "50%" : "20%",
-          fill: poly.color,
-          strokeOpacity: select ? "100%" : "40%",
-          stroke: poly.color,
-          strokeWidth: select ? "2px" : "1px",
-        }}
-        points={Object.values(poly.polygon)
-          .map(({ x, y }) => `${x * width},${y * height}`)
-          .join(" ")}
-      />
-    );
-  };
+  ) => (
+    <polygon
+      key={poly.objectHash}
+      style={{
+        fillOpacity: select && annotationHash !== undefined ? "50%" : "20%",
+        fill: poly.color,
+        strokeOpacity: select ? "100%" : "40%",
+        stroke: poly.color,
+        strokeWidth: select ? "2px" : "1px",
+      }}
+      points={Object.values(poly.polygon)
+        .map(({ x, y }) => `${x * width},${y * height}`)
+        .join(" ")}
+    />
+  );
 
   const renderPoint = (
     poly: AnnotationObjectCommon & AnnotationObjectPoint,
     select: boolean
   ) => {
     const { x, y } = poly.point["0"];
+
     return (
       <g key={poly.objectHash}>
         <circle cx={x * width} cy={y * height} r="5px" fill={poly.color} />
@@ -191,19 +189,17 @@ function AnnotationRenderLayer(props: {
   const renderBoundingBox = (
     poly: AnnotationObjectCommon & AnnotationObjectAABB,
     select: boolean
-  ) => {
-    return (
-      <polygon
-        key={poly.objectHash}
-        style={{
-          fillOpacity: ".40",
-          stroke: poly.color,
-          strokeWidth: "4px",
-        }}
-        points={""} // FIXME:
-      />
-    );
-  };
+  ) => (
+    <polygon
+      key={poly.objectHash}
+      style={{
+        fillOpacity: ".40",
+        stroke: poly.color,
+        strokeWidth: "4px",
+      }}
+      points="" // FIXME:
+    />
+  );
 
   const renderObject = (object: AnnotationObject) => {
     const select =
@@ -213,7 +209,7 @@ function AnnotationRenderLayer(props: {
     } else if (object.shape === "polygon") {
       return renderPolygon(object, select);
     } else {
-      throw Error("Unknown shape: " + object.shape);
+      throw Error(`Unknown shape: ${object.shape}`);
     }
   };
 

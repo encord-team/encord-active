@@ -41,10 +41,11 @@ export function UploadToEncordModal(props: {
         form
           .validateFields()
           .then((fields) =>
-            mutateCreateSubset.mutate({
+            mutateCreateSubset.mutateAsync({
               ...fields,
             })
           )
+          .then((a) => setSelectedProjectHash(a.data))
           .catch(() => undefined);
       }}
     >

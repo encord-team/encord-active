@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useMemo, useState, useContext } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
-import { FaEdit } from "react-icons/fa";
-import { MdClose, MdFilterAltOff, MdImageSearch } from "react-icons/md";
+import { MdClose, MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
@@ -12,12 +11,7 @@ import { HiOutlineTag } from "react-icons/hi";
 import { ApiContext, getApi, Item, useApi } from "./api";
 import { Assistant } from "./Assistant";
 import { splitId } from "./id";
-import {
-  BulkTaggingForm,
-  TaggingDropdown,
-  TaggingForm,
-  TagList,
-} from "./Tagging";
+import { BulkTaggingForm } from "./Tagging";
 import {
   FilterState,
   MetricFilter,
@@ -38,8 +32,8 @@ import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysi
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
 import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { ExplorerFilterState } from "./ExplorerTypes";
-import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "../preview/AnnotatedImage";
+import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 
 export type Props = {
   projectHash: string;
@@ -322,10 +316,11 @@ export function Explorer({
         }}
       />
       {previewedItem && (
-        <ItemPreview
+        <ItemPreviewModal
           queryContext={queryContext}
           projectHash={projectHash}
-          id={previewedItem}
+          previewItem={previewedItem}
+          domain={selectedMetric.domain}
           similaritySearchDisabled={!hasSimilaritySearch}
           scope={scope}
           iou={iou}
@@ -590,106 +585,6 @@ function SimilarityItem({
         >
           <MdClose className="text-base" />
         </button>
-      </div>
-    </div>
-  );
-}
-
-function ItemPreview({
-  queryContext,
-  projectHash,
-  id,
-  similaritySearchDisabled,
-  scope,
-  iou,
-  onClose,
-  onShowSimilar,
-  allowTaggingAnnotations = false,
-}: {
-  queryContext: QueryContext;
-  projectHash: string;
-  id: string;
-  similaritySearchDisabled: boolean;
-  scope: "prediction" | "analysis";
-  onClose: () => void;
-  onShowSimilar: () => void;
-  iou?: number;
-  allowTaggingAnnotations: boolean;
-}) {
-  const dataId = id.split("_").slice(0, 3).join("_");
-  const { data: preview, isLoading } = useProjectDataItem(
-    queryContext,
-    projectHash,
-    dataId
-  );
-  const mutate = () => console.log("fixme");
-
-  if (isLoading || !preview) {
-    return <Spin indicator={loadingIndicator} />;
-  }
-
-  /* const { description, ...metrics } = preview.metadata.metrics;
-  const { editUrl } = data; */
-  const editUrl = "FIXME";
-  const description = "";
-
-  return (
-    <div className="flex w-full flex-col items-center gap-3 p-1">
-      <div className="flex w-full justify-between">
-        <div className="flex gap-3">
-          <button
-            className="btn btn-ghost gap-2"
-            disabled={similaritySearchDisabled}
-            onClick={onShowSimilar}
-          >
-            <MdImageSearch className="text-base" />
-            Similar
-          </button>
-          <button
-            className="btn btn-ghost gap-2"
-            onClick={() =>
-              editUrl ? window.open(editUrl, "_blank") : undefined
-            }
-            disabled={editUrl == null}
-          >
-            <FaEdit />
-            Edit
-          </button>
-          <TaggingDropdown
-            disabledReason={scope === "prediction" ? scope : undefined}
-          >
-            <TaggingForm
-              onChange={(groupedTags) => mutate([{ id, groupedTags }])}
-              selectedTags={{ data: [], label: [] }} // FIXME:
-              tabIndex={0}
-              allowTaggingAnnotations={allowTaggingAnnotations}
-            />
-          </TaggingDropdown>
-        </div>
-        <button onClick={onClose} className="btn btn-outline btn-square">
-          <MdClose className="text-base" />
-        </button>
-      </div>
-      <div className="flex w-full justify-between">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col">
-            <div>
-              <span>Title: </span>
-              <span>{preview?.data_title ?? "unknown"}</span>
-            </div>
-            {description && (
-              <div>
-                <span>Description: </span>
-                <span>{description}</span>
-              </div>
-            )}
-          </div>
-          {/* <MetadataMetrics metrics={metrics} />
-          <TagList tags={data.tags} /> */}
-        </div>
-        <div className="relative inline-block w-fit">
-          <ImageWithPolygons className="" preview={preview} />
-        </div>
       </div>
     </div>
   );

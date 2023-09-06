@@ -30,6 +30,11 @@ export const useAllTags = (itemSet?: Set<string>) => {
     taggedItems,
   };
 
+  const dataItemSet = useMemo(
+    () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
+    [itemSet]
+  );
+
   if (isLoading) {
     return {
       ...defaultAllTags,
@@ -39,11 +44,6 @@ export const useAllTags = (itemSet?: Set<string>) => {
       },
     };
   }
-
-  const dataItemSet = useMemo(
-    () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
-    [itemSet]
-  );
 
   const allTags = [...taggedItems].reduce((result, [id, { data, label }]) => {
     data.forEach(result.allDataTags.add, result.allDataTags);
@@ -75,7 +75,9 @@ export function TaggingDropdown({
   ...rest
 }: {
   disabledReason?: keyof typeof taggingDisabledReasons;
-} & JSX.IntrinsicElements["div"]) {
+  children?: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div
       {...rest}
@@ -199,7 +201,7 @@ export function TaggingForm({
       {...rest}
       tabIndex={0}
       className={classy(
-        "card-compact card dropdown-content w-64 bg-base-100 p-2 text-primary-content shadow",
+        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
         className
       )}
     >

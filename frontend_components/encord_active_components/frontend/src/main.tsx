@@ -11,22 +11,24 @@ import {
 } from "react-router-dom";
 import { App } from "./app";
 import { env } from "./constants";
-import {AuthContext, useCreateAuthContext} from "./authContext";
+import { AuthContext, useCreateAuthContext } from "./authContext";
 import "antd/dist/reset.css";
 
 const queryClient = new QueryClient();
 
 function Root() {
-  const authContext = useCreateAuthContext()
+  const authContext = useCreateAuthContext();
 
-  return <QueryClientProvider client={queryClient}>
-    {env === "development" && <ReactQueryDevtools position="bottom-right" />}
-    <AuthContext.Provider value={authContext}>
-      <Routes>
-        <Route path="/" element={<App />} />
-      </Routes>
-    </AuthContext.Provider>
-  </QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      {env === "development" && <ReactQueryDevtools position="bottom-right" />}
+      <AuthContext.Provider value={authContext}>
+        <Routes>
+          <Route path="/" element={<App />} />
+        </Routes>
+      </AuthContext.Provider>
+    </QueryClientProvider>
+  );
 }
 
 const router = createBrowserRouter([

@@ -117,7 +117,7 @@ export function SummaryTab(props: {
         {data == null ||
         ("metric_width" in data.metrics &&
           "metric_height" in data.metrics &&
-          (data.metrics["metric_height"]?.count ?? 0) > 0) ? (
+          (data.metrics.metric_height?.count ?? 0) > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"

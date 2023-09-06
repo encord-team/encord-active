@@ -264,7 +264,7 @@ function addNewEntry(
     );
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
-      if (newEnumSummary != undefined) {
+      if (newEnumSummary !== undefined) {
         const enumValues = getEnumList(newEnumSummary, featureHashMap);
 
         return {

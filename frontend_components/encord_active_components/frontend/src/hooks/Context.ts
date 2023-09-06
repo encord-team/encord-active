@@ -3,7 +3,9 @@ import { Configuration } from "../openapi/configuration";
 
 export class QueryContext {
   public readonly baseUrl: string;
+
   public readonly usesAuth: boolean;
+
   private readonly projectV2: ReturnType<typeof ProjectsV2ApiFactory>;
 
   constructor(baseUrl: string, token: string | null) {

@@ -1,6 +1,4 @@
 import * as React from "react";
-import { fork } from "radash";
-import { useMemo, useRef } from "react";
 import { Card, Space, Spin } from "antd";
 import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";
@@ -9,8 +7,6 @@ import encordImportUrl from "../../assets/encord-import.svg";
 import fileImageUrl from "../../assets/file-image.svg";
 import annotationsUrl from "../../assets/annotations.svg";
 import classesUrl from "../../assets/classes.svg";
-import DEFAULT_PROJECT_IMAGE from "../../assets/default_project_image.webp";
-
 import { classy } from "../helpers/classy";
 import { env } from "../constants";
 import { useImageSrc } from "../hooks/useImageSrc";
@@ -140,7 +136,6 @@ function ProjectCard({
   showDownloadedBadge?: boolean;
   setSelectedProjectHash: (projectHash: string) => void;
 }) {
-  const video = useRef<HTMLVideoElement>(null);
   const { data: projectMetadata } = useProjectMetadata(
     queryContext,
     project.project_hash

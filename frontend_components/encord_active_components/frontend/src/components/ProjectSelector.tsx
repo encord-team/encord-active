@@ -1,9 +1,9 @@
 import * as React from "react";
 import { fork } from "radash";
 import { Button, Select, Space } from "antd";
+import { useMemo } from "react";
 import { QueryContext } from "../hooks/Context";
 import { useProjectList } from "../hooks/queries/useListProjects";
-import { useMemo } from "react";
 
 export type Props = {
   queryContext: QueryContext;
@@ -17,9 +17,9 @@ export function ProjectSelector({
   setSelectedProjectHash,
 }: Props) {
   const { data: projectListData } = useProjectList(queryContext);
-  const projects = projectListData?.projects ?? [];
+  const projects = projectListData?.projects;
   const [sandboxProjects, userProjects] = useMemo(
-    () => fork(projects, ({ sandbox }) => !!sandbox),
+    () => fork(projects ?? [], ({ sandbox }) => !!sandbox),
     [projects]
   );
 

@@ -107,7 +107,6 @@ export function ChartDistributionBar(props: {
       results.sort((a, b) => Number(a.group) - Number(b.group));
     }
     const getGroupName = (group: string | number): string | number => {
-      console.log("ke", keyValues, selectedProperty, group);
       if (selectedProperty === "feature_hash") {
         return featureHashMap[group]?.name ?? group;
       } else if (keyValues !== undefined) {
@@ -122,7 +121,13 @@ export function ChartDistributionBar(props: {
       group: getGroupName(isMetric ? Number(grouping.group) : grouping.group),
       fill: getFill(grouping.count),
     }));
-  }, [featureHashMap, groupingData.data, isMetric, selectedProperty]);
+  }, [
+    featureHashMap,
+    groupingData.data,
+    isMetric,
+    selectedProperty,
+    metricsSummary.enums,
+  ]);
 
   const lookupGrouping = (value: number) =>
     Number(

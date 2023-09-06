@@ -4,12 +4,11 @@ import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Checkbox, Row, Typography } from "antd";
+import { useMemo } from "react";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
-import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
-import { useMemo } from "react";
 
 export function GalleryCard(props: {
   projectHash: string;
@@ -49,14 +48,9 @@ export function GalleryCard(props: {
   );
   const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
   const projectSummaryForDomain =
-    projectSummary == undefined
+    projectSummary === undefined
       ? {}
       : projectSummary[selectedMetric.domain].metrics;
-  const { data: projectAnalysisSummary } = useProjectAnalysisSummary(
-    queryContext,
-    projectHash,
-    selectedMetric.domain
-  );
 
   // Metric name for order by metric
   const metricName =
@@ -87,12 +81,12 @@ export function GalleryCard(props: {
     }
     const objOrClass = preview.objects
       .concat(preview.classifications)
-      .find((elem: { objectHash?: string; classificationHash?: string }) => {
-        return (
+      .find(
+        (elem: { objectHash?: string; classificationHash?: string }) =>
           elem.objectHash === annotationHash ||
           elem.classificationHash === annotationHash
-        );
-      });
+      );
+
     return objOrClass as {
       readonly objectHash: string;
       readonly color: string;
@@ -140,7 +134,7 @@ export function GalleryCard(props: {
                   onClick={onExpand}
                 />
                 {
-                  /*<div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
+                  /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
                   {<TagList tags={data.tags} />}
                   {description && (
                     <div className="flex flex-col">
@@ -151,7 +145,7 @@ export function GalleryCard(props: {
                       <span>{description}</span>
                     </div>
                   )}
-                </div>*/ null
+                </div> */ null
                 }
               </div>
             </AnnotatedImage>

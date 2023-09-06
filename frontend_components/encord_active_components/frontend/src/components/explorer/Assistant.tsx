@@ -26,7 +26,9 @@ export const useSearch = (
   const { refetch, isFetching, data } = useQuery(
     [scope, "search", search?.type, search?.query],
     ({ signal }) => {
-      if (!search?.query) {return null;}
+      if (!search?.query) {
+        return null;
+      }
       client.cancelQueries(["search"]);
       const res = searchFn(
         { scope, filters, query: search.query, type: search.type },
@@ -39,12 +41,17 @@ export const useSearch = (
   );
 
   useEffect(() => {
-    if (search) {refetch();}
-    else {setResult(undefined);}
-  }, [search]);
+    if (search) {
+      refetch();
+    } else {
+      setResult(undefined);
+    }
+  }, [search, refetch]);
 
   useEffect(() => {
-    if (data) {setResult(data);}
+    if (data) {
+      setResult(data);
+    }
   }, [data]);
 
   return { search, setSearch, result, loading: isFetching };

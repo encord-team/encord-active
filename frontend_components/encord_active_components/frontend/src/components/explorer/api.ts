@@ -184,7 +184,9 @@ export const defaultTags = { data: [], label: [] };
 
 export const getApi = (projectHash: string, authToken?: string | null) => {
   const updateOptions = (options: Parameters<typeof fetch>[1]) => {
-    if (!authToken) {return options;}
+    if (!authToken) {
+      return options;
+    }
 
     return {
       ...options,
@@ -367,8 +369,9 @@ export const getApi = (projectHash: string, authToken?: string | null) => {
 export const useApi = () => {
   const apiContext = useContext(ApiContext);
 
-  if (!apiContext)
-    {throw new Error("useApi has to be used within <ProjectContext.Provider>");}
+  if (!apiContext) {
+    throw new Error("useApi has to be used within <ProjectContext.Provider>");
+  }
 
   const { projectHash, ...api } = apiContext;
 

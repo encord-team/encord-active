@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Column,
   ColumnConfig,
@@ -95,7 +96,6 @@ export function MetricDistributionTiny(props: {
 const fixedFormatter = (value: string | number | null) =>
   value != null ? parseFloat(value.toString()).toFixed(2) : "Missing";
 
-const HEX_BINS = 1000;
 const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export function ScatteredEmbeddings(props: {
@@ -137,6 +137,7 @@ export function ScatteredEmbeddings(props: {
   }>(() => {
     if (false) {
       // prediction
+
       return {
         colorField: "score",
         color: (datum) => getColor(datum.score ?? 0),

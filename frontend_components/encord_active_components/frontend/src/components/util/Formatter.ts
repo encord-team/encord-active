@@ -32,7 +32,7 @@ export function formatTooltipLabel<T>(prefix?: string): (value: T) => string {
 */
 const cyrb53a = (str: string, seed: number = 0) => {
   let h1 = 0xdeadbeef ^ seed;
-    let h2 = 0x41c6ce57 ^ seed;
+  let h2 = 0x41c6ce57 ^ seed;
   for (let i = 0; i < str.length; i += 1) {
     const ch = str.charCodeAt(i);
     h1 = Math.imul(h1 ^ ch, 0x85ebca77);
