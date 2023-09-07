@@ -628,6 +628,7 @@ export const Explorer = ({
                     similaritySearchDisabled={!hasSimilaritySearch}
                     onShowSimilar={() => showSimilarItems(id)}
                     selected={selectedItems.has(id)}
+                    scope={scope}
                     iou={iou}
                   />
                 ))}
@@ -923,6 +924,7 @@ const GalleryItem = ({
   similaritySearchDisabled,
   onExpand,
   onShowSimilar,
+  scope,
   iou,
 }: {
   itemId: string;
@@ -931,9 +933,14 @@ const GalleryItem = ({
   similaritySearchDisabled: boolean;
   onExpand: JSX.IntrinsicElements["button"]["onClick"];
   onShowSimilar: JSX.IntrinsicElements["button"]["onClick"];
+  scope: Scope;
   iou?: number;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(itemId, iou);
+  const { data, isLoading } = useApi().fetchItem(
+    itemId,
+    scope === "prediction",
+    iou,
+  );
 
   if (isLoading || !data)
     return (
