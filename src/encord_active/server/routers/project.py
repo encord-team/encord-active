@@ -291,7 +291,9 @@ def read_item(project: ProjectFileStructureDep, id: str, is_prediction: bool = F
     if is_prediction:
         row = get_model_prediction_by_id(project, id, iou)
         if not row:
-            raise HTTPException(status_code=404, detail=f'Prediction with id "{id}" was not found for project "{project}"')
+            raise HTTPException(
+                status_code=404, detail=f'Prediction with id "{id}" was not found for project "{project}"'
+            )
         return to_item(row, project, lr_hash, du_hash, frame, object_hash[0] if len(object_hash) else None)
 
     with DBConnection(project) as conn:
