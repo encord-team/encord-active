@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from rich.markup import escape
 from rich.panel import Panel
 from typer.core import TyperGroup
-from typing_extensions import Annotated
 
 from encord_active.cli.project import project_cli
 from encord_active.cli.utils.server import ensure_safe_project
