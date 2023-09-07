@@ -27,8 +27,8 @@
     "antd": "^5.8.6",
     "axios": "^1.4.0",
     "d3-array": "^3.2.3",
-    "d3-scale": "^4.0.2",
     "d3-hexbin": "^0.2.2",
+    "d3-scale": "^4.0.2",
     "daisyui": "^2.51.3",
     "radash": "^10.7.1",
     "react": "^18.2.0",
@@ -42,6 +42,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.7.0",
     "@types/d3-array": "^3.0.4",
     "@types/d3-hexbin": "^0.2.3",
     "@types/react": "^18.2.15",
