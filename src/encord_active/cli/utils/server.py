@@ -38,11 +38,13 @@ def is_port_in_use(port: int) -> bool:
         return s.connect_ex(("localhost", port)) == 0
 
 
-def launch_server_app(target: Path):
-    if is_port_in_use(8000):
+def launch_server_app(target: Path, port: int):
+    if is_port_in_use(port):
         import typer
 
-        rich.print("[red]Port already in use...")
+        rich.print(
+            f"[orange1]Port [blue]{port}[/blue] already in use. Try changing the `[blue]--port[/blue]` option.[/orange1]"
+        )
         raise typer.Exit()
     else:
         rich.print("[yellow]Bear with us, this might take a short while...")
@@ -51,5 +53,5 @@ def launch_server_app(target: Path):
         generate_prisma_client()
     ensure_safe_project(target)
     data_dir = target.expanduser().absolute()
-    rich.print("[green] Server starting on localhost:8000")
-    start(data_dir, app_config.is_dev)
+    rich.print(f"[green] Server starting on [blue]http://localhost:{port}[/blue]")
+    start(data_dir, port=port, reload=app_config.is_dev)

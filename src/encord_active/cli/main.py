@@ -411,13 +411,14 @@ def start(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Path of the project you would like to start", file_okay=False
     ),
+    port: int = typer.Option(8000, help="Bind app to this port", envvar="PORT"),
 ):
     """
     [green bold]Launch[/green bold] the application with the provided project ✨
     """
     from encord_active.cli.utils.server import launch_server_app
 
-    launch_server_app(target)
+    launch_server_app(target, port)
 
 
 @cli.command()
@@ -425,6 +426,7 @@ def quickstart(
     target: Path = typer.Option(
         Path.cwd(), "--target", "-t", help="Directory where the project would be saved.", file_okay=False
     ),
+    port: int = typer.Option(8000, help="Bind app to this port", envvar="PORT"),
 ):
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
@@ -437,7 +439,7 @@ def quickstart(
     project_dir.mkdir(exist_ok=True)
 
     fetch_prebuilt_project(project_name, project_dir)
-    launch_server_app(project_dir)
+    launch_server_app(project_dir, port)
 
 
 @cli.command(rich_help_panel="Resources")
