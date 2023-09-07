@@ -125,12 +125,12 @@ export const Explorer = ({
       object_classes: labelClass,
       ...(scope === "prediction" && predictionType
         ? {
-            prediction_filters: {
-              type: predictionType,
-              outcome: predictionOutcome,
-              iou_threshold: iou,
-            },
-          }
+          prediction_filters: {
+            type: predictionType,
+            outcome: predictionOutcome,
+            iou_threshold: iou,
+          },
+        }
         : {}),
     } as Filters;
   }, [JSON.stringify(newFilters), predictionType, predictionOutcome, iou]);
@@ -421,9 +421,9 @@ export const Explorer = ({
               idValues={
                 (scope === "prediction"
                   ? sortedItems?.map(({ id, ...item }) => ({
-                      ...item,
-                      id: id.slice(0, id.lastIndexOf("_")),
-                    }))
+                    ...item,
+                    id: id.slice(0, id.lastIndexOf("_")),
+                  }))
                   : sortedItems) || []
               }
               filters={filters}
@@ -449,8 +449,8 @@ export const Explorer = ({
                   scope === "prediction"
                     ? scope
                     : !selectedItems.size
-                    ? "missing-target"
-                    : undefined
+                      ? "missing-target"
+                      : undefined
                 }
               >
                 <BulkTaggingForm
@@ -843,7 +843,11 @@ const ItemPreview = ({
   iou?: number;
   allowTaggingAnnotations: boolean;
 }) => {
-  const { data, isLoading } = useApi().fetchItem(id, iou);
+  const { data, isLoading } = useApi().fetchItem(
+    id,
+    scope === "prediction",
+    iou,
+  );
   const { mutate } = useApi().itemTagsMutation;
 
   if (isLoading || !data) return <Spinner />;
