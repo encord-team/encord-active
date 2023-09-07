@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     git \
     ffmpeg \
-    sqlite3
+    sqlite3 \
+    libgeos-dev
 
 RUN apt-get -y clean  \
     && rm -rf /var/lib/apt/lists/*
