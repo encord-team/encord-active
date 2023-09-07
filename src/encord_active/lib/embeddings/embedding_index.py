@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import pickle
-from pathlib import Path
 from typing import NamedTuple, Optional
 
 import numpy as np
@@ -37,17 +36,20 @@ def _query_in_batches(index: NNDescent, embeddings: np.ndarray, k: int, batch_si
     return EmbeddingSearchResult(np.concatenate(dists, axis=0), np.concatenate(idxs, axis=0))
 
 
-def _get_embedding_index_file(embedding_file: Path, metric: str) -> Path:
-    return embedding_file.parent / f"{embedding_file.stem}_{metric}_index.pkl"
-
-
 class EmbeddingIndex:
     @classmethod
     def index_available(
         cls, project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, metric: str = "cosine"
     ):
-        embedding_file = project_file_structure.get_embeddings_file(embedding_type)
-        return _get_embedding_index_file(embedding_file, metric).is_file()
+        return project_file_structure.get_embedding_index_file(embedding_type, metric).is_file()
+
+    @classmethod
+    def remove_index(
+        cls, project_file_structure: ProjectFileStructure, embedding_type: EmbeddingType, metric: str = "cosine"
+    ):
+        embedding_file = project_file_structure.get_embedding_index_file(embedding_type, metric)
+        if embedding_file.is_file():
+            embedding_file.unlink()
 
     @classmethod
     def from_project(
@@ -70,8 +72,7 @@ class EmbeddingIndex:
             An index ready for querying
 
         """
-        embedding_file = project_file_structure.get_embeddings_file(embedding_type)
-        index_file = _get_embedding_index_file(embedding_file, metric)
+        index_file = project_file_structure.get_embedding_index_file(embedding_type, metric)
 
         if iterator is None:
             iterator = DatasetIterator(cache_dir=project_file_structure.project_dir)

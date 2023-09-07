@@ -4,9 +4,10 @@ import itertools
 import json
 import logging
 import tempfile
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, NamedTuple, Optional, Union
 
 if TYPE_CHECKING:
     import prisma
@@ -44,6 +45,13 @@ from encord_active.lib.project.project_file_structure import ProjectFileStructur
 logger = logger.opt(colors=True)
 encord_logger = logging.getLogger("encord")
 encord_logger.setLevel(logging.ERROR)
+
+
+class ProjectRefreshChangeResponse(NamedTuple):
+    data_changed: bool
+    labels_changed: bool
+    has_objects: bool
+    has_classifications: bool
 
 
 class Project:
@@ -122,14 +130,14 @@ class Project:
 
         return self.load()
 
-    def refresh(self):
+    def refresh(self) -> ProjectRefreshChangeResponse:
         """
         Refresh project data and labels using its remote project in Encord Annotate.
 
         :return: The updated project instance.
         """
 
-        self.project_meta = fetch_project_meta(self.file_structure.project_dir)
+        self.project_meta = self.file_structure.load_project_meta()
         if not self.project_meta.get("has_remote", False):
             raise AttributeError("The project does not have a remote project associated to it.")
 
@@ -146,10 +154,33 @@ class Project:
 
         encord_client = get_client(Path(ssh_key_path))
         encord_project = encord_client.get_project(project_hash)
-        self.__download_and_save_label_rows(encord_project)
+
+        self.__save_project_meta(encord_project)
+        new_ontology = OntologyStructure.from_dict(encord_project.ontology)
+        self.save_ontology(new_ontology)
+        data_changed = self.__download_and_save_label_rows(encord_project)
+
+        stored_edit_times: list[datetime] = list(
+            filter(None, [meta.last_edited_at for meta in self.__load_label_row_meta().values()])
+        )
+        latest_stored_edit = max(stored_edit_times) if stored_edit_times else None
+        latest_edit_times: list[datetime] = list(
+            filter(None, [meta.last_edited_at for meta in encord_project.list_label_rows()])
+        )
+        latest_edit = max(latest_edit_times) if latest_edit_times else None
+
         self.__save_label_row_meta(encord_project)  # Update cached metadata of the label rows (after new data sync)
 
-        return self.load()
+        return ProjectRefreshChangeResponse(
+            data_changed=data_changed,
+            labels_changed=data_changed
+            or (
+                latest_edit is not None
+                and (latest_stored_edit is None or (latest_edit - latest_stored_edit) > timedelta(seconds=1))
+            ),
+            has_objects=len(new_ontology.objects) > 0,
+            has_classifications=len(new_ontology.classifications) > 0,
+        )
 
     @property
     def is_loaded(self) -> bool:
@@ -187,7 +218,7 @@ class Project:
             raise FileNotFoundError(f"Expected file `ontology.json` at {ontology_file_path.parent}")
         self.ontology = OntologyStructure.from_dict(json.loads(ontology_file_path.read_text(encoding="utf-8")))
 
-    def __save_label_row_meta(self, encord_project: EncordProject):
+    def __save_label_row_meta(self, encord_project: EncordProject) -> dict[str, Any]:
         label_row_meta = {
             lrm.label_hash: handle_enum_and_datetime(lrm)
             for lrm in encord_project.list_label_rows()
@@ -198,6 +229,7 @@ class Project:
             meta["last_edited_at"] = meta["last_edited_at"].rsplit(".", maxsplit=1)[0]
 
         self.file_structure.label_row_meta.write_text(json.dumps(label_row_meta, indent=2), encoding="utf-8")
+        return label_row_meta
 
     def __load_label_row_meta(self, subset_size: Optional[int] = None) -> dict[str, LabelRowMetadata]:
         label_row_meta_file_path = self.file_structure.label_row_meta
@@ -220,11 +252,19 @@ class Project:
                 where={"label_hash": label_row["label_hash"]},
             )
 
-    def __download_and_save_label_rows(self, encord_project: EncordProject):
+    def __download_and_save_label_rows(self, encord_project: EncordProject) -> bool:
+        """
+        Args:
+            encord_project: project to download data from
+
+        Returns:
+            boolean whether new data was downloaded.
+
+        """
         label_rows = self.__download_label_rows_and_data(encord_project, self.file_structure)
         split_lr_videos(label_rows, self.file_structure)
         logger.info("Data and labels successfully synced from the remote project")
-        return
+        return len(label_rows) > 0
 
     def __download_label_rows_and_data(
         self,
