@@ -11,6 +11,7 @@ import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import {
+  Embedding2DFilter,
   PredictionQuery2DEmbedding,
   Query2DEmbedding,
 } from "../../openapi/api";
@@ -104,26 +105,32 @@ const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 export function ScatteredEmbeddings(props: {
   reductionScatter: Query2DEmbedding | PredictionQuery2DEmbedding | undefined;
   predictionHash: string | undefined;
-  setEmbeddingSelection: (
-    bounds:
-      | {
-          x1: number;
-          x2: number;
-          y1: number;
-          y2: number;
-        }
-      | undefined
-  ) => void;
+  reductionHash: string | undefined;
+  setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
   onReset: () => void;
 }) {
-  const { reductionScatter, predictionHash, setEmbeddingSelection, onReset } =
-    props;
+  const {
+    reductionScatter,
+    reductionHash,
+    predictionHash,
+    setEmbeddingSelection,
+    onReset,
+  } = props;
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
-      if (["mouseup", "legend-item:click"].includes(type)) {
+      //console.log("t", type, view);
+      if (type.includes("brush")) {
+        console.log("ty", type, view);
+      }
+      if (
+        ["mouseup", "legend-item:click"].includes(type) &&
+        reductionHash !== undefined
+      ) {
+        console.log("go", view);
         const bbox = view.coordinateBBox;
         setEmbeddingSelection({
+          reduction_hash: reductionHash,
           x1: bbox.x,
           x2: bbox.x + bbox.width,
           y1: bbox.y,

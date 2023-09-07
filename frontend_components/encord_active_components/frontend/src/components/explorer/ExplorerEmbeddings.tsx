@@ -7,6 +7,7 @@ import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { usePredictionAnalysisReducedEmbeddings } from "../../hooks/queries/usePredictionAnalysisReducedEmbeddings";
+import { Embedding2DFilter } from "../../openapi/api";
 
 export function ExplorerEmbeddings(props: {
   queryContext: QueryContext;
@@ -14,16 +15,7 @@ export function ExplorerEmbeddings(props: {
   predictionHash: string | undefined;
   reductionHash: string | undefined;
   filters: ExplorerFilterState;
-  setEmbeddingSelection: (
-    bounds:
-      | {
-          x1: number;
-          x2: number;
-          y1: number;
-          y2: number;
-        }
-      | undefined
-  ) => void;
+  setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
 }) {
   const {
     queryContext,
@@ -79,6 +71,7 @@ export function ExplorerEmbeddings(props: {
       ) : (
         <ScatteredEmbeddings
           reductionScatter={scatteredEmbeddings}
+          reductionHash={reductionHash}
           predictionHash={predictionHash}
           setEmbeddingSelection={setEmbeddingSelection}
           onReset={() => setEmbeddingSelection(undefined)}

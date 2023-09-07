@@ -1,5 +1,9 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
+import {
+  CACHE_TIME_LIST_TOP_LEVEL,
+  STALE_TIME_LIST_TOP_LEVEL,
+} from "../queryConstants";
 
 export function useProjectListPredictions(
   queryContext: QueryContext,
@@ -13,6 +17,10 @@ export function useProjectListPredictions(
         .getProjectV2API()
         .listProjectPredictionsProjectsV2ProjectHashPredictionsGet(projectHash)
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_LIST_TOP_LEVEL,
+      cacheTime: CACHE_TIME_LIST_TOP_LEVEL,
+    }
   );
 }

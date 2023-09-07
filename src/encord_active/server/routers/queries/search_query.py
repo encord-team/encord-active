@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as
@@ -18,14 +18,14 @@ from encord_active.server.routers.queries.domain_query import (
 
 class Embedding2DFilter(BaseModel):
     reduction_hash: uuid.UUID
-    minX: float
-    maxX: float
-    minY: float
-    maxY: float
+    x1: float
+    x2: float
+    y1: float
+    y2: float
 
 
 class DomainSearchFilters(BaseModel):
-    metrics: Dict[str, List[int]]
+    metrics: Dict[str, List[float]]
     enums: Dict[str, List[str]]
     reduction: Optional[Embedding2DFilter]
     tags: Optional[List[uuid.UUID]]
@@ -169,7 +169,6 @@ def _append_filters(
     # Embedding filters
     if search.reduction is not None:
         reduction_list = filters.setdefault(tables.reduction, [])
-        min_x, min_y = search.reduction.min
-        max_x, max_y = search.reduction.max
-        reduction_list.append(between_op(tables.reduction.x, min_x, max_x))
-        reduction_list.append(between_op(tables.reduction.y, min_y, max_y))
+        reduction_list.append(tables.reduction.reduction_hash == search.reduction.reduction_hash)
+        reduction_list.append(between_op(tables.reduction.x, search.reduction.x1, search.reduction.x2))
+        reduction_list.append(between_op(tables.reduction.y, search.reduction.y1, search.reduction.y2))

@@ -1,6 +1,7 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
 import { AnalysisDomain } from "../../openapi/api";
+import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectCompareDissimilarity(
   queryContext: QueryContext,
@@ -26,6 +27,10 @@ export function useProjectCompareDissimilarity(
           compareProjectHash
         )
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_ANALYTICS,
+      cacheTime: CACHE_TIME_ANALYTICS,
+    }
   );
 }

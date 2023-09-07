@@ -20,17 +20,22 @@ import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 export function ProjectPage(props: {
   queryContext: QueryContext;
   projectHash: string;
-  editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
 }) {
-  const { queryContext, editUrl, projectHash, setSelectedProjectHash } = props;
+  const { queryContext, projectHash, setSelectedProjectHash, encordDomain } =
+    props;
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary, isError } = useProjectSummary(
     queryContext,
     projectHash
   );
+
+  const editUrl =
+    projectSummary === undefined || projectSummary.local_project
+      ? undefined
+      : (dataHash: string, projectHash: string, frame: number): string =>
+          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
@@ -134,7 +139,6 @@ export function ProjectPage(props: {
                 predictionHash={undefined}
                 dataMetricsSummary={projectSummary.data}
                 annotationMetricsSummary={projectSummary.annotation}
-                scope="analysis"
                 queryContext={queryContext}
                 editUrl={editUrl}
                 featureHashMap={featureHashMap}

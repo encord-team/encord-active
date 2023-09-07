@@ -150,22 +150,21 @@ function ProjectCard({
   );
   const imgSrcUrl = useImageSrc(queryContext, projectDataItem?.url);
 
-  if (imgSrcUrl === undefined || projectDataItem === undefined) {
-    return <Spin indicator={loadingIndicator} />;
-  }
-
   return (
     <Card
       hoverable
       style={{ width: 240 }}
+      loading={imgSrcUrl === undefined || projectDataItem === undefined}
       onClick={() => setSelectedProjectHash(project.project_hash)}
       cover={
-        <AnnotatedImage
-          queryContext={queryContext}
-          item={projectDataItem}
-          annotationHash={undefined}
-          mode="preview"
-        />
+        projectDataItem !== undefined ? (
+          <AnnotatedImage
+            queryContext={queryContext}
+            item={projectDataItem}
+            annotationHash={undefined}
+            mode="preview"
+          />
+        ) : null
       }
     >
       <Meta title={project.title} description={project.description} />

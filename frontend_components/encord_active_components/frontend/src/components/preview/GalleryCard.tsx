@@ -52,7 +52,6 @@ export function GalleryCard(props: {
   // Conditionally extract prediction type
   const predictionTy: "TP" | "FP" | "FN" | string | undefined =
     predictionHash !== undefined ? itemId.split("_")[3] : undefined;
-  console.log("a", itemId, "?", annotationHash, predictionTy);
 
   // Conditionally fetch the correct dataId from project or prediction.
   const projectItem = predictionTy === undefined || predictionTy === "FN";

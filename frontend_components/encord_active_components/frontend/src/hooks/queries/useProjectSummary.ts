@@ -1,5 +1,6 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
+import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectSummary(
   queryContext: QueryContext,
@@ -13,6 +14,10 @@ export function useProjectSummary(
         .getProjectV2API()
         .getProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash)
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_ANALYTICS,
+      cacheTime: CACHE_TIME_ANALYTICS,
+    }
   );
 }

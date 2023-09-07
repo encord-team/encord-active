@@ -353,9 +353,7 @@ export function Explorer({
         predictionHash={predictionHash}
         reductionHash={reductionHash}
         filters={filters}
-        setEmbeddingSelection={() => {
-          /* FIXME */
-        }}
+        setEmbeddingSelection={setEmbeddingFilter}
       />
       {previewedItem && (
         <ItemPreviewModal

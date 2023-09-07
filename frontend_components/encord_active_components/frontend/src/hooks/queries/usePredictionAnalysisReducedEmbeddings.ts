@@ -5,6 +5,7 @@ import {
   PredictionDomain,
   SearchFilters,
 } from "../../openapi/api";
+import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function usePredictionAnalysisReducedEmbeddings(
   queryContext: QueryContext,
@@ -43,6 +44,10 @@ export function usePredictionAnalysisReducedEmbeddings(
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_ANALYTICS,
+      cacheTime: CACHE_TIME_ANALYTICS,
+    }
   );
 }

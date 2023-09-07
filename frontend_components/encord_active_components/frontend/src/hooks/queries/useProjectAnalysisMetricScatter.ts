@@ -5,6 +5,7 @@ import {
   Scatter2dDataMetricProjectsV2ProjectHashAnalysisDomainScatterGetBucketsEnum,
   SearchFilters,
 } from "../../openapi/api";
+import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectAnalysisMetricScatter(
   queryContext: QueryContext,
@@ -43,6 +44,10 @@ export function useProjectAnalysisMetricScatter(
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_ANALYTICS,
+      cacheTime: CACHE_TIME_ANALYTICS,
+    }
   );
 }

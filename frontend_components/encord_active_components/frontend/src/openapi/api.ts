@@ -151,25 +151,25 @@ export interface Embedding2DFilter {
    * @type {number}
    * @memberof Embedding2DFilter
    */
-  minX: number;
+  x1: number;
   /**
    *
    * @type {number}
    * @memberof Embedding2DFilter
    */
-  maxX: number;
+  x2: number;
   /**
    *
    * @type {number}
    * @memberof Embedding2DFilter
    */
-  minY: number;
+  y1: number;
   /**
    *
    * @type {number}
    * @memberof Embedding2DFilter
    */
-  maxY: number;
+  y2: number;
 }
 /**
  * An enumeration.

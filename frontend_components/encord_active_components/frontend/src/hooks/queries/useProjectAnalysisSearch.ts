@@ -1,6 +1,7 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
 import { AnalysisDomain, SearchFilters } from "../../openapi/api";
+import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectAnalysisSearch(
   queryContext: QueryContext,
@@ -38,6 +39,10 @@ export function useProjectAnalysisSearch(
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),
-    options
+    {
+      ...options,
+      staleTime: STALE_TIME_ANALYTICS,
+      cacheTime: CACHE_TIME_ANALYTICS,
+    }
   );
 }

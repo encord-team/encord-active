@@ -14,6 +14,9 @@ export function App() {
   const { token } = useAuth();
   const queryContext = useMemo(() => new QueryContext(apiUrl, token), [token]);
 
+  // FIXME: make variable conditionally loaded from parent
+  const encordDomain = "https://app.encord.com";
+
   return (
     <div className="bg-white p-12">
       {selectedProjectHash ? (
@@ -22,6 +25,7 @@ export function App() {
         >
           <ProjectPage
             queryContext={queryContext}
+            encordDomain={encordDomain}
             projectHash={selectedProjectHash}
             setSelectedProjectHash={setSelectedProjectHash}
           />
