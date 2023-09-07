@@ -629,6 +629,12 @@ class PredictionItem(BaseModel):
     label_hash: uuid.UUID
 
 
+def _sanitise_nan(value: Optional[float]) -> Optional[float]:
+    if value is None or math.isnan(value):
+        return None
+    return value
+
+
 @router.get("/preview/{data_item}")
 def get_prediction_item(
     project_hash: uuid.UUID,
@@ -669,7 +675,9 @@ def get_prediction_item(
 
     return PredictionItem(
         annotation_metrics={
-            annotation_analytics.annotation_hash: {k: getattr(annotation_analytics, k) for k in AnnotationMetrics}
+            annotation_analytics.annotation_hash: {
+                k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
+            }
             for annotation_analytics in annotation_analytics_list
         },
         objects=du_meta.objects,

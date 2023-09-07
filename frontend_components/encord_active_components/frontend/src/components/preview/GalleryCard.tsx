@@ -80,7 +80,9 @@ export function GalleryCard(props: {
       return undefined;
     }
   }, [previewProject, previewPrediction, projectItem]);
-  const isLoading = projectItem ? isLoadingProject : true;
+  const isLoading = projectItem
+    ? isLoadingProject
+    : isLoadingProject && isLoadingPrediction;
 
   // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(queryContext, projectHash);

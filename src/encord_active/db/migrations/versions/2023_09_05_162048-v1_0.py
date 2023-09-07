@@ -802,7 +802,7 @@ def upgrade() -> None:
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("reduction_hash", "project_hash", "du_hash"),
+        sa.PrimaryKeyConstraint("reduction_hash", "project_hash", "du_hash", "frame"),
     )
     op.create_index(
         "project_analytics_data_reduced_x",

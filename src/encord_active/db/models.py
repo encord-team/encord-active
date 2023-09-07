@@ -363,7 +363,7 @@ class ProjectDataAnalyticsReduced(SQLModel, table=True):
     reduction_hash: UUID = field_uuid(primary_key=True)
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
-    frame: int = field_int()
+    frame: int = field_int(primary_key=True)
     x: float = field_real()
     y: float = field_real()
 

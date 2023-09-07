@@ -108,6 +108,8 @@ def import_encord(
                         height=video_height,
                         data_uri=data_uri,
                         data_uri_is_video=True,
+                        data_title=data_title,
+                        data_type=data_type,
                         objects=frame_labels_json.get("objects", []),
                         classifications=frame_labels_json.get("classifications", []),
                     )
@@ -152,6 +154,8 @@ def import_encord(
                             height=video_height,
                             data_uri=None,
                             data_uri_is_video=is_video,
+                            data_title=data_title,
+                            data_type=data_type,
                             objects=[],
                             classifications=[],
                         )

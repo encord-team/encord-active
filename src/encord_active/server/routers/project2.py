@@ -1,3 +1,4 @@
+import math
 import uuid
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
@@ -413,6 +414,12 @@ class ProjectItem(BaseModel):
     timestamp: Optional[float]
 
 
+def _sanitise_nan(value: Optional[float]) -> Optional[float]:
+    if value is None or math.isnan(value):
+        return None
+    return value
+
+
 @router.get("/{project_hash}/item/{data_item}/")
 def project_item(
     project_hash: uuid.UUID, item_details: DataItem = Depends(parse_data_item), engine: Engine = Depends(dep_engine)
@@ -468,9 +475,11 @@ def project_item(
     )
 
     return ProjectItem(
-        data_metrics={k: getattr(du_analytics, k) for k in DataMetrics},
+        data_metrics={k: _sanitise_nan(getattr(du_analytics, k)) for k in DataMetrics},
         annotation_metrics={
-            annotation_analytics.annotation_hash: {k: getattr(annotation_analytics, k) for k in AnnotationMetrics}
+            annotation_analytics.annotation_hash: {
+                k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
+            }
             for annotation_analytics in annotation_analytics_list
         },
         objects=du_meta.objects,
