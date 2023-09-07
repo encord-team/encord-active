@@ -7,11 +7,13 @@ import { Button, Card, Checkbox, Row, Typography } from "antd";
 import { useMemo } from "react";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
-import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
+import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
+import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 
 export function GalleryCard(props: {
   projectHash: string;
+  predictionHash: string | undefined;
   queryContext: QueryContext;
   itemId: string;
   selected: boolean;
@@ -27,6 +29,7 @@ export function GalleryCard(props: {
 }) {
   const {
     projectHash,
+    predictionHash,
     queryContext,
     itemId,
     selected,
@@ -38,14 +41,49 @@ export function GalleryCard(props: {
     editUrl,
     hideExtraAnnotations,
   } = props;
+  // Conditionally extract annotation hash
   const dataId = itemId.split("_").slice(0, 2).join("_");
-  const annotationHash: string | undefined =
-    selectedMetric.domain === "annotation" ? itemId.split("_")[2] : undefined;
-  const { data: preview, isLoading } = useProjectDataItem(
+  const annotationItem =
+    selectedMetric.domain === "annotation" || predictionHash !== undefined;
+  const annotationHash: string | undefined = annotationItem
+    ? itemId.split("_")[2]
+    : undefined;
+
+  // Conditionally extract prediction type
+  const predictionTy: "TP" | "FP" | "FN" | string | undefined =
+    predictionHash !== undefined ? itemId.split("_")[3] : undefined;
+  console.log("a", itemId, "?", annotationHash, predictionTy);
+
+  // Conditionally fetch the correct dataId from project or prediction.
+  const projectItem = predictionTy === undefined || predictionTy === "FN";
+  const { data: previewProject, isLoading: isLoadingProject } = useProjectItem(
     queryContext,
     projectHash,
     dataId
   );
+  const { data: previewPrediction, isLoading: isLoadingPrediction } =
+    usePredictionItem(queryContext, projectHash, predictionHash ?? "", dataId, {
+      enabled: !projectItem,
+    });
+  const preview = useMemo(() => {
+    if (projectItem) {
+      return previewProject;
+    } else if (
+      previewProject !== undefined &&
+      previewPrediction !== undefined
+    ) {
+      // Set values not set by prediction using values from preview project.
+      return {
+        ...previewProject,
+        ...previewPrediction,
+      };
+    } else {
+      return undefined;
+    }
+  }, [previewProject, previewPrediction, projectItem]);
+  const isLoading = projectItem ? isLoadingProject : true;
+
+  // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
   const projectSummaryForDomain =
     projectSummary === undefined
@@ -69,10 +107,9 @@ export function GalleryCard(props: {
       : preview.annotation_metrics[annotationHash ?? ""] ?? {};
   const displayValueAnnotation =
     displayValueAnnotationMetricsDict[selectedMetric.metric_key] ?? NaN;
-  const displayValue =
-    selectedMetric.domain === "annotation"
-      ? displayValueAnnotation
-      : displayValueData;
+  const displayValue = annotationItem
+    ? displayValueAnnotation
+    : displayValueData;
 
   const description = "FIXME_DESCRIPTION";
   const labelObject = useMemo(() => {

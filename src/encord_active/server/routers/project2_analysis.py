@@ -128,10 +128,8 @@ def metric_search(
         print(f"DEBUGGING: {query}")
         search_results = sess.exec(query).fetchall()
 
-    truncated = len(search_results) == limit + 1
-
     return AnalysisSearch(
-        truncated=truncated,
+        truncated=len(search_results) == limit + 1,
         results=[
             _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
             for result in search_results[:-1]

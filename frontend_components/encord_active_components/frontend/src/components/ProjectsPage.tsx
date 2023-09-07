@@ -16,7 +16,7 @@ import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectList } from "../hooks/queries/useListProjects";
 import { ProjectSearchEntry } from "../openapi/api";
 import { useProjectMetadata } from "../hooks/queries/useProjectMetadata";
-import { useProjectDataItem } from "../hooks/queries/useProjectItem";
+import { useProjectItem } from "../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./preview/AnnotatedImage";
 
 export type Props = {
@@ -142,7 +142,7 @@ function ProjectCard({
     queryContext,
     project.project_hash
   );
-  const { data: projectDataItem } = useProjectDataItem(
+  const { data: projectDataItem } = useProjectItem(
     queryContext,
     project.project_hash,
     projectSummary?.preview ?? "",

@@ -4,8 +4,8 @@ from typing import Literal, List, Optional
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Integer, Float, desc as desc_fn
-from sqlmodel import Session
+from sqlalchemy import Integer, Float, desc as desc_fn, literal
+from sqlmodel import Session, select
 from sqlalchemy.engine import Engine
 
 from encord_active.db.models import (
@@ -134,40 +134,70 @@ def prediction_search(
     # Where conditions for FN table
     fn_select = None
     if domain in {PredictionDomain.ALL, PredictionDomain.FALSE_NEGATIVE}:
+        fn_base_table = TABLES_ANNOTATION.primary
         fn_where = search_query.search_filters(
             tables=TABLES_ANNOTATION,
-            base=TABLES_ANNOTATION.analytics,
+            base=fn_base_table.analytics,
             search=filters,
             project_filters={"project_hash": [project_hash], "prediction_hash": [prediction_hash]},
         ) + [
             ProjectPredictionAnalyticsFalseNegatives.project_hash == project_hash,
             ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
             ProjectPredictionAnalyticsFalseNegatives.du_hash == ProjectAnnotationAnalytics.du_hash,
-            ProjectPredictionAnalytics,
+            ProjectPredictionAnalyticsFalseNegatives.frame == ProjectAnnotationAnalytics.frame,
+            ProjectPredictionAnalyticsFalseNegatives.annotation_hash == ProjectAnnotationAnalytics.annotation_hash,
         ]
+        fn_order_attr = literal(1)
+        if order_by is not None and order_by in fn_base_table.metrics or order_by in fn_base_table.enums:
+            fn_order_attr = getattr(fn_base_table.analytics, order_by)
+        fn_select = (
+            select(
+                ProjectPredictionAnalyticsFalseNegatives.du_hash,
+                ProjectPredictionAnalyticsFalseNegatives.frame,
+                ProjectPredictionAnalyticsFalseNegatives.annotation_hash,
+                2,
+                *([fn_order_attr.label("order_by")] if domain == PredictionDomain.ALL else []),
+            )
+            .where(*fn_where)
+            .order_by(fn_order_attr.desc() if desc else fn_order_attr)
+        )
 
     # Where conditions for TP table
     p_select = None
     if domain != PredictionDomain.FALSE_NEGATIVE:
+        p_base_table = TABLES_PREDICTION_TP_FP.annotation
         p_where = search_query.search_filters(
             tables=TABLES_PREDICTION_TP_FP,
-            base=TABLES_PREDICTION_TP_FP.analytics,
+            base=p_base_table.analytics,
             search=filters,
             project_filters={"project_hash": [project_hash], "prediction_hash": [prediction_hash]},
         )
-        tp_cond = (
-            ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou))
-            .cast(Integer)
-            .cast(Float)
-        )
+        tp_cond = (ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+        tp_cond_select = tp_cond.cast(Integer)
         if domain == PredictionDomain.TRUE_POSITIVE:
             p_where.append(tp_cond)
+            tp_cond_select = literal(1)
         elif domain == PredictionDomain.FALSE_POSITIVE:
             p_where.append(~tp_cond)
+            tp_cond_select = literal(0)
+        p_order_attr = literal(1)
+        if order_by is not None and order_by in p_base_table.metrics or order_by in p_base_table.enums:
+            p_order_attr = getattr(p_base_table.analytics, order_by)
+        p_select = (
+            select(  # type: ignore
+                ProjectPredictionAnalytics.du_hash,
+                ProjectPredictionAnalytics.frame,
+                ProjectPredictionAnalytics.annotation_hash,
+                tp_cond_select,
+                *([p_order_attr.label("order_by")] if domain == PredictionDomain.ALL else []),
+            )
+            .where(*p_where)
+            .order_by(p_order_attr.desc() if desc else p_order_attr)
+        )
 
     # Conditionally union to 1 select query.
     if fn_select is not None and p_select is not None:
-        pass  # FIXME: union all
+        f_select = fn_select.union_all(p_select).order_by("order_by")
     elif fn_select is not None:
         f_select = fn_select
     elif p_select is not None:
@@ -176,16 +206,22 @@ def prediction_search(
         raise RuntimeError("Impossible prediction domain case")
 
     # Apply ordering
-    if desc:
-        f_select = f_select.order_by(desc_fn("order_k"))
-    else:
-        f_select = f_select.order_by("order_k")
+    if domain == PredictionDomain.ALL:
+        f_select = f_select.order_by(desc_fn("order_by") if desc else "order_by")
+
+    # Offset & Limit
     f_select = f_select.offset(offset).limit(limit + 1)
 
     with Session(engine) as sess:
-        results = sess.exec(f_select).fetchall()
+        print(f"DEBUG PREDICTION SEARCH: {f_select}")
+        search_results = sess.exec(f_select).fetchall()
+
+    ty_lookup = {0: "FP", 1: "TP", 2: "FN"}
 
     return AnalysisSearch(
-        truncated=True,
-        results=[],
+        truncated=len(search_results) == limit + 1,
+        results=[
+            f"{du_hash}_{frame}_{annotation_hash}_{ty_lookup[ty]}"
+            for du_hash, frame, annotation_hash, ty, *rest in search_results[:-1]
+        ],
     )

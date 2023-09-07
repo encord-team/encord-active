@@ -9,6 +9,7 @@ lerna-debug.log*
 
 # Openapi
 openapi.json
+openapitools.json
 # Node
 node_modules
 dist

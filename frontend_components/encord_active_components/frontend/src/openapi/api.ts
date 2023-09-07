@@ -360,6 +360,39 @@ export type PredictionDomain =
 /**
  *
  * @export
+ * @interface PredictionItem
+ */
+export interface PredictionItem {
+  /**
+   *
+   * @type {{ [key: string]: { [key: string]: number | undefined; } | undefined; }}
+   * @memberof PredictionItem
+   */
+  annotation_metrics: {
+    [key: string]: { [key: string]: number | undefined } | undefined;
+  };
+  /**
+   *
+   * @type {Array<object>}
+   * @memberof PredictionItem
+   */
+  objects: Array<object>;
+  /**
+   *
+   * @type {Array<object>}
+   * @memberof PredictionItem
+   */
+  classifications: Array<object>;
+  /**
+   *
+   * @type {string}
+   * @memberof PredictionItem
+   */
+  label_hash: string;
+}
+/**
+ *
+ * @export
  * @interface PredictionPRPoint
  */
 export interface PredictionPRPoint {
@@ -2273,48 +2306,48 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     /**
      *
      * @summary Get Prediction Item
-     * @param {string} predictionHash
-     * @param {string} item
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet:
+    getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet:
       async (
-        predictionHash: string,
-        item: string,
         projectHash: string,
+        predictionHash: string,
+        dataItem: string,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
-        // verify required parameter 'predictionHash' is not null or undefined
-        assertParamExists(
-          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet",
-          "predictionHash",
-          predictionHash
-        );
-        // verify required parameter 'item' is not null or undefined
-        assertParamExists(
-          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet",
-          "item",
-          item
-        );
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet",
+          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
           "projectHash",
           projectHash
         );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'dataItem' is not null or undefined
+        assertParamExists(
+          "getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "dataItem",
+          dataItem
+        );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/preview/{item}`
+          `/projects_v2/{project_hash}/predictions/{prediction_hash}/preview/{data_item}`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
             .replace(
               `{${"prediction_hash"}}`,
               encodeURIComponent(String(predictionHash))
             )
-            .replace(`{${"item"}}`, encodeURIComponent(String(item)))
-            .replace(
-              `{${"project_hash"}}`,
-              encodeURIComponent(String(projectHash))
-            );
+            .replace(`{${"data_item"}}`, encodeURIComponent(String(dataItem)));
         // use dummy base URL string because the URL constructor only accepts absolute URLs.
         const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
         let baseOptions;
@@ -3816,25 +3849,25 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     /**
      *
      * @summary Get Prediction Item
-     * @param {string} predictionHash
-     * @param {string} item
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-      predictionHash: string,
-      item: string,
+    async getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
       projectHash: string,
+      predictionHash: string,
+      dataItem: string,
       options?: AxiosRequestConfig
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<PredictionItem>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-          predictionHash,
-          item,
+        await localVarAxiosParamCreator.getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,
+          predictionHash,
+          dataItem,
           options
         );
       return createRequestFunction(
@@ -4600,23 +4633,23 @@ export const ProjectsV2ApiFactory = function (
     /**
      *
      * @summary Get Prediction Item
-     * @param {string} predictionHash
-     * @param {string} item
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-      predictionHash: string,
-      item: string,
+    getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
       projectHash: string,
+      predictionHash: string,
+      dataItem: string,
       options?: any
-    ): AxiosPromise<any> {
+    ): AxiosPromise<PredictionItem> {
       return localVarFp
-        .getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-          predictionHash,
-          item,
+        .getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,
+          predictionHash,
+          dataItem,
           options
         )
         .then((request) => request(axios, basePath));
@@ -5258,24 +5291,24 @@ export class ProjectsV2Api extends BaseAPI {
   /**
    *
    * @summary Get Prediction Item
-   * @param {string} predictionHash
-   * @param {string} item
    * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {string} dataItem
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-    predictionHash: string,
-    item: string,
+  public getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
     projectHash: string,
+    predictionHash: string,
+    dataItem: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewItemGet(
-        predictionHash,
-        item,
+      .getPredictionItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
         projectHash,
+        predictionHash,
+        dataItem,
         options
       )
       .then((request) => request(this.axios, this.basePath));

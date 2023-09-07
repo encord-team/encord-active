@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Literal, Optional, Set
+from typing import Dict, List, Literal, Optional, Set, Tuple
 
 from cachetools import TTLCache, cached
 from fastapi import APIRouter, HTTPException, Depends
@@ -362,6 +362,40 @@ def _cache_encord_img_lookup(
     return encord_url_dict
 
 
+def get_data_unit_url(
+    project_hash: uuid.UUID,
+    project_ssh_path: Optional[str],
+    data_hash: uuid.UUID,
+    du_hash: uuid.UUID,
+    frame: int,
+    uri: Optional[str],
+    uri_is_video: bool,
+    frames_per_second: Optional[float],
+) -> Tuple[str, Optional[float]]:
+    if uri is not None:
+        settings = get_settings()
+        root_path = settings.SERVER_START_PATH.expanduser().resolve()
+        url_path = url_to_file_path(uri, root_path)
+        if url_path is not None:
+            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
+    elif project_ssh_path is not None:
+        uri = _cache_encord_img_lookup(
+            ssh_key_path=project_ssh_path,
+            project_hash=project_hash,
+            data_hash=data_hash,
+        )[du_hash]
+    else:
+        raise ValueError(f"Cannot resolve project url: {project_hash} / {du_hash}")
+
+    timestamp = None
+    if uri_is_video:
+        if frames_per_second is None:
+            raise ValueError("Video defined but missing valid frames_per_second")
+        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
+
+    return uri, timestamp
+
+
 class ProjectItem(BaseModel):
     data_metrics: Dict[str, Optional[float]]
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
@@ -422,29 +456,16 @@ def project_item(
     if du_meta is None or du_analytics is None:
         raise ValueError
 
-    uri = du_meta.data_uri
-    uri_is_video = du_meta.data_uri_is_video
-    frames_per_second = data_meta.frames_per_second
-    if uri is not None:
-        settings = get_settings()
-        root_path = settings.SERVER_START_PATH.expanduser().resolve()
-        url_path = url_to_file_path(uri, root_path)
-        if url_path is not None:
-            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
-    elif project_ssh_key_path is not None:
-        uri = _cache_encord_img_lookup(
-            ssh_key_path=project_ssh_key_path,
-            project_hash=project_hash,
-            data_hash=du_meta.data_hash,
-        )[du_hash]
-    else:
-        raise ValueError(f"Cannot resolve project url: {project_hash} / {du_hash}")
-
-    timestamp = None
-    if uri_is_video:
-        if frames_per_second is None:
-            raise ValueError("Video defined but missing valid frames_per_second")
-        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
+    uri, timestamp = get_data_unit_url(
+        project_hash=project_hash,
+        project_ssh_path=project_ssh_key_path,
+        data_hash=du_meta.data_hash,
+        du_hash=du_hash,
+        frame=frame,
+        uri=du_meta.data_uri,
+        uri_is_video=du_meta.data_uri_is_video,
+        frames_per_second=data_meta.frames_per_second,
+    )
 
     return ProjectItem(
         data_metrics={k: getattr(du_analytics, k) for k in DataMetrics},

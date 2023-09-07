@@ -2,7 +2,7 @@ import { Col, Modal, Row, Spin, Table } from "antd";
 import * as React from "react";
 import { useMemo } from "react";
 import { QueryContext } from "../../hooks/Context";
-import { useProjectDataItem } from "../../hooks/queries/useProjectItem";
+import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { AnnotatedImage } from "./AnnotatedImage";
@@ -13,7 +13,6 @@ export function ItemPreviewModal(props: {
   previewItem: string | undefined;
   similaritySearchDisabled: boolean;
   domain: "annotation" | "data";
-  scope: "prediction" | "analysis";
   onClose: () => void;
   onShowSimilar: () => void;
   iou?: number;
@@ -28,7 +27,7 @@ export function ItemPreviewModal(props: {
     domain === "annotation" && previewItem !== undefined
       ? previewItem.split("_")[2]
       : undefined;
-  const { data: preview } = useProjectDataItem(
+  const { data: preview } = useProjectItem(
     queryContext,
     projectHash,
     dataId ?? "",

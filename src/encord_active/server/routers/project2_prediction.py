@@ -1,7 +1,5 @@
-import json
 import math
 import uuid
-from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
@@ -25,9 +23,11 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
+    ProjectPredictionDataUnitMetadata,
+    ProjectPredictionDataMetadata,
 )
 from encord_active.db.util.char8 import Char8
-from encord_active.server.dependencies import dep_engine
+from encord_active.server.dependencies import dep_engine, DataItem, parse_data_item
 from encord_active.server.routers import project2_prediction_analysis
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -623,13 +623,56 @@ def prediction_metric_performance(
 
 
 class PredictionItem(BaseModel):
+    annotation_metrics: Dict[str, Dict[str, Optional[float]]]
     objects: list[dict]
+    classifications: list[dict]
+    label_hash: uuid.UUID
 
 
-@router.get("/preview/{item}")
+@router.get("/preview/{data_item}")
 def get_prediction_item(
+    project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
-    item: str,
-) -> None:
-    # FIXME: return required metadata to correctly view the associated value.
-    return None
+    item_details: DataItem = Depends(parse_data_item),
+    engine: Engine = Depends(dep_engine),
+) -> PredictionItem:
+    du_hash = item_details.du_hash
+    frame = item_details.frame
+    with Session(engine) as sess:
+        du_meta = sess.exec(
+            select(ProjectPredictionDataUnitMetadata).where(
+                ProjectPredictionDataUnitMetadata.project_hash == project_hash,
+                ProjectPredictionDataUnitMetadata.prediction_hash == prediction_hash,
+                ProjectPredictionDataUnitMetadata.du_hash == du_hash,
+                ProjectPredictionDataUnitMetadata.frame == frame,
+            )
+        ).first()
+        if du_meta is None:
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataUnitMeta")
+        data_meta = sess.exec(
+            select(ProjectPredictionDataMetadata).where(
+                ProjectPredictionDataMetadata.project_hash == project_hash,
+                ProjectPredictionDataMetadata.prediction_hash == prediction_hash,
+                ProjectPredictionDataMetadata.data_hash == du_meta.data_hash,
+            )
+        ).first()
+        if data_meta is None:
+            raise ValueError(f"Invalid request: du_hash={du_hash}, frame={frame} is missing DataMeta")
+        annotation_analytics_list = sess.exec(
+            select(ProjectPredictionAnalytics).where(
+                ProjectPredictionAnalytics.project_hash == project_hash,
+                ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+                ProjectPredictionAnalytics.du_hash == du_hash,
+                ProjectPredictionAnalytics.frame == frame,
+            )
+        ).fetchall()
+
+    return PredictionItem(
+        annotation_metrics={
+            annotation_analytics.annotation_hash: {k: getattr(annotation_analytics, k) for k in AnnotationMetrics}
+            for annotation_analytics in annotation_analytics_list
+        },
+        objects=du_meta.objects,
+        classifications=du_meta.classifications,
+        label_hash=data_meta.label_hash,
+    )

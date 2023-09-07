@@ -45,7 +45,6 @@ export type Props = {
   predictionHash: string | undefined;
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
-  scope: "analysis" | "prediction";
   queryContext: QueryContext;
   editUrl?:
     | ((dataHash: string, projectHash: string, frame: number) => string)
@@ -58,7 +57,6 @@ export type Props = {
 export function Explorer({
   projectHash,
   predictionHash,
-  scope,
   queryContext,
   editUrl,
   featureHashMap,
@@ -94,7 +92,9 @@ export function Explorer({
     metric_key: "metric_random",
   });
   const [hideExtraAnnotations, setHideExtraAnnotations] = useState(false);
-  useEffect(() => { setHideExtraAnnotations(selectedMetric.domain === "annotation") }, [selectedMetric.domain])
+  useEffect(() => {
+    setHideExtraAnnotations(selectedMetric.domain === "annotation");
+  }, [selectedMetric.domain]);
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -221,7 +221,7 @@ export function Explorer({
       1000,
       filters.filters,
       {
-        enabled: scope !== "prediction",
+        enabled: predictionHash === undefined,
       }
     );
   const {
@@ -239,13 +239,13 @@ export function Explorer({
     1000,
     filters.filters,
     {
-      enabled: scope !== "prediction",
+      enabled: predictionHash !== undefined,
     }
   );
   const sortedItems =
-    scope !== "prediction" ? sortedItemsProject : sortedItemsPrediction;
+    predictionHash === undefined ? sortedItemsProject : sortedItemsPrediction;
   const isLoadingSortedItems =
-    scope !== "prediction"
+    predictionHash === undefined
       ? isLoadingSortedItemsProject
       : isLoadingSortedItemsPrediction;
 
@@ -364,7 +364,6 @@ export function Explorer({
           previewItem={previewedItem}
           domain={selectedMetric.domain}
           similaritySearchDisabled={!hasSimilaritySearch}
-          scope={scope}
           iou={iou}
           onClose={closePreview}
           onShowSimilar={() => showSimilarItems(previewedItem)}
@@ -377,14 +376,14 @@ export function Explorer({
           onClose={() => setSimilarityItem(null)}
         />
       )}
-      {!similarityItem && scope !== "prediction" && (
+      {!similarityItem && predictionHash === undefined && (
         <MetricDistributionTiny
           projectHash={projectHash}
           queryContext={queryContext}
           filters={filters}
         />
       )}
-      {scope === "prediction" && (
+      {predictionHash !== undefined && (
         <PredictionFilters
           disabled={!!similarityItem}
           iou={iou}
@@ -546,6 +545,7 @@ export function Explorer({
         renderItem={(item: string) => (
           <GalleryCard
             projectHash={projectHash}
+            predictionHash={predictionHash}
             queryContext={queryContext}
             selectedMetric={selectedMetric}
             key={item}
@@ -586,23 +586,23 @@ function PredictionFilters({
         value={predictionOutcome}
         options={[
           {
-            key: "fp",
+            value: "fp",
             label: "False Positive",
           },
           {
-            key: "tp",
+            value: "tp",
             label: "True Positive",
           },
           {
-            key: "fn",
+            value: "fn",
             label: "False Negative",
           },
           {
-            key: "p",
+            value: "p",
             label: "All Positive",
           },
           {
-            key: "a",
+            value: "a",
             label: "All Outcomes",
           },
         ]}

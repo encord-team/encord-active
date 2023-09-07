@@ -55,7 +55,7 @@ def generate_openapi_fe_components() -> None:
         "OPENAPI_GENERATOR_VERSION": "7.0.0",
     }
     print(f"Running openapi generator: {' '.join(command)}")
-    subprocess.run(" ".join(command), shell=True, check=True, env=command_env)
+    subprocess.run(" ".join(command), shell=True, check=True, env=command_env, cwd=fe_dir)
 
 
 if __name__ == "__main__":
