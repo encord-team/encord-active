@@ -232,14 +232,19 @@ def get_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_en
         tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
 
         preview = sess.exec(
-            select(ProjectAnnotationAnalytics.du_hash, ProjectAnnotationAnalytics.frame)
-            .where(ProjectAnnotationAnalytics.project_hash == project_hash)
-            .limit(1)
+            select(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame)
+            .where(ProjectDataAnalytics.project_hash == project_hash)
+            .order_by(
+                ProjectDataAnalytics.metric_object_count.desc(),
+                ProjectDataAnalytics.du_hash,
+                ProjectDataAnalytics.frame
+            ).limit(1)
         ).first()
         if preview is None:
             preview = sess.exec(
                 select(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
                 .where(ProjectDataUnitMetadata.project_hash == project_hash)
+                .order_by(ProjectDataUnitMetadata.du_hash, ProjectDataUnitMetadata.frame)
                 .limit(1)
             ).first()
 

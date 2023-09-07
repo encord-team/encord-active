@@ -11,9 +11,7 @@ export function AnnotatedImage(props: {
   annotationHash: string | undefined;
   hideExtraAnnotations?: boolean | undefined;
   className?: string | undefined;
-  width?: number | undefined;
-  height?: number | undefined;
-  fit?: boolean;
+  mode: "preview" | "full" | "large";
   children?: React.ReactNode | undefined;
 }) {
   const {
@@ -23,9 +21,7 @@ export function AnnotatedImage(props: {
     annotationHash,
     hideExtraAnnotations,
     children,
-    width,
-    height,
-    fit,
+    mode,
   } = props;
   const {
     ref: image,
@@ -41,25 +37,29 @@ export function AnnotatedImage(props: {
   const contentHeight = item.timestamp != null ? videoHeight : imageHeight;
   const imageSrc = useImageSrc(queryContext, item.url);
 
-  const exactFit = width && height && fit;
-  const contentStyle: React.CSSProperties = {
-    // width: fitWidth ? width : undefined,
-    // height: fitWidth ? undefined : height,
-    flexShrink: exactFit ? 0 : undefined,
-    minWidth: exactFit ? "100%" : undefined,
-    minHeight: exactFit ? "100%" : undefined,
-    position: exactFit ? "absolute" : undefined,
-    overflow: exactFit ? "hidden" : undefined,
-  };
-  const figureStyle: React.CSSProperties = {
-    display: exactFit ? "flex" : undefined,
-    justifyContent: exactFit ? "center" : undefined,
-    alignItems: exactFit ? "center" : undefined,
-    overflow: exactFit ? "hidden" : undefined,
-    width,
-    height,
-    position: "relative",
-  };
+  //fit
+  // width={240}
+  // height={160}
+  let contentStyle: React.CSSProperties = {};
+  let figureStyle: React.CSSProperties = {};
+  if (mode === "preview") {
+    contentStyle = {
+      flexShrink: 0,
+      minWidth: "100%",
+      minHeight: "100%",
+      position: "absolute",
+      overflow: "hidden",
+    };
+    figureStyle = {
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      overflow: "hidden",
+      width: 240,
+      height: 160,
+      position: "relative",
+    };
+  }
 
   return (
     <figure className={className} style={figureStyle}>
@@ -90,7 +90,7 @@ export function AnnotatedImage(props: {
       )}
       {item.objects.length > 0 && contentWidth && contentHeight ? (
         <AnnotationRenderLayer
-          layout={width && height ? "relative" : "absolute"}
+          layout={mode === "preview" ? "relative" : "absolute"}
           objects={item.objects as AnnotationObject[]}
           width={contentWidth}
           height={contentHeight}

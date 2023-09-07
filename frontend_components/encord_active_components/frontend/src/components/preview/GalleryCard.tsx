@@ -118,6 +118,7 @@ export function GalleryCard(props: {
               className="group-hover:opacity-30"
               annotationHash={annotationHash}
               hideExtraAnnotations={hideExtraAnnotations}
+              mode="full"
             >
               <div className="absolute z-10 h-full w-full bg-gray-100 bg-opacity-70 opacity-0 hover:opacity-100">
                 <Checkbox

@@ -96,6 +96,7 @@ export function ItemPreviewModal(props: {
               queryContext={queryContext}
               item={preview}
               annotationHash={annotationHash}
+              mode="large"
             />
           </Col>
         </Row>

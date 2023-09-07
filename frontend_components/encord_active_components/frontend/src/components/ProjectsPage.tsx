@@ -166,9 +166,7 @@ function ProjectCard({
           queryContext={queryContext}
           item={projectDataItem}
           annotationHash={undefined}
-          fit
-          width={240}
-          height={160}
+          mode="preview"
         />
       }
     >
