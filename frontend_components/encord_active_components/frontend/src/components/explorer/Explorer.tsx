@@ -1,5 +1,4 @@
-import * as React from "react";
-import { useMemo, useState, useContext } from "react";
+import { useMemo, useState, useContext, useEffect } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { MdClose, MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
@@ -89,6 +88,7 @@ export function Explorer({
     metric_key: "metric_random",
   });
   const [hideExtraAnnotations, setHideExtraAnnotations] = useState(false);
+  useEffect(() => { setHideExtraAnnotations(selectedMetric.domain === "annotation") }, [selectedMetric.domain])
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -398,7 +398,7 @@ export function Explorer({
             icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
           />
           <Button onClick={() => setHideExtraAnnotations((v) => !v)}>
-            {hideExtraAnnotations ? "Show annotations" : "Hide annotations"}
+            {`${hideExtraAnnotations ? "Show" : "hide"} all annotations`}
           </Button>
           <Popover
             placement="bottomLeft"
