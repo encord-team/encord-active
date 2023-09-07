@@ -11,13 +11,9 @@ from encord_active.server.routers.queries.domain_query import (
     DomainTables,
     ProjectFilters,
     ReductionTable,
-    Tables, TagTable,
+    Tables,
+    TagTable,
 )
-
-
-class Range(BaseModel):
-    min: float
-    max: float
 
 
 class Embedding2DFilter(BaseModel):
@@ -29,7 +25,7 @@ class Embedding2DFilter(BaseModel):
 
 
 class DomainSearchFilters(BaseModel):
-    metrics: Dict[str, Range]
+    metrics: Dict[str, List[int]]
     enums: Dict[str, List[str]]
     reduction: Optional[Embedding2DFilter]
     tags: Optional[List[uuid.UUID]]
@@ -109,9 +105,7 @@ def search_filters(
             compiled_filters.extend(sql_filters)
 
     if len(exists_filters) > 0:
-        compiled_filters.append(
-            select(1).where(*exists_filters).exists()
-        )
+        compiled_filters.append(select(1).where(*exists_filters).exists())
 
     return compiled_filters
 
@@ -133,19 +127,24 @@ def _project_filters(
 def _append_filters(
     tables: DomainTables,
     search: DomainSearchFilters,
-    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]]
+    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]],
 ) -> None:
     # Metric filters
     if len(search.metrics) > 0:
         metrics_list = filters.setdefault(tables.analytics, [])
-        for metric_name, (filter_start, filter_end) in search.metrics.items():
+        for metric_name, filter_list in search.metrics.items():
             if metric_name not in tables.metrics:
                 raise ValueError(f"Invalid metric filter: {metric_name}")
             metric_attr = getattr(tables.analytics, metric_name)
-            if filter_start == filter_end:
-                metrics_list.append(metric_attr == filter_start)
-            else:
-                metrics_list.append(between_op(metric_attr, filter_start, filter_end))
+            for i in range(0, len(filter_list), 2):
+                filter_start, *filter_end_opt = filter_list[i : i + 2]
+                filter_end = None if len(filter_end_opt) == 0 else filter_end_opt[0]
+                if filter_end is None:
+                    metrics_list.append(metric_attr >= filter_start)
+                elif filter_start == filter_end:
+                    metrics_list.append(metric_attr == filter_start)
+                else:
+                    metrics_list.append(between_op(metric_attr, filter_start, filter_end))
 
     # Enum filters
     if len(search.enums) > 0:

@@ -82,7 +82,7 @@ export function TaggingDropdown({
     <div
       {...rest}
       className={classy(
-        "dropdown-bottom dropdown tooltip tooltip-right min-w-fit",
+        "dropdown dropdown-bottom tooltip tooltip-right min-w-fit",
         className
       )}
       data-tip={disabledReason && taggingDisabledReasons[disabledReason]}

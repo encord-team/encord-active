@@ -10,7 +10,10 @@ import { scaleLinear } from "d3-scale";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { ExplorerFilterState } from "./ExplorerTypes";
-import { Query2DEmbedding } from "../../openapi/api";
+import {
+  PredictionQuery2DEmbedding,
+  Query2DEmbedding,
+} from "../../openapi/api";
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
@@ -99,7 +102,8 @@ const fixedFormatter = (value: string | number | null) =>
 const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export function ScatteredEmbeddings(props: {
-  reductionScatter: Query2DEmbedding | undefined;
+  reductionScatter: Query2DEmbedding | PredictionQuery2DEmbedding | undefined;
+  predictionHash: string | undefined;
   setEmbeddingSelection: (
     bounds:
       | {
@@ -112,7 +116,8 @@ export function ScatteredEmbeddings(props: {
   ) => void;
   onReset: () => void;
 }) {
-  const { reductionScatter, setEmbeddingSelection, onReset } = props;
+  const { reductionScatter, predictionHash, setEmbeddingSelection, onReset } =
+    props;
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
@@ -135,7 +140,7 @@ export function ScatteredEmbeddings(props: {
     colorField: string;
     color?: Parameters<typeof Scatter>[0]["color"];
   }>(() => {
-    if (false) {
+    if (predictionHash !== undefined) {
       // prediction
 
       return {

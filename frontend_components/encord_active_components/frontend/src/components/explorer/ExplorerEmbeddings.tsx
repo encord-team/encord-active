@@ -6,10 +6,12 @@ import { loadingIndicator } from "../Spin";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
+import { usePredictionAnalysisReducedEmbeddings } from "../../hooks/queries/usePredictionAnalysisReducedEmbeddings";
 
 export function ExplorerEmbeddings(props: {
   queryContext: QueryContext;
   projectHash: string;
+  predictionHash: string | undefined;
   reductionHash: string | undefined;
   filters: ExplorerFilterState;
   setEmbeddingSelection: (
@@ -26,11 +28,12 @@ export function ExplorerEmbeddings(props: {
   const {
     queryContext,
     projectHash,
+    predictionHash,
     reductionHash,
     filters,
     setEmbeddingSelection,
   } = props;
-  const { isLoading, data: scatteredEmbeddings } =
+  const { isLoading: isLoadingProject, data: scatteredEmbeddingsProject } =
     useProjectAnalysisReducedEmbeddings(
       queryContext,
       projectHash,
@@ -38,8 +41,27 @@ export function ExplorerEmbeddings(props: {
       reductionHash ?? "",
       undefined,
       filters.filters,
-      { enabled: reductionHash != null }
+      { enabled: reductionHash != null && predictionHash === undefined }
     );
+  const {
+    isLoading: isLoadingPrediction,
+    data: scatteredEmbeddingsPrediction,
+  } = usePredictionAnalysisReducedEmbeddings(
+    queryContext,
+    projectHash,
+    predictionHash ?? "",
+    filters.predictionOutcome,
+    reductionHash ?? "",
+    undefined,
+    filters.filters,
+    { enabled: reductionHash != null && predictionHash !== undefined }
+  );
+  const isLoading =
+    predictionHash === undefined ? isLoadingProject : isLoadingPrediction;
+  const scatteredEmbeddings =
+    predictionHash === undefined
+      ? scatteredEmbeddingsProject
+      : scatteredEmbeddingsPrediction;
 
   return !isLoading && !scatteredEmbeddings?.reductions?.length ? (
     <div className="alert h-fit shadow-lg">
@@ -57,6 +79,7 @@ export function ExplorerEmbeddings(props: {
       ) : (
         <ScatteredEmbeddings
           reductionScatter={scatteredEmbeddings}
+          predictionHash={predictionHash}
           setEmbeddingSelection={setEmbeddingSelection}
           onReset={() => setEmbeddingSelection(undefined)}
         />

@@ -2,43 +2,25 @@ from typing import Union
 
 import numpy as np
 from psycopg2.extensions import Binary
-from sqlalchemy import TypeDecorator, Float
+from sqlalchemy import TypeDecorator, BigInteger
+from sqlmodel import AutoString
+
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlalchemy.types import UserDefinedType, BINARY
+from sqlalchemy.types import BINARY
 
-__all__ = ["PGVector"]
-
-
-class PGVectorRaw(UserDefinedType):
-    cache_ok = True
-
-    def __init__(self, dim: int) -> None:
-        super(UserDefinedType, self).__init__()
-        self.dim = dim
-
-    def get_col_spec(self, **kwargs) -> str:
-        return f"VECTOR({self.dim})"
-
-    class comparator_factory(UserDefinedType.Comparator):
-        def l2_distance(self, other):
-            return self.op("<->", return_type=Float)(other)
-
-        def max_inner_product(self, other):
-            return self.op("<#>", return_type=Float)(other)
-
-        def cosine_distance(self, other):
-            return self.op("<=>", return_type=Float)(other)
+__all__ = ["Char8List"]
 
 
-class PGVector(TypeDecorator):
-    """Platform-independent PGVector type.
+class Char8List(TypeDecorator):
+    """Platform-independent Char8 list type.
 
-    Uses PostgreSQL's Vector type, otherwise uses
-    JSON, storing as a serialized key.
+    Uses PostgreSQL's bigint[] type, otherwise
+    uses a comma separated string of raw values.
     """
 
-    impl = PGVectorRaw
+    impl = ARRAY(BigInteger)
     cache_ok = True
 
     def __init__(self, dim: int) -> None:
@@ -47,9 +29,9 @@ class PGVector(TypeDecorator):
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(PGVectorRaw(self.dim))
+            return dialect.type_descriptor(ARRAY(BigInteger))
         else:
-            return dialect.type_descriptor(BINARY())
+            return dialect.type_descriptor(AutoString())
 
     def bind_processor(self, dialect: Dialect):
         def as_validated_ndarray(value: Union[np.ndarray, bytes]) -> np.ndarray:

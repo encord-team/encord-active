@@ -111,10 +111,10 @@ export interface CreateProjectSubsetPostAction {
 export interface DomainSearchFilters {
   /**
    *
-   * @type {{ [key: string]: Range | undefined; }}
+   * @type {{ [key: string]: Array<number> | undefined; }}
    * @memberof DomainSearchFilters
    */
-  metrics: { [key: string]: Range | undefined };
+  metrics: { [key: string]: Array<number> | undefined };
   /**
    *
    * @type {{ [key: string]: Array<string> | undefined; }}
@@ -347,6 +347,8 @@ export type MetricType = (typeof MetricType)[keyof typeof MetricType];
  */
 
 export const PredictionDomain = {
+  A: "a",
+  P: "p",
   Tp: "tp",
   Fp: "fp",
   Fn: "fn",
@@ -373,6 +375,56 @@ export interface PredictionPRPoint {
    * @memberof PredictionPRPoint
    */
   r: number;
+}
+/**
+ *
+ * @export
+ * @interface PredictionQuery2DEmbedding
+ */
+export interface PredictionQuery2DEmbedding {
+  /**
+   *
+   * @type {number}
+   * @memberof PredictionQuery2DEmbedding
+   */
+  count: number;
+  /**
+   *
+   * @type {Array<PredictionQueryScatterPoint>}
+   * @memberof PredictionQuery2DEmbedding
+   */
+  reductions: Array<PredictionQueryScatterPoint>;
+}
+/**
+ *
+ * @export
+ * @interface PredictionQueryScatterPoint
+ */
+export interface PredictionQueryScatterPoint {
+  /**
+   *
+   * @type {number}
+   * @memberof PredictionQueryScatterPoint
+   */
+  x: number;
+  /**
+   *
+   * @type {number}
+   * @memberof PredictionQueryScatterPoint
+   */
+  y: number;
+  /**
+   *
+   * @type {number}
+   * @memberof PredictionQueryScatterPoint
+   */
+  n: number;
+  /**
+   *
+   * @type {number}
+   * @memberof PredictionQueryScatterPoint
+   */
+  tp: number;
 }
 /**
  *
@@ -1135,25 +1187,6 @@ export interface QuerySummary {
 /**
  *
  * @export
- * @interface Range
- */
-export interface Range {
-  /**
-   *
-   * @type {number}
-   * @memberof Range
-   */
-  min: number;
-  /**
-   *
-   * @type {number}
-   * @memberof Range
-   */
-  max: number;
-}
-/**
- *
- * @export
  * @interface SearchFilters
  */
 export interface SearchFilters {
@@ -1864,63 +1897,6 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     },
     /**
      *
-     * @summary Display Preview
-     * @param {string} projectHash
-     * @param {string} item
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    displayPreviewProjectsV2ProjectHashPreviewItemGet: async (
-      projectHash: string,
-      item: string,
-      options: AxiosRequestConfig = {}
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'projectHash' is not null or undefined
-      assertParamExists(
-        "displayPreviewProjectsV2ProjectHashPreviewItemGet",
-        "projectHash",
-        projectHash
-      );
-      // verify required parameter 'item' is not null or undefined
-      assertParamExists(
-        "displayPreviewProjectsV2ProjectHashPreviewItemGet",
-        "item",
-        item
-      );
-      const localVarPath = `/projects_v2/{project_hash}/preview/{item}`
-        .replace(`{${"project_hash"}}`, encodeURIComponent(String(projectHash)))
-        .replace(`{${"item"}}`, encodeURIComponent(String(item)));
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-      let baseOptions;
-      if (configuration) {
-        baseOptions = configuration.baseOptions;
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      };
-      const localVarHeaderParameter = {} as any;
-      const localVarQueryParameter = {} as any;
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      };
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      };
-    },
-    /**
-     *
      * @summary Display Raw File
      * @param {string} projectHash
      * @param {string} duHash
@@ -1985,6 +1961,104 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       };
     },
+    /**
+     *
+     * @summary Get 2D Embedding Summary Prediction
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        reductionHash: string,
+        buckets?: Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "domain",
+          domain
+        );
+        // verify required parameter 'reductionHash' is not null or undefined
+        assertParamExists(
+          "get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "reductionHash",
+          reductionHash
+        );
+        const localVarPath =
+          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/reductions/{reduction_hash}/summary`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
+            .replace(
+              `{${"reduction_hash"}}`,
+              encodeURIComponent(String(reductionHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
     /**
      *
      * @summary Get 2D Embedding Summary
@@ -2733,63 +2807,60 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     /**
      *
      * @summary Prediction Metric Distribution
-     * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {string} group
-     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum} [buckets]
+     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet:
+    predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet:
       async (
-        predictionHash: string,
-        predictionDomain: PredictionDomain,
         projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
         group: string,
-        buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum,
+        buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum,
         filters?: string,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
-        // verify required parameter 'predictionHash' is not null or undefined
-        assertParamExists(
-          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet",
-          "predictionHash",
-          predictionHash
-        );
-        // verify required parameter 'predictionDomain' is not null or undefined
-        assertParamExists(
-          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet",
-          "predictionDomain",
-          predictionDomain
-        );
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet",
+          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "projectHash",
           projectHash
         );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "domain",
+          domain
+        );
         // verify required parameter 'group' is not null or undefined
         assertParamExists(
-          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet",
+          "predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "group",
           group
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{prediction_domain}/distribution`
+          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/distribution`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
             .replace(
               `{${"prediction_hash"}}`,
               encodeURIComponent(String(predictionHash))
             )
-            .replace(
-              `{${"prediction_domain"}}`,
-              encodeURIComponent(String(predictionDomain))
-            )
-            .replace(
-              `{${"project_hash"}}`,
-              encodeURIComponent(String(projectHash))
-            );
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
         // use dummy base URL string because the URL constructor only accepts absolute URLs.
         const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
         let baseOptions;
@@ -2936,66 +3007,63 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      *
      * @summary Prediction Metric Scatter
      * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
+     * @param {PredictionDomain} domain
      * @param {string} projectHash
      * @param {string} xMetric
      * @param {string} yMetric
-     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum} [buckets]
+     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet:
+    predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet:
       async (
         predictionHash: string,
-        predictionDomain: PredictionDomain,
+        domain: PredictionDomain,
         projectHash: string,
         xMetric: string,
         yMetric: string,
-        buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum,
+        buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum,
         filters?: string,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet",
+          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "predictionHash",
           predictionHash
         );
-        // verify required parameter 'predictionDomain' is not null or undefined
+        // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet",
-          "predictionDomain",
-          predictionDomain
+          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "domain",
+          domain
         );
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet",
+          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'xMetric' is not null or undefined
         assertParamExists(
-          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet",
+          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "xMetric",
           xMetric
         );
         // verify required parameter 'yMetric' is not null or undefined
         assertParamExists(
-          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet",
+          "predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "yMetric",
           yMetric
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{prediction_domain}/scatter`
+          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/scatter`
             .replace(
               `{${"prediction_hash"}}`,
               encodeURIComponent(String(predictionHash))
             )
-            .replace(
-              `{${"prediction_domain"}}`,
-              encodeURIComponent(String(predictionDomain))
-            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -3048,63 +3116,66 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     /**
      *
      * @summary Prediction Search
-     * @param {string} predictionHash
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {number} iou
-     * @param {string} metricFilters
-     * @param {string} enumFilters
+     * @param {string} [orderBy]
+     * @param {boolean} [desc]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet:
+    predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet:
       async (
-        predictionHash: string,
         projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
         iou: number,
-        metricFilters: string,
-        enumFilters: string,
+        orderBy?: string,
+        desc?: boolean,
+        offset?: number,
+        limit?: number,
+        filters?: string,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
-        // verify required parameter 'predictionHash' is not null or undefined
-        assertParamExists(
-          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet",
-          "predictionHash",
-          predictionHash
-        );
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet",
+          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "projectHash",
           projectHash
         );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "domain",
+          domain
+        );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet",
+          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "iou",
           iou
         );
-        // verify required parameter 'metricFilters' is not null or undefined
-        assertParamExists(
-          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet",
-          "metricFilters",
-          metricFilters
-        );
-        // verify required parameter 'enumFilters' is not null or undefined
-        assertParamExists(
-          "predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet",
-          "enumFilters",
-          enumFilters
-        );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/search`
+          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
             .replace(
               `{${"prediction_hash"}}`,
               encodeURIComponent(String(predictionHash))
             )
-            .replace(
-              `{${"project_hash"}}`,
-              encodeURIComponent(String(projectHash))
-            );
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
         // use dummy base URL string because the URL constructor only accepts absolute URLs.
         const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
         let baseOptions;
@@ -3124,12 +3195,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
           localVarQueryParameter["iou"] = iou;
         }
 
-        if (metricFilters !== undefined) {
-          localVarQueryParameter["metric_filters"] = metricFilters;
+        if (orderBy !== undefined) {
+          localVarQueryParameter["order_by"] = orderBy;
         }
 
-        if (enumFilters !== undefined) {
-          localVarQueryParameter["enum_filters"] = enumFilters;
+        if (desc !== undefined) {
+          localVarQueryParameter["desc"] = desc;
+        }
+
+        if (offset !== undefined) {
+          localVarQueryParameter["offset"] = offset;
+        }
+
+        if (limit !== undefined) {
+          localVarQueryParameter["limit"] = limit;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
         }
 
         setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -3555,34 +3638,6 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
-     * @summary Display Preview
-     * @param {string} projectHash
-     * @param {string} item
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async displayPreviewProjectsV2ProjectHashPreviewItemGet(
-      projectHash: string,
-      item: string,
-      options?: AxiosRequestConfig
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.displayPreviewProjectsV2ProjectHashPreviewItemGet(
-          projectHash,
-          item,
-          options
-        );
-      return createRequestFunction(
-        localVarAxiosArgs,
-        globalAxios,
-        BASE_PATH,
-        configuration
-      );
-    },
-    /**
-     *
      * @summary Display Raw File
      * @param {string} projectHash
      * @param {string} duHash
@@ -3603,6 +3658,49 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
           projectHash,
           duHash,
           frame,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Get 2D Embedding Summary Prediction
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      buckets?: Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<PredictionQuery2DEmbedding>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          buckets,
+          filters,
           options
         );
       return createRequestFunction(
@@ -3978,21 +4076,21 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     /**
      *
      * @summary Prediction Metric Distribution
-     * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {string} group
-     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum} [buckets]
+     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-      predictionHash: string,
-      predictionDomain: PredictionDomain,
+    async predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
       projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
       group: string,
-      buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum,
+      buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum,
       filters?: string,
       options?: AxiosRequestConfig
     ): Promise<
@@ -4002,10 +4100,10 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<QueryDistribution>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-          predictionHash,
-          predictionDomain,
+        await localVarAxiosParamCreator.predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
           projectHash,
+          predictionHash,
+          domain,
           group,
           buckets,
           filters,
@@ -4065,31 +4163,31 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      *
      * @summary Prediction Metric Scatter
      * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
+     * @param {PredictionDomain} domain
      * @param {string} projectHash
      * @param {string} xMetric
      * @param {string} yMetric
-     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum} [buckets]
+     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+    async predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
       predictionHash: string,
-      predictionDomain: PredictionDomain,
+      domain: PredictionDomain,
       projectHash: string,
       xMetric: string,
       yMetric: string,
-      buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum,
+      buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum,
       filters?: string,
       options?: AxiosRequestConfig
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+        await localVarAxiosParamCreator.predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
           predictionHash,
-          predictionDomain,
+          domain,
           projectHash,
           xMetric,
           yMetric,
@@ -4107,31 +4205,43 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     /**
      *
      * @summary Prediction Search
-     * @param {string} predictionHash
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {number} iou
-     * @param {string} metricFilters
-     * @param {string} enumFilters
+     * @param {string} [orderBy]
+     * @param {boolean} [desc]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-      predictionHash: string,
+    async predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
       projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
       iou: number,
-      metricFilters: string,
-      enumFilters: string,
+      orderBy?: string,
+      desc?: boolean,
+      offset?: number,
+      limit?: number,
+      filters?: string,
       options?: AxiosRequestConfig
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<string>>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-          predictionHash,
+        await localVarAxiosParamCreator.predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
+          predictionHash,
+          domain,
           iou,
-          metricFilters,
-          enumFilters,
+          orderBy,
+          desc,
+          offset,
+          limit,
+          filters,
           options
         );
       return createRequestFunction(
@@ -4359,27 +4469,6 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
-     * @summary Display Preview
-     * @param {string} projectHash
-     * @param {string} item
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    displayPreviewProjectsV2ProjectHashPreviewItemGet(
-      projectHash: string,
-      item: string,
-      options?: any
-    ): AxiosPromise<any> {
-      return localVarFp
-        .displayPreviewProjectsV2ProjectHashPreviewItemGet(
-          projectHash,
-          item,
-          options
-        )
-        .then((request) => request(axios, basePath));
-    },
-    /**
-     *
      * @summary Display Raw File
      * @param {string} projectHash
      * @param {string} duHash
@@ -4398,6 +4487,39 @@ export const ProjectsV2ApiFactory = function (
           projectHash,
           duHash,
           frame,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Get 2D Embedding Summary Prediction
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      buckets?: Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<PredictionQuery2DEmbedding> {
+      return localVarFp
+        .get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          buckets,
+          filters,
           options
         )
         .then((request) => request(axios, basePath));
@@ -4667,29 +4789,29 @@ export const ProjectsV2ApiFactory = function (
     /**
      *
      * @summary Prediction Metric Distribution
-     * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {string} group
-     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum} [buckets]
+     * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-      predictionHash: string,
-      predictionDomain: PredictionDomain,
+    predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
       projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
       group: string,
-      buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum,
+      buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum,
       filters?: string,
       options?: any
     ): AxiosPromise<QueryDistribution> {
       return localVarFp
-        .predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-          predictionHash,
-          predictionDomain,
+        .predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
           projectHash,
+          predictionHash,
+          domain,
           group,
           buckets,
           filters,
@@ -4734,29 +4856,29 @@ export const ProjectsV2ApiFactory = function (
      *
      * @summary Prediction Metric Scatter
      * @param {string} predictionHash
-     * @param {PredictionDomain} predictionDomain
+     * @param {PredictionDomain} domain
      * @param {string} projectHash
      * @param {string} xMetric
      * @param {string} yMetric
-     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum} [buckets]
+     * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum} [buckets]
      * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+    predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
       predictionHash: string,
-      predictionDomain: PredictionDomain,
+      domain: PredictionDomain,
       projectHash: string,
       xMetric: string,
       yMetric: string,
-      buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum,
+      buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum,
       filters?: string,
       options?: any
     ): AxiosPromise<QueryScatter> {
       return localVarFp
-        .predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+        .predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
           predictionHash,
-          predictionDomain,
+          domain,
           projectHash,
           xMetric,
           yMetric,
@@ -4769,29 +4891,41 @@ export const ProjectsV2ApiFactory = function (
     /**
      *
      * @summary Prediction Search
-     * @param {string} predictionHash
      * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
      * @param {number} iou
-     * @param {string} metricFilters
-     * @param {string} enumFilters
+     * @param {string} [orderBy]
+     * @param {boolean} [desc]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [filters] Search Filters
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-      predictionHash: string,
+    predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
       projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
       iou: number,
-      metricFilters: string,
-      enumFilters: string,
+      orderBy?: string,
+      desc?: boolean,
+      offset?: number,
+      limit?: number,
+      filters?: string,
       options?: any
-    ): AxiosPromise<Array<string>> {
+    ): AxiosPromise<AnalysisSearch> {
       return localVarFp
-        .predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-          predictionHash,
+        .predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
+          predictionHash,
+          domain,
           iou,
-          metricFilters,
-          enumFilters,
+          orderBy,
+          desc,
+          offset,
+          limit,
+          filters,
           options
         )
         .then((request) => request(axios, basePath));
@@ -4985,29 +5119,6 @@ export class ProjectsV2Api extends BaseAPI {
 
   /**
    *
-   * @summary Display Preview
-   * @param {string} projectHash
-   * @param {string} item
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof ProjectsV2Api
-   */
-  public displayPreviewProjectsV2ProjectHashPreviewItemGet(
-    projectHash: string,
-    item: string,
-    options?: AxiosRequestConfig
-  ) {
-    return ProjectsV2ApiFp(this.configuration)
-      .displayPreviewProjectsV2ProjectHashPreviewItemGet(
-        projectHash,
-        item,
-        options
-      )
-      .then((request) => request(this.axios, this.basePath));
-  }
-
-  /**
-   *
    * @summary Display Raw File
    * @param {string} projectHash
    * @param {string} duHash
@@ -5027,6 +5138,41 @@ export class ProjectsV2Api extends BaseAPI {
         projectHash,
         duHash,
         frame,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Get 2D Embedding Summary Prediction
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {string} reductionHash
+   * @param {Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectsV2Api
+   */
+  public get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    reductionHash: string,
+    buckets?: Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectsV2ApiFp(this.configuration)
+      .get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+        projectHash,
+        predictionHash,
+        domain,
+        reductionHash,
+        buckets,
+        filters,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -5314,30 +5460,30 @@ export class ProjectsV2Api extends BaseAPI {
   /**
    *
    * @summary Prediction Metric Distribution
-   * @param {string} predictionHash
-   * @param {PredictionDomain} predictionDomain
    * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
    * @param {string} group
-   * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum} [buckets]
+   * @param {PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum} [buckets]
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-    predictionHash: string,
-    predictionDomain: PredictionDomain,
+  public predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
     projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
     group: string,
-    buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum,
+    buckets?: PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum,
     filters?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGet(
-        predictionHash,
-        predictionDomain,
+      .predictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
         projectHash,
+        predictionHash,
+        domain,
         group,
         buckets,
         filters,
@@ -5385,30 +5531,30 @@ export class ProjectsV2Api extends BaseAPI {
    *
    * @summary Prediction Metric Scatter
    * @param {string} predictionHash
-   * @param {PredictionDomain} predictionDomain
+   * @param {PredictionDomain} domain
    * @param {string} projectHash
    * @param {string} xMetric
    * @param {string} yMetric
-   * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum} [buckets]
+   * @param {PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum} [buckets]
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+  public predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
     predictionHash: string,
-    predictionDomain: PredictionDomain,
+    domain: PredictionDomain,
     projectHash: string,
     xMetric: string,
     yMetric: string,
-    buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum,
+    buckets?: PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum,
     filters?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGet(
+      .predictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
         predictionHash,
-        predictionDomain,
+        domain,
         projectHash,
         xMetric,
         yMetric,
@@ -5422,30 +5568,42 @@ export class ProjectsV2Api extends BaseAPI {
   /**
    *
    * @summary Prediction Search
-   * @param {string} predictionHash
    * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
    * @param {number} iou
-   * @param {string} metricFilters
-   * @param {string} enumFilters
+   * @param {string} [orderBy]
+   * @param {boolean} [desc]
+   * @param {number} [offset]
+   * @param {number} [limit]
+   * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-    predictionHash: string,
+  public predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
     projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
     iou: number,
-    metricFilters: string,
-    enumFilters: string,
+    orderBy?: string,
+    desc?: boolean,
+    offset?: number,
+    limit?: number,
+    filters?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .predictionSearchProjectsV2ProjectHashPredictionsPredictionHashSearchGet(
-        predictionHash,
+      .predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
         projectHash,
+        predictionHash,
+        domain,
         iou,
-        metricFilters,
-        enumFilters,
+        orderBy,
+        desc,
+        offset,
+        limit,
+        filters,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -5565,6 +5723,17 @@ export class ProjectsV2Api extends BaseAPI {
 /**
  * @export
  */
+export const Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum =
+  {
+    _10: "10",
+    _100: "100",
+    _1000: "1000",
+  } as const;
+export type Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum =
+  (typeof Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum)[keyof typeof Get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGetBucketsEnum];
+/**
+ * @export
+ */
 export const Get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGetBucketsEnum =
   {
     _10: "10",
@@ -5596,14 +5765,14 @@ export type ListProjectPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum
 /**
  * @export
  */
-export const PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum =
+export const PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum =
   {
     _10: "10",
     _100: "100",
     _1000: "1000",
   } as const;
-export type PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum =
-  (typeof PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum)[keyof typeof PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainDistributionGetBucketsEnum];
+export type PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum =
+  (typeof PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum)[keyof typeof PredictionMetricDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGetBucketsEnum];
 /**
  * @export
  */
@@ -5618,14 +5787,14 @@ export type PredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictio
 /**
  * @export
  */
-export const PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum =
+export const PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum =
   {
     _10: "10",
     _100: "100",
     _1000: "1000",
   } as const;
-export type PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum =
-  (typeof PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum)[keyof typeof PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsPredictionDomainScatterGetBucketsEnum];
+export type PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum =
+  (typeof PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum)[keyof typeof PredictionMetricScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGetBucketsEnum];
 /**
  * @export
  */

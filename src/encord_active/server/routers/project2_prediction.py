@@ -26,7 +26,9 @@ from encord_active.db.models import (
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
 )
+from encord_active.db.util.char8 import Char8
 from encord_active.server.dependencies import dep_engine
+from encord_active.server.routers import project2_prediction_analysis
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
     TABLES_ANNOTATION,
@@ -45,9 +47,7 @@ from encord_active.server.routers.queries.search_query import (
 
 
 def dep_check_project_prediction_hash_match(
-    project_hash: uuid.UUID,
-    prediction_hash: uuid.UUID,
-    engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, prediction_hash: uuid.UUID, engine: Engine = Depends(dep_engine)
 ):
     with Session(engine) as sess:
         exists = (
@@ -64,14 +64,9 @@ def dep_check_project_prediction_hash_match(
 
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
-    dependencies=[Depends(dep_check_project_prediction_hash_match)]
+    dependencies=[Depends(dep_check_project_prediction_hash_match)],
 )
-
-
-class PredictionDomain(Enum):
-    TRUE_POSITIVE = "tp"
-    FALSE_POSITIVE = "fp"
-    FALSE_NEGATIVE = "fn"
+router.include_router(project2_prediction_analysis.router)
 
 
 def remove_nan_inf(v: float, inf: float = 100_000.0) -> float:
@@ -136,7 +131,7 @@ def get_project_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> PredictionSummaryResult:
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
@@ -151,6 +146,7 @@ def get_project_prediction_summary(
     # FIXME: fn_where needs separate set of queries as this is implemented as a side table join.
     # FIXME: performance improvements are possible
     guid = GUID()
+    char8 = Char8()
     with Session(engine) as sess:
         range_annotation_types = sess.exec(
             select(  # type: ignore
@@ -303,7 +299,7 @@ def get_project_prediction_summary(
                     f"as var_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                FROM active_project_prediction_analytics, (
+                FROM project_prediction_analytics, (
                     SELECT
                         avg(
                             iou >= :iou and
@@ -313,7 +309,7 @@ def get_project_prediction_summary(
                     f"avg({metric_name}) as e_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                     FROM active_project_prediction_analytics
+                     FROM project_prediction_analytics
                      WHERE prediction_hash = :prediction_hash
                 )
                 WHERE prediction_hash = :prediction_hash
@@ -356,7 +352,7 @@ def get_project_prediction_summary(
                             '''
                         for metric_name in valid_metric_stat_names
                     ])}
-                    FROM active_project_prediction_analytics
+                    FROM project_prediction_analytics
                     WHERE prediction_hash = :prediction_hash
                     """
                 ),
@@ -386,7 +382,7 @@ def get_project_prediction_summary(
                         for metric_name in metric_names
                         ]
                     )}
-                FROM active_project_prediction_analytics
+                FROM project_prediction_analytics
                 WHERE prediction_hash = :prediction_hash
                 """
                 ),
@@ -424,7 +420,7 @@ def get_project_prediction_summary(
                         )) OVER (
                             ORDER BY PR.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_count
-                    FROM active_project_prediction_analytics PR
+                    FROM project_prediction_analytics PR
                     WHERE PR.prediction_hash = :prediction_hash
                     AND PR.feature_hash = :feature_hash
                     ORDER BY PR.metric_confidence DESC
@@ -440,7 +436,7 @@ def get_project_prediction_summary(
             params={
                 "prediction_hash": guid.process_bind_param(prediction_hash, engine.dialect),
                 "iou": iou,
-                "feature_hash": feature_hash,
+                "feature_hash": char8.process_bind_param(feature_hash, engine.dialect),
                 "r_divisor": true_positive_count_map.get(feature_hash, 0)
                 + false_negative_count_map.get(feature_hash, 0),
             },
@@ -501,57 +497,6 @@ def get_project_prediction_summary(
     )
 
 
-@router.get("/analytics/{prediction_domain}/distribution")
-def prediction_metric_distribution(
-    prediction_hash: uuid.UUID,
-    prediction_domain: PredictionDomain,
-    group: str,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
-    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
-) -> metric_query.QueryDistribution:
-    # FIXME: prediction_domain!!! (this & scatter) both need it implemented
-    # FIXME: how to do we want to support fp-tp-fn split (2-group, 3-group)?
-    # FIXME:  or try to support unified?
-    with Session(engine) as sess:
-        return metric_query.query_attr_distribution(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            attr_name=group,
-            buckets=buckets,
-            filters=filters,
-        )
-
-
-@router.get("/analytics/{prediction_domain}/scatter")
-def prediction_metric_scatter(
-    prediction_hash: uuid.UUID,
-    prediction_domain: PredictionDomain,
-    x_metric: str,
-    y_metric: str,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
-    filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
-) -> metric_query.QueryScatter:
-    with Session(engine) as sess:
-        return metric_query.query_attr_scatter(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            x_metric_name=x_metric,
-            y_metric_name=y_metric,
-            buckets=buckets,
-            filters=filters,
-        )
-
-
 class QueryMetricPerformanceEntry(BaseModel):
     m: float
     a: float
@@ -571,7 +516,7 @@ def prediction_metric_performance(
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine)
+    engine: Engine = Depends(dep_engine),
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
@@ -677,29 +622,8 @@ def prediction_metric_performance(
     )
 
 
-@router.get("/search")
-def prediction_search(
-    prediction_hash: uuid.UUID,
-    iou: float,
-    metric_filters: str,
-    enum_filters: str,
-) -> list[str]:
-    metric_filters_dict = json.loads(metric_filters)
-    enum_filters_dict = json.loads(enum_filters)
-    # Some enums have special meaning.
-    include_prediction_tp = True
-    include_prediction_fp = True
-    include_prediction_fn = True
-    if "prediction_type" in enum_filters_dict:
-        filters = set(enum_filters_dict.pop("prediction_type"))
-        include_prediction_tp = "tp" in filters
-        include_prediction_fp = "fp" in filters
-        include_prediction_fn = "fn" in filters
-    include_prediction_hashes = enum_filters_dict.pop("prediction_hash", None)
-    include_data = True
-    include_annotations = True
-
-    return None
+class PredictionItem(BaseModel):
+    objects: list[dict]
 
 
 @router.get("/preview/{item}")

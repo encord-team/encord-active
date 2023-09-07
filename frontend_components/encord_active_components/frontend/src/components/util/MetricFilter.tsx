@@ -10,7 +10,7 @@ import {
 } from "../../openapi/api";
 
 export type FilterState = {
-  readonly metricFilters: Readonly<Record<string, readonly [number, number]>>;
+  readonly metricFilters: Readonly<Record<string, readonly number[]>>;
   readonly enumFilters: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly ordering: ReadonlyArray<string>;
 };

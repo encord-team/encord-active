@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -15,6 +16,8 @@ from encord_active.db.models import (
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectPrediction,
+    ProjectPredictionDataMetadata,
+    ProjectPredictionDataUnitMetadata,
 )
 
 
@@ -35,6 +38,7 @@ class PredictionImportSpec:
 
 def import_prediction(engine: Engine, database_dir: Path, prediction: PredictionImportSpec) -> None:
     prediction_hash = prediction.prediction.prediction_hash
+    coco_timestamp = datetime.now()
 
     # Group by data unit/frame
     du_prediction_lookup = {}
@@ -78,7 +82,10 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
             dataset_title=dataset_title,
             data_title=data_title,
             data_type=data_type,
-            label_row_json={},
+            created_at=coco_timestamp,
+            last_edited_at=coco_timestamp,
+            object_answers={},
+            classification_answers={},
         )
         for data_hash, dataset_hash, num_frames, frames_per_second, dataset_title, data_title, data_type in project_data_meta_list
     ]
@@ -93,6 +100,8 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
             height=du_meta.height,
             data_uri=du_meta.data_uri,
             data_uri_is_video=du_meta.data_uri_is_video,
+            data_title=du_meta.data_title,
+            data_type=du_meta.data_type,
             objects=du_prediction_lookup[(du_meta.du_hash, du_meta.frame)].objects
             if (du_meta.du_hash, du_meta.frame) in du_prediction_lookup
             else [],
@@ -121,10 +130,38 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
     )
     prediction_analytics, prediction_analytics_extra, prediction_analytics_false_negatives, new_collaborators = res
 
+    prediction_db_data_meta = [
+        ProjectPredictionDataMetadata(
+            prediction_hash=prediction_hash,
+            data_hash=d.data_hash,
+            project_hash=project_hash,
+            label_hash=d.label_hash,
+            created_at=d.created_at,
+            last_edited_at=d.last_edited_at,
+            object_answers=d.object_answers,
+            classification_answers=d.classification_answers,
+        )
+        for d in prediction_data_metadata
+    ]
+    prediction_db_data_unit_meta = [
+        ProjectPredictionDataUnitMetadata(
+            prediction_hash=prediction_hash,
+            du_hash=du.du_hash,
+            frame=du.frame,
+            project_hash=project_hash,
+            data_hash=du.data_hash,
+            objects=du.objects,
+            classifications=du.classifications,
+        )
+        for du in prediction_data_unit_metadata
+    ]
+
     # Store to the database
     with Session(engine) as sess:
         sess.add(prediction.prediction)
         sess.add_all(new_collaborators)
+        sess.add_all(prediction_db_data_meta)
+        sess.add_all(prediction_db_data_unit_meta)
         sess.add_all(prediction_analytics)
         sess.add_all(prediction_analytics_extra)
         sess.add_all(prediction_analytics_false_negatives)

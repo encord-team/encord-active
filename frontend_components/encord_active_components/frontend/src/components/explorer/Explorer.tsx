@@ -5,7 +5,7 @@ import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "usehooks-ts";
-import { Button, List, Popover, Select, Slider, Space, Spin } from "antd";
+import { Button, List, Popover, Select, Slider, Space } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { ApiContext, getApi, Item, useApi } from "./api";
 import { Assistant } from "./Assistant";
@@ -24,7 +24,12 @@ import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
-import { ProjectDomainSummary } from "../../openapi/api";
+import {
+  DomainSearchFilters,
+  Embedding2DFilter,
+  PredictionDomain,
+  ProjectDomainSummary,
+} from "../../openapi/api";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
@@ -33,6 +38,7 @@ import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProje
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { AnnotatedImage } from "../preview/AnnotatedImage";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
+import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 
 export type Props = {
   projectHash: string;
@@ -92,24 +98,28 @@ export function Explorer({
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
-  const [predictionOutcome, setPredictionOutcome] = useState<
-    "tp" | "fp" | "fn"
-  >("tp");
+  const [predictionOutcome, setPredictionOutcome] =
+    useState<PredictionDomain>("tp");
   const [iou, setIou] = useState<number>(0.5);
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   const [annotationFilters, setAnnotationFilters] =
     useState<FilterState>(DefaultFilters);
+  const [embeddingFilter, setEmbeddingFilter] = useState<
+    Embedding2DFilter | undefined
+  >();
   const canResetFilters =
     predictionOutcome !== "tp" ||
     iou !== 0.5 ||
     dataFilters.ordering.length !== 0 ||
-    annotationFilters.ordering.length !== 0;
+    annotationFilters.ordering.length !== 0 ||
+    embeddingFilter !== undefined;
   const resetAllFilters = () => {
     setIsAscending(true);
     setPredictionOutcome("tp");
     setIou(0.5);
     setDataFilters(DefaultFilters);
     setAnnotationFilters(DefaultFilters);
+    setEmbeddingFilter(undefined);
   };
 
   const rawFilters: ExplorerFilterState = useMemo(
@@ -117,16 +127,22 @@ export function Explorer({
       analysisDomain: selectedMetric.domain,
       filters: {
         data: {
-          metrics: dataFilters.metricFilters,
-          enums: dataFilters.enumFilters,
-          reduction: null,
-          tags: null,
+          // FIXME: the 'as' casts should NOT! be needed
+          metrics: dataFilters.metricFilters as DomainSearchFilters["metrics"],
+          enums: dataFilters.enumFilters as DomainSearchFilters["enums"],
+          reduction:
+            selectedMetric.domain === "data" ? embeddingFilter : undefined,
+          tags: undefined,
         },
         annotation: {
-          metrics: annotationFilters.metricFilters,
-          enums: annotationFilters.enumFilters,
-          reduction: null,
-          tags: null,
+          metrics:
+            annotationFilters.metricFilters as DomainSearchFilters["metrics"],
+          enums: annotationFilters.enumFilters as DomainSearchFilters["enums"],
+          reduction:
+            selectedMetric.domain === "annotation"
+              ? embeddingFilter
+              : undefined,
+          tags: undefined,
         },
       },
       orderBy: selectedMetric.metric_key,
@@ -194,7 +210,7 @@ export function Explorer({
     isLoading: isLoadingAnnotationMetrics,
   } = useProjectAnalysisSummary(queryContext, projectHash, "annotation");
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
-  const { data: sortedItems, isLoading: isLoadingSortedItems } =
+  const { data: sortedItemsProject, isLoading: isLoadingSortedItemsProject } =
     useProjectAnalysisSearch(
       queryContext,
       projectHash,
@@ -208,6 +224,30 @@ export function Explorer({
         enabled: scope !== "prediction",
       }
     );
+  const {
+    data: sortedItemsPrediction,
+    isLoading: isLoadingSortedItemsPrediction,
+  } = usePredictionAnalysisSearch(
+    queryContext,
+    projectHash,
+    predictionHash ?? "",
+    filters.predictionOutcome,
+    filters.iou,
+    filters.orderBy,
+    filters.desc,
+    0,
+    1000,
+    filters.filters,
+    {
+      enabled: scope !== "prediction",
+    }
+  );
+  const sortedItems =
+    scope !== "prediction" ? sortedItemsProject : sortedItemsPrediction;
+  const isLoadingSortedItems =
+    scope !== "prediction"
+      ? isLoadingSortedItemsProject
+      : isLoadingSortedItemsPrediction;
 
   /*
   FIXME: implement
@@ -310,6 +350,7 @@ export function Explorer({
       <ExplorerEmbeddings
         queryContext={queryContext}
         projectHash={projectHash}
+        predictionHash={predictionHash}
         reductionHash={reductionHash}
         filters={filters}
         setEmbeddingSelection={() => {
@@ -532,13 +573,13 @@ function PredictionFilters({
 }: {
   iou: number;
   setIou: (iou: number) => void;
-  predictionOutcome: "fp" | "fn" | "tp";
-  setPredictionOutcome: (outcome: "fp" | "fn" | "tp") => void;
+  predictionOutcome: PredictionDomain;
+  setPredictionOutcome: (outcome: PredictionDomain) => void;
   isClassificationOnly: boolean;
   disabled: boolean;
 }) {
   return (
-    <div className="flex gap-2">
+    <Space.Compact>
       <Select
         disabled={disabled}
         onChange={setPredictionOutcome}
@@ -556,12 +597,27 @@ function PredictionFilters({
             key: "fn",
             label: "False Negative",
           },
+          {
+            key: "p",
+            label: "All Positive",
+          },
+          {
+            key: "a",
+            label: "All Outcomes",
+          },
         ]}
       />
       {!isClassificationOnly && (
-        <Slider value={iou} onChange={setIou} min={0.0} max={0.0} step={0.01} />
+        <Slider
+          style={{ width: 200, paddingLeft: 10 }}
+          value={iou}
+          onChange={setIou}
+          min={0.0}
+          max={0.0}
+          step={0.01}
+        />
       )}
-    </div>
+    </Space.Compact>
   );
 }
 

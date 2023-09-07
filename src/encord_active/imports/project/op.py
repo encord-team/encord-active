@@ -28,6 +28,7 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
     ProjectImportMetadata,
     ProjectPrediction,
+    ProjectEmbeddingIndex,
 )
 
 
@@ -117,6 +118,16 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         for (extra, (x, y)) in zip(annotation_analytics_extra, reduced_annotation_clip_raw)
     ]
 
+    embedding_index = ProjectEmbeddingIndex(
+        project_hash=project_hash,
+        data_index_dirty=True,
+        data_index_name=None,
+        data_index_compiled=None,
+        annotation_index_dirty=True,
+        annotation_index_name=None,
+        annotation_index_compiled=None,
+    )
+
     # Populate the database.
     with Session(engine) as sess:
         sess.add(project.project)
@@ -126,6 +137,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         sess.add_all(project.project_du_list)
         sess.add_all(new_collaborators)
         sess.add(project_reduction)
+        sess.add(embedding_index)
         sess.commit()
         sess.add_all(data_analytics)
         sess.add_all(data_analytics_extra)

@@ -1153,10 +1153,10 @@ class SimpleExecutor(Executor):
             prediction_analysis_extra.append(
                 ProjectPredictionAnalyticsExtra(
                     prediction_hash=prediction_hash,
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
                     annotation_hash=annotation_hash,
-                    annotation_bytes=b"",  # FIXME: how should prediction metadata be stored!?
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
@@ -1165,6 +1165,7 @@ class SimpleExecutor(Executor):
             prediction_false_negatives.append(
                 ProjectPredictionAnalyticsFalseNegatives(
                     prediction_hash=prediction_hash,
+                    project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
                     annotation_hash=annotation_hash,

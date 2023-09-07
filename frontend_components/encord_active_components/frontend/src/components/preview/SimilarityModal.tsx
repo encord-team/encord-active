@@ -1,6 +1,11 @@
+import * as React from "react";
 import { Modal } from "antd";
+import { QueryContext } from "../../hooks/Context";
 
-function SimilarityModal(props: {
+export function SimilarityModal(props: {
+  queryContext: QueryContext;
+  projectHash: string;
+  predictionHash: string;
   similarityItem: string | undefined;
   onClose: () => void;
 }) {

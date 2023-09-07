@@ -103,6 +103,7 @@ def import_coco_result(
             prediction_hash=prediction_hash,
             name=prediction_name,
             project_hash=project_hash,
+            external_project_hash=None,
         ),
         du_prediction_list=list(du_prediction_list.values()),
     )

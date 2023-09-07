@@ -5,8 +5,20 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
-from sqlalchemy import INT, JSON, REAL, SMALLINT, CheckConstraint, Column, BigInteger, Integer, Boolean, TIMESTAMP, \
-    event
+from sqlalchemy import (
+    INT,
+    JSON,
+    REAL,
+    SMALLINT,
+    CheckConstraint,
+    Column,
+    BigInteger,
+    Integer,
+    Boolean,
+    TIMESTAMP,
+    event,
+    LargeBinary,
+)
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 from sqlmodel.sql.sqltypes import GUID, AutoString
@@ -23,6 +35,7 @@ from encord_active.db.metrics import (
 )
 from encord_active.db.util.char8 import Char8
 from encord_active.db.util.pgvector import PGVector
+from encord_active.db.util.strdict import StrDict
 
 
 def fk_constraint(
@@ -41,7 +54,9 @@ def fk_constraint(
 
 
 def field_uuid(primary_key: bool = False, unique: bool = False, nullable: bool = False) -> UUID:
-    return Field(primary_key=primary_key, unique=unique, sa_column=Column(GUID(), nullable=nullable, primary_key=primary_key))
+    return Field(
+        primary_key=primary_key, unique=unique, sa_column=Column(GUID(), nullable=nullable, primary_key=primary_key)
+    )
 
 
 def field_bool(nullable: bool = False) -> float:
@@ -68,6 +83,10 @@ def field_text(nullable: bool = False) -> str:
     return Field(sa_column=Column(AutoString, nullable=nullable))
 
 
+def field_bytes(nullable: bool = False) -> bytes:
+    return Field(sa_column=Column(LargeBinary, nullable=nullable))
+
+
 def field_json_dict(nullable: bool = False, default: Optional[dict] = None) -> dict:
     return Field(sa_column=Column(JSON, nullable=nullable, default=default))
 
@@ -81,6 +100,11 @@ EmbeddingVector = Union[list[float], bytes]
 
 def field_embedding_vector(dim: int, nullable: bool = False) -> EmbeddingVector:
     return Field(sa_column=Column(PGVector(dim), nullable=nullable))
+
+
+def field_string_dict(nullable: bool = False) -> dict[str, str]:
+    return Field(sa_column=Column(StrDict(), nullable=nullable))
+
 
 """
 Number of custom metrics supported for each table
@@ -105,10 +129,25 @@ class Project(SQLModel, table=True):
 
 
 class ProjectImportMetadata(SQLModel, table=True):
-    __tablename__ = "project_import_metadata"
+    __tablename__ = "project_import"
     project_hash: UUID = field_uuid(primary_key=True)
     import_metadata_type: str = field_text()
     import_metadata: dict = field_json_dict()
+
+    __table_args__ = (fk_constraint(["project_hash"], Project, "project_hash_import_meta_fk"),)
+
+
+class ProjectEmbeddingIndex(SQLModel, table=True):
+    __tablename__ = "project_embedding_index"
+    project_hash: UUID = field_uuid(primary_key=True)
+
+    data_index_dirty: bool = field_bool()
+    data_index_name: Optional[str] = field_text(nullable=True)
+    data_index_compiled: Optional[bytes] = field_bytes(nullable=True)
+
+    annotation_index_dirty: bool = field_bool()
+    annotation_index_name: Optional[str] = field_text(nullable=True)
+    annotation_index_compiled: Optional[bytes] = field_bytes(nullable=True)
 
     __table_args__ = (fk_constraint(["project_hash"], Project, "project_hash_import_meta_fk"),)
 
@@ -133,7 +172,10 @@ class ProjectEmbeddingReduction(SQLModel, table=True):
     reduction_type: EmbeddingReductionType
     reduction_bytes: bytes
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_embedding_reduction_project_fk"),)
+    __table_args__ = (
+        fk_constraint(["project_hash"], Project, "project_embedding_reduction_project_fk"),
+        Index("project_embedding_reduction_ph_idx", "reduction_hash", "project_hash", unique=True),
+    )
 
 
 class ProjectDataMetadata(SQLModel, table=True):
@@ -157,7 +199,7 @@ class ProjectDataMetadata(SQLModel, table=True):
 
     __table_args__ = (
         fk_constraint(["project_hash"], Project, "project_data_project_fk"),
-        CheckConstraint("num_frames > 0", name="project_data_num_frames_ck")
+        CheckConstraint("num_frames > 0", name="project_data_num_frames_ck"),
     )
 
 
@@ -185,8 +227,8 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     classifications: list = field_json_list()
 
     __table_args__ = (
-        Index("project_data_units_unique_du_hash_frame", "project_hash", "du_hash", "frame", unique=True),
         fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "data_unit_data_fk"),
+        CheckConstraint("frame >= 0", name="data_unit_frame_check"),
     )
 
 
@@ -305,7 +347,7 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     # Embeddings derived
     derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
-    metric_metadata: dict = field_json_dict(nullable=False)
+    metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
     __table_args__ = (
         fk_constraint(
@@ -388,9 +430,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
         "annotate",
         AnnotationMetrics,
         [
-            fk_constraint(
-                ["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "label_project_data_fk"
-            ),
+            fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "label_project_data_fk"),
             fk_constraint(
                 ["project_hash", "annotation_user_id"],
                 ProjectCollaborator,
@@ -415,7 +455,7 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     # Embeddings derived
     derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
-    metric_metadata: dict = field_json_dict()
+    metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
     __table_args__ = (
         fk_constraint(
@@ -505,8 +545,60 @@ class ProjectPrediction(SQLModel, table=True):
     __tablename__ = "project_prediction"
     prediction_hash: UUID = field_uuid(primary_key=True)
     project_hash: UUID = field_uuid()
+    external_project_hash: Optional[UUID] = field_uuid(nullable=True)
     name: str
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_prediction_project_hash_fk"),)
+    __table_args__ = (
+        fk_constraint(["project_hash"], Project, "project_prediction_project_hash_fk"),
+        Index("project_prediction_project_uq", "prediction_hash", "project_hash", unique=True),
+    )
+
+
+class ProjectPredictionDataMetadata(SQLModel, table=True):
+    __tablename__ = "project_prediction_data"
+    # Base primary key
+    prediction_hash: UUID = field_uuid(primary_key=True)
+    data_hash: UUID = field_uuid(primary_key=True)
+
+    # Associated project_hash
+    project_hash: UUID = field_uuid()
+
+    # Metadata
+    label_hash: UUID = field_uuid(unique=True)
+    created_at: datetime = field_datetime()
+    last_edited_at: datetime = field_datetime()
+    object_answers: dict = field_json_dict()
+    classification_answers: dict = field_json_dict()
+
+    __table_args__ = (
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_data_fk"),
+        fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "project_prediction_data_project_fk"),
+    )
+
+
+class ProjectPredictionDataUnitMetadata(SQLModel, table=True):
+    __tablename__ = "project_prediction_data_units"
+    prediction_hash: UUID = field_uuid(primary_key=True)
+    du_hash: UUID = field_uuid(primary_key=True)
+    frame: int = field_int(primary_key=True)
+
+    # Associated project_hash / data_hash
+    project_hash: UUID = field_uuid()
+    data_hash: UUID = field_uuid()
+
+    # Per-frame information about the root cause.
+    objects: list = field_json_list()
+    classifications: list = field_json_list()
+
+    __table_args__ = (
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "prediction_du_project_fk"),
+        fk_constraint(
+            ["prediction_hash", "data_hash"],
+            ProjectPredictionDataMetadata,
+            "prediction_data_unit_data_fk",
+        ),
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "prediction_data_unit_fk"),
+        CheckConstraint("frame >= 0", name="prediction_data_unit_frame_check"),
+    )
 
 
 @assert_cls_metrics_match(AnnotationMetrics, CUSTOM_METRIC_COUNT)
@@ -563,7 +655,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     metric_custom3: Optional[float] = metric_field_type_normal()
 
     __table_args__ = (
-        fk_constraint(["prediction_hash"], ProjectPrediction, "project_prediction_prediction_fk"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_prediction_fk"),
         Index(
             "project_prediction_confidence_index",
             "prediction_hash",
@@ -590,14 +682,7 @@ class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
     annotation_hash: str = field_type_char8(primary_key=True)
-
-    # Packed prediction bytes, format depends on annotation_type on associated
-    # non-extra table.
-    # BB = [x1, y1, x2, y2] (np.float)
-    # RBB = [x1, y1, x2, y2, theta] (np.float)
-    # BITMASK = count array (np.int)
-    # Polygon = [[x, y], [x,y]] (np.float)
-    annotation_bytes: bytes
+    project_hash: UUID = field_uuid()
 
     # Embeddings
     embedding_clip: Optional[EmbeddingVector] = field_embedding_vector(512, nullable=True)
@@ -605,9 +690,12 @@ class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
     # Embeddings derived
     derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
-    metric_metadata: dict = field_json_dict()
+    metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
     __table_args__ = (
+        fk_constraint(
+            ["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_analytics_extra_ph_fk"
+        ),
         fk_constraint(
             ["prediction_hash", "du_hash", "frame", "annotation_hash"],
             ProjectPredictionAnalytics,
@@ -625,18 +713,20 @@ class ProjectPredictionAnalyticsReduced(SQLModel, table=True):
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
     annotation_hash: str = field_type_char8(primary_key=True)
+    project_hash: UUID = field_uuid()
     # 2D embedding
     x: float = field_real()
     y: float = field_real()
 
     __table_args__ = (
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "prediction_project_reduced_fk"),
         fk_constraint(
             ["prediction_hash", "du_hash", "frame", "annotation_hash"],
             ProjectPredictionAnalytics,
             "data_project_prediction_analytics_reduced_fk",
         ),
         fk_constraint(
-            ["reduction_hash"],
+            ["reduction_hash", "project_hash"],
             ProjectEmbeddingReduction,
             "data_project_prediction_analytics_reduced_reduction_fk",
         ),
@@ -647,11 +737,12 @@ class ProjectPredictionAnalyticsReduced(SQLModel, table=True):
 
 
 class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
-    __tablename__ = "project_prediction_analytics_false_negatives"
+    __tablename__ = "project_prediction_analytics_fn"
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
     annotation_hash: str = field_type_char8(primary_key=True)
+    project_hash: UUID = field_uuid()
 
     # IOU threshold for missed prediction
     # this entry is a false negative IFF (iou < iou_threshold)
@@ -662,7 +753,12 @@ class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
     feature_hash: str = field_type_char8(primary_key=True)
 
     __table_args__ = (
-        fk_constraint(["prediction_hash"], ProjectPrediction, "project_prediction_unmatched_prediction_fk"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_fn_prediction_fk"),
+        fk_constraint(
+            ["project_hash", "du_hash", "frame", "annotation_hash"],
+            ProjectAnnotationAnalytics,
+            "project_prediction_fn_project_fk",
+        ),
         Index("project_prediction_unmatched_feature_hash_index", "prediction_hash", "feature_hash"),
         CheckConstraint(
             "iou_threshold BETWEEN 0.0 AND 1.0 OR iou_threshold = -1.0",
@@ -705,7 +801,7 @@ def get_engine(
 
     # Create the engine connection
     print(f"Connection to database: {engine_url}")
-    engine = create_engine(engine_url, connect_args=connect_args)
+    engine = create_engine(engine_url, connect_args=connect_args, pool_size=15, max_overflow=30)
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
         if use_alembic:

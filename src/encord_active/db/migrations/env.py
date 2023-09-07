@@ -32,15 +32,6 @@ target_metadata.naming_convention = {
 }
 
 
-def process_revision_directives(context, revision, directives):
-    # extract Migration
-    migration_script = directives[0]
-    raise ValueError(f"{revision}, {directives}")
-
-    # Use our-revision-id
-    migration_script.rev_id = '{0:04}'.format(new_rev_id)
-
-
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -61,7 +52,6 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
-        process_revision_directives=process_revision_directives,
     )
 
     with context.begin_transaction():
@@ -105,7 +95,6 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            process_revision_directives=process_revision_directives,
         )
 
         with context.begin_transaction():

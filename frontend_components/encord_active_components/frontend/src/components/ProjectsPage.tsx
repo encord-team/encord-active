@@ -86,20 +86,18 @@ function NewProjectButton({
   onClick?: () => void;
 }) {
   const disabled = !onClick;
-  const containerProps = disabled
-    ? {
-        className: "tooltip",
-        "data-tip": "Coming soon, please use the CLI",
-      }
-    : {};
 
   return (
-    <div {...containerProps}>
+    <div
+      className={disabled ? "tooltip" : undefined}
+      data-tip="Coming soon, please use the CLI"
+    >
       <button
         className={classy(
           "felx-row border-1 btn btn-ghost flex h-28 w-96 justify-start gap-3 border-zinc-50 p-3.5 normal-case",
           { "shadow-lg": !disabled }
         )}
+        type="button"
         onClick={onClick}
         disabled={disabled}
       >

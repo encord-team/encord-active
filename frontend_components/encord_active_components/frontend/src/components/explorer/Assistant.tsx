@@ -70,7 +70,7 @@ export function Assistant({
   setSearch: (search: ScopelessSearch) => void;
   disabled?: boolean;
 }) {
-  const [parent, _] = useAutoAnimate();
+  const [parent] = useAutoAnimate();
 
   return (
     <div ref={parent} className="flex flex-1 flex-col gap-2">
