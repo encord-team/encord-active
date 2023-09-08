@@ -24,8 +24,8 @@ export function GalleryCard(props: {
   onClick: () => void;
   onShowSimilar: () => void;
   editUrl:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   hideExtraAnnotations: boolean;
 }) {
   const {
@@ -149,7 +149,7 @@ export function GalleryCard(props: {
       onClick={onClick}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className={classy("group overflow-clip", { selected: "" })}
+      className={classy("group overflow-clip", { "border-blue-300": selected, })}
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (
