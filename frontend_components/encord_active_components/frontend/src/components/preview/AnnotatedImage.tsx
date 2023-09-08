@@ -31,9 +31,6 @@ export function AnnotatedImage(props: {
     height: imageHeight,
   } = useResizeObserver<HTMLImageElement>({ ref: image });
 
-  console.log({ id: item.data_hash, imageHeight, imageWidth });
-
-
   const video = useRef<HTMLVideoElement>(null);
   const { width: videoWidth, height: videoHeight } =
     useResizeObserver<HTMLVideoElement>({
