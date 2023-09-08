@@ -1,8 +1,8 @@
 import json
+import math
 import uuid
 from typing import List, Optional, Tuple, Union
 
-import math
 import numpy as np
 import umap
 

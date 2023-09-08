@@ -3,14 +3,19 @@ import uuid
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
 from cachetools import TTLCache, cached
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
 from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
-from encord_active.db.metrics import AnnotationMetrics, DataMetrics, MetricDefinition, MetricType
+from encord_active.db.metrics import (
+    AnnotationMetrics,
+    DataMetrics,
+    MetricDefinition,
+    MetricType,
+)
 from encord_active.db.models import (
     AnnotationType,
     EmbeddingReductionType,
@@ -31,11 +36,11 @@ from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
 )
 from encord_active.server.dependencies import (
-    DataOrAnnotateItem,
-    parse_data_or_annotate_item,
     DataItem,
-    parse_data_item,
+    DataOrAnnotateItem,
     dep_engine,
+    parse_data_item,
+    parse_data_or_annotate_item,
 )
 from encord_active.server.routers import (
     project2_actions,

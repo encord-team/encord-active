@@ -1,4 +1,4 @@
-from sqlalchemy import TypeDecorator, JSON
+from sqlalchemy import JSON, TypeDecorator
 from sqlalchemy.dialects.postgresql import HSTORE
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine

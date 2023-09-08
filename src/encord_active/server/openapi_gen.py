@@ -1,14 +1,15 @@
 import json
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 from fastapi.openapi.utils import get_openapi
+
 from encord_active.server.app import get_app
 
 
 def generate_openapi_fe_components() -> None:
-    import subprocess
     import os
+    import subprocess
     from unittest.mock import MagicMock
 
     # Path lookup

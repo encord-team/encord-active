@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Optional, Union, Type
+from typing import Dict, List, Optional, Type, Union
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as

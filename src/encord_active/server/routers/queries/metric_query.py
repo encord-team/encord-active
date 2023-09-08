@@ -2,7 +2,6 @@ import dataclasses
 import math
 from enum import IntEnum
 from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
-from typing_extensions import TypeAlias
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
@@ -15,6 +14,7 @@ from sqlalchemy.sql.functions import sum as sql_sum_raw
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
 from sqlmodel.sql.expression import Select
+from typing_extensions import TypeAlias
 
 from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType

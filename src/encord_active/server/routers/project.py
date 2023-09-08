@@ -41,9 +41,9 @@ from encord_active.db.models import (
     ProjectTaggedDataUnit,
 )
 from encord_active.db.queries.analytics import (
+    select_annotation_analytics,
     select_data_analytics,
     select_prediction_analytics_with_extra,
-    select_annotation_analytics,
 )
 from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
@@ -104,9 +104,7 @@ from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
     fetch_prebuilt_project,
 )
-from encord_active.server.dependencies import (
-    verify_premium,
-)
+from encord_active.server.dependencies import verify_premium
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
     filtered_merged_metrics,

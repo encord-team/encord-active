@@ -242,6 +242,7 @@ def import_coco_ontology(
 COCO_FILE_DOMAIN = uuid.UUID("99be3b7a-314b-4237-9a3f-982177550ddf")
 COCO_DATASET_DOMAIN = uuid.UUID("d9ee9a72-fe37-4081-a3b7-47965b280428")
 
+
 def import_coco(
     database_dir: Path,
     annotations_file_path: Path,

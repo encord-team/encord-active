@@ -2,13 +2,12 @@ from typing import Union
 
 import numpy as np
 from psycopg2.extensions import Binary
-from sqlalchemy import TypeDecorator, BigInteger
-from sqlmodel import AutoString
-
+from sqlalchemy import BigInteger, TypeDecorator
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import BINARY
+from sqlmodel import AutoString
 
 __all__ = ["Char8List"]
 

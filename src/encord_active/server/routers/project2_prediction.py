@@ -23,11 +23,11 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
-    ProjectPredictionDataUnitMetadata,
     ProjectPredictionDataMetadata,
+    ProjectPredictionDataUnitMetadata,
 )
 from encord_active.db.util.char8 import Char8
-from encord_active.server.dependencies import dep_engine, DataItem, parse_data_item
+from encord_active.server.dependencies import DataItem, dep_engine, parse_data_item
 from encord_active.server.routers import project2_prediction_analysis
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (

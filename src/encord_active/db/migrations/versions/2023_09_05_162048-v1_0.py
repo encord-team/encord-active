@@ -5,11 +5,11 @@ Revises: bcfdfc2f498a
 Create Date: 2023-09-05 14:26:50.014633+01:00
 
 """
-from typing import Dict, Callable
+from typing import Callable, Dict
 
 import sqlalchemy as sa
-from sqlmodel.sql.sqltypes import GUID, AutoString
 from alembic import op
+from sqlmodel.sql.sqltypes import GUID, AutoString
 
 from encord_active.db.util.char8 import Char8
 from encord_active.db.util.pgvector import PGVector

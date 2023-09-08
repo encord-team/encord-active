@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from typing import Annotated, Optional
 
 from fastapi import Depends, HTTPException, status
@@ -54,6 +55,15 @@ def dep_engine() -> Engine:
 
 def dep_oauth2_scheme() -> OAuth2PasswordBearer:
     raise RuntimeError(f"Missing OAuth2PasswordBearer")
+
+
+def dep_ssh_key() -> str:
+    raise RuntimeError(f"Missing ssh_key")
+
+
+def dep_database_dir() -> Path:
+    settings = get_settings()
+    return settings.SERVER_START_PATH.expanduser().resolve()
 
 
 async def verify_token(token: Annotated[str, Depends(dep_oauth2_scheme)]) -> None:

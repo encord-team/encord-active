@@ -2,28 +2,28 @@ import enum
 import os
 from datetime import datetime
 from pathlib import Path
+from sqlite3 import Connection as SqliteConnection
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from uuid import UUID
 
+from psycopg2.extensions import connection as pg_connection
 from sqlalchemy import (
     INT,
     JSON,
     REAL,
     SMALLINT,
+    TIMESTAMP,
+    BigInteger,
+    Boolean,
     CheckConstraint,
     Column,
-    BigInteger,
     Integer,
-    Boolean,
-    TIMESTAMP,
-    event,
     LargeBinary,
+    event,
 )
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 from sqlmodel.sql.sqltypes import GUID, AutoString
-from psycopg2.extensions import connection as pg_connection
-from sqlite3 import Connection as SqliteConnection
 
 from encord_active.db.enums import AnnotationType, AnnotationTypeMaxValue
 from encord_active.db.metrics import (

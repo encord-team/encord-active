@@ -26,9 +26,9 @@ from encord_active.db.models import (
     ProjectDataAnalyticsReduced,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectEmbeddingIndex,
     ProjectImportMetadata,
     ProjectPrediction,
-    ProjectEmbeddingIndex,
 )
 
 

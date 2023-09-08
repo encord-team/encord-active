@@ -2,10 +2,10 @@ from typing import Union
 
 import numpy as np
 from psycopg2.extensions import Binary
-from sqlalchemy import TypeDecorator, Float
+from sqlalchemy import Float, TypeDecorator
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlalchemy.types import UserDefinedType, BINARY
+from sqlalchemy.types import BINARY, UserDefinedType
 
 __all__ = ["PGVector"]
 

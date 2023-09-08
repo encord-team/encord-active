@@ -1,26 +1,33 @@
 import math
 import uuid
 from enum import Enum
-from typing import Literal, List, Optional, Tuple, Dict, Type, Union
+from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Integer, desc as desc_fn, literal
-from sqlmodel import Session, select
+from sqlalchemy import Integer
+from sqlalchemy import desc as desc_fn
+from sqlalchemy import literal
 from sqlalchemy.engine import Engine
+from sqlmodel import Session, select
 
 from encord_active.db.models import (
+    ProjectAnnotationAnalytics,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
-    ProjectAnnotationAnalytics,
     ProjectPredictionAnalyticsReduced,
 )
 from encord_active.server.dependencies import dep_engine
 from encord_active.server.routers.project2_analysis import AnalysisSearch
-from encord_active.server.routers.queries import search_query, metric_query
-from encord_active.server.routers.queries.domain_query import TABLES_ANNOTATION, TABLES_PREDICTION_TP_FP
+from encord_active.server.routers.queries import metric_query, search_query
+from encord_active.server.routers.queries.domain_query import (
+    TABLES_ANNOTATION,
+    TABLES_PREDICTION_TP_FP,
+)
 from encord_active.server.routers.queries.metric_query import literal_bucket_depends
-from encord_active.server.routers.queries.search_query import SearchFiltersFastAPIDepends
+from encord_active.server.routers.queries.search_query import (
+    SearchFiltersFastAPIDepends,
+)
 
 
 class PredictionDomain(Enum):

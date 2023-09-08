@@ -11,7 +11,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 
-from encord_active.server.dependencies import DataOrAnnotateItem, parse_data_or_annotate_item, dep_engine
+from encord_active.server.dependencies import (
+    DataOrAnnotateItem,
+    dep_engine,
+    parse_data_or_annotate_item,
+)
 from encord_active.server.routers.queries import (
     metric_query,
     search_query,

@@ -32,7 +32,9 @@ def select_annotation_analytics(
     )
 
 
-def select_prediction_analytics_with_extra(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, annotation_hash: str):
+def select_prediction_analytics_with_extra(
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, annotation_hash: str
+):
     return select(ProjectPredictionAnalytics, ProjectPredictionAnalyticsExtra).where(
         ProjectPredictionAnalytics.project_hash == project_hash,
         ProjectPredictionAnalytics.du_hash == du_hash,
