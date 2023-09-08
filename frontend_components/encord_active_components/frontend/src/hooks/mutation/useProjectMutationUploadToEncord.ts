@@ -12,7 +12,7 @@ export function useProjectMutationUploadToEncord(
     (uploadEncordAction: UploadProjectToEncordPostAction) =>
       querier
         .getProjectV2API()
-        .routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+        .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,
           uploadEncordAction
         )

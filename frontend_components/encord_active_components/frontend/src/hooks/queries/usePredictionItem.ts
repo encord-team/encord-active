@@ -20,7 +20,7 @@ export function usePredictionItem(
     () =>
       querier
         .getProjectV2API()
-        .routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+        .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,
           predictionHash,
           dataItem

@@ -14,18 +14,17 @@ import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
-import { useQuerier } from "../hooks/Context";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
+import { useParams } from "react-router";
 
 export function ProjectPage(props: {
-  projectHash: string;
   encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
 }) {
-  const { projectHash, setSelectedProjectHash, encordDomain } =
+  const projectHash = useParams().projectHash!
+  const { setSelectedProjectHash, encordDomain } =
     props;
 
-  const querier = useQuerier()
 
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary, isError } = useProjectSummary(

@@ -1,5 +1,5 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { Querier, useQuerier } from "../Context";
+import { useQuerier } from "../Context";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectSummary(
@@ -13,7 +13,7 @@ export function useProjectSummary(
     () =>
       querier
         .getProjectV2API()
-        .routeProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash)
+        .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(projectHash)
         .then((r) => r.data),
     {
       ...options,

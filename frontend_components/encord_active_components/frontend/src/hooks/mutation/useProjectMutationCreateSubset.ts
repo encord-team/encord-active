@@ -12,7 +12,7 @@ export function useProjectMutationCreateSubset(
     (createSubsetAction: CreateProjectSubsetPostAction) =>
       querier
         .getProjectV2API()
-        .routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+        .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createSubsetAction
         )

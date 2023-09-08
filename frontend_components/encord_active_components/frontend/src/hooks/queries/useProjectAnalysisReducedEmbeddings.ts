@@ -29,7 +29,7 @@ export function useProjectAnalysisReducedEmbeddings(
     () =>
       querier
         .getProjectV2API()
-        .routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+        .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
           projectHash,
           domain,
           reductionHash,

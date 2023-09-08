@@ -14,7 +14,7 @@ export function useProjectItem(
     () =>
       querier
         .getProjectV2API()
-        .routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+        .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
           projectHash,
           dataItem
         )

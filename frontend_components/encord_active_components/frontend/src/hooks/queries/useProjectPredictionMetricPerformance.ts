@@ -27,7 +27,7 @@ export function useProjectPredictionMetricPerformance(
     () =>
       querier
         .getProjectV2API()
-        .routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+        .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
           projectHash,
           predictionHash,
           iou,

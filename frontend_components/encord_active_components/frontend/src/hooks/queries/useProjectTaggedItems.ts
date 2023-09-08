@@ -11,7 +11,7 @@ export function useProjectTaggedItems(
     async () =>
       await querier
         .getProjectV2API()
-        .routeTaggedItemsProjectsV2ProjectHashTagsTaggedItemsGet(
+        .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
           projectHash,
         )
   );

@@ -29,7 +29,7 @@ export function useProjectAnalysisDistribution(
     () =>
       querier
         .getProjectV2API()
-        .routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+        .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
           projectHash,
           domain,
           group,

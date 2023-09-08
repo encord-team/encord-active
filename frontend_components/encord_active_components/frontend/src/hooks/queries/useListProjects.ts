@@ -14,7 +14,7 @@ export function useProjectList(
     () =>
       querier
         .getProjectV2API()
-        .routeListProjectsProjectsV2Get()
+        .routeListProjectsApiProjectsV2Get()
         .then((r) => r.data),
     {
       ...options,

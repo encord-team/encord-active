@@ -241,6 +241,25 @@ export type EnumType = (typeof EnumType)[keyof typeof EnumType];
 /**
  *
  * @export
+ * @interface GroupedTags
+ */
+export interface GroupedTags {
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof GroupedTags
+   */
+  data: Array<string>;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof GroupedTags
+   */
+  label: Array<string>;
+}
+/**
+ *
+ * @export
  * @interface HTTPValidationError
  */
 export interface HTTPValidationError {
@@ -756,6 +775,31 @@ export interface ProjectItem {
    * @memberof ProjectItem
    */
   timestamp?: number;
+  /**
+   *
+   * @type {ProjectItemTags}
+   * @memberof ProjectItem
+   */
+  tags: ProjectItemTags;
+}
+/**
+ *
+ * @export
+ * @interface ProjectItemTags
+ */
+export interface ProjectItemTags {
+  /**
+   *
+   * @type {Array<ProjectTag>}
+   * @memberof ProjectItemTags
+   */
+  data: Array<ProjectTag>;
+  /**
+   *
+   * @type {{ [key: string]: Array<ProjectTag> | undefined; }}
+   * @memberof ProjectItemTags
+   */
+  label: { [key: string]: Array<ProjectTag> | undefined };
 }
 /**
  *
@@ -1016,6 +1060,37 @@ export interface ProjectSummary {
    * @memberof ProjectSummary
    */
   preview?: string;
+}
+/**
+ *
+ * @export
+ * @interface ProjectTag
+ */
+export interface ProjectTag {
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  tag_hash: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  project_hash: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  name: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  description: string;
 }
 /**
  *
@@ -1744,7 +1819,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost:
+    routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost:
       async (
         projectHash: string,
         createProjectSubsetPostAction: CreateProjectSubsetPostAction,
@@ -1752,18 +1827,18 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost",
+          "routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost",
           "projectHash",
           projectHash
         );
         // verify required parameter 'createProjectSubsetPostAction' is not null or undefined
         assertParamExists(
-          "routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost",
+          "routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost",
           "createProjectSubsetPostAction",
           createProjectSubsetPostAction
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/actions/create_project_subset`.replace(
+          `/api/projects_v2/{project_hash}/actions/create_project_subset`.replace(
             `{${"project_hash"}}`,
             encodeURIComponent(String(projectHash))
           );
@@ -1811,7 +1886,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost:
+    routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost:
       async (
         projectHash: string,
         uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
@@ -1819,18 +1894,18 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost",
+          "routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost",
           "projectHash",
           projectHash
         );
         // verify required parameter 'uploadProjectToEncordPostAction' is not null or undefined
         assertParamExists(
-          "routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost",
+          "routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost",
           "uploadProjectToEncordPostAction",
           uploadProjectToEncordPostAction
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/actions/upload_to_encord`.replace(
+          `/api/projects_v2/{project_hash}/actions/upload_to_encord`.replace(
             `{${"project_hash"}}`,
             encodeURIComponent(String(projectHash))
           );
@@ -1876,10 +1951,10 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeListProjectsProjectsV2Get: async (
+    routeListProjectsApiProjectsV2Get: async (
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
-      const localVarPath = `/projects_v2`;
+      const localVarPath = `/api/projects_v2`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -1918,7 +1993,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet:
+    routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -1927,24 +2002,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'dataItem' is not null or undefined
         assertParamExists(
-          "routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
           "dataItem",
           dataItem
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/preview/{data_item}`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/preview/{data_item}`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -1996,7 +2071,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet:
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -2009,36 +2084,36 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "domain",
           domain
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "iou",
           iou
         );
         // verify required parameter 'group' is not null or undefined
         assertParamExists(
-          "routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
           "group",
           group
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/distribution`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/distribution`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2105,7 +2180,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet:
+    routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -2117,30 +2192,30 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
           "iou",
           iou
         );
         // verify required parameter 'metricName' is not null or undefined
         assertParamExists(
-          "routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
           "metricName",
           metricName
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/metric_performance`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/metric_performance`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2207,7 +2282,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet:
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -2220,36 +2295,36 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
           "domain",
           domain
         );
         // verify required parameter 'reductionHash' is not null or undefined
         assertParamExists(
-          "routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
           "reductionHash",
           reductionHash
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
           "iou",
           iou
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/reductions/{reduction_hash}/summary`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/reductions/{reduction_hash}/summary`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2318,7 +2393,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet:
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -2332,42 +2407,42 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "domain",
           domain
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "iou",
           iou
         );
         // verify required parameter 'xMetric' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "xMetric",
           xMetric
         );
         // verify required parameter 'yMetric' is not null or undefined
         assertParamExists(
-          "routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
           "yMetric",
           yMetric
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/scatter`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/scatter`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2441,7 +2516,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet:
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet:
       async (
         projectHash: string,
         predictionHash: string,
@@ -2456,30 +2531,30 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "domain",
           domain
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
           "iou",
           iou
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2552,7 +2627,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet:
+    routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet:
       async (
         predictionHash: string,
         projectHash: string,
@@ -2562,24 +2637,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
           "iou",
           iou
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/predictions/{prediction_hash}/summary`
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/summary`
             .replace(
               `{${"prediction_hash"}}`,
               encodeURIComponent(String(predictionHash))
@@ -2634,7 +2709,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost: async (
+    routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost: async (
       projectHash: string,
       tagName: string,
       requestBody: Array<string>,
@@ -2642,23 +2717,23 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost",
+        "routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost",
         "projectHash",
         projectHash
       );
       // verify required parameter 'tagName' is not null or undefined
       assertParamExists(
-        "routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost",
+        "routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost",
         "tagName",
         tagName
       );
       // verify required parameter 'requestBody' is not null or undefined
       assertParamExists(
-        "routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost",
+        "routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost",
         "requestBody",
         requestBody
       );
-      const localVarPath = `/projects_v2/{project_hash}/create/tag`.replace(
+      const localVarPath = `/api/projects_v2/{project_hash}/create/tag`.replace(
         `{${"project_hash"}}`,
         encodeURIComponent(String(projectHash))
       );
@@ -2711,7 +2786,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet:
+    routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet:
       async (
         projectHash: string,
         domain: AnalysisDomain,
@@ -2720,24 +2795,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
           "domain",
           domain
         );
         // verify required parameter 'compareProjectHash' is not null or undefined
         assertParamExists(
-          "routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet",
           "compareProjectHash",
           compareProjectHash
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/analysis/{domain}/project_compare/metric_dissimilarity`
+          `/api/projects_v2/{project_hash}/analysis/{domain}/project_compare/metric_dissimilarity`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2784,24 +2859,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectDataItemProjectsV2ProjectHashItemDataItemGet: async (
+    routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet: async (
       projectHash: string,
       dataItem: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectDataItemProjectsV2ProjectHashItemDataItemGet",
+        "routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet",
         "projectHash",
         projectHash
       );
       // verify required parameter 'dataItem' is not null or undefined
       assertParamExists(
-        "routeProjectDataItemProjectsV2ProjectHashItemDataItemGet",
+        "routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet",
         "dataItem",
         dataItem
       );
-      const localVarPath = `/projects_v2/{project_hash}/item/{data_item}/`
+      const localVarPath = `/api/projects_v2/{project_hash}/item/{data_item}/`
         .replace(`{${"project_hash"}}`, encodeURIComponent(String(projectHash)))
         .replace(`{${"data_item"}}`, encodeURIComponent(String(dataItem)));
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -2844,7 +2919,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet:
+    routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet:
       async (
         projectHash: string,
         domain: AnalysisDomain,
@@ -2855,24 +2930,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet",
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet",
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet",
           "domain",
           domain
         );
         // verify required parameter 'group' is not null or undefined
         assertParamExists(
-          "routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet",
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet",
           "group",
           group
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/analysis/{domain}/distribution`
+          `/api/projects_v2/{project_hash}/analysis/{domain}/distribution`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -2925,27 +3000,28 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {string} projectHash
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
+     * @param {RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet: async (
+    routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet: async (
       projectHash: string,
       offset?: number,
       limit?: number,
-      orderBy?: RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum,
+      orderBy?: RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet",
+        "routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet",
         "projectHash",
         projectHash
       );
-      const localVarPath = `/projects_v2/{project_hash}/predictions`.replace(
-        `{${"project_hash"}}`,
-        encodeURIComponent(String(projectHash))
-      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/predictions`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -2994,17 +3070,17 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectListReductionsProjectsV2ProjectHashReductionsGet: async (
+    routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet: async (
       projectHash: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectListReductionsProjectsV2ProjectHashReductionsGet",
+        "routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet",
         "projectHash",
         projectHash
       );
-      const localVarPath = `/projects_v2/{project_hash}/reductions`.replace(
+      const localVarPath = `/api/projects_v2/{project_hash}/reductions`.replace(
         `{${"project_hash"}}`,
         encodeURIComponent(String(projectHash))
       );
@@ -3044,17 +3120,17 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectMetadataProjectsV2ProjectHashMetadataGet: async (
+    routeProjectMetadataApiProjectsV2ProjectHashMetadataGet: async (
       projectHash: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectMetadataProjectsV2ProjectHashMetadataGet",
+        "routeProjectMetadataApiProjectsV2ProjectHashMetadataGet",
         "projectHash",
         projectHash
       );
-      const localVarPath = `/projects_v2/{project_hash}/metadata`.replace(
+      const localVarPath = `/api/projects_v2/{project_hash}/metadata`.replace(
         `{${"project_hash"}}`,
         encodeURIComponent(String(projectHash))
       );
@@ -3096,7 +3172,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet: async (
+    routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet: async (
       projectHash: string,
       duHash: string,
       frame: number,
@@ -3104,26 +3180,30 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet",
+        "routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet",
         "projectHash",
         projectHash
       );
       // verify required parameter 'duHash' is not null or undefined
       assertParamExists(
-        "routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet",
+        "routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet",
         "duHash",
         duHash
       );
       // verify required parameter 'frame' is not null or undefined
       assertParamExists(
-        "routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet",
+        "routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet",
         "frame",
         frame
       );
-      const localVarPath = `/projects_v2/{project_hash}/files/{du_hash}/{frame}`
-        .replace(`{${"project_hash"}}`, encodeURIComponent(String(projectHash)))
-        .replace(`{${"du_hash"}}`, encodeURIComponent(String(duHash)))
-        .replace(`{${"frame"}}`, encodeURIComponent(String(frame)));
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/files/{du_hash}/{frame}`
+          .replace(
+            `{${"project_hash"}}`,
+            encodeURIComponent(String(projectHash))
+          )
+          .replace(`{${"du_hash"}}`, encodeURIComponent(String(duHash)))
+          .replace(`{${"frame"}}`, encodeURIComponent(String(frame)));
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -3164,7 +3244,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet:
+    routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet:
       async (
         projectHash: string,
         domain: AnalysisDomain,
@@ -3175,24 +3255,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
           "domain",
           domain
         );
         // verify required parameter 'reductionHash' is not null or undefined
         assertParamExists(
-          "routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet",
           "reductionHash",
           reductionHash
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/analysis/{domain}/reductions/{reduction_hash}/summary`
+          `/api/projects_v2/{project_hash}/analysis/{domain}/reductions/{reduction_hash}/summary`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -3251,7 +3331,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet: async (
+    routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet: async (
       projectHash: string,
       domain: AnalysisDomain,
       xMetric: string,
@@ -3262,30 +3342,30 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet",
+        "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet",
         "projectHash",
         projectHash
       );
       // verify required parameter 'domain' is not null or undefined
       assertParamExists(
-        "routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet",
+        "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet",
         "domain",
         domain
       );
       // verify required parameter 'xMetric' is not null or undefined
       assertParamExists(
-        "routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet",
+        "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet",
         "xMetric",
         xMetric
       );
       // verify required parameter 'yMetric' is not null or undefined
       assertParamExists(
-        "routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet",
+        "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet",
         "yMetric",
         yMetric
       );
       const localVarPath =
-        `/projects_v2/{project_hash}/analysis/{domain}/scatter`
+        `/api/projects_v2/{project_hash}/analysis/{domain}/scatter`
           .replace(
             `{${"project_hash"}}`,
             encodeURIComponent(String(projectHash))
@@ -3349,7 +3429,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet: async (
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet: async (
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -3361,18 +3441,18 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet",
+        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet",
         "projectHash",
         projectHash
       );
       // verify required parameter 'domain' is not null or undefined
       assertParamExists(
-        "routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet",
+        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet",
         "domain",
         domain
       );
       const localVarPath =
-        `/projects_v2/{project_hash}/analysis/{domain}/search`
+        `/api/projects_v2/{project_hash}/analysis/{domain}/search`
           .replace(
             `{${"project_hash"}}`,
             encodeURIComponent(String(projectHash))
@@ -3433,44 +3513,44 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
      * @param {string} item
-     * @param {RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
+     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet:
+    routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet:
       async (
         projectHash: string,
         domain: AnalysisDomain,
         item: string,
-        embedding: RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
+        embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
+          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
           "projectHash",
           projectHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
+          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
           "domain",
           domain
         );
         // verify required parameter 'item' is not null or undefined
         assertParamExists(
-          "routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
+          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
           "item",
           item
         );
         // verify required parameter 'embedding' is not null or undefined
         assertParamExists(
-          "routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
+          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
           "embedding",
           embedding
         );
         const localVarPath =
-          `/projects_v2/{project_hash}/analysis/{domain}/similarity/{item}`
+          `/api/projects_v2/{project_hash}/analysis/{domain}/similarity/{item}`
             .replace(
               `{${"project_hash"}}`,
               encodeURIComponent(String(projectHash))
@@ -3519,7 +3599,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet: async (
+    routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet: async (
       projectHash: string,
       domain: AnalysisDomain,
       filters?: string,
@@ -3527,18 +3607,18 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet",
+        "routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet",
         "projectHash",
         projectHash
       );
       // verify required parameter 'domain' is not null or undefined
       assertParamExists(
-        "routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet",
+        "routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet",
         "domain",
         domain
       );
       const localVarPath =
-        `/projects_v2/{project_hash}/analysis/{domain}/summary`
+        `/api/projects_v2/{project_hash}/analysis/{domain}/summary`
           .replace(
             `{${"project_hash"}}`,
             encodeURIComponent(String(projectHash))
@@ -3584,20 +3664,71 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSummaryProjectsV2ProjectHashSummaryGet: async (
+    routeProjectSummaryApiProjectsV2ProjectHashSummaryGet: async (
       projectHash: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectSummaryProjectsV2ProjectHashSummaryGet",
+        "routeProjectSummaryApiProjectsV2ProjectHashSummaryGet",
         "projectHash",
         projectHash
       );
-      const localVarPath = `/projects_v2/{project_hash}/summary`.replace(
+      const localVarPath = `/api/projects_v2/{project_hash}/summary`.replace(
         `{${"project_hash"}}`,
         encodeURIComponent(String(projectHash))
       );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/tags/tagged_items`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -3646,7 +3777,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+    async routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
       options?: AxiosRequestConfig
@@ -3654,7 +3785,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+        await localVarAxiosParamCreator.routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createProjectSubsetPostAction,
           options
@@ -3674,7 +3805,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+    async routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
       projectHash: string,
       uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
       options?: AxiosRequestConfig
@@ -3682,7 +3813,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+        await localVarAxiosParamCreator.routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,
           uploadProjectToEncordPostAction,
           options
@@ -3700,7 +3831,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeListProjectsProjectsV2Get(
+    async routeListProjectsApiProjectsV2Get(
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -3709,7 +3840,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<ProjectSearchResult>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeListProjectsProjectsV2Get(options);
+        await localVarAxiosParamCreator.routeListProjectsApiProjectsV2Get(
+          options
+        );
       return createRequestFunction(
         localVarAxiosArgs,
         globalAxios,
@@ -3726,7 +3859,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+    async routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
       projectHash: string,
       predictionHash: string,
       dataItem: string,
@@ -3735,7 +3868,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<PredictionItem>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+        await localVarAxiosParamCreator.routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,
           predictionHash,
           dataItem,
@@ -3761,7 +3894,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+    async routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -3777,7 +3910,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<QueryDistribution>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+        await localVarAxiosParamCreator.routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
           projectHash,
           predictionHash,
           domain,
@@ -3806,7 +3939,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+    async routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
       projectHash: string,
       predictionHash: string,
       iou: number,
@@ -3821,7 +3954,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<QueryMetricPerformance>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+        await localVarAxiosParamCreator.routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
           projectHash,
           predictionHash,
           iou,
@@ -3850,7 +3983,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+    async routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -3866,7 +3999,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<PredictionQuery2DEmbedding>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+        await localVarAxiosParamCreator.routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
           projectHash,
           predictionHash,
           domain,
@@ -3897,7 +4030,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+    async routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -3911,7 +4044,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+        await localVarAxiosParamCreator.routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
           projectHash,
           predictionHash,
           domain,
@@ -3944,7 +4077,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+    async routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -3959,7 +4092,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        await localVarAxiosParamCreator.routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
           predictionHash,
           domain,
@@ -3988,7 +4121,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+    async routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
       predictionHash: string,
       projectHash: string,
       iou: number,
@@ -4001,7 +4134,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<PredictionSummaryResult>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+        await localVarAxiosParamCreator.routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
           predictionHash,
           projectHash,
           iou,
@@ -4024,7 +4157,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+    async routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
       projectHash: string,
       tagName: string,
       requestBody: Array<string>,
@@ -4033,7 +4166,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+        await localVarAxiosParamCreator.routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
           projectHash,
           tagName,
           requestBody,
@@ -4055,7 +4188,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+    async routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
       projectHash: string,
       domain: AnalysisDomain,
       compareProjectHash: string,
@@ -4067,7 +4200,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<MetricDissimilarityResult>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+        await localVarAxiosParamCreator.routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
           projectHash,
           domain,
           compareProjectHash,
@@ -4088,7 +4221,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+    async routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
       projectHash: string,
       dataItem: string,
       options?: AxiosRequestConfig
@@ -4096,7 +4229,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectItem>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+        await localVarAxiosParamCreator.routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
           projectHash,
           dataItem,
           options
@@ -4119,7 +4252,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+    async routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
       projectHash: string,
       domain: AnalysisDomain,
       group: string,
@@ -4133,7 +4266,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<QueryDistribution>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+        await localVarAxiosParamCreator.routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
           projectHash,
           domain,
           group,
@@ -4154,15 +4287,15 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {string} projectHash
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
+     * @param {RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+    async routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
       projectHash: string,
       offset?: number,
       limit?: number,
-      orderBy?: RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum,
+      orderBy?: RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum,
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -4171,7 +4304,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<ListProjectPredictionResult>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+        await localVarAxiosParamCreator.routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
           projectHash,
           offset,
           limit,
@@ -4192,7 +4325,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+    async routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
       projectHash: string,
       options?: AxiosRequestConfig
     ): Promise<
@@ -4202,7 +4335,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<ProjectList2DEmbeddingReductionResult>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+        await localVarAxiosParamCreator.routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
           projectHash,
           options
         );
@@ -4220,7 +4353,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+    async routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
       projectHash: string,
       options?: AxiosRequestConfig
     ): Promise<
@@ -4230,7 +4363,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<ProjectMetadata>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+        await localVarAxiosParamCreator.routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
           projectHash,
           options
         );
@@ -4250,7 +4383,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+    async routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
       projectHash: string,
       duHash: string,
       frame: number,
@@ -4259,7 +4392,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+        await localVarAxiosParamCreator.routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
           projectHash,
           duHash,
           frame,
@@ -4283,7 +4416,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+    async routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
       projectHash: string,
       domain: AnalysisDomain,
       reductionHash: string,
@@ -4297,7 +4430,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<Query2DEmbedding>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+        await localVarAxiosParamCreator.routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
           projectHash,
           domain,
           reductionHash,
@@ -4324,7 +4457,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+    async routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
       projectHash: string,
       domain: AnalysisDomain,
       xMetric: string,
@@ -4336,7 +4469,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+        await localVarAxiosParamCreator.routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
           projectHash,
           domain,
           xMetric,
@@ -4365,7 +4498,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+    async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -4378,7 +4511,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+        await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
           projectHash,
           domain,
           orderBy,
@@ -4401,15 +4534,15 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
      * @param {string} item
-     * @param {RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
+     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+    async routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
       projectHash: string,
       domain: AnalysisDomain,
       item: string,
-      embedding: RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
+      embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -4418,7 +4551,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<Array<SimilarityResult>>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+        await localVarAxiosParamCreator.routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
           projectHash,
           domain,
           item,
@@ -4441,7 +4574,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+    async routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
       projectHash: string,
       domain: AnalysisDomain,
       filters?: string,
@@ -4450,7 +4583,7 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QuerySummary>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+        await localVarAxiosParamCreator.routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
           projectHash,
           domain,
           filters,
@@ -4470,14 +4603,42 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectSummaryProjectsV2ProjectHashSummaryGet(
+    async routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
       projectHash: string,
       options?: AxiosRequestConfig
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectSummary>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSummaryProjectsV2ProjectHashSummaryGet(
+        await localVarAxiosParamCreator.routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<{ [key: string]: GroupedTags | undefined }>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
           projectHash,
           options
         );
@@ -4510,13 +4671,13 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+    routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
       options?: any
     ): AxiosPromise<any> {
       return localVarFp
-        .routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+        .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createProjectSubsetPostAction,
           options
@@ -4531,13 +4692,13 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+    routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
       projectHash: string,
       uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
       options?: any
     ): AxiosPromise<any> {
       return localVarFp
-        .routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+        .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,
           uploadProjectToEncordPostAction,
           options
@@ -4550,11 +4711,11 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeListProjectsProjectsV2Get(
+    routeListProjectsApiProjectsV2Get(
       options?: any
     ): AxiosPromise<ProjectSearchResult> {
       return localVarFp
-        .routeListProjectsProjectsV2Get(options)
+        .routeListProjectsApiProjectsV2Get(options)
         .then((request) => request(axios, basePath));
     },
     /**
@@ -4566,14 +4727,14 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+    routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
       projectHash: string,
       predictionHash: string,
       dataItem: string,
       options?: any
     ): AxiosPromise<PredictionItem> {
       return localVarFp
-        .routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+        .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,
           predictionHash,
           dataItem,
@@ -4594,7 +4755,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -4605,7 +4766,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<QueryDistribution> {
       return localVarFp
-        .routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+        .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
           projectHash,
           predictionHash,
           domain,
@@ -4629,7 +4790,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+    routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
       projectHash: string,
       predictionHash: string,
       iou: number,
@@ -4639,7 +4800,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<QueryMetricPerformance> {
       return localVarFp
-        .routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+        .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
           projectHash,
           predictionHash,
           iou,
@@ -4663,7 +4824,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -4674,7 +4835,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<PredictionQuery2DEmbedding> {
       return localVarFp
-        .routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+        .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
           projectHash,
           predictionHash,
           domain,
@@ -4700,7 +4861,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -4712,7 +4873,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<QueryScatter> {
       return localVarFp
-        .routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+        .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
           projectHash,
           predictionHash,
           domain,
@@ -4740,7 +4901,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
@@ -4753,7 +4914,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<AnalysisSearch> {
       return localVarFp
-        .routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
           predictionHash,
           domain,
@@ -4777,7 +4938,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+    routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
       predictionHash: string,
       projectHash: string,
       iou: number,
@@ -4785,7 +4946,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<PredictionSummaryResult> {
       return localVarFp
-        .routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+        .routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
           predictionHash,
           projectHash,
           iou,
@@ -4803,14 +4964,14 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+    routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
       projectHash: string,
       tagName: string,
       requestBody: Array<string>,
       options?: any
     ): AxiosPromise<any> {
       return localVarFp
-        .routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+        .routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
           projectHash,
           tagName,
           requestBody,
@@ -4827,14 +4988,14 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+    routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
       projectHash: string,
       domain: AnalysisDomain,
       compareProjectHash: string,
       options?: any
     ): AxiosPromise<MetricDissimilarityResult> {
       return localVarFp
-        .routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+        .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
           projectHash,
           domain,
           compareProjectHash,
@@ -4850,13 +5011,13 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+    routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
       projectHash: string,
       dataItem: string,
       options?: any
     ): AxiosPromise<ProjectItem> {
       return localVarFp
-        .routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+        .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
           projectHash,
           dataItem,
           options
@@ -4874,7 +5035,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+    routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
       projectHash: string,
       domain: AnalysisDomain,
       group: string,
@@ -4883,7 +5044,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<QueryDistribution> {
       return localVarFp
-        .routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+        .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
           projectHash,
           domain,
           group,
@@ -4899,19 +5060,19 @@ export const ProjectsV2ApiFactory = function (
      * @param {string} projectHash
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
+     * @param {RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+    routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
       projectHash: string,
       offset?: number,
       limit?: number,
-      orderBy?: RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum,
+      orderBy?: RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum,
       options?: any
     ): AxiosPromise<ListProjectPredictionResult> {
       return localVarFp
-        .routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+        .routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
           projectHash,
           offset,
           limit,
@@ -4927,12 +5088,12 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+    routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
       projectHash: string,
       options?: any
     ): AxiosPromise<ProjectList2DEmbeddingReductionResult> {
       return localVarFp
-        .routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+        .routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
           projectHash,
           options
         )
@@ -4945,12 +5106,12 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+    routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
       projectHash: string,
       options?: any
     ): AxiosPromise<ProjectMetadata> {
       return localVarFp
-        .routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+        .routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
           projectHash,
           options
         )
@@ -4965,14 +5126,14 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+    routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
       projectHash: string,
       duHash: string,
       frame: number,
       options?: any
     ): AxiosPromise<any> {
       return localVarFp
-        .routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+        .routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
           projectHash,
           duHash,
           frame,
@@ -4991,7 +5152,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+    routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
       projectHash: string,
       domain: AnalysisDomain,
       reductionHash: string,
@@ -5000,7 +5161,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<Query2DEmbedding> {
       return localVarFp
-        .routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+        .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
           projectHash,
           domain,
           reductionHash,
@@ -5022,7 +5183,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+    routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
       projectHash: string,
       domain: AnalysisDomain,
       xMetric: string,
@@ -5032,7 +5193,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<QueryScatter> {
       return localVarFp
-        .routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+        .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
           projectHash,
           domain,
           xMetric,
@@ -5056,7 +5217,7 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -5067,7 +5228,7 @@ export const ProjectsV2ApiFactory = function (
       options?: any
     ): AxiosPromise<AnalysisSearch> {
       return localVarFp
-        .routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
           projectHash,
           domain,
           orderBy,
@@ -5085,19 +5246,19 @@ export const ProjectsV2ApiFactory = function (
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
      * @param {string} item
-     * @param {RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
+     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+    routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
       projectHash: string,
       domain: AnalysisDomain,
       item: string,
-      embedding: RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
+      embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
       options?: any
     ): AxiosPromise<Array<SimilarityResult>> {
       return localVarFp
-        .routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+        .routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
           projectHash,
           domain,
           item,
@@ -5115,14 +5276,14 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+    routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
       projectHash: string,
       domain: AnalysisDomain,
       filters?: string,
       options?: any
     ): AxiosPromise<QuerySummary> {
       return localVarFp
-        .routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+        .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
           projectHash,
           domain,
           filters,
@@ -5137,12 +5298,30 @@ export const ProjectsV2ApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSummaryProjectsV2ProjectHashSummaryGet(
+    routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
       projectHash: string,
       options?: any
     ): AxiosPromise<ProjectSummary> {
       return localVarFp
-        .routeProjectSummaryProjectsV2ProjectHashSummaryGet(
+        .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
+          projectHash,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<{ [key: string]: GroupedTags | undefined }> {
+      return localVarFp
+        .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
           projectHash,
           options
         )
@@ -5167,13 +5346,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+  public routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
     projectHash: string,
     createProjectSubsetPostAction: CreateProjectSubsetPostAction,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+      .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
         projectHash,
         createProjectSubsetPostAction,
         options
@@ -5190,13 +5369,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+  public routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
     projectHash: string,
     uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+      .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
         projectHash,
         uploadProjectToEncordPostAction,
         options
@@ -5211,9 +5390,9 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeListProjectsProjectsV2Get(options?: AxiosRequestConfig) {
+  public routeListProjectsApiProjectsV2Get(options?: AxiosRequestConfig) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeListProjectsProjectsV2Get(options)
+      .routeListProjectsApiProjectsV2Get(options)
       .then((request) => request(this.axios, this.basePath));
   }
 
@@ -5227,14 +5406,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+  public routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
     projectHash: string,
     predictionHash: string,
     dataItem: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+      .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
         projectHash,
         predictionHash,
         dataItem,
@@ -5257,7 +5436,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+  public routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
     projectHash: string,
     predictionHash: string,
     domain: PredictionDomain,
@@ -5268,7 +5447,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionDistributionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+      .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
         projectHash,
         predictionHash,
         domain,
@@ -5294,7 +5473,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+  public routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
     projectHash: string,
     predictionHash: string,
     iou: number,
@@ -5304,7 +5483,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+      .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
         projectHash,
         predictionHash,
         iou,
@@ -5330,7 +5509,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+  public routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
     projectHash: string,
     predictionHash: string,
     domain: PredictionDomain,
@@ -5341,7 +5520,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+      .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
         projectHash,
         predictionHash,
         domain,
@@ -5369,7 +5548,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+  public routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
     projectHash: string,
     predictionHash: string,
     domain: PredictionDomain,
@@ -5381,7 +5560,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+      .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
         projectHash,
         predictionHash,
         domain,
@@ -5411,7 +5590,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+  public routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
     projectHash: string,
     predictionHash: string,
     domain: PredictionDomain,
@@ -5424,7 +5603,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+      .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
         projectHash,
         predictionHash,
         domain,
@@ -5450,7 +5629,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+  public routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
     predictionHash: string,
     projectHash: string,
     iou: number,
@@ -5458,7 +5637,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+      .routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
         predictionHash,
         projectHash,
         iou,
@@ -5478,14 +5657,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+  public routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
     projectHash: string,
     tagName: string,
     requestBody: Array<string>,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectActionTagItemsProjectsV2ProjectHashCreateTagPost(
+      .routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
         projectHash,
         tagName,
         requestBody,
@@ -5504,14 +5683,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+  public routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
     projectHash: string,
     domain: AnalysisDomain,
     compareProjectHash: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+      .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
         projectHash,
         domain,
         compareProjectHash,
@@ -5529,13 +5708,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+  public routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
     projectHash: string,
     dataItem: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+      .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
         projectHash,
         dataItem,
         options
@@ -5555,7 +5734,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+  public routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
     projectHash: string,
     domain: AnalysisDomain,
     group: string,
@@ -5564,7 +5743,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
+      .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
         projectHash,
         domain,
         group,
@@ -5581,20 +5760,20 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {number} [offset]
    * @param {number} [limit]
-   * @param {RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
+   * @param {RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+  public routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
     projectHash: string,
     offset?: number,
     limit?: number,
-    orderBy?: RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum,
+    orderBy?: RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+      .routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
         projectHash,
         offset,
         limit,
@@ -5612,12 +5791,12 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+  public routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
+      .routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
         projectHash,
         options
       )
@@ -5632,12 +5811,12 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+  public routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectMetadataProjectsV2ProjectHashMetadataGet(
+      .routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
         projectHash,
         options
       )
@@ -5654,14 +5833,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+  public routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
     projectHash: string,
     duHash: string,
     frame: number,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectRawFileProjectsV2ProjectHashFilesDuHashFrameGet(
+      .routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
         projectHash,
         duHash,
         frame,
@@ -5682,7 +5861,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+  public routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
     projectHash: string,
     domain: AnalysisDomain,
     reductionHash: string,
@@ -5691,7 +5870,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+      .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
         projectHash,
         domain,
         reductionHash,
@@ -5715,7 +5894,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+  public routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
     projectHash: string,
     domain: AnalysisDomain,
     xMetric: string,
@@ -5725,7 +5904,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
+      .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
         projectHash,
         domain,
         xMetric,
@@ -5751,7 +5930,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+  public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
     projectHash: string,
     domain: AnalysisDomain,
     orderBy?: string,
@@ -5762,7 +5941,7 @@ export class ProjectsV2Api extends BaseAPI {
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+      .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
         projectHash,
         domain,
         orderBy,
@@ -5781,20 +5960,20 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {AnalysisDomain} domain
    * @param {string} item
-   * @param {RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
+   * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+  public routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
     projectHash: string,
     domain: AnalysisDomain,
     item: string,
-    embedding: RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
+    embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+      .routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
         projectHash,
         domain,
         item,
@@ -5814,14 +5993,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+  public routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
     projectHash: string,
     domain: AnalysisDomain,
     filters?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+      .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
         projectHash,
         domain,
         filters,
@@ -5838,12 +6017,35 @@ export class ProjectsV2Api extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectSummaryProjectsV2ProjectHashSummaryGet(
+  public routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash, options)
+      .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
+        projectHash,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Tagged Items
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectsV2Api
+   */
+  public routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectsV2ApiFp(this.configuration)
+      .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+        projectHash,
+        options
+      )
       .then((request) => request(this.axios, this.basePath));
   }
 }
@@ -5851,18 +6053,18 @@ export class ProjectsV2Api extends BaseAPI {
 /**
  * @export
  */
-export const RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum =
+export const RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum =
   {
     Empty: "",
   } as const;
-export type RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum =
-  (typeof RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum)[keyof typeof RouteProjectListPredictionsProjectsV2ProjectHashPredictionsGetOrderByEnum];
+export type RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum =
+  (typeof RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum)[keyof typeof RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum];
 /**
  * @export
  */
-export const RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
+export const RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
   {
     EmbeddingClip: "embedding_clip",
   } as const;
-export type RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
-  (typeof RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum)[keyof typeof RouteProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum];
+export type RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
+  (typeof RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum)[keyof typeof RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum];

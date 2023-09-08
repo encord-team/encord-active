@@ -5,9 +5,7 @@ import "./index.css";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   createBrowserRouter,
-  Route,
   RouterProvider,
-  Routes,
 } from "react-router-dom";
 import { App } from "./app";
 import { apiUrl, env } from "./constants";
@@ -26,9 +24,7 @@ function Root() {
       {env === "development" && <ReactQueryDevtools position="bottom-right" />}
       <AuthContext.Provider value={authContext}>
         <QuerierContext.Provider value={querier}>
-          <Routes>
-            <Route path="/" element={<App />} />
-          </Routes>
+          <App />
         </QuerierContext.Provider>
       </AuthContext.Provider>
     </QueryClientProvider >

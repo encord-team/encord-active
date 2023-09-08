@@ -33,7 +33,7 @@ export function usePredictionAnalysisSearch(
     () =>
       querier
         .getProjectV2API()
-        .routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
           predictionHash,
           domain,

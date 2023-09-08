@@ -3,31 +3,31 @@ import { useState } from "react";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
+import { Route, Routes, useNavigate } from "react-router";
 
 export function App() {
-  const [selectedProjectHash, setSelectedProjectHash] = useState<
-    string | undefined
-  >();
   // FIXME: make variable conditionally loaded from parent
   const encordDomain = "https://app.encord.com";
 
-  return (
-    <div className="bg-white p-12">
-      {selectedProjectHash ? (
-        <ErrorBoundary
-          message={`An error occurred rendering the project: ${selectedProjectHash}`}
-        >
-          <ProjectPage
-            encordDomain={encordDomain}
-            projectHash={selectedProjectHash}
-            setSelectedProjectHash={setSelectedProjectHash}
-          />
-        </ErrorBoundary>
-      ) : (
-        <ProjectsPage
-          onSelectLocalProject={setSelectedProjectHash}
+  const navigate = useNavigate();
+  const selectProject = (projectHash?: string) => navigate(projectHash ? `/projects/${projectHash}` : "/")
+
+
+  return <div className="bg-white p-12">
+    <Routes>
+      <Route path="/" element={<ProjectsPage
+        onSelectLocalProject={selectProject}
+      />
+      } />
+      <Route path={`/projects/:projectHash`} element={<ErrorBoundary
+        message={`An error occurred rendering the project`}
+      >
+        <ProjectPage
+          encordDomain={encordDomain}
+          setSelectedProjectHash={selectProject}
         />
-      )}
-    </div>
-  );
+      </ErrorBoundary>
+      } />
+    </Routes>
+  </div >
 }
