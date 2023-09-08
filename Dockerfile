@@ -39,7 +39,7 @@ COPY ./pyproject.toml ./poetry.lock /home/appuser/
 RUN poetry cache clear pypi --all
 RUN poetry config virtualenvs.create true  \
     && poetry config virtualenvs.in-project true  \
-    && poetry install --no-root --without dev \
+    && poetry install --no-root --without dev --extras coco\
     && poetry run poe torch-linux
 
 COPY ./src/ /home/appuser/src/
