@@ -55,11 +55,11 @@ def _tp_fp_extra_where(
     prediction_hash: uuid.UUID,
 ) -> list:
     tp_cond = (ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
-    tp_where = None
+    tp_where: Optional[bool] = None
     if domain == PredictionDomain.TRUE_POSITIVE:
         tp_where = tp_cond
     elif domain == PredictionDomain.FALSE_POSITIVE:
-        tp_where = ~tp_cond
+        tp_where = ~tp_cond  # type: ignore
     if tp_where is None:
         return []
     elif table == ProjectPredictionAnalytics:
@@ -75,7 +75,7 @@ def _tp_fp_extra_where(
 
 
 def _tp_int(iou: float) -> int:
-    return ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)).cast(
+    return ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)).cast(  # type: ignore
         Integer
     )
 
@@ -115,7 +115,7 @@ def route_prediction_reduction_scatter(
         tp_fp_select = None
         if domain != PredictionDomain.FALSE_NEGATIVE:
             tp_fp_select = metric_query.select_for_query_reduction_scatter(
-                dialect=sess.bind.dialect,
+                dialect=engine.dialect,
                 tables=TABLES_PREDICTION_TP_FP,
                 project_filters={
                     "prediction_hash": [prediction_hash],
@@ -130,14 +130,14 @@ def route_prediction_reduction_scatter(
                     prediction_hash,
                 ),
                 extra_select=(
-                    metric_query.sql_sum(_tp_int(iou)).label("tp"),
+                    metric_query.sql_sum(_tp_int(iou)).label("tp"),  # type: ignore
                     literal(0).label("fn"),
                 ),
             )
         fn_select = None
         if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
             fn_select = metric_query.select_for_query_reduction_scatter(
-                dialect=sess.bind.dialect,
+                dialect=engine.dialect,
                 tables=TABLES_ANNOTATION,
                 project_filters={
                     "prediction_hash": [prediction_hash],
@@ -147,11 +147,11 @@ def route_prediction_reduction_scatter(
                 buckets=buckets,
                 filters=filters,
                 extra_where=_fn_extra_where(project_hash, prediction_hash),
-                extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),
+                extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
             )
     if fn_select is not None and tp_fp_select is not None:
         query_select = (
-            select(
+            select(  # type: ignore
                 "xv",
                 "yv",
                 metric_query.sql_sum("n"),
@@ -343,7 +343,7 @@ def route_prediction_search(
             project_filters={"project_hash": [project_hash], "prediction_hash": [prediction_hash]},
         )
         tp_cond = (ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
-        tp_cond_select = tp_cond.cast(Integer)
+        tp_cond_select = tp_cond.cast(Integer)  # type: ignore
         if domain == PredictionDomain.TRUE_POSITIVE:
             p_where.append(tp_cond)
             tp_cond_select = literal(1)
@@ -369,9 +369,9 @@ def route_prediction_search(
     if fn_select is not None and p_select is not None:
         f_select = fn_select.union_all(p_select).order_by("order_by")
     elif fn_select is not None:
-        f_select = fn_select
+        f_select = fn_select  # type: ignore
     elif p_select is not None:
-        f_select = p_select
+        f_select = p_select  # type: ignore
     else:
         raise RuntimeError("Impossible prediction domain case")
 
@@ -384,7 +384,7 @@ def route_prediction_search(
 
     with Session(engine) as sess:
         print(f"DEBUG PREDICTION SEARCH: {f_select}")
-        search_results = sess.exec(f_select).fetchall()
+        search_results = sess.exec(f_select).fetchall()  # type: ignore
 
     ty_lookup = {0: "FP", 1: "TP", 2: "FN"}
 

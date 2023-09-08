@@ -4,6 +4,7 @@ from typing import List, Optional, Type, Union
 
 import pandas as pd
 from pydantic import BaseModel
+from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import eq, in_op, or_
 from sqlmodel import Session, select
 
@@ -50,7 +51,9 @@ class Filters(BaseModel):
         return hash(json.dumps(self.dict(exclude_defaults=True)))
 
 
-def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure, scope: Optional[MetricScope] = None):
+def apply_filters(
+    df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure, engine: Engine, scope: Optional[MetricScope] = None
+):
     project_hash = uuid.UUID(pfs.load_project_meta()["project_hash"])
     filtered = df.copy()
     identifier_split = filtered.index.str.split("_", n=3)
@@ -59,7 +62,7 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure,
 
     if filters.tags is not None and filters.tags:
         data_tags, label_tags = from_grouped_tags(filters.tags)
-        filtered = filter_tags(project_hash, filtered, data_tags, label_tags)
+        filtered = filter_tags(project_hash, filtered, data_tags, label_tags, engine)
 
     if filters.object_classes is not None:
         filtered = filter_object_classes(filtered, filters.object_classes, scope)
@@ -88,7 +91,13 @@ def apply_filters(df: pd.DataFrame, filters: Filters, pfs: ProjectFileStructure,
     return filtered
 
 
-def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], label_tags: list[Tag]):
+def filter_tags(
+    project_hash,
+    to_filter: pd.DataFrame,
+    data_tags: list[Tag],
+    label_tags: list[Tag],
+    engine: Engine,
+):
     if not (data_tags or label_tags):
         return to_filter
 
@@ -112,7 +121,7 @@ def filter_tags(project_hash, to_filter: pd.DataFrame, data_tags: list[Tag], lab
                 ProjectDataUnitMetadata.frame,
             ]
             if is_annotations:
-                column_selection.append(ProjectTaggedAnnotation.object_hash)
+                column_selection.append(ProjectTaggedAnnotation.annotation_hash)
             stmt = (
                 select(*column_selection)  # type: ignore
                 .join(

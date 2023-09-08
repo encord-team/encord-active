@@ -1,19 +1,13 @@
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 import requests
 from encord import Dataset, EncordUserClient
 from encord.http.constants import RequestsSettings
 from encord.objects import OntologyStructure
 from encord.orm.dataset import StorageLocation
-from encord.orm.project import (
-    CopyDatasetAction,
-    CopyDatasetOptions,
-    CopyLabelsOptions,
-    ReviewApprovalState,
-)
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func, literal
@@ -35,12 +29,10 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.dependencies import dep_database_dir, dep_engine, dep_ssh_key
 from encord_active.server.routers.queries import search_query
 from encord_active.server.routers.queries.domain_query import TABLES_DATA
 from encord_active.server.routers.queries.search_query import SearchFilters
-from encord_active.server.settings import get_settings
 
 router = APIRouter(
     prefix="/{project_hash}/actions",
@@ -57,10 +49,10 @@ class CreateProjectSubsetPostAction(BaseModel):
 
 SubsetTableType = TypeVar(
     "SubsetTableType",
-    Type[ProjectDataAnalytics],
-    Type[ProjectDataAnalyticsExtra],
-    Type[ProjectAnnotationAnalytics],
-    Type[ProjectAnnotationAnalyticsExtra],
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
+    ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
 )
 
 
@@ -157,7 +149,7 @@ def route_action_create_project_subset(
         sess.execute(
             insert(ProjectDataMetadata).from_select(
                 insert_data_names,
-                select(
+                select(  # type: ignore
                     *[insert_data_overrides.get(k, getattr(ProjectDataMetadata, k)) for k in insert_data_names]
                 ).where(in_op(ProjectDataMetadata.data_hash, subset_data_hashes)),
                 include_defaults=False,
@@ -166,7 +158,7 @@ def route_action_create_project_subset(
         sess.execute(
             insert(ProjectDataUnitMetadata).from_select(
                 insert_data_unit_names,
-                select(
+                select(  # type: ignore
                     *[
                         insert_data_unit_overrides.get(k, getattr(ProjectDataUnitMetadata, k))
                         for k in insert_data_unit_names
@@ -184,7 +176,7 @@ def route_action_create_project_subset(
 
         # FIXME: quick-abort
         return
-
+        """
         if project.project_remote_ssh_key_path is None:
             # Run for local project
             new_project_hash = uuid.uuid4()
@@ -280,6 +272,7 @@ def route_action_create_project_subset(
 
         # Commit changes
         sess.commit()
+        """
 
 
 """
@@ -310,7 +303,7 @@ def _file_path_for_upload(
     if opt_path is not None:
         return opt_path
     else:
-        temp_path = tempdir.name / str(uuid.uuid4())
+        temp_path = tempdir / str(uuid.uuid4())
         with open(temp_path, "xb") as file:
             r = requests.get(data_uri, stream=True)
             if r.status_code != 200:
@@ -379,7 +372,7 @@ def route_action_upload_project_to_encord(
             raise ValueError("Project already is bound to a remote")
 
         # Select all hashes present in the project
-        hashes_query = select(
+        hashes_query = select(  # type: ignore
             ProjectDataUnitMetadata.data_hash,
             ProjectDataUnitMetadata.du_hash,
             ProjectDataUnitMetadata.frame,
@@ -443,7 +436,7 @@ def route_action_upload_project_to_encord(
         data_query = select(ProjectDataMetadata).where(ProjectDataMetadata.project_hash == project_hash)
         data_results = sess.exec(data_query).fetchall()
         label_upload_state: Dict[uuid.UUID, Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]] = {
-            data.data_hash: data for data in data_results
+            data.data_hash: (data, []) for data in data_results
         }
         for du in du_results:
             data, du_list = label_upload_state[du.data_hash]

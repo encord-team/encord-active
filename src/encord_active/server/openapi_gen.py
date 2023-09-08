@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 from fastapi.openapi.utils import get_openapi
 
@@ -34,7 +33,7 @@ def generate_openapi_fe_components() -> None:
     openapi_gen_path = fe_dir / "node_modules" / ".bin" / "openapi-generator-cli"
     if not openapi_gen_path.exists():
         raise RuntimeError(
-            f"openapi-generator-cli doesn't exist, make sure you ran `npm install` in the fronted directory"
+            "openapi-generator-cli doesn't exist, make sure you ran `npm install` in the fronted directory"
         )
     openapi_fe_output = fe_dir / "src" / "openapi"
     prettier_module = fe_dir / "node_modules" / ".bin" / "prettier"

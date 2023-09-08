@@ -45,20 +45,20 @@ def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
     du_hash, frame = segments[:2]
     annotation_hash = None if len(segments) == 2 else segments[2]
     if annotation_hash is not None and len(annotation_hash) != 8:
-        raise ValueError(f"Item annotation_hash should be exactly 8 characters")
+        raise ValueError(f"Item annotation_hash should be exactly 8 characters: {annotation_hash}")
     return DataOrAnnotateItem(du_hash=uuid.UUID(du_hash), frame=int(frame), annotation_hash=annotation_hash)
 
 
 def dep_engine() -> Engine:
-    raise RuntimeError(f"Missing Engine")
+    raise RuntimeError("Missing Engine")
 
 
 def dep_oauth2_scheme() -> OAuth2PasswordBearer:
-    raise RuntimeError(f"Missing OAuth2PasswordBearer")
+    raise RuntimeError("Missing OAuth2PasswordBearer")
 
 
 def dep_ssh_key() -> str:
-    raise RuntimeError(f"Missing ssh_key")
+    raise RuntimeError("Missing ssh_key")
 
 
 def dep_database_dir() -> Path:

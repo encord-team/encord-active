@@ -28,9 +28,9 @@ class Char8List(TypeDecorator):
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(ARRAY(BigInteger))
+            return dialect.type_descriptor(ARRAY(BigInteger))  # type: ignore
         else:
-            return dialect.type_descriptor(AutoString())
+            return dialect.type_descriptor(AutoString())  # type: ignore
 
     def bind_processor(self, dialect: Dialect):
         def as_validated_ndarray(value: Union[np.ndarray, bytes]) -> np.ndarray:
@@ -53,7 +53,7 @@ class Char8List(TypeDecorator):
 
             def process_fallback(value: Union[np.ndarray, bytes]) -> bytes:
                 np_value = as_validated_ndarray(value)
-                return bind_other(np_value.tobytes(order="C"))
+                return bind_other(np_value.tobytes(order="C"))  # type: ignore
 
             return process_fallback
 
@@ -69,7 +69,7 @@ class Char8List(TypeDecorator):
                 np_value = np.frombuffer(value, dtype=np.float64)
             else:
                 result_value = result_processor(value)
-                np_value = np.frombuffer(result_value, dtype=np.float64)
+                np_value = np.frombuffer(result_value, dtype=np.float64)  # type: ignore
             return np_value.tobytes(order="C")
 
         return process

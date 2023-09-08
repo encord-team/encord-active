@@ -220,8 +220,8 @@ def _get_similarity_query(
             is_not(base_domain.metadata.embedding_clip, None),
         )
         results = sess.exec(query).fetchall()
-    embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results]
-    return similarity_query.SimilarityQuery(embeddings, results)
+    embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results if e is not None]  # type: ignore
+    return similarity_query.SimilarityQuery(embeddings, results)  # type: ignore
 
 
 @router.get("/similarity/{item}")
@@ -278,7 +278,7 @@ def route_project_similarity_search(
             )
             pg_results = sess.exec(pg_query).fetchall()
             return [
-                similarity_query.pack_similarity_result(tuple(similarity_item), similarity)
+                similarity_query.pack_similarity_result(tuple(similarity_item), similarity)  # type: ignore
                 for similarity, *similarity_item in pg_results
             ]
 

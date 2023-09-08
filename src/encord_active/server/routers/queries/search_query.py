@@ -99,7 +99,7 @@ def search_filters(
         sql_filters.append(base.du_hash == sql_table.du_hash)
         sql_filters.append(base.frame == sql_table.frame)
         if sql_table_is_annotation and sql_table_is_annotation:
-            sql_filters.append(base.annotation_hash == sql_table.annotation_hash)
+            sql_filters.append(base.annotation_hash == sql_table.annotation_hash)  # type: ignore
         # Append to filters
         if sql_table_is_annotation and not base_is_annotation:
             # Data Result & Annotation Filter -> use Exists
@@ -114,7 +114,7 @@ def search_filters(
 
 
 def _project_filters(
-    table: Union[AnalyticsTable, ReductionTable, TagTable],
+    table: Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]],
     project_filters: ProjectFilters,
     table_filters: list,
 ) -> None:
@@ -130,7 +130,9 @@ def _project_filters(
 def _append_filters(
     tables: DomainTables,
     search: DomainSearchFilters,
-    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list[bool]],
+    filters: dict[
+        Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]], list
+    ],
 ) -> None:
     # Metric filters
     if len(search.metrics) > 0:

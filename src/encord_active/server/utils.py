@@ -9,14 +9,9 @@ from shapely.affinity import rotate
 from shapely.geometry import Polygon
 
 from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.lib.common.filtering import Filters, apply_filters
 from encord_active.lib.common.utils import mask_to_polygon, rle_to_binary_mask
-from encord_active.lib.db.connection import DBConnection
 from encord_active.lib.db.helpers.tags import GroupedTags
-from encord_active.lib.db.merged_metrics import MergedMetrics
-from encord_active.lib.embeddings.utils import SimilaritiesFinder
 from encord_active.lib.labels.object import ObjectShape
-from encord_active.lib.metrics.types import EmbeddingType
 from encord_active.lib.metrics.utils import (
     MetricData,
     MetricScope,
@@ -43,17 +38,17 @@ def load_project_metrics(project: ProjectFileStructure, scope: Optional[MetricSc
     return load_available_metrics(project.metrics, scope)
 
 
-@cached(cache=LRUCache(maxsize=100))
-def get_similarity_finder(embedding_type: EmbeddingType, project: None):
-    return SimilaritiesFinder(embedding_type, project)
+# @cached(cache=LRUCache(maxsize=100))
+# def get_similarity_finder(embedding_type: EmbeddingType, project: None):
+#    return SimilaritiesFinder(embedding_type, project)
 
 
-@cached(cache=LRUCache(maxsize=5))
-def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
-    with DBConnection(project) as conn:
-        merged_metrics = MergedMetrics(conn).all()
-
-    return apply_filters(merged_metrics, filters, project, scope)
+# @cached(cache=LRUCache(maxsize=5))
+# def filtered_merged_metrics(project: ProjectFileStructure, filters: Filters, scope: Optional[MetricScope] = None):
+#    with DBConnection(project) as conn:
+#        merged_metrics = MergedMetrics(conn).all()
+#
+#    return apply_filters(merged_metrics, filters, project, scope)
 
 
 @cached(cache=LRUCache(maxsize=100))

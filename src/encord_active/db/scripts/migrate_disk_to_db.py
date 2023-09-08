@@ -19,7 +19,6 @@ from encord_active.db.metrics import (
     MetricType,
 )
 from encord_active.db.models import (
-    AnnotationType,
     EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
@@ -301,10 +300,10 @@ def __prediction_iou_range_post_process(model_prediction_group: List[ProjectPred
     else:
 
         def confidence_compare_key(m_obj: ProjectPredictionAnalytics):
-            return m_obj.metric_confidence, m_obj.iou, m_obj.object_hash
+            return m_obj.metric_confidence, m_obj.iou, m_obj.annotation_hash
 
         def iou_compare_key(m_obj: ProjectPredictionAnalytics) -> Tuple[float, float, str]:
-            return m_obj.iou, m_obj.metric_confidence, m_obj.object_hash
+            return m_obj.iou, m_obj.metric_confidence, m_obj.annotation_hash
 
         # Consider each candidate in confidence order:
         # max-confidence: always the TP if it matches (if iou is valid and hence not null)
@@ -879,7 +878,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                             f"Duplicate object_hash={object_hash} in du_hash={du_hash}, frame={data_unit.frame}"
                         )
                     object_hashes_seen.add(object_hash)
-                    annotation_type = AnnotationType(str(obj["shape"]))
+                    annotation_type = AnnotationType(str(obj["shape"]))  # type: ignore
                     annotation_metrics[(du_hash, data_unit.frame, object_hash)] = {
                         "feature_hash": str(obj["featureHash"]),
                         "annotation_type": annotation_type,
@@ -946,7 +945,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                 raise ValueError(
                     f"Validation failure: prisma db missed data units for label row: \n"
                     f"For: {project_data_meta.label_hash}/{expected_data_units}\n"
-                    f"Label row JSON: {project_data_meta.label_row_json}\n"
+                    f"Label row JSON: {project_data_meta}\n"
                     f"Prisma DB State: {label_row}\n"
                 )
             project_data_meta.frames_per_second = fps

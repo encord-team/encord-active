@@ -14,7 +14,6 @@ from encord_active.db.models import (
     ProjectDataAnalyticsReduced,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsExtra,
-    ProjectPredictionAnalyticsFalseNegatives,
     ProjectPredictionAnalyticsReduced,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
@@ -28,7 +27,7 @@ MetadataTable = Type[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalytics
 TagTable = Type[Union[ProjectTaggedDataUnit, ProjectTaggedAnnotation]]
 TableJoinLiterals = List[Literal["du_hash", "frame", "annotation_hash"]]
 
-ProjectFilters = Dict[Literal["project_hash", "prediction_hash"], List[uuid.UUID]]
+ProjectFilters = Dict[Literal["project_hash", "prediction_hash", "reduction_hash"], List[uuid.UUID]]
 
 
 class DomainTables(BaseModel):

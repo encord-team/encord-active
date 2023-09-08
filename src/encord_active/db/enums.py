@@ -2,8 +2,6 @@ import enum
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from encord_active.lib.metrics.types import AnnotationType
-
 
 class EnumType(enum.Enum):
     ONTOLOGY = "ontology"

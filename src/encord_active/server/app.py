@@ -17,7 +17,7 @@ from encord_active.server.dependencies import (
     verify_token,
 )
 
-from .routers import project, project2
+from .routers import project2
 from .settings import Env, get_settings
 
 

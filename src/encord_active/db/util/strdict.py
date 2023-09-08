@@ -18,6 +18,6 @@ class StrDict(TypeDecorator):
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(HSTORE())
+            return dialect.type_descriptor(HSTORE())  # type: ignore
         else:
-            return dialect.type_descriptor(JSON())
+            return dialect.type_descriptor(JSON())  # type: ignore

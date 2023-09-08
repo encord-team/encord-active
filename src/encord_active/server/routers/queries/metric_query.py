@@ -14,7 +14,6 @@ from sqlalchemy.sql.functions import sum as sql_sum_raw
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
 from sqlmodel.sql.expression import Select
-from typing_extensions import TypeAlias
 
 from encord_active.db.enums import EnumDefinition
 from encord_active.db.metrics import MetricDefinition, MetricType
@@ -68,16 +67,16 @@ def literal_bucket_depends(default: int) -> Literal[10, 100, 1000]:
 def get_normal_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optional[Literal[10, 100, 1000]]) -> float:
     round_digits = None if buckets is None else int(math.log10(buckets))
     if dialect.name == "sqlite":
-        return metric_attr if round_digits is None else func.ROUND(metric_attr, round_digits)
+        return metric_attr if round_digits is None else func.ROUND(metric_attr, round_digits)  # type: ignore
     else:
-        return metric_attr if round_digits is None else metric_attr.cast(Numeric(1 + round_digits, round_digits))
+        return metric_attr if round_digits is None else metric_attr.cast(Numeric(1 + round_digits, round_digits))  # type: ignore
 
 
 def get_float_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optional[Literal[10, 100, 1000]]) -> float:
     # FIXME: work for different distributions (currently ONLY aspect ratio)
     #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
     round_digits = None if buckets is None else int(math.log10(buckets))
-    return metric_attr if metric_attr is None else func.ROUND(metric_attr.cast(Numeric(20, 10)), round_digits)
+    return metric_attr if metric_attr is None else func.ROUND(metric_attr.cast(Numeric(20, 10)), round_digits)  # type: ignore
 
 
 def get_int_attr_bucket(dialect: Dialect, metric_attr: int, buckets: Optional[Literal[10, 100, 1000]]) -> int:
@@ -300,7 +299,7 @@ def select_for_query_attr_distribution(
     return (
         select(
             attr.group_attr.label("g"),  # type: ignore
-            sql_count().label("n"),
+            sql_count().label("n"),  # type: ignore
         )
         .where(*where, is_not(attr.filter_attr, None), *(extra_where or []))
         .group_by("g")
@@ -317,7 +316,7 @@ def query_attr_distribution(
     extra_where: Optional[list] = None,
 ) -> QueryDistribution:
     grouping_query = select_for_query_attr_distribution(
-        dialect=sess.bind.dialect,
+        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
         project_filters=project_filters,
         attr_name=attr_name,
@@ -356,7 +355,7 @@ def select_for_query_attr_scatter(
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list],
-) -> "Select[float, float, int]":
+) -> "Select[Tuple[float, float, int]]":
     domain_tables = tables.primary
     x_attr = get_metric_or_enum(
         dialect, domain_tables.analytics, x_metric_name, domain_tables.metrics, {}, buckets=buckets  # type: ignore
@@ -374,7 +373,7 @@ def select_for_query_attr_scatter(
         select(
             x_attr.group_attr.label("x"),  # type: ignore
             y_attr.group_attr.label("y"),  # type: ignore
-            sql_count().label("n"),
+            sql_count().label("n"),  # type: ignore
         )
         .where(*where, is_not(x_attr.filter_attr, None), is_not(x_attr.filter_attr, None), *(extra_where or []))
         .group_by("x", "y")
@@ -392,7 +391,7 @@ def query_attr_scatter(
     extra_where: Optional[list] = None,
 ) -> QueryScatter:
     scatter_query = select_for_query_attr_scatter(
-        dialect=sess.bind.dialect,
+        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
         project_filters=project_filters,
         x_metric_name=x_metric_name,
@@ -424,7 +423,7 @@ def select_for_query_reduction_scatter(
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list],
     extra_select: TExtraSelect,
-) -> "Tuple[float, float, int, ...]":
+) -> "Select[Union[Tuple[float, float, int], Tuple[float, float, int, TExtraSelect]]]":
     domain_tables = tables.primary
     x_attr = get_float_attr_bucket(dialect, domain_tables.reduction.x, buckets)
     y_attr = get_float_attr_bucket(dialect, domain_tables.reduction.y, buckets)
@@ -438,7 +437,7 @@ def select_for_query_reduction_scatter(
         select(
             x_attr.label("xv"),  # type: ignore
             y_attr.label("yv"),  # type: ignore
-            sql_count().label("n"),
+            sql_count().label("n"),  # type: ignore
             *extra_select,
         )
         .where(
@@ -457,8 +456,8 @@ def query_reduction_scatter(
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list] = None,
 ) -> Query2DEmbedding:
-    query = select_for_query_reduction_scatter(
-        dialect=sess.bind.dialect,
+    query: "Select[Tuple[float, float, int]]" = select_for_query_reduction_scatter(  # type: ignore
+        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
         project_filters=project_filters,
         buckets=buckets,

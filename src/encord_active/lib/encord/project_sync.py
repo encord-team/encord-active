@@ -31,12 +31,7 @@ from encord_active.lib.model_predictions.reader import (
 )
 from encord_active.lib.project import ProjectFileStructure
 from encord_active.lib.project.metadata import fetch_project_meta
-from encord_active.server.utils import (
-    filtered_merged_metrics,
-    get_similarity_finder,
-    load_project_metrics,
-    read_class_idx,
-)
+from encord_active.server.utils import load_project_metrics, read_class_idx
 
 
 class LabelRowDataUnit(NamedTuple):
@@ -138,8 +133,6 @@ def _replace_uids(
     caches = [
         load_metric_dataframe,
         load_project_metrics,
-        get_similarity_finder,
-        filtered_merged_metrics,
         read_class_idx,
         get_model_predictions,
         read_prediction_files,

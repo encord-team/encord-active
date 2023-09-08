@@ -230,7 +230,7 @@ class SimpleExecutor(Executor):
                     database_dir=database_dir,
                     project_hash=project_hash,
                     project_ssh_path=project_ssh_path,
-                    batching=batch,
+                    batching=batch or 1,
                     gt_lookup=gt_lookup,
                 )
 
@@ -576,7 +576,9 @@ class SimpleExecutor(Executor):
             annotation_metrics: MetricDependencies = {
                 "feature_hash": annotation.feature_hash,
                 "annotation_type": annotation.annotation_type,
-                "annotation_email": user_id_to_email[annotation.annotation_user_id],
+                "annotation_email": user_id_to_email[annotation.annotation_user_id]
+                if annotation.annotation_user_id is not None
+                else None,
                 "annotation_manual": annotation.annotation_manual,
                 "metric_confidence": annotation.metric_confidence,
                 "metric_metadata": annotation_extra.metric_metadata,
@@ -796,7 +798,7 @@ class SimpleExecutor(Executor):
         for obj in du_meta.objects:
             obj_hash = str(obj["objectHash"])
             feature_hash = str(obj["featureHash"])
-            annotation_type = AnnotationType(str(obj["shape"]))
+            annotation_type = AnnotationType(str(obj["shape"]))  # type: ignore
             if obj_hash in annotations:
                 hash_collision = True
             else:

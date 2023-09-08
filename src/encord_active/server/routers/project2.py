@@ -35,13 +35,7 @@ from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
 )
-from encord_active.server.dependencies import (
-    DataItem,
-    DataOrAnnotateItem,
-    dep_engine,
-    parse_data_item,
-    parse_data_or_annotate_item,
-)
+from encord_active.server.dependencies import DataItem, dep_engine, parse_data_item
 from encord_active.server.routers import (
     project2_actions,
     project2_analysis,
@@ -195,11 +189,11 @@ class EnumSummary(BaseModel):
 
 def _enum_summary(enums: Dict[str, EnumDefinition]) -> Dict[str, EnumSummary]:
     return {
-        enum_name: {
-            "title": enum.title,
-            "values": enum.values,
-            "type": enum.enum_type,
-        }
+        enum_name: EnumSummary(
+            title=enum.title,
+            values=enum.values,
+            type=enum.enum_type,
+        )
         for enum_name, enum in enums.items()
     }
 
@@ -238,7 +232,7 @@ def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_
             select(ProjectDataAnalytics.du_hash, ProjectDataAnalytics.frame)
             .where(ProjectDataAnalytics.project_hash == project_hash)
             .order_by(
-                ProjectDataAnalytics.metric_object_count.desc(),
+                ProjectDataAnalytics.metric_object_count.desc(),  # type: ignore
                 ProjectDataAnalytics.du_hash,
                 ProjectDataAnalytics.frame,
             )
@@ -538,6 +532,8 @@ def route_project_action_tag_items(
     project_hash: uuid.UUID, tagged_items: List[str], tag_name: str, engine: Engine = Depends(dep_engine)
 ) -> None:
     tag_hash = uuid.uuid4()
+    data: List[Tuple[uuid.UUID, int]] = []
+    annotations: List[Tuple[uuid.UUID, int, str]] = []
     with Session(engine) as sess:
         sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=tag_name))
         tags = [
@@ -549,7 +545,7 @@ def route_project_action_tag_items(
 
     with Session(engine) as sess:
         sess.add(ProjectTag(tag_hash=tag_hash, project_hash=project_hash, name=tag_name))
-        tags = [
+        tags2 = [
             ProjectTaggedAnnotation(
                 project_hash=project_hash,
                 du_hash=du_hash,
@@ -559,5 +555,5 @@ def route_project_action_tag_items(
             )
             for du_hash, frame, annotation_hash in annotations
         ]
-        sess.add_all(tags)
+        sess.add_all(tags2)
         sess.commit()

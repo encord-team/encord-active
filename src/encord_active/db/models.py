@@ -59,7 +59,7 @@ def field_uuid(primary_key: bool = False, unique: bool = False, nullable: bool =
     )
 
 
-def field_bool(nullable: bool = False) -> float:
+def field_bool(nullable: bool = False) -> bool:
     return Field(sa_column=Column(Boolean, nullable=nullable))
 
 
@@ -95,7 +95,7 @@ def field_json_list(nullable: bool = False, default: Optional[list] = None) -> l
     return Field(sa_column=Column(JSON, nullable=nullable, default=default))
 
 
-EmbeddingVector = Union[list[float], bytes]
+EmbeddingVector = bytes  # FIXME: Union[list[float], bytes]
 
 
 def field_embedding_vector(dim: int, nullable: bool = False) -> EmbeddingVector:

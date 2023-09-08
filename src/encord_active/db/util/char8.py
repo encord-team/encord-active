@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import Column, TypeDecorator
+from sqlalchemy import TypeDecorator
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import BigInteger
@@ -20,7 +20,7 @@ class Char8(TypeDecorator):
     cache_ok = True
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
-        return dialect.type_descriptor(BigInteger())
+        return dialect.type_descriptor(BigInteger())  # type: ignore
 
     def process_bind_param(self, value: Optional[str], dialect: Dialect) -> Optional[int]:
         if value is None:

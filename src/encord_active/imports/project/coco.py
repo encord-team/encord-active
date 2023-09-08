@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 from encord.objects import Object, OntologyStructure, Shape
-from encord.utilities import label_utilities
 from pydantic import BaseModel
 
 from encord_active.db.models import (
