@@ -62,8 +62,13 @@ class HSVColorMetric(OneImageMetric):
         distances = torch.sqrt(
             torch.square(hue_dist * HUE_SCALE) + torch.square(1 - hsv_image[1]) + torch.square(1 - hsv_image[2])
         ) / (HUE_SCALE + 2)
+
         distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, distances, torch.ones_like(distances))
-        return torch.mean(distances)
+        return 1 - torch.mean(distances)
+
+        # distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, distances, torch.ones_like(distances))
+        # distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, hue_dist, torch.ones_like(distances))
+        # return 1 - torch.mean(distances)
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
