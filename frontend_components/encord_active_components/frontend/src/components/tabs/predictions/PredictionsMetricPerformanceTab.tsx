@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
 import { ProjectDomainSummary } from "../../../openapi/api";
-import { QueryContext } from "../../../hooks/Context";
 import { useProjectPredictionMetricPerformance } from "../../../hooks/queries/useProjectPredictionMetricPerformance";
 
 const bucketOptions: { label: number; value: number }[] = [
@@ -26,7 +25,6 @@ export function PredictionsMetricPerformanceTab(props: {
   metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -36,7 +34,6 @@ export function PredictionsMetricPerformanceTab(props: {
     metricsSummary,
     projectHash,
     predictionHash,
-    queryContext,
     featureHashMap,
   } = props;
   const [iou, setIOU] = useState(0.5);
@@ -69,7 +66,6 @@ export function PredictionsMetricPerformanceTab(props: {
   );
   const debounceQueryState = useDebounce(rawQueryState);
   const queryPerformance = useProjectPredictionMetricPerformance(
-    queryContext,
     projectHash,
     predictionHash,
     debounceQueryState.iou,

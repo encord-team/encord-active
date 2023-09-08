@@ -1,10 +1,9 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import { PredictionDomain, SearchFilters } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function usePredictionAnalysisSearch(
-  queryContext: QueryContext,
   projectHash: string,
   predictionHash: string,
   domain: PredictionDomain,
@@ -16,10 +15,11 @@ export function usePredictionAnalysisSearch(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "usePredictionAnalysisSearch",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       predictionHash,
       domain,
@@ -31,7 +31,7 @@ export function usePredictionAnalysisSearch(
       filters,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,

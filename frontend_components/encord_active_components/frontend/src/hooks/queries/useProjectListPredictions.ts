@@ -1,19 +1,19 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import {
   CACHE_TIME_LIST_TOP_LEVEL,
   STALE_TIME_LIST_TOP_LEVEL,
 } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectListPredictions(
-  queryContext: QueryContext,
   projectHash: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
-    ["useProjectListPredictions", queryContext.baseUrl, projectHash],
+    ["useProjectListPredictions", querier.baseUrl, projectHash],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
           projectHash

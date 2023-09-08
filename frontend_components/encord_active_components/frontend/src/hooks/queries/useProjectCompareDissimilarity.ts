@@ -1,25 +1,25 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import { AnalysisDomain } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectCompareDissimilarity(
-  queryContext: QueryContext,
   projectHash: string,
   domain: AnalysisDomain,
   compareProjectHash: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "useProjectCompareDissimilarity",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       domain,
       compareProjectHash,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectCompareMetricDissimilarityProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
           projectHash,

@@ -1,14 +1,13 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import {
   AnalysisBuckets,
   AnalysisDomain,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectAnalysisReducedEmbeddings(
-  queryContext: QueryContext,
   projectHash: string,
   domain: AnalysisDomain,
   reductionHash: string,
@@ -16,10 +15,11 @@ export function useProjectAnalysisReducedEmbeddings(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "useProjectAnalysisReducedEmbeddings",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       domain,
       reductionHash,
@@ -27,7 +27,7 @@ export function useProjectAnalysisReducedEmbeddings(
       filters,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
           projectHash,

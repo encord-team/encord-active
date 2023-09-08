@@ -1,14 +1,13 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import {
   AnalysisDomain,
   AnalysisBuckets,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectAnalysisMetricScatter(
-  queryContext: QueryContext,
   projectHash: string,
   domain: AnalysisDomain,
   xMetric: string,
@@ -17,10 +16,11 @@ export function useProjectAnalysisMetricScatter(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "useProjectAnalysisMetricScatter",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       domain,
       xMetric,
@@ -29,7 +29,7 @@ export function useProjectAnalysisMetricScatter(
       filters,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
           projectHash,

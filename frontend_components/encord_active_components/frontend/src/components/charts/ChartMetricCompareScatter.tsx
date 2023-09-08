@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import { scaleLinear } from "d3-scale";
 import { formatTooltip } from "../util/Formatter";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisMetricScatter } from "../../hooks/queries/useProjectAnalysisMetricScatter";
 import {
   AnalysisDomain,
@@ -26,7 +25,6 @@ export function ChartMetricCompareScatter(props: {
   analysisDomain: AnalysisDomain;
   projectHash: string;
   compareProjectHash?: string | undefined;
-  queryContext: QueryContext;
   allowTrend?: boolean;
 }) {
   const {
@@ -34,7 +32,6 @@ export function ChartMetricCompareScatter(props: {
     analysisSummary,
     analysisDomain,
     projectHash,
-    queryContext,
     allowTrend,
     compareProjectHash,
   } = props;
@@ -42,7 +39,6 @@ export function ChartMetricCompareScatter(props: {
   const [yMetric, setYMetric] = useState<undefined | string>();
   const [showTrend, setShowTrend] = useState<boolean>(true);
   const sampledState = useProjectAnalysisMetricScatter(
-    queryContext,
     projectHash,
     analysisDomain,
     xMetric ?? "",
@@ -52,7 +48,6 @@ export function ChartMetricCompareScatter(props: {
     { enabled: xMetric !== undefined && yMetric !== undefined }
   );
   const compareSampledState = useProjectAnalysisMetricScatter(
-    queryContext,
     compareProjectHash ?? "",
     analysisDomain,
     xMetric ?? "",

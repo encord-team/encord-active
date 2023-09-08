@@ -5,7 +5,6 @@ import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
 import { useMemo } from "react";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
@@ -15,7 +14,6 @@ import { classy } from "../../helpers/classy";
 export function GalleryCard(props: {
   projectHash: string;
   predictionHash: string | undefined;
-  queryContext: QueryContext;
   itemId: string;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
@@ -31,7 +29,6 @@ export function GalleryCard(props: {
   const {
     projectHash,
     predictionHash,
-    queryContext,
     itemId,
     selected,
     selectedMetric,
@@ -57,12 +54,11 @@ export function GalleryCard(props: {
   // Conditionally fetch the correct dataId from project or prediction.
   const projectItem = predictionTy === undefined || predictionTy === "FN";
   const { data: previewProject, isLoading: isLoadingProject } = useProjectItem(
-    queryContext,
     projectHash,
     dataId
   );
   const { data: previewPrediction, isLoading: isLoadingPrediction } =
-    usePredictionItem(queryContext, projectHash, predictionHash ?? "", dataId, {
+    usePredictionItem(projectHash, predictionHash ?? "", dataId, {
       enabled: !projectItem,
     });
   const preview = useMemo(() => {
@@ -83,7 +79,7 @@ export function GalleryCard(props: {
   }, [previewProject, previewPrediction, projectItem]);
 
   // Load project summary state for extra metadata
-  const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
+  const { data: projectSummary } = useProjectSummary(projectHash);
   const projectSummaryForDomain =
     projectSummary === undefined
       ? {}
@@ -154,7 +150,6 @@ export function GalleryCard(props: {
         <div className="!flex items-center justify-center">
           {preview != null && (
             <AnnotatedImage
-              queryContext={queryContext}
               item={preview}
               className="h-56"
               annotationHash={annotationHash}

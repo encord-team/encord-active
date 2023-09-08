@@ -3,14 +3,12 @@ import { BiInfoCircle } from "react-icons/bi";
 import { Spin } from "antd";
 import { ScatteredEmbeddings } from "./ExplorerCharts";
 import { loadingIndicator } from "../Spin";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { usePredictionAnalysisReducedEmbeddings } from "../../hooks/queries/usePredictionAnalysisReducedEmbeddings";
 import { Embedding2DFilter } from "../../openapi/api";
 
 export function ExplorerEmbeddings(props: {
-  queryContext: QueryContext;
   projectHash: string;
   predictionHash: string | undefined;
   reductionHash: string | undefined;
@@ -18,7 +16,6 @@ export function ExplorerEmbeddings(props: {
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
 }) {
   const {
-    queryContext,
     projectHash,
     predictionHash,
     reductionHash,
@@ -27,7 +24,6 @@ export function ExplorerEmbeddings(props: {
   } = props;
   const { isLoading: isLoadingProject, data: scatteredEmbeddingsProject } =
     useProjectAnalysisReducedEmbeddings(
-      queryContext,
       projectHash,
       filters.analysisDomain,
       reductionHash ?? "",
@@ -39,7 +35,6 @@ export function ExplorerEmbeddings(props: {
     isLoading: isLoadingPrediction,
     data: scatteredEmbeddingsPrediction,
   } = usePredictionAnalysisReducedEmbeddings(
-    queryContext,
     projectHash,
     predictionHash ?? "",
     filters.predictionOutcome,

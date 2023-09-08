@@ -1,14 +1,13 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import {
   AnalysisBuckets,
   PredictionDomain,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function usePredictionAnalysisReducedEmbeddings(
-  queryContext: QueryContext,
   projectHash: string,
   predictionHash: string,
   domain: PredictionDomain,
@@ -18,10 +17,11 @@ export function usePredictionAnalysisReducedEmbeddings(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "usePredictionAnalysisReducedEmbeddings",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       predictionHash,
       domain,
@@ -31,7 +31,7 @@ export function usePredictionAnalysisReducedEmbeddings(
       filters,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
           projectHash,

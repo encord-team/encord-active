@@ -30,7 +30,6 @@ import {
   PredictionDomain,
   ProjectDomainSummary,
 } from "../../openapi/api";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
@@ -45,10 +44,9 @@ export type Props = {
   predictionHash: string | undefined;
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
-  queryContext: QueryContext;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -57,7 +55,6 @@ export type Props = {
 export function Explorer({
   projectHash,
   predictionHash,
-  queryContext,
   editUrl,
   featureHashMap,
   dataMetricsSummary,
@@ -71,7 +68,6 @@ export function Explorer({
 
   // Select reduction hash
   const { data: reductionHashes } = useProjectListReductions(
-    queryContext,
     projectHash
   );
   const reductionHash: string | undefined = useMemo(
@@ -193,7 +189,6 @@ export function Explorer({
   const hasSimilaritySearch = false;
   const { data: similarItems, isLoading: isLoadingSimilarItemsRaw } =
     useProjectAnalysisSimilaritySearch(
-      queryContext,
       projectHash,
       filters.analysisDomain,
       similarityItem ?? "",
@@ -206,15 +201,14 @@ export function Explorer({
 
   // Load metric ranges
   const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
-    useProjectAnalysisSummary(queryContext, projectHash, "data");
+    useProjectAnalysisSummary(projectHash, "data");
   const {
     data: annotationMetricRanges,
     isLoading: isLoadingAnnotationMetrics,
-  } = useProjectAnalysisSummary(queryContext, projectHash, "annotation");
+  } = useProjectAnalysisSummary(projectHash, "annotation");
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
   const { data: sortedItemsProject, isLoading: isLoadingSortedItemsProject } =
     useProjectAnalysisSearch(
-      queryContext,
       projectHash,
       filters.analysisDomain,
       filters.orderBy,
@@ -230,7 +224,6 @@ export function Explorer({
     data: sortedItemsPrediction,
     isLoading: isLoadingSortedItemsPrediction,
   } = usePredictionAnalysisSearch(
-    queryContext,
     projectHash,
     predictionHash ?? "",
     filters.predictionOutcome,
@@ -339,18 +332,15 @@ export function Explorer({
         open={open == "subset"}
         close={close}
         projectHash={projectHash}
-        queryContext={queryContext}
         filters={filters.filters}
       />
       <UploadToEncordModal
         open={open === "upload"}
         close={close}
         projectHash={projectHash}
-        queryContext={queryContext}
         setSelectedProjectHash={setSelectedProjectHash}
       />
       <ExplorerEmbeddings
-        queryContext={queryContext}
         projectHash={projectHash}
         predictionHash={predictionHash}
         reductionHash={reductionHash}
@@ -359,7 +349,6 @@ export function Explorer({
       />
       {previewedItem && (
         <ItemPreviewModal
-          queryContext={queryContext}
           projectHash={projectHash}
           previewItem={previewedItem}
           domain={selectedMetric.domain}
@@ -379,7 +368,6 @@ export function Explorer({
       {!similarityItem && predictionHash === undefined && (
         <MetricDistributionTiny
           projectHash={projectHash}
-          queryContext={queryContext}
           filters={filters}
         />
       )}
@@ -546,7 +534,6 @@ export function Explorer({
           <GalleryCard
             projectHash={projectHash}
             predictionHash={predictionHash}
-            queryContext={queryContext}
             selectedMetric={selectedMetric}
             key={item}
             itemId={item}

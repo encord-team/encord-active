@@ -7,7 +7,6 @@ import {
 } from "@ant-design/plots";
 import { useCallback, useMemo } from "react";
 import { scaleLinear } from "d3-scale";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import {
@@ -18,12 +17,10 @@ import {
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
-  queryContext: QueryContext;
   filters: ExplorerFilterState;
 }) {
-  const { projectHash, filters, queryContext } = props;
+  const { projectHash, filters } = props;
   const { data: distribution } = useProjectAnalysisDistribution(
-    queryContext,
     projectHash,
     filters.analysisDomain,
     filters.orderBy
@@ -80,19 +77,19 @@ export function MetricDistributionTiny(props: {
       brush={
         (distribution?.results?.length ?? 0) > 1
           ? {
-              enabled: true,
-              type: "x-rect",
-              action: "filter",
-              mask: {
-                style: { fill: "rgba(255,0,0,0.15)" },
-              },
-            }
+            enabled: true,
+            type: "x-rect",
+            action: "filter",
+            mask: {
+              style: { fill: "rgba(255,0,0,0.15)" },
+            },
+          }
           : {}
       }
       onEvent={onEvent}
-      /* tooltip={{
-        customContent,
-      }} */
+    /* tooltip={{
+      customContent,
+    }} */
     />
   );
 }

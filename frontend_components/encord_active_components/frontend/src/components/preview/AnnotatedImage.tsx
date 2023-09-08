@@ -2,12 +2,10 @@ import useResizeObserver from "use-resize-observer";
 import { useRef } from "react";
 import * as React from "react";
 import { ProjectItem } from "../../openapi/api";
-import { QueryContext } from "../../hooks/Context";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { classy } from "../../helpers/classy";
 
 export function AnnotatedImage(props: {
-  queryContext: QueryContext;
   item: ProjectItem;
   annotationHash: string | undefined;
   hideExtraAnnotations?: boolean | undefined;
@@ -17,7 +15,6 @@ export function AnnotatedImage(props: {
 }) {
   const {
     item,
-    queryContext,
     className,
     annotationHash,
     hideExtraAnnotations,
@@ -38,7 +35,7 @@ export function AnnotatedImage(props: {
   const contentWidth = item.timestamp != null ? videoWidth : imageWidth;
   const contentHeight = item.timestamp != null ? videoHeight : imageHeight;
 
-  const imageSrc = useImageSrc(queryContext, item.url);
+  const imageSrc = useImageSrc(item.url);
 
   //fit
   // width={240}

@@ -1,14 +1,13 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import {
   AnalysisDomain,
   AnalysisBuckets,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectAnalysisDistribution(
-  queryContext: QueryContext,
   projectHash: string,
   domain: AnalysisDomain,
   group: string,
@@ -16,10 +15,11 @@ export function useProjectAnalysisDistribution(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "useProjectAnalysisDistribution",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       domain,
       group,
@@ -27,7 +27,7 @@ export function useProjectAnalysisDistribution(
       filters,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectDistributionProjectsV2ProjectHashAnalysisDomainDistributionGet(
           projectHash,

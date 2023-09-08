@@ -3,23 +3,20 @@ import { Col, Divider, Row, Select, Typography } from "antd";
 import { useState } from "react";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
 import { ChartMetricDissimilarity } from "../charts/ChartMetricDissimilarity";
-import { QueryContext } from "../../hooks/Context";
 import { ProjectDomainSummary } from "../../openapi/api";
 import { useProjectList } from "../../hooks/queries/useListProjects";
 
 export function ProjectComparisonTab(props: {
   projectHash: string;
-  queryContext: QueryContext;
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
 }) {
   const {
     projectHash,
-    queryContext,
     dataMetricsSummary,
     annotationMetricsSummary,
   } = props;
-  const allProjects = useProjectList(queryContext);
+  const allProjects = useProjectList();
   const [compareProjectHash, setCompareProjectHash] = useState<
     undefined | string
   >();
@@ -71,7 +68,6 @@ export function ProjectComparisonTab(props: {
             metricsSummary={metricsSummary}
             analysisDomain={domain}
             projectHash={projectHash}
-            queryContext={queryContext}
             compareProjectHash={compareProjectHash}
           />
           <Divider>
@@ -80,7 +76,6 @@ export function ProjectComparisonTab(props: {
           <ChartMetricDissimilarity
             projectHash={projectHash}
             analysisDomain={domain}
-            queryContext={queryContext}
             metricsSummary={metricsSummary}
             compareProjectHash={compareProjectHash}
           />

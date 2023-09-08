@@ -11,7 +11,6 @@ import { isEmpty } from "radash";
 import { ChartMetricCompareScatter } from "../charts/ChartMetricCompareScatter";
 import { ChartDistributionBar } from "../charts/ChartDistributionBar";
 import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
 
@@ -22,7 +21,6 @@ const AnalysisDomainToName: Record<AnalysisDomain, string> = {
 
 export function SummaryTab(props: {
   projectHash: string;
-  queryContext: QueryContext;
   metricsSummary: ProjectDomainSummary;
   analysisDomain: AnalysisDomain;
   featureHashMap: Record<
@@ -32,13 +30,11 @@ export function SummaryTab(props: {
 }) {
   const {
     projectHash,
-    queryContext,
     metricsSummary,
     analysisDomain,
     featureHashMap,
   } = props;
   const summary = useProjectAnalysisSummary(
-    queryContext,
     projectHash,
     analysisDomain
   );
@@ -115,9 +111,9 @@ export function SummaryTab(props: {
           />
         </Card>
         {data == null ||
-        ("metric_width" in data.metrics &&
-          "metric_height" in data.metrics &&
-          (data.metrics.metric_height?.count ?? 0) > 0) ? (
+          ("metric_width" in data.metrics &&
+            "metric_height" in data.metrics &&
+            (data.metrics.metric_height?.count ?? 0) > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"
@@ -155,7 +151,6 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryContext={queryContext}
           allowTrend
         />
       </Card>
@@ -168,7 +163,6 @@ export function SummaryTab(props: {
           analysisSummary={data}
           analysisDomain={analysisDomain}
           projectHash={projectHash}
-          queryContext={queryContext}
           featureHashMap={featureHashMap}
         />
       </Card>

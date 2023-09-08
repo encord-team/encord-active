@@ -4,13 +4,11 @@ import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
 import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
 import { Explorer, Props as ExplorerProps } from "../../explorer";
-import { QueryContext } from "../../../hooks/Context";
 import { ProjectDomainSummary } from "../../../openapi/api";
 import { useProjectListPredictions } from "../../../hooks/queries/useProjectListPredictions";
 
 export function PredictionsTab(
   props: {
-    queryContext: QueryContext;
     projectHash: string;
     dataMetricsSummary: ProjectDomainSummary;
     annotationMetricsSummary: ProjectDomainSummary;
@@ -21,7 +19,6 @@ export function PredictionsTab(
   } & Pick<ExplorerProps, "remoteProject" | "setSelectedProjectHash">
 ) {
   const {
-    queryContext,
     projectHash,
     dataMetricsSummary,
     annotationMetricsSummary,
@@ -31,7 +28,6 @@ export function PredictionsTab(
   } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
   const { data: allPredictions } = useProjectListPredictions(
-    queryContext,
     projectHash
   );
 
@@ -92,7 +88,6 @@ export function PredictionsTab(
                 <PredictionSummaryTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryContext={queryContext}
                   metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
@@ -105,7 +100,6 @@ export function PredictionsTab(
                 <PredictionsMetricPerformanceTab
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  queryContext={queryContext}
                   metricsSummary={annotationMetricsSummary}
                   featureHashMap={featureHashMap}
                 />
@@ -121,7 +115,6 @@ export function PredictionsTab(
                   featureHashMap={featureHashMap}
                   dataMetricsSummary={dataMetricsSummary}
                   annotationMetricsSummary={annotationMetricsSummary}
-                  queryContext={queryContext}
                   setSelectedProjectHash={setSelectedProjectHash}
                   remoteProject={remoteProject}
                 />

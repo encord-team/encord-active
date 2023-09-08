@@ -1,25 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect, useMemo } from "react";
-import { QueryContext } from "./Context";
 import { apiUrl } from "../constants";
+import { useQuerier } from "./Context";
 
 const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com"];
 
 export function useImageSrc(
-  queryContext: QueryContext,
   url: string | undefined
 ): string | undefined {
+  const querier = useQuerier()
   const itemUrl =
     url === undefined || url.startsWith("http") ? url : `${apiUrl}${url}`;
 
   const requiresAuth: boolean = useMemo(
     () =>
-      queryContext.usesAuth &&
+      querier.usesAuth &&
       !NO_AUTH_PATTERNS.some(
         (pattern) => itemUrl === undefined || itemUrl.includes(pattern)
       ),
-    [queryContext, itemUrl]
+    [querier, itemUrl]
   );
   const { data: queryBlob } = useQuery(
     ["ImageSrcAuth", itemUrl],

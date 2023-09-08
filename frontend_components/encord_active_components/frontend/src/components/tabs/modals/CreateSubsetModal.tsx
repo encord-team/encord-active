@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Form, Input, Modal } from "antd";
-import { QueryContext } from "../../../hooks/Context";
 import { useProjectMutationCreateSubset } from "../../../hooks/mutation/useProjectMutationCreateSubset";
 import { SearchFilters } from "../../../openapi/api";
 
@@ -8,10 +7,9 @@ export function CreateSubsetModal(props: {
   open: boolean;
   close: () => void;
   projectHash: string;
-  queryContext: QueryContext;
   filters: SearchFilters;
 }) {
-  const { open, close, projectHash, queryContext, filters } = props;
+  const { open, close, projectHash, filters } = props;
   const [form] = Form.useForm<{
     project_title: string;
     project_description?: string | undefined;
@@ -20,7 +18,6 @@ export function CreateSubsetModal(props: {
   }>();
 
   const mutateCreateSubset = useProjectMutationCreateSubset(
-    queryContext,
     projectHash
   );
 

@@ -11,7 +11,6 @@ import {
 } from "recharts";
 import { useMemo } from "react";
 import { scaleLinear } from "d3-scale";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectCompareDissimilarity } from "../../hooks/queries/useProjectCompareDissimilarity";
 import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
 
@@ -20,18 +19,15 @@ export function ChartMetricDissimilarity(props: {
   compareProjectHash: string;
   analysisDomain: AnalysisDomain;
   metricsSummary: ProjectDomainSummary;
-  queryContext: QueryContext;
 }) {
   const {
     projectHash,
     compareProjectHash,
     analysisDomain,
     metricsSummary,
-    queryContext,
   } = props;
 
   const { data } = useProjectCompareDissimilarity(
-    queryContext,
     projectHash,
     analysisDomain,
     compareProjectHash

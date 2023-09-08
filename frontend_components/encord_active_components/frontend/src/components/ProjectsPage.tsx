@@ -11,7 +11,6 @@ import { classy } from "../helpers/classy";
 import { env } from "../constants";
 import { useImageSrc } from "../hooks/useImageSrc";
 import { loadingIndicator } from "./Spin";
-import { QueryContext } from "../hooks/Context";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectList } from "../hooks/queries/useListProjects";
 import { ProjectSearchEntry } from "../openapi/api";
@@ -20,11 +19,10 @@ import { useProjectItem } from "../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./preview/AnnotatedImage";
 
 export type Props = {
-  queryContext: QueryContext;
   onSelectLocalProject: (projectHash: string) => void;
 };
-export function ProjectsPage({ queryContext, onSelectLocalProject }: Props) {
-  const { data: projects, isLoading } = useProjectList(queryContext);
+export function ProjectsPage({ onSelectLocalProject }: Props) {
+  const { data: projects, isLoading } = useProjectList();
   const userProjects = projects?.projects ?? [];
 
   if (isLoading) {
@@ -61,7 +59,6 @@ export function ProjectsPage({ queryContext, onSelectLocalProject }: Props) {
           userProjects.map((project) => (
             <ProjectCard
               key={project.project_hash}
-              queryContext={queryContext}
               project={project}
               setSelectedProjectHash={onSelectLocalProject}
             />
@@ -125,30 +122,25 @@ function NewProjectButton({
 
 function ProjectCard({
   project,
-  queryContext,
   showDownloadedBadge = false,
   setSelectedProjectHash,
 }: {
   project: ProjectSearchEntry;
-  queryContext: QueryContext;
   showDownloadedBadge?: boolean;
   setSelectedProjectHash: (projectHash: string) => void;
 }) {
   const { data: projectMetadata } = useProjectMetadata(
-    queryContext,
     project.project_hash
   );
   const { data: projectSummary } = useProjectSummary(
-    queryContext,
     project.project_hash
   );
   const { data: projectDataItem } = useProjectItem(
-    queryContext,
     project.project_hash,
     projectSummary?.preview ?? "",
     { enabled: projectSummary !== undefined }
   );
-  const imgSrcUrl = useImageSrc(queryContext, projectDataItem?.url);
+  const imgSrcUrl = useImageSrc(projectDataItem?.url);
 
   return (
     <Card
@@ -159,7 +151,6 @@ function ProjectCard({
       cover={
         projectDataItem !== undefined ? (
           <AnnotatedImage
-            queryContext={queryContext}
             item={projectDataItem}
             annotationHash={undefined}
             mode="preview"

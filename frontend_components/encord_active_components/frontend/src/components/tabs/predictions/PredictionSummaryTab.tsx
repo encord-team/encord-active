@@ -5,14 +5,12 @@ import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBar";
 import { ChartPredictionRecallCurve } from "../../charts/ChartPredictionRecallCurve";
 import { ProjectDomainSummary } from "../../../openapi/api";
-import { QueryContext } from "../../../hooks/Context";
 import { useProjectPredictionSummary } from "../../../hooks/queries/useProjectPredictionSummary";
 
 export function PredictionSummaryTab(props: {
   metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -22,14 +20,12 @@ export function PredictionSummaryTab(props: {
     metricsSummary,
     predictionHash,
     projectHash,
-    queryContext,
     featureHashMap,
   } = props;
   const [iou, setIOU] = useState(0.5);
   const debounceIOU = useDebounce(iou, 1000);
 
   const { data: predictionSummaryData } = useProjectPredictionSummary(
-    queryContext,
     projectHash,
     predictionHash,
     debounceIOU

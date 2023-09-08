@@ -1,15 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import { UploadProjectToEncordPostAction } from "../../openapi/api";
+import { useQuerier } from "../Context";
 
 export function useProjectMutationUploadToEncord(
-  queryContext: QueryContext,
   projectHash: string
 ) {
+  const querier = useQuerier()
+
   return useMutation(
-    ["useProjectMutationCreateSubset", queryContext.baseUrl, projectHash],
+    ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
     (uploadEncordAction: UploadProjectToEncordPostAction) =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,

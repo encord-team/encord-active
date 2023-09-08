@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Form, Input, Modal } from "antd";
-import { QueryContext } from "../../../hooks/Context";
 import { useProjectMutationUploadToEncord } from "../../../hooks/mutation/useProjectMutationUploadToEncord";
 
 export function UploadToEncordModal(props: {
@@ -8,9 +7,8 @@ export function UploadToEncordModal(props: {
   close: () => void;
   projectHash: string;
   setSelectedProjectHash: (key: string | undefined) => void;
-  queryContext: QueryContext;
 }) {
-  const { open, close, projectHash, queryContext, setSelectedProjectHash } =
+  const { open, close, projectHash, setSelectedProjectHash } =
     props;
   const [form] = Form.useForm<{
     dataset_title: string;
@@ -22,7 +20,6 @@ export function UploadToEncordModal(props: {
   }>();
 
   const mutateCreateSubset = useProjectMutationUploadToEncord(
-    queryContext,
     projectHash
   );
 

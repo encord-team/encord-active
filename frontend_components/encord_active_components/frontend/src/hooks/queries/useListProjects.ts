@@ -1,18 +1,18 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
+import { useQuerier } from "../Context";
 import {
   CACHE_TIME_LIST_TOP_LEVEL,
   STALE_TIME_LIST_TOP_LEVEL,
 } from "../queryConstants";
 
 export function useProjectList(
-  queryContext: QueryContext,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
-    ["useProjectList", queryContext.baseUrl],
+    ["useProjectList", querier.baseUrl],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeListProjectsProjectsV2Get()
         .then((r) => r.data),

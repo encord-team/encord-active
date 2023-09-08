@@ -9,6 +9,7 @@ import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
 import { takeDataId } from "./id";
 import { loadingIndicator } from "../Spin";
+import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -21,7 +22,7 @@ const taggingDisabledReasons = {
 } as const;
 
 export const useAllTags = (itemSet?: Set<string>) => {
-  const { isLoading, data: taggedItems } = useApi().fetchTaggedItems();
+  const { isLoading, data: taggedItems } = useProjectTaggedItems()
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),

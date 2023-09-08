@@ -1,14 +1,12 @@
 import { Col, Modal, Row, Spin, Table } from "antd";
 import * as React from "react";
 import { useMemo } from "react";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { AnnotatedImage } from "./AnnotatedImage";
 
 export function ItemPreviewModal(props: {
-  queryContext: QueryContext;
   projectHash: string;
   previewItem: string | undefined;
   similaritySearchDisabled: boolean;
@@ -18,7 +16,7 @@ export function ItemPreviewModal(props: {
   iou?: number;
   allowTaggingAnnotations: boolean;
 }) {
-  const { queryContext, previewItem, domain, projectHash, onClose } = props;
+  const { previewItem, domain, projectHash, onClose } = props;
   const dataId =
     previewItem === undefined
       ? undefined
@@ -28,12 +26,11 @@ export function ItemPreviewModal(props: {
       ? previewItem.split("_")[2]
       : undefined;
   const { data: preview } = useProjectItem(
-    queryContext,
     projectHash,
     dataId ?? "",
     { enabled: dataId !== undefined }
   );
-  const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
+  const { data: projectSummary } = useProjectSummary(projectHash);
   const projectSummaryForDomain =
     projectSummary === undefined ? {} : projectSummary[domain].metrics;
 
@@ -92,7 +89,6 @@ export function ItemPreviewModal(props: {
           </Col>
           <Col span={12}>
             <AnnotatedImage
-              queryContext={queryContext}
               item={preview}
               annotationHash={annotationHash}
               mode="large"
@@ -105,7 +101,6 @@ export function ItemPreviewModal(props: {
   /*
   const dataId = id.split("_").slice(0, 3).join("_");
   const { data: preview, isLoading } = useProjectDataItem(
-    queryContext,
     projectHash,
     dataId
   );

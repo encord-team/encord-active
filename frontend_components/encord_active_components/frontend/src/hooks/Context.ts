@@ -1,7 +1,8 @@
+import { createContext, useContext } from "react";
 import { ProjectsV2ApiFactory } from "../openapi/api";
 import { Configuration } from "../openapi/configuration";
 
-export class QueryContext {
+export class Querier {
   public readonly baseUrl: string;
 
   public readonly usesAuth: boolean;
@@ -28,4 +29,17 @@ export class QueryContext {
   getProjectV2API(): ReturnType<typeof ProjectsV2ApiFactory> {
     return this.projectV2;
   }
+}
+
+export const QuerierContext = createContext<Querier | null>(null);
+
+
+export function useQuerier(): Querier {
+  const querier = useContext(QuerierContext);
+
+  if (!querier) {
+    throw new Error("useQuerier has to be used within <QuerierContext.Provider>");
+  }
+
+  return querier
 }

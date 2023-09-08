@@ -1,24 +1,24 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import { CACHE_TIME_ITEM, STALE_TIME_ITEM } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function usePredictionItem(
-  queryContext: QueryContext,
   projectHash: string,
   predictionHash: string,
   dataItem: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "usePredictionItem",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       predictionHash,
       dataItem,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routePredictionDataItemProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
           projectHash,

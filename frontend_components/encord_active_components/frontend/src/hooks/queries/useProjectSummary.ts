@@ -1,16 +1,17 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
+import { Querier, useQuerier } from "../Context";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectSummary(
-  queryContext: QueryContext,
   projectHash: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
+
   return useQuery(
-    ["useProjectSummary", queryContext.baseUrl, projectHash],
+    ["useProjectSummary", querier.baseUrl, projectHash],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash)
         .then((r) => r.data),

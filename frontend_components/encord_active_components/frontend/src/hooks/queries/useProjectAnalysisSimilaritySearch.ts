@@ -1,25 +1,25 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
 import { AnalysisDomain } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
+import { useQuerier } from "../Context";
 
 export function useProjectAnalysisSimilaritySearch(
-  queryContext: QueryContext,
   projectHash: string,
   domain: AnalysisDomain,
   item: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
+  const querier = useQuerier()
   return useQuery(
     [
       "useProjectAnalysisSimilaritySearch",
-      queryContext.baseUrl,
+      querier.baseUrl,
       projectHash,
       domain,
       item,
     ],
     () =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
           projectHash,

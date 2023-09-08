@@ -1,15 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { QueryContext } from "../Context";
+import { useQuerier } from "../Context";
 import { CreateProjectSubsetPostAction } from "../../openapi/api";
 
 export function useProjectMutationCreateSubset(
-  queryContext: QueryContext,
   projectHash: string
 ) {
+  const querier = useQuerier()
+
   return useMutation(
-    ["useProjectMutationCreateSubset", queryContext.baseUrl, projectHash],
+    ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
     (createSubsetAction: CreateProjectSubsetPostAction) =>
-      queryContext
+      querier
         .getProjectV2API()
         .routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,

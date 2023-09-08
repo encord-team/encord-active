@@ -12,7 +12,6 @@ import {
   YAxis,
 } from "recharts";
 import { formatTooltip } from "../util/Formatter";
-import { QueryContext } from "../../hooks/Context";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import {
@@ -26,7 +25,6 @@ export function ChartDistributionBar(props: {
   analysisSummary?: undefined | QuerySummary;
   analysisDomain: AnalysisDomain;
   projectHash: string;
-  queryContext: QueryContext;
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
@@ -34,7 +32,6 @@ export function ChartDistributionBar(props: {
 }) {
   const {
     projectHash,
-    queryContext,
     metricsSummary,
     analysisSummary,
     analysisDomain,
@@ -69,7 +66,6 @@ export function ChartDistributionBar(props: {
   >();
 
   const groupingData = useProjectAnalysisDistribution(
-    queryContext,
     projectHash,
     analysisDomain,
     selectedProperty ?? "",
@@ -135,7 +131,6 @@ export function ChartDistributionBar(props: {
     );
 
   const allMetricsSummary = useProjectAnalysisSummary(
-    queryContext,
     projectHash,
     analysisDomain,
     undefined,
@@ -150,7 +145,7 @@ export function ChartDistributionBar(props: {
     if (
       selectedProperty === undefined ||
       allProperties.findIndex((value) => value.value === selectedProperty) ===
-        -1
+      -1
     ) {
       const hasFeatureHash =
         allProperties.find((value) => value.value === "feature_hash") != null;
@@ -172,11 +167,10 @@ export function ChartDistributionBar(props: {
     return (
       <>
         <ReferenceLine
-          label={`Q1${
-            lineQ1 === lineMedian
-              ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
-              : ""
-          }`}
+          label={`Q1${lineQ1 === lineMedian
+            ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
+            : ""
+            }`}
           stroke="black"
           strokeDasharray="3 3"
           x={lineQ1}

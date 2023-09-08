@@ -14,20 +14,21 @@ import { SummaryView } from "./tabs/SummaryView";
 import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
-import { QueryContext } from "../hooks/Context";
+import { useQuerier } from "../hooks/Context";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 
 export function ProjectPage(props: {
-  queryContext: QueryContext;
   projectHash: string;
   encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
 }) {
-  const { queryContext, projectHash, setSelectedProjectHash, encordDomain } =
+  const { projectHash, setSelectedProjectHash, encordDomain } =
     props;
+
+  const querier = useQuerier()
+
   const [activeTab, setActiveTab] = useState<string>("1");
   const { data: projectSummary, isError } = useProjectSummary(
-    queryContext,
     projectHash
   );
 
@@ -35,7 +36,7 @@ export function ProjectPage(props: {
     projectSummary === undefined || projectSummary.local_project
       ? undefined
       : (dataHash: string, projectHash: string, frame: number): string =>
-          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
+        `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
@@ -111,7 +112,6 @@ export function ProjectPage(props: {
     <Tabs
       tabBarExtraContent={
         <ProjectSelector
-          queryContext={queryContext}
           selectedProjectHash={projectHash}
           setSelectedProjectHash={setSelectedProjectHash}
         />
@@ -123,7 +123,6 @@ export function ProjectPage(props: {
           children: (
             <SummaryView
               projectHash={projectHash}
-              queryContext={queryContext}
               projectSummary={projectSummary}
               featureHashMap={featureHashMap}
             />
@@ -139,7 +138,6 @@ export function ProjectPage(props: {
                 predictionHash={undefined}
                 dataMetricsSummary={projectSummary.data}
                 annotationMetricsSummary={projectSummary.annotation}
-                queryContext={queryContext}
                 editUrl={editUrl}
                 featureHashMap={featureHashMap}
                 setSelectedProjectHash={setSelectedProjectHash}
@@ -155,7 +153,6 @@ export function ProjectPage(props: {
             <ApiContext.Provider value={api}>
               <PredictionsTab
                 projectHash={projectHash}
-                queryContext={queryContext}
                 annotationMetricsSummary={projectSummary.annotation}
                 dataMetricsSummary={projectSummary.data}
                 featureHashMap={featureHashMap}
@@ -171,7 +168,6 @@ export function ProjectPage(props: {
           children: (
             <ProjectComparisonTab
               projectHash={projectHash}
-              queryContext={queryContext}
               dataMetricsSummary={projectSummary.data}
               annotationMetricsSummary={projectSummary.annotation}
             />
