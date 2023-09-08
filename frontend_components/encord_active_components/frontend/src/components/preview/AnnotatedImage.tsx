@@ -4,6 +4,7 @@ import * as React from "react";
 import { ProjectItem } from "../../openapi/api";
 import { QueryContext } from "../../hooks/Context";
 import { useImageSrc } from "../../hooks/useImageSrc";
+import { classy } from "../../helpers/classy";
 
 export function AnnotatedImage(props: {
   queryContext: QueryContext;
@@ -23,18 +24,25 @@ export function AnnotatedImage(props: {
     children,
     mode,
   } = props;
+
+  const image = useRef<HTMLImageElement>(null);
   const {
-    ref: image,
     width: imageWidth,
     height: imageHeight,
-  } = useResizeObserver<HTMLImageElement>();
+  } = useResizeObserver<HTMLImageElement>({ ref: image });
+
+  console.log({ id: item.data_hash, imageHeight, imageWidth });
+
+
   const video = useRef<HTMLVideoElement>(null);
   const { width: videoWidth, height: videoHeight } =
     useResizeObserver<HTMLVideoElement>({
       ref: video,
     });
+
   const contentWidth = item.timestamp != null ? videoWidth : imageWidth;
   const contentHeight = item.timestamp != null ? videoHeight : imageHeight;
+
   const imageSrc = useImageSrc(queryContext, item.url);
 
   //fit
@@ -62,12 +70,12 @@ export function AnnotatedImage(props: {
   }
 
   return (
-    <figure className={className} style={figureStyle}>
+    <figure className={classy(className, "relative h-full w-full overflow-clip flex justify-center items-center m-0")} style={figureStyle}>
       {children}
       {item.timestamp != null ? (
         <video
           ref={video}
-          className="rounded object-contain transition-opacity"
+          className="!rounded-none object-contain transition-opacity"
           style={contentStyle}
           src={imageSrc}
           muted
@@ -82,7 +90,7 @@ export function AnnotatedImage(props: {
       ) : (
         <img
           ref={image}
-          className="rounded object-contain transition-opacity"
+          className="!rounded-none object-contain transition-opacity"
           style={contentStyle}
           alt=""
           src={imageSrc}
@@ -90,7 +98,7 @@ export function AnnotatedImage(props: {
       )}
       {item.objects.length > 0 && contentWidth && contentHeight ? (
         <AnnotationRenderLayer
-          layout={mode === "preview" ? "relative" : "absolute"}
+          /* className={mode === "preview" ? "" : "rounded-t-lg"} */
           objects={item.objects as AnnotationObject[]}
           width={contentWidth}
           height={contentHeight}
@@ -140,23 +148,21 @@ type AnnotationObjectCommon = {
 type AnnotationObject = AnnotationObjectCommon &
   (AnnotationObjectPolygon | AnnotationObjectPoint | AnnotationObjectAABB);
 
-function AnnotationRenderLayer(props: {
+function AnnotationRenderLayer({
+  objects,
+  width,
+  height,
+  annotationHash,
+  className,
+  hideExtraAnnotations,
+  ...props
+}: {
   objects: AnnotationObject[];
-  layout: "relative" | "absolute";
   width: number;
   height: number;
   annotationHash: string | undefined;
   hideExtraAnnotations: boolean;
-}) {
-  const {
-    objects,
-    layout,
-    width,
-    height,
-    annotationHash,
-    hideExtraAnnotations,
-  } = props;
-
+} & JSX.IntrinsicElements["svg"]) {
   const fillOpacity = (select: boolean | undefined): string => {
     if (select === undefined) {
       return "20%";
@@ -256,7 +262,8 @@ function AnnotationRenderLayer(props: {
 
   return (
     <svg
-      className={`${layout} top-0 right-0 overflow-hidden`}
+      {...props}
+      className={classy(className, `w-full h-full absolute overflow-hidden`)}
       style={{ width, height }}
     >
       {objects.map(renderObject)}

@@ -3,7 +3,7 @@ import { FullscreenOutlined, EditOutlined } from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
-import { Button, Card, Checkbox, Row, Typography } from "antd";
+import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
 import { useMemo } from "react";
 import { QueryContext } from "../../hooks/Context";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
@@ -23,8 +23,8 @@ export function GalleryCard(props: {
   onClick: () => void;
   onShowSimilar: () => void;
   editUrl:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   hideExtraAnnotations: boolean;
 }) {
   const {
@@ -80,9 +80,6 @@ export function GalleryCard(props: {
       return undefined;
     }
   }, [previewProject, previewPrediction, projectItem]);
-  const isLoading = projectItem
-    ? isLoadingProject
-    : isLoadingProject && isLoadingPrediction;
 
   // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(queryContext, projectHash);
@@ -140,42 +137,52 @@ export function GalleryCard(props: {
     };
   }, [annotationHash, preview]);
 
+  const isLoading = projectItem
+    ? isLoadingProject
+    : isLoadingProject && isLoadingPrediction;
+
   return (
     <Card
       hoverable
       style={{ width: 240, margin: 10 }}
       onClick={onClick}
       loading={isLoading}
-      bodyStyle={{ padding: 0 }}
+      bodyStyle={{ padding: 4 }}
+      className="overflow-clip group"
       cover={
-        <div>
+        <div className="!flex justify-center items-center">
           {preview != null && (
             <AnnotatedImage
               queryContext={queryContext}
               item={preview}
-              className="group-hover:opacity-30"
+              className="h-56"
               annotationHash={annotationHash}
               hideExtraAnnotations={hideExtraAnnotations}
               mode="full"
             >
-              <div className="absolute z-10 h-full w-full bg-gray-100 bg-opacity-70 opacity-0 hover:opacity-100">
+              <div className="absolute z-10 h-full w-full bg-gray-100 bg-opacity-70 opacity-0 group-hover:opacity-100">
                 <Checkbox
                   className="absolute left-2 top-2"
                   checked={selected}
-                  onChange={() => {}}
                 />
-                <Typography.Text className="absolute top-2">
-                  {metricName}: {displayValue.toFixed(5)}
-                </Typography.Text>
-                <Button
-                  className="absolute top-2 right-2 bg-white"
-                  icon={<FullscreenOutlined />}
-                  shape="circle"
-                  onClick={onExpand}
-                />
+                <div className="flex flex-col gap-1 absolute top-2 right-2">
+                  <Button
+                    className="bg-white"
+                    icon={<FullscreenOutlined />}
+                    onClick={onExpand}
+                  />
+                  <Button
+                    disabled={similaritySearchDisabled}
+                    className="bg-white"
+                    onClick={onShowSimilar}
+                    type="text"
+                    key="similarity-search"
+                    icon={<MdImageSearch />}
+                  />,
+
+                </div>
                 {
                   /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
-                  {<TagList tags={data.tags} />}
                   {description && (
                     <div className="flex flex-col">
                       <div className="inline-flex items-center gap-1">
@@ -190,32 +197,14 @@ export function GalleryCard(props: {
               </div>
             </AnnotatedImage>
           )}
-        </div>
+        </ div>
       }
-      actions={[
-        <Button
-          disabled={similaritySearchDisabled}
-          onClick={onShowSimilar}
-          type="text"
-          key="similarity-search"
-          icon={<MdImageSearch />}
-        />,
-        <Button
-          disabled={editUrl == null || preview == null}
-          onClick={() =>
-            editUrl != null && preview != null
-              ? window.open(
-                  editUrl(preview.data_hash, projectHash, 0).toString(),
-                  "_blank"
-                )
-              : null
-          }
-          type="text"
-          key="edit"
-          icon={<EditOutlined />}
-        />,
-      ]}
     >
+      <Row>
+        <Tag bordered={false} color="gold" className="rounded-xl">
+          {metricName} - <span className="font-bold">{displayValue.toFixed(5)}</span>
+        </Tag>
+      </Row>
       {labelObject != null ? (
         <>
           <Row>

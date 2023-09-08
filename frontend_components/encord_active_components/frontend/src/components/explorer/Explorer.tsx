@@ -4,8 +4,8 @@ import { MdClose, MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
-import { useDebounce } from "usehooks-ts";
-import { Button, List, Popover, Select, Slider, Space } from "antd";
+import { useDebounce, useToggle } from "usehooks-ts";
+import { Button, List, Popover, Select, Slider, Space, Spin } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { ApiContext, getApi, Item, useApi } from "./api";
 import { Assistant } from "./Assistant";
@@ -47,8 +47,8 @@ export type Props = {
   annotationMetricsSummary: ProjectDomainSummary;
   queryContext: QueryContext;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -91,10 +91,9 @@ export function Explorer({
     domain: "data",
     metric_key: "metric_random",
   });
-  const [hideExtraAnnotations, setHideExtraAnnotations] = useState(false);
-  useEffect(() => {
-    setHideExtraAnnotations(selectedMetric.domain === "annotation");
-  }, [selectedMetric.domain]);
+
+  const [showAnnotations, toggleShowAnnotations, setShowAnnotations] = useToggle(true)
+  useEffect(() => { setShowAnnotations(selectedMetric.domain === "annotation") }, [selectedMetric.domain])
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -435,8 +434,8 @@ export function Explorer({
             onClick={() => setIsAscending(!isAscending)}
             icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
           />
-          <Button onClick={() => setHideExtraAnnotations((v) => !v)}>
-            {`${hideExtraAnnotations ? "Show" : "hide"} all annotations`}
+          <Button onClick={toggleShowAnnotations}>
+            {`${showAnnotations ? "Show" : "hide"} all annotations`}
           </Button>
           <Popover
             placement="bottomLeft"
@@ -548,12 +547,12 @@ export function Explorer({
             selectedMetric={selectedMetric}
             key={item}
             itemId={item}
-            onClick={() => {}}
+            onClick={() => toggleImageSelection(item)}
             onExpand={() => setPreviewedItem(item)}
             similaritySearchDisabled={!hasSimilaritySearch}
             onShowSimilar={() => showSimilarItems(item)}
             selected={selectedItems.has(item)}
-            hideExtraAnnotations={hideExtraAnnotations}
+            hideExtraAnnotations={showAnnotations}
             editUrl={editUrl}
           />
         )}
