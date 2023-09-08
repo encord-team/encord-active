@@ -15,7 +15,7 @@ export function useProjectListReductions(
     () =>
       queryContext
         .getProjectV2API()
-        .listSupported2dEmbeddingReductionsProjectsV2ProjectHashReductionsGet(
+        .routeProjectListReductionsProjectsV2ProjectHashReductionsGet(
           projectHash
         )
         .then((r) => r.data),

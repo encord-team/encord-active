@@ -1,8 +1,8 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
 import {
+  AnalysisBuckets,
   AnalysisDomain,
-  Get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGetBucketsEnum,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
@@ -12,7 +12,7 @@ export function useProjectAnalysisReducedEmbeddings(
   projectHash: string,
   domain: AnalysisDomain,
   reductionHash: string,
-  buckets: 10 | 100 | 1000 | undefined = undefined,
+  buckets: AnalysisBuckets | undefined = undefined,
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
@@ -29,15 +29,11 @@ export function useProjectAnalysisReducedEmbeddings(
     () =>
       queryContext
         .getProjectV2API()
-        .get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+        .routeProjectReductionScatterProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
           projectHash,
           domain,
           reductionHash,
-          buckets === undefined
-            ? undefined
-            : (String(
-                buckets
-              ) as Get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGetBucketsEnum),
+          buckets,
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),

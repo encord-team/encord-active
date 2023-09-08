@@ -127,7 +127,7 @@ class PredictionSummaryResult(BaseModel):
 
 
 @router.get("/summary")
-def get_project_prediction_summary(
+def route_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
@@ -509,7 +509,7 @@ class QueryMetricPerformance(BaseModel):
 
 
 @router.get("/metric_performance")
-def prediction_metric_performance(
+def route_prediction_metric_performance(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     iou: float,
@@ -537,7 +537,7 @@ def prediction_metric_performance(
     )
     with Session(engine) as sess:
         metric_attr = metric_query.get_metric_or_enum(
-            engine=engine,
+            dialect=engine.dialect,
             table=ProjectPredictionAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
@@ -580,7 +580,7 @@ def prediction_metric_performance(
             tp_count[(feature, bucket_m)] = bucket_tp_fp
 
         metric_attr = metric_query.get_metric_or_enum(
-            engine=engine,
+            dialect=engine.dialect,
             table=ProjectAnnotationAnalytics,
             attr_name=metric_name,
             metrics=AnnotationMetrics,
@@ -636,7 +636,7 @@ def _sanitise_nan(value: Optional[float]) -> Optional[float]:
 
 
 @router.get("/preview/{data_item}")
-def get_prediction_item(
+def route_prediction_data_item(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     item_details: DataItem = Depends(parse_data_item),

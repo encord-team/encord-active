@@ -29,7 +29,7 @@ export function useProjectAnalysisSearch(
     () =>
       queryContext
         .getProjectV2API()
-        .metricSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
+        .routeProjectSearchProjectsV2ProjectHashAnalysisDomainSearchGet(
           projectHash,
           domain,
           orderBy,

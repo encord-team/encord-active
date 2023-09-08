@@ -11,7 +11,7 @@ export function useProjectMutationUploadToEncord(
     (uploadEncordAction: UploadProjectToEncordPostAction) =>
       queryContext
         .getProjectV2API()
-        .uploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
+        .routeActionUploadProjectToEncordProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,
           uploadEncordAction
         )

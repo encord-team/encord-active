@@ -2,7 +2,7 @@ import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
 import {
   AnalysisDomain,
-  Scatter2dDataMetricProjectsV2ProjectHashAnalysisDomainScatterGetBucketsEnum,
+  AnalysisBuckets,
   SearchFilters,
 } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
@@ -13,7 +13,7 @@ export function useProjectAnalysisMetricScatter(
   domain: AnalysisDomain,
   xMetric: string,
   yMetric: string,
-  buckets: 10 | 100 | 1000 | undefined = undefined,
+  buckets: AnalysisBuckets | undefined = undefined,
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
@@ -31,16 +31,12 @@ export function useProjectAnalysisMetricScatter(
     () =>
       queryContext
         .getProjectV2API()
-        .scatter2dDataMetricProjectsV2ProjectHashAnalysisDomainScatterGet(
+        .routeProjectScatterProjectsV2ProjectHashAnalysisDomainScatterGet(
           projectHash,
           domain,
           xMetric,
           yMetric,
-          buckets === undefined
-            ? undefined
-            : (String(
-                buckets
-              ) as Scatter2dDataMetricProjectsV2ProjectHashAnalysisDomainScatterGetBucketsEnum),
+          buckets,
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),

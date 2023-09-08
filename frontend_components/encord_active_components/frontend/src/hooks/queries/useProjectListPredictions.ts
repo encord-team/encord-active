@@ -15,7 +15,9 @@ export function useProjectListPredictions(
     () =>
       queryContext
         .getProjectV2API()
-        .listProjectPredictionsProjectsV2ProjectHashPredictionsGet(projectHash)
+        .routeProjectListPredictionsProjectsV2ProjectHashPredictionsGet(
+          projectHash
+        )
         .then((r) => r.data),
     {
       ...options,

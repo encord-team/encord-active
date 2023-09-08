@@ -33,7 +33,7 @@ export function usePredictionAnalysisSearch(
     () =>
       queryContext
         .getProjectV2API()
-        .predictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        .routePredictionSearchProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
           projectHash,
           predictionHash,
           domain,

@@ -97,3 +97,9 @@ TABLES_PREDICTION_TP_FP = Tables(
     annotation=_DOMAIN_PREDICTION_TP_FP,
     primary=_DOMAIN_PREDICTION_TP_FP,
 )
+
+TABLES_PREDICTION_TP_FP_DATA = Tables(
+    data=_DOMAIN_DATA,
+    annotation=_DOMAIN_PREDICTION_TP_FP,
+    primary=_DOMAIN_DATA,
+)

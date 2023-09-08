@@ -43,6 +43,7 @@ export function ExplorerEmbeddings(props: {
     projectHash,
     predictionHash ?? "",
     filters.predictionOutcome,
+    filters.iou,
     reductionHash ?? "",
     undefined,
     filters.filters,

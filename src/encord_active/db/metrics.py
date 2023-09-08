@@ -14,8 +14,6 @@ class MetricType(Enum):
     """ Positive integer >= 0 """
     UFLOAT = "ufloat"
     """ Positive float >= 0 """
-    RANK = "rank"
-    """ Float value where the value is the relative order"""
 
 
 @dataclass

@@ -14,7 +14,7 @@ export function useProjectList(
     () =>
       queryContext
         .getProjectV2API()
-        .getAllProjectsProjectsV2Get()
+        .routeListProjectsProjectsV2Get()
         .then((r) => r.data),
     {
       ...options,

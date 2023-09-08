@@ -11,7 +11,7 @@ export function useProjectMutationCreateSubset(
     (createSubsetAction: CreateProjectSubsetPostAction) =>
       queryContext
         .getProjectV2API()
-        .createActiveSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+        .routeActionCreateProjectSubsetProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createSubsetAction
         )

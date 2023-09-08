@@ -118,7 +118,6 @@ export function PredictionsTab(
                 <Explorer
                   projectHash={projectHash}
                   predictionHash={predictionHash}
-                  scope="prediction"
                   featureHashMap={featureHashMap}
                   dataMetricsSummary={dataMetricsSummary}
                   annotationMetricsSummary={annotationMetricsSummary}

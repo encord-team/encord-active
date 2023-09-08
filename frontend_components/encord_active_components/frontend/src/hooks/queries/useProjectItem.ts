@@ -13,7 +13,10 @@ export function useProjectItem(
     () =>
       queryContext
         .getProjectV2API()
-        .projectItemProjectsV2ProjectHashItemDataItemGet(projectHash, dataItem)
+        .routeProjectDataItemProjectsV2ProjectHashItemDataItemGet(
+          projectHash,
+          dataItem
+        )
         .then((r) => r.data),
     { ...options, staleTime: STALE_TIME_ITEM, cacheTime: CACHE_TIME_ITEM }
   );

@@ -78,7 +78,7 @@ class ProjectSearchResult(BaseModel):
 
 
 @router.get("")
-def get_all_projects(engine: Engine = Depends(dep_engine)) -> ProjectSearchResult:
+def route_list_projects(engine: Engine = Depends(dep_engine)) -> ProjectSearchResult:
     # Load existing projects
     projects: List[ProjectSearchEntry] = []
     project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
@@ -124,7 +124,7 @@ class ProjectMetadata(BaseModel):
 
 @router.get("/{project_hash}/metadata")
 @cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minute TTL Cache
-def get_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectMetadata:
+def route_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectMetadata:
     with Session(engine) as sess:
         ontology = sess.exec(select(Project.project_ontology).where(Project.project_hash == project_hash)).first()
         if ontology is None:
@@ -221,7 +221,7 @@ class ProjectSummary(BaseModel):
 
 
 @router.get("/{project_hash}/summary")
-def get_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectSummary:
+def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectSummary:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
@@ -308,7 +308,7 @@ class ProjectList2DEmbeddingReductionResult(BaseModel):
 
 
 @router.get("/{project_hash}/reductions")
-def list_supported_2d_embedding_reductions(
+def route_project_list_reductions(
     project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)
 ) -> ProjectList2DEmbeddingReductionResult:
     with Session(engine) as sess:
@@ -327,7 +327,7 @@ def list_supported_2d_embedding_reductions(
 
 
 @router.get("/{project_hash}/files/{du_hash}/{frame}")
-def display_raw_file(
+def route_project_raw_file(
     project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, engine: Engine = Depends(dep_engine)
 ) -> FileResponse:
     with Session(engine) as sess:
@@ -421,7 +421,7 @@ def _sanitise_nan(value: Optional[float]) -> Optional[float]:
 
 
 @router.get("/{project_hash}/item/{data_item}/")
-def project_item(
+def route_project_data_item(
     project_hash: uuid.UUID, item_details: DataItem = Depends(parse_data_item), engine: Engine = Depends(dep_engine)
 ) -> ProjectItem:
     du_hash = item_details.du_hash
@@ -508,7 +508,7 @@ class ListProjectPredictionResult(BaseModel):
 
 
 @router.get("/{project_hash}/predictions")
-def list_project_predictions(
+def route_project_list_predictions(
     project_hash: uuid.UUID,
     offset: Optional[int] = None,
     limit: Optional[int] = None,
@@ -529,7 +529,7 @@ def list_project_predictions(
 
 
 @router.post("/{project_hash}/create/tag")
-def create_data_tag(
+def route_project_action_tag_items(
     project_hash: uuid.UUID, tagged_items: List[str], tag_name: str, engine: Engine = Depends(dep_engine)
 ) -> None:
     tag_hash = uuid.uuid4()

@@ -40,8 +40,11 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
-from encord_active.db.queries.analytics import select_data_analytics, select_prediction_analytics_with_extra, \
-    select_annotation_analytics
+from encord_active.db.queries.analytics import (
+    select_data_analytics,
+    select_prediction_analytics_with_extra,
+    select_annotation_analytics,
+)
 from encord_active.db.scripts.delete_project import delete_project_from_db
 from encord_active.db.scripts.migrate_disk_to_db import migrate_disk_to_db
 from encord_active.lib.common.filtering import Filters, Range, apply_filters
@@ -104,7 +107,6 @@ from encord_active.lib.project.sandbox_projects.sandbox_projects import (
 from encord_active.server.dependencies import (
     verify_premium,
 )
-from encord_active.server.routers.project2 import get_all_projects
 from encord_active.server.settings import get_settings
 from encord_active.server.utils import (
     filtered_merged_metrics,
@@ -165,11 +167,7 @@ def tagged_items(project_hash: uuid.UUID):
     identifier_tags: dict[str, GroupedTags] = {}
     with Session(engine) as sess:
         data_tags = sess.exec(
-            select(
-                ProjectTaggedDataUnit.du_hash,
-                ProjectTaggedDataUnit.frame,
-                ProjectTag.name,
-            ).where(
+            select(ProjectTaggedDataUnit.du_hash, ProjectTaggedDataUnit.frame, ProjectTag.name,).where(
                 ProjectTaggedDataUnit.tag_hash == ProjectTag.tag_hash,
                 ProjectTaggedDataUnit.project_hash == project_hash,
                 ProjectTag.project_hash == project_hash,
@@ -280,7 +278,9 @@ def read_item(project_hash: uuid.UUID, id: str, iou: Optional[float] = None):
                 except NoResultFound:
                     item = sess.exec(select_annotation_analytics(*args)).one()
         except Exception:
-            raise HTTPException(status_code=404, detail=f'Item with id "{id}" was not found for project "{project.project_hash}"')
+            raise HTTPException(
+                status_code=404, detail=f'Item with id "{id}" was not found for project "{project.project_hash}"'
+            )
 
         return {"id": id, **build_item(sess, project, item, extra, iou).dict()}
 
@@ -410,9 +410,7 @@ def get_has_similarity_search(project: None, embedding_type: EmbeddingType):
 
 
 @router.get("/{project}/similarities/{id}")
-def get_similar_items(
-    project: None, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None
-):
+def get_similar_items(project: None, id: str, embedding_type: EmbeddingType, page_size: Optional[int] = None):
     finder = get_similarity_finder(embedding_type, project)
     if embedding_type == EmbeddingType.IMAGE:
         id = "_".join(id.split("_", maxsplit=3)[:3])
@@ -493,9 +491,7 @@ def get_available_prediction_types(project: None):
 
 
 @router.post("/{project}/2d_embeddings", response_class=ORJSONResponse)
-def get_2d_embeddings(
-    project: None, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters
-):
+def get_2d_embeddings(project: None, embedding_type: Annotated[EmbeddingType, Body()], filters: Filters):
     embeddings_df = get_2d_embedding_data(project, embedding_type)
 
     if embeddings_df is None:

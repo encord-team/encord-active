@@ -1,11 +1,12 @@
 import uuid
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Type
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Json, ValidationError, parse_obj_as
 from sqlalchemy.sql.operators import between_op, in_op
 from sqlmodel import select
 
+from encord_active.db.models import ProjectPredictionAnalyticsFalseNegatives
 from encord_active.server.routers.queries.domain_query import (
     AnalyticsTable,
     DomainTables,
@@ -56,11 +57,13 @@ SearchFiltersFastAPIDepends = Depends(parse_search_filters_fast_api, use_cache=F
 
 def search_filters(
     tables: Tables,
-    base: Union[AnalyticsTable, ReductionTable, TagTable],
+    base: Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]],
     search: Optional[SearchFilters],
     project_filters: ProjectFilters,
 ) -> list:
-    filters: dict[Union[AnalyticsTable, ReductionTable, TagTable], list] = {}
+    filters: dict[
+        Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]], list
+    ] = {}
     if search is not None:
         if search.annotation is not None:
             _append_filters(

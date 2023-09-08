@@ -1,5 +1,4 @@
 import functools
-import math
 import uuid
 from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple
@@ -8,7 +7,6 @@ import numpy as np
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
-from sqlalchemy import func, Numeric
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
@@ -68,7 +66,7 @@ def _unpack_id(ident: str) -> Tuple[uuid.UUID, int, Optional[str]]:
 
 
 @router.get("/summary")
-def metric_summary(
+def route_project_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
@@ -92,7 +90,7 @@ class AnalysisSearch(BaseModel):
 
 
 @router.get("/search")
-def metric_search(
+def route_project_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
@@ -138,7 +136,7 @@ def metric_search(
 
 
 @router.get("/scatter")
-def scatter_2d_data_metric(
+def route_project_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     x_metric: str,
@@ -161,7 +159,7 @@ def scatter_2d_data_metric(
 
 
 @router.get("/distribution")
-def get_metric_distribution(
+def route_project_distribution(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     group: str,
@@ -183,66 +181,24 @@ def get_metric_distribution(
         )
 
 
-class Query2DEmbedding(BaseModel):
-    count: int
-    reductions: List[metric_query.QueryScatterPoint]
-
-
 @router.get("/reductions/{reduction_hash}/summary")
-def get_2d_embedding_summary(
+def route_project_reduction_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     engine: Engine = Depends(dep_engine),
-) -> Query2DEmbedding:
+) -> metric_query.Query2DEmbedding:
     tables = _get_metric_domain_tables(domain)
-    domain_tables = tables.primary
-    # FIXME: reduction_hash search filters will not work as they are on the wrong reduction_hash.
-    #  Will work correctly IFF reduction hash filtering only happens on the same reduction hash
-    where = search_query.search_filters(
-        tables=tables,
-        base=domain_tables.reduction,
-        search=filters,
-        project_filters={
-            "project_hash": [project_hash],
-        },
-    )
     with Session(engine) as sess:
-        # FIXME: support variable bucketing.
-        round_digits = None if buckets is None else int(math.log10(buckets))
-        if engine.dialect == "sqlite":
-            x_attr = func.round(domain_tables.reduction.x, round_digits)
-            y_attr = func.round(domain_tables.reduction.y, round_digits)
-        else:
-            x_attr = domain_tables.reduction.x.cast(Numeric(6 + round_digits, round_digits))
-            y_attr = domain_tables.reduction.y.cast(Numeric(6 + round_digits, round_digits))
-        query = (
-            select(  # type: ignore
-                x_attr.label("xv"),
-                y_attr.label("yv"),
-                func.count(),
-            )
-            .where(
-                domain_tables.reduction.reduction_hash == reduction_hash,
-                *where,
-            )
-            .group_by(
-                "xv",
-                "yv",
-            )
+        return metric_query.query_reduction_scatter(
+            sess=sess,
+            tables=tables,
+            project_filters={"project_hash": [project_hash], "reduction_hash": [reduction_hash]},
+            buckets=buckets,
+            filters=filters,
         )
-        print(f"DEBUGGING REDUCTION: {query}")
-        results = sess.exec(query).fetchall()
-        print(f"DEBUG SMORE: {results}")
-    return Query2DEmbedding(
-        count=sum(n for x, y, n in results),
-        reductions=[
-            metric_query.QueryScatterPoint(x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n)
-            for x, y, n in results
-        ],
-    )
 
 
 @functools.lru_cache(maxsize=2)
@@ -265,7 +221,7 @@ def _get_similarity_query(
 
 
 @router.get("/similarity/{item}")
-def search_similarity(
+def route_project_similarity_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     embedding: Literal["embedding_clip"],
@@ -332,7 +288,7 @@ class MetricDissimilarityResult(BaseModel):
 
 
 @router.get("/project_compare/metric_dissimilarity")
-def compare_metric_dissimilarity(
+def route_project_compare_metric_dissimilarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     compare_project_hash: uuid.UUID,

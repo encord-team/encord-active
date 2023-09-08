@@ -1,9 +1,6 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
-import {
-  PredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGetBucketsEnum,
-  SearchFilters,
-} from "../../openapi/api";
+import { AnalysisBuckets, SearchFilters } from "../../openapi/api";
 import { CACHE_TIME_ANALYTICS, STALE_TIME_ANALYTICS } from "../queryConstants";
 
 export function useProjectPredictionMetricPerformance(
@@ -12,7 +9,7 @@ export function useProjectPredictionMetricPerformance(
   predictionHash: string,
   iou: number,
   metricName: string,
-  buckets: 10 | 100 | 1000 | undefined = undefined,
+  buckets: AnalysisBuckets | undefined = undefined,
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
@@ -30,16 +27,12 @@ export function useProjectPredictionMetricPerformance(
     () =>
       queryContext
         .getProjectV2API()
-        .predictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+        .routePredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
           projectHash,
           predictionHash,
           iou,
           metricName,
-          buckets === undefined
-            ? undefined
-            : (String(
-                buckets
-              ) as PredictionMetricPerformanceProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGetBucketsEnum),
+          buckets,
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),

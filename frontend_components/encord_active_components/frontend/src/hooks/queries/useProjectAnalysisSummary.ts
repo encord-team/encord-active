@@ -21,7 +21,7 @@ export function useProjectAnalysisSummary(
     () =>
       queryContext
         .getProjectV2API()
-        .metricSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
+        .routeProjectSummaryProjectsV2ProjectHashAnalysisDomainSummaryGet(
           projectHash,
           domain,
           filters !== undefined ? JSON.stringify(filters) : undefined

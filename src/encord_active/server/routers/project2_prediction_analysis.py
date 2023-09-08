@@ -1,10 +1,11 @@
+import math
 import uuid
 from enum import Enum
-from typing import Literal, List, Optional
+from typing import Literal, List, Optional, Tuple, Dict, Type, Union
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Integer, Float, desc as desc_fn, literal
+from sqlalchemy import Integer, desc as desc_fn, literal
 from sqlmodel import Session, select
 from sqlalchemy.engine import Engine
 
@@ -12,11 +13,12 @@ from encord_active.db.models import (
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectAnnotationAnalytics,
+    ProjectPredictionAnalyticsReduced,
 )
 from encord_active.server.dependencies import dep_engine
 from encord_active.server.routers.project2_analysis import AnalysisSearch
 from encord_active.server.routers.queries import search_query, metric_query
-from encord_active.server.routers.queries.domain_query import Tables, TABLES_ANNOTATION, TABLES_PREDICTION_TP_FP
+from encord_active.server.routers.queries.domain_query import TABLES_ANNOTATION, TABLES_PREDICTION_TP_FP
 from encord_active.server.routers.queries.metric_query import literal_bucket_depends
 from encord_active.server.routers.queries.search_query import SearchFiltersFastAPIDepends
 
@@ -29,11 +31,46 @@ class PredictionDomain(Enum):
     FALSE_NEGATIVE = "fn"
 
 
-def _load_tables(domain: PredictionDomain) -> Tables:
-    if domain == PredictionDomain.FALSE_NEGATIVE:
-        pass
+def _fn_extra_where(project_hash: uuid.UUID, prediction_hash: uuid.UUID) -> list:
+    return [
+        ProjectPredictionAnalyticsFalseNegatives.project_hash == project_hash,
+        ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
+        ProjectPredictionAnalyticsFalseNegatives.du_hash == ProjectAnnotationAnalytics.du_hash,
+        ProjectPredictionAnalyticsFalseNegatives.frame == ProjectAnnotationAnalytics.frame,
+        ProjectPredictionAnalyticsFalseNegatives.annotation_hash == ProjectAnnotationAnalytics.annotation_hash,
+    ]
 
-    raise ValueError(f"Unsupported domain: {domain}")
+
+def _tp_fp_extra_where(
+    domain: PredictionDomain,
+    iou: float,
+    table: Type[Union[ProjectPredictionAnalytics, ProjectPredictionAnalyticsReduced]],
+    prediction_hash: uuid.UUID,
+) -> list:
+    tp_cond = (ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)
+    tp_where = None
+    if domain == PredictionDomain.TRUE_POSITIVE:
+        tp_where = tp_cond
+    elif domain == PredictionDomain.FALSE_POSITIVE:
+        tp_where = ~tp_cond
+    if tp_where is None:
+        return []
+    elif table == ProjectPredictionAnalytics:
+        return [tp_where]
+    else:
+        return [
+            tp_where,
+            ProjectPredictionAnalytics.prediction_hash == prediction_hash,
+            ProjectPredictionAnalytics.du_hash == table.du_hash,
+            ProjectPredictionAnalytics.frame == table.frame,
+            ProjectPredictionAnalytics.annotation_hash == table.annotation_hash,
+        ]
+
+
+def _tp_int(iou: float) -> int:
+    return ((ProjectPredictionAnalytics.iou >= iou) & (ProjectPredictionAnalytics.match_duplicate_iou < iou)).cast(
+        Integer
+    )
 
 
 router = APIRouter(
@@ -45,7 +82,9 @@ class PredictionQueryScatterPoint(BaseModel):
     x: float
     y: float
     n: int
-    tp: float
+    tp: int
+    fp: int
+    fn: int
 
 
 class PredictionQuery2DEmbedding(BaseModel):
@@ -54,72 +93,195 @@ class PredictionQuery2DEmbedding(BaseModel):
 
 
 @router.get("/reductions/{reduction_hash}/summary")
-def get_2d_embedding_summary_prediction(
+def route_prediction_reduction_scatter(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     domain: PredictionDomain,
+    iou: float,
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     engine: Engine = Depends(dep_engine),
 ) -> PredictionQuery2DEmbedding:
+    # Where conditions for FN table
+    with Session(engine) as sess:
+        tp_fp_select = None
+        if domain != PredictionDomain.FALSE_NEGATIVE:
+            tp_fp_select = metric_query.select_for_query_reduction_scatter(
+                dialect=sess.bind.dialect,
+                tables=TABLES_PREDICTION_TP_FP,
+                project_filters={
+                    "prediction_hash": [prediction_hash],
+                    "reduction_hash": [reduction_hash],
+                },
+                buckets=buckets,
+                filters=filters,
+                extra_where=_tp_fp_extra_where(
+                    domain,
+                    iou,
+                    ProjectPredictionAnalyticsReduced,
+                    prediction_hash,
+                ),
+                extra_select=(
+                    metric_query.sql_sum(_tp_int(iou)).label("tp"),
+                    literal(0).label("fn"),
+                ),
+            )
+        fn_select = None
+        if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
+            fn_select = metric_query.select_for_query_reduction_scatter(
+                dialect=sess.bind.dialect,
+                tables=TABLES_ANNOTATION,
+                project_filters={
+                    "prediction_hash": [prediction_hash],
+                    "project_hash": [project_hash],
+                    "reduction_hash": [reduction_hash],
+                },
+                buckets=buckets,
+                filters=filters,
+                extra_where=_fn_extra_where(project_hash, prediction_hash),
+                extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),
+            )
+    if fn_select is not None and tp_fp_select is not None:
+        query_select = (
+            select(
+                "xv",
+                "yv",
+                metric_query.sql_sum("n"),
+                metric_query.sql_sum("tp"),
+                metric_query.sql_sum("fn"),
+            )
+            .from_statement(fn_select.union_all(tp_fp_select))
+            .group_by("xv", "yv")
+        )
+    elif fn_select is not None:
+        query_select = fn_select
+    elif tp_fp_select is not None:
+        query_select = tp_fp_select
+    else:
+        raise RuntimeError("Bug in prediction reduction")
+
+    with Session(engine) as sess:
+        print(f"Project reduction embedding: {query_select}")
+        results = sess.exec(query_select).fetchall()
+        print(f"Project reduction results: {results}")
+
     return PredictionQuery2DEmbedding(
-        count=0,
-        reductions=[],
+        count=sum(n for x, y, n, tp, fn in results),
+        reductions=[
+            PredictionQueryScatterPoint(
+                x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n, tp=tp, fp=(n - tp - fn), fn=fn
+            )
+            for x, y, n, tp, fn in results
+        ],
     )
 
 
 @router.get("/distribution")
-def prediction_metric_distribution(
+def route_prediction_distribution(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     domain: PredictionDomain,
+    iou: float,
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryDistribution:
+    # FIXME: extend this to also support data distribution filtered by 'self'
     with Session(engine) as sess:
-        return metric_query.query_attr_distribution(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            attr_name=group,
-            buckets=buckets,
-            filters=filters,
+        tp_fp_dist = None
+        if domain != PredictionDomain.FALSE_NEGATIVE:
+            tp_fp_dist = metric_query.query_attr_distribution(
+                sess=sess,
+                tables=TABLES_PREDICTION_TP_FP,
+                project_filters={"prediction_hash": [prediction_hash]},
+                attr_name=group,
+                buckets=buckets,
+                filters=filters,
+                extra_where=_tp_fp_extra_where(domain, iou, ProjectPredictionAnalytics, prediction_hash),
+            )
+        fn_dist = None
+        if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
+            fn_dist = metric_query.query_attr_distribution(
+                sess=sess,
+                tables=TABLES_ANNOTATION,
+                project_filters={"prediction_hash": [prediction_hash], "project_hash": [project_hash]},
+                attr_name=group,
+                buckets=buckets,
+                filters=filters,
+                extra_where=_fn_extra_where(project_hash, prediction_hash),
+            )
+    if tp_fp_dist is not None and fn_dist is not None:
+        group_by = {e.group: e.count for e in fn_dist.results}
+        for v in tp_fp_dist.results:
+            group_by[v.group] = group_by.setdefault(v.group, 0) + v.count
+        return metric_query.QueryDistribution(
+            results=[metric_query.QueryDistributionGroup(group=g, count=c) for g, c in group_by.items()]
         )
+    elif tp_fp_dist is not None:
+        return tp_fp_dist
+    elif fn_dist is not None:
+        return fn_dist
+    else:
+        raise RuntimeError("Bug in prediction distribution")
 
 
 @router.get("/scatter")
-def prediction_metric_scatter(
+def route_prediction_scatter(
+    project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     domain: PredictionDomain,
+    iou: float,
     x_metric: str,
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     engine: Engine = Depends(dep_engine),
 ) -> metric_query.QueryScatter:
+    # FIXME: extend this to also support data distribution filtered by 'self'
     with Session(engine) as sess:
-        return metric_query.query_attr_scatter(
-            sess=sess,
-            tables=TABLES_PREDICTION_TP_FP,
-            project_filters={
-                "prediction_hash": [prediction_hash],
-                # FIXME: needs project_hash
-            },
-            x_metric_name=x_metric,
-            y_metric_name=y_metric,
-            buckets=buckets,
-            filters=filters,
+        tp_fp_dist = None
+        if domain != PredictionDomain.FALSE_NEGATIVE:
+            tp_fp_dist = metric_query.query_attr_scatter(
+                sess=sess,
+                tables=TABLES_PREDICTION_TP_FP,
+                project_filters={"prediction_hash": [prediction_hash]},
+                x_metric_name=x_metric,
+                y_metric_name=y_metric,
+                buckets=buckets,
+                filters=filters,
+                extra_where=_tp_fp_extra_where(domain, iou, ProjectPredictionAnalytics, prediction_hash),
+            )
+        fn_dist = None
+        if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
+            fn_dist = metric_query.query_attr_scatter(
+                sess=sess,
+                tables=TABLES_ANNOTATION,
+                project_filters={"prediction_hash": [prediction_hash], "project_hash": [project_hash]},
+                x_metric_name=x_metric,
+                y_metric_name=y_metric,
+                buckets=buckets,
+                filters=filters,
+                extra_where=_fn_extra_where(project_hash, prediction_hash),
+            )
+    if tp_fp_dist is not None and fn_dist is not None:
+        group_by: Dict[Tuple[float, float], int] = {(e.x, e.y): e.n for e in fn_dist.samples}
+        for v in tp_fp_dist.samples:
+            group_by[v.x, v.y] = group_by.setdefault((v.x, v.y), 0) + v.n
+        return metric_query.QueryScatter(
+            results=[metric_query.QueryScatterPoint(x=x, y=y, n=n) for (x, y), n in group_by.items()]
         )
+    elif tp_fp_dist is not None:
+        return tp_fp_dist
+    elif fn_dist is not None:
+        return fn_dist
+    else:
+        raise RuntimeError("Bug in prediction distribution")
 
 
 @router.get("/search")
-def prediction_search(
+def route_prediction_search(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     domain: PredictionDomain,
@@ -131,6 +293,7 @@ def prediction_search(
     limit: int = Query(1000, le=1000),
     engine: Engine = Depends(dep_engine),
 ) -> AnalysisSearch:
+    # FIXME: clean up the implementation with more shared logic.
     # Where conditions for FN table
     fn_select = None
     if domain in {PredictionDomain.ALL, PredictionDomain.FALSE_NEGATIVE}:

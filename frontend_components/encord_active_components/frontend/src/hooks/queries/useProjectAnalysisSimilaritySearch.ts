@@ -21,7 +21,7 @@ export function useProjectAnalysisSimilaritySearch(
     () =>
       queryContext
         .getProjectV2API()
-        .searchSimilarityProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
+        .routeProjectSimilaritySearchProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
           projectHash,
           domain,
           item,

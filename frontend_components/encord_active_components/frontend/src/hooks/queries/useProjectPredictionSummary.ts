@@ -23,7 +23,7 @@ export function useProjectPredictionSummary(
     () =>
       queryContext
         .getProjectV2API()
-        .getProjectPredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+        .routePredictionSummaryProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
           predictionHash,
           projectHash,
           iou,

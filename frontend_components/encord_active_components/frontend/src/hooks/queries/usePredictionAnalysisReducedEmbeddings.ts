@@ -1,7 +1,7 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { QueryContext } from "../Context";
 import {
-  Get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGetBucketsEnum,
+  AnalysisBuckets,
   PredictionDomain,
   SearchFilters,
 } from "../../openapi/api";
@@ -12,8 +12,9 @@ export function usePredictionAnalysisReducedEmbeddings(
   projectHash: string,
   predictionHash: string,
   domain: PredictionDomain,
+  iou: number,
   reductionHash: string,
-  buckets: 10 | 100 | 1000 | undefined = undefined,
+  buckets: AnalysisBuckets | undefined = undefined,
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
@@ -25,22 +26,20 @@ export function usePredictionAnalysisReducedEmbeddings(
       predictionHash,
       domain,
       reductionHash,
+      iou,
       buckets,
       filters,
     ],
     () =>
       queryContext
         .getProjectV2API()
-        .get2dEmbeddingSummaryPredictionProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+        .routePredictionReductionScatterProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
           projectHash,
           predictionHash,
           domain,
           reductionHash,
-          buckets === undefined
-            ? undefined
-            : (String(
-                buckets
-              ) as Get2dEmbeddingSummaryProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGetBucketsEnum),
+          iou,
+          buckets,
           filters !== undefined ? JSON.stringify(filters) : undefined
         )
         .then((r) => r.data),

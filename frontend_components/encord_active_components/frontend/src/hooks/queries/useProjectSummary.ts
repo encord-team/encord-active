@@ -12,7 +12,7 @@ export function useProjectSummary(
     () =>
       queryContext
         .getProjectV2API()
-        .getProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash)
+        .routeProjectSummaryProjectsV2ProjectHashSummaryGet(projectHash)
         .then((r) => r.data),
     {
       ...options,
