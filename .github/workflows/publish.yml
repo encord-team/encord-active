@@ -21,6 +21,8 @@ jobs:
 
       - name: Build
         uses: ./.github/actions/build-frontend
+        with:
+          secrets: ${{ toJSON(secrets) }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
