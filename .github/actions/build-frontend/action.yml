@@ -1,14 +1,20 @@
 name: "Build frontend"
 description: "Sets up Python, Poetry and dependencies"
 
+inputs:
+  secrets:
+    description: "Pass secrets here"
+    required: true
+
 runs:
   using: "composite"
 
   steps:
-    - name: Set additional Environment variables
-      uses: ./.github/actions/write-env-vars
-      with:
-        secrets: ${{ toJSON(secrets) }}
+    - name: "Write env vars"
+      run: |
+        echo VITE_ROLLBAR_ACCESS_TOKEN=${{ fromJSON(inputs.secrets).ROLLBAR_ACCESS_TOKEN }} >> $GITHUB_ENV
+        echo VITE_CODE_VERSION=${{ github.ref_name }} >> $GITHUB_ENV
+      shell: bash
 
     - name: Use Node.js
       uses: actions/setup-node@v3
