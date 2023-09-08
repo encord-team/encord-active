@@ -30,6 +30,12 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
+from encord_active.db.queries.tags import (
+    select_annotation_label_tags,
+    select_frame_data_tags,
+    select_frame_grouped_label_tags,
+    select_frame_label_tags,
+)
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
@@ -40,6 +46,7 @@ from encord_active.server.routers import (
     project2_actions,
     project2_analysis,
     project2_prediction,
+    project2_tags,
 )
 from encord_active.server.routers.queries.metric_query import sql_count
 from encord_active.server.settings import get_settings
@@ -51,6 +58,7 @@ router = APIRouter(
 router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)
 router.include_router(project2_actions.router)
+router.include_router(project2_tags.router)
 
 
 class ProjectSearchEntry(BaseModel):
@@ -362,38 +370,9 @@ def _cache_encord_img_lookup(
     return encord_url_dict
 
 
-def get_data_unit_url(
-    project_hash: uuid.UUID,
-    project_ssh_path: Optional[str],
-    data_hash: uuid.UUID,
-    du_hash: uuid.UUID,
-    frame: int,
-    uri: Optional[str],
-    uri_is_video: bool,
-    frames_per_second: Optional[float],
-) -> Tuple[str, Optional[float]]:
-    if uri is not None:
-        settings = get_settings()
-        root_path = settings.SERVER_START_PATH.expanduser().resolve()
-        url_path = url_to_file_path(uri, root_path)
-        if url_path is not None:
-            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
-    elif project_ssh_path is not None:
-        uri = _cache_encord_img_lookup(
-            ssh_key_path=project_ssh_path,
-            project_hash=project_hash,
-            data_hash=data_hash,
-        )[du_hash]
-    else:
-        raise ValueError(f"Cannot resolve project url: {project_hash} / {du_hash}")
-
-    timestamp = None
-    if uri_is_video:
-        if frames_per_second is None:
-            raise ValueError("Video defined but missing valid frames_per_second")
-        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
-
-    return uri, timestamp
+class ProjectItemTags(BaseModel):
+    data: List[ProjectTag]
+    label: Dict[uuid.UUID, List[ProjectTag]]
 
 
 class ProjectItem(BaseModel):
@@ -411,6 +390,7 @@ class ProjectItem(BaseModel):
     data_type: str
     url: str
     timestamp: Optional[float]
+    tags: ProjectItemTags
 
 
 def _sanitise_nan(value: Optional[float]) -> Optional[float]:
@@ -459,19 +439,36 @@ def route_project_data_item(
                 ProjectAnnotationAnalytics.frame == frame,
             )
         ).fetchall()
+
+        data_tags = sess.exec(select_frame_data_tags(project_hash, du_hash, frame)).fetchall()
+        # label_tags = sess.exec(select_frame_grouped_label_tags(project_hash, du_hash, frame)).fetchall()
+
     if du_meta is None or du_analytics is None:
         raise ValueError
 
-    uri, timestamp = get_data_unit_url(
-        project_hash=project_hash,
-        project_ssh_path=project_ssh_key_path,
-        data_hash=du_meta.data_hash,
-        du_hash=du_hash,
-        frame=frame,
-        uri=du_meta.data_uri,
-        uri_is_video=du_meta.data_uri_is_video,
-        frames_per_second=data_meta.frames_per_second,
-    )
+    uri = du_meta.data_uri
+    uri_is_video = du_meta.data_uri_is_video
+    frames_per_second = data_meta.frames_per_second
+    if uri is not None:
+        settings = get_settings()
+        root_path = settings.SERVER_START_PATH.expanduser().resolve()
+        url_path = url_to_file_path(uri, root_path)
+        if url_path is not None:
+            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
+    elif project_ssh_key_path is not None:
+        uri = _cache_encord_img_lookup(
+            ssh_key_path=project_ssh_key_path,
+            project_hash=project_hash,
+            data_hash=du_meta.data_hash,
+        )[du_hash]
+    else:
+        raise ValueError(f"Cannot resolve project url: {project_hash} / {du_hash}")
+
+    timestamp = None
+    if uri_is_video:
+        if frames_per_second is None:
+            raise ValueError("Video defined but missing valid frames_per_second")
+        timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
 
     return ProjectItem(
         data_metrics={k: _sanitise_nan(getattr(du_analytics, k)) for k in DataMetrics},
@@ -493,6 +490,7 @@ def route_project_data_item(
         data_type=data_meta.data_type,
         url=uri,
         timestamp=timestamp,
+        tags=ProjectItemTags(data=data_tags, label={}),
     )
 
 

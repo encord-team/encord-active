@@ -16,12 +16,13 @@ import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useParams } from "react-router";
+import { useProjectHash } from "../hooks/useProjectHash";
 
 export function ProjectPage(props: {
   encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
 }) {
-  const projectHash = useParams().projectHash!
+  const projectHash = useProjectHash()
   const { setSelectedProjectHash, encordDomain } =
     props;
 

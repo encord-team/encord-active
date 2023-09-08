@@ -10,6 +10,9 @@ import { defaultTags, GroupedTags, useApi } from "./api";
 import { takeDataId } from "./id";
 import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
+import { useParams } from "react-router";
+import { useProjectHash } from "../../hooks/useProjectHash";
+import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -21,8 +24,8 @@ const taggingDisabledReasons = {
   "missing-target": "Select items to tag first",
 } as const;
 
-export const useAllTags = (itemSet?: Set<string>) => {
-  const { isLoading, data: taggedItems } = useProjectTaggedItems()
+export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
+  const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash)
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),
@@ -36,7 +39,7 @@ export const useAllTags = (itemSet?: Set<string>) => {
     [itemSet]
   );
 
-  if (isLoading) {
+  if (isLoading || !taggedItems) {
     return {
       ...defaultAllTags,
       selectedTags: {
@@ -109,8 +112,9 @@ export function BulkTaggingForm({
   items: string[];
   allowTaggingAnnotations: boolean;
 }) {
-  const { selectedTags, isLoading, taggedItems } = useAllTags(new Set(items));
-  const { mutate, isLoading: isMutating } = useApi().itemTagsMutation;
+  const projectHash = useProjectHash()
+  const { selectedTags, isLoading, taggedItems } = useAllTags(projectHash, new Set(items));
+  const { mutate, isLoading: isMutating } = useProjectMutationTagItems(projectHash)
 
   return (
     <TaggingForm
@@ -121,14 +125,14 @@ export function BulkTaggingForm({
       onSelect={(scope, selected) =>
         mutate(
           items.map((id) => {
-            const { label } = taggedItems.get(id) || defaultTags;
-            const { data } = taggedItems.get(takeDataId(id)) || defaultTags;
+            const { label } = taggedItems?.get(id) || defaultTags;
+            const { data } = taggedItems?.get(takeDataId(id)) || defaultTags;
 
             const groupedTags = { data, label };
 
             return {
               id,
-              groupedTags: {
+              grouped_tags: {
                 ...groupedTags,
                 [scope]: [...groupedTags[scope], selected],
               },
@@ -139,14 +143,14 @@ export function BulkTaggingForm({
       onDeselect={(scope, deselected) =>
         mutate(
           items.reduce((payload, id) => {
-            const itemPreviousTags = taggedItems.get(id);
+            const itemPreviousTags = taggedItems?.get(id);
             if (
               itemPreviousTags &&
               itemPreviousTags[scope].includes(deselected)
             ) {
               payload.push({
                 id,
-                groupedTags: {
+                grouped_tags: {
                   ...itemPreviousTags,
                   [scope]: itemPreviousTags[scope].filter(
                     (tag) => tag !== deselected
@@ -184,7 +188,8 @@ export function TaggingForm({
   allowClear?: SelectProps["allowClear"];
   allowTaggingAnnotations?: boolean;
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) {
-  const { allDataTags, allLabelTags } = useAllTags();
+  const projectHash = useProjectHash()
+  const { allDataTags, allLabelTags } = useAllTags(projectHash);
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 
   const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(

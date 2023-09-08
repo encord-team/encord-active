@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useQuerier } from "../Context";
+import { GroupedTags } from "../../openapi/api";
 
 export function useProjectTaggedItems(
   projectHash: string,
@@ -8,12 +9,14 @@ export function useProjectTaggedItems(
   const querier = useQuerier()
   return useQuery(
     ["useProjectItem", querier.baseUrl, projectHash],
-    async () =>
-      await querier
+    async () => {
+      const data = (await querier
         .getProjectV2API()
         .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
           projectHash,
-        )
+        )).data
+      return new Map(Object.entries(data).filter((([_, tags]) => tags != null)) as [string, GroupedTags][])
+    }
   );
 }
 

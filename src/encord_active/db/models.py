@@ -801,7 +801,7 @@ def get_engine(
 
     # Create the engine connection
     print(f"Connection to database: {engine_url}")
-    engine = create_engine(engine_url, connect_args=connect_args, pool_size=15, max_overflow=30)
+    engine = create_engine(engine_url, connect_args=connect_args)
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
         if use_alembic:
