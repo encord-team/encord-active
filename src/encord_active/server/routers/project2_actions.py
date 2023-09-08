@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Type, Union, TypeVar
 
 from encord.orm.project import (
     CopyDatasetAction,
@@ -9,18 +9,29 @@ from encord.orm.project import (
 )
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy import func, literal
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, insert, select
 
+from encord_active.analysis.config import create_analysis, default_torch_device
+from encord_active.analysis.executor import SimpleExecutor
 from encord_active.db.models import (
     Project,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsExtra,
+    ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectCollaborator,
 )
 from encord_active.lib.encord.utils import get_encord_project
 from encord_active.server.dependencies import dep_engine
+from encord_active.server.routers.queries import search_query
+from encord_active.server.routers.queries.domain_query import TABLES_DATA
 from encord_active.server.routers.queries.search_query import SearchFilters
+from encord_active.server.settings import get_settings
 
 router = APIRouter(
     prefix="/{project_hash}/actions",
@@ -35,31 +46,131 @@ class CreateProjectSubsetPostAction(BaseModel):
     filters: SearchFilters
 
 
+SubsetTableType = TypeVar(
+    "SubsetTableType",
+    Type[ProjectDataAnalytics],
+    Type[ProjectDataAnalyticsExtra],
+    Type[ProjectAnnotationAnalytics],
+    Type[ProjectAnnotationAnalyticsExtra],
+)
+
+
 @router.post("/create_project_subset")
 def route_action_create_project_subset(
     project_hash: uuid.UUID, item: CreateProjectSubsetPostAction, engine: Engine = Depends(dep_engine)
 ) -> None:
     with Session(engine) as sess:
-        project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
-        if project is None:
+        current_project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
+        if current_project is None:
             raise ValueError("Unknown project")
+        new_local_project_hash = uuid.uuid4()
+        new_project = Project(
+            project_hash=new_local_project_hash,
+            project_name=item.project_title,
+            project_description=item.project_description or "",
+            project_remote_ssh_key_path=current_project.project_remote_ssh_key_path,
+            project_ontology=current_project.project_ontology,
+            custom_metrics=current_project.custom_metrics,
+        )
 
-        data_hashes = select(ProjectDataUnitMetadata.data_hash).where(
-            ProjectDataUnitMetadata.project_hash == project_hash, in_op(ProjectDataUnitMetadata.du_hash, item.du_hashes)
+        current_collaborators = sess.exec(
+            select(ProjectCollaborator).where(ProjectCollaborator.project_hash == project_hash)
+        ).fetchall()
+
+        where = search_query.search_filters(
+            tables=TABLES_DATA,
+            base=TABLES_DATA.primary.analytics,
+            search=item.filters,
+            project_filters={"project_hash": [project_hash]},
         )
-        # Map to data_hashes and back again to duplicate expected behaviour.
-        hashes_query = select(
-            ProjectDataUnitMetadata.data_hash,
-            ProjectDataUnitMetadata.du_hash,
-            ProjectDataMetadata.label_hash,
-            ProjectDataMetadata.dataset_hash,
-        ).where(
-            ProjectDataUnitMetadata.project_hash == project_hash,
-            ProjectDataUnitMetadata.data_hash == ProjectDataMetadata.data_hash,
-            in_op(ProjectDataMetadata.data_hash, data_hashes),
+
+        # Return the complete list of data_hashes (granularity of subset creation that we support).
+        data_hashes_query = (
+            select(ProjectDataUnitMetadata.data_hash)
+            .where(
+                *where,
+                ProjectDataUnitMetadata.project_hash == project_hash,
+                ProjectDataUnitMetadata.du_hash == ProjectDataAnalytics.du_hash,
+                ProjectDataUnitMetadata.frame == ProjectDataAnalytics.frame,
+            )
+            .group_by(ProjectDataUnitMetadata.data_hash)
         )
-        hashes = sess.exec(hashes_query).fetchall()
-        du_hashes = [du_hash for data_hash, du_hash, label_hash, dataset_hash in hashes]
+
+        # Fetch all analytics state & run stage 2 & 3 re-calculation.
+        subset_data_hashes = sess.exec(data_hashes_query).fetchall()
+
+        def _fetch_all(table: Type[SubsetTableType]) -> List[SubsetTableType]:
+            return sess.exec(
+                select(table).where(
+                    table.project_hash == project_hash,
+                    ProjectDataUnitMetadata.project_hash == project_hash,
+                    table.du_hash == ProjectDataUnitMetadata.du_hash,
+                    table.frame == ProjectDataUnitMetadata.frame,
+                    in_op(ProjectDataUnitMetadata.data_hash, subset_data_hashes),
+                )
+            ).fetchall()
+
+        # Fetch all the subset state (used to avoid calculating stage 1 metrics)
+        subset_data_analytics = _fetch_all(ProjectDataAnalytics)
+        subset_data_analytics_extra = _fetch_all(ProjectDataAnalyticsExtra)
+        subset_annotation_analytics = _fetch_all(ProjectAnnotationAnalytics)
+        subset_annotation_analytics_extra = _fetch_all(ProjectAnnotationAnalyticsExtra)
+
+        # Use this info to generate NEW values to insert
+        metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
+        settings = get_settings()
+        new_analytics = metric_engine.execute_from_db_subset(
+            database_dir=settings.SERVER_START_PATH.expanduser().resolve(),
+            project_hash=new_local_project_hash,
+            precalculated_data=subset_data_analytics,
+            precalculated_data_extra=subset_data_analytics_extra,
+            precalculated_annotation=subset_annotation_analytics,
+            precalculated_annotation_extra=subset_annotation_analytics_extra,
+            precalculated_collaborators=current_collaborators,
+        )
+        new_data, new_data_extra, new_annotate, new_annotate_extra, new_collab = new_analytics
+
+        # Insert state into the database
+        new_local_dataset_hash = uuid.uuid4()
+        sess.execute(insert(Project).values(**{k: getattr(new_project, k) for k in Project.__fields__}))
+        insert_data_names = sorted(ProjectDataMetadata.__fields__.keys())
+        insert_data_overrides = {
+            "dataset_hash": literal(new_local_dataset_hash),
+            "project_hash": literal(new_local_project_hash),
+            "label_hash": func.gen_random_uuid() if engine.dialect.name == "postgresql" else None,
+        }
+        insert_data_unit_names = sorted(ProjectDataUnitMetadata.__fields__.keys())
+        insert_data_unit_overrides = {"project_hash": literal(new_local_project_hash)}
+        sess.execute(
+            insert(ProjectDataMetadata).from_select(
+                insert_data_names,
+                select(
+                    *[insert_data_overrides.get(k, getattr(ProjectDataMetadata, k)) for k in insert_data_names]
+                ).where(in_op(ProjectDataMetadata.data_hash, subset_data_hashes)),
+                include_defaults=False,
+            )
+        )
+        sess.execute(
+            insert(ProjectDataUnitMetadata).from_select(
+                insert_data_unit_names,
+                select(
+                    *[
+                        insert_data_unit_overrides.get(k, getattr(ProjectDataUnitMetadata, k))
+                        for k in insert_data_unit_names
+                    ]
+                ).where(in_op(ProjectDataUnitMetadata.data_hash, subset_data_hashes)),
+                include_defaults=False,
+            )
+        )
+        sess.bulk_save_objects(new_collab)
+        sess.add_all(new_data)
+        sess.add_all(new_annotate)
+        sess.add_all(new_data_extra)
+        sess.add_all(new_annotate_extra)
+        sess.commit()
+
+        # FIXME: quick-abort
+        return
 
         if project.project_remote_ssh_key_path is None:
             # Run for local project

@@ -4,7 +4,7 @@ import random
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast, Any
 
 import av
 import encord
@@ -100,6 +100,37 @@ class SimpleExecutor(Executor):
         )
         return self._pack_output(project_hash=project_hash, collaborators=collaborators)
 
+    def execute_from_db_subset(
+        self,
+        database_dir: Path,
+        project_hash: uuid.UUID,
+        precalculated_data: List[ProjectDataAnalytics],
+        precalculated_data_extra: List[ProjectDataAnalyticsExtra],
+        precalculated_annotation: List[ProjectAnnotationAnalytics],
+        precalculated_annotation_extra: List[ProjectAnnotationAnalyticsExtra],
+        precalculated_collaborators: List[ProjectCollaborator],
+    ) -> Tuple[
+        List[ProjectDataAnalytics],
+        List[ProjectDataAnalyticsExtra],
+        List[ProjectAnnotationAnalytics],
+        List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectCollaborator],
+    ]:
+        self._stage_1_load_from_existing_data(
+            precalculated_data=precalculated_data,
+            precalculated_data_extra=precalculated_data_extra,
+            precalculated_annotation=precalculated_annotation,
+            precalculated_annotation_extra=precalculated_annotation_extra,
+            precalculated_collaborators=precalculated_collaborators,
+        )
+        self.execute(
+            [],
+            database_dir=database_dir,
+            project_hash=project_hash,
+            project_ssh_path=None,
+        )
+        return self._pack_output(project_hash=project_hash, collaborators=[])
+
     def execute_prediction_from_db(
         self,
         data_meta: List[ProjectDataMetadata],
@@ -140,6 +171,7 @@ class SimpleExecutor(Executor):
         project_ssh_path: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]] = None,
         batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
+        skip_stage_1: bool = False,
     ) -> None:
         # Split into videos & images
         video_values = [v for v in values if v[0].data_type == "video"]
@@ -170,7 +202,7 @@ class SimpleExecutor(Executor):
         # Video best thing
         with torch.no_grad():
             # Stage 1
-            if batch is None:
+            if batch is None and not skip_stage_1:
                 self._stage_1_video_no_batching(
                     video_values,
                     database_dir=database_dir,
@@ -185,7 +217,7 @@ class SimpleExecutor(Executor):
                     project_ssh_path=project_ssh_path,
                     gt_lookup=gt_lookup,
                 )
-            else:
+            elif not skip_stage_1:
                 self._stage_1_video_batching(
                     video_values,
                     database_dir=database_dir,
@@ -503,6 +535,60 @@ class SimpleExecutor(Executor):
                                 classification_results[evaluation.ident] = metric_result.classifications
                         else:
                             raise ValueError(f"Object result but no annotations: {evaluation.ident}")
+
+    def _stage_1_load_from_existing_data(
+        self,
+        precalculated_data: List[ProjectDataAnalytics],
+        precalculated_data_extra: List[ProjectDataAnalyticsExtra],
+        precalculated_annotation: List[ProjectAnnotationAnalytics],
+        precalculated_annotation_extra: List[ProjectAnnotationAnalyticsExtra],
+        precalculated_collaborators: List[ProjectCollaborator],
+    ) -> None:
+        user_id_to_email: Dict[int, str] = {
+            collaborator.user_id: collaborator.user_email for collaborator in precalculated_collaborators
+        }
+        data_extra_lookup: Dict[Tuple[uuid.UUID, int], ProjectDataAnalyticsExtra] = {
+            (data_extra.du_hash, data_extra.frame): data_extra for data_extra in precalculated_data_extra
+        }
+        annotation_extra_lookup: Dict[Tuple[uuid.UUID, int, str], ProjectAnnotationAnalyticsExtra] = {
+            (annotation_extra.du_hash, annotation_extra.frame, annotation_extra.annotation_hash): annotation_extra
+            for annotation_extra in precalculated_annotation_extra
+        }
+
+        def _load_embedding(value: Any) -> Any:
+            if isinstance(value, bytes):
+                return torch.from_numpy(np.frombuffer(value, dtype=np.float64))
+            else:
+                return value
+
+        for data in precalculated_data:
+            data_extra = data_extra_lookup[data.du_hash, data.frame]
+            data_metrics: MetricDependencies = {"metric_metadata": data_extra.metric_metadata}
+            for analysis in self.config.analysis:
+                if analysis.ident in data.__fields__:
+                    data_metrics[analysis.ident] = getattr(data, analysis.ident)
+                elif analysis.ident in data_extra.__fields__:
+                    data_metrics[analysis.ident] = _load_embedding(getattr(data_extra, analysis.ident))
+            self.data_metrics[data.du_hash, data.frame] = data_metrics
+
+        for annotation in precalculated_annotation:
+            annotation_extra = annotation_extra_lookup[annotation.du_hash, annotation.frame, annotation.annotation_hash]
+            annotation_metrics: MetricDependencies = {
+                "feature_hash": annotation.feature_hash,
+                "annotation_type": annotation.annotation_type,
+                "annotation_email": user_id_to_email[annotation.annotation_user_id],
+                "annotation_manual": annotation.annotation_manual,
+                "metric_confidence": annotation.metric_confidence,
+                "metric_metadata": annotation_extra.metric_metadata,
+            }
+            for analysis in self.config.analysis:
+                if analysis.ident in annotation.__fields__:
+                    annotation_metrics[analysis.ident] = getattr(annotation, analysis.ident)
+                elif analysis.ident in annotation_extra.__fields__:
+                    annotation_metrics[analysis.ident] = _load_embedding(getattr(annotation_extra, analysis.ident))
+            self.annotation_metrics[
+                annotation.du_hash, annotation.frame, annotation.annotation_hash
+            ] = annotation_metrics
 
     def _open_image(
         self,
