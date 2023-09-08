@@ -26,10 +26,8 @@ export function AnnotatedImage(props: {
   } = props;
 
   const image = useRef<HTMLImageElement>(null);
-  const {
-    width: imageWidth,
-    height: imageHeight,
-  } = useResizeObserver<HTMLImageElement>({ ref: image });
+  const { width: imageWidth, height: imageHeight } =
+    useResizeObserver<HTMLImageElement>({ ref: image });
 
   const video = useRef<HTMLVideoElement>(null);
   const { width: videoWidth, height: videoHeight } =
@@ -67,7 +65,13 @@ export function AnnotatedImage(props: {
   }
 
   return (
-    <figure className={classy(className, "relative h-full w-full overflow-clip flex justify-center items-center m-0")} style={figureStyle}>
+    <figure
+      className={classy(
+        className,
+        "relative m-0 flex h-full w-full items-center justify-center overflow-clip"
+      )}
+      style={figureStyle}
+    >
       {children}
       {item.timestamp != null ? (
         <video
@@ -260,7 +264,7 @@ function AnnotationRenderLayer({
   return (
     <svg
       {...props}
-      className={classy(className, `w-full h-full absolute overflow-hidden`)}
+      className={classy(className, `absolute h-full w-full overflow-hidden`)}
       style={{ width, height }}
     >
       {objects.map(renderObject)}

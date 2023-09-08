@@ -10,6 +10,7 @@ import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
 import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
+import { classy } from "../../helpers/classy";
 
 export function GalleryCard(props: {
   projectHash: string;
@@ -23,8 +24,8 @@ export function GalleryCard(props: {
   onClick: () => void;
   onShowSimilar: () => void;
   editUrl:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   hideExtraAnnotations: boolean;
 }) {
   const {
@@ -148,9 +149,9 @@ export function GalleryCard(props: {
       onClick={onClick}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className="overflow-clip group"
+      className={classy("group overflow-clip", { selected: "" })}
       cover={
-        <div className="!flex justify-center items-center">
+        <div className="!flex items-center justify-center">
           {preview != null && (
             <AnnotatedImage
               queryContext={queryContext}
@@ -160,12 +161,19 @@ export function GalleryCard(props: {
               hideExtraAnnotations={hideExtraAnnotations}
               mode="full"
             >
-              <div className="absolute z-10 h-full w-full bg-gray-100 bg-opacity-70 opacity-0 group-hover:opacity-100">
+              <div
+                className={classy(
+                  "absolute z-10 h-full w-full bg-gray-100 bg-opacity-0 group-hover:bg-opacity-70",
+                  "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                )}
+              >
                 <Checkbox
-                  className="absolute left-2 top-2"
+                  className={classy("absolute left-2 top-2", {
+                    "!opacity-100": selected,
+                  })}
                   checked={selected}
                 />
-                <div className="flex flex-col gap-1 absolute top-2 right-2">
+                <div className="absolute top-2 right-2 flex flex-col gap-1">
                   <Button
                     className="bg-white"
                     icon={<FullscreenOutlined />}
@@ -178,8 +186,7 @@ export function GalleryCard(props: {
                     type="text"
                     key="similarity-search"
                     icon={<MdImageSearch />}
-                  />,
-
+                  />
                 </div>
                 {
                   /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
@@ -197,12 +204,13 @@ export function GalleryCard(props: {
               </div>
             </AnnotatedImage>
           )}
-        </ div>
+        </div>
       }
     >
       <Row>
         <Tag bordered={false} color="gold" className="rounded-xl">
-          {metricName} - <span className="font-bold">{displayValue.toFixed(5)}</span>
+          {metricName} -{" "}
+          <span className="font-bold">{displayValue.toFixed(5)}</span>
         </Tag>
       </Row>
       {labelObject != null ? (

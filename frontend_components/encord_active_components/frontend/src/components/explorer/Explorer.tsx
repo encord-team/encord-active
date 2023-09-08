@@ -47,8 +47,8 @@ export type Props = {
   annotationMetricsSummary: ProjectDomainSummary;
   queryContext: QueryContext;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -92,8 +92,11 @@ export function Explorer({
     metric_key: "metric_random",
   });
 
-  const [showAnnotations, toggleShowAnnotations, setShowAnnotations] = useToggle(true)
-  useEffect(() => { setShowAnnotations(selectedMetric.domain === "annotation") }, [selectedMetric.domain])
+  const [showAnnotations, toggleShowAnnotations, setShowAnnotations] =
+    useToggle(true);
+  useEffect(() => {
+    setShowAnnotations(selectedMetric.domain === "annotation");
+  }, [selectedMetric.domain]);
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
