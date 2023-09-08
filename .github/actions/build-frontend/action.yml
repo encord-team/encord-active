@@ -1,0 +1,21 @@
+name: "Build frontend"
+description: "Sets up Python, Poetry and dependencies"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set additional Environment variables
+      uses: ./.github/actions/write-env-vars
+      with:
+        secrets: ${{ toJSON(secrets) }}
+
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: "18.x"
+
+    - name: Build
+      run: npm install && npm run build
+      shell: bash
+      working-directory: ./src/encord_active/frontend

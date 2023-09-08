@@ -9,8 +9,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish:
-    name: Publish Encord.Active
+  frontend-build:
+    name: Build frontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -19,18 +19,32 @@ jobs:
           token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
           ref: main
 
-      - name: Set additional Environment variables
-        uses: ./.github/actions/write-env-vars
-        with:
-          secrets: ${{ toJSON(secrets) }}
+      - name: Build
+        uses: ./.github/actions/build-frontend
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
         with:
-          node-version: "18.x"
+          name: frontend-build-${{ github.sha }}
+          path: src/encord_active/frontend/dist
+          if-no-files-found: error
 
-      - run: "npm install && npm run build"
-        working-directory: ./src/encord_active/frontend
+  publish:
+    needs: [frontend-build]
+    name: Build and publish Encord Active
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
+          ref: main
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: src/encord_active/frontend/dist
 
       - name: Setup root poetry environment
         uses: ./.github/actions/setup-root-poetry-environment
@@ -63,6 +77,12 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: main
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: src/encord_active/frontend/dist
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
