@@ -46,12 +46,8 @@ class HSVColorMetric(OneImageMetric):
         if not isinstance(hsv_image, torch.Tensor):
             raise ValueError("missing hsv image")
 
-        # FIXME: (see dist code in batched - unused), (more efficient, float % is slow)
-        #  FIXME: should we consider the s & v channels, Black should not be considered very 'red'?
-        #         need to investigate more on the most useful reduction formula.
-
-        IGNORE_S_V_THRESHOLD = 0.04
-        HUE_SCALE = 10
+        IGNORE_S_V_THRESHOLD = 0.0625
+        HUE_SCALE = 6
 
         hue_values = hsv_image[0]
         hue_dists1 = (hue_values - self.hue_query) % (2 * torch.pi)
@@ -62,13 +58,8 @@ class HSVColorMetric(OneImageMetric):
         distances = torch.sqrt(
             torch.square(hue_dist * HUE_SCALE) + torch.square(1 - hsv_image[1]) + torch.square(1 - hsv_image[2])
         ) / (HUE_SCALE + 2)
-
         distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, distances, torch.ones_like(distances))
         return 1 - torch.mean(distances)
-
-        # distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, distances, torch.ones_like(distances))
-        # distances = torch.where(sv_dists > IGNORE_S_V_THRESHOLD, hue_dist, torch.ones_like(distances))
-        # return 1 - torch.mean(distances)
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
