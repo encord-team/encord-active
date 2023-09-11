@@ -8,11 +8,11 @@ export function useProjectTaggedItems(projectHash: string) {
   return useQuery(
     ["useProjectItem", querier.baseUrl, projectHash],
     async () => {
-      const {data} = await querier
-          .getProjectV2API()
-          .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
-            projectHash
-          );
+      const { data } = await querier
+        .getProjectV2API()
+        .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+          projectHash
+        );
 
       return new Map(
         Object.entries(data).filter(([_, tags]) => tags != null) as [

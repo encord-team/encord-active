@@ -17,14 +17,11 @@ export function GalleryCard(props: {
   itemId: string;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
-  similaritySearchDisabled: boolean;
   onExpand: () => void;
   onClick: () => void;
   onShowSimilar: () => void;
-  editUrl:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
   hideExtraAnnotations: boolean;
+  customTags?: React.ReactNode | undefined;
 }) {
   const {
     projectHash,
@@ -32,12 +29,11 @@ export function GalleryCard(props: {
     itemId,
     selected,
     selectedMetric,
-    similaritySearchDisabled,
     onExpand,
     onClick,
     onShowSimilar,
-    editUrl,
     hideExtraAnnotations,
+    customTags,
   } = props;
   // Conditionally extract annotation hash
   const dataId = itemId.split("_").slice(0, 2).join("_");
@@ -106,7 +102,7 @@ export function GalleryCard(props: {
     ? displayValueAnnotation
     : displayValueData;
 
-  const description = "FIXME_DESCRIPTION";
+  // FIXME: const description = "FIXME_DESCRIPTION";
   const labelObject = useMemo(() => {
     if (annotationHash === undefined || preview === undefined) {
       return undefined;
@@ -175,7 +171,6 @@ export function GalleryCard(props: {
                     onClick={onExpand}
                   />
                   <Button
-                    disabled={similaritySearchDisabled}
                     className="bg-white"
                     onClick={onShowSimilar}
                     type="text"
@@ -203,10 +198,12 @@ export function GalleryCard(props: {
       }
     >
       <Row>
-        <Tag bordered={false} color="gold" className="rounded-xl">
-          {metricName} -{" "}
-          <span className="font-bold">{displayValue.toFixed(5)}</span>
-        </Tag>
+        {customTags ?? (
+          <Tag bordered={false} color="gold" className="rounded-xl">
+            {metricName} -{" "}
+            <span className="font-bold">{displayValue.toFixed(5)}</span>
+          </Tag>
+        )}
       </Row>
       {labelObject != null ? (
         <>

@@ -5,7 +5,6 @@ import { FaMagic } from "react-icons/fa";
 
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Spin } from "antd";
-import { API, Filters, Scope, SearchType, searchTypeOptions } from "./api";
 import { classy } from "../../helpers/classy";
 import { loadingIndicator } from "../Spin";
 

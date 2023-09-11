@@ -96,7 +96,6 @@ export function AnnotatedImage(props: {
       )}
       {item.objects.length > 0 && contentWidth && contentHeight ? (
         <AnnotationRenderLayer
-          /* className={mode === "preview" ? "" : "rounded-t-lg"} */
           objects={item.objects as AnnotationObject[]}
           width={contentWidth}
           height={contentHeight}
@@ -129,6 +128,27 @@ type AnnotationObjectAABB = {
   };
 };
 
+type AnnotationObjectRotBB = {
+  readonly shape: "rotatable_bounding_box";
+  readonly rotatable_bounding_box: {
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+    readonly theta: number;
+  };
+};
+
+type AnnotationObjectSkeleton = {
+  readonly shape: "skeleton";
+  readonly skeleton: object;
+};
+
+type AnnotationObjectBitmask = {
+  readonly shape: "bitmask";
+  readonly bitmask: string;
+};
+
 type AnnotationObjectCommon = {
   readonly objectHash: string;
   readonly color: string;
@@ -144,23 +164,28 @@ type AnnotationObjectCommon = {
 };
 
 type AnnotationObject = AnnotationObjectCommon &
-  (AnnotationObjectPolygon | AnnotationObjectPoint | AnnotationObjectAABB);
+  (
+    | AnnotationObjectPolygon
+    | AnnotationObjectPoint
+    | AnnotationObjectAABB
+    | AnnotationObjectRotBB
+    | AnnotationObjectSkeleton
+    | AnnotationObjectBitmask
+  );
 
 function AnnotationRenderLayer({
   objects,
   width,
   height,
   annotationHash,
-  className,
   hideExtraAnnotations,
-  ...props
 }: {
   objects: AnnotationObject[];
   width: number;
   height: number;
   annotationHash: string | undefined;
   hideExtraAnnotations: boolean;
-} & JSX.IntrinsicElements["svg"]) {
+}) {
   const fillOpacity = (select: boolean | undefined): string => {
     if (select === undefined) {
       return "20%";
@@ -225,21 +250,44 @@ function AnnotationRenderLayer({
   };
 
   const renderBoundingBox = (
-    poly: AnnotationObjectCommon & AnnotationObjectAABB,
+    poly: AnnotationObjectCommon &
+      (AnnotationObjectAABB | AnnotationObjectRotBB),
     select: boolean | undefined
-  ) => (
-    <polygon
-      key={poly.objectHash}
-      style={{
-        fillOpacity: fillOpacity(select),
-        fill: poly.color,
-        strokeOpacity: strokeOpacity(select),
-        stroke: poly.color,
-        strokeWidth: strokeWidth(select),
-      }}
-      points="" // FIXME:
-    />
-  );
+  ) => {
+    const bb =
+      poly.shape === "bounding_box"
+        ? { ...poly.bounding_box, theta: 0 }
+        : poly.rotatable_bounding_box;
+    const x1 = bb.x * width;
+    const y1 = bb.y * height;
+    const x2 = (bb.x + bb.w) * width;
+    const y2 = (bb.y + bb.h) * height;
+    const c = Math.cos(bb.theta);
+    const s = Math.sin(bb.theta);
+    const rotate = (x: number, y: number): string => {
+      const xr = x * c - y * s;
+      const yr = x * s + y * c;
+
+      return `${xr},${yr}`;
+    };
+
+    return (
+      <polygon
+        key={poly.objectHash}
+        style={{
+          fillOpacity: fillOpacity(select),
+          fill: poly.color,
+          strokeOpacity: strokeOpacity(select),
+          stroke: poly.color,
+          strokeWidth: strokeWidth(select),
+        }}
+        points={`${rotate(x1, y1)} ${rotate(x1, y2)} ${rotate(x2, y2)} ${rotate(
+          x2,
+          y1
+        )}`}
+      />
+    );
+  };
 
   const renderObject = (object: AnnotationObject) => {
     if (hideExtraAnnotations && object.objectHash !== annotationHash) {
@@ -253,6 +301,11 @@ function AnnotationRenderLayer({
       return renderPoint(object, select);
     } else if (object.shape === "polygon") {
       return renderPolygon(object, select);
+    } else if (
+      object.shape === "bounding_box" ||
+      object.shape === "rotatable_bounding_box"
+    ) {
+      return renderBoundingBox(object, select);
     } else {
       throw Error(`Unknown shape: ${object.shape}`);
     }
@@ -260,8 +313,7 @@ function AnnotationRenderLayer({
 
   return (
     <svg
-      {...props}
-      className={classy(className, `absolute h-full w-full overflow-hidden`)}
+      className="absolute h-full w-full overflow-hidden"
       style={{ width, height }}
     >
       {objects.map(renderObject)}

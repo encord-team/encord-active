@@ -1,6 +1,8 @@
-import { Col, Modal, Row, Spin, Table } from "antd";
+import { Button, Col, Modal, Row, Spin, Table } from "antd";
 import * as React from "react";
 import { useMemo } from "react";
+import { MdImageSearch } from "react-icons/md";
+import { EditOutlined } from "@ant-design/icons";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
@@ -9,14 +11,15 @@ import { AnnotatedImage } from "./AnnotatedImage";
 export function ItemPreviewModal(props: {
   projectHash: string;
   previewItem: string | undefined;
-  similaritySearchDisabled: boolean;
   domain: "annotation" | "data";
   onClose: () => void;
   onShowSimilar: () => void;
-  iou?: number;
-  allowTaggingAnnotations: boolean;
+  editUrl:
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
 }) {
-  const { previewItem, domain, projectHash, onClose } = props;
+  const { previewItem, domain, projectHash, onClose, onShowSimilar, editUrl } =
+    props;
   const dataId =
     previewItem === undefined
       ? undefined
@@ -29,10 +32,11 @@ export function ItemPreviewModal(props: {
     enabled: dataId !== undefined,
   });
   const { data: projectSummary } = useProjectSummary(projectHash);
-  const projectSummaryForDomain =
-    projectSummary === undefined ? {} : projectSummary[domain].metrics;
 
   const metricsList = useMemo(() => {
+    const projectSummaryForDomain =
+      projectSummary === undefined ? {} : projectSummary[domain].metrics;
+
     const metricsDict =
       domain === "data" || preview === undefined
         ? preview?.data_metrics ?? {}
@@ -50,7 +54,7 @@ export function ItemPreviewModal(props: {
     };
 
     return metricsList.sort(sortByName);
-  }, [preview, projectSummaryForDomain]);
+  }, [preview, projectSummary, annotationHash, domain]);
 
   const columns = [
     {
@@ -71,6 +75,27 @@ export function ItemPreviewModal(props: {
       open={dataId !== undefined}
       onCancel={onClose}
       width="95vw"
+      footer={
+        <>
+          <Button onClick={onShowSimilar} icon={<MdImageSearch />}>
+            Similarity search
+          </Button>
+          <Button
+            disabled={editUrl === undefined}
+            icon={<EditOutlined />}
+            onClick={() =>
+              editUrl !== undefined && preview !== undefined
+                ? window.open(
+                    editUrl(preview.data_hash, projectHash, 0),
+                    "_blank"
+                  )
+                : undefined
+            }
+          >
+            Edit in Encord
+          </Button>
+        </>
+      }
     >
       {preview === undefined ? (
         <Spin indicator={loadingIndicator} />

@@ -11,8 +11,6 @@ import { ProjectSelector } from "./ProjectSelector";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/SummaryView";
-import { getApi, ApiContext } from "./explorer/api";
-import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
@@ -24,7 +22,7 @@ export function ProjectPage(props: {
   const projectHash = useProjectHash();
   const { setSelectedProjectHash, encordDomain } = props;
 
-  const [activeTab, setActiveTab] = useState<string>("1");
+  const [activeTab, setActiveTab] = useState<string>("summary");
   const { data: projectSummary, isError } = useProjectSummary(projectHash);
 
   const editUrl =
@@ -93,9 +91,6 @@ export function ProjectPage(props: {
     return featureHashMap;
   }, [projectSummary]);
 
-  const { token } = useAuth();
-  const api = getApi(projectHash, token);
-
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
     return <Spin indicator={loadingIndicator} />;
@@ -114,7 +109,7 @@ export function ProjectPage(props: {
       items={[
         {
           label: "Summary",
-          key: "1",
+          key: "summary",
           children: (
             <SummaryView
               projectHash={projectHash}
@@ -125,41 +120,37 @@ export function ProjectPage(props: {
         },
         {
           label: "Explorer",
-          key: "2",
+          key: "explorer",
           children: (
-            <ApiContext.Provider value={api}>
-              <Explorer
-                projectHash={projectHash}
-                predictionHash={undefined}
-                dataMetricsSummary={projectSummary.data}
-                annotationMetricsSummary={projectSummary.annotation}
-                editUrl={editUrl}
-                featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProjectHash}
-                remoteProject={remoteProject}
-              />
-            </ApiContext.Provider>
+            <Explorer
+              projectHash={projectHash}
+              predictionHash={undefined}
+              dataMetricsSummary={projectSummary.data}
+              annotationMetricsSummary={projectSummary.annotation}
+              editUrl={editUrl}
+              featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProjectHash}
+              remoteProject={remoteProject}
+            />
           ),
         },
         {
           label: "Predictions",
-          key: "3",
+          key: "predictions",
           children: (
-            <ApiContext.Provider value={api}>
-              <PredictionsTab
-                projectHash={projectHash}
-                annotationMetricsSummary={projectSummary.annotation}
-                dataMetricsSummary={projectSummary.data}
-                featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProjectHash}
-                remoteProject={remoteProject}
-              />
-            </ApiContext.Provider>
+            <PredictionsTab
+              projectHash={projectHash}
+              annotationMetricsSummary={projectSummary.annotation}
+              dataMetricsSummary={projectSummary.data}
+              featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProjectHash}
+              remoteProject={remoteProject}
+            />
           ),
         },
         {
           label: "Project Comparison",
-          key: "4",
+          key: "comparison",
           children: (
             <ProjectComparisonTab
               projectHash={projectHash}

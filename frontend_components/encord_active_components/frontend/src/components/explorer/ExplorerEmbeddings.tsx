@@ -1,12 +1,31 @@
 import * as React from "react";
-import { BiInfoCircle } from "react-icons/bi";
-import { Spin } from "antd";
-import { ScatteredEmbeddings } from "./ExplorerCharts";
+import { Alert, Spin } from "antd";
+import { useMemo, useState } from "react";
+import {
+  CartesianGrid,
+  ReferenceArea,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { scaleLinear } from "d3-scale";
 import { loadingIndicator } from "../Spin";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { usePredictionAnalysisReducedEmbeddings } from "../../hooks/queries/usePredictionAnalysisReducedEmbeddings";
-import { Embedding2DFilter } from "../../openapi/api";
+import {
+  Embedding2DFilter,
+  PredictionQuery2DEmbedding,
+  PredictionQueryScatterPoint,
+  Query2DEmbedding,
+  QueryScatterPoint,
+} from "../../openapi/api";
+import { formatTooltip } from "../util/Formatter";
+
+const getColorPrediction = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
 export function ExplorerEmbeddings(props: {
   projectHash: string;
@@ -46,33 +65,132 @@ export function ExplorerEmbeddings(props: {
   );
   const isLoading =
     predictionHash === undefined ? isLoadingProject : isLoadingPrediction;
-  const scatteredEmbeddings =
+  const scatteredEmbeddings:
+    | PredictionQuery2DEmbedding
+    | Query2DEmbedding
+    | undefined =
     predictionHash === undefined
       ? scatteredEmbeddingsProject
       : scatteredEmbeddingsPrediction;
 
-  return !isLoading && !scatteredEmbeddings?.reductions?.length ? (
-    <div className="alert h-fit shadow-lg">
-      <div>
-        <BiInfoCircle className="text-base" />
-        <span>2D embedding are not available for this project. </span>
-      </div>
-    </div>
-  ) : (
-    <div className="flex h-96  w-full items-center [&>*]:flex-1">
-      {isLoading ? (
-        <div className="absolute" style={{ left: "50%" }}>
-          <Spin indicator={loadingIndicator} tip="Loading Embedding Plot" />
-        </div>
-      ) : (
-        <ScatteredEmbeddings
-          reductionScatter={scatteredEmbeddings}
-          reductionHash={reductionHash}
-          predictionHash={predictionHash}
-          setEmbeddingSelection={setEmbeddingSelection}
-          onReset={() => setEmbeddingSelection(undefined)}
+  const reductionWithColor = useMemo(() => {
+    if (scatteredEmbeddings == null) {
+      return [];
+    }
+    return scatteredEmbeddings.reductions.map(
+      (entry: QueryScatterPoint | PredictionQueryScatterPoint) => {
+        const fill =
+          "tp" in entry
+            ? getColorPrediction(entry.tp / (entry.fp + entry.fn))
+            : "#4a4aee";
+
+        return {
+          ...entry,
+          fill,
+          value: entry.n,
+        };
+      }
+    );
+  }, [scatteredEmbeddings]);
+
+  const [selection, setSelection] = useState<
+    | {
+        x1: number;
+        y1: number;
+        x2: number;
+        y2: number;
+      }
+    | undefined
+  >();
+
+  if (reductionHash === undefined) {
+    return (
+      <Alert
+        message="2D embedding are not available for this project."
+        type="warning"
+        showIcon
+        className="mb-4"
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Spin
+        indicator={loadingIndicator}
+        tip="Loading Embedding Plot"
+        className="h-400 w-full"
+      />
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={400}>
+      <ScatterChart
+        className="active-chart"
+        onMouseDown={({ xValue, yValue }) =>
+          xValue !== undefined && yValue !== undefined
+            ? setSelection({
+                x1: xValue,
+                y1: yValue,
+                x2: xValue,
+                y2: yValue,
+              })
+            : undefined
+        }
+        onMouseMove={({ xValue, yValue }) =>
+          xValue !== undefined &&
+          yValue !== undefined &&
+          selection !== undefined
+            ? setSelection((val) =>
+                val === undefined
+                  ? undefined
+                  : { ...val, x2: xValue, y2: yValue }
+              )
+            : undefined
+        }
+        onMouseUp={() => {
+          setSelection(undefined);
+          if (selection !== undefined && reductionHash !== undefined) {
+            setEmbeddingSelection({
+              reduction_hash: reductionHash,
+              x1: Math.min(selection.x1, selection.x2),
+              x2: Math.max(selection.x1, selection.x2),
+              y1: Math.min(selection.y1, selection.y2),
+              y2: Math.max(selection.y1, selection.y2),
+            });
+          }
+        }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis
+          dataKey="x"
+          type="number"
+          name="x"
+          domain={["dataMin - 10", "dataMax + 10"]}
         />
-      )}
-    </div>
+        <YAxis
+          dataKey="y"
+          type="number"
+          name="y"
+          domain={["dataMin - 10", "dataMax + 10"]}
+        />
+        <Tooltip
+          cursor={{ strokeDasharray: "3 3" }}
+          formatter={formatTooltip}
+        />
+        {selection !== undefined ? (
+          <ReferenceArea
+            x1={selection.x1}
+            x2={selection.x2}
+            y1={selection.y1}
+            y2={selection.y2}
+          />
+        ) : undefined}
+        {reductionWithColor != null ? (
+          <Scatter data={reductionWithColor} isAnimationActive={false} />
+        ) : null}
+      </ScatterChart>
+    </ResponsiveContainer>
   );
 }

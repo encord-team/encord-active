@@ -1,19 +1,8 @@
 import * as React from "react";
-import {
-  Column,
-  ColumnConfig,
-  Scatter,
-  ScatterConfig,
-} from "@ant-design/plots";
+import { Column, ColumnConfig } from "@ant-design/plots";
 import { useCallback, useMemo } from "react";
-import { scaleLinear } from "d3-scale";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
 import { ExplorerFilterState } from "./ExplorerTypes";
-import {
-  Embedding2DFilter,
-  PredictionQuery2DEmbedding,
-  Query2DEmbedding,
-} from "../../openapi/api";
 
 export function MetricDistributionTiny(props: {
   projectHash: string;
@@ -90,103 +79,6 @@ export function MetricDistributionTiny(props: {
       /* tooltip={{
       customContent,
     }} */
-    />
-  );
-}
-
-const fixedFormatter = (value: string | number | null) =>
-  value != null ? parseFloat(value.toString()).toFixed(2) : "Missing";
-
-const getColor = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
-
-export function ScatteredEmbeddings(props: {
-  reductionScatter: Query2DEmbedding | PredictionQuery2DEmbedding | undefined;
-  predictionHash: string | undefined;
-  reductionHash: string | undefined;
-  setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
-  onReset: () => void;
-}) {
-  const {
-    reductionScatter,
-    reductionHash,
-    predictionHash,
-    setEmbeddingSelection,
-    onReset,
-  } = props;
-
-  const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
-    (_, { type, view }) => {
-      // console.log("t", type, view);
-      if (type.includes("brush")) {
-        console.log("ty", type, view);
-      }
-      if (
-        ["mouseup", "legend-item:click"].includes(type) &&
-        reductionHash !== undefined
-      ) {
-        console.log("go", view);
-        const bbox = view.coordinateBBox;
-        setEmbeddingSelection({
-          reduction_hash: reductionHash,
-          x1: bbox.x,
-          x2: bbox.x + bbox.width,
-          y1: bbox.y,
-          y2: bbox.y + bbox.height,
-        });
-      } else if (type === "brush-reset-button:click") {
-        onReset();
-      }
-    },
-    [setEmbeddingSelection, onReset]
-  );
-
-  const colorConfig = useMemo<{
-    colorField: string;
-    color?: Parameters<typeof Scatter>[0]["color"];
-  }>(() => {
-    if (predictionHash !== undefined) {
-      // prediction
-
-      return {
-        colorField: "score",
-        color: (datum) => getColor(datum.score ?? 0),
-      };
-    }
-
-    return { colorField: "label" };
-  }, []);
-
-  return (
-    <Scatter
-      {...colorConfig}
-      autoFit
-      data={reductionScatter?.reductions as unknown as Record<string, any>[]}
-      xField="x"
-      yField="y"
-      sizeField="n"
-      size={[5, 30]}
-      shape="circle"
-      legend={{
-        layout: "vertical",
-        position: "right",
-        rail: { size: 20, defaultLength: 200 },
-        label: {
-          formatter: fixedFormatter,
-        },
-      }}
-      pointStyle={{ fillOpacity: 1 }}
-      interactions={[{ type: "reset-button", enable: false }]}
-      brush={{
-        enabled: true,
-        mask: {
-          style: { fill: "rgba(255,0,0,0.15)" },
-        },
-      }}
-      meta={{
-        x: { formatter: fixedFormatter },
-        y: { formatter: fixedFormatter },
-      }}
-      onEvent={onEvent}
     />
   );
 }

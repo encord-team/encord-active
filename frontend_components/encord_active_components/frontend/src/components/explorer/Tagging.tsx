@@ -5,9 +5,7 @@ import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
-import { useParams } from "react-router";
 import { classy } from "../../helpers/classy";
-import { defaultTags, GroupedTags, useApi } from "./api";
 import { takeDataId } from "./id";
 import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
@@ -23,6 +21,13 @@ const taggingDisabledReasons = {
   prediction: "Tagging is not available for predictions",
   "missing-target": "Select items to tag first",
 } as const;
+
+const defaultTags = { data: [], label: [] };
+
+type GroupedTags = {
+  readonly data: readonly string[];
+  readonly label: readonly string[];
+};
 
 export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
   const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash);

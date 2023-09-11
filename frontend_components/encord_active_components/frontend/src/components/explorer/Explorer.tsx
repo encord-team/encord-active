@@ -1,16 +1,12 @@
 import * as React from "react";
-import { useMemo, useState, useContext, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
-import { MdClose, MdFilterAltOff } from "react-icons/md";
+import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
-import { useQuery } from "@tanstack/react-query";
 import { useDebounce, useToggle } from "usehooks-ts";
 import { Button, List, Popover, Select, Slider, Space } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
-import { ApiContext, getApi, Item, useApi } from "./api";
-import { Assistant } from "./Assistant";
-import { splitId } from "./id";
 import { BulkTaggingForm } from "./Tagging";
 import {
   FilterState,
@@ -19,7 +15,6 @@ import {
 } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { env, local } from "../../constants";
-import { useAuth } from "../../authContext";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { MetricDistributionTiny } from "./ExplorerCharts";
@@ -34,11 +29,10 @@ import {
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
-import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { ExplorerFilterState } from "./ExplorerTypes";
-import { AnnotatedImage } from "../preview/AnnotatedImage";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
+import { SimilarityModal } from "../preview/SimilarityModal";
 
 export type Props = {
   projectHash: string;
@@ -64,8 +58,8 @@ export function Explorer({
   remoteProject,
 }: Props) {
   // Item selected for extra analysis operations
-  const [previewedItem, setPreviewedItem] = useState<string | null>(null);
-  const [similarityItem, setSimilarityItem] = useState<string | null>(null);
+  const [previewedItem, setPreviewedItem] = useState<string | undefined>();
+  const [similarityItem, setSimilarityItem] = useState<string | undefined>();
 
   // Select reduction hash
   const { data: reductionHashes } = useProjectListReductions(projectHash);
@@ -156,48 +150,12 @@ export function Explorer({
       annotationFilters,
       predictionHash,
       predictionOutcome,
+      embeddingFilter,
       iou,
     ]
   );
 
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
-
-  const apiContext = useContext(ApiContext);
-  const { token } = useAuth();
-
-  let apiLegacy: ReturnType<typeof getApi>;
-  if (apiContext == null) {
-    apiLegacy = getApi(projectHash, token);
-  } else {
-    apiLegacy = apiContext;
-  }
-
-  const { data: hasPremiumFeatures } = useQuery(
-    ["hasPremiumFeatures"],
-    apiLegacy.fetchHasPremiumFeatures,
-    { staleTime: Infinity }
-  );
-
-  /// / START OF SIMILARITY SEARCH.
-  /*
-  const { data: hasSimilaritySearch } = useQuery(
-    sift([projectHash, "hasSimilaritySearch", selectedMetric?.embeddingType]),
-    () => api.fetchHasSimilaritySearch(selectedMetric?.embeddingType!),
-    { enabled: !!selectedMetric, staleTime: Infinity },
-  );
-  */
-  const hasSimilaritySearch = false;
-  const { data: similarItems, isLoading: isLoadingSimilarItemsRaw } =
-    useProjectAnalysisSimilaritySearch(
-      projectHash,
-      filters.analysisDomain,
-      similarityItem ?? "",
-      { enabled: hasSimilaritySearch && similarityItem !== undefined }
-    );
-  const isLoadingSimilarItems =
-    isLoadingSimilarItemsRaw &&
-    hasSimilaritySearch &&
-    similarityItem !== undefined;
 
   // Load metric ranges
   const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
@@ -244,32 +202,14 @@ export function Explorer({
       ? isLoadingSortedItemsProject
       : isLoadingSortedItemsPrediction;
 
-  /*
-  FIXME: implement
-  const {
-    search,
-    setSearch,
-    result: searchResults,
-    loading: searching,
-  } = useSearch(scope, filters, api.searchInProject);
-  */
-  const [premiumSearch, setPremiumSearch] = useState("");
-  const searchResults: undefined | { snippet: string | null; ids: string[] } =
-    1 === 1 ? undefined : { snippet: "", ids: [] };
-  const searching = false;
-
   const reset = (clearFilters: boolean = true) => {
-    setSimilarityItem(null);
+    setSimilarityItem(undefined);
     if (clearFilters) {
       resetAllFilters();
     }
   };
 
-  const itemsToRender: readonly string[] =
-    similarItems?.map((v) => v.item) ??
-    searchResults?.ids ??
-    sortedItems?.results ??
-    [];
+  const itemsToRender: readonly string[] = sortedItems?.results ?? [];
 
   const toggleImageSelection = (id: string) => {
     setSelectedItems((prev) => {
@@ -283,7 +223,8 @@ export function Explorer({
     });
   };
 
-  const closePreview = () => setPreviewedItem(null);
+  const closePreview = () => setPreviewedItem(undefined);
+  const closeSimilarityItem = () => setSimilarityItem(undefined);
   const showSimilarItems = (itemId: string) => {
     closePreview();
     setSimilarityItem(itemId);
@@ -299,15 +240,7 @@ export function Explorer({
       },
       {
         isLoading: isLoadingSortedItems,
-        description: "Loading available data",
-      },
-      {
-        isLoading: isLoadingSimilarItems,
-        description: "Finding similar images",
-      },
-      {
-        isLoading: searching,
-        description: "Searching",
+        description: "Loading search results",
       },
     ];
 
@@ -315,12 +248,7 @@ export function Explorer({
       (res, item) => (!res && item.isLoading ? item.description : res),
       ""
     );
-  }, [
-    isLoadingMetrics,
-    isLoadingSortedItems,
-    isLoadingSimilarItems,
-    searching,
-  ]);
+  }, [isLoadingMetrics, isLoadingSortedItems]);
 
   // Modal state
   const [open, setOpen] = useState<undefined | "subset" | "upload">();
@@ -329,7 +257,7 @@ export function Explorer({
   return (
     <div>
       <CreateSubsetModal
-        open={open == "subset"}
+        open={open === "subset"}
         close={close}
         projectHash={projectHash}
         filters={filters.filters}
@@ -347,25 +275,25 @@ export function Explorer({
         filters={filters}
         setEmbeddingSelection={setEmbeddingFilter}
       />
-      {previewedItem && (
-        <ItemPreviewModal
-          projectHash={projectHash}
-          previewItem={previewedItem}
-          domain={selectedMetric.domain}
-          similaritySearchDisabled={!hasSimilaritySearch}
-          iou={iou}
-          onClose={closePreview}
-          onShowSimilar={() => showSimilarItems(previewedItem)}
-          allowTaggingAnnotations={allowTaggingAnnotations}
-        />
-      )}
-      {similarityItem && (
-        <SimilarityItem
-          itemId={similarityItem}
-          onClose={() => setSimilarityItem(null)}
-        />
-      )}
-      {!similarityItem && predictionHash === undefined && (
+      <ItemPreviewModal
+        projectHash={projectHash}
+        previewItem={previewedItem}
+        domain={selectedMetric.domain}
+        onClose={closePreview}
+        onShowSimilar={() =>
+          previewedItem != null ? showSimilarItems(previewedItem) : undefined
+        }
+        editUrl={editUrl}
+      />
+      <SimilarityModal
+        projectHash={projectHash}
+        analysisDomain={filters.analysisDomain}
+        selectedMetric={selectedMetric}
+        predictionHash={predictionHash}
+        similarityItem={similarityItem}
+        onClose={closeSimilarityItem}
+      />
+      {predictionHash === undefined && (
         <MetricDistributionTiny projectHash={projectHash} filters={filters} />
       )}
       {predictionHash !== undefined && (
@@ -378,13 +306,13 @@ export function Explorer({
           setPredictionOutcome={setPredictionOutcome}
         />
       )}
-      <Assistant
+      {/* <Assistant
         defaultSearch={premiumSearch}
         isFetching={searching}
         setSearch={setPremiumSearch}
         snippet={searchResults?.snippet}
         disabled={!hasPremiumFeatures}
-      />
+      /> */}
       <Space wrap>
         <Space.Compact size="large">
           <Select
@@ -517,7 +445,7 @@ export function Explorer({
         dataSource={itemsToRender as string[]}
         grid={{}}
         loading={{
-          spinning: loadingDescription != "",
+          spinning: loadingDescription !== "",
           tip: loadingDescription,
           indicator: loadingIndicator,
         }}
@@ -536,11 +464,9 @@ export function Explorer({
             itemId={item}
             onClick={() => toggleImageSelection(item)}
             onExpand={() => setPreviewedItem(item)}
-            similaritySearchDisabled={!hasSimilaritySearch}
             onShowSimilar={() => showSimilarItems(item)}
             selected={selectedItems.has(item)}
             hideExtraAnnotations={showAnnotations}
-            editUrl={editUrl}
           />
         )}
       />
@@ -602,87 +528,5 @@ function PredictionFilters({
         />
       )}
     </Space.Compact>
-  );
-}
-
-function SimilarityItem({
-  itemId,
-  onClose,
-}: {
-  itemId: string;
-  onClose: () => void;
-}) {
-  const { data, isLoading } = useApi().fetchItem(itemId);
-
-  if (isLoading || !data) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-lg">Similar items</h1>
-      <div className="group relative max-w-xs">
-        <AnnotatedImage className="group-hover:opacity-20" item={data} />
-        <button
-          onClick={onClose}
-          className="btn btn-square absolute top-1 right-1 opacity-0 group-hover:opacity-100"
-        >
-          <MdClose className="text-base" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-const getObjects = (item: Item) => {
-  const { annotation_hash } = splitId(item.id);
-  const object = item.labels.objects.find(
-    (object) => object.objectHash === annotation_hash
-  );
-  const prediction = item.predictions.objects.find(
-    (object) => object.objectHash === annotation_hash
-  );
-
-  if (object) {
-    return [object];
-  }
-
-  return prediction
-    ? [...item.labels.objects, prediction]
-    : item.labels.objects;
-};
-
-type ItemLabelObject = Item["labels"]["objects"][0];
-
-const pointsRecordToPolygonPoints = (
-  points: NonNullable<ItemLabelObject["points"]>,
-  width: number,
-  height: number
-) =>
-  Object.values(points)
-    .map(({ x, y }) => `${x * width},${y * height}`)
-    .join(" ");
-
-function MetadataMetrics({
-  metrics,
-}: {
-  metrics: Item["metadata"]["metrics"];
-}) {
-  const entries = Object.entries(metrics);
-  entries.sort();
-
-  return (
-    <div className="flex flex-col">
-      {entries.map(([key, value]) => {
-        const number = parseFloat(value.toString());
-
-        return (
-          <div key={key}>
-            <span>{key}: </span>
-            <span>{isNaN(number) ? value : number.toFixed(4)}</span>
-          </div>
-        );
-      })}
-    </div>
   );
 }
