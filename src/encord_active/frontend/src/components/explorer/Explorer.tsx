@@ -1164,15 +1164,15 @@ const ImageWithPolygons = ({
                   <g key={index}>
                     <circle
                       key={index + "_inner"}
-                      cx={points[0].x}
-                      cy={points[0].y}
+                      cx={points[0].x * width}
+                      cy={points[0].y * height}
                       r="5px"
                       fill={color}
                     />
                     <circle
                       key={index + "_outer"}
-                      cx={points[0].x}
-                      cy={points[0].y}
+                      cx={points[0].x * width}
+                      cy={points[0].y * height}
                       r="7px"
                       fill="none"
                       stroke={color}
