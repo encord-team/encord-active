@@ -276,7 +276,7 @@ def route_prediction_summary(
 
     # Calculate correlation for metrics
     metric_names = [key for key, value in AnnotationMetrics.items()]
-    if engine.dialect == "sqlite":
+    if engine.dialect.name == "sqlite":
         # Horrible implementation for use by sqlite.
         # FIXME: sqlite does not have corr(), stdev() or sqrt() functions, so have to implement manually.
         metric_stats = sess.execute(

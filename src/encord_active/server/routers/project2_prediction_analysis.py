@@ -16,6 +16,7 @@ from encord_active.db.models import (
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectPredictionAnalyticsReduced,
+    ProjectAnnotationAnalyticsReduced,
 )
 from encord_active.server.dependencies import dep_engine
 from encord_active.server.routers.project2_analysis import AnalysisSearch
@@ -38,13 +39,17 @@ class PredictionDomain(Enum):
     FALSE_NEGATIVE = "fn"
 
 
-def _fn_extra_where(project_hash: uuid.UUID, prediction_hash: uuid.UUID) -> list:
+def _fn_extra_where(
+    project_hash: uuid.UUID,
+    table: Type[Union[ProjectAnnotationAnalytics, ProjectAnnotationAnalyticsReduced]],
+    prediction_hash: uuid.UUID,
+) -> list:
     return [
         ProjectPredictionAnalyticsFalseNegatives.project_hash == project_hash,
         ProjectPredictionAnalyticsFalseNegatives.prediction_hash == prediction_hash,
-        ProjectPredictionAnalyticsFalseNegatives.du_hash == ProjectAnnotationAnalytics.du_hash,
-        ProjectPredictionAnalyticsFalseNegatives.frame == ProjectAnnotationAnalytics.frame,
-        ProjectPredictionAnalyticsFalseNegatives.annotation_hash == ProjectAnnotationAnalytics.annotation_hash,
+        ProjectPredictionAnalyticsFalseNegatives.du_hash == table.du_hash,
+        ProjectPredictionAnalyticsFalseNegatives.frame == table.frame,
+        ProjectPredictionAnalyticsFalseNegatives.annotation_hash == table.annotation_hash,
     ]
 
 
@@ -63,8 +68,10 @@ def _tp_fp_extra_where(
     if tp_where is None:
         return []
     elif table == ProjectPredictionAnalytics:
+        print("A")
         return [tp_where]
     else:
+        print("B")
         return [
             tp_where,
             ProjectPredictionAnalytics.prediction_hash == prediction_hash,
@@ -146,7 +153,7 @@ def route_prediction_reduction_scatter(
                 },
                 buckets=buckets,
                 filters=filters,
-                extra_where=_fn_extra_where(project_hash, prediction_hash),
+                extra_where=_fn_extra_where(project_hash, TABLES_ANNOTATION.primary.reduction, prediction_hash),
                 extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
             )
     if fn_select is not None and tp_fp_select is not None:
@@ -217,7 +224,7 @@ def route_prediction_distribution(
                 attr_name=group,
                 buckets=buckets,
                 filters=filters,
-                extra_where=_fn_extra_where(project_hash, prediction_hash),
+                extra_where=_fn_extra_where(project_hash, TABLES_ANNOTATION.primary.analytics, prediction_hash),
             )
     if tp_fp_dist is not None and fn_dist is not None:
         group_by = {e.group: e.count for e in fn_dist.results}
@@ -270,7 +277,7 @@ def route_prediction_scatter(
                 y_metric_name=y_metric,
                 buckets=buckets,
                 filters=filters,
-                extra_where=_fn_extra_where(project_hash, prediction_hash),
+                extra_where=_fn_extra_where(project_hash, TABLES_ANNOTATION.primary.analytics, prediction_hash),
             )
     if tp_fp_dist is not None and fn_dist is not None:
         group_by: Dict[Tuple[float, float], int] = {(e.x, e.y): e.n for e in fn_dist.samples}
