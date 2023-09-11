@@ -1,5 +1,7 @@
 from typing import Optional
 
+import torch
+
 from encord_active.analysis.metric import TemporalOneObjectMetric
 from encord_active.analysis.types import (
     AnnotationMetadata,
@@ -26,6 +28,5 @@ class TemporalShapeChange(TemporalOneObjectMetric):
         next_annotation: Optional[AnnotationMetadata],
     ) -> MetricResult:
         if prev_annotation is None or next_annotation is None:
-            return 0.0  # no obvious outlier
-        # FIXME: Please actually implement this.
+            return torch.nn.CosineSimilarity(dim=0)(deps["weighted_hu_embedding"], deps["embedding_hu"])
         return None
