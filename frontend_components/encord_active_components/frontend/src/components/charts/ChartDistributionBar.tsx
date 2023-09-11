@@ -145,7 +145,7 @@ export function ChartDistributionBar(props: {
     if (
       selectedProperty === undefined ||
       allProperties.findIndex((value) => value.value === selectedProperty) ===
-      -1
+        -1
     ) {
       const hasFeatureHash =
         allProperties.find((value) => value.value === "feature_hash") != null;
@@ -167,10 +167,11 @@ export function ChartDistributionBar(props: {
     return (
       <>
         <ReferenceLine
-          label={`Q1${lineQ1 === lineMedian
-            ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
-            : ""
-            }`}
+          label={`Q1${
+            lineQ1 === lineMedian
+              ? `, Median${lineQ3 === lineMedian ? ", Q3" : ""}`
+              : ""
+          }`}
           stroke="black"
           strokeDasharray="3 3"
           x={lineQ1}

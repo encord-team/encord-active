@@ -6,7 +6,8 @@ export function useProjectMetadata(
   projectHash: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     ["useProjectMetadata", querier.baseUrl, projectHash],
     () =>

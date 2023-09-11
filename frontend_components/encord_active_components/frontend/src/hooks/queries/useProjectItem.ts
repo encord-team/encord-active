@@ -7,7 +7,7 @@ export function useProjectItem(
   dataItem: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
 
   return useQuery(
     ["useProjectItem", querier.baseUrl, projectHash, dataItem],

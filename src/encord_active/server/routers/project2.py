@@ -40,10 +40,10 @@ from encord_active.lib.project.sandbox_projects.sandbox_projects import (
 )
 from encord_active.server.dependencies import (
     DataItem,
+    dep_database_dir,
     dep_engine,
     dep_ssh_key,
     parse_data_item,
-    dep_database_dir,
 )
 from encord_active.server.routers import (
     project2_actions,

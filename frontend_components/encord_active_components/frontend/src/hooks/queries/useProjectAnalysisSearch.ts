@@ -13,7 +13,8 @@ export function useProjectAnalysisSearch(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "useProjectAnalysisSearch",

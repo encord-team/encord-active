@@ -8,7 +8,8 @@ export function usePredictionItem(
   dataItem: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "usePredictionItem",

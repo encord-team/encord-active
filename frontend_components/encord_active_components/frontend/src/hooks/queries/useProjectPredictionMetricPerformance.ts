@@ -12,7 +12,8 @@ export function useProjectPredictionMetricPerformance(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "useProjectPredictionSummary",

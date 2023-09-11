@@ -3,10 +3,7 @@ import React, { useMemo } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { App } from "./app";
 import { apiUrl, env } from "./constants";
 import { AuthContext, useCreateAuthContext } from "./authContext";
@@ -17,7 +14,10 @@ const queryClient = new QueryClient();
 
 function Root() {
   const authContext = useCreateAuthContext();
-  const querier = useMemo(() => new Querier(apiUrl, authContext.token), [authContext.token]);
+  const querier = useMemo(
+    () => new Querier(apiUrl, authContext.token),
+    [authContext.token]
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -27,7 +27,7 @@ function Root() {
           <App />
         </QuerierContext.Provider>
       </AuthContext.Provider>
-    </QueryClientProvider >
+    </QueryClientProvider>
   );
 }
 

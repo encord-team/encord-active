@@ -25,11 +25,9 @@ export function ItemPreviewModal(props: {
     domain === "annotation" && previewItem !== undefined
       ? previewItem.split("_")[2]
       : undefined;
-  const { data: preview } = useProjectItem(
-    projectHash,
-    dataId ?? "",
-    { enabled: dataId !== undefined }
-  );
+  const { data: preview } = useProjectItem(projectHash, dataId ?? "", {
+    enabled: dataId !== undefined,
+  });
   const { data: projectSummary } = useProjectSummary(projectHash);
   const projectSummaryForDomain =
     projectSummary === undefined ? {} : projectSummary[domain].metrics;

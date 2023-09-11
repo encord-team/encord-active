@@ -5,12 +5,12 @@ import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
+import { useParams } from "react-router";
 import { classy } from "../../helpers/classy";
 import { defaultTags, GroupedTags, useApi } from "./api";
 import { takeDataId } from "./id";
 import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
-import { useParams } from "react-router";
 import { useProjectHash } from "../../hooks/useProjectHash";
 import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
 
@@ -25,7 +25,7 @@ const taggingDisabledReasons = {
 } as const;
 
 export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
-  const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash)
+  const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash);
   const defaultAllTags = {
     allDataTags: new Set<string>(),
     allLabelTags: new Set<string>(),
@@ -112,9 +112,13 @@ export function BulkTaggingForm({
   items: string[];
   allowTaggingAnnotations: boolean;
 }) {
-  const projectHash = useProjectHash()
-  const { selectedTags, isLoading, taggedItems } = useAllTags(projectHash, new Set(items));
-  const { mutate, isLoading: isMutating } = useProjectMutationTagItems(projectHash)
+  const projectHash = useProjectHash();
+  const { selectedTags, isLoading, taggedItems } = useAllTags(
+    projectHash,
+    new Set(items)
+  );
+  const { mutate, isLoading: isMutating } =
+    useProjectMutationTagItems(projectHash);
 
   return (
     <TaggingForm
@@ -188,7 +192,7 @@ export function TaggingForm({
   allowClear?: SelectProps["allowClear"];
   allowTaggingAnnotations?: boolean;
 } & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) {
-  const projectHash = useProjectHash()
+  const projectHash = useProjectHash();
   const { allDataTags, allLabelTags } = useAllTags(projectHash);
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
 

@@ -17,9 +17,7 @@ export function CreateSubsetModal(props: {
     dataset_description?: string | undefined;
   }>();
 
-  const mutateCreateSubset = useProjectMutationCreateSubset(
-    projectHash
-  );
+  const mutateCreateSubset = useProjectMutationCreateSubset(projectHash);
 
   return (
     <Modal

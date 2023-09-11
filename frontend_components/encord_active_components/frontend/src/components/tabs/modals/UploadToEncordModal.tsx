@@ -8,8 +8,7 @@ export function UploadToEncordModal(props: {
   projectHash: string;
   setSelectedProjectHash: (key: string | undefined) => void;
 }) {
-  const { open, close, projectHash, setSelectedProjectHash } =
-    props;
+  const { open, close, projectHash, setSelectedProjectHash } = props;
   const [form] = Form.useForm<{
     dataset_title: string;
     dataset_description?: string | undefined;
@@ -19,9 +18,7 @@ export function UploadToEncordModal(props: {
     ontology_description?: string | undefined;
   }>();
 
-  const mutateCreateSubset = useProjectMutationUploadToEncord(
-    projectHash
-  );
+  const mutateCreateSubset = useProjectMutationUploadToEncord(projectHash);
 
   return (
     <Modal

@@ -37,7 +37,7 @@ export function AnnotatedImage(props: {
 
   const imageSrc = useImageSrc(item.url);
 
-  //fit
+  // fit
   // width={240}
   // height={160}
   let contentStyle: React.CSSProperties = {};

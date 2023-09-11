@@ -77,17 +77,17 @@ export function MetricDistributionTiny(props: {
       brush={
         (distribution?.results?.length ?? 0) > 1
           ? {
-            enabled: true,
-            type: "x-rect",
-            action: "filter",
-            mask: {
-              style: { fill: "rgba(255,0,0,0.15)" },
-            },
-          }
+              enabled: true,
+              type: "x-rect",
+              action: "filter",
+              mask: {
+                style: { fill: "rgba(255,0,0,0.15)" },
+              },
+            }
           : {}
       }
       onEvent={onEvent}
-    /* tooltip={{
+      /* tooltip={{
       customContent,
     }} */
     />
@@ -116,7 +116,7 @@ export function ScatteredEmbeddings(props: {
 
   const onEvent = useCallback<NonNullable<ScatterConfig["onEvent"]>>(
     (_, { type, view }) => {
-      //console.log("t", type, view);
+      // console.log("t", type, view);
       if (type.includes("brush")) {
         console.log("ty", type, view);
       }

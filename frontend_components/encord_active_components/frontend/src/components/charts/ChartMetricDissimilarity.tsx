@@ -20,12 +20,8 @@ export function ChartMetricDissimilarity(props: {
   analysisDomain: AnalysisDomain;
   metricsSummary: ProjectDomainSummary;
 }) {
-  const {
-    projectHash,
-    compareProjectHash,
-    analysisDomain,
-    metricsSummary,
-  } = props;
+  const { projectHash, compareProjectHash, analysisDomain, metricsSummary } =
+    props;
 
   const { data } = useProjectCompareDissimilarity(
     projectHash,

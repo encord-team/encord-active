@@ -33,13 +33,14 @@ export class Querier {
 
 export const QuerierContext = createContext<Querier | null>(null);
 
-
 export function useQuerier(): Querier {
   const querier = useContext(QuerierContext);
 
   if (!querier) {
-    throw new Error("useQuerier has to be used within <QuerierContext.Provider>");
+    throw new Error(
+      "useQuerier has to be used within <QuerierContext.Provider>"
+    );
   }
 
-  return querier
+  return querier;
 }

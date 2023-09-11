@@ -11,8 +11,8 @@ import encord
 import numpy as np
 import torch
 import torchvision
-from PIL import Image
 from encord.http.constants import RequestsSettings
+from PIL import Image
 from pynndescent import NNDescent
 from torch import Tensor
 from torchvision.io import VideoReader

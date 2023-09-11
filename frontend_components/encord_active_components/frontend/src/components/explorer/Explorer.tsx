@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useMemo, useState, useContext, useEffect } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { MdClose, MdFilterAltOff } from "react-icons/md";
@@ -5,7 +6,7 @@ import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, List, Popover, Select, Slider, Space, Spin } from "antd";
+import { Button, List, Popover, Select, Slider, Space } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { ApiContext, getApi, Item, useApi } from "./api";
 import { Assistant } from "./Assistant";
@@ -45,8 +46,8 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -67,9 +68,7 @@ export function Explorer({
   const [similarityItem, setSimilarityItem] = useState<string | null>(null);
 
   // Select reduction hash
-  const { data: reductionHashes } = useProjectListReductions(
-    projectHash
-  );
+  const { data: reductionHashes } = useProjectListReductions(projectHash);
   const reductionHash: string | undefined = useMemo(
     () =>
       reductionHashes === undefined || reductionHashes.results.length === 0
@@ -88,11 +87,12 @@ export function Explorer({
     metric_key: "metric_random",
   });
 
+  // Set show animations view state.
   const [showAnnotations, toggleShowAnnotations, setShowAnnotations] =
     useToggle(true);
   useEffect(() => {
     setShowAnnotations(selectedMetric.domain === "annotation");
-  }, [selectedMetric.domain]);
+  }, [selectedMetric.domain, setShowAnnotations]);
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -366,10 +366,7 @@ export function Explorer({
         />
       )}
       {!similarityItem && predictionHash === undefined && (
-        <MetricDistributionTiny
-          projectHash={projectHash}
-          filters={filters}
-        />
+        <MetricDistributionTiny projectHash={projectHash} filters={filters} />
       )}
       {predictionHash !== undefined && (
         <PredictionFilters

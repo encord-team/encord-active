@@ -16,12 +16,7 @@ export function PredictionSummaryTab(props: {
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    metricsSummary,
-    predictionHash,
-    projectHash,
-    featureHashMap,
-  } = props;
+  const { metricsSummary, predictionHash, projectHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);
   const debounceIOU = useDebounce(iou, 1000);
 

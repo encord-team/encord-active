@@ -30,12 +30,7 @@ export function PredictionsMetricPerformanceTab(props: {
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    metricsSummary,
-    projectHash,
-    predictionHash,
-    featureHashMap,
-  } = props;
+  const { metricsSummary, projectHash, predictionHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);
   const [selectedMetric, setSelectedMetric] = useState<undefined | string>();
   const metricOptions = useMemo(

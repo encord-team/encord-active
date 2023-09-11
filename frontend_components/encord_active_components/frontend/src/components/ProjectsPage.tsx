@@ -129,12 +129,8 @@ function ProjectCard({
   showDownloadedBadge?: boolean;
   setSelectedProjectHash: (projectHash: string) => void;
 }) {
-  const { data: projectMetadata } = useProjectMetadata(
-    project.project_hash
-  );
-  const { data: projectSummary } = useProjectSummary(
-    project.project_hash
-  );
+  const { data: projectMetadata } = useProjectMetadata(project.project_hash);
+  const { data: projectSummary } = useProjectSummary(project.project_hash);
   const { data: projectDataItem } = useProjectItem(
     project.project_hash,
     projectSummary?.preview ?? "",

@@ -27,9 +27,7 @@ export function PredictionsTab(
     setSelectedProjectHash,
   } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
-  const { data: allPredictions } = useProjectListPredictions(
-    projectHash
-  );
+  const { data: allPredictions } = useProjectListPredictions(projectHash);
 
   const allPredictionOptions = useMemo(
     () =>

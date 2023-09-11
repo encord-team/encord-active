@@ -15,28 +15,23 @@ import { getApi, ApiContext } from "./explorer/api";
 import { useAuth } from "../authContext";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
-import { useParams } from "react-router";
 import { useProjectHash } from "../hooks/useProjectHash";
 
 export function ProjectPage(props: {
   encordDomain: string;
   setSelectedProjectHash: (projectHash?: string) => void;
 }) {
-  const projectHash = useProjectHash()
-  const { setSelectedProjectHash, encordDomain } =
-    props;
-
+  const projectHash = useProjectHash();
+  const { setSelectedProjectHash, encordDomain } = props;
 
   const [activeTab, setActiveTab] = useState<string>("1");
-  const { data: projectSummary, isError } = useProjectSummary(
-    projectHash
-  );
+  const { data: projectSummary, isError } = useProjectSummary(projectHash);
 
   const editUrl =
     projectSummary === undefined || projectSummary.local_project
       ? undefined
       : (dataHash: string, projectHash: string, frame: number): string =>
-        `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
+          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {

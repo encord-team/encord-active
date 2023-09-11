@@ -8,11 +8,12 @@ export function SimilarityModal(props: {
   onClose: () => void;
 }) {
   const { onClose, similarityItem } = props;
+
   return (
     <Modal
       width="95vw"
       open={similarityItem !== undefined}
       onCancel={onClose}
-    ></Modal>
+     />
   );
 }

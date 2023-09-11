@@ -11,11 +11,7 @@ export function ProjectComparisonTab(props: {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
 }) {
-  const {
-    projectHash,
-    dataMetricsSummary,
-    annotationMetricsSummary,
-  } = props;
+  const { projectHash, dataMetricsSummary, annotationMetricsSummary } = props;
   const allProjects = useProjectList();
   const [compareProjectHash, setCompareProjectHash] = useState<
     undefined | string

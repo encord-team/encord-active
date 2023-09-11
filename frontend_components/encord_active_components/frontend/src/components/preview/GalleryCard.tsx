@@ -1,9 +1,9 @@
 import * as React from "react";
-import { FullscreenOutlined, EditOutlined } from "@ant-design/icons";
+import { FullscreenOutlined } from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
-import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
+import { Button, Card, Checkbox, Row, Tag } from "antd";
 import { useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
@@ -22,8 +22,8 @@ export function GalleryCard(props: {
   onClick: () => void;
   onShowSimilar: () => void;
   editUrl:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   hideExtraAnnotations: boolean;
 }) {
   const {
@@ -145,7 +145,7 @@ export function GalleryCard(props: {
       onClick={onClick}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className={classy("group overflow-clip", { "border-blue-300": selected, })}
+      className={classy("group overflow-clip", { "border-blue-300": selected })}
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (

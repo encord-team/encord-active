@@ -15,7 +15,8 @@ export function useProjectAnalysisDistribution(
   filters: SearchFilters | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "useProjectAnalysisDistribution",

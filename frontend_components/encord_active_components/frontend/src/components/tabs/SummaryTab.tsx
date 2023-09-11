@@ -28,16 +28,8 @@ export function SummaryTab(props: {
     { readonly color: string; readonly name: string }
   >;
 }) {
-  const {
-    projectHash,
-    metricsSummary,
-    analysisDomain,
-    featureHashMap,
-  } = props;
-  const summary = useProjectAnalysisSummary(
-    projectHash,
-    analysisDomain
-  );
+  const { projectHash, metricsSummary, analysisDomain, featureHashMap } = props;
+  const summary = useProjectAnalysisSummary(projectHash, analysisDomain);
   const { data } = summary;
 
   // Derived: Total outliers
@@ -111,9 +103,9 @@ export function SummaryTab(props: {
           />
         </Card>
         {data == null ||
-          ("metric_width" in data.metrics &&
-            "metric_height" in data.metrics &&
-            (data.metrics.metric_height?.count ?? 0) > 0) ? (
+        ("metric_width" in data.metrics &&
+          "metric_height" in data.metrics &&
+          (data.metrics.metric_height?.count ?? 0) > 0) ? (
           <Card bordered={false} loading={data == null}>
             <Statistic
               title="Median Image Size"

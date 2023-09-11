@@ -5,10 +5,9 @@ import {
   STALE_TIME_LIST_TOP_LEVEL,
 } from "../queryConstants";
 
-export function useProjectList(
-  options: Pick<UseQueryOptions, "enabled"> = {}
-) {
-  const querier = useQuerier()
+export function useProjectList(options: Pick<UseQueryOptions, "enabled"> = {}) {
+  const querier = useQuerier();
+
   return useQuery(
     ["useProjectList", querier.baseUrl],
     () =>

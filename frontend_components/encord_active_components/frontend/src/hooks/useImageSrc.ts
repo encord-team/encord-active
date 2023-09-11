@@ -6,10 +6,8 @@ import { useQuerier } from "./Context";
 
 const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com"];
 
-export function useImageSrc(
-  url: string | undefined
-): string | undefined {
-  const querier = useQuerier()
+export function useImageSrc(url: string | undefined): string | undefined {
+  const querier = useQuerier();
   const itemUrl =
     url === undefined || url.startsWith("http") ? url : `${apiUrl}${url}`;
 
