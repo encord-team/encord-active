@@ -8,6 +8,7 @@ from jwt import decode
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 
+from ..cli.app_config import app_config
 from .settings import Env, get_settings
 
 
@@ -58,7 +59,10 @@ def dep_oauth2_scheme() -> OAuth2PasswordBearer:
 
 
 def dep_ssh_key() -> str:
-    raise RuntimeError("Missing ssh_key")
+    opt_ssh_key = app_config.get_ssh_key()
+    if opt_ssh_key is None:
+        raise RuntimeError("Cannot run operation as ssh key is missing")
+    return opt_ssh_key.read_text("utf-8")
 
 
 def dep_database_dir() -> Path:

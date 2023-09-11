@@ -35,13 +35,25 @@ def upgrade() -> None:
     op.create_table(
         "project",
         sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("project_name", AutoString(), nullable=False),
-        sa.Column("project_description", AutoString(), nullable=False),
-        sa.Column("project_remote_ssh_key_path", AutoString(), nullable=True),
-        sa.Column("project_ontology", sa.JSON(), nullable=False),
+        sa.Column("name", AutoString(), nullable=False),
+        sa.Column("description", AutoString(), nullable=False),
+        sa.Column("ontology", sa.JSON(), nullable=False),
+        sa.Column("remote", sa.Boolean(), nullable=False),
         sa.Column("custom_metrics", sa.JSON(), nullable=False),
         sa.PrimaryKeyConstraint("project_hash"),
     )
+    op.create_table(
+        "prediction",
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("external_project_hash", GUID(), nullable=True),
+        sa.Column("name", AutoString(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["project_hash"], ["project.project_hash"], name="fk_prediction", onupdate="CASCADE", ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("prediction_hash"),
+    )
+    op.create_index("uq_project_prediction", "prediction", ["project_hash", "prediction_hash"], unique=True)
     op.create_table(
         "project_collaborator",
         sa.Column("project_hash", GUID(), nullable=False),
@@ -50,7 +62,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["project_hash"],
             ["project.project_hash"],
-            name="project_hash_collaborator_fk",
+            name="fk_project_collaborator",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -71,13 +83,9 @@ def upgrade() -> None:
         sa.Column("last_edited_at", sa.TIMESTAMP(), nullable=False),
         sa.Column("object_answers", sa.JSON(), nullable=False),
         sa.Column("classification_answers", sa.JSON(), nullable=False),
-        sa.CheckConstraint("num_frames > 0", name="project_data_num_frames_ck"),
+        sa.CheckConstraint("num_frames > 0", name="project_data_num_frames"),
         sa.ForeignKeyConstraint(
-            ["project_hash"],
-            ["project.project_hash"],
-            name="project_data_project_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+            ["project_hash"], ["project.project_hash"], name="fk_project_data", onupdate="CASCADE", ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("project_hash", "data_hash"),
     )
@@ -93,7 +101,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["project_hash"],
             ["project.project_hash"],
-            name="project_hash_import_meta_fk",
+            name="fk_project_embedding_index",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -110,49 +118,24 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["project_hash"],
             ["project.project_hash"],
-            name="project_embedding_reduction_project_fk",
+            name="fk_project_embedding_reduction",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("reduction_hash"),
     )
     op.create_index(
-        "project_embedding_reduction_ph_idx",
-        "project_embedding_reduction",
-        ["reduction_hash", "project_hash"],
-        unique=True,
+        "ix_project_embedding_reduction", "project_embedding_reduction", ["project_hash", "reduction_hash"], unique=True
     )
     op.create_table(
         "project_import",
         sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("import_metadata_type", AutoString(), nullable=False),
         sa.Column("import_metadata", sa.JSON(), nullable=False),
+        sa.Column("import_metadata_type", sa.Enum("COCO", name="importmetadatatype"), nullable=False),
         sa.ForeignKeyConstraint(
-            ["project_hash"],
-            ["project.project_hash"],
-            name="project_hash_import_meta_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+            ["project_hash"], ["project.project_hash"], name="fk_project_import", onupdate="CASCADE", ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("project_hash"),
-    )
-    op.create_table(
-        "project_prediction",
-        sa.Column("prediction_hash", GUID(), nullable=False),
-        sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("external_project_hash", GUID(), nullable=True),
-        sa.Column("name", AutoString(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["project_hash"],
-            ["project.project_hash"],
-            name="project_prediction_project_hash_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("prediction_hash"),
-    )
-    op.create_index(
-        "project_prediction_project_uq", "project_prediction", ["prediction_hash", "project_hash"], unique=True
     )
     op.create_table(
         "project_tags",
@@ -161,40 +144,12 @@ def upgrade() -> None:
         sa.Column("name", AutoString(), nullable=False),
         sa.Column("description", AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["project_hash"],
-            ["project.project_hash"],
-            name="project_tags_project_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+            ["project_hash"], ["project.project_hash"], name="fk_project_tags", onupdate="CASCADE", ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("tag_hash"),
     )
     op.create_table(
-        "project_data_units",
-        sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("du_hash", GUID(), nullable=False),
-        sa.Column("frame", sa.Integer(), nullable=False),
-        sa.Column("data_hash", GUID(), nullable=False),
-        sa.Column("width", sa.Integer(), nullable=False),
-        sa.Column("height", sa.Integer(), nullable=False),
-        sa.Column("data_uri", AutoString(), nullable=True),
-        sa.Column("data_uri_is_video", sa.Boolean(), nullable=False),
-        sa.Column("data_title", AutoString(), nullable=False),
-        sa.Column("data_type", AutoString(), nullable=False),
-        sa.Column("objects", sa.JSON(), nullable=False),
-        sa.Column("classifications", sa.JSON(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="data_unit_frame_check"),
-        sa.ForeignKeyConstraint(
-            ["project_hash", "data_hash"],
-            ["project_data.project_hash", "project_data.data_hash"],
-            name="data_unit_data_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame"),
-    )
-    op.create_table(
-        "project_prediction_analytics",
+        "prediction_analytics",
         sa.Column("prediction_hash", GUID(), nullable=False),
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
@@ -221,44 +176,168 @@ def upgrade() -> None:
         sa.Column("metric_annotation_quality", sa.REAL(), nullable=True),
         sa.Column("metric_max_iou", sa.REAL(), nullable=True),
         sa.Column("metric_border_relative", sa.REAL(), nullable=True),
-        sa.Column("metric_label_poly_similarity", sa.REAL(), nullable=True),
+        sa.Column("metric_polygon_similarity", sa.REAL(), nullable=True),
         sa.Column("metric_missing_or_broken_track", sa.REAL(), nullable=True),
         sa.Column("metric_inconsistent_class", sa.REAL(), nullable=True),
-        sa.Column("metric_label_shape_outlier", sa.REAL(), nullable=True),
+        sa.Column("metric_shape_outlier", sa.REAL(), nullable=True),
         sa.Column("metric_confidence", sa.REAL(), nullable=True),
         sa.Column("metric_custom0", sa.REAL(), nullable=True),
         sa.Column("metric_custom1", sa.REAL(), nullable=True),
         sa.Column("metric_custom2", sa.REAL(), nullable=True),
         sa.Column("metric_custom3", sa.REAL(), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="project_prediction_frame_check"),
-        sa.CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="project_prediction_iou"),
+        sa.CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
+        sa.CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="prediction_analytics_iou"),
         sa.CheckConstraint(
             "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0",
-            name="project_prediction_match_duplicate_iou",
+            name="prediction_analytics_duplicate_iou",
         ),
+        sa.CheckConstraint(
+            "metric_annotation_quality BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_annotation_quality"
+        ),
+        sa.CheckConstraint("metric_area >= 0", name="prediction_analytics_mtc_area"),
+        sa.CheckConstraint("metric_area_relative BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_area_relative"),
+        sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="prediction_analytics_mtc_aspect_ratio"),
+        sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_blue"),
+        sa.CheckConstraint(
+            "metric_border_relative BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_border_relative"
+        ),
+        sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_brightness"),
+        sa.CheckConstraint("metric_confidence BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_confidence"),
+        sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_contrast"),
+        sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_green"),
+        sa.CheckConstraint("metric_height >= 0", name="prediction_analytics_mtc_height"),
+        sa.CheckConstraint(
+            "metric_inconsistent_class BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_inconsistent_class"
+        ),
+        sa.CheckConstraint("metric_max_iou BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_max_iou"),
+        sa.CheckConstraint(
+            "metric_missing_or_broken_track BETWEEN 0.0 AND 1.0",
+            name="prediction_analytics_mtc_missing_or_broken_track",
+        ),
+        sa.CheckConstraint(
+            "metric_polygon_similarity BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_polygon_similarity"
+        ),
+        sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_random"),
+        sa.CheckConstraint("metric_red BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_red"),
+        sa.CheckConstraint("metric_shape_outlier BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_shape_outlier"),
+        sa.CheckConstraint("metric_sharpness BETWEEN 0.0 AND 1.0", name="prediction_analytics_mtc_sharpness"),
+        sa.CheckConstraint("metric_width >= 0", name="prediction_analytics_mtc_width"),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="project_prediction_prediction_fk",
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_analytics",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash"),
     )
     op.create_index(
-        "project_prediction_confidence_index",
-        "project_prediction_analytics",
-        ["prediction_hash", "metric_confidence"],
-        unique=False,
-    )
-    op.create_index(
-        "project_prediction_feature_confidence_index",
-        "project_prediction_analytics",
+        "ix_prediction_analytics_ph_fh_mtc_confidence",
+        "prediction_analytics",
         ["prediction_hash", "feature_hash", "metric_confidence"],
         unique=False,
     )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_annotation_quality",
+        "prediction_analytics",
+        ["project_hash", "metric_annotation_quality"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_area", "prediction_analytics", ["project_hash", "metric_area"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_area_relative",
+        "prediction_analytics",
+        ["project_hash", "metric_area_relative"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_aspect_ratio",
+        "prediction_analytics",
+        ["project_hash", "metric_aspect_ratio"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_blue", "prediction_analytics", ["project_hash", "metric_blue"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_border_relative",
+        "prediction_analytics",
+        ["project_hash", "metric_border_relative"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_brightness",
+        "prediction_analytics",
+        ["project_hash", "metric_brightness"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_confidence",
+        "prediction_analytics",
+        ["project_hash", "metric_confidence"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_contrast",
+        "prediction_analytics",
+        ["project_hash", "metric_contrast"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_green", "prediction_analytics", ["project_hash", "metric_green"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_height", "prediction_analytics", ["project_hash", "metric_height"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_inconsistent_class",
+        "prediction_analytics",
+        ["project_hash", "metric_inconsistent_class"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_max_iou",
+        "prediction_analytics",
+        ["project_hash", "metric_max_iou"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_missing_or_broken_track",
+        "prediction_analytics",
+        ["project_hash", "metric_missing_or_broken_track"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_polygon_similarity",
+        "prediction_analytics",
+        ["project_hash", "metric_polygon_similarity"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_random", "prediction_analytics", ["project_hash", "metric_random"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_red", "prediction_analytics", ["project_hash", "metric_red"], unique=False
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_shape_outlier",
+        "prediction_analytics",
+        ["project_hash", "metric_shape_outlier"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_sharpness",
+        "prediction_analytics",
+        ["project_hash", "metric_sharpness"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_ph_mtc_width", "prediction_analytics", ["project_hash", "metric_width"], unique=False
+    )
     op.create_table(
-        "project_prediction_data",
+        "prediction_data",
         sa.Column("prediction_hash", GUID(), nullable=False),
         sa.Column("data_hash", GUID(), nullable=False),
         sa.Column("project_hash", GUID(), nullable=False),
@@ -269,19 +348,197 @@ def upgrade() -> None:
         sa.Column("classification_answers", sa.JSON(), nullable=False),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="project_prediction_data_fk",
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_data",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["project_hash", "data_hash"],
             ["project_data.project_hash", "project_data.data_hash"],
-            name="project_prediction_data_project_fk",
+            name="fk_prediction_data_project",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("prediction_hash", "data_hash"),
+    )
+    op.create_table(
+        "project_data_units",
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("data_hash", GUID(), nullable=False),
+        sa.Column("width", sa.Integer(), nullable=False),
+        sa.Column("height", sa.Integer(), nullable=False),
+        sa.Column("data_uri", AutoString(), nullable=True),
+        sa.Column("data_uri_is_video", sa.Boolean(), nullable=False),
+        sa.Column("data_title", AutoString(), nullable=False),
+        sa.Column("data_type", AutoString(), nullable=False),
+        sa.Column("objects", sa.JSON(), nullable=False),
+        sa.Column("classifications", sa.JSON(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="project_data_units_frame"),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "data_hash"],
+            ["project_data.project_hash", "project_data.data_hash"],
+            name="fk_project_data_units",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame"),
+    )
+    op.create_table(
+        "prediction_analytics_derived",
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("annotation_hash", Char8(), nullable=False),
+        sa.Column("distance_metric", sa.SMALLINT(), nullable=False),
+        sa.Column("distance_index", sa.SMALLINT(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("similarity", sa.REAL(), nullable=False),
+        sa.Column("dep_du_hash", GUID(), nullable=False),
+        sa.Column("dep_frame", sa.Integer(), nullable=False),
+        sa.Column("dep_annotation_hash", Char8(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="prediction_derived_frame"),
+        sa.CheckConstraint("similarity >= 0", name="prediction_derived_similarity"),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            [
+                "prediction_analytics.prediction_hash",
+                "prediction_analytics.du_hash",
+                "prediction_analytics.frame",
+                "prediction_analytics.annotation_hash",
+            ],
+            name="fk_prediction_analytics_derived",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "project_hash"],
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_analytics_derive_project",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint(
+            "prediction_hash", "du_hash", "frame", "annotation_hash", "distance_metric", "distance_index"
+        ),
+    )
+    op.create_table(
+        "prediction_analytics_extra",
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("annotation_hash", Char8(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("embedding_clip", PGVector(512), nullable=True),
+        sa.Column("embedding_hu", PGVector(7), nullable=True),
+        sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
+        sa.CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            [
+                "prediction_analytics.prediction_hash",
+                "prediction_analytics.du_hash",
+                "prediction_analytics.frame",
+                "prediction_analytics.annotation_hash",
+            ],
+            name="fk_prediction_analytics_extra",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "project_hash"],
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_analytics_extra_project",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash"),
+    )
+    op.create_table(
+        "prediction_analytics_reduced",
+        sa.Column("reduction_hash", GUID(), nullable=False),
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("annotation_hash", Char8(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("x", sa.REAL(), nullable=False),
+        sa.Column("y", sa.REAL(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="prediction_analytics_reduced_frame"),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            [
+                "prediction_analytics.prediction_hash",
+                "prediction_analytics.du_hash",
+                "prediction_analytics.frame",
+                "prediction_analytics.annotation_hash",
+            ],
+            name="fk_prediction_analytics_reduced_data",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "project_hash"],
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_analytics_reduced_project",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["reduction_hash", "project_hash"],
+            ["project_embedding_reduction.reduction_hash", "project_embedding_reduction.project_hash"],
+            name="fk_prediction_analytics_reduced",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("reduction_hash", "prediction_hash", "du_hash", "frame", "annotation_hash"),
+    )
+    op.create_index(
+        "ix_prediction_analytics_reduced_x",
+        "prediction_analytics_reduced",
+        ["reduction_hash", "prediction_hash", "x", "y"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_prediction_analytics_reduced_y",
+        "prediction_analytics_reduced",
+        ["reduction_hash", "prediction_hash", "y", "x"],
+        unique=False,
+    )
+    op.create_table(
+        "prediction_data_units",
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("data_hash", GUID(), nullable=False),
+        sa.Column("objects", sa.JSON(), nullable=False),
+        sa.Column("classifications", sa.JSON(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="prediction_data_units_frame"),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "data_hash"],
+            ["prediction_data.prediction_hash", "prediction_data.data_hash"],
+            name="fk_prediction_data_units",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "project_hash"],
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_data_units_project",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame"],
+            ["project_data_units.project_hash", "project_data_units.du_hash", "project_data_units.frame"],
+            name="fk_prediction_data_units_data",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame"),
     )
     op.create_table(
         "project_analytics_annotation",
@@ -308,166 +565,186 @@ def upgrade() -> None:
         sa.Column("metric_annotation_quality", sa.REAL(), nullable=True),
         sa.Column("metric_max_iou", sa.REAL(), nullable=True),
         sa.Column("metric_border_relative", sa.REAL(), nullable=True),
-        sa.Column("metric_label_poly_similarity", sa.REAL(), nullable=True),
+        sa.Column("metric_polygon_similarity", sa.REAL(), nullable=True),
         sa.Column("metric_missing_or_broken_track", sa.REAL(), nullable=True),
         sa.Column("metric_inconsistent_class", sa.REAL(), nullable=True),
-        sa.Column("metric_label_shape_outlier", sa.REAL(), nullable=True),
+        sa.Column("metric_shape_outlier", sa.REAL(), nullable=True),
         sa.Column("metric_confidence", sa.REAL(), nullable=True),
         sa.Column("metric_custom0", sa.REAL(), nullable=True),
         sa.Column("metric_custom1", sa.REAL(), nullable=True),
         sa.Column("metric_custom2", sa.REAL(), nullable=True),
         sa.Column("metric_custom3", sa.REAL(), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="annotate_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_annotation_frame"),
         sa.CheckConstraint(
-            "metric_annotation_quality BETWEEN 0.0 AND 1.0", name="annotate_metric_annotation_quality_ck"
+            "metric_annotation_quality BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_annotation_quality"
         ),
-        sa.CheckConstraint("metric_area >= 0", name="annotate_metric_area_ck"),
-        sa.CheckConstraint("metric_area_relative BETWEEN 0.0 AND 1.0", name="annotate_metric_area_relative_ck"),
-        sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="annotate_metric_aspect_ratio_ck"),
-        sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="annotate_metric_blue_ck"),
-        sa.CheckConstraint("metric_border_relative BETWEEN 0.0 AND 1.0", name="annotate_metric_border_relative_ck"),
-        sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="annotate_metric_brightness_ck"),
-        sa.CheckConstraint("metric_confidence BETWEEN 0.0 AND 1.0", name="annotate_metric_confidence_ck"),
-        sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="annotate_metric_contrast_ck"),
-        sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="annotate_metric_green_ck"),
-        sa.CheckConstraint("metric_height >= 0", name="annotate_metric_height_ck"),
+        sa.CheckConstraint("metric_area >= 0", name="project_analytics_annotation_mtc_area"),
         sa.CheckConstraint(
-            "metric_inconsistent_class BETWEEN 0.0 AND 1.0", name="annotate_metric_inconsistent_class_ck"
+            "metric_area_relative BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_area_relative"
+        ),
+        sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="project_analytics_annotation_mtc_aspect_ratio"),
+        sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_blue"),
+        sa.CheckConstraint(
+            "metric_border_relative BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_border_relative"
+        ),
+        sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_brightness"),
+        sa.CheckConstraint("metric_confidence BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_confidence"),
+        sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_contrast"),
+        sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_green"),
+        sa.CheckConstraint("metric_height >= 0", name="project_analytics_annotation_mtc_height"),
+        sa.CheckConstraint(
+            "metric_inconsistent_class BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_inconsistent_class"
+        ),
+        sa.CheckConstraint("metric_max_iou BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_max_iou"),
+        sa.CheckConstraint(
+            "metric_missing_or_broken_track BETWEEN 0.0 AND 1.0",
+            name="project_analytics_annotation_mtc_missing_or_broken_track",
         ),
         sa.CheckConstraint(
-            "metric_label_poly_similarity BETWEEN 0.0 AND 1.0", name="annotate_metric_label_poly_similarity_ck"
+            "metric_polygon_similarity BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_polygon_similarity"
         ),
+        sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_random"),
+        sa.CheckConstraint("metric_red BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_red"),
         sa.CheckConstraint(
-            "metric_label_shape_outlier BETWEEN 0.0 AND 1.0", name="annotate_metric_label_shape_outlier_ck"
+            "metric_shape_outlier BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_shape_outlier"
         ),
-        sa.CheckConstraint("metric_max_iou BETWEEN 0.0 AND 1.0", name="annotate_metric_max_iou_ck"),
-        sa.CheckConstraint(
-            "metric_missing_or_broken_track BETWEEN 0.0 AND 1.0", name="annotate_metric_missing_or_broken_track_ck"
-        ),
-        sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="annotate_metric_random_ck"),
-        sa.CheckConstraint("metric_red BETWEEN 0.0 AND 1.0", name="annotate_metric_red_ck"),
-        sa.CheckConstraint("metric_sharpness BETWEEN 0.0 AND 1.0", name="annotate_metric_sharpness_ck"),
-        sa.CheckConstraint("metric_width >= 0", name="annotate_metric_width_ck"),
+        sa.CheckConstraint("metric_sharpness BETWEEN 0.0 AND 1.0", name="project_analytics_annotation_mtc_sharpness"),
+        sa.CheckConstraint("metric_width >= 0", name="project_analytics_annotation_mtc_width"),
         sa.ForeignKeyConstraint(
             ["project_hash", "annotation_user_id"],
             ["project_collaborator.project_hash", "project_collaborator.user_id"],
-            name="project_label_annotation_user_id_fk",
+            name="fk_project_analytics_annotation_user_id",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             ["project_data_units.project_hash", "project_data_units.du_hash", "project_data_units.frame"],
-            name="label_project_data_fk",
+            name="fk_project_analytics_annotation",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame", "annotation_hash"),
     )
     op.create_index(
-        "annotate_ph_metric_annotation_quality_index",
+        "ix_project_analytics_annotation_ph_mtc_annotation_quality",
         "project_analytics_annotation",
         ["project_hash", "metric_annotation_quality"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_area_index", "project_analytics_annotation", ["project_hash", "metric_area"], unique=False
+        "ix_project_analytics_annotation_ph_mtc_area",
+        "project_analytics_annotation",
+        ["project_hash", "metric_area"],
+        unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_area_relative_index",
+        "ix_project_analytics_annotation_ph_mtc_area_relative",
         "project_analytics_annotation",
         ["project_hash", "metric_area_relative"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_aspect_ratio_index",
+        "ix_project_analytics_annotation_ph_mtc_aspect_ratio",
         "project_analytics_annotation",
         ["project_hash", "metric_aspect_ratio"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_blue_index", "project_analytics_annotation", ["project_hash", "metric_blue"], unique=False
+        "ix_project_analytics_annotation_ph_mtc_blue",
+        "project_analytics_annotation",
+        ["project_hash", "metric_blue"],
+        unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_border_relative_index",
+        "ix_project_analytics_annotation_ph_mtc_border_relative",
         "project_analytics_annotation",
         ["project_hash", "metric_border_relative"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_brightness_index",
+        "ix_project_analytics_annotation_ph_mtc_brightness",
         "project_analytics_annotation",
         ["project_hash", "metric_brightness"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_confidence_index",
+        "ix_project_analytics_annotation_ph_mtc_confidence",
         "project_analytics_annotation",
         ["project_hash", "metric_confidence"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_contrast_index",
+        "ix_project_analytics_annotation_ph_mtc_contrast",
         "project_analytics_annotation",
         ["project_hash", "metric_contrast"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_green_index", "project_analytics_annotation", ["project_hash", "metric_green"], unique=False
+        "ix_project_analytics_annotation_ph_mtc_green",
+        "project_analytics_annotation",
+        ["project_hash", "metric_green"],
+        unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_height_index",
+        "ix_project_analytics_annotation_ph_mtc_height",
         "project_analytics_annotation",
         ["project_hash", "metric_height"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_inconsistent_class_index",
+        "ix_project_analytics_annotation_ph_mtc_inconsistent_class",
         "project_analytics_annotation",
         ["project_hash", "metric_inconsistent_class"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_label_poly_similarity_index",
-        "project_analytics_annotation",
-        ["project_hash", "metric_label_poly_similarity"],
-        unique=False,
-    )
-    op.create_index(
-        "annotate_ph_metric_label_shape_outlier_index",
-        "project_analytics_annotation",
-        ["project_hash", "metric_label_shape_outlier"],
-        unique=False,
-    )
-    op.create_index(
-        "annotate_ph_metric_max_iou_index",
+        "ix_project_analytics_annotation_ph_mtc_max_iou",
         "project_analytics_annotation",
         ["project_hash", "metric_max_iou"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_missing_or_broken_track_index",
+        "ix_project_analytics_annotation_ph_mtc_missing_or_broken_track",
         "project_analytics_annotation",
         ["project_hash", "metric_missing_or_broken_track"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_random_index",
+        "ix_project_analytics_annotation_ph_mtc_polygon_similarity",
+        "project_analytics_annotation",
+        ["project_hash", "metric_polygon_similarity"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_project_analytics_annotation_ph_mtc_random",
         "project_analytics_annotation",
         ["project_hash", "metric_random"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_red_index", "project_analytics_annotation", ["project_hash", "metric_red"], unique=False
+        "ix_project_analytics_annotation_ph_mtc_red",
+        "project_analytics_annotation",
+        ["project_hash", "metric_red"],
+        unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_sharpness_index",
+        "ix_project_analytics_annotation_ph_mtc_shape_outlier",
+        "project_analytics_annotation",
+        ["project_hash", "metric_shape_outlier"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_project_analytics_annotation_ph_mtc_sharpness",
         "project_analytics_annotation",
         ["project_hash", "metric_sharpness"],
         unique=False,
     )
     op.create_index(
-        "annotate_ph_metric_width_index", "project_analytics_annotation", ["project_hash", "metric_width"], unique=False
+        "ix_project_analytics_annotation_ph_mtc_width",
+        "project_analytics_annotation",
+        ["project_hash", "metric_width"],
+        unique=False,
     )
     op.create_table(
         "project_analytics_data",
@@ -493,205 +770,186 @@ def upgrade() -> None:
         sa.Column("metric_custom1", sa.REAL(), nullable=True),
         sa.Column("metric_custom2", sa.REAL(), nullable=True),
         sa.Column("metric_custom3", sa.REAL(), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="data_frame_check"),
-        sa.CheckConstraint("metric_area >= 0", name="data_metric_area_ck"),
-        sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="data_metric_aspect_ratio_ck"),
-        sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="data_metric_blue_ck"),
-        sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="data_metric_brightness_ck"),
-        sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="data_metric_contrast_ck"),
-        sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="data_metric_green_ck"),
-        sa.CheckConstraint("metric_height >= 0", name="data_metric_height_ck"),
-        sa.CheckConstraint("metric_image_difficulty BETWEEN 0.0 AND 1.0", name="data_metric_image_difficulty_ck"),
-        sa.CheckConstraint("metric_image_uniqueness BETWEEN 0.0 AND 1.0", name="data_metric_image_uniqueness_ck"),
-        sa.CheckConstraint("metric_object_count >= 0", name="data_metric_object_count_ck"),
-        sa.CheckConstraint("metric_object_density BETWEEN 0.0 AND 1.0", name="data_metric_object_density_ck"),
-        sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="data_metric_random_ck"),
-        sa.CheckConstraint("metric_red BETWEEN 0.0 AND 1.0", name="data_metric_red_ck"),
-        sa.CheckConstraint("metric_sharpness BETWEEN 0.0 AND 1.0", name="data_metric_sharpness_ck"),
-        sa.CheckConstraint("metric_width >= 0", name="data_metric_width_ck"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_data_frame"),
+        sa.CheckConstraint("metric_area >= 0", name="project_analytics_data_mtc_area"),
+        sa.CheckConstraint("metric_aspect_ratio >= 0.0", name="project_analytics_data_mtc_aspect_ratio"),
+        sa.CheckConstraint("metric_blue BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_blue"),
+        sa.CheckConstraint("metric_brightness BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_brightness"),
+        sa.CheckConstraint("metric_contrast BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_contrast"),
+        sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_green"),
+        sa.CheckConstraint("metric_height >= 0", name="project_analytics_data_mtc_height"),
+        sa.CheckConstraint(
+            "metric_image_difficulty BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_image_difficulty"
+        ),
+        sa.CheckConstraint(
+            "metric_image_uniqueness BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_image_uniqueness"
+        ),
+        sa.CheckConstraint("metric_object_count >= 0", name="project_analytics_data_mtc_object_count"),
+        sa.CheckConstraint(
+            "metric_object_density BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_object_density"
+        ),
+        sa.CheckConstraint("metric_random BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_random"),
+        sa.CheckConstraint("metric_red BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_red"),
+        sa.CheckConstraint("metric_sharpness BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_sharpness"),
+        sa.CheckConstraint("metric_width >= 0", name="project_analytics_data_mtc_width"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             ["project_data_units.project_hash", "project_data_units.du_hash", "project_data_units.frame"],
-            name="data_project_analytics_data_fk",
+            name="fk_project_analytics_data",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame"),
     )
     op.create_index(
-        "data_ph_metric_area_index", "project_analytics_data", ["project_hash", "metric_area"], unique=False
+        "ix_project_analytics_data_ph_mtc_area", "project_analytics_data", ["project_hash", "metric_area"], unique=False
     )
     op.create_index(
-        "data_ph_metric_aspect_ratio_index",
+        "ix_project_analytics_data_ph_mtc_aspect_ratio",
         "project_analytics_data",
         ["project_hash", "metric_aspect_ratio"],
         unique=False,
     )
     op.create_index(
-        "data_ph_metric_blue_index", "project_analytics_data", ["project_hash", "metric_blue"], unique=False
+        "ix_project_analytics_data_ph_mtc_blue", "project_analytics_data", ["project_hash", "metric_blue"], unique=False
     )
     op.create_index(
-        "data_ph_metric_brightness_index", "project_analytics_data", ["project_hash", "metric_brightness"], unique=False
+        "ix_project_analytics_data_ph_mtc_brightness",
+        "project_analytics_data",
+        ["project_hash", "metric_brightness"],
+        unique=False,
     )
     op.create_index(
-        "data_ph_metric_contrast_index", "project_analytics_data", ["project_hash", "metric_contrast"], unique=False
+        "ix_project_analytics_data_ph_mtc_contrast",
+        "project_analytics_data",
+        ["project_hash", "metric_contrast"],
+        unique=False,
     )
     op.create_index(
-        "data_ph_metric_green_index", "project_analytics_data", ["project_hash", "metric_green"], unique=False
+        "ix_project_analytics_data_ph_mtc_green",
+        "project_analytics_data",
+        ["project_hash", "metric_green"],
+        unique=False,
     )
     op.create_index(
-        "data_ph_metric_height_index", "project_analytics_data", ["project_hash", "metric_height"], unique=False
+        "ix_project_analytics_data_ph_mtc_height",
+        "project_analytics_data",
+        ["project_hash", "metric_height"],
+        unique=False,
     )
     op.create_index(
-        "data_ph_metric_image_difficulty_index",
+        "ix_project_analytics_data_ph_mtc_image_difficulty",
         "project_analytics_data",
         ["project_hash", "metric_image_difficulty"],
         unique=False,
     )
     op.create_index(
-        "data_ph_metric_image_uniqueness_index",
+        "ix_project_analytics_data_ph_mtc_image_uniqueness",
         "project_analytics_data",
         ["project_hash", "metric_image_uniqueness"],
         unique=False,
     )
     op.create_index(
-        "data_ph_metric_object_count_index",
+        "ix_project_analytics_data_ph_mtc_object_count",
         "project_analytics_data",
         ["project_hash", "metric_object_count"],
         unique=False,
     )
     op.create_index(
-        "data_ph_metric_object_density_index",
+        "ix_project_analytics_data_ph_mtc_object_density",
         "project_analytics_data",
         ["project_hash", "metric_object_density"],
         unique=False,
     )
     op.create_index(
-        "data_ph_metric_random_index", "project_analytics_data", ["project_hash", "metric_random"], unique=False
+        "ix_project_analytics_data_ph_mtc_random",
+        "project_analytics_data",
+        ["project_hash", "metric_random"],
+        unique=False,
     )
-    op.create_index("data_ph_metric_red_index", "project_analytics_data", ["project_hash", "metric_red"], unique=False)
     op.create_index(
-        "data_ph_metric_sharpness_index", "project_analytics_data", ["project_hash", "metric_sharpness"], unique=False
+        "ix_project_analytics_data_ph_mtc_red", "project_analytics_data", ["project_hash", "metric_red"], unique=False
     )
     op.create_index(
-        "data_ph_metric_width_index", "project_analytics_data", ["project_hash", "metric_width"], unique=False
+        "ix_project_analytics_data_ph_mtc_sharpness",
+        "project_analytics_data",
+        ["project_hash", "metric_sharpness"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_project_analytics_data_ph_mtc_width",
+        "project_analytics_data",
+        ["project_hash", "metric_width"],
+        unique=False,
     )
     op.create_table(
-        "project_prediction_analytics_extra",
+        "prediction_analytics_fn",
         sa.Column("prediction_hash", GUID(), nullable=False),
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("annotation_hash", Char8(), nullable=False),
         sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("embedding_clip", PGVector(512), nullable=True),
-        sa.Column("embedding_hu", PGVector(7), nullable=True),
-        sa.Column("derived_clip_nearest", sa.JSON(), nullable=True),
-        sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="project_prediction_extra_frame_check"),
-        sa.ForeignKeyConstraint(
-            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
-            [
-                "project_prediction_analytics.prediction_hash",
-                "project_prediction_analytics.du_hash",
-                "project_prediction_analytics.frame",
-                "project_prediction_analytics.annotation_hash",
-            ],
-            name="project_prediction_analytics_extra_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+        sa.Column("iou_threshold", sa.REAL(), nullable=False),
+        sa.Column("feature_hash", Char8(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="prediction_analytics_fn_frame"),
+        sa.CheckConstraint(
+            "iou_threshold BETWEEN 0.0 AND 1.0 OR iou_threshold = -1.0", name="prediction_analytics_fn_iou_threshold"
         ),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="project_prediction_analytics_extra_ph_fk",
+            ["prediction.prediction_hash", "prediction.project_hash"],
+            name="fk_prediction_analytics_fn_project",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash"),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame", "annotation_hash"],
+            [
+                "project_analytics_annotation.project_hash",
+                "project_analytics_annotation.du_hash",
+                "project_analytics_annotation.frame",
+                "project_analytics_annotation.annotation_hash",
+            ],
+            name="fk_prediction_analytics_fn",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash", "feature_hash"),
+    )
+    op.create_index(
+        "fk_prediction_analytics_fn_feature_hash",
+        "prediction_analytics_fn",
+        ["prediction_hash", "feature_hash"],
+        unique=False,
     )
     op.create_table(
-        "project_prediction_analytics_reduced",
-        sa.Column("reduction_hash", GUID(), nullable=False),
-        sa.Column("prediction_hash", GUID(), nullable=False),
+        "project_analytics_annotation_derived",
+        sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("annotation_hash", Char8(), nullable=False),
-        sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("x", sa.REAL(), nullable=False),
-        sa.Column("y", sa.REAL(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="project_prediction_reduced_frame_check"),
+        sa.Column("distance_metric", sa.SMALLINT(), nullable=False),
+        sa.Column("distance_index", sa.SMALLINT(), nullable=False),
+        sa.Column("similarity", sa.REAL(), nullable=True),
+        sa.Column("dep_du_hash", GUID(), nullable=False),
+        sa.Column("dep_frame", sa.Integer(), nullable=False),
+        sa.Column("dep_annotation_hash", Char8(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_annotation_derived_frame"),
         sa.ForeignKeyConstraint(
-            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            ["project_hash", "du_hash", "frame", "annotation_hash"],
             [
-                "project_prediction_analytics.prediction_hash",
-                "project_prediction_analytics.du_hash",
-                "project_prediction_analytics.frame",
-                "project_prediction_analytics.annotation_hash",
+                "project_analytics_annotation.project_hash",
+                "project_analytics_annotation.du_hash",
+                "project_analytics_annotation.frame",
+                "project_analytics_annotation.annotation_hash",
             ],
-            name="data_project_prediction_analytics_reduced_fk",
+            name="fk_project_analytics_annotation_derived",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
-        sa.ForeignKeyConstraint(
-            ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="prediction_project_reduced_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+        sa.PrimaryKeyConstraint(
+            "project_hash", "du_hash", "frame", "annotation_hash", "distance_metric", "distance_index"
         ),
-        sa.ForeignKeyConstraint(
-            ["reduction_hash", "project_hash"],
-            ["project_embedding_reduction.reduction_hash", "project_embedding_reduction.project_hash"],
-            name="data_project_prediction_analytics_reduced_reduction_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("reduction_hash", "prediction_hash", "du_hash", "frame", "annotation_hash"),
-    )
-    op.create_index(
-        "project_analytics_prediction_reduced_x",
-        "project_prediction_analytics_reduced",
-        ["reduction_hash", "prediction_hash", "x", "y"],
-        unique=False,
-    )
-    op.create_index(
-        "project_analytics_prediction_reduced_y",
-        "project_prediction_analytics_reduced",
-        ["reduction_hash", "prediction_hash", "y", "x"],
-        unique=False,
-    )
-    op.create_table(
-        "project_prediction_data_units",
-        sa.Column("prediction_hash", GUID(), nullable=False),
-        sa.Column("du_hash", GUID(), nullable=False),
-        sa.Column("frame", sa.Integer(), nullable=False),
-        sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("data_hash", GUID(), nullable=False),
-        sa.Column("objects", sa.JSON(), nullable=False),
-        sa.Column("classifications", sa.JSON(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="prediction_data_unit_frame_check"),
-        sa.ForeignKeyConstraint(
-            ["prediction_hash", "data_hash"],
-            ["project_prediction_data.prediction_hash", "project_prediction_data.data_hash"],
-            name="prediction_data_unit_data_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="prediction_du_project_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["project_hash", "du_hash", "frame"],
-            ["project_data_units.project_hash", "project_data_units.du_hash", "project_data_units.frame"],
-            name="prediction_data_unit_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame"),
     )
     op.create_table(
         "project_analytics_annotation_extra",
@@ -701,9 +959,8 @@ def upgrade() -> None:
         sa.Column("annotation_hash", Char8(), nullable=False),
         sa.Column("embedding_clip", PGVector(512), nullable=True),
         sa.Column("embedding_hu", PGVector(7), nullable=True),
-        sa.Column("derived_clip_nearest", sa.JSON(), nullable=True),
         sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="annotate_extra_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_annotation_extra_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             [
@@ -712,7 +969,7 @@ def upgrade() -> None:
                 "project_analytics_annotation.frame",
                 "project_analytics_annotation.annotation_hash",
             ],
-            name="data_project_annotation_analytics_extra_fk",
+            name="fk_project_analytics_annotation_extra",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -727,7 +984,7 @@ def upgrade() -> None:
         sa.Column("annotation_hash", Char8(), nullable=False),
         sa.Column("x", sa.REAL(), nullable=False),
         sa.Column("y", sa.REAL(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="annotate_reduced_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_annotation_reduced_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             [
@@ -736,30 +993,50 @@ def upgrade() -> None:
                 "project_analytics_annotation.frame",
                 "project_analytics_annotation.annotation_hash",
             ],
-            name="data_project_annotation_analytics_reduced_fk",
+            name="fk_project_analytics_annotation_reduced",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["reduction_hash"],
             ["project_embedding_reduction.reduction_hash"],
-            name="data_project_annotation_analytics_reduced_reduction_fk",
+            name="fk_project_analytics_annotation_reduced_reduction",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("reduction_hash", "project_hash", "du_hash", "frame", "annotation_hash"),
     )
     op.create_index(
-        "project_analytics_annotation_reduced_x",
+        "ix_project_analytics_annotation_reduced_x",
         "project_analytics_annotation_reduced",
         ["reduction_hash", "project_hash", "x", "y"],
         unique=False,
     )
     op.create_index(
-        "project_analytics_annotation_reduced_y",
+        "ix_project_analytics_annotation_reduced_y",
         "project_analytics_annotation_reduced",
         ["reduction_hash", "project_hash", "y", "x"],
         unique=False,
+    )
+    op.create_table(
+        "project_analytics_data_derived",
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("distance_metric", sa.SMALLINT(), nullable=False),
+        sa.Column("distance_index", sa.SMALLINT(), nullable=False),
+        sa.Column("similarity", sa.REAL(), nullable=True),
+        sa.Column("dep_du_hash", GUID(), nullable=False),
+        sa.Column("dep_frame", sa.Integer(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_data_derived_frame"),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "du_hash", "frame"],
+            ["project_analytics_data.project_hash", "project_analytics_data.du_hash", "project_analytics_data.frame"],
+            name="fk_project_analytics_data_derived",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("project_hash", "du_hash", "frame", "distance_metric", "distance_index"),
     )
     op.create_table(
         "project_analytics_data_extra",
@@ -767,13 +1044,12 @@ def upgrade() -> None:
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("embedding_clip", PGVector(512), nullable=True),
-        sa.Column("derived_clip_nearest", sa.JSON(), nullable=True),
         sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
-        sa.CheckConstraint("frame >= 0", name="data_extra_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_data_extra_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             ["project_analytics_data.project_hash", "project_analytics_data.du_hash", "project_analytics_data.frame"],
-            name="data_project_data_analytics_extra_fk",
+            name="fk_project_analytics_data_extra",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -787,74 +1063,33 @@ def upgrade() -> None:
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("x", sa.REAL(), nullable=False),
         sa.Column("y", sa.REAL(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="data_reduced_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_analytics_data_reduced_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             ["project_analytics_data.project_hash", "project_analytics_data.du_hash", "project_analytics_data.frame"],
-            name="data_project_data_analytics_reduced_fk",
+            name="fk_project_analytics_data_reduced",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["reduction_hash"],
             ["project_embedding_reduction.reduction_hash"],
-            name="data_project_data_analytics_reduced_reduction_fk",
+            name="fk_project_analytics_data_reduced_reduction",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("reduction_hash", "project_hash", "du_hash", "frame"),
     )
     op.create_index(
-        "project_analytics_data_reduced_x",
+        "ix_project_analytics_data_reduced_x",
         "project_analytics_data_reduced",
         ["reduction_hash", "project_hash", "x", "y"],
         unique=False,
     )
     op.create_index(
-        "project_analytics_data_reduced_y",
+        "ix_project_analytics_data_reduced_y",
         "project_analytics_data_reduced",
         ["reduction_hash", "project_hash", "y", "x"],
-        unique=False,
-    )
-    op.create_table(
-        "project_prediction_analytics_fn",
-        sa.Column("prediction_hash", GUID(), nullable=False),
-        sa.Column("du_hash", GUID(), nullable=False),
-        sa.Column("frame", sa.Integer(), nullable=False),
-        sa.Column("annotation_hash", Char8(), nullable=False),
-        sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("iou_threshold", sa.REAL(), nullable=False),
-        sa.Column("feature_hash", Char8(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="project_prediction_unmatched_frame_check"),
-        sa.CheckConstraint(
-            "iou_threshold BETWEEN 0.0 AND 1.0 OR iou_threshold = -1.0",
-            name="project_prediction_unmatched_iou_threshold",
-        ),
-        sa.ForeignKeyConstraint(
-            ["prediction_hash", "project_hash"],
-            ["project_prediction.prediction_hash", "project_prediction.project_hash"],
-            name="project_prediction_fn_prediction_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["project_hash", "du_hash", "frame", "annotation_hash"],
-            [
-                "project_analytics_annotation.project_hash",
-                "project_analytics_annotation.du_hash",
-                "project_analytics_annotation.frame",
-                "project_analytics_annotation.annotation_hash",
-            ],
-            name="project_prediction_fn_project_fk",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash", "feature_hash"),
-    )
-    op.create_index(
-        "project_prediction_unmatched_feature_hash_index",
-        "project_prediction_analytics_fn",
-        ["prediction_hash", "feature_hash"],
         unique=False,
     )
     op.create_table(
@@ -864,7 +1099,7 @@ def upgrade() -> None:
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("annotation_hash", Char8(), nullable=False),
         sa.Column("tag_hash", GUID(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="project_tagged_annotation_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_tagged_annotation_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             [
@@ -873,14 +1108,14 @@ def upgrade() -> None:
                 "project_analytics_annotation.frame",
                 "project_analytics_annotation.annotation_hash",
             ],
-            name="project_tagged_annotation_analysis_fk",
+            name="fk_project_tagged_annotation",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["tag_hash"],
             ["project_tags.tag_hash"],
-            name="project_tagged_annotation_tag_fk",
+            name="fk_project_tagged_annotation_tag",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -892,18 +1127,18 @@ def upgrade() -> None:
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("tag_hash", GUID(), nullable=False),
-        sa.CheckConstraint("frame >= 0", name="project_tagged_data_frame_check"),
+        sa.CheckConstraint("frame >= 0", name="project_tagged_data_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],
             ["project_analytics_data.project_hash", "project_analytics_data.du_hash", "project_analytics_data.frame"],
-            name="project_tagged_data_units_analysis_fk",
+            name="fk_project_tagged_data",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["tag_hash"],
             ["project_tags.tag_hash"],
-            name="project_tagged_data_units_tag_fk",
+            name="fk_project_tagged_data_tag",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),

@@ -9,7 +9,8 @@ export function useProjectAnalysisSimilaritySearch(
   item: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "useProjectAnalysisSimilaritySearch",

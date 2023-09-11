@@ -49,7 +49,8 @@ AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
 class DataType(enum.IntEnum):
     IMAGE = 0
     IMAGE_GROUP = 1
-    VIDEO = 2
+    IMAGE_SEQUENCE = 2
+    VIDEO = 3
 
     @classmethod
     def _missing_(cls, value: object) -> "DataType":
@@ -66,6 +67,8 @@ class DataType(enum.IntEnum):
     def __repr__(self) -> str:
         return self.__str__()
 
+
+DataTypeMaxValue: int = int(DataType.VIDEO)
 
 DataEnums: Dict[str, EnumDefinition] = {}
 AnnotationEnums: Dict[str, EnumDefinition] = {

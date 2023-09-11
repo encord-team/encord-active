@@ -26,8 +26,8 @@ from encord_active.analysis.types import (
     MetricDependencies,
     MetricResult,
 )
+from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import MetricType
-from encord_active.db.models import AnnotationType
 
 
 class BaseMetricWithAnnotationFilter(BaseMetric, metaclass=ABCMeta):
@@ -472,8 +472,9 @@ class RandomSamplingQuery:
     Randomly select 'limit' number of entries from the analysis scope.
     """
 
-    def __init__(self, ident: str, limit: int = 100) -> None:
+    def __init__(self, ident: str, limit: int = 100, same_feature_hash: bool = False) -> None:
         self.ident = ident
         self.limit = limit
+        self.same_feature_hash = same_feature_hash
 
     # FIXME: add support for 'filters' (constraint the randomness depending on sql-like filters)??

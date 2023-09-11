@@ -24,51 +24,52 @@ def import_coco_project(
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     project_spec = import_coco(database_dir, annotations_file_path, images_dir_path, store_data_locally, store_symlinks)
-    import_project(engine, database_dir, project_spec)
+    import_project(engine, database_dir, project_spec, "")
 
 
 def import_encord_project(
-    database_dir: Path, encord_project_hash: uuid.UUID, ssh_key_path: Path, store_data_locally: bool
+    database_dir: Path, encord_project_hash: uuid.UUID, ssh_key: str, store_data_locally: bool
 ) -> None:
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     encord_client = EncordUserClient.create_with_ssh_private_key(
-        Path(ssh_key_path).read_text(encoding="utf-8"),
+        ssh_key,
         requests_settings=RequestsSettings(max_retries=5),
     )
     encord_project = encord_client.get_project(str(encord_project_hash))
-    project_spec = import_encord(encord_project, ssh_key_path, database_dir, store_data_locally)
-    import_project(engine, database_dir, project_spec)
+    project_spec = import_encord(encord_project, database_dir, store_data_locally)
+    import_project(engine, database_dir, project_spec, ssh_key)
 
 
-def refresh_encord_project(database_dir: Path, encord_project_hash: uuid.UUID, force: bool = False) -> bool:
+def refresh_encord_project(
+    database_dir: Path, ssh_key: str, encord_project_hash: uuid.UUID, force: bool = False
+) -> bool:
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     with Session(engine) as sess:
-        ssh_key_path = sess.exec(
-            select(Project.project_remote_ssh_key_path).where(Project.project_hash == encord_project_hash)
-        ).first()
-        if ssh_key_path is None:
+        remote = sess.exec(select(Project.remote).where(Project.project_hash == encord_project_hash)).first()
+        if not remote:
             raise ValueError(f"{encord_project_hash} does not correspond to a valid encord project")
     encord_client = EncordUserClient.create_with_ssh_private_key(
-        Path(ssh_key_path).read_text(encoding="utf-8"),
+        ssh_key,
         requests_settings=RequestsSettings(max_retries=5),
     )
     encord_project = encord_client.get_project(str(encord_project_hash))
-    project_spec = import_encord(encord_project, Path(ssh_key_path), database_dir, store_data_locally=False)
-    return refresh_project(engine, database_dir, project_spec, force=force)
+    project_spec = import_encord(encord_project, database_dir, store_data_locally=False)
+    return refresh_project(engine, database_dir, ssh_key, project_spec, force=force)
 
 
 def import_coco_prediction(
     database_dir: Path,
     predictions_file_path: Path,
+    ssh_key: str,
     project_hash: uuid.UUID,
     prediction_name: str,
 ) -> None:
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     with Session(engine) as sess:
-        ontology = sess.exec(select(Project.project_ontology).where(Project.project_hash == project_hash)).first()
+        ontology = sess.exec(select(Project.ontology).where(Project.project_hash == project_hash)).first()
         if ontology is None:
             raise RuntimeError(f"Project hash: {project_hash} is missing from the database")
         metadata = sess.exec(
@@ -85,7 +86,7 @@ def import_coco_prediction(
         prediction_file=predictions_file_path,
         import_metadata=dict(metadata),
     )
-    import_prediction(engine=engine, database_dir=database_dir, prediction=coco_prediction)
+    import_prediction(engine=engine, database_dir=database_dir, ssh_key=ssh_key, prediction=coco_prediction)
 
 
 def import_encord_pickle_prediction(

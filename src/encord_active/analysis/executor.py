@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import torchvision
 from PIL import Image
+from encord.http.constants import RequestsSettings
 from pynndescent import NNDescent
 from torch import Tensor
 from torchvision.io import VideoReader
@@ -32,13 +33,16 @@ from encord_active.analysis.util.torch import (
 )
 from encord_active.db.models import (
     ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsDerived,
     ProjectAnnotationAnalyticsExtra,
     ProjectCollaborator,
     ProjectDataAnalytics,
+    ProjectDataAnalyticsDerived,
     ProjectDataAnalyticsExtra,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
     ProjectPredictionAnalytics,
+    ProjectPredictionAnalyticsDerived,
     ProjectPredictionAnalyticsExtra,
     ProjectPredictionAnalyticsFalseNegatives,
 )
@@ -48,7 +52,11 @@ from ..db.enums import AnnotationType
 from ..db.metrics import MetricType
 from ..lib.encord.utils import get_encord_project
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
-from .embedding import BaseEmbedding, NearestImageEmbeddingQuery
+from .embedding import (
+    BaseEmbedding,
+    EmbeddingDistanceMetric,
+    NearestImageEmbeddingQuery,
+)
 from .metric import RandomSamplingQuery
 
 TTypeAnnotationAnalytics = TypeVar("TTypeAnnotationAnalytics", ProjectAnnotationAnalytics, ProjectPredictionAnalytics)
@@ -69,6 +77,7 @@ class SimpleExecutor(Executor):
         self.annotation_metrics: Dict[Tuple[uuid.UUID, int, str], MetricDependencies] = {}
         self.prediction_false_negatives: Dict[Tuple[uuid.UUID, int, str], Tuple[str, float]] = {}
         self.encord_projects: Dict[uuid.UUID, encord.Project] = {}
+        self.encord_client: Optional[encord.EncordUserClient] = None
         self.encord_project_urls: Dict[Tuple[uuid.UUID, uuid.UUID], str] = {}
         self.pool_size = pool_size
         print(f"Simple executor: using {self.config.device.type} device")
@@ -80,12 +89,14 @@ class SimpleExecutor(Executor):
         collaborators: List[ProjectCollaborator],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
+        List[ProjectDataAnalyticsDerived],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectAnnotationAnalyticsDerived],
         List[ProjectCollaborator],
     ]:
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
@@ -96,7 +107,7 @@ class SimpleExecutor(Executor):
             values,
             database_dir=database_dir,
             project_hash=project_hash,
-            project_ssh_path=project_ssh_path,
+            project_ssh_key=project_ssh_key,
         )
         return self._pack_output(project_hash=project_hash, collaborators=collaborators)
 
@@ -112,8 +123,10 @@ class SimpleExecutor(Executor):
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
+        List[ProjectDataAnalyticsDerived],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectAnnotationAnalyticsDerived],
         List[ProjectCollaborator],
     ]:
         self._stage_1_load_from_existing_data(
@@ -127,7 +140,7 @@ class SimpleExecutor(Executor):
             [],
             database_dir=database_dir,
             project_hash=project_hash,
-            project_ssh_path=None,
+            project_ssh_key=None,
         )
         return self._pack_output(project_hash=project_hash, collaborators=[])
 
@@ -140,7 +153,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         prediction_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
     ) -> Tuple[
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
@@ -156,7 +169,7 @@ class SimpleExecutor(Executor):
             values,
             database_dir=database_dir,
             project_hash=project_hash,
-            project_ssh_path=project_ssh_path,
+            project_ssh_key=project_ssh_key,
             gt_lookup=gt_lookup,
         )
         return self._pack_prediction(
@@ -168,7 +181,7 @@ class SimpleExecutor(Executor):
         values: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]] = None,
         batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
         skip_stage_1: bool = False,
@@ -207,14 +220,14 @@ class SimpleExecutor(Executor):
                     video_values,
                     database_dir=database_dir,
                     project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
+                    project_ssh_key=project_ssh_key,
                     gt_lookup=gt_lookup,
                 )
                 self._stage_1_image_no_batching(
                     image_values,
                     database_dir=database_dir,
                     project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
+                    project_ssh_key=project_ssh_key,
                     gt_lookup=gt_lookup,
                 )
             elif not skip_stage_1:
@@ -222,14 +235,14 @@ class SimpleExecutor(Executor):
                     video_values,
                     database_dir=database_dir,
                     project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
+                    project_ssh_key=project_ssh_key,
                     gt_lookup=gt_lookup,
                 )
                 self._stage_1_image_batching(
                     image_values,
                     database_dir=database_dir,
                     project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
+                    project_ssh_key=project_ssh_key,
                     batching=batch or 1,
                     gt_lookup=gt_lookup,
                 )
@@ -241,13 +254,18 @@ class SimpleExecutor(Executor):
     def _batch_populate_lookup_cache(
         self,
         project_hash: uuid.UUID,
-        project_ssh_path: str,
+        project_ssh_key: str,
         values: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
     ) -> None:
         if project_hash in self.encord_projects:
             encord_project = self.encord_projects[project_hash]
         else:
-            encord_project = get_encord_project(ssh_key_path=project_ssh_path, project_hash=str(project_hash))
+            if self.encord_client is None:
+                self.encord_client = encord.EncordUserClient.create_with_ssh_private_key(
+                    project_ssh_key,
+                    requests_settings=RequestsSettings(max_retries=5),
+                )
+            encord_project = self.encord_client.get_project(str(project_hash))
             self.encord_projects[project_hash] = encord_project
         data_hashes: List[str] = []
         for data_hash_meta, du_meta_list in values:
@@ -280,7 +298,7 @@ class SimpleExecutor(Executor):
         videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         if len(videos) == 0:
@@ -299,7 +317,7 @@ class SimpleExecutor(Executor):
                 uri=video_start.data_uri,
                 database_dir=database_dir,
                 project_hash=project_hash,
-                project_ssh_path=project_ssh_path,
+                project_ssh_key=project_ssh_key,
                 label_hash=data_metadata.label_hash,
                 data_hash=data_metadata.data_hash,
                 du_hash=video_start.du_hash,
@@ -323,7 +341,7 @@ class SimpleExecutor(Executor):
         videos: List[Tuple[ProjectDataMetadata, List[ProjectDataUnitMetadata]]],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         if len(videos) == 0:
@@ -334,7 +352,7 @@ class SimpleExecutor(Executor):
                 uri=video_start.data_uri,
                 database_dir=database_dir,
                 project_hash=project_hash,
-                project_ssh_path=project_ssh_path,
+                project_ssh_key=project_ssh_key,
                 label_hash=data_metadata.label_hash,
                 data_hash=data_metadata.data_hash,
                 du_hash=video_start.du_hash,
@@ -416,7 +434,7 @@ class SimpleExecutor(Executor):
         images: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ):
         def _job(data_meta_job: ProjectDataMetadata, du_meta_job: ProjectDataUnitMetadata):
@@ -426,7 +444,7 @@ class SimpleExecutor(Executor):
                     uri=du_meta_job.data_uri,
                     database_dir=database_dir,
                     project_hash=project_hash,
-                    project_ssh_path=project_ssh_path,
+                    project_ssh_key=project_ssh_key,
                     label_hash=data_meta_job.label_hash,
                     data_hash=data_meta_job.data_hash,
                     du_hash=du_meta_job.du_hash,
@@ -472,7 +490,7 @@ class SimpleExecutor(Executor):
         values: List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         batching: int,
         gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
     ) -> None:
@@ -488,7 +506,7 @@ class SimpleExecutor(Executor):
                             uri=du_meta.data_uri,
                             database_dir=database_dir,
                             project_hash=project_hash,
-                            project_ssh_path=project_ssh_path,
+                            project_ssh_key=project_ssh_key,
                             label_hash=meta.label_hash,
                             data_hash=du_meta.data_hash,
                             du_hash=du_meta.du_hash,
@@ -569,6 +587,8 @@ class SimpleExecutor(Executor):
                     data_metrics[analysis.ident] = getattr(data, analysis.ident)
                 elif analysis.ident in data_extra.__fields__:
                     data_metrics[analysis.ident] = _load_embedding(getattr(data_extra, analysis.ident))
+                else:
+                    raise RuntimeError(f"Simple executor bug: cannot load ident {analysis.ident} from subset")
             self.data_metrics[data.du_hash, data.frame] = data_metrics
 
         for annotation in precalculated_annotation:
@@ -588,6 +608,8 @@ class SimpleExecutor(Executor):
                     annotation_metrics[analysis.ident] = getattr(annotation, analysis.ident)
                 elif analysis.ident in annotation_extra.__fields__:
                     annotation_metrics[analysis.ident] = _load_embedding(getattr(annotation_extra, analysis.ident))
+                else:
+                    raise RuntimeError(f"Simple executor bug: cannot load ident {analysis.ident} from subset")
             self.annotation_metrics[
                 annotation.du_hash, annotation.frame, annotation.annotation_hash
             ] = annotation_metrics
@@ -597,7 +619,7 @@ class SimpleExecutor(Executor):
         uri: Optional[str],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         label_hash: uuid.UUID,
         data_hash: uuid.UUID,
         du_hash: uuid.UUID,
@@ -606,7 +628,7 @@ class SimpleExecutor(Executor):
             uri=uri,
             database_dir=database_dir,
             project_hash=project_hash,
-            project_ssh_path=project_ssh_path,
+            project_ssh_key=project_ssh_key,
             label_hash=label_hash,
             data_hash=data_hash,
             du_hash=du_hash,
@@ -620,7 +642,7 @@ class SimpleExecutor(Executor):
         uri: Optional[str],
         database_dir: Path,
         project_hash: uuid.UUID,
-        project_ssh_path: Optional[str],
+        project_ssh_key: Optional[str],
         label_hash: uuid.UUID,
         data_hash: uuid.UUID,
         du_hash: uuid.UUID,
@@ -631,13 +653,18 @@ class SimpleExecutor(Executor):
                 return url_path
             else:
                 return uri
-        elif project_ssh_path is not None:
+        elif project_ssh_key is not None:
             if (project_hash, du_hash) in self.encord_project_urls:
                 return self.encord_project_urls[(project_hash, du_hash)]
             if project_hash in self.encord_projects:
                 encord_project = self.encord_projects[project_hash]
             else:
-                encord_project = get_encord_project(ssh_key_path=project_ssh_path, project_hash=str(project_hash))
+                if self.encord_client is None:
+                    self.encord_client = encord.EncordUserClient.create_with_ssh_private_key(
+                        project_ssh_key,
+                        requests_settings=RequestsSettings(max_retries=5),
+                    )
+                encord_project = self.encord_client.get_project(str(project_hash))
                 self.encord_projects[project_hash] = encord_project
             video, images = encord_project.get_data(data_hash=str(data_hash), get_signed_url=True)
             for image in images or []:
@@ -882,8 +909,8 @@ class SimpleExecutor(Executor):
         # and the associated storage and indexing strategy.
         for metric in tqdm(self.config.derived_embeddings, desc="Metric Computation Stage 2: Building indices"):
             metrics_tqdm_desc = f"                          : Generating indices for {metric.ident}"
-            metrics_tqdm = tqdm([self.data_metrics, self.annotation_metrics], desc=metrics_tqdm_desc)
-            for metrics in metrics_tqdm:
+            metrics_tqdm = tqdm([(False, self.data_metrics), (True, self.annotation_metrics)], desc=metrics_tqdm_desc)
+            for is_annotation_metrics, metrics in metrics_tqdm:
                 metrics_tqdm.set_description(metrics_tqdm_desc)
                 if len(metrics) == 0:
                     continue
@@ -892,70 +919,98 @@ class SimpleExecutor(Executor):
                     max_neighbours = int(metric.max_neighbours)
                     if max_neighbours > 50:
                         raise ValueError(f"Too many embedding nn-query results: {metric.ident} => {max_neighbours}")
-                    data_keys = list(metrics.keys())
-                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Loading data]")
-                    data_list = [metrics[k][metric.embedding_source].cpu().numpy() for k in data_keys]
-                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Preparing data]")
-                    data = np.stack(data_list)
-                    # FIXME: tune threshold where using pynndescent is actually faster.
-                    if len(data_list) <= 4096:
-                        # Exhaustive search is faster & more correct for very small datasets.
-                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Exhaustive search]")
-                        data_indices_list = []
-                        data_distances_list = []
-                        for data_key, data_embedding in zip(data_keys, data_list):
-                            data_raw_offsets = data - data_embedding
-                            data_raw_similarities = np.linalg.norm(data_raw_offsets, axis=1)
-                            data_raw_index = np.argsort(data_raw_similarities)[:max_neighbours]
-                            data_indices_list.append(data_raw_index)
-                            data_distances_list.append(data_raw_similarities[data_raw_index])
-                        data_indices = np.stack(data_indices_list)
-                        data_distances = np.stack(data_distances_list)
-                    else:
-                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Creating index]")
-                        nn_descent = NNDescent(
-                            data=data,
-                            parallel_batch_queries=True,
-                            n_jobs=-1,
-                        )
-                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Building index]")
-                        nn_descent.prepare()
-                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Querying index]")
-                        data_indices, data_distances = nn_descent.query(
-                            query_data=data,
-                            k=max_neighbours,
-                        )
-                    metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Finishing]")
-                    for i, k in enumerate(data_keys):
-                        indices = data_indices[i]
-                        distances = data_distances[i]
+                    if metric.similarity == EmbeddingDistanceMetric.RANDOM:
+                        raise ValueError("Please explicitly request random distance metric as limits are different")
+                    metrics_subset_list = [metrics]
+                    if metric.same_feature_hash and is_annotation_metrics:
+                        metrics_subset_list_dict = {}
+                        for metric_key, metric_value in metrics.items():
+                            metrics_subset_list_dict.setdefault(metric_value["feature_hash"], {})[
+                                metric_key
+                            ] = metric_value
+                        metrics_subset_list = list(metrics_subset_list_dict.values())
+                    elif metric.same_feature_hash:
+                        continue  # This is an annotation only query.
 
-                        # Post-process query result:
-                        if len(indices) > 0 and indices[0] == i:
-                            indices = indices[1:]
-                            distances = distances[1:]
-                        while len(distances) > 0 and math.isinf(distances[-1]):
-                            indices = distances[:-1]
-                            distances = distances[:-1]
+                    for metrics_subset in metrics_subset_list:
+                        data_keys = list(metrics_subset.keys())
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Loading data]")
+                        data_list = [metrics_subset[k][metric.embedding_source].cpu().numpy() for k in data_keys]
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Preparing data]")
+                        data = np.stack(data_list)
+                        # FIXME: tune threshold where using pynndescent is actually faster.
+                        if len(data_list) <= 4096:
+                            # Exhaustive search is faster & more correct for very small datasets.
+                            metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Exhaustive search]")
+                            data_indices_list = []
+                            data_distances_list = []
+                            for data_key, data_embedding in zip(data_keys, data_list):
+                                if metric.similarity == EmbeddingDistanceMetric.EUCLIDEAN:
+                                    data_raw_offsets = data - data_embedding
+                                    data_raw_similarities = np.linalg.norm(data_raw_offsets, axis=1)
+                                elif metric.similarity == EmbeddingDistanceMetric.COSINE:
+                                    data_raw_dot = np.dot(data, data_embedding)
+                                    data_raw_data_dist = np.linalg.norm(data, axis=1)
+                                    data_raw_dist = np.linalg.norm(data_embedding)
+                                    data_raw_similarities = data_raw_dot / (data_raw_data_dist * data_raw_dist)
+                                else:
+                                    raise RuntimeError(f"Unknown similarity metric: {metric.similarity}")
+                                data_raw_index = np.argsort(data_raw_similarities)[:max_neighbours]
+                                data_indices_list.append(data_raw_index)
+                                data_distances_list.append(data_raw_similarities[data_raw_index])
+                            data_indices = np.stack(data_indices_list)
+                            data_distances = np.stack(data_distances_list)
+                        else:
+                            metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Creating index]")
+                            nn_descent = NNDescent(
+                                data=data, parallel_batch_queries=True, n_jobs=-1, metric=metric.similarity.key.lower()
+                            )
+                            metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Building index]")
+                            nn_descent.prepare()
+                            metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Querying index]")
+                            data_indices, data_distances = nn_descent.query(
+                                query_data=data,
+                                k=max_neighbours,
+                            )
+                        metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Finishing]")
+                        for i, k in enumerate(data_keys):
+                            indices = data_indices[i]
+                            distances = data_distances[i]
 
-                        # Transform value to result.
-                        nearest_neighbor_result = NearestNeighbors(
-                            similarities=distances.tolist(),
-                            metric_deps=[dict(metrics[data_keys[int(j)]]) for j in indices.tolist()],
-                            metric_keys=[data_keys[int(j)] for j in indices.tolist()],
-                        )
-                        metrics[k][metric.ident] = nearest_neighbor_result
+                            # Post-process query result:
+                            if len(indices) > 0 and indices[0] == i:
+                                indices = indices[1:]
+                                distances = distances[1:]
+                            while len(distances) > 0 and math.isinf(distances[-1]):
+                                indices = distances[:-1]
+                                distances = distances[:-1]
+
+                            # Transform value to result.
+                            nearest_neighbor_result = NearestNeighbors(
+                                similarities=distances.tolist(),
+                                metric_deps=[dict(metrics[data_keys[int(j)]]) for j in indices.tolist()],
+                                metric_keys=[data_keys[int(j)] for j in indices.tolist()],
+                                embedding_type=metric.similarity,
+                            )
+                            metrics[k][metric.ident] = nearest_neighbor_result
                 elif isinstance(metric, RandomSamplingQuery):
                     # Random sampling
                     limit = metric.limit
-                    if limit > 100:
-                        raise ValueError("Too large random sampling amount")
+                    if limit > 1000:
+                        raise ValueError(f"Too large random sampling amount: {limit}")
                     data_keys = list(metrics.keys())
                     for i, dk in enumerate(data_keys):
                         other_data_keys = data_keys[:i] + data_keys[i + 1 :]
+                        if metric.same_feature_hash and is_annotation_metrics:
+                            other_data_keys = [
+                                k
+                                for k in other_data_keys
+                                if metrics[k].get("feature_hash", None)
+                                == metrics[data_keys[i]].get("feature_hash", None)
+                            ]
                         chosen_keys = random.choices(other_data_keys, k=max(limit, len(other_data_keys)))
                         metrics[dk][metric.ident] = RandomSampling(
-                            metric_deps=[dict(metrics[k]) for k in chosen_keys.tolist()], metric_keys=chosen_keys
+                            metric_deps=[dict(metrics[k]) for k in chosen_keys], metric_keys=chosen_keys
                         )
                 else:
                     raise ValueError(
@@ -985,8 +1040,11 @@ class SimpleExecutor(Executor):
         ty_extra: Type[
             Union[ProjectPredictionAnalyticsExtra, ProjectAnnotationAnalyticsExtra, ProjectDataAnalyticsExtra]
         ],
+        ty_derived: Type[
+            Union[ProjectPredictionAnalyticsDerived, ProjectAnnotationAnalyticsDerived, ProjectDataAnalyticsDerived]
+        ],
         ty_extra_metric: Set[str],
-    ) -> Tuple[Set[str], Set[str]]:
+    ) -> Tuple[Set[str], Set[str], Set[str]]:
         metric_lookup = {
             m.ident: m.metric_type
             for m in (self.config.analysis + self.config.derived_metrics)
@@ -1015,7 +1073,9 @@ class SimpleExecutor(Executor):
                 raise ValueError(f"Unsupported metric type: {m}")
 
         # Extra values & missing values
-        extra_values = set(deps.keys()) - analysis_values
+        # FIXME: logic here is broken
+        extra_values = {v for v in (set(deps.keys()) - analysis_values) if not v.startswith("derived_")}
+        derived_values = {v for v in (set(deps.keys()) - analysis_values) if v.startswith("derived_")}
         unassigned_metric_values = {
             k
             for k in ty_analytics.__fields__
@@ -1028,11 +1088,7 @@ class SimpleExecutor(Executor):
             log.debug(f"WARNING: unassigned analytics metrics({ty_analytics.__name__}) = {unassigned_metric_values}")
         for extra_value in extra_values:
             if (
-                not (
-                    extra_value.startswith("metric_")
-                    or extra_value.startswith("embedding_")
-                    or extra_value.startswith("derived_")
-                )
+                not (extra_value.startswith("metric_") or extra_value.startswith("embedding_"))
                 or extra_value not in ty_extra.__fields__
             ):
                 raise ValueError(f"Unknown field name: '{extra_value}' for {ty_extra.__name__}")
@@ -1044,7 +1100,7 @@ class SimpleExecutor(Executor):
         }
         if len(unassigned_extra_values) > 0:
             log.debug(f"WARNING: unassigned analytics extra value({ty_extra.__name__}) = {unassigned_extra_values}")
-        return analysis_values, extra_values
+        return analysis_values, extra_values, derived_values
 
     @classmethod
     def _pack_metric(
@@ -1120,21 +1176,26 @@ class SimpleExecutor(Executor):
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
+        List[ProjectDataAnalyticsDerived],
         List[ProjectAnnotationAnalytics],
         List[ProjectAnnotationAnalyticsExtra],
+        List[ProjectAnnotationAnalyticsDerived],
         List[ProjectCollaborator],
     ]:
         data_analysis = []
         data_analysis_extra = []
+        data_analysis_derived = []
         annotation_analysis = []
         annotation_analysis_extra = []
+        annotation_analysis_derived = []
         new_collaborators: List[ProjectCollaborator] = []
         user_email_lookup = {collab.user_email: collab.user_id for collab in collaborators}
         for (du_hash, frame), data_deps in self.data_metrics.items():
-            analysis_values, extra_values = self._validate_pack_deps(
+            analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 data_deps,
                 ProjectDataAnalytics,
                 ProjectDataAnalyticsExtra,
+                ProjectDataAnalyticsDerived,
                 set(),
             )
             data_analysis.append(
@@ -1150,22 +1211,40 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
-                    **{
-                        k: self._pack_extra(k, v)
-                        for k, v in data_deps.items()
-                        if k in extra_values and not k.startswith("derived_")
-                    },
+                    **{k: self._pack_extra(k, v) for k, v in data_deps.items() if k in extra_values},
                 )
             )
+            for k, v in data_deps.items():
+                if k not in derived_values:
+                    continue
+                if isinstance(v, (RandomSampling, NearestNeighbors)):
+                    for idx, (dep_du_hash, dep_frame) in enumerate(v.metric_keys):  # type: ignore
+                        data_analysis_derived.append(
+                            ProjectDataAnalyticsDerived(
+                                project_hash=project_hash,
+                                du_hash=du_hash,
+                                frame=frame,
+                                distance_metric=v.embedding_type
+                                if isinstance(v, NearestNeighbors)
+                                else EmbeddingDistanceMetric.RANDOM,
+                                distance_index=idx,
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                dep_du_hash=dep_du_hash,
+                                dep_frame=dep_frame,
+                            )
+                        )
+                else:
+                    raise ValueError(f"Unknown derived type: {v}")
         for (du_hash, frame, annotation_hash), annotation_deps in self.annotation_metrics.items():
             feature_hash = annotation_deps.pop("feature_hash")
             annotation_type = annotation_deps.pop("annotation_type")
             annotation_email = annotation_deps.pop("annotation_email")
             annotation_manual = annotation_deps.pop("annotation_manual")
-            analysis_values, extra_values = self._validate_pack_deps(
+            analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 annotation_deps,
                 ProjectAnnotationAnalytics,
                 ProjectAnnotationAnalyticsExtra,
+                ProjectAnnotationAnalyticsDerived,
                 set(),
             )
             annotation_analysis.append(
@@ -1192,8 +1271,39 @@ class SimpleExecutor(Executor):
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
+            for k, v in annotation_deps.items():
+                if k not in derived_values:
+                    continue
+                if isinstance(v, (RandomSampling, NearestNeighbors)):
+                    for idx, (dep_du_hash, dep_frame, dep_annotation_hash) in enumerate(v.metric_keys):  # type: ignore
+                        annotation_analysis_derived.append(
+                            ProjectAnnotationAnalyticsDerived(
+                                project_hash=project_hash,
+                                du_hash=du_hash,
+                                frame=frame,
+                                annotation_hash=annotation_hash,
+                                distance_metric=v.embedding_type
+                                if isinstance(v, NearestNeighbors)
+                                else EmbeddingDistanceMetric.RANDOM,
+                                distance_index=idx,
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                dep_du_hash=dep_du_hash,
+                                dep_frame=dep_frame,
+                                dep_annotation_hash=dep_annotation_hash,
+                            )
+                        )
+                else:
+                    raise ValueError(f"Unknown derived type: {v}")
 
-        return data_analysis, data_analysis_extra, annotation_analysis, annotation_analysis_extra, new_collaborators
+        return (
+            data_analysis,
+            data_analysis_extra,
+            data_analysis_derived,
+            annotation_analysis,
+            annotation_analysis_extra,
+            annotation_analysis_derived,
+            new_collaborators,
+        )
 
     def _pack_prediction(
         self,
@@ -1208,6 +1318,7 @@ class SimpleExecutor(Executor):
     ]:
         prediction_analysis = []
         prediction_analysis_extra = []
+        prediction_analysis_derived = []
         prediction_false_negatives = []
         user_email_lookup = {collab.user_email: collab.user_id for collab in collaborators}
         new_collaborators: List[ProjectCollaborator] = []
@@ -1216,10 +1327,11 @@ class SimpleExecutor(Executor):
             annotation_type = annotation_deps.pop("annotation_type")
             annotation_email = annotation_deps.pop("annotation_email")
             annotation_manual = annotation_deps.pop("annotation_manual")
-            analysis_values, extra_values = self._validate_pack_deps(
+            analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 annotation_deps,
                 ProjectPredictionAnalytics,
                 ProjectPredictionAnalyticsExtra,
+                ProjectPredictionAnalyticsDerived,
                 {"iou", "match_annotation_hash", "match_feature_hash", "match_duplicate_iou"},
             )
             prediction_analysis.append(
@@ -1248,6 +1360,29 @@ class SimpleExecutor(Executor):
                     **{k: self._pack_extra(k, v) for k, v in annotation_deps.items() if k in extra_values},
                 )
             )
+            for k, v in annotation_deps.items():
+                if k not in derived_values:
+                    continue
+                if isinstance(v, (RandomSampling, NearestNeighbors)):
+                    for idx, (dep_du_hash, dep_frame, dep_annotation_hash) in enumerate(v.metric_keys):  # type: ignore
+                        prediction_analysis_derived.append(
+                            ProjectPredictionAnalyticsDerived(
+                                project_hash=project_hash,
+                                du_hash=du_hash,
+                                frame=frame,
+                                annotation_hash=annotation_hash,
+                                distance_metric=v.embedding_type
+                                if isinstance(v, NearestNeighbors)
+                                else EmbeddingDistanceMetric.RANDOM,
+                                distance_index=idx,
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                dep_du_hash=dep_du_hash,
+                                dep_frame=dep_frame,
+                                dep_annotation_hash=dep_annotation_hash,
+                            )
+                        )
+                else:
+                    raise ValueError(f"Unknown derived type: {v}")
 
         for (du_hash, frame, annotation_hash), (feature_hash, iou_threshold) in self.prediction_false_negatives.items():
             prediction_false_negatives.append(

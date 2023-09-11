@@ -70,10 +70,10 @@ def route_action_create_project_subset(
         new_local_project_hash = uuid.uuid4()
         new_project = Project(
             project_hash=new_local_project_hash,
-            project_name=item.project_title,
-            project_description=item.project_description or "",
-            project_remote_ssh_key_path=current_project.project_remote_ssh_key_path,
-            project_ontology=current_project.project_ontology,
+            name=item.project_title,
+            description=item.project_description or "",
+            remote=current_project.remote,
+            ontology=current_project.ontology,
             custom_metrics=current_project.custom_metrics,
         )
 
@@ -131,7 +131,15 @@ def route_action_create_project_subset(
             precalculated_annotation_extra=subset_annotation_analytics_extra,
             precalculated_collaborators=current_collaborators,
         )
-        new_data, new_data_extra, new_annotate, new_annotate_extra, new_collab = new_analytics
+        (
+            new_data,
+            new_data_extra,
+            new_data_derived,
+            new_annotate,
+            new_annotate_extra,
+            new_annotate_derived,
+            new_collab,
+        ) = new_analytics
 
         # Insert state into the database
         new_local_dataset_hash = uuid.uuid4()
@@ -368,7 +376,7 @@ def route_action_upload_project_to_encord(
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
             raise ValueError("Unknown project")
-        if project.project_remote_ssh_key_path is not None:
+        if project.remote:
             raise ValueError("Project already is bound to a remote")
 
         # Select all hashes present in the project
@@ -399,7 +407,7 @@ def route_action_upload_project_to_encord(
     uploaded_ontology = encord_client.create_ontology(
         title=item.ontology_title,
         description=item.ontology_description or "",
-        structure=OntologyStructure.from_dict(project.project_ontology),
+        structure=OntologyStructure.from_dict(project.ontology),
     )
     uploaded_dataset = encord_client.create_dataset(
         dataset_title=item.dataset_title,

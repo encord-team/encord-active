@@ -38,6 +38,7 @@ def import_predictions(
         import_coco_prediction(
             database_dir=database_dir,
             predictions_file_path=predictions_path,
+            ssh_key=app_config.get_or_query_ssh_key().read_text("utf-8"),
             project_hash=project_uuid,
             prediction_name=prediction_name,
         )
@@ -152,11 +153,11 @@ Check that you have the correct ssh key set up and available projects on [blue]h
     else:
         from encord_active.imports.op import import_encord_project
 
-        ssh_key_path = app_config.get_or_query_ssh_key()
+        ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
         import_encord_project(
             database_dir=database_dir,
             encord_project_hash=project_hash,
-            ssh_key_path=ssh_key_path,
+            ssh_key=ssh_key,
             store_data_locally=store_data_locally,
         )
 

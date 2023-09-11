@@ -8,6 +8,7 @@ from encord.objects import Object, OntologyStructure, Shape
 from pydantic import BaseModel
 
 from encord_active.db.models import (
+    ImportMetadataType,
     Project,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
@@ -350,14 +351,14 @@ def import_coco(
     return ProjectImportSpec(
         project=Project(
             project_hash=project_hash,
-            project_name=title,
-            project_description=description,
-            project_remote_ssh_key_path=None,
-            project_ontology=ontology,
+            name=title,
+            description=description,
+            remote=False,
+            ontology=ontology,
         ),
         project_import_meta=ProjectImportMetadata(
             project_hash=project_hash,
-            import_metadata_type="COCO",
+            import_metadata_type=ImportMetadataType.COCO,
             import_metadata={"images": images_map},
         ),
         project_data_list=project_data_list,

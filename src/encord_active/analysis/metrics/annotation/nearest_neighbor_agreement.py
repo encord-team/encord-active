@@ -26,7 +26,7 @@ class NearestNeighborAgreement(DerivedMetric):
         # FIXME: experiment with different filtering strategies & weighting strategies
         #  find one that works the best.
         # calculate
-        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest"])
+        nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest_cosine"])
         if len(nearest_neighbours.similarities) == 0:
             # No nearest neighbours for agreement, hence score of 0
             # FIXME: what should the default score be?

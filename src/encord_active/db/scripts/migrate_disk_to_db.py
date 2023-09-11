@@ -81,10 +81,10 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Object Area - Absolute": "metric_area",
     "Object Area - Relative": "metric_area_relative",
     "Object Aspect Ratio": "metric_aspect_ratio",
-    "Polygon Shape Similarity": "metric_label_poly_similarity",
+    "Polygon Shape Similarity": "metric_polygon_similarity",
     "Random Values on Objects": "metric_random",
     "Image-level Annotation Quality": "metric_annotation_quality",
-    "Shape outlier detection": "metric_label_shape_outlier",
+    "Shape outlier detection": "metric_shape_outlier",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.
@@ -142,7 +142,7 @@ def _assign_metrics(
             # more complete. As had to increase the value from 1020
             # due to larger values being returned from the metric.
             score = math.sqrt(score) / (8.0 * 255.0)
-        elif metric_column_name == "metric_label_shape_outlier":
+        elif metric_column_name == "metric_shape_outlier":
             # NOTE: guesswork, not based on any analysis of hu moments
             score = score / 10000.0
             pass
@@ -813,10 +813,10 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
         ontology_dict = json.loads(pfs.ontology.read_text(encoding="utf-8"))
         project = Project(
             project_hash=project_hash,
-            project_name=project_meta["project_title"],
-            project_description=project_meta.get("project_description", ""),
-            project_remote_ssh_key_path=project_meta["ssh_key_path"] if project_meta.get("has_remote", False) else None,
-            project_ontology=ontology_dict,
+            name=project_meta["project_title"],
+            description=project_meta.get("project_description", ""),
+            remote=project_meta.get("has_remote", False),
+            ontology=ontology_dict,
         )
         valid_classify_child_feature_hashes = __list_valid_child_feature_hashes(ontology_dict)
         label_rows = conn.labelrow.find_many(

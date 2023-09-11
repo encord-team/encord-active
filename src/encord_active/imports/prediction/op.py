@@ -36,7 +36,7 @@ class PredictionImportSpec:
     du_prediction_list: List[ProjectPredictedDataUnit]
 
 
-def import_prediction(engine: Engine, database_dir: Path, prediction: PredictionImportSpec) -> None:
+def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, prediction: PredictionImportSpec) -> None:
     prediction_hash = prediction.prediction.prediction_hash
     coco_timestamp = datetime.now()
 
@@ -126,7 +126,7 @@ def import_prediction(engine: Engine, database_dir: Path, prediction: Prediction
         database_dir=database_dir,
         project_hash=project_hash,
         prediction_hash=prediction_hash,
-        project_ssh_path=project.project_remote_ssh_key_path,
+        project_ssh_key=ssh_key if project.remote else None,
     )
     prediction_analytics, prediction_analytics_extra, prediction_analytics_false_negatives, new_collaborators = res
 

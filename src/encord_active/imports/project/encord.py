@@ -16,9 +16,7 @@ from ..local_files import get_data_uri
 from .op import ProjectImportSpec
 
 
-def import_encord(
-    encord_project: encord.Project, ssh_key_path: Path, database_dir: Path, store_data_locally: bool
-) -> ProjectImportSpec:
+def import_encord(encord_project: encord.Project, database_dir: Path, store_data_locally: bool) -> ProjectImportSpec:
     project_hash = uuid.UUID(encord_project.project_hash)
 
     # Batch label row initialization.
@@ -130,8 +128,7 @@ def import_encord(
                         classifications=labels_json.get("classifications", []),
                     )
                 )
-            if len(data_unit_json) > 0:
-                print(f"DATA UNIT REST: {data_unit_json}")
+
         # Video needs special case handling to populate all frames that were missed.
         if is_video:
             video_json = data_unit_list_json[str(data_hash)]
@@ -165,10 +162,10 @@ def import_encord(
     return ProjectImportSpec(
         project=Project(
             project_hash=uuid.UUID(encord_project.project_hash),
-            project_name=encord_project.title,
-            project_description=encord_project.description,
-            project_remote_ssh_key_path=str(ssh_key_path),
-            project_ontology=encord_project.get_project_ontology().to_dict(),
+            name=encord_project.title,
+            description=encord_project.description,
+            remote=True,
+            ontology=encord_project.get_project_ontology().to_dict(),
         ),
         project_import_meta=None,
         project_data_list=project_data_list,

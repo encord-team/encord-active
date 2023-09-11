@@ -14,6 +14,7 @@ from encord_active.analysis.base import (
 from encord_active.analysis.metric import ObjectOnlyBatchInput
 from encord_active.analysis.types import (
     EmbeddingBatchTensor,
+    EmbeddingDistanceMetric,
     EmbeddingTensor,
     ImageBatchTensor,
     ImageTensor,
@@ -140,13 +141,22 @@ class NearestImageEmbeddingQuery:
     Extra dependency tracking is automatically added whenever this is used.
     """
 
-    def __init__(self, ident: str, embedding_source: str, max_neighbors: int = 11) -> None:
+    def __init__(
+        self,
+        ident: str,
+        embedding_source: str,
+        max_neighbors: int = 11,
+        similarity: EmbeddingDistanceMetric = EmbeddingDistanceMetric.EUCLIDEAN,
+        same_feature_hash: bool = False,
+    ) -> None:
         self.ident = ident
         # NOTE: as this-is implemented externally by the executor.
-        # dependencies is not set. This returns a reference for up to 'max_neighbours' nearby
+        # This returns a reference for up to 'max_neighbours' nearby
         # values and all associated stage 1 metric results. (ONLY stage 1 metric results!)
         self.embedding_source = embedding_source
         self.max_neighbours = max_neighbors
+        self.similarity = similarity
+        self.same_feature_hash = same_feature_hash
 
     """
     def setup_embedding_index(self, metric_results: dict[MetricKey, dict[str, MetricResult | EmbeddingTensor]]):

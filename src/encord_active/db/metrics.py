@@ -128,9 +128,9 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         type=MetricType.NORMAL,
     ),
     "metric_max_iou": MetricDefinition(
-        title="Label Duplicates",
+        title="Annotation Duplicates",
         short_desc="",
-        long_desc="",
+        long_desc="The maximum iou collision with another annotation",
         type=MetricType.NORMAL,
     ),
     "metric_border_relative": MetricDefinition(
@@ -139,7 +139,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_poly_similarity": MetricDefinition(
+    "metric_polygon_similarity": MetricDefinition(
         title="Polygon Similarity",
         short_desc="",
         long_desc="",
@@ -163,7 +163,7 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_label_shape_outlier": MetricDefinition(
+    "metric_shape_outlier": MetricDefinition(
         title="Shape Outlier",
         short_desc="",
         long_desc="",

@@ -38,7 +38,7 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
     engine = get_engine(path)
     with Session(engine) as sess:
         # Exact search
-        unique_project = sess.exec(select(Project.project_hash).where(Project.project_name == project_name)).fetchall()
+        unique_project = sess.exec(select(Project.project_hash).where(Project.name == project_name)).fetchall()
         if len(unique_project) == 1:
             return unique_project[0]
         elif len(unique_project) > 1:
@@ -57,7 +57,7 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
 
         # Fuzzy search
         fuzzy_project = sess.exec(
-            select(Project.project_name, Project.project_hash).where(
+            select(Project.name, Project.project_hash).where(
                 Project.project_name.like("%" + project_name + "%")  # type: ignore
             )
         ).fetchall()

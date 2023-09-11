@@ -25,7 +25,13 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Field, ForeignKeyConstraint, Index, SQLModel, create_engine
 from sqlmodel.sql.sqltypes import GUID, AutoString
 
-from encord_active.db.enums import AnnotationType, AnnotationTypeMaxValue
+from encord_active.analysis.types import EmbeddingDistanceMetric
+from encord_active.db.enums import (
+    AnnotationType,
+    AnnotationTypeMaxValue,
+    DataType,
+    DataTypeMaxValue,
+)
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
@@ -65,6 +71,10 @@ def field_bool(nullable: bool = False) -> bool:
 
 def field_int(primary_key: bool = False, nullable: bool = False) -> int:
     return Field(primary_key=primary_key, sa_column=Column(Integer, nullable=nullable, primary_key=primary_key))
+
+
+def field_small_int(primary_key: bool = False, nullable: bool = False) -> int:
+    return Field(primary_key=primary_key, sa_column=Column(SMALLINT, nullable=nullable, primary_key=primary_key))
 
 
 def field_big_int(primary_key: bool = False, nullable: bool = False) -> int:
@@ -116,13 +126,17 @@ class EmbeddingReductionType(enum.Enum):
     UMAP = "umap"
 
 
+class ImportMetadataType(enum.Enum):
+    COCO = "coco"
+
+
 class Project(SQLModel, table=True):
     __tablename__ = "project"
     project_hash: UUID = field_uuid(primary_key=True)
-    project_name: str = field_text()
-    project_description: str = field_text()
-    project_remote_ssh_key_path: Optional[str] = field_text(nullable=True)
-    project_ontology: dict = field_json_dict()
+    name: str = field_text()
+    description: str = field_text()
+    ontology: dict = field_json_dict()
+    remote: bool = field_bool()
 
     # Custom metadata, list of all metadata for custom metrics
     custom_metrics: list = field_json_list(default=[])
@@ -131,10 +145,10 @@ class Project(SQLModel, table=True):
 class ProjectImportMetadata(SQLModel, table=True):
     __tablename__ = "project_import"
     project_hash: UUID = field_uuid(primary_key=True)
-    import_metadata_type: str = field_text()
     import_metadata: dict = field_json_dict()
+    import_metadata_type: ImportMetadataType
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_hash_import_meta_fk"),)
+    __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_import"),)
 
 
 class ProjectEmbeddingIndex(SQLModel, table=True):
@@ -149,7 +163,7 @@ class ProjectEmbeddingIndex(SQLModel, table=True):
     annotation_index_name: Optional[str] = field_text(nullable=True)
     annotation_index_compiled: Optional[bytes] = field_bytes(nullable=True)
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_hash_import_meta_fk"),)
+    __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_embedding_index"),)
 
 
 class ProjectCollaborator(SQLModel, table=True):
@@ -158,7 +172,7 @@ class ProjectCollaborator(SQLModel, table=True):
     user_id: int = field_big_int(primary_key=True)
     user_email: str = field_text()
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_hash_collaborator_fk"),)
+    __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_collaborator"),)
 
 
 class ProjectEmbeddingReduction(SQLModel, table=True):
@@ -173,8 +187,8 @@ class ProjectEmbeddingReduction(SQLModel, table=True):
     reduction_bytes: bytes
 
     __table_args__ = (
-        fk_constraint(["project_hash"], Project, "project_embedding_reduction_project_fk"),
-        Index("project_embedding_reduction_ph_idx", "reduction_hash", "project_hash", unique=True),
+        fk_constraint(["project_hash"], Project, "fk_project_embedding_reduction"),
+        Index("ix_project_embedding_reduction", "project_hash", "reduction_hash", unique=True),
     )
 
 
@@ -198,8 +212,8 @@ class ProjectDataMetadata(SQLModel, table=True):
     classification_answers: dict = field_json_dict()
 
     __table_args__ = (
-        fk_constraint(["project_hash"], Project, "project_data_project_fk"),
-        CheckConstraint("num_frames > 0", name="project_data_num_frames_ck"),
+        fk_constraint(["project_hash"], Project, "fk_project_data"),
+        CheckConstraint("num_frames > 0", name="project_data_num_frames"),
     )
 
 
@@ -227,34 +241,26 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     classifications: list = field_json_list()
 
     __table_args__ = (
-        fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "data_unit_data_fk"),
-        CheckConstraint("frame >= 0", name="data_unit_frame_check"),
+        fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "fk_project_data_units"),
+        CheckConstraint("frame >= 0", name="project_data_units_frame"),
     )
 
 
-def metric_field_type_normal(nullable: bool = True, override_min: int = 0) -> float:
+def field_metric_normal(nullable: bool = True) -> float:
     return Field(
-        # ge=override_min,
-        # le=0,
         sa_column=Column(REAL, nullable=nullable),
     )
 
 
-def metric_field_type_positive_integer(nullable: bool = True) -> int:
-    return Field(
-        # ge=0,
-        sa_column=Column(INT, nullable=nullable)
-    )
+def field_metric_positive_integer(nullable: bool = True) -> int:
+    return Field(sa_column=Column(INT, nullable=nullable))
 
 
-def metric_field_type_positive_float(nullable: bool = True) -> float:
-    return Field(
-        # ge=0,
-        sa_column=Column(REAL, nullable=nullable)
-    )
+def field_metric_positive_float(nullable: bool = True) -> float:
+    return Field(sa_column=Column(REAL, nullable=nullable))
 
 
-def field_type_char8(primary_key: bool = False, nullable: bool = False) -> str:
+def field_char8(primary_key: bool = False, nullable: bool = False) -> str:
     return Field(
         primary_key=primary_key,
         sa_column=Column(Char8, nullable=nullable, primary_key=primary_key),
@@ -263,8 +269,24 @@ def field_type_char8(primary_key: bool = False, nullable: bool = False) -> str:
     )
 
 
-def field_type_annotation_type() -> AnnotationType:
-    return Field(sa_column=Column(SMALLINT, nullable=False), ge=0, le=AnnotationTypeMaxValue)
+def field_annotation_type() -> AnnotationType:
+    return Field(sa_column=Column(SMALLINT, nullable=False))
+
+
+def check_annotation_type(name: str) -> CheckConstraint:
+    return CheckConstraint(f"annotation_type >= 0 AND annotation_type <= {AnnotationTypeMaxValue}", name=name)
+
+
+def field_data_type() -> DataType:
+    return Field(sa_column=Column(SMALLINT), nullable=False)
+
+
+def check_data_type(name: str) -> CheckConstraint:
+    return CheckConstraint(f"data_type >= 0 AND data_type <= {DataTypeMaxValue}", name=name)
+
+
+def field_embedding_distance_metric(primary_key: bool = False) -> EmbeddingDistanceMetric:
+    return Field(sa_column=Column(SMALLINT, nullable=False, primary_key=primary_key))
 
 
 def define_metric_indices(
@@ -272,14 +294,15 @@ def define_metric_indices(
     metrics: Dict[str, MetricDefinition],
     extra: Iterable[Union[Index, CheckConstraint, ForeignKeyConstraint]],
     add_constraints: bool = True,
+    grouping: str = "project_hash",
 ) -> Tuple[Union[Index, CheckConstraint, ForeignKeyConstraint], ...]:
     values: List[Union[Index, CheckConstraint, ForeignKeyConstraint]] = [
-        Index(f"{metric_prefix}_ph_{metric_name}_index", "project_hash", metric_name)
+        Index(f"ix_{metric_prefix}_ph_{metric_name.replace('metric_', 'mtc_')}", grouping, metric_name)
         for metric_name, metric_metadata in metrics.items()
     ]
     if add_constraints:
         for metric_name, metric_metadata in metrics.items():
-            name = f"{metric_prefix}_{metric_name}_ck"
+            name = f"{metric_prefix}_{metric_name.replace('metric_', 'mtc_')}"
             if metric_metadata.type == MetricType.NORMAL:
                 values.append(CheckConstraint(f"{metric_name} BETWEEN 0.0 AND 1.0", name=name))
             elif metric_metadata.type == MetricType.UINT:
@@ -298,40 +321,38 @@ class ProjectDataAnalytics(SQLModel, table=True):
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
     # Metrics - Absolute Size
-    metric_width: Optional[int] = metric_field_type_positive_integer()
-    metric_height: Optional[int] = metric_field_type_positive_integer()
-    metric_area: Optional[int] = metric_field_type_positive_integer()
+    metric_width: Optional[int] = field_metric_positive_integer()
+    metric_height: Optional[int] = field_metric_positive_integer()
+    metric_area: Optional[int] = field_metric_positive_integer()
     # Metrics - Relative Size
-    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
+    metric_aspect_ratio: Optional[float] = field_metric_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = metric_field_type_normal()
-    metric_contrast: Optional[float] = metric_field_type_normal()
-    metric_sharpness: Optional[float] = metric_field_type_normal()
-    metric_red: Optional[float] = metric_field_type_normal()
-    metric_green: Optional[float] = metric_field_type_normal()
-    metric_blue: Optional[float] = metric_field_type_normal()
+    metric_brightness: Optional[float] = field_metric_normal()
+    metric_contrast: Optional[float] = field_metric_normal()
+    metric_sharpness: Optional[float] = field_metric_normal()
+    metric_red: Optional[float] = field_metric_normal()
+    metric_green: Optional[float] = field_metric_normal()
+    metric_blue: Optional[float] = field_metric_normal()
     # Random
-    metric_random: Optional[float] = metric_field_type_normal()
+    metric_random: Optional[float] = field_metric_normal()
     # Image Only
-    metric_object_count: Optional[int] = metric_field_type_positive_integer()
-    metric_object_density: Optional[float] = metric_field_type_normal()
-    metric_image_difficulty: Optional[float] = metric_field_type_normal()
-    metric_image_uniqueness: Optional[float] = metric_field_type_normal()
+    metric_object_count: Optional[int] = field_metric_positive_integer()
+    metric_object_density: Optional[float] = field_metric_normal()
+    metric_image_difficulty: Optional[float] = field_metric_normal()
+    metric_image_uniqueness: Optional[float] = field_metric_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = metric_field_type_normal()
-    metric_custom1: Optional[float] = metric_field_type_normal()
-    metric_custom2: Optional[float] = metric_field_type_normal()
-    metric_custom3: Optional[float] = metric_field_type_normal()
+    metric_custom0: Optional[float] = field_metric_normal()
+    metric_custom1: Optional[float] = field_metric_normal()
+    metric_custom2: Optional[float] = field_metric_normal()
+    metric_custom3: Optional[float] = field_metric_normal()
 
     __table_args__ = define_metric_indices(
-        "data",
+        "project_analytics_data",
         DataMetrics,
         [
-            fk_constraint(
-                ["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "data_project_analytics_data_fk"
-            ),
-            CheckConstraint("frame >= 0", name="data_frame_check"),
+            fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "fk_project_analytics_data"),
+            CheckConstraint("frame >= 0", name="project_analytics_data_frame"),
         ],
     )
 
@@ -344,16 +365,31 @@ class ProjectDataAnalyticsExtra(SQLModel, table=True):
     frame: int = field_int(primary_key=True)
     # Embeddings
     embedding_clip: Optional[EmbeddingVector] = field_embedding_vector(512, nullable=True)
-    # Embeddings derived
-    derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
     metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
     __table_args__ = (
-        fk_constraint(
-            ["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "data_project_data_analytics_extra_fk"
-        ),
-        CheckConstraint("frame >= 0", name="data_extra_frame_check"),
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "fk_project_analytics_data_extra"),
+        CheckConstraint("frame >= 0", name="project_analytics_data_extra_frame"),
+    )
+
+
+class ProjectDataAnalyticsDerived(SQLModel, table=True):
+    __tablename__ = "project_analytics_data_derived"
+    # Base primary key
+    project_hash: UUID = field_uuid(primary_key=True)
+    du_hash: UUID = field_uuid(primary_key=True)
+    frame: int = field_int(primary_key=True)
+    distance_metric: EmbeddingDistanceMetric = field_embedding_distance_metric(primary_key=True)
+    distance_index: int = field_small_int(primary_key=True)
+    # Query result
+    similarity: Optional[float] = field_real(nullable=True)
+    dep_du_hash: UUID = field_uuid()
+    dep_frame: int = field_int()
+
+    __table_args__ = (
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "fk_project_analytics_data_derived"),
+        CheckConstraint("frame >= 0", name="project_analytics_data_derived_frame"),
     )
 
 
@@ -368,15 +404,11 @@ class ProjectDataAnalyticsReduced(SQLModel, table=True):
     y: float = field_real()
 
     __table_args__ = (
-        fk_constraint(
-            ["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "data_project_data_analytics_reduced_fk"
-        ),
-        fk_constraint(
-            ["reduction_hash"], ProjectEmbeddingReduction, "data_project_data_analytics_reduced_reduction_fk"
-        ),
-        Index("project_analytics_data_reduced_x", "reduction_hash", "project_hash", "x", "y"),
-        Index("project_analytics_data_reduced_y", "reduction_hash", "project_hash", "y", "x"),
-        CheckConstraint("frame >= 0", name="data_reduced_frame_check"),
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "fk_project_analytics_data_reduced"),
+        fk_constraint(["reduction_hash"], ProjectEmbeddingReduction, "fk_project_analytics_data_reduced_reduction"),
+        Index("ix_project_analytics_data_reduced_x", "reduction_hash", "project_hash", "x", "y"),
+        Index("ix_project_analytics_data_reduced_y", "reduction_hash", "project_hash", "y", "x"),
+        CheckConstraint("frame >= 0", name="project_analytics_data_reduced_frame"),
     )
 
 
@@ -387,57 +419,59 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     # Extra properties
-    feature_hash: str = field_type_char8()
-    annotation_type: AnnotationType = field_type_annotation_type()
+    feature_hash: str = field_char8()
+    annotation_type: AnnotationType = field_annotation_type()
     annotation_user_id: Optional[int] = field_int(nullable=True)
     annotation_manual: bool = field_bool()
     # Metrics - Absolute Size
-    metric_width: Optional[int] = metric_field_type_positive_integer()
-    metric_height: Optional[int] = metric_field_type_positive_integer()
-    metric_area: Optional[int] = metric_field_type_positive_integer()
+    metric_width: Optional[int] = field_metric_positive_integer()
+    metric_height: Optional[int] = field_metric_positive_integer()
+    metric_area: Optional[int] = field_metric_positive_integer()
     # Metrics - Relative Size
-    metric_area_relative: Optional[float] = metric_field_type_normal()
-    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
+    metric_area_relative: Optional[float] = field_metric_normal()
+    metric_aspect_ratio: Optional[float] = field_metric_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = metric_field_type_normal()
-    metric_contrast: Optional[float] = metric_field_type_normal()
-    metric_sharpness: Optional[float] = metric_field_type_normal()
-    metric_red: Optional[float] = metric_field_type_normal()
-    metric_green: Optional[float] = metric_field_type_normal()
-    metric_blue: Optional[float] = metric_field_type_normal()
+    metric_brightness: Optional[float] = field_metric_normal()
+    metric_contrast: Optional[float] = field_metric_normal()
+    metric_sharpness: Optional[float] = field_metric_normal()
+    metric_red: Optional[float] = field_metric_normal()
+    metric_green: Optional[float] = field_metric_normal()
+    metric_blue: Optional[float] = field_metric_normal()
     # Random
-    metric_random: Optional[float] = metric_field_type_normal()
+    metric_random: Optional[float] = field_metric_normal()
     # Both - Annotation based
-    metric_annotation_quality: Optional[float] = metric_field_type_normal()
+    metric_annotation_quality: Optional[float] = field_metric_normal()
     # Metrics - Label Only
-    metric_max_iou: Optional[float] = metric_field_type_normal()
-    metric_border_relative: Optional[float] = metric_field_type_normal()
-    metric_label_poly_similarity: Optional[float] = metric_field_type_normal()
-    metric_missing_or_broken_track: Optional[float] = metric_field_type_normal()
-    metric_inconsistent_class: Optional[float] = metric_field_type_normal()
-    metric_label_shape_outlier: Optional[float] = metric_field_type_normal()
-    metric_confidence: float = metric_field_type_normal()
+    metric_max_iou: Optional[float] = field_metric_normal()
+    metric_border_relative: Optional[float] = field_metric_normal()
+    metric_polygon_similarity: Optional[float] = field_metric_normal()
+    metric_missing_or_broken_track: Optional[float] = field_metric_normal()
+    metric_inconsistent_class: Optional[float] = field_metric_normal()
+    metric_shape_outlier: Optional[float] = field_metric_normal()
+    metric_confidence: float = field_metric_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = metric_field_type_normal()
-    metric_custom1: Optional[float] = metric_field_type_normal()
-    metric_custom2: Optional[float] = metric_field_type_normal()
-    metric_custom3: Optional[float] = metric_field_type_normal()
+    metric_custom0: Optional[float] = field_metric_normal()
+    metric_custom1: Optional[float] = field_metric_normal()
+    metric_custom2: Optional[float] = field_metric_normal()
+    metric_custom3: Optional[float] = field_metric_normal()
 
     __table_args__ = define_metric_indices(
-        "annotate",
+        "project_analytics_annotation",
         AnnotationMetrics,
         [
-            fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "label_project_data_fk"),
+            fk_constraint(
+                ["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "fk_project_analytics_annotation"
+            ),
             fk_constraint(
                 ["project_hash", "annotation_user_id"],
                 ProjectCollaborator,
-                "project_label_annotation_user_id_fk",
+                "fk_project_analytics_annotation_user_id",
                 ["project_hash", "user_id"],
             ),
-            CheckConstraint("frame >= 0", name="annotate_frame_check"),
+            CheckConstraint("frame >= 0", name="project_analytics_annotation_frame"),
         ],
     )
 
@@ -448,12 +482,10 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     # Embeddings
     embedding_clip: Optional[EmbeddingVector] = field_embedding_vector(512, nullable=True)
     embedding_hu: Optional[EmbeddingVector] = field_embedding_vector(7, nullable=True)
-    # Embeddings derived
-    derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
     metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
@@ -461,9 +493,34 @@ class ProjectAnnotationAnalyticsExtra(SQLModel, table=True):
         fk_constraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             ProjectAnnotationAnalytics,
-            "data_project_annotation_analytics_extra_fk",
+            "fk_project_analytics_annotation_extra",
         ),
-        CheckConstraint("frame >= 0", name="annotate_extra_frame_check"),
+        CheckConstraint("frame >= 0", name="project_analytics_annotation_extra_frame"),
+    )
+
+
+class ProjectAnnotationAnalyticsDerived(SQLModel, table=True):
+    __tablename__ = "project_analytics_annotation_derived"
+    # Base primary key
+    project_hash: UUID = field_uuid(primary_key=True)
+    du_hash: UUID = field_uuid(primary_key=True)
+    frame: int = field_int(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
+    distance_metric: EmbeddingDistanceMetric = field_embedding_distance_metric(primary_key=True)
+    distance_index: int = field_small_int(primary_key=True)
+    # Query result
+    similarity: Optional[float] = field_real(nullable=True)
+    dep_du_hash: UUID = field_uuid()
+    dep_frame: int = field_int()
+    dep_annotation_hash: str = field_char8()
+
+    __table_args__ = (
+        fk_constraint(
+            ["project_hash", "du_hash", "frame", "annotation_hash"],
+            ProjectAnnotationAnalytics,
+            "fk_project_analytics_annotation_derived",
+        ),
+        CheckConstraint("frame >= 0", name="project_analytics_annotation_derived_frame"),
     )
 
 
@@ -474,7 +531,7 @@ class ProjectAnnotationAnalyticsReduced(SQLModel, table=True):
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     # 2D embedding
     x: float = field_real()
     y: float = field_real()
@@ -483,16 +540,16 @@ class ProjectAnnotationAnalyticsReduced(SQLModel, table=True):
         fk_constraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             ProjectAnnotationAnalytics,
-            "data_project_annotation_analytics_reduced_fk",
+            "fk_project_analytics_annotation_reduced",
         ),
         fk_constraint(
             ["reduction_hash"],
             ProjectEmbeddingReduction,
-            "data_project_annotation_analytics_reduced_reduction_fk",
+            "fk_project_analytics_annotation_reduced_reduction",
         ),
-        Index("project_analytics_annotation_reduced_x", "reduction_hash", "project_hash", "x", "y"),
-        Index("project_analytics_annotation_reduced_y", "reduction_hash", "project_hash", "y", "x"),
-        CheckConstraint("frame >= 0", name="annotate_reduced_frame_check"),
+        Index("ix_project_analytics_annotation_reduced_x", "reduction_hash", "project_hash", "x", "y"),
+        Index("ix_project_analytics_annotation_reduced_y", "reduction_hash", "project_hash", "y", "x"),
+        CheckConstraint("frame >= 0", name="project_analytics_annotation_reduced_frame"),
     )
 
 
@@ -503,7 +560,7 @@ class ProjectTag(SQLModel, table=True):
     name: str = field_text()
     description: str = field_text()
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "project_tags_project_fk"),)
+    __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_tags"),)
 
 
 class ProjectTaggedDataUnit(SQLModel, table=True):
@@ -514,11 +571,9 @@ class ProjectTaggedDataUnit(SQLModel, table=True):
     tag_hash: UUID = field_uuid(primary_key=True)
 
     __table_args__ = (
-        fk_constraint(["tag_hash"], ProjectTag, "project_tagged_data_units_tag_fk"),
-        fk_constraint(
-            ["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "project_tagged_data_units_analysis_fk"
-        ),
-        CheckConstraint("frame >= 0", name="project_tagged_data_frame_check"),
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataAnalytics, "fk_project_tagged_data"),
+        fk_constraint(["tag_hash"], ProjectTag, "fk_project_tagged_data_tag"),
+        CheckConstraint("frame >= 0", name="project_tagged_data_frame"),
     )
 
 
@@ -527,34 +582,34 @@ class ProjectTaggedAnnotation(SQLModel, table=True):
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     tag_hash: UUID = field_uuid(primary_key=True)
 
     __table_args__ = (
-        fk_constraint(["tag_hash"], ProjectTag, "project_tagged_annotation_tag_fk"),
         fk_constraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             ProjectAnnotationAnalytics,
-            "project_tagged_annotation_analysis_fk",
+            "fk_project_tagged_annotation",
         ),
-        CheckConstraint("frame >= 0", name="project_tagged_annotation_frame_check"),
+        fk_constraint(["tag_hash"], ProjectTag, "fk_project_tagged_annotation_tag"),
+        CheckConstraint("frame >= 0", name="project_tagged_annotation_frame"),
     )
 
 
 class ProjectPrediction(SQLModel, table=True):
-    __tablename__ = "project_prediction"
+    __tablename__ = "prediction"
     prediction_hash: UUID = field_uuid(primary_key=True)
     project_hash: UUID = field_uuid()
     external_project_hash: Optional[UUID] = field_uuid(nullable=True)
     name: str
     __table_args__ = (
-        fk_constraint(["project_hash"], Project, "project_prediction_project_hash_fk"),
-        Index("project_prediction_project_uq", "prediction_hash", "project_hash", unique=True),
+        fk_constraint(["project_hash"], Project, "fk_prediction"),
+        Index("uq_project_prediction", "project_hash", "prediction_hash", unique=True),
     )
 
 
 class ProjectPredictionDataMetadata(SQLModel, table=True):
-    __tablename__ = "project_prediction_data"
+    __tablename__ = "prediction_data"
     # Base primary key
     prediction_hash: UUID = field_uuid(primary_key=True)
     data_hash: UUID = field_uuid(primary_key=True)
@@ -570,13 +625,13 @@ class ProjectPredictionDataMetadata(SQLModel, table=True):
     classification_answers: dict = field_json_dict()
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_data_fk"),
-        fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "project_prediction_data_project_fk"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_data"),
+        fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "fk_prediction_data_project"),
     )
 
 
 class ProjectPredictionDataUnitMetadata(SQLModel, table=True):
-    __tablename__ = "project_prediction_data_units"
+    __tablename__ = "prediction_data_units"
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
@@ -590,181 +645,207 @@ class ProjectPredictionDataUnitMetadata(SQLModel, table=True):
     classifications: list = field_json_list()
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "prediction_du_project_fk"),
         fk_constraint(
             ["prediction_hash", "data_hash"],
             ProjectPredictionDataMetadata,
-            "prediction_data_unit_data_fk",
+            "fk_prediction_data_units",
         ),
-        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "prediction_data_unit_fk"),
-        CheckConstraint("frame >= 0", name="prediction_data_unit_frame_check"),
+        fk_constraint(["project_hash", "du_hash", "frame"], ProjectDataUnitMetadata, "fk_prediction_data_units_data"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_data_units_project"),
+        CheckConstraint("frame >= 0", name="prediction_data_units_frame"),
     )
 
 
 @assert_cls_metrics_match(AnnotationMetrics, CUSTOM_METRIC_COUNT)
 class ProjectPredictionAnalytics(SQLModel, table=True):
-    __tablename__ = "project_prediction_analytics"
+    __tablename__ = "prediction_analytics"
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
-    feature_hash: str = field_type_char8()
+    annotation_hash: str = field_char8(primary_key=True)
+    feature_hash: str = field_char8()
     project_hash: UUID = field_uuid()
 
     # Prediction data for display.
-    annotation_type: AnnotationType = field_type_annotation_type()
+    annotation_type: AnnotationType = field_annotation_type()
 
     # Prediction metadata: (for iou dependent TP vs FP split & feature hash grouping)
-    match_annotation_hash: Optional[str] = field_type_char8(nullable=True)
-    match_feature_hash: Optional[str] = field_type_char8(nullable=True)
-    match_duplicate_iou: float = metric_field_type_normal(nullable=False, override_min=-1)  # -1 is always TP
-    iou: float = metric_field_type_normal(nullable=False)
+    match_annotation_hash: Optional[str] = field_char8(nullable=True)
+    match_feature_hash: Optional[str] = field_char8(nullable=True)
+    match_duplicate_iou: float = field_metric_normal(nullable=False)  # -1 is always TP
+    iou: float = field_metric_normal(nullable=False)
 
     # Prediction object metrics
     # Metrics - Absolute Size
-    metric_width: Optional[int] = metric_field_type_positive_integer()
-    metric_height: Optional[int] = metric_field_type_positive_integer()
-    metric_area: Optional[int] = metric_field_type_positive_integer()
+    metric_width: Optional[int] = field_metric_positive_integer()
+    metric_height: Optional[int] = field_metric_positive_integer()
+    metric_area: Optional[int] = field_metric_positive_integer()
     # Metrics - Relative Size
-    metric_area_relative: Optional[float] = metric_field_type_normal()
-    metric_aspect_ratio: Optional[float] = metric_field_type_positive_float()
+    metric_area_relative: Optional[float] = field_metric_normal()
+    metric_aspect_ratio: Optional[float] = field_metric_positive_float()
     # Metrics Color
-    metric_brightness: Optional[float] = metric_field_type_normal()
-    metric_contrast: Optional[float] = metric_field_type_normal()
-    metric_sharpness: Optional[float] = metric_field_type_normal()
-    metric_red: Optional[float] = metric_field_type_normal()
-    metric_green: Optional[float] = metric_field_type_normal()
-    metric_blue: Optional[float] = metric_field_type_normal()
+    metric_brightness: Optional[float] = field_metric_normal()
+    metric_contrast: Optional[float] = field_metric_normal()
+    metric_sharpness: Optional[float] = field_metric_normal()
+    metric_red: Optional[float] = field_metric_normal()
+    metric_green: Optional[float] = field_metric_normal()
+    metric_blue: Optional[float] = field_metric_normal()
     # Random
-    metric_random: Optional[float] = metric_field_type_normal()
+    metric_random: Optional[float] = field_metric_normal()
     # Both - Annotation based
-    metric_annotation_quality: Optional[float] = metric_field_type_normal()
+    metric_annotation_quality: Optional[float] = field_metric_normal()
     # Metrics - Label Only
-    metric_max_iou: Optional[float] = metric_field_type_normal()
-    metric_border_relative: Optional[float] = metric_field_type_normal()
-    metric_label_poly_similarity: Optional[float] = metric_field_type_normal()
-    metric_missing_or_broken_track: Optional[float] = metric_field_type_normal()
-    metric_inconsistent_class: Optional[float] = metric_field_type_normal()
-    metric_label_shape_outlier: Optional[float] = metric_field_type_normal()
-    metric_confidence: float = metric_field_type_normal()
+    metric_max_iou: Optional[float] = field_metric_normal()
+    metric_border_relative: Optional[float] = field_metric_normal()
+    metric_polygon_similarity: Optional[float] = field_metric_normal()
+    metric_missing_or_broken_track: Optional[float] = field_metric_normal()
+    metric_inconsistent_class: Optional[float] = field_metric_normal()
+    metric_shape_outlier: Optional[float] = field_metric_normal()
+    metric_confidence: float = field_metric_normal()
 
     # 4x custom normal metrics
-    metric_custom0: Optional[float] = metric_field_type_normal()
-    metric_custom1: Optional[float] = metric_field_type_normal()
-    metric_custom2: Optional[float] = metric_field_type_normal()
-    metric_custom3: Optional[float] = metric_field_type_normal()
+    metric_custom0: Optional[float] = field_metric_normal()
+    metric_custom1: Optional[float] = field_metric_normal()
+    metric_custom2: Optional[float] = field_metric_normal()
+    metric_custom3: Optional[float] = field_metric_normal()
 
-    __table_args__ = (
-        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_prediction_fk"),
-        Index(
-            "project_prediction_confidence_index",
-            "prediction_hash",
-            "metric_confidence",
-        ),
-        Index(
-            "project_prediction_feature_confidence_index",
-            "prediction_hash",
-            "feature_hash",
-            "metric_confidence",
-        ),
-        CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="project_prediction_iou"),
-        CheckConstraint(
-            "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0",
-            name="project_prediction_match_duplicate_iou",
-        ),
-        CheckConstraint("frame >= 0", name="project_prediction_frame_check"),
+    __table_args__ = define_metric_indices(
+        "prediction_analytics",
+        AnnotationMetrics,
+        [
+            fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics"),
+            Index(
+                "ix_prediction_analytics_ph_fh_mtc_confidence",
+                "prediction_hash",
+                "feature_hash",
+                "metric_confidence",
+            ),
+            CheckConstraint("iou BETWEEN 0.0 AND 1.0", name="prediction_analytics_iou"),
+            CheckConstraint(
+                "match_duplicate_iou BETWEEN 0.0 AND 1.0 OR match_duplicate_iou = -1.0",
+                name="prediction_analytics_duplicate_iou",
+            ),
+            CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
+        ],
     )
 
 
 class ProjectPredictionAnalyticsExtra(SQLModel, table=True):
-    __tablename__ = "project_prediction_analytics_extra"
+    __tablename__ = "prediction_analytics_extra"
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     project_hash: UUID = field_uuid()
 
     # Embeddings
     embedding_clip: Optional[EmbeddingVector] = field_embedding_vector(512, nullable=True)
     embedding_hu: Optional[EmbeddingVector] = field_embedding_vector(7, nullable=True)
-    # Embeddings derived
-    derived_clip_nearest: Optional[dict] = field_json_dict(nullable=True)
     # Metric comments
     metric_metadata: Optional[Dict[str, str]] = field_string_dict(nullable=True)
 
     __table_args__ = (
         fk_constraint(
-            ["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_analytics_extra_ph_fk"
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            ProjectPredictionAnalytics,
+            "fk_prediction_analytics_extra",
         ),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics_extra_project"),
+        CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
+    )
+
+
+class ProjectPredictionAnalyticsDerived(SQLModel, table=True):
+    __tablename__ = "prediction_analytics_derived"
+    # Base primary key
+    prediction_hash: UUID = field_uuid(primary_key=True)
+    du_hash: UUID = field_uuid(primary_key=True)
+    frame: int = field_int(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
+    distance_metric: EmbeddingDistanceMetric = field_embedding_distance_metric(primary_key=True)
+    distance_index: int = field_small_int(primary_key=True)
+    # Extra state
+    project_hash: UUID = field_uuid()
+    # Query result
+    similarity: Optional[float] = field_real()
+    dep_du_hash: UUID = field_uuid()
+    dep_frame: int = field_int()
+    dep_annotation_hash: str = field_char8()
+
+    __table_args__ = (
         fk_constraint(
             ["prediction_hash", "du_hash", "frame", "annotation_hash"],
             ProjectPredictionAnalytics,
-            "project_prediction_analytics_extra_fk",
+            "fk_prediction_analytics_derived",
         ),
-        CheckConstraint("frame >= 0", name="project_prediction_extra_frame_check"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics_derive_project"),
+        CheckConstraint("frame >= 0", name="prediction_derived_frame"),
+        CheckConstraint("similarity >= 0", name="prediction_derived_similarity"),
     )
 
 
 class ProjectPredictionAnalyticsReduced(SQLModel, table=True):
-    __tablename__ = "project_prediction_analytics_reduced"
+    __tablename__ = "prediction_analytics_reduced"
     # Base primary key
     reduction_hash: UUID = field_uuid(primary_key=True)
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     project_hash: UUID = field_uuid()
     # 2D embedding
     x: float = field_real()
     y: float = field_real()
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "prediction_project_reduced_fk"),
-        fk_constraint(
-            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
-            ProjectPredictionAnalytics,
-            "data_project_prediction_analytics_reduced_fk",
-        ),
         fk_constraint(
             ["reduction_hash", "project_hash"],
             ProjectEmbeddingReduction,
-            "data_project_prediction_analytics_reduced_reduction_fk",
+            "fk_prediction_analytics_reduced",
         ),
-        Index("project_analytics_prediction_reduced_x", "reduction_hash", "prediction_hash", "x", "y"),
-        Index("project_analytics_prediction_reduced_y", "reduction_hash", "prediction_hash", "y", "x"),
-        CheckConstraint("frame >= 0", name="project_prediction_reduced_frame_check"),
+        fk_constraint(
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            ProjectPredictionAnalytics,
+            "fk_prediction_analytics_reduced_data",
+        ),
+        fk_constraint(
+            ["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics_reduced_project"
+        ),
+        Index("ix_prediction_analytics_reduced_x", "reduction_hash", "prediction_hash", "x", "y"),
+        Index("ix_prediction_analytics_reduced_y", "reduction_hash", "prediction_hash", "y", "x"),
+        CheckConstraint("frame >= 0", name="prediction_analytics_reduced_frame"),
     )
 
 
 class ProjectPredictionAnalyticsFalseNegatives(SQLModel, table=True):
-    __tablename__ = "project_prediction_analytics_fn"
+    __tablename__ = "prediction_analytics_fn"
     prediction_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
-    annotation_hash: str = field_type_char8(primary_key=True)
+    annotation_hash: str = field_char8(primary_key=True)
     project_hash: UUID = field_uuid()
 
     # IOU threshold for missed prediction
     # this entry is a false negative IFF (iou < iou_threshold)
     # -1.0 is used for unconditional
-    iou_threshold: float = metric_field_type_normal(nullable=False, override_min=-1)
+    iou_threshold: float = field_metric_normal(nullable=False)
 
     # Associated feature hash - used for common queries so split out explicitly.
-    feature_hash: str = field_type_char8(primary_key=True)
+    feature_hash: str = field_char8(primary_key=True)
 
     __table_args__ = (
-        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "project_prediction_fn_prediction_fk"),
         fk_constraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
             ProjectAnnotationAnalytics,
-            "project_prediction_fn_project_fk",
+            "fk_prediction_analytics_fn",
         ),
-        Index("project_prediction_unmatched_feature_hash_index", "prediction_hash", "feature_hash"),
+        fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics_fn_project"),
+        Index("fk_prediction_analytics_fn_feature_hash", "prediction_hash", "feature_hash"),
         CheckConstraint(
             "iou_threshold BETWEEN 0.0 AND 1.0 OR iou_threshold = -1.0",
-            name="project_prediction_unmatched_iou_threshold",
+            name="prediction_analytics_fn_iou_threshold",
         ),
-        CheckConstraint("frame >= 0", name="project_prediction_unmatched_frame_check"),
+        CheckConstraint("frame >= 0", name="prediction_analytics_fn_frame"),
     )
 
 

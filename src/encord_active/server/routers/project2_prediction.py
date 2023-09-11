@@ -299,7 +299,7 @@ def route_prediction_summary(
                     f"as var_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                FROM project_prediction_analytics, (
+                FROM prediction_analytics, (
                     SELECT
                         avg(
                             iou >= :iou and
@@ -309,7 +309,7 @@ def route_prediction_summary(
                     f"avg({metric_name}) as e_{metric_name}"
                     for metric_name in metric_names
                 ])}
-                     FROM project_prediction_analytics
+                     FROM prediction_analytics
                      WHERE prediction_hash = :prediction_hash
                 )
                 WHERE prediction_hash = :prediction_hash
@@ -352,7 +352,7 @@ def route_prediction_summary(
                             '''
                         for metric_name in valid_metric_stat_names
                     ])}
-                    FROM project_prediction_analytics
+                    FROM prediction_analytics
                     WHERE prediction_hash = :prediction_hash
                     """
                 ),
@@ -382,7 +382,7 @@ def route_prediction_summary(
                         for metric_name in metric_names
                         ]
                     )}
-                FROM project_prediction_analytics
+                FROM prediction_analytics
                 WHERE prediction_hash = :prediction_hash
                 """
                 ),
@@ -420,7 +420,7 @@ def route_prediction_summary(
                         )) OVER (
                             ORDER BY PR.metric_confidence DESC ROWS UNBOUNDED PRECEDING
                         ) AS tp_count
-                    FROM project_prediction_analytics PR
+                    FROM prediction_analytics PR
                     WHERE PR.prediction_hash = :prediction_hash
                     AND PR.feature_hash = :feature_hash
                     ORDER BY PR.metric_confidence DESC

@@ -1,8 +1,11 @@
 import math
 import uuid
+from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
+import encord
 from cachetools import TTLCache, cached
+from encord.http.constants import RequestsSettings
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
@@ -30,18 +33,18 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
-from encord_active.db.queries.tags import (
-    select_annotation_label_tags,
-    select_frame_data_tags,
-    select_frame_grouped_label_tags,
-    select_frame_label_tags,
-)
+from encord_active.db.queries.tags import select_frame_data_tags
 from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.lib.encord.utils import get_encord_project
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
 )
-from encord_active.server.dependencies import DataItem, dep_engine, parse_data_item
+from encord_active.server.dependencies import (
+    DataItem,
+    dep_engine,
+    dep_ssh_key,
+    parse_data_item,
+    dep_database_dir,
+)
 from encord_active.server.routers import (
     project2_actions,
     project2_analysis,
@@ -91,8 +94,8 @@ def route_list_projects(engine: Engine = Depends(dep_engine)) -> ProjectSearchRe
     project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
     with Session(engine) as sess:
         project_res = sess.exec(
-            select(Project.project_hash, Project.project_name, Project.project_description).order_by(
-                Project.project_name,
+            select(Project.project_hash, Project.name, Project.description).order_by(
+                Project.name,
             )
         ).fetchall()
         for project_hash, title, description in project_res:
@@ -133,7 +136,7 @@ class ProjectMetadata(BaseModel):
 @cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minute TTL Cache
 def route_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectMetadata:
     with Session(engine) as sess:
-        ontology = sess.exec(select(Project.project_ontology).where(Project.project_hash == project_hash)).first()
+        ontology = sess.exec(select(Project.ontology).where(Project.project_hash == project_hash)).first()
         if ontology is None:
             raise HTTPException(status_code=404, detail="Project does not exist")
         data_count = sess.exec(select(sql_count()).where(ProjectDataMetadata.project_hash == project_hash)).first()
@@ -275,10 +278,10 @@ def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_
         ).first()
 
     return ProjectSummary(
-        name=project.project_name,
-        description=project.project_description,
-        ontology=project.project_ontology,
-        local_project=project.project_remote_ssh_key_path is None,
+        name=project.name,
+        description=project.description,
+        ontology=project.ontology,
+        local_project=not project.remote,
         data=ProjectDomainSummary(
             metrics=_metric_summary(DataMetrics),
             enums=_enum_summary(DataEnums),
@@ -335,7 +338,11 @@ def route_project_list_reductions(
 
 @router.get("/{project_hash}/files/{du_hash}/{frame}")
 def route_project_raw_file(
-    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID,
+    du_hash: uuid.UUID,
+    frame: int,
+    engine: Engine = Depends(dep_engine),
+    database_dir: Path = Depends(dep_database_dir),
 ) -> FileResponse:
     with Session(engine) as sess:
         query = select(ProjectDataUnitMetadata.data_uri,).where(
@@ -345,22 +352,33 @@ def route_project_raw_file(
         )
         data_uri = sess.exec(query).first()
         if data_uri is not None:
-            settings = get_settings()
-            root_path = settings.SERVER_START_PATH.expanduser().resolve()
-            url_path = url_to_file_path(data_uri, root_path)
+            url_path = url_to_file_path(data_uri, database_dir)
             if url_path is not None:
                 # FIXME: add not-modified case response (see StaticFiles)
                 return FileResponse(url_path)
         raise HTTPException(status_code=404, detail="Project local file not found")
 
 
-@cached(cache=TTLCache(maxsize=10_000, ttl=60 * 30))  # 60* 30 (s) = 30 mins
+@cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 60 * 5 (s) = 5 min
+def _cache_encord_user_client(ssh_key: str) -> encord.EncordUserClient:
+    return encord.EncordUserClient.create_with_ssh_private_key(
+        ssh_key,
+        requests_settings=RequestsSettings(max_retries=5),
+    )
+
+
+@cached(cache=TTLCache(maxsize=50, ttl=60 * 5))  # 60 * 5 (s) = 5 min
+def _cache_encord_project(ssh_key: str, project_hash: uuid.UUID) -> encord.Project:
+    return _cache_encord_user_client(ssh_key).get_project(str(project_hash))
+
+
+@cached(cache=TTLCache(maxsize=50_000, ttl=60 * 30))  # 60 * 30 (s) = 30 min
 def _cache_encord_img_lookup(
-    ssh_key_path: str,
+    ssh_key: str,
     project_hash: uuid.UUID,
     data_hash: uuid.UUID,
 ) -> Dict[uuid.UUID, str]:
-    encord_project = get_encord_project(ssh_key_path=ssh_key_path, project_hash=str(project_hash))
+    encord_project = _cache_encord_project(ssh_key, project_hash)
     video, images = encord_project.get_data(str(data_hash), get_signed_url=True)
     encord_url_dict = {}
     for image in images or []:
@@ -401,14 +419,16 @@ def _sanitise_nan(value: Optional[float]) -> Optional[float]:
 
 @router.get("/{project_hash}/item/{data_item}/")
 def route_project_data_item(
-    project_hash: uuid.UUID, item_details: DataItem = Depends(parse_data_item), engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID,
+    item_details: DataItem = Depends(parse_data_item),
+    engine: Engine = Depends(dep_engine),
+    ssh_key: str = Depends(dep_ssh_key),
+    database_dir: Path = Depends(dep_database_dir),
 ) -> ProjectItem:
     du_hash = item_details.du_hash
     frame = item_details.frame
     with Session(engine) as sess:
-        project_ssh_key_path = sess.exec(
-            select(Project.project_remote_ssh_key_path).where(Project.project_hash == project_hash)
-        ).first()
+        project_remote = sess.exec(select(Project.remote).where(Project.project_hash == project_hash)).first()
         du_meta = sess.exec(
             select(ProjectDataUnitMetadata).where(
                 ProjectDataUnitMetadata.project_hash == project_hash,
@@ -450,14 +470,12 @@ def route_project_data_item(
     uri_is_video = du_meta.data_uri_is_video
     frames_per_second = data_meta.frames_per_second
     if uri is not None:
-        settings = get_settings()
-        root_path = settings.SERVER_START_PATH.expanduser().resolve()
-        url_path = url_to_file_path(uri, root_path)
+        url_path = url_to_file_path(uri, database_dir)
         if url_path is not None:
-            uri = f"/projects_v2/{project_hash}/files/{du_hash}/{frame}"
-    elif project_ssh_key_path is not None:
+            uri = f"/api/projects_v2/{project_hash}/files/{du_hash}/{frame}"
+    elif project_remote:
         uri = _cache_encord_img_lookup(
-            ssh_key_path=project_ssh_key_path,
+            ssh_key=ssh_key,
             project_hash=project_hash,
             data_hash=du_meta.data_hash,
         )[du_hash]

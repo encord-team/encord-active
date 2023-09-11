@@ -9,7 +9,8 @@ export function useProjectCompareDissimilarity(
   compareProjectHash: string,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
-  const querier = useQuerier()
+  const querier = useQuerier();
+
   return useQuery(
     [
       "useProjectCompareDissimilarity",
