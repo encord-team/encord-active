@@ -14,6 +14,7 @@ import { SummaryView } from "./tabs/SummaryView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
+import { useNavigate, useParams } from "react-router";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -22,14 +23,18 @@ export function ProjectPage(props: {
   const projectHash = useProjectHash();
   const { setSelectedProjectHash, encordDomain } = props;
 
-  const [activeTab, setActiveTab] = useState<string>("summary");
+  const navigate = useNavigate();
+  const { tab } = useParams();
+
+  if (!tab) throw Error("Missing `tab` path parameter")
+
   const { data: projectSummary, isError } = useProjectSummary(projectHash);
 
   const editUrl =
     projectSummary === undefined || projectSummary.local_project
       ? undefined
       : (dataHash: string, projectHash: string, frame: number): string =>
-          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
+        `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
@@ -160,8 +165,8 @@ export function ProjectPage(props: {
           ),
         },
       ]}
-      activeKey={activeTab}
-      onChange={setActiveTab}
+      activeKey={tab}
+      onChange={(key) => navigate(`../${key}`, { relative: "path" })}
     />
   );
 }
