@@ -138,17 +138,17 @@ export function ExplorerEmbeddings(props: {
               })
             : undefined
         }
-        onMouseMove={({ xValue, yValue }) =>
-          xValue !== undefined &&
-          yValue !== undefined &&
-          selection !== undefined
-            ? setSelection((val) =>
-                val === undefined
-                  ? undefined
-                  : { ...val, x2: xValue, y2: yValue }
-              )
-            : undefined
-        }
+        onMouseMove={(state) => {
+          if (
+            state != null &&
+            state.xValue != null &&
+            state.yValue != null &&
+            selection != null
+          ) {
+            const { xValue, yValue } = state;
+            setSelection((val) => val && { ...val, x2: xValue, y2: yValue });
+          }
+        }}
         onMouseUp={() => {
           setSelection(undefined);
           if (selection !== undefined && reductionHash !== undefined) {
