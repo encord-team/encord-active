@@ -958,7 +958,7 @@ class SimpleExecutor(Executor):
                         else:
                             metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Creating index]")
                             nn_descent = NNDescent(
-                                data=data, parallel_batch_queries=True, n_jobs=-1, metric=metric.similarity.key.lower()
+                                data=data, parallel_batch_queries=True, n_jobs=-1, metric=metric.similarity.name.lower()
                             )
                             metrics_tqdm.set_description(f"{metrics_tqdm_desc}  [Building index]")
                             nn_descent.prepare()
