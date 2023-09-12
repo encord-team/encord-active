@@ -6,7 +6,7 @@ export function useProjectTaggedItems(projectHash: string) {
   const querier = useQuerier();
 
   return useQuery(
-    ["useProjectItem", querier.baseUrl, projectHash],
+    ["useTaggedItems", querier.baseUrl, projectHash],
     async () => {
       const { data } = await querier
         .getProjectV2API()

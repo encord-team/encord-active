@@ -22,7 +22,7 @@ def select_frame_data_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: i
     )
 
 
-def select_frame_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def select_frame_label_tags_distinct(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     return (
         select(ProjectTag)
         .join(ProjectTaggedAnnotation)
@@ -36,9 +36,9 @@ def select_frame_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: 
     )
 
 
-def select_frame_grouped_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def select_frame_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
     return (
-        select(ProjectTag)
+        select(ProjectTag, ProjectTaggedAnnotation.annotation_hash)
         .join(ProjectTaggedAnnotation)
         .where(
             ProjectTaggedAnnotation.project_hash == project_hash,
@@ -46,7 +46,6 @@ def select_frame_grouped_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID,
             ProjectTaggedAnnotation.frame == frame,
             ProjectTaggedAnnotation.tag_hash == ProjectTag.tag_hash,
         )
-        .group_by(ProjectTaggedAnnotation.annotation_hash)
     )
 
 

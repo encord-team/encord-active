@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuerier } from "../Context";
 import { ProjectsV2Api } from "../../openapi/api";
+import { useProjectTaggedItems } from "../queries/useProjectTaggedItems";
 
 export function useProjectMutationTagItems(projectHash: string) {
   const querier = useQuerier();
@@ -20,10 +21,20 @@ export function useProjectMutationTagItems(projectHash: string) {
           itemTags
         ),
     {
+      onMutate: (variables) => {
+        const key = ["useTaggedItems", querier.baseUrl, projectHash]
+        const prevData = queryClient.getQueryData(key) as NonNullable<ReturnType<typeof useProjectTaggedItems>["data"]>
+        queryClient.setQueryData(key, () => {
+          variables.forEach(({ id, grouped_tags }) => {
+            prevData.set(id, grouped_tags)
+          })
+          return prevData
+        })
+      },
       onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: [projectHash, "item"] });
+        queryClient.invalidateQueries({ queryKey: ["useProjectItem", querier.baseUrl, projectHash], });
         queryClient.invalidateQueries({
-          queryKey: [projectHash, "tagged_items"],
+          queryKey: ["useTaggedItems", querier.baseUrl, projectHash],
         });
       },
     }

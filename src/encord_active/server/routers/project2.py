@@ -33,7 +33,10 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
-from encord_active.db.queries.tags import select_frame_data_tags
+from encord_active.db.queries.tags import (
+    select_frame_data_tags,
+    select_frame_label_tags,
+)
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.lib.project.sandbox_projects.sandbox_projects import (
     available_prebuilt_projects,
@@ -390,7 +393,7 @@ def _cache_encord_img_lookup(
 
 class ProjectItemTags(BaseModel):
     data: List[ProjectTag]
-    label: Dict[uuid.UUID, List[ProjectTag]]
+    label: Dict[str, List[ProjectTag]]
 
 
 class ProjectItem(BaseModel):
@@ -461,7 +464,9 @@ def route_project_data_item(
         ).fetchall()
 
         data_tags = sess.exec(select_frame_data_tags(project_hash, du_hash, frame)).fetchall()
-        # label_tags = sess.exec(select_frame_grouped_label_tags(project_hash, du_hash, frame)).fetchall()
+        label_tags = {}
+        for tag, annotation_hash in sess.exec(select_frame_label_tags(project_hash, du_hash, frame)).fetchall():
+            label_tags.setdefault(annotation_hash, []).append(tag)
 
     if du_meta is None or du_analytics is None:
         raise ValueError
@@ -508,7 +513,7 @@ def route_project_data_item(
         data_type=data_meta.data_type,
         url=uri,
         timestamp=timestamp,
-        tags=ProjectItemTags(data=data_tags, label={}),
+        tags=ProjectItemTags(data=data_tags, label=label_tags),
     )
 
 

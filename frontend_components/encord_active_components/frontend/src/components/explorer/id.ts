@@ -19,4 +19,4 @@ export const splitId = (id: string): IdParts => {
 };
 
 export const takeDataId = (id: string): string =>
-  id.split("_").slice(0, 3).join("_");
+  id.split("_").slice(0, 2).join("_");

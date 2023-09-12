@@ -53,7 +53,7 @@ def route_tagged_items(project_hash: uuid.UUID, engine: Engine = Depends(dep_eng
             )
         ).all()
         for du_hash, frame, annotation_hash, tag in label_tags:
-            data_key = f"{du_hash}_{frame:05d}"
+            data_key = f"{du_hash}_{frame}"
             label_key = f"{data_key}_{annotation_hash}"
             du_tags = identifier_tags.setdefault(data_key, GroupedTags(data=[], label=[]))
             if tag not in du_tags["label"]:

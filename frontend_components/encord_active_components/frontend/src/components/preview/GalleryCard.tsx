@@ -10,6 +10,7 @@ import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
 import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
+import { ItemTags } from "../explorer/Tagging";
 
 export function GalleryCard(props: {
   projectHash: string;
@@ -205,6 +206,7 @@ export function GalleryCard(props: {
           </Tag>
         )}
       </Row>
+      {preview?.tags && <Row> <ItemTags tags={preview?.tags} annotationHash={labelObject?.objectHash} /></Row>}
       {labelObject != null ? (
         <>
           <Row>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Select, SelectProps, Spin } from "antd";
+import { Select, SelectProps, Spin, Tag } from "antd";
 import { useMemo, useRef, useState } from "react";
 import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
@@ -11,6 +11,7 @@ import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
 import { useProjectHash } from "../../hooks/useProjectHash";
 import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
+import { ProjectItemTags, ProjectTag } from "../../openapi/api";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -59,7 +60,7 @@ export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
     label.forEach(result.allLabelTags.add, result.allLabelTags);
 
     if (itemSet?.has(id)) {
-      data.forEach(result.selectedTags.label.add, result.selectedTags.label);
+      label.forEach(result.selectedTags.label.add, result.selectedTags.label);
     }
     if (dataItemSet.has(id)) {
       data.forEach(result.selectedTags.data.add, result.selectedTags.data);
@@ -68,13 +69,15 @@ export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
     return result;
   }, defaultAllTags);
 
-  return {
-    ...allTags,
-    selectedTags: {
-      data: [...allTags.selectedTags.data],
-      label: [...allTags.selectedTags.label],
-    },
-  };
+  const selectedTags = {
+    data: [...allTags.selectedTags.data],
+    label: [...allTags.selectedTags.label],
+  }
+
+  console.log({ selectedTags });
+
+
+  return { ...allTags, selectedTags };
 };
 
 export function TaggingDropdown({
@@ -260,32 +263,48 @@ export function TaggingForm({
   );
 }
 
-export function TagList({
-  tags,
+export function ItemTags({
+  tags: { data, label },
+  annotationHash,
   className,
   ...rest
-}: { tags: GroupedTags } & JSX.IntrinsicElements["div"]) {
+}: { tags: ProjectItemTags, annotationHash?: string } & JSX.IntrinsicElements["div"]) {
+  const annotationTags = annotationHash && label[annotationHash]
+  const labelTags = annotationTags || Object.values(label).filter(Boolean).flat() as ProjectTag[]
+
+  return <div {...rest} className={`flex flex-col gap-1 ${className}`}>
+    {!!data.length &&
+      <div className="flex items-center">
+        <MdOutlineImage className="text-base" />
+        <TagList tags={data} limit={4} />
+      </div>
+    }
+    {
+      !!labelTags.length &&
+      <div className="flex items-center">
+        <TbPolygon className="text-base" />
+        <TagList tags={labelTags} limit={4} />
+      </div>
+    }
+  </div >
+
+}
+
+export function TagList({ tags, limit }: { tags: ProjectTag[], limit?: number }) {
+  const firstTags = tags.slice(0, limit)
+  const remainder = tags.length - firstTags.length
+
   return (
-    <div {...rest} className={`flex flex-col gap-1 ${className}`}>
-      {TAG_GROUPS.map((group) => (
-        <div key={group.value}>
-          <div className="inline-flex items-center gap-1">
-            <group.Icon className="text-base" />
-            <span>{group.label} tags:</span>
-          </div>
-          <div className="flex-wrap">
-            {tags[group.value].length ? (
-              tags[group.value].map((tag, index) => (
-                <span key={index} className="badge">
-                  {tag}
-                </span>
-              ))
-            ) : (
-              <span>None</span>
-            )}
-          </div>
-        </div>
-      ))}
+    <div className="flex-wrap">
+      {firstTags.map(tag =>
+        <Tag key={tag.tag_hash} bordered={false} className="rounded-xl">
+          {tag.name}
+        </Tag>
+      )}
+      {remainder > 0 && <Tag bordered={false} color="#434343" className="rounded-xl">
+        + {remainder} more tags
+      </Tag>
+      }
     </div>
   );
 }
