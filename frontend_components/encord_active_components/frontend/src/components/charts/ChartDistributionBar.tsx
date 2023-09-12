@@ -204,7 +204,7 @@ export function ChartDistributionBar(props: {
           value={selectedProperty}
           onChange={setSelectedProperty}
           options={allProperties}
-          style={{ width: 265 }}
+          className="w-64"
         />
         {!isMetric ? null : (
           <>

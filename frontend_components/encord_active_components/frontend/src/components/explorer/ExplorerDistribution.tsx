@@ -1,0 +1,101 @@
+import * as React from "react";
+import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceArea,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
+import { ExplorerFilterState } from "./ExplorerTypes";
+import { formatTooltip } from "../util/Formatter";
+import { usePredictionAnalysisDistribution } from "../../hooks/queries/usePredictionAnalysisDistribution";
+
+export function ExplorerDistribution(props: {
+  projectHash: string;
+  predictionHash: string | undefined;
+  filters: ExplorerFilterState;
+}) {
+  const { projectHash, predictionHash, filters } = props;
+  const { data: distributionProject } = useProjectAnalysisDistribution(
+    projectHash,
+    filters.analysisDomain,
+    filters.orderBy,
+    undefined,
+    filters.filters,
+    { enabled: predictionHash === undefined }
+  );
+  const { data: distributionPrediction } = usePredictionAnalysisDistribution(
+    projectHash,
+    predictionHash ?? "",
+    filters.predictionOutcome,
+    filters.iou,
+    filters.orderBy,
+    undefined,
+    filters.filters,
+    { enabled: predictionHash !== undefined }
+  );
+  const distribution =
+    predictionHash === undefined ? distributionProject : distributionPrediction;
+
+  const barData = useMemo(() => {
+    if (distribution == null) {
+      return [];
+    }
+    return distribution.results.map(({ group, count }) => ({
+      group: Number(group),
+      count,
+    }));
+  }, [distribution]);
+
+  const [selection, setSelection] = useState<
+    | {
+        min: number;
+        max: number;
+      }
+    | undefined
+  >();
+
+  return (
+    <ResponsiveContainer width="100%" height={100}>
+      <BarChart
+        data={barData}
+        className="active-chart select-none"
+        onMouseDown={(chart) => {
+          const { chartX } = chart;
+
+          return chartX !== undefined
+            ? setSelection({
+                min: chartX,
+                max: chartX,
+              })
+            : undefined;
+        }}
+        onMouseMove={({ chartX }) =>
+          chartX !== undefined && selection !== undefined
+            ? setSelection((val) =>
+                val === undefined ? undefined : { ...val, max: chartX }
+              )
+            : undefined
+        }
+        onMouseUp={() => {
+          setSelection(undefined);
+          // FIXME:
+        }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="group" type="number" padding="no-gap" />
+        <YAxis tick={false} />
+        <Tooltip formatter={formatTooltip} />
+        <Bar dataKey="count" isAnimationActive={false} fill="#0000bf" />
+        {selection !== undefined ? (
+          <ReferenceArea x1={selection.min} x2={selection.max} />
+        ) : null}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}

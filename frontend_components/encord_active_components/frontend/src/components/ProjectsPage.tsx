@@ -141,7 +141,7 @@ function ProjectCard({
   return (
     <Card
       hoverable
-      style={{ width: 240 }}
+      className="w-60"
       loading={imgSrcUrl === undefined || projectDataItem === undefined}
       onClick={() => setSelectedProjectHash(project.project_hash)}
       cover={

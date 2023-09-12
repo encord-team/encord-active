@@ -30,7 +30,7 @@ export function ProjectComparisonTab(props: {
             <Select
               onChange={setCompareProjectHash}
               value={compareProjectHash}
-              style={{ width: 300 }}
+              className="w-80"
               options={
                 allProjects.data?.projects
                   ?.filter((project) => project.project_hash !== projectHash)
@@ -47,7 +47,7 @@ export function ProjectComparisonTab(props: {
           <Select
             onChange={setDomain}
             value={domain}
-            style={{ width: 200 }}
+            className="w-52"
             options={[
               { value: "data", label: "Data" },
               { value: "annotation", label: "Annotation" },

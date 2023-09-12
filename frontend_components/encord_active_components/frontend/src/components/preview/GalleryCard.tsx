@@ -142,7 +142,9 @@ export function GalleryCard(props: {
       onClick={onClick}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className={classy("group overflow-clip", { "border-blue-300": selected })}
+      className={classy("group m-2.5 w-60 overflow-clip", {
+        "border-blue-300": selected,
+      })}
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (

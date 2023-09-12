@@ -117,14 +117,14 @@ export function ChartMetricCompareScatter(props: {
           value={xMetric}
           onChange={setXMetric}
           options={metricOptions}
-          style={{ width: 265 }}
+          className="w-64"
         />
         <Typography.Text strong>Y Metric: </Typography.Text>
         <Select
           value={yMetric}
           onChange={setYMetric}
           options={metricOptions}
-          style={{ width: 265 }}
+          className="w-64"
         />
         {allowTrend ? (
           <>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Alert, Spin } from "antd";
+import { Alert, Button, Row, Spin } from "antd";
 import { useMemo, useState } from "react";
 import {
   CartesianGrid,
@@ -31,6 +31,7 @@ export function ExplorerEmbeddings(props: {
   projectHash: string;
   predictionHash: string | undefined;
   reductionHash: string | undefined;
+  reductionHashLoading: boolean;
   filters: ExplorerFilterState;
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
 }) {
@@ -38,6 +39,7 @@ export function ExplorerEmbeddings(props: {
     projectHash,
     predictionHash,
     reductionHash,
+    reductionHashLoading,
     filters,
     setEmbeddingSelection,
   } = props;
@@ -64,7 +66,8 @@ export function ExplorerEmbeddings(props: {
     { enabled: reductionHash != null && predictionHash !== undefined }
   );
   const isLoading =
-    predictionHash === undefined ? isLoadingProject : isLoadingPrediction;
+    reductionHashLoading ||
+    (predictionHash === undefined ? isLoadingProject : isLoadingPrediction);
   const scatteredEmbeddings:
     | PredictionQuery2DEmbedding
     | Query2DEmbedding
@@ -103,7 +106,7 @@ export function ExplorerEmbeddings(props: {
     | undefined
   >();
 
-  if (reductionHash === undefined) {
+  if (reductionHash === undefined && !reductionHashLoading) {
     return (
       <Alert
         message="2D embedding are not available for this project."
@@ -116,81 +119,98 @@ export function ExplorerEmbeddings(props: {
 
   if (isLoading) {
     return (
-      <Spin
-        indicator={loadingIndicator}
-        tip="Loading Embedding Plot"
-        className="h-400 w-full"
-      />
+      <Row className="h-96 w-full" justify="center" align="middle">
+        <Spin indicator={loadingIndicator} tip="Loading Embedding Plot" />
+      </Row>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <ScatterChart
-        className="active-chart"
-        onMouseDown={({ xValue, yValue }) =>
-          xValue !== undefined && yValue !== undefined
-            ? setSelection({
-                x1: xValue,
-                y1: yValue,
-                x2: xValue,
-                y2: yValue,
-              })
-            : undefined
-        }
-        onMouseMove={(state) => {
-          if (
-            state != null &&
-            state.xValue != null &&
-            state.yValue != null &&
-            selection != null
-          ) {
-            const { xValue, yValue } = state;
-            setSelection((val) => val && { ...val, x2: xValue, y2: yValue });
+    <>
+      {filters.filters.data?.reduction !== undefined ||
+      filters.filters.annotation?.reduction !== undefined ? (
+        <Button
+          className="absolute top-3 right-3 z-40"
+          onClick={(e) => {
+            setEmbeddingSelection(undefined);
+            e.preventDefault();
+          }}
+        >
+          Reset Filter
+        </Button>
+      ) : null}
+      <ResponsiveContainer width="100%" height={384}>
+        <ScatterChart
+          className="active-chart select-none"
+          onMouseDown={({ xValue, yValue }) =>
+            xValue !== undefined && yValue !== undefined
+              ? setSelection({
+                  x1: xValue,
+                  y1: yValue,
+                  x2: xValue,
+                  y2: yValue,
+                })
+              : undefined
           }
-        }}
-        onMouseUp={() => {
-          setSelection(undefined);
-          if (selection !== undefined && reductionHash !== undefined) {
-            setEmbeddingSelection({
-              reduction_hash: reductionHash,
-              x1: Math.min(selection.x1, selection.x2),
-              x2: Math.max(selection.x1, selection.x2),
-              y1: Math.min(selection.y1, selection.y2),
-              y2: Math.max(selection.y1, selection.y2),
-            });
-          }
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis
-          dataKey="x"
-          type="number"
-          name="x"
-          domain={["dataMin - 10", "dataMax + 10"]}
-        />
-        <YAxis
-          dataKey="y"
-          type="number"
-          name="y"
-          domain={["dataMin - 10", "dataMax + 10"]}
-        />
-        <Tooltip
-          cursor={{ strokeDasharray: "3 3" }}
-          formatter={formatTooltip}
-        />
-        {selection !== undefined ? (
-          <ReferenceArea
-            x1={selection.x1}
-            x2={selection.x2}
-            y1={selection.y1}
-            y2={selection.y2}
+          onMouseMove={(elem) => {
+            if (elem == null) {
+              return null;
+            }
+            const { xValue, yValue } = elem;
+
+            return xValue !== undefined &&
+              yValue !== undefined &&
+              selection !== undefined
+              ? setSelection((val) =>
+                  val === undefined
+                    ? undefined
+                    : { ...val, x2: xValue, y2: yValue }
+                )
+              : undefined;
+          }}
+          onMouseUp={() => {
+            setSelection(undefined);
+            if (selection !== undefined && reductionHash !== undefined) {
+              setEmbeddingSelection({
+                reduction_hash: reductionHash,
+                x1: Math.min(selection.x1, selection.x2),
+                x2: Math.max(selection.x1, selection.x2),
+                y1: Math.min(selection.y1, selection.y2),
+                y2: Math.max(selection.y1, selection.y2),
+              });
+            }
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="x"
+            type="number"
+            name="x"
+            domain={["dataMin - 10", "dataMax + 10"]}
           />
-        ) : undefined}
-        {reductionWithColor != null ? (
-          <Scatter data={reductionWithColor} isAnimationActive={false} />
-        ) : null}
-      </ScatterChart>
-    </ResponsiveContainer>
+          <YAxis
+            dataKey="y"
+            type="number"
+            name="y"
+            domain={["dataMin - 10", "dataMax + 10"]}
+          />
+          <Tooltip
+            cursor={{ strokeDasharray: "3 3" }}
+            formatter={formatTooltip}
+          />
+          {selection !== undefined ? (
+            <ReferenceArea
+              x1={selection.x1}
+              x2={selection.x2}
+              y1={selection.y1}
+              y2={selection.y2}
+            />
+          ) : undefined}
+          {reductionWithColor != null ? (
+            <Scatter data={reductionWithColor} isAnimationActive={false} />
+          ) : null}
+        </ScatterChart>
+      </ResponsiveContainer>
+    </>
   );
 }

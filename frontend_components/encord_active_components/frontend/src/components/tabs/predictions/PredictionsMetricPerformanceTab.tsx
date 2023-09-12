@@ -96,7 +96,7 @@ export function PredictionsMetricPerformanceTab(props: {
               min={0}
               max={1}
               step={0.01}
-              style={{ width: 300 }}
+              className="w-80"
             />
           </Row>
         </Col>
@@ -107,7 +107,7 @@ export function PredictionsMetricPerformanceTab(props: {
             value={selectedMetric}
             onChange={setSelectedMetric}
             options={metricOptions}
-            style={{ width: 300 }}
+            className="w-80"
             bordered={false}
           />
         </Col>

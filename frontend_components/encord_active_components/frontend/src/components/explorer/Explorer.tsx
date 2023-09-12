@@ -17,7 +17,7 @@ import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
-import { MetricDistributionTiny } from "./ExplorerCharts";
+import { ExplorerDistribution } from "./ExplorerDistribution";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
 import {
@@ -62,7 +62,8 @@ export function Explorer({
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
 
   // Select reduction hash
-  const { data: reductionHashes } = useProjectListReductions(projectHash);
+  const { data: reductionHashes, isLoading: reductionHashLoading } =
+    useProjectListReductions(projectHash);
   const reductionHash: string | undefined = useMemo(
     () =>
       reductionHashes === undefined || reductionHashes.results.length === 0
@@ -272,6 +273,7 @@ export function Explorer({
         projectHash={projectHash}
         predictionHash={predictionHash}
         reductionHash={reductionHash}
+        reductionHashLoading={reductionHashLoading}
         filters={filters}
         setEmbeddingSelection={setEmbeddingFilter}
       />
@@ -293,9 +295,11 @@ export function Explorer({
         similarityItem={similarityItem}
         onClose={closeSimilarityItem}
       />
-      {predictionHash === undefined && (
-        <MetricDistributionTiny projectHash={projectHash} filters={filters} />
-      )}
+      <ExplorerDistribution
+        projectHash={projectHash}
+        predictionHash={predictionHash}
+        filters={filters}
+      />
       {predictionHash !== undefined && (
         <PredictionFilters
           disabled={!!similarityItem}
@@ -324,7 +328,7 @@ export function Explorer({
                 metric_key,
               });
             }}
-            style={{ width: 300 }}
+            className="w-80"
             options={[
               {
                 label: "Data Metrics",
@@ -441,7 +445,7 @@ export function Explorer({
         </Space.Compact>
       </Space>
       <List
-        style={{ marginTop: 10 }}
+        className="mt-2.5"
         dataSource={itemsToRender as string[]}
         grid={{}}
         loading={{
@@ -518,14 +522,18 @@ function PredictionFilters({
         ]}
       />
       {!isClassificationOnly && (
-        <Slider
-          style={{ width: 200, paddingLeft: 10 }}
-          value={iou}
-          onChange={setIou}
-          min={0.0}
-          max={0.0}
-          step={0.01}
-        />
+        <div className="box-border h-8 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200 pr-3 pl-2.5">
+          <Slider
+            tooltip={{
+              formatter: (val: number | undefined) => `IOU: ${val}`,
+            }}
+            value={iou}
+            onChange={setIou}
+            min={0}
+            max={1}
+            step={0.01}
+          />
+        </div>
       )}
     </Space.Compact>
   );

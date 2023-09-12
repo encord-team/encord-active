@@ -70,7 +70,7 @@ export function PredictionsTab(
               value={predictionHash}
               options={allPredictionOptions ?? []}
               onChange={setPredictionHash}
-              style={{ width: 300 }}
+              className="w-80"
             />
           </Space>
           <Divider />

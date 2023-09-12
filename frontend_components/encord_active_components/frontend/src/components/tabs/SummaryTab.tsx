@@ -61,7 +61,7 @@ export function SummaryTab(props: {
   }
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }}>
+    <Space direction="vertical" className="w-full">
       <Row wrap justify="space-evenly">
         <Card bordered={false} loading={data == null}>
           <Statistic

@@ -28,7 +28,7 @@ export function ProjectSelector({
       <Select
         value={selectedProjectHash}
         onChange={(projectHash) => setSelectedProjectHash(projectHash)}
-        style={{ maxWidth: 500 }}
+        className="max-w-lg"
         options={[
           {
             label: "User Projects",
