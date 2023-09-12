@@ -37,6 +37,13 @@ class BoundingBoxLabel(BaseModel):
         return f"BounndingBoxLabel({self.class_}, {self.bounding_box})"
 
 
+class KeypointLabel(Label):
+    point: Point
+
+    def __str__(self) -> str:
+        return f"KeypointLabel({self.class_})"
+
+
 @dataclass
 class PolygonLabel:
     class_: str
@@ -50,7 +57,7 @@ class PolygonLabel:
         return f"PolygonLabel({self.class_}, [{n}, 2])"
 
 
-LabelOptions = Union[BoundingBoxLabel, ClassificationLabel, PolygonLabel]
+LabelOptions = Union[BoundingBoxLabel, ClassificationLabel, PolygonLabel, KeypointLabel]
 
 
 class DataLabel(NamedTuple):
@@ -191,6 +198,13 @@ This will make a (potentially new) classification question `{LabelTransformerWra
         bbox_obj = make_object_dict(ont_obj, bbox_dict)
         data_unit.setdefault("labels", {}).setdefault("objects", []).append(bbox_obj)
 
+    def _add_keypoint_label(self, label: KeypointLabel, data_unit: dict):
+        shape = Shape.POINT
+
+        ont_obj = self._get_object_by_name(label.class_, shape=shape, create_when_missing=True)
+        bbox_obj = make_object_dict(ont_obj, label.point)
+        data_unit.setdefault("labels", {}).setdefault("objects", []).append(bbox_obj)
+
     def _add_polygon_label(self, label: PolygonLabel, data_unit: dict):
         ont_obj = self._get_object_by_name(label.class_, shape=Shape.POLYGON, create_when_missing=True)
         points = [Point(*r) for r in label.polygon]
@@ -204,6 +218,8 @@ This will make a (potentially new) classification question `{LabelTransformerWra
             self._add_bounding_box_label(label, data_unit)
         elif isinstance(label, PolygonLabel):
             self._add_polygon_label(label, data_unit)
+        elif isinstance(label, KeypointLabel):
+            self._add_keypoint_label(label, data_unit)
 
     def add_labels(self, label_paths: List[Path], data_paths: List[Path]):
         if not self.label_transformer:
