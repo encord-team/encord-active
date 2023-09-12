@@ -45,7 +45,7 @@ RUN poetry config virtualenvs.create true  \
 COPY ./src/ /home/appuser/src/
 COPY ./README.md /home/appuser/
 
-RUN poetry install --only-root
+RUN poetry install --only-root --extras coco
 
 RUN poetry run prisma generate --schema=./src/encord_active/lib/db/schema.prisma
 
