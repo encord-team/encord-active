@@ -356,4 +356,4 @@ ci-tests
 
 # any sqlite database instance.
 *.sqlite
-
+node_modules
