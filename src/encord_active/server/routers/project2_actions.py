@@ -17,7 +17,7 @@ from encord.orm.project import (
 )
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import func, literal, text, bindparam, JSON, TEXT
+from sqlalchemy import JSON, TEXT, bindparam, func, literal, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql.operators import in_op
@@ -305,9 +305,11 @@ def route_action_create_project_subset(
 
 def _file_path_for_upload(
     tempdir: Path,
-    data_uri: str,
+    data_uri: Optional[str],
     database_dir: Path,
 ) -> Path:
+    if data_uri is None:
+        raise RuntimeError("Attempting to upload remote file to encord, this is not supported")
     opt_path = url_to_file_path(data_uri, database_dir)
     if opt_path is not None:
         return opt_path

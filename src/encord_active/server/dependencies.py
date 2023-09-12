@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import decode
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
+from sqlalchemy.future.engine import OptionEngine
 
 from ..cli.app_config import app_config
 from .settings import Env, get_settings
@@ -52,6 +53,10 @@ def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
 
 def dep_engine() -> Engine:
     raise RuntimeError("Missing Engine")
+
+
+def dep_engine_readonly() -> OptionEngine:
+    raise RuntimeError("Missing ReadOnly Engine")
 
 
 def dep_oauth2_scheme() -> OAuth2PasswordBearer:

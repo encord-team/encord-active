@@ -464,7 +464,7 @@ def route_project_data_item(
         ).fetchall()
 
         data_tags = sess.exec(select_frame_data_tags(project_hash, du_hash, frame)).fetchall()
-        label_tags = {}
+        label_tags: Dict[str, List[ProjectTag]] = {}
         for tag, annotation_hash in sess.exec(select_frame_label_tags(project_hash, du_hash, frame)).fetchall():
             label_tags.setdefault(annotation_hash, []).append(tag)
 

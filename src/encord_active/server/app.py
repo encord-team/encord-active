@@ -12,6 +12,7 @@ from starlette.responses import FileResponse
 from encord_active.lib.project.sandbox_projects.sandbox_projects import IMAGES_PATH
 from encord_active.server.dependencies import (
     dep_engine,
+    dep_engine_readonly,
     dep_oauth2_scheme,
     verify_premium,
     verify_token,
@@ -27,9 +28,19 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
     # app.include_router(project.router, dependencies=[Depends(verify_token)])
     app.include_router(project2.router, dependencies=[Depends(verify_token)], prefix="/api")
 
+    # Create read-only engine
+    if engine.dialect.name == "postgresql":
+        readonly_engine = engine.execution_options(
+            isolation_level="SERIALIZABLE",
+            postgresql_readonly=True,
+        )
+    else:
+        readonly_engine = engine.execution_options()
+
     # Hook dependencies
     app.dependency_overrides = {
         dep_engine: lambda: engine,
+        dep_engine_readonly: lambda: readonly_engine,
         dep_oauth2_scheme: lambda: oauth2_scheme,
     }
 
