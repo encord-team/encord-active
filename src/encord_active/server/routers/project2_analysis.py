@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 
 from encord_active.server.dependencies import (
     DataOrAnnotateItem,
-    dep_engine,
+    dep_engine_readonly,
     parse_data_or_annotate_item,
 )
 from encord_active.server.routers.queries import (
@@ -74,7 +74,7 @@ def route_project_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QuerySummary:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -102,7 +102,7 @@ def route_project_search(
     desc: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(1000, le=1000),
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
     base_table = tables.primary
@@ -112,8 +112,6 @@ def route_project_search(
         search=filters,
         project_filters={"project_hash": [project_hash]},
     )
-    print(f"Filter debugging =>: {filters}")
-    print(f"Where debugging =>: {where}")
 
     with Session(engine) as sess:
         query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
@@ -127,14 +125,13 @@ def route_project_search(
 
         # + 1 to detect truncation.
         query = query.offset(offset).limit(limit + 1)
-        print(f"DEBUGGING: {query}")
         search_results = sess.exec(query).fetchall()
 
     return AnalysisSearch(
         truncated=len(search_results) == limit + 1,
         results=[
             _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
-            for result in search_results[:-1]
+            for result in search_results[:limit]
         ],
     )
 
@@ -147,7 +144,7 @@ def route_project_scatter(
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(1000),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryScatter:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -169,7 +166,7 @@ def route_project_distribution(
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryDistribution:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -192,7 +189,7 @@ def route_project_reduction_scatter(
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.Query2DEmbedding:
     tables = _get_metric_domain_tables(domain)
     with Session(engine) as sess:
@@ -230,7 +227,7 @@ def route_project_similarity_search(
     domain: AnalysisDomain,
     embedding: Literal["embedding_clip"],
     similarity_item: DataOrAnnotateItem = Depends(parse_data_or_annotate_item),
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> List[similarity_query.SimilarityResult]:
     tables = _get_metric_domain_tables(domain)
     limit = 50
@@ -296,7 +293,7 @@ def route_project_compare_metric_dissimilarity(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     compare_project_hash: uuid.UUID,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> MetricDissimilarityResult:
     tables = _get_metric_domain_tables(domain)
     base_domain = tables.primary

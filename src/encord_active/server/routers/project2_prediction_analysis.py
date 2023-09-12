@@ -18,7 +18,7 @@ from encord_active.db.models import (
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectPredictionAnalyticsReduced,
 )
-from encord_active.server.dependencies import dep_engine
+from encord_active.server.dependencies import dep_engine_readonly
 from encord_active.server.routers.project2_analysis import AnalysisSearch
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -68,10 +68,8 @@ def _tp_fp_extra_where(
     if tp_where is None:
         return []
     elif table == ProjectPredictionAnalytics:
-        print("A")
         return [tp_where]
     else:
-        print("B")
         return [
             tp_where,
             ProjectPredictionAnalytics.prediction_hash == prediction_hash,
@@ -115,7 +113,7 @@ def route_prediction_reduction_scatter(
     reduction_hash: uuid.UUID,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> PredictionQuery2DEmbedding:
     # Where conditions for FN table
     with Session(engine) as sess:
@@ -176,9 +174,7 @@ def route_prediction_reduction_scatter(
         raise RuntimeError("Bug in prediction reduction")
 
     with Session(engine) as sess:
-        print(f"Project reduction embedding: {query_select}")
         results = sess.exec(query_select).fetchall()
-        print(f"Project reduction results: {results}")
 
     return PredictionQuery2DEmbedding(
         count=sum(n for x, y, n, tp, fn in results),
@@ -200,7 +196,7 @@ def route_prediction_distribution(
     group: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryDistribution:
     # FIXME: extend this to also support data distribution filtered by 'self'
     with Session(engine) as sess:
@@ -251,7 +247,7 @@ def route_prediction_scatter(
     y_metric: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.QueryScatter:
     # FIXME: extend this to also support data distribution filtered by 'self'
     with Session(engine) as sess:
@@ -305,7 +301,7 @@ def route_prediction_search(
     desc: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(1000, le=1000),
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> AnalysisSearch:
     # FIXME: clean up the implementation with more shared logic.
     # Where conditions for FN table
@@ -390,7 +386,6 @@ def route_prediction_search(
     f_select = f_select.offset(offset).limit(limit + 1)
 
     with Session(engine) as sess:
-        print(f"DEBUG PREDICTION SEARCH: {f_select}")
         search_results = sess.exec(f_select).fetchall()  # type: ignore
 
     ty_lookup = {0: "FP", 1: "TP", 2: "FN"}
@@ -399,6 +394,6 @@ def route_prediction_search(
         truncated=len(search_results) == limit + 1,
         results=[
             f"{du_hash}_{frame}_{annotation_hash}_{ty_lookup[ty]}"
-            for du_hash, frame, annotation_hash, ty, *rest in search_results[:-1]
+            for du_hash, frame, annotation_hash, ty, *rest in search_results[:limit]
         ],
     )

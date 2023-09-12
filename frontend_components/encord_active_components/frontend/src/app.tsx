@@ -1,6 +1,6 @@
 import * as React from "react";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
-import { Navigate, Route, Routes, redirect, useNavigate } from "react-router";
+import { Navigate, Route, Routes, useNavigate } from "react-router";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
 
@@ -20,7 +20,9 @@ export function App() {
           element={<ProjectsPage onSelectLocalProject={selectProject} />}
         />
         <Route
-          path="/projects/:projectHash" element={<Navigate to="./summary" replace={true} />} />
+          path="/projects/:projectHash"
+          element={<Navigate to="./summary" replace />}
+        />
         <Route
           path="/projects/:projectHash/:tab"
           element={

@@ -874,6 +874,7 @@ def get_engine(
     use_alembic: bool = True,
 ) -> Engine:
     override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
+    database_echo = os.environ.get("ENCORD_ACTIVE_DATABASE_ECHO", "0") == "1"
     create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
 
     path = path.expanduser().resolve()
@@ -882,7 +883,7 @@ def get_engine(
 
     # Create the engine connection
     print(f"Connection to database: {engine_url}")
-    engine = create_engine(engine_url, connect_args=connect_args)
+    engine = create_engine(engine_url, connect_args=connect_args, echo=database_echo)
     path_key = path.as_posix()
     if path_key not in _init_metadata and create_db_schema == "1":
         if use_alembic:

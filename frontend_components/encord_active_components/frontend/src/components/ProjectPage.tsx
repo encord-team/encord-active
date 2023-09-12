@@ -1,6 +1,7 @@
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Spin, Tabs } from "antd";
+import { useNavigate, useParams } from "react-router";
 import {
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
@@ -14,7 +15,6 @@ import { SummaryView } from "./tabs/SummaryView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
-import { useNavigate, useParams } from "react-router";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -26,7 +26,9 @@ export function ProjectPage(props: {
   const navigate = useNavigate();
   const { tab } = useParams();
 
-  if (!tab) throw Error("Missing `tab` path parameter")
+  if (!tab) {
+    throw Error("Missing `tab` path parameter");
+  }
 
   const { data: projectSummary, isError } = useProjectSummary(projectHash);
 
@@ -34,7 +36,7 @@ export function ProjectPage(props: {
     projectSummary === undefined || projectSummary.local_project
       ? undefined
       : (dataHash: string, projectHash: string, frame: number): string =>
-        `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
+          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {

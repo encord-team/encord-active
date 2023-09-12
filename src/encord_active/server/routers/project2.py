@@ -45,6 +45,7 @@ from encord_active.server.dependencies import (
     DataItem,
     dep_database_dir,
     dep_engine,
+    dep_engine_readonly,
     dep_ssh_key,
     parse_data_item,
 )
@@ -91,7 +92,7 @@ class ProjectSearchResult(BaseModel):
 
 
 @router.get("")
-def route_list_projects(engine: Engine = Depends(dep_engine)) -> ProjectSearchResult:
+def route_list_projects(engine: Engine = Depends(dep_engine_readonly)) -> ProjectSearchResult:
     # Load existing projects
     projects: List[ProjectSearchEntry] = []
     project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
@@ -137,7 +138,7 @@ class ProjectMetadata(BaseModel):
 
 @router.get("/{project_hash}/metadata")
 @cached(cache=TTLCache(maxsize=1, ttl=60 * 5))  # 5 minute TTL Cache
-def route_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectMetadata:
+def route_project_metadata(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> ProjectMetadata:
     with Session(engine) as sess:
         ontology = sess.exec(select(Project.ontology).where(Project.project_hash == project_hash)).first()
         if ontology is None:
@@ -234,7 +235,7 @@ class ProjectSummary(BaseModel):
 
 
 @router.get("/{project_hash}/summary")
-def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> ProjectSummary:
+def route_project_summary(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> ProjectSummary:
     with Session(engine) as sess:
         project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if project is None:
@@ -322,7 +323,7 @@ class ProjectList2DEmbeddingReductionResult(BaseModel):
 
 @router.get("/{project_hash}/reductions")
 def route_project_list_reductions(
-    project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
 ) -> ProjectList2DEmbeddingReductionResult:
     with Session(engine) as sess:
         r = sess.exec(
@@ -344,7 +345,7 @@ def route_project_raw_file(
     project_hash: uuid.UUID,
     du_hash: uuid.UUID,
     frame: int,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
     database_dir: Path = Depends(dep_database_dir),
 ) -> FileResponse:
     with Session(engine) as sess:
@@ -424,7 +425,7 @@ def _sanitise_nan(value: Optional[float]) -> Optional[float]:
 def route_project_data_item(
     project_hash: uuid.UUID,
     item_details: DataItem = Depends(parse_data_item),
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
     ssh_key: str = Depends(dep_ssh_key),
     database_dir: Path = Depends(dep_database_dir),
 ) -> ProjectItem:
@@ -533,7 +534,7 @@ def route_project_list_predictions(
     offset: Optional[int] = None,
     limit: Optional[int] = None,
     order_by: Optional[Literal[""]] = None,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> ListProjectPredictionResult:
     with Session(engine) as sess:
         predictions = sess.exec(

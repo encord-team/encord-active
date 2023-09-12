@@ -22,17 +22,21 @@ export function useProjectMutationTagItems(projectHash: string) {
         ),
     {
       onMutate: (variables) => {
-        const key = ["useTaggedItems", querier.baseUrl, projectHash]
-        const prevData = queryClient.getQueryData(key) as NonNullable<ReturnType<typeof useProjectTaggedItems>["data"]>
+        const key = ["useTaggedItems", querier.baseUrl, projectHash];
+        const prevData = queryClient.getQueryData(key) as NonNullable<
+          ReturnType<typeof useProjectTaggedItems>["data"]
+        >;
         queryClient.setQueryData(key, () => {
           variables.forEach(({ id, grouped_tags }) => {
-            prevData.set(id, grouped_tags)
-          })
-          return prevData
-        })
+            prevData.set(id, grouped_tags);
+          });
+          return prevData;
+        });
       },
       onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: ["useProjectItem", querier.baseUrl, projectHash], });
+        queryClient.invalidateQueries({
+          queryKey: ["useProjectItem", querier.baseUrl, projectHash],
+        });
         queryClient.invalidateQueries({
           queryKey: ["useTaggedItems", querier.baseUrl, projectHash],
         });

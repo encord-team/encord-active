@@ -13,7 +13,7 @@ from encord_active.db.models import (
     ProjectTaggedDataUnit,
 )
 from encord_active.lib.db.helpers.tags import GroupedTags
-from encord_active.server.dependencies import dep_engine
+from encord_active.server.dependencies import dep_engine, dep_engine_readonly
 
 router = APIRouter(
     prefix="/{project_hash}/tags",
@@ -21,7 +21,9 @@ router = APIRouter(
 
 
 @router.get("/tagged_items")
-def route_tagged_items(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine)) -> Dict[str, GroupedTags]:
+def route_tagged_items(
+    project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
+) -> Dict[str, GroupedTags]:
     identifier_tags: dict[str, GroupedTags] = {}
     with Session(engine) as sess:
         data_tags = sess.exec(

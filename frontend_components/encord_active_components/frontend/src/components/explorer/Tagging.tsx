@@ -72,10 +72,7 @@ export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
   const selectedTags = {
     data: [...allTags.selectedTags.data],
     label: [...allTags.selectedTags.label],
-  }
-
-  console.log({ selectedTags });
-
+  };
 
   return { ...allTags, selectedTags };
 };
@@ -94,7 +91,7 @@ export function TaggingDropdown({
     <div
       {...rest}
       className={classy(
-        "dropdown dropdown-bottom tooltip tooltip-right min-w-fit",
+        "dropdown-bottom dropdown tooltip tooltip-right min-w-fit",
         className
       )}
       data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
@@ -189,7 +186,6 @@ export function TaggingForm({
   onDeselect,
   allowClear = true,
   allowTaggingAnnotations: allowTaggingAnnotatoins = false,
-  ...rest
 }: {
   selectedTags: GroupedTags;
   controlled?: boolean;
@@ -199,7 +195,8 @@ export function TaggingForm({
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
   allowTaggingAnnotations?: boolean;
-} & Omit<JSX.IntrinsicElements["div"], "onChange" | "onSelect">) {
+  className: string;
+}) {
   const projectHash = useProjectHash();
   const { allDataTags, allLabelTags } = useAllTags(projectHash);
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
@@ -216,7 +213,6 @@ export function TaggingForm({
 
   return (
     <div
-      {...rest}
       tabIndex={0}
       className={classy(
         "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
@@ -245,7 +241,7 @@ export function TaggingForm({
             className={classy({
               "!hidden": value !== selectedTab.value,
             })}
-            disabled={value == "label" && !allowTaggingAnnotatoins}
+            disabled={value === "label" && !allowTaggingAnnotatoins}
             mode="tags"
             placeholder="Tags"
             allowClear={allowClear}
@@ -267,44 +263,56 @@ export function ItemTags({
   tags: { data, label },
   annotationHash,
   className,
-  ...rest
-}: { tags: ProjectItemTags, annotationHash?: string } & JSX.IntrinsicElements["div"]) {
-  const annotationTags = annotationHash && label[annotationHash]
-  const labelTags = annotationTags || Object.values(label).filter(Boolean).flat() as ProjectTag[]
+}: {
+  tags: ProjectItemTags;
+  annotationHash?: string;
+  className?: string;
+}) {
+  const annotationTags = annotationHash && label[annotationHash];
+  const labelTags =
+    annotationTags ||
+    (Object.values(label).filter(Boolean).flat() as ProjectTag[]);
 
-  return <div {...rest} className={`flex flex-col gap-1 ${className}`}>
-    {!!data.length &&
-      <div className="flex items-center">
-        <MdOutlineImage className="text-base" />
-        <TagList tags={data} limit={4} />
-      </div>
-    }
-    {
-      !!labelTags.length &&
-      <div className="flex items-center">
-        <TbPolygon className="text-base" />
-        <TagList tags={labelTags} limit={4} />
-      </div>
-    }
-  </div >
-
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      {!!data.length && (
+        <div className="flex items-center">
+          <MdOutlineImage className="text-base" />
+          <TagList tags={data} limit={4} />
+        </div>
+      )}
+      {!!labelTags.length && (
+        <div className="flex items-center">
+          <TbPolygon className="text-base" />
+          <TagList tags={labelTags} limit={4} />
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function TagList({ tags, limit }: { tags: ProjectTag[], limit?: number }) {
-  const firstTags = tags.slice(0, limit)
-  const remainder = tags.length - firstTags.length
+export function TagList({
+  tags,
+  limit,
+}: {
+  tags: ProjectTag[];
+  limit?: number;
+}) {
+  const firstTags = tags.slice(0, limit);
+  const remainder = tags.length - firstTags.length;
 
   return (
     <div className="flex-wrap">
-      {firstTags.map(tag =>
+      {firstTags.map((tag) => (
         <Tag key={tag.tag_hash} bordered={false} className="rounded-xl">
           {tag.name}
         </Tag>
+      ))}
+      {remainder > 0 && (
+        <Tag bordered={false} color="#434343" className="rounded-xl">
+          + {remainder} more tags
+        </Tag>
       )}
-      {remainder > 0 && <Tag bordered={false} color="#434343" className="rounded-xl">
-        + {remainder} more tags
-      </Tag>
-      }
     </div>
   );
 }

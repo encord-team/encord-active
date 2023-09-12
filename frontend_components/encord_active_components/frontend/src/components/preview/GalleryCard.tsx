@@ -206,7 +206,15 @@ export function GalleryCard(props: {
           </Tag>
         )}
       </Row>
-      {preview?.tags && <Row> <ItemTags tags={preview?.tags} annotationHash={labelObject?.objectHash} /></Row>}
+      {preview?.tags && (
+        <Row>
+          {" "}
+          <ItemTags
+            tags={preview?.tags}
+            annotationHash={labelObject?.objectHash}
+          />
+        </Row>
+      )}
       {labelObject != null ? (
         <>
           <Row>

@@ -27,7 +27,11 @@ from encord_active.db.models import (
     ProjectPredictionDataUnitMetadata,
 )
 from encord_active.db.util.char8 import Char8
-from encord_active.server.dependencies import DataItem, dep_engine, parse_data_item
+from encord_active.server.dependencies import (
+    DataItem,
+    dep_engine_readonly,
+    parse_data_item,
+)
 from encord_active.server.routers import project2_prediction_analysis
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -47,7 +51,7 @@ from encord_active.server.routers.queries.search_query import (
 
 
 def dep_check_project_prediction_hash_match(
-    project_hash: uuid.UUID, prediction_hash: uuid.UUID, engine: Engine = Depends(dep_engine)
+    project_hash: uuid.UUID, prediction_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
 ):
     with Session(engine) as sess:
         exists = (
@@ -131,7 +135,7 @@ def route_prediction_summary(
     prediction_hash: uuid.UUID,
     iou: float,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> PredictionSummaryResult:
     # FIXME: this command will return the wrong answers when filters are applied!!!
     tp_fp_where = search_query.search_filters(
@@ -516,7 +520,7 @@ def route_prediction_metric_performance(
     metric_name: str,
     buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> QueryMetricPerformance:
     where_tp_fp = search_query.search_filters(
         tables=TABLES_PREDICTION_TP_FP,
@@ -640,7 +644,7 @@ def route_prediction_data_item(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     item_details: DataItem = Depends(parse_data_item),
-    engine: Engine = Depends(dep_engine),
+    engine: Engine = Depends(dep_engine_readonly),
 ) -> PredictionItem:
     du_hash = item_details.du_hash
     frame = item_details.frame

@@ -31,7 +31,7 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
     # Create read-only engine
     if engine.dialect.name == "postgresql":
         readonly_engine = engine.execution_options(
-            isolation_level="SERIALIZABLE",
+            isolation_level="AUTOCOMMIT",
             postgresql_readonly=True,
         )
     else:
