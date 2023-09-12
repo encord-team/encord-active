@@ -35,6 +35,8 @@ repository = "https://github.com/encord-team/encord-active"
 
 include = ['.env', "src/encord_active/frontend/dist/**/*"]
 
+exclude = ['src/encord_active/frontend/**/*']
+
 packages = [{ include = "encord_active", from = "src" }]
 
 license = "Apache-2.0"
