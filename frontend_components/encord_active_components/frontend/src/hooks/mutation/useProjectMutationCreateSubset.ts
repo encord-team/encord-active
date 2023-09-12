@@ -1,9 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuerier } from "../Context";
 import { CreateProjectSubsetPostAction } from "../../openapi/api";
 
 export function useProjectMutationCreateSubset(projectHash: string) {
   const querier = useQuerier();
+  const queryClient = useQueryClient();
 
   return useMutation(
     ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
@@ -14,5 +15,12 @@ export function useProjectMutationCreateSubset(projectHash: string) {
           projectHash,
           createSubsetAction
         )
+        .then(async (r) => {
+          await queryClient.invalidateQueries([
+            "useProjectList",
+            querier.baseUrl,
+          ]);
+          return r;
+        })
   );
 }

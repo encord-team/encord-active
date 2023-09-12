@@ -50,7 +50,6 @@ from encord_active.lib.common.data_utils import download_image, url_to_file_path
 
 from ..db.enums import AnnotationType
 from ..db.metrics import MetricType
-from ..lib.encord.utils import get_encord_project
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
 from .embedding import (
     BaseEmbedding,
@@ -587,8 +586,6 @@ class SimpleExecutor(Executor):
                     data_metrics[analysis.ident] = getattr(data, analysis.ident)
                 elif analysis.ident in data_extra.__fields__:
                     data_metrics[analysis.ident] = _load_embedding(getattr(data_extra, analysis.ident))
-                else:
-                    raise RuntimeError(f"Simple executor bug: cannot load ident {analysis.ident} from subset")
             self.data_metrics[data.du_hash, data.frame] = data_metrics
 
         for annotation in precalculated_annotation:
@@ -608,8 +605,6 @@ class SimpleExecutor(Executor):
                     annotation_metrics[analysis.ident] = getattr(annotation, analysis.ident)
                 elif analysis.ident in annotation_extra.__fields__:
                     annotation_metrics[analysis.ident] = _load_embedding(getattr(annotation_extra, analysis.ident))
-                else:
-                    raise RuntimeError(f"Simple executor bug: cannot load ident {analysis.ident} from subset")
             self.annotation_metrics[
                 annotation.du_hash, annotation.frame, annotation.annotation_hash
             ] = annotation_metrics

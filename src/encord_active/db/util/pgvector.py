@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Optional, Union
 
 import numpy as np
 from psycopg2.extensions import Binary
@@ -65,9 +65,9 @@ class PGVector(TypeDecorator):
         if dialect.name == "postgresql":
 
             def process_pg(value: Union[np.ndarray, bytes, None]) -> Optional[str]:
-                if value is None:
-                    return None
                 np_value = as_validated_ndarray(value)
+                if np_value is None:
+                    return None
                 return "[" + ",".join([str(float(v)) for v in np_value]) + "]"
 
             return process_pg
@@ -75,9 +75,9 @@ class PGVector(TypeDecorator):
             bind_other = BINARY().bind_processor(dialect)
 
             def process_fallback(value: Union[np.ndarray, bytes, None]) -> Optional[bytes]:
-                if value is None:
-                    return None
                 np_value = as_validated_ndarray(value)
+                if np_value is None:
+                    return None
                 return bind_other(np_value.tobytes(order="C"))  # type: ignore
 
             return process_fallback

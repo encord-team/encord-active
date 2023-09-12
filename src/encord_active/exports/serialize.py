@@ -4,13 +4,28 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Type, TypeVar, Optional
+from typing import List, Literal, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.db.models import (
+    Project,
+    ProjectAnnotationAnalytics,
+    ProjectAnnotationAnalyticsDerived,
+    ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsReduced,
+    ProjectCollaborator,
+    ProjectDataAnalytics,
+    ProjectDataAnalyticsDerived,
+    ProjectDataAnalyticsExtra,
+    ProjectDataAnalyticsReduced,
+    ProjectDataMetadata,
+    ProjectDataUnitMetadata,
+    ProjectEmbeddingIndex,
+    ProjectEmbeddingReduction,
+    ProjectImportMetadata,
     ProjectPrediction,
     ProjectPredictionAnalytics,
     ProjectPredictionAnalyticsDerived,
@@ -19,24 +34,9 @@ from encord_active.db.models import (
     ProjectPredictionAnalyticsReduced,
     ProjectPredictionDataMetadata,
     ProjectPredictionDataUnitMetadata,
-    Project,
-    ProjectAnnotationAnalyticsExtra,
-    ProjectAnnotationAnalyticsDerived,
-    ProjectAnnotationAnalytics,
-    ProjectDataAnalytics,
-    ProjectDataAnalyticsDerived,
-    ProjectDataAnalyticsExtra,
-    ProjectAnnotationAnalyticsReduced,
-    ProjectDataAnalyticsReduced,
-    ProjectDataUnitMetadata,
-    ProjectDataMetadata,
-    ProjectCollaborator,
-    ProjectEmbeddingIndex,
-    ProjectEmbeddingReduction,
-    ProjectImportMetadata,
+    ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    ProjectTag,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 

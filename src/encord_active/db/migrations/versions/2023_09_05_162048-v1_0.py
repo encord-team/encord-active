@@ -5,11 +5,11 @@ Revises: bcfdfc2f498a
 Create Date: 2023-09-05 14:26:50.014633+01:00
 
 """
+import json
 import math
 import uuid
 from datetime import datetime
-import json
-from typing import Callable, Dict, Union, Optional, Tuple, Set, List
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import sqlalchemy as sa

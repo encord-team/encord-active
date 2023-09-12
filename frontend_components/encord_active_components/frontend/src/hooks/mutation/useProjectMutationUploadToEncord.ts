@@ -1,9 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UploadProjectToEncordPostAction } from "../../openapi/api";
 import { useQuerier } from "../Context";
 
 export function useProjectMutationUploadToEncord(projectHash: string) {
   const querier = useQuerier();
+  const queryClient = useQueryClient();
 
   return useMutation(
     ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
@@ -14,5 +15,12 @@ export function useProjectMutationUploadToEncord(projectHash: string) {
           projectHash,
           uploadEncordAction
         )
+        .then(async (r) => {
+          await queryClient.invalidateQueries([
+            "useProjectList",
+            querier.baseUrl,
+          ]);
+          return r;
+        })
   );
 }
