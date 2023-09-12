@@ -58,7 +58,7 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
         # Fuzzy search
         fuzzy_project = sess.exec(
             select(Project.name, Project.project_hash).where(
-                Project.project_name.like("%" + project_name + "%")  # type: ignore
+                Project.name.like("%" + project_name + "%")  # type: ignore
             )
         ).fetchall()
         if len(fuzzy_project) == 1:

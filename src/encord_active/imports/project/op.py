@@ -262,9 +262,9 @@ def refresh_project(
     with Session(engine) as sess:
         # Sync collab & project metadata
         sess.add_all(collab_new)
-        existing_project.project_ontology = upsert.project.ontology
-        existing_project.project_name = upsert.project.name
-        existing_project.project_description = upsert.project.description
+        existing_project.ontology = upsert.project.ontology
+        existing_project.name = upsert.project.name
+        existing_project.description = upsert.project.description
         sess.add(existing_project)
         sess.commit()
 

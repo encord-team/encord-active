@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 from psycopg2.extensions import Binary
@@ -52,7 +52,9 @@ class PGVector(TypeDecorator):
             return dialect.type_descriptor(BINARY())  # type: ignore
 
     def bind_processor(self, dialect: Dialect):
-        def as_validated_ndarray(value: Union[np.ndarray, bytes]) -> np.ndarray:
+        def as_validated_ndarray(value: Union[np.ndarray, bytes, None]) -> Optional[np.ndarray]:
+            if value is None:
+                return None
             np_value = np.frombuffer(value, dtype=np.float64) if isinstance(value, bytes) else value
             if np_value.dtype != np.float64:
                 raise ValueError(f"pgvector with wrong type: {np_value.dtype}")
@@ -62,7 +64,9 @@ class PGVector(TypeDecorator):
 
         if dialect.name == "postgresql":
 
-            def process_pg(value: Union[np.ndarray, bytes]) -> str:
+            def process_pg(value: Union[np.ndarray, bytes, None]) -> Optional[str]:
+                if value is None:
+                    return None
                 np_value = as_validated_ndarray(value)
                 return "[" + ",".join([str(float(v)) for v in np_value]) + "]"
 
@@ -70,7 +74,9 @@ class PGVector(TypeDecorator):
         else:
             bind_other = BINARY().bind_processor(dialect)
 
-            def process_fallback(value: Union[np.ndarray, bytes]) -> bytes:
+            def process_fallback(value: Union[np.ndarray, bytes, None]) -> Optional[bytes]:
+                if value is None:
+                    return None
                 np_value = as_validated_ndarray(value)
                 return bind_other(np_value.tobytes(order="C"))  # type: ignore
 
@@ -79,7 +85,9 @@ class PGVector(TypeDecorator):
     def result_processor(self, dialect: Dialect, coltype):
         result_processor = BINARY().result_processor(dialect, coltype)
 
-        def process(value: Union[np.ndarray, str, bytes, Binary]) -> bytes:
+        def process(value: Union[np.ndarray, str, bytes, Binary, None]) -> Optional[bytes]:
+            if value is None:
+                return None
             if isinstance(value, str):
                 np_value = np.array(value[1:-1].split(","), dtype=np.float64)
             elif isinstance(value, np.ndarray):

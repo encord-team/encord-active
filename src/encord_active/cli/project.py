@@ -167,3 +167,29 @@ def delete_project(
                 style="green",
             )
         )
+
+
+@project_cli.command("serialize")
+def serialize_project(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    export_folder_name: str = typer.Option(
+        None,
+        "--export_folder-name",
+        "-e",
+        help="Export folder name",
+    ),
+) -> None:
+    """
+    Serialize the whole project state
+    """
+    from encord_active.db.models import get_engine
+    from encord_active.exports.serialize import serialize_whole_project_state
+
+    #
+    project_hash = select_project_hash_from_name(database_dir, project_name or "")
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+
+    export_folder = Path.cwd() / (export_folder_name if export_folder_name is not None else f"export-{project_hash}")
+    serialize_whole_project_state(engine, database_dir, project_hash, export_folder)
