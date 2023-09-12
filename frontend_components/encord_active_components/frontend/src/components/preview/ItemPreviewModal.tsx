@@ -7,6 +7,7 @@ import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { AnnotatedImage } from "./AnnotatedImage";
+import { ItemTags } from "../explorer/Tagging";
 
 export function ItemPreviewModal(props: {
   projectHash: string;
@@ -15,8 +16,8 @@ export function ItemPreviewModal(props: {
   onClose: () => void;
   onShowSimilar: () => void;
   editUrl:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
 }) {
   const { previewItem, domain, projectHash, onClose, onShowSimilar, editUrl } =
     props;
@@ -86,9 +87,9 @@ export function ItemPreviewModal(props: {
             onClick={() =>
               editUrl !== undefined && preview !== undefined
                 ? window.open(
-                    editUrl(preview.data_hash, projectHash, 0),
-                    "_blank"
-                  )
+                  editUrl(preview.data_hash, projectHash, 0),
+                  "_blank"
+                )
                 : undefined
             }
           >
@@ -102,13 +103,14 @@ export function ItemPreviewModal(props: {
       ) : (
         <Row className="vh-100 vw-100">
           <Col span={12}>
-            <Row>
+            <Row className="[&>*]:w-full">
               <Table
                 dataSource={metricsList}
                 columns={columns}
                 pagination={{ pageSize: 5 }}
               />
             </Row>
+            <ItemTags tags={preview.tags} annotationHash={annotationHash} />
           </Col>
           <Col span={12}>
             <AnnotatedImage

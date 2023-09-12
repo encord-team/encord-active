@@ -262,10 +262,12 @@ export function TaggingForm({
 export function ItemTags({
   tags: { data, label },
   annotationHash,
+  limit,
   className,
 }: {
   tags: ProjectItemTags;
   annotationHash?: string;
+  limit?: number;
   className?: string;
 }) {
   const annotationTags = annotationHash && label[annotationHash];
@@ -278,13 +280,13 @@ export function ItemTags({
       {!!data.length && (
         <div className="flex items-center">
           <MdOutlineImage className="text-base" />
-          <TagList tags={data} limit={4} />
+          <TagList tags={data} limit={limit} />
         </div>
       )}
       {!!labelTags.length && (
         <div className="flex items-center">
           <TbPolygon className="text-base" />
-          <TagList tags={labelTags} limit={4} />
+          <TagList tags={labelTags} limit={limit} />
         </div>
       )}
     </div>

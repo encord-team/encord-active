@@ -210,10 +210,10 @@ export function GalleryCard(props: {
       </Row>
       {preview?.tags && (
         <Row>
-          {" "}
           <ItemTags
             tags={preview?.tags}
             annotationHash={labelObject?.objectHash}
+            limit={4}
           />
         </Row>
       )}
