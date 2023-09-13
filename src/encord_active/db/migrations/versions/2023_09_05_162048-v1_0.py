@@ -18,6 +18,7 @@ from sqlmodel.sql.sqltypes import GUID, AutoString
 from tqdm import tqdm
 
 from encord_active.db.util.char8 import Char8
+from encord_active.db.util.encrypted_str import EncryptedStr
 from encord_active.db.util.pgvector import PGVector
 from encord_active.db.util.strdict import StrDict
 
@@ -86,7 +87,7 @@ def upgrade() -> None:
         "project_collaborator",
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_email", AutoString(), nullable=False),
+        sa.Column("user_email", EncryptedStr(), nullable=False),
         sa.ForeignKeyConstraint(
             ["project_hash"],
             ["project.project_hash"],

@@ -40,6 +40,7 @@ from encord_active.db.metrics import (
     assert_cls_metrics_match,
 )
 from encord_active.db.util.char8 import Char8
+from encord_active.db.util.encrypted_str import EncryptedStr
 from encord_active.db.util.pgvector import PGVector
 from encord_active.db.util.strdict import StrDict
 
@@ -91,6 +92,10 @@ def field_real(nullable: bool = False) -> float:
 
 def field_text(nullable: bool = False) -> str:
     return Field(sa_column=Column(AutoString, nullable=nullable))
+
+
+def field_encrypted_text(nullable: bool = False) -> str:
+    return Field(sa_column=Column(EncryptedStr, nullable=nullable))
 
 
 def field_bytes(nullable: bool = False) -> bytes:
