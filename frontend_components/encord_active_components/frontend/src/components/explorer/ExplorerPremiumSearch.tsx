@@ -20,6 +20,7 @@ export function useExplorerPremiumSearch(): {
 } {
   const [search, setSearch] = useState<string>();
   const [searchMode, setSearchMode] = useState<SearchMode>("embedding");
+
   return {
     premiumSearchState: {
       search,
@@ -43,6 +44,7 @@ export function ExplorerPremiumSearch(props: {
       searchLoading,
     },
   } = props;
+
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
   return (
     <Space.Compact size="large">

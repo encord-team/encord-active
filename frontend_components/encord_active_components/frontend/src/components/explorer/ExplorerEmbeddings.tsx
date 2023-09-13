@@ -10,9 +10,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
- ZAxis } from "recharts";
+  ZAxis,
+} from "recharts";
 import { scaleLinear } from "d3-scale";
-import { debounce, throttle } from "radash";
 import { loadingIndicator } from "../Spin";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
@@ -103,7 +103,7 @@ export function ExplorerEmbeddings(props: {
 
   const hoveredReduction = useMemo(
     () =>
-      reductionWithColor.length == null || hoveredIndex == undefined
+      reductionWithColor.length === null || hoveredIndex === undefined
         ? null
         : { ...reductionWithColor[hoveredIndex], fill: "#e2e8f0" },
     [reductionWithColor, hoveredIndex]
@@ -157,16 +157,17 @@ export function ExplorerEmbeddings(props: {
           className="active-chart select-none"
           onMouseDown={(elem) => {
             if (elem == null) {
-              return null;
+              return;
             }
             const { xValue, yValue } = elem;
-            if (xValue !== undefined && yValue !== undefined)
-              {setSelection({
+            if (xValue !== undefined && yValue !== undefined) {
+              setSelection({
                 x1: xValue,
                 y1: yValue,
                 x2: xValue,
                 y2: yValue,
-              });}
+              });
+            }
           }}
           onMouseMove={(elem) => {
             if (elem == null) {
