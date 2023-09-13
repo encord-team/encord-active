@@ -1,76 +1,84 @@
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { Spin } from "antd";
-import { classy } from "../../helpers/classy";
-import { loadingIndicator } from "../Spin";
+import { Button, Select, Space } from "antd";
+import Search from "antd/es/input/Search";
 
-type SearchFn = API["searchInProject"];
-type ScopelessSearch = Omit<Parameters<SearchFn>[0], "scope" | "filters">;
-type Result = Awaited<ReturnType<SearchFn>>;
+type SearchMode = "query" | "embedding";
 
-export const useSearch = (
-  scope: Scope,
-  filters: Filters,
-  searchFn: SearchFn
-) => {
-  const client = useQueryClient();
-
-  const [search, setSearch] = useState<ScopelessSearch | undefined>();
-  const [result, setResult] = useState<Result | undefined>();
-
-  const { refetch, isFetching, data } = useQuery(
-    [scope, "search", search?.type, search?.query],
-    ({ signal }) => {
-      if (!search?.query) {
-        return null;
-      }
-      client.cancelQueries(["search"]);
-      const res = searchFn(
-        { scope, filters, query: search.query, type: search.type },
-        signal
-      );
-
-      return res;
-    },
-    { enabled: false }
-  );
-
-  useEffect(() => {
-    if (search) {
-      refetch();
-    } else {
-      setResult(undefined);
-    }
-  }, [search, refetch]);
-
-  useEffect(() => {
-    if (data) {
-      setResult(data);
-    }
-  }, [data]);
-
-  return { search, setSearch, result, loading: isFetching };
+export type ExplorerPremiumSearchState = {
+  search: string | undefined;
+  setSearch: (value: string | undefined) => void;
+  searchLoading: boolean;
+  searchMode: SearchMode;
+  setSearchMode: (value: SearchMode) => void;
 };
 
-export function Assistant({
-  defaultSearch,
-  isFetching,
-  snippet,
-  setSearch,
-  disabled = false,
-}: {
-  defaultSearch?: ScopelessSearch;
-  isFetching: boolean;
-  snippet?: string | null;
-  setSearch: (search: ScopelessSearch) => void;
-  disabled?: boolean;
-}) {
-  const [parent] = useAutoAnimate();
+export function useExplorerPremiumSearch(): {
+  premiumSearchState: ExplorerPremiumSearchState;
+} {
+  const [search, setSearch] = useState<string>();
+  const [searchMode, setSearchMode] = useState<SearchMode>("embedding");
+  return {
+    premiumSearchState: {
+      search,
+      setSearch,
+      searchLoading: false,
+      searchMode,
+      setSearchMode,
+    },
+  };
+}
 
+export function ExplorerPremiumSearch(props: {
+  premiumSearchState: ExplorerPremiumSearchState;
+}) {
+  const {
+    premiumSearchState: {
+      search,
+      setSearch,
+      searchMode,
+      setSearchMode,
+      searchLoading,
+    },
+  } = props;
+  // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
+  return (
+    <Space.Compact size="large">
+      <Search
+        onSearch={setSearch}
+        onChange={() => setSearch(undefined)}
+        loading={searchLoading}
+        enterButton={
+          <Button className="bg-white px-4">
+            <FaMagic
+              color={search === undefined ? "red" : "blue"}
+              className="bg-white"
+            />
+          </Button>
+        }
+      />
+      <Select
+        value={searchMode}
+        onChange={(mode) => {
+          setSearchMode(mode);
+          setSearch(undefined);
+        }}
+        options={[
+          {
+            value: "embedding",
+            label: "Embedding Search",
+          },
+          {
+            value: "query",
+            label: "Query Generation",
+          },
+        ]}
+      />
+    </Space.Compact>
+  );
+  /*
   return (
     <div ref={parent} className="flex flex-1 flex-col gap-2">
       <form
@@ -134,4 +142,5 @@ export function Assistant({
       )}
     </div>
   );
+  */
 }

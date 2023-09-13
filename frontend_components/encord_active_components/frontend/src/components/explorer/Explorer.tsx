@@ -33,6 +33,10 @@ import { ExplorerFilterState } from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import { SimilarityModal } from "../preview/SimilarityModal";
+import {
+  ExplorerPremiumSearch,
+  useExplorerPremiumSearch,
+} from "./ExplorerPremiumSearch";
 
 export type Props = {
   projectHash: string;
@@ -210,6 +214,9 @@ export function Explorer({
     }
   };
 
+  // Premium search hooks:
+  const { premiumSearchState } = useExplorerPremiumSearch();
+
   const itemsToRender: readonly string[] = sortedItems?.results ?? [];
 
   const toggleImageSelection = (id: string) => {
@@ -300,24 +307,17 @@ export function Explorer({
         predictionHash={predictionHash}
         filters={filters}
       />
-      {predictionHash !== undefined && (
-        <PredictionFilters
-          disabled={!!similarityItem}
-          iou={iou}
-          setIou={setIou}
-          predictionOutcome={predictionOutcome}
-          isClassificationOnly={false}
-          setPredictionOutcome={setPredictionOutcome}
-        />
-      )}
-      {/* <Assistant
-        defaultSearch={premiumSearch}
-        isFetching={searching}
-        setSearch={setPremiumSearch}
-        snippet={searchResults?.snippet}
-        disabled={!hasPremiumFeatures}
-      /> */}
       <Space wrap>
+        {predictionHash !== undefined && (
+          <PredictionFilters
+            disabled={!!similarityItem}
+            iou={iou}
+            setIou={setIou}
+            predictionOutcome={predictionOutcome}
+            isClassificationOnly={false}
+            setPredictionOutcome={setPredictionOutcome}
+          />
+        )}
         <Space.Compact size="large">
           <Select
             value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
@@ -425,24 +425,46 @@ export function Explorer({
             Select all ({itemsToRender.length})
           </Button>
         </Space.Compact>
-        <Space.Compact size="large">
-          <Button
-            onClick={() => setOpen("subset")}
-            disabled={!canResetFilters}
-            hidden={env === "sandbox"}
-            icon={<BiWindows />}
-          >
-            Create Project subset
-          </Button>
-          <Button
-            onClick={() => setOpen("upload")}
-            disabled={canResetFilters}
-            hidden={remoteProject || !local}
-            icon={<BiCloudUpload />}
-          >
-            Upload project
-          </Button>
-        </Space.Compact>
+        {env !== "sandbox" && !(remoteProject || !local) ? (
+          <Space.Compact size="large">
+            <Button
+              onClick={() => setOpen("subset")}
+              disabled={!canResetFilters}
+              icon={<BiWindows />}
+            >
+              Create Project subset
+            </Button>
+            <Button
+              onClick={() => setOpen("upload")}
+              disabled={canResetFilters}
+              icon={<BiCloudUpload />}
+            >
+              Upload project
+            </Button>
+          </Space.Compact>
+        ) : (
+          <>
+            <Button
+              onClick={() => setOpen("subset")}
+              disabled={!canResetFilters}
+              hidden={env === "sandbox"}
+              icon={<BiWindows />}
+              size="large"
+            >
+              Create Project subset
+            </Button>
+            <Button
+              onClick={() => setOpen("upload")}
+              disabled={canResetFilters}
+              hidden={remoteProject || !local}
+              icon={<BiCloudUpload />}
+              size="large"
+            >
+              Upload project
+            </Button>
+          </>
+        )}
+        <ExplorerPremiumSearch premiumSearchState={premiumSearchState} />
       </Space>
       <List
         className="mt-2.5"
@@ -493,7 +515,7 @@ function PredictionFilters({
   disabled: boolean;
 }) {
   return (
-    <Space.Compact>
+    <Space.Compact size="large">
       <Select
         disabled={disabled}
         onChange={setPredictionOutcome}
@@ -522,8 +544,9 @@ function PredictionFilters({
         ]}
       />
       {!isClassificationOnly && (
-        <div className="box-border h-8 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200 pr-3 pl-2.5">
+        <div className="box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200 pr-3 pl-2.5">
           <Slider
+            className="mt-3.5"
             tooltip={{
               formatter: (val: number | undefined) => `IOU: ${val}`,
             }}
