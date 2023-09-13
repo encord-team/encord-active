@@ -10,8 +10,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from "recharts";
+ ZAxis } from "recharts";
 import { scaleLinear } from "d3-scale";
+import { debounce, throttle } from "radash";
 import { loadingIndicator } from "../Spin";
 import { useProjectAnalysisReducedEmbeddings } from "../../hooks/queries/useProjectAnalysisReducedEmbeddings";
 import { ExplorerFilterState } from "./ExplorerTypes";
@@ -24,8 +25,6 @@ import {
   QueryScatterPoint,
 } from "../../openapi/api";
 import { formatTooltip } from "../util/Formatter";
-import { ZAxis } from "recharts";
-import { debounce, throttle } from "radash";
 
 const getColorPrediction = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
@@ -52,7 +51,7 @@ export function ExplorerEmbeddings(props: {
       reductionHash ?? "",
       undefined,
       filters.filters,
-      { enabled: reductionHash != null && predictionHash === undefined },
+      { enabled: reductionHash != null && predictionHash === undefined }
     );
   const {
     isLoading: isLoadingPrediction,
@@ -65,7 +64,7 @@ export function ExplorerEmbeddings(props: {
     reductionHash ?? "",
     undefined,
     filters.filters,
-    { enabled: reductionHash != null && predictionHash !== undefined },
+    { enabled: reductionHash != null && predictionHash !== undefined }
   );
   const isLoading =
     reductionHashLoading ||
@@ -98,7 +97,7 @@ export function ExplorerEmbeddings(props: {
           value: entry.n,
           index,
         };
-      },
+      }
     );
   }, [scatteredEmbeddings]);
 
@@ -107,16 +106,16 @@ export function ExplorerEmbeddings(props: {
       reductionWithColor.length == null || hoveredIndex == undefined
         ? null
         : { ...reductionWithColor[hoveredIndex], fill: "#e2e8f0" },
-    [reductionWithColor, hoveredIndex],
+    [reductionWithColor, hoveredIndex]
   );
 
   const [selection, setSelection] = useState<
     | {
-      x1: number;
-      y1: number;
-      x2: number;
-      y2: number;
-    }
+        x1: number;
+        y1: number;
+        x2: number;
+        y2: number;
+      }
     | undefined
   >();
 
@@ -142,7 +141,7 @@ export function ExplorerEmbeddings(props: {
   return (
     <>
       {filters.filters.data?.reduction !== undefined ||
-        filters.filters.annotation?.reduction !== undefined ? (
+      filters.filters.annotation?.reduction !== undefined ? (
         <Button
           className="absolute top-3 right-3 z-40"
           onClick={(e) => {
@@ -162,12 +161,12 @@ export function ExplorerEmbeddings(props: {
             }
             const { xValue, yValue } = elem;
             if (xValue !== undefined && yValue !== undefined)
-              setSelection({
+              {setSelection({
                 x1: xValue,
                 y1: yValue,
                 x2: xValue,
                 y2: yValue,
-              });
+              });}
           }}
           onMouseMove={(elem) => {
             if (elem == null) {
@@ -179,10 +178,10 @@ export function ExplorerEmbeddings(props: {
               yValue !== undefined &&
               selection !== undefined
               ? setSelection((val) =>
-                val === undefined
-                  ? undefined
-                  : { ...val, x2: xValue, y2: yValue },
-              )
+                  val === undefined
+                    ? undefined
+                    : { ...val, x2: xValue, y2: yValue }
+                )
               : undefined;
           }}
           onMouseUp={() => {

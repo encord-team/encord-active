@@ -16,8 +16,8 @@ export function ItemPreviewModal(props: {
   onClose: () => void;
   onShowSimilar: () => void;
   editUrl:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
 }) {
   const { previewItem, domain, projectHash, onClose, onShowSimilar, editUrl } =
     props;
@@ -87,9 +87,9 @@ export function ItemPreviewModal(props: {
             onClick={() =>
               editUrl !== undefined && preview !== undefined
                 ? window.open(
-                  editUrl(preview.data_hash, projectHash, 0),
-                  "_blank"
-                )
+                    editUrl(preview.data_hash, projectHash, 0),
+                    "_blank"
+                  )
                 : undefined
             }
           >
