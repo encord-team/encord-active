@@ -76,6 +76,8 @@ function getEnumList(
     return Object.keys(featureHashMap);
   } else if (enumSummary.type === "enum") {
     return Object.keys(enumSummary.values ?? {});
+  } else if (enumSummary.type === "user_email") {
+    return [];
   } else {
     throw Error("Unknown enum state");
   }
@@ -98,6 +100,8 @@ function getEnumOptions(
       value,
       label: label ?? value,
     }));
+  } else if (enumSummary.type === "user_email") {
+    return [];
   }
   throw Error("Unknown enum state");
 }
@@ -106,6 +110,8 @@ function getEnumName(enumKey: string, enumSummary: EnumSummary): string {
   if (enumKey === "feature_hash") {
     return "Label Class";
   } else if (enumSummary.type === "enum") {
+    return enumSummary.title;
+  } else if (enumSummary.type === "user_email") {
     return enumSummary.title;
   }
   throw Error("Unknown enum state");

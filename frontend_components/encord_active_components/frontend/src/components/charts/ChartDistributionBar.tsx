@@ -16,9 +16,11 @@ import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAn
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import {
   AnalysisDomain,
+  ProjectCollaboratorEntry,
   ProjectDomainSummary,
   QuerySummary,
 } from "../../openapi/api";
+import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 
 export function ChartDistributionBar(props: {
   metricsSummary: ProjectDomainSummary;
@@ -73,6 +75,16 @@ export function ChartDistributionBar(props: {
     undefined,
     { enabled: selectedProperty !== undefined }
   );
+  const { data: collaborators } = useProjectListCollaborators(projectHash, {
+    enabled: selectedProperty === "annotation_user_id",
+  });
+  const collaboratorsMap = useMemo(() => {
+    const map: Record<string, ProjectCollaboratorEntry> = {};
+    collaborators?.forEach((v) => {
+      map[v.id] = v;
+    });
+    return map;
+  }, [collaborators]);
 
   const isMetric =
     selectedProperty !== undefined &&
@@ -105,7 +117,9 @@ export function ChartDistributionBar(props: {
     const getGroupName = (group: string | number): string | number => {
       if (selectedProperty === "feature_hash") {
         return featureHashMap[group]?.name ?? group;
-      } else if (keyValues !== undefined) {
+      } else if (selectedProperty === "annotation_user_id") {
+        return collaboratorsMap[group]?.email ?? group;
+      } else if (keyValues != null) {
         return keyValues[group] ?? group;
       } else {
         return group;
@@ -123,6 +137,7 @@ export function ChartDistributionBar(props: {
     isMetric,
     selectedProperty,
     metricsSummary.enums,
+    collaboratorsMap,
   ]);
 
   const lookupGrouping = (value: number) =>

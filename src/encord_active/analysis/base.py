@@ -1,6 +1,6 @@
 from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 from encord_active.analysis.types import (
     AnnotationMetadata,
@@ -15,6 +15,7 @@ from encord_active.analysis.types import (
     MetricDependencies,
     MetricResult,
 )
+from encord_active.db.enums import DataType
 from encord_active.db.metrics import MetricType
 
 
@@ -27,7 +28,8 @@ class BaseFrameInput:
     annotations_deps: Dict[str, MetricDependencies]
     # hash collision, if set the object or classification hash uniqueness constraint is
     # not held for this frame
-    hash_collision: bool
+    hash_collision: Set[str]
+    data_type: DataType
 
 
 @dataclass

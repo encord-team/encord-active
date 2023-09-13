@@ -48,7 +48,7 @@ from encord_active.db.models import (
 )
 from encord_active.lib.common.data_utils import download_image, url_to_file_path
 
-from ..db.enums import AnnotationType
+from ..db.enums import AnnotationType, DataType
 from ..db.metrics import MetricType
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
 from .embedding import (
@@ -377,8 +377,7 @@ class SimpleExecutor(Executor):
                     iter_frame_num = frame_num
                     frame_image = frame.to_image().convert("RGB")
                     frame_input = self._get_frame_input(
-                        image=frame_image,
-                        du_meta=frame_du_meta,
+                        image=frame_image, du_meta=frame_du_meta, data_meta=data_metadata
                     )
                     gt = None if gt_lookup is None else gt_lookup[frame_du_meta.du_hash, frame_du_meta.frame]
                     if gt is None:
@@ -451,6 +450,7 @@ class SimpleExecutor(Executor):
                 frame_input = self._get_frame_input(
                     image=image,
                     du_meta=du_meta_job,
+                    data_meta=data_meta_job,
                 )
                 if gt is None:
                     gt_input = None
@@ -511,6 +511,7 @@ class SimpleExecutor(Executor):
                             du_hash=du_meta.du_hash,
                         ),
                         du_meta=du_meta,
+                        data_meta=meta,
                     )
                     for meta, du_meta in grouped_batch
                 ]
@@ -580,7 +581,10 @@ class SimpleExecutor(Executor):
 
         for data in precalculated_data:
             data_extra = data_extra_lookup[data.du_hash, data.frame]
-            data_metrics: MetricDependencies = {"metric_metadata": data_extra.metric_metadata}
+            data_metrics: MetricDependencies = {
+                "data_type": data.data_type,
+                "metric_metadata": data_extra.metric_metadata,
+            }
             for analysis in self.config.analysis:
                 if analysis.ident in data.__fields__:
                     data_metrics[analysis.ident] = getattr(data, analysis.ident)
@@ -597,6 +601,7 @@ class SimpleExecutor(Executor):
                 if annotation.annotation_user_id is not None
                 else None,
                 "annotation_manual": annotation.annotation_manual,
+                "annotation_invalid": annotation.annotation_invalid,
                 "metric_confidence": annotation.metric_confidence,
                 "metric_metadata": annotation_extra.metric_metadata,
             }
@@ -684,13 +689,17 @@ class SimpleExecutor(Executor):
         frame: int,
     ) -> None:
         # FIXME: add sanity checking that values are not mutated by metric runs
-        image_results_deps: MetricDependencies = {"metric_metadata": {}}  # String comments (currently not used)
+        image_results_deps: MetricDependencies = {
+            "data_type": current_frame.data_type,
+            "metric_metadata": {},  # String comments (currently not used)
+        }
         annotation_results_deps: Dict[str, MetricDependencies] = {
             k: {
                 "feature_hash": meta.feature_hash,
                 "annotation_type": meta.annotation_type,
                 "annotation_email": meta.annotation_email,
                 "annotation_manual": meta.annotation_manual,
+                "annotation_invalid": k in current_frame.hash_collision,
                 "metric_confidence": meta.annotation_confidence,
                 "metric_metadata": {},  # String comments (currently not used)
             }
@@ -814,15 +823,15 @@ class SimpleExecutor(Executor):
         du_meta: ProjectDataUnitMetadata,
         image_width: int,
         image_height: int,
-    ) -> Tuple[Dict[str, AnnotationMetadata], bool]:
+    ) -> Tuple[Dict[str, AnnotationMetadata], Set[str]]:
         annotations = {}
-        hash_collision = False
+        hash_collision = set()
         for obj in du_meta.objects:
             obj_hash = str(obj["objectHash"])
             feature_hash = str(obj["featureHash"])
             annotation_type = AnnotationType(str(obj["shape"]))  # type: ignore
             if obj_hash in annotations:
-                hash_collision = True
+                hash_collision.add(obj_hash)
             else:
                 try:
                     points = obj_to_points(annotation_type, obj, img_w=image_width, img_h=image_height)
@@ -878,7 +887,9 @@ class SimpleExecutor(Executor):
                 )
         return annotations, hash_collision
 
-    def _get_frame_input(self, image: Image.Image, du_meta: ProjectDataUnitMetadata) -> BaseFrameInput:
+    def _get_frame_input(
+        self, image: Image.Image, data_meta: ProjectDataMetadata, du_meta: ProjectDataUnitMetadata
+    ) -> BaseFrameInput:
         annotations, hash_collision = self._get_frame_annotations(
             du_meta=du_meta, image_width=image.width, image_height=image.height
         )
@@ -895,6 +906,7 @@ class SimpleExecutor(Executor):
             annotations=annotations,
             annotations_deps=annotations_deps,
             hash_collision=hash_collision,
+            data_type=DataType(data_meta.data_type),  # type: ignore
         )
 
     def _stage_2(self):
@@ -1186,6 +1198,7 @@ class SimpleExecutor(Executor):
         new_collaborators: List[ProjectCollaborator] = []
         user_email_lookup = {collab.user_email: collab.user_id for collab in collaborators}
         for (du_hash, frame), data_deps in self.data_metrics.items():
+            data_type = data_deps.pop("data_type")
             analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 data_deps,
                 ProjectDataAnalytics,
@@ -1198,6 +1211,7 @@ class SimpleExecutor(Executor):
                     project_hash=project_hash,
                     du_hash=du_hash,
                     frame=frame,
+                    data_type=data_type,
                     **{k: self._pack_metric(v) for k, v in data_deps.items() if k in analysis_values},
                 )
             )
@@ -1235,6 +1249,7 @@ class SimpleExecutor(Executor):
             annotation_type = annotation_deps.pop("annotation_type")
             annotation_email = annotation_deps.pop("annotation_email")
             annotation_manual = annotation_deps.pop("annotation_manual")
+            annotation_invalid = annotation_deps.pop("annotation_invalid")
             analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 annotation_deps,
                 ProjectAnnotationAnalytics,
@@ -1254,6 +1269,7 @@ class SimpleExecutor(Executor):
                         str(annotation_email), user_email_lookup, new_collaborators, project_hash
                     ),
                     annotation_manual=annotation_manual,
+                    annotation_invalid=annotation_invalid,
                     **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
             )
@@ -1322,6 +1338,7 @@ class SimpleExecutor(Executor):
             annotation_type = annotation_deps.pop("annotation_type")
             annotation_email = annotation_deps.pop("annotation_email")
             annotation_manual = annotation_deps.pop("annotation_manual")
+            annotation_invalid = annotation_deps.pop("annotation_invalid")
             analysis_values, extra_values, derived_values = self._validate_pack_deps(
                 annotation_deps,
                 ProjectPredictionAnalytics,
@@ -1342,6 +1359,7 @@ class SimpleExecutor(Executor):
                         str(annotation_email), user_email_lookup, new_collaborators, project_hash
                     ),
                     annotation_manual=annotation_manual,
+                    annotation_invalid=annotation_invalid,
                     **{k: self._pack_metric(v) for k, v in annotation_deps.items() if k in analysis_values},
                 )
             )

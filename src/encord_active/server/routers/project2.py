@@ -32,6 +32,7 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
+    ProjectCollaborator,
 )
 from encord_active.db.queries.tags import (
     select_frame_data_tags,
@@ -547,6 +548,23 @@ def route_project_list_predictions(
             for prediction in predictions
         ],
     )
+
+
+class ProjectCollaboratorEntry(BaseModel):
+    email: str
+    id: int
+
+
+@router.get("/{project_hash}/collaborators")
+def route_project_list_collaborators(
+    project_hash: uuid.UUID,
+    engine: Engine = Depends(dep_engine_readonly),
+) -> List[ProjectCollaboratorEntry]:
+    with Session(engine) as sess:
+        collaborators = sess.exec(
+            select(ProjectCollaborator).where(ProjectCollaborator.project_hash == project_hash)
+        ).fetchall()
+    return [ProjectCollaboratorEntry(email=c.user_email, id=c.user_id) for c in collaborators]
 
 
 @router.post("/{project_hash}/create/tag")

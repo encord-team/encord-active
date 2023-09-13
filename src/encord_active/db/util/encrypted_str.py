@@ -24,11 +24,11 @@ class EncryptedStr(TypeDecorator):
 
     def __init__(self) -> None:
         super().__init__()
-        key = os.environ.get("FERNET_SECRET", None).encode("utf-8")
+        key = os.environ.get("FERNET_SECRET", None)
         if key is None:
             self.fernet = None
         else:
-            self.fernet = Fernet(key)
+            self.fernet = Fernet(key.encode("utf-8"))
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
         return dialect.type_descriptor(VARCHAR(600))  # type: ignore
@@ -36,6 +36,8 @@ class EncryptedStr(TypeDecorator):
     def process_bind_param(self, value: Optional[str], dialect: Dialect) -> Optional[str]:
         if value is None:
             return None
+        if self.fernet is None:
+            return value
         return self.fernet.encrypt(value.encode("utf-8")).decode("utf-8")
 
     def bind_processor(self, dialect: Dialect):
@@ -48,6 +50,8 @@ class EncryptedStr(TypeDecorator):
         def unpack_from_int(value: Optional[str]) -> Optional[str]:
             if value is None:
                 return None
+            if self.fernet is None:
+                return value
             try:
                 return self.fernet.decrypt(value.encode("utf-8")).decode("utf-8")
             except InvalidToken as e:

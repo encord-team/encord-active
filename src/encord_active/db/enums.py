@@ -6,6 +6,8 @@ from typing import Dict, Optional
 class EnumType(enum.Enum):
     ONTOLOGY = "ontology"
     """Ontology well-known enum"""
+    USER_EMAIL = "user_email"
+    """User Email well-known enum"""
     ENUM = "enum"
     """Simple enum with fixed values"""
 
@@ -48,8 +50,8 @@ AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
 
 class DataType(enum.IntEnum):
     IMAGE = 0
-    IMAGE_GROUP = 1
-    IMAGE_SEQUENCE = 2
+    IMG_GROUP = 1
+    IMG_SEQUENCE = 2
     VIDEO = 3
 
     @classmethod
@@ -70,7 +72,16 @@ class DataType(enum.IntEnum):
 
 DataTypeMaxValue: int = int(DataType.VIDEO)
 
-DataEnums: Dict[str, EnumDefinition] = {}
+DataEnums: Dict[str, EnumDefinition] = {
+    "data_type": EnumDefinition(
+        enum_type=EnumType.ENUM,
+        title="Data Type",
+        values={
+            str(data_type.value): data_type.name.replace("IMG_", "IMAGE_").replace("_", " ").title()
+            for data_type in DataType
+        },
+    )
+}
 AnnotationEnums: Dict[str, EnumDefinition] = {
     "feature_hash": EnumDefinition(
         enum_type=EnumType.ONTOLOGY,
@@ -81,7 +92,7 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
         enum_type=EnumType.ENUM,
         title="Annotation Type",
         values={
-            str(annotation_type.value): annotation_type.name.replace("_", "").title()
+            str(annotation_type.value): annotation_type.name.replace("_", " ").title()
             for annotation_type in AnnotationType
         },
     ),
@@ -92,5 +103,18 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
             "0": "Automated Annotation",
             "1": "Manual Annotation",
         },
+    ),
+    "annotation_invalid": EnumDefinition(
+        enum_type=EnumType.ENUM,
+        title="Annotation Invalid",
+        values={
+            "False": "Well-formed Annotation",
+            "True": "Invalid Annotation",
+        },
+    ),
+    "annotation_user_id": EnumDefinition(
+        enum_type=EnumType.USER_EMAIL,
+        title="Annotator",
+        values=None,
     ),
 }

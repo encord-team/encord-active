@@ -233,6 +233,7 @@ export interface EnumSummary {
 
 export const EnumType = {
   Ontology: "ontology",
+  UserEmail: "user_email",
   Enum: "enum",
 } as const;
 
@@ -682,6 +683,25 @@ export interface PredictionSummaryResult {
    * @memberof PredictionSummaryResult
    */
   importance: { [key: string]: number | undefined };
+}
+/**
+ *
+ * @export
+ * @interface ProjectCollaboratorEntry
+ */
+export interface ProjectCollaboratorEntry {
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectCollaboratorEntry
+   */
+  email: string;
+  /**
+   *
+   * @type {number}
+   * @memberof ProjectCollaboratorEntry
+   */
+  id: number;
 }
 /**
  *
@@ -3015,6 +3035,58 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       },
     /**
      *
+     * @summary Route Project List Collaborators
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet:
+      async (
+        projectHash: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet",
+          "projectHash",
+          projectHash
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/collaborators`.replace(
+            `{${"project_hash"}}`,
+            encodeURIComponent(String(projectHash))
+          );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route Project List Predictions
      * @param {string} projectHash
      * @param {number} [offset]
@@ -4368,6 +4440,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Project List Collaborators
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<Array<ProjectCollaboratorEntry>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Project List Predictions
      * @param {string} projectHash
      * @param {number} [offset]
@@ -5169,6 +5269,24 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Project List Collaborators
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<Array<ProjectCollaboratorEntry>> {
+      return localVarFp
+        .routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+          projectHash,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Project List Predictions
      * @param {string} projectHash
      * @param {number} [offset]
@@ -5883,6 +6001,26 @@ export class ProjectsV2Api extends BaseAPI {
         group,
         buckets,
         filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project List Collaborators
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectsV2Api
+   */
+  public routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectsV2ApiFp(this.configuration)
+      .routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
+        projectHash,
         options
       )
       .then((request) => request(this.axios, this.basePath));

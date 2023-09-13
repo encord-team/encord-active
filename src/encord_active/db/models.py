@@ -175,7 +175,7 @@ class ProjectCollaborator(SQLModel, table=True):
     __tablename__ = "project_collaborator"
     project_hash: UUID = field_uuid(primary_key=True)
     user_id: int = field_big_int(primary_key=True)
-    user_email: str = field_text()
+    user_email: str = field_encrypted_text()
 
     __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_collaborator"),)
 
@@ -325,6 +325,8 @@ class ProjectDataAnalytics(SQLModel, table=True):
     project_hash: UUID = field_uuid(primary_key=True)
     du_hash: UUID = field_uuid(primary_key=True)
     frame: int = field_int(primary_key=True)
+    # Enums:
+    data_type: DataType = field_data_type()
     # Metrics - Absolute Size
     metric_width: Optional[int] = field_metric_positive_integer()
     metric_height: Optional[int] = field_metric_positive_integer()
@@ -428,8 +430,9 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
     # Extra properties
     feature_hash: str = field_char8()
     annotation_type: AnnotationType = field_annotation_type()
-    annotation_user_id: Optional[int] = field_int(nullable=True)
+    annotation_invalid: bool = field_bool()
     annotation_manual: bool = field_bool()
+    annotation_user_id: Optional[int] = field_int(nullable=True)
     # Metrics - Absolute Size
     metric_width: Optional[int] = field_metric_positive_integer()
     metric_height: Optional[int] = field_metric_positive_integer()
@@ -477,6 +480,7 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
                 ["project_hash", "user_id"],
             ),
             CheckConstraint("frame >= 0", name="project_analytics_annotation_frame"),
+            check_annotation_type("project_analytics_annotation"),
         ],
     )
 
@@ -673,6 +677,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
 
     # Prediction data for display.
     annotation_type: AnnotationType = field_annotation_type()
+    annotation_invalid: bool = field_bool()
 
     # Prediction metadata: (for iou dependent TP vs FP split & feature hash grouping)
     match_annotation_hash: Optional[str] = field_char8(nullable=True)
@@ -731,6 +736,7 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
                 name="prediction_analytics_duplicate_iou",
             ),
             CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
+            check_annotation_type("prediction_analytics_annotation_type"),
         ],
     )
 
