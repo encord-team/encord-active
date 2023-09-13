@@ -99,9 +99,16 @@ def _remote_project_clone(
     cloned_project = encord_client.get_project(cloned_project_hash_str)
 
     # Change is applied at the end to keep label hash in sync.
-    remap_label_hashes = {
-        uuid.UUID(val.data_hash): uuid.UUID(val.label_hash) for val in cloned_project.list_label_rows_v2()
-    }
+    cloned_project_label_rows = cloned_project.list_label_rows_v2()
+    for i in tqdm(range(0, len(cloned_project_label_rows), 50), desc="Fetching cloned label rows"):
+        cloned_project_label_row_slice = cloned_project_label_rows[i : i + 50]
+        init_bundle = cloned_project.create_bundle()
+        for label_row in cloned_project_label_row_slice:
+            label_row.initialise_labels(
+                bundle=init_bundle, include_classification_feature_hashes=set(), include_object_feature_hashes=set()
+            )
+        init_bundle.execute()
+    remap_label_hashes = {uuid.UUID(val.data_hash): uuid.UUID(val.label_hash) for val in cloned_project_label_rows}
     return uuid.UUID(cloned_project_hash_str), remap_label_hashes
 
 

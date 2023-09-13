@@ -30,7 +30,7 @@ export function ProjectsPage({ onSelectLocalProject }: Props) {
   }
 
   return (
-    <div className="flex h-max flex-col gap-5 p-5">
+    <div className="flex h-max w-full flex-col gap-5 p-5">
       {env !== "production" && (
         <>
           <h1 className="text-3xl font-medium">Let’s get started!</h1>
@@ -54,7 +54,7 @@ export function ProjectsPage({ onSelectLocalProject }: Props) {
         </>
       )}
       <h2 className="text-xl font-light text-neutral-700">Your projects</h2>
-      <Space>
+      <Space wrap>
         {userProjects.length ? (
           userProjects.map((project) => (
             <ProjectCard

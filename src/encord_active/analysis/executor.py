@@ -1003,7 +1003,7 @@ class SimpleExecutor(Executor):
                                 if metrics[k].get("feature_hash", None)
                                 == metrics[data_keys[i]].get("feature_hash", None)
                             ]
-                        chosen_keys = random.choices(other_data_keys, k=max(limit, len(other_data_keys)))
+                        chosen_keys = random.choices(other_data_keys, k=min(limit, len(other_data_keys)))
                         metrics[dk][metric.ident] = RandomSampling(
                             metric_deps=[dict(metrics[k]) for k in chosen_keys], metric_keys=chosen_keys
                         )

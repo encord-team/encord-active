@@ -34,7 +34,7 @@ export function CreateSubsetModal(props: {
         form
           .validateFields()
           .then((fields) =>
-            mutateCreateSubset.mutate({
+            mutateCreateSubset.mutateAsync({
               ...fields,
               filters,
             })
