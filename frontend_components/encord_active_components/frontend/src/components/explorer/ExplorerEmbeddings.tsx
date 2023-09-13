@@ -228,7 +228,6 @@ export function ExplorerEmbeddings(props: {
           ) : undefined}
           {reductionWithColor != null ? (
             <Scatter
-              onMouseMove={console.log}
               onMouseEnter={({ index }: (typeof reductionWithColor)[number]) =>
                 setHoveredIndex(index)
               }
