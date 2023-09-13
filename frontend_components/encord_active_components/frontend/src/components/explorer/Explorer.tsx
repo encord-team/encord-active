@@ -1,11 +1,11 @@
 import * as React from "react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, List, Popover, Select, Slider, Space } from "antd";
+import { Button, Popover, Select, Slider, Space } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { BulkTaggingForm } from "./Tagging";
 import {
@@ -18,8 +18,6 @@ import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import { ExplorerDistribution } from "./ExplorerDistribution";
-import { GalleryCard } from "../preview/GalleryCard";
-import { loadingIndicator } from "../Spin";
 import {
   DomainSearchFilters,
   Embedding2DFilter,
@@ -37,6 +35,7 @@ import {
   ExplorerPremiumSearch,
   useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
+import { ExplorerSearchResults } from "./ExplorerSearchResults";
 
 export type Props = {
   projectHash: string;
@@ -219,7 +218,7 @@ export function Explorer({
 
   const itemsToRender: readonly string[] = sortedItems?.results ?? [];
 
-  const toggleImageSelection = (id: string) => {
+  const toggleImageSelection = useCallback((id: string) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -229,14 +228,20 @@ export function Explorer({
       }
       return next;
     });
-  };
+  }, []);
 
-  const closePreview = () => setPreviewedItem(undefined);
-  const closeSimilarityItem = () => setSimilarityItem(undefined);
-  const showSimilarItems = (itemId: string) => {
-    closePreview();
-    setSimilarityItem(itemId);
-  };
+  const closePreview = useCallback(() => setPreviewedItem(undefined), []);
+  const closeSimilarityItem = useCallback(
+    () => setSimilarityItem(undefined),
+    []
+  );
+  const showSimilarItems = useCallback(
+    (itemId: string) => {
+      closePreview();
+      setSimilarityItem(itemId);
+    },
+    [closePreview]
+  );
 
   const allowTaggingAnnotations = selectedMetric?.domain === "annotation";
 
@@ -466,35 +471,17 @@ export function Explorer({
         )}
         <ExplorerPremiumSearch premiumSearchState={premiumSearchState} />
       </Space>
-      <List
-        className="mt-2.5"
-        dataSource={itemsToRender as string[]}
-        grid={{}}
-        loading={{
-          spinning: loadingDescription !== "",
-          tip: loadingDescription,
-          indicator: loadingIndicator,
-        }}
-        locale={{
-          emptyText: "No Results",
-        }}
-        pagination={{
-          defaultPageSize: 20,
-        }}
-        renderItem={(item: string) => (
-          <GalleryCard
-            projectHash={projectHash}
-            predictionHash={predictionHash}
-            selectedMetric={selectedMetric}
-            key={item}
-            itemId={item}
-            onClick={() => toggleImageSelection(item)}
-            onExpand={() => setPreviewedItem(item)}
-            onShowSimilar={() => showSimilarItems(item)}
-            selected={selectedItems.has(item)}
-            hideExtraAnnotations={showAnnotations}
-          />
-        )}
+      <ExplorerSearchResults
+        projectHash={projectHash}
+        predictionHash={predictionHash}
+        itemsToRender={itemsToRender}
+        loadingDescription={loadingDescription}
+        selectedMetric={selectedMetric}
+        toggleImageSelection={toggleImageSelection}
+        setPreviewedItem={setPreviewedItem}
+        showSimilarItems={showSimilarItems}
+        selectedItems={selectedItems}
+        showAnnotations={showAnnotations}
       />
     </div>
   );

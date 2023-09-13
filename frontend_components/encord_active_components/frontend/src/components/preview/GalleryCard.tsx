@@ -12,15 +12,17 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 
-export function GalleryCard(props: {
+export const GalleryCard = React.memo(GalleryCardRaw);
+
+function GalleryCardRaw(props: {
   projectHash: string;
   predictionHash: string | undefined;
   itemId: string;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
-  onExpand: () => void;
-  onClick: () => void;
-  onShowSimilar: () => void;
+  onExpand: (itemId: string) => void;
+  onClick: (itemId: string) => void;
+  onShowSimilar: (itemId: string) => void;
   hideExtraAnnotations: boolean;
   customTags?: React.ReactNode | undefined;
 }) {
@@ -139,7 +141,7 @@ export function GalleryCard(props: {
     <Card
       hoverable
       style={{ width: 240, margin: 10 }}
-      onClick={onClick}
+      onClick={() => onClick(itemId)}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
       className={classy("group m-2.5 w-60 overflow-clip", {
@@ -171,11 +173,11 @@ export function GalleryCard(props: {
                   <Button
                     className="bg-white"
                     icon={<FullscreenOutlined />}
-                    onClick={onExpand}
+                    onClick={() => onExpand(itemId)}
                   />
                   <Button
                     className="bg-white"
-                    onClick={onShowSimilar}
+                    onClick={() => onShowSimilar(itemId)}
                     type="text"
                     key="similarity-search"
                     icon={<MdImageSearch />}

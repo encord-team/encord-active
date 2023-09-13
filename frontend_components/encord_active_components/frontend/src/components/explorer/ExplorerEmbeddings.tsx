@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Alert, Button, Row, Spin } from "antd";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   CartesianGrid,
   ReferenceArea,
@@ -25,8 +25,22 @@ import {
   QueryScatterPoint,
 } from "../../openapi/api";
 import { formatTooltip } from "../util/Formatter";
+import useRateLimit from "../../hooks/useRateLimit";
+
+const EmbeddingScatterAxisDomain = ["dataMin - 1", "dataMax + 1"];
+const EmbeddingScatterXAxisPadding = { left: 10, right: 10 };
+const EmbeddingScatterZAxisRange = [5, 500];
 
 const getColorPrediction = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
+
+type SelectionType =
+  | {
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+    }
+  | undefined;
 
 export function ExplorerEmbeddings(props: {
   projectHash: string;
@@ -43,6 +57,48 @@ export function ExplorerEmbeddings(props: {
     reductionHashLoading,
     filters,
     setEmbeddingSelection,
+  } = props;
+
+  const [selectionRaw, setSelection] = useState<SelectionType>();
+  const selection = useRateLimit(selectionRaw, 16);
+
+  return (
+    <ExplorerEmbeddingsMemo
+      projectHash={projectHash}
+      predictionHash={predictionHash}
+      reductionHash={reductionHash}
+      reductionHashLoading={reductionHashLoading}
+      filters={filters}
+      setEmbeddingSelection={setEmbeddingSelection}
+      selection={selection}
+      setSelection={setSelection}
+    />
+  );
+}
+
+export const ExplorerEmbeddingsMemo = React.memo(ExplorerEmbeddingsRaw);
+
+function ExplorerEmbeddingsRaw(props: {
+  projectHash: string;
+  predictionHash: string | undefined;
+  reductionHash: string | undefined;
+  reductionHashLoading: boolean;
+  filters: ExplorerFilterState;
+  setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
+  selection: SelectionType;
+  setSelection: (
+    selection: SelectionType | ((old: SelectionType) => SelectionType)
+  ) => void;
+}) {
+  const {
+    projectHash,
+    predictionHash,
+    reductionHash,
+    reductionHashLoading,
+    filters,
+    setEmbeddingSelection,
+    selection,
+    setSelection,
   } = props;
   const { isLoading: isLoadingProject, data: scatteredEmbeddingsProject } =
     useProjectAnalysisReducedEmbeddings(
@@ -109,15 +165,75 @@ export function ExplorerEmbeddings(props: {
     [reductionWithColor, hoveredIndex]
   );
 
-  const [selection, setSelection] = useState<
-    | {
-        x1: number;
-        y1: number;
-        x2: number;
-        y2: number;
+  const onMouseDown = useCallback(
+    (
+      elem: null | { xValue?: number | undefined; yValue?: number | undefined }
+    ) => {
+      if (elem == null) {
+        return;
       }
-    | undefined
-  >();
+      const { xValue, yValue } = elem;
+      if (xValue !== undefined && yValue !== undefined) {
+        setSelection({
+          x1: xValue,
+          y1: yValue,
+          x2: xValue,
+          y2: yValue,
+        });
+      }
+    },
+    [setSelection]
+  );
+
+  const noActiveSelection = selection === undefined;
+  const onMouseMove = useCallback(
+    (
+      elem: null | { xValue?: number | undefined; yValue?: number | undefined }
+    ) => {
+      if (elem == null || noActiveSelection) {
+        return undefined;
+      }
+      const { xValue, yValue } = elem;
+
+      return xValue !== undefined && yValue !== undefined
+        ? setSelection((val) =>
+            val === undefined ? undefined : { ...val, x2: xValue, y2: yValue }
+          )
+        : undefined;
+    },
+    [noActiveSelection, setSelection]
+  );
+
+  const onMouseUp = useCallback(() => {
+    setSelection(undefined);
+    if (selection !== undefined && reductionHash !== undefined) {
+      setEmbeddingSelection({
+        reduction_hash: reductionHash,
+        x1: Math.min(selection.x1, selection.x2),
+        x2: Math.max(selection.x1, selection.x2),
+        y1: Math.min(selection.y1, selection.y2),
+        y2: Math.max(selection.y1, selection.y2),
+      });
+    }
+  }, [reductionHash, selection, setSelection, setEmbeddingSelection]);
+
+  const onScatterHoverMouseEnter = useCallback(
+    ({ index }: (typeof reductionWithColor)[number]) => {
+      if (noActiveSelection) {
+        setHoveredIndex(index);
+      }
+    },
+    [noActiveSelection]
+  );
+
+  const onScatterHoverMouseLeave = useCallback(() => {
+    setHoveredIndex(undefined);
+  }, []);
+
+  const scatterData = useMemo(
+    () => [...reductionWithColor, hoveredReduction],
+    [reductionWithColor, hoveredReduction]
+  );
 
   if (reductionHash === undefined && !reductionHashLoading) {
     return (
@@ -155,65 +271,25 @@ export function ExplorerEmbeddings(props: {
       <ResponsiveContainer width="100%" height={384}>
         <ScatterChart
           className="active-chart select-none"
-          onMouseDown={(elem) => {
-            if (elem == null) {
-              return;
-            }
-            const { xValue, yValue } = elem;
-            if (xValue !== undefined && yValue !== undefined) {
-              setSelection({
-                x1: xValue,
-                y1: yValue,
-                x2: xValue,
-                y2: yValue,
-              });
-            }
-          }}
-          onMouseMove={(elem) => {
-            if (elem == null) {
-              return null;
-            }
-            const { xValue, yValue } = elem;
-
-            return xValue !== undefined &&
-              yValue !== undefined &&
-              selection !== undefined
-              ? setSelection((val) =>
-                  val === undefined
-                    ? undefined
-                    : { ...val, x2: xValue, y2: yValue }
-                )
-              : undefined;
-          }}
-          onMouseUp={() => {
-            setSelection(undefined);
-            if (selection !== undefined && reductionHash !== undefined) {
-              setEmbeddingSelection({
-                reduction_hash: reductionHash,
-                x1: Math.min(selection.x1, selection.x2),
-                x2: Math.max(selection.x1, selection.x2),
-                y1: Math.min(selection.y1, selection.y2),
-                y2: Math.max(selection.y1, selection.y2),
-              });
-            }
-          }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="x"
             type="number"
             name="x"
-            domain={["dataMin - 1", "dataMax + 1"]}
-            padding={{ left: 10, right: 10 }}
+            domain={EmbeddingScatterAxisDomain}
+            padding={EmbeddingScatterXAxisPadding}
           />
           <YAxis
             dataKey="y"
             type="number"
             name="y"
-            domain={["dataMin - 1", "dataMax + 1"]}
+            domain={EmbeddingScatterAxisDomain}
           />
-          <ZAxis type="number" dataKey="n" range={[5, 500]} />
-
+          <ZAxis type="number" dataKey="n" range={EmbeddingScatterZAxisRange} />
           <Tooltip
             cursor={{ strokeDasharray: "3 3" }}
             formatter={formatTooltip}
@@ -226,16 +302,12 @@ export function ExplorerEmbeddings(props: {
               y2={selection.y2}
             />
           ) : undefined}
-          {reductionWithColor != null ? (
-            <Scatter
-              onMouseEnter={({ index }: (typeof reductionWithColor)[number]) =>
-                setHoveredIndex(index)
-              }
-              onMouseLeave={() => setHoveredIndex(undefined)}
-              data={[...reductionWithColor, hoveredReduction]}
-              isAnimationActive={false}
-            />
-          ) : null}
+          <Scatter
+            onMouseEnter={onScatterHoverMouseEnter}
+            onMouseLeave={onScatterHoverMouseLeave}
+            data={scatterData}
+            isAnimationActive={false}
+          />
         </ScatterChart>
       </ResponsiveContainer>
     </>

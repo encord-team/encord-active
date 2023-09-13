@@ -173,7 +173,9 @@ type AnnotationObject = AnnotationObjectCommon &
     | AnnotationObjectBitmask
   );
 
-function AnnotationRenderLayer({
+const AnnotationRenderLayer = React.memo(AnnotationRenderLayerRaw);
+
+function AnnotationRenderLayerRaw({
   objects,
   width,
   height,
