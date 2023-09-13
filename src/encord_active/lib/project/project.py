@@ -451,7 +451,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
                     cache=False,  # Disable cache symlink tricks
                 )
             else:
-                video_path = Path(video_dir) / du["data_title"]
+                video_path = (Path(video_dir) / data_hash).with_suffix(Path(du["data_title"]).suffix)
                 data_uri = None
                 download_file(du["data_link"], project_dir=project_file_structure.project_dir, destination=video_path)
                 project_file_structure.cached_signed_urls[du["data_hash"]] = du["data_link"]
