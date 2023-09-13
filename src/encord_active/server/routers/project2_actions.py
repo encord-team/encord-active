@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Type, TypeVar
 import encord
 import requests
 from encord import Dataset, EncordUserClient
+from encord.constants.enums import DataType
 from encord.http.constants import RequestsSettings
 from encord.objects import OntologyStructure
 from encord.orm.dataset import StorageLocation
@@ -332,16 +333,19 @@ def _upload_data_to_encord(
     database_dir: Path,
     data_hash: uuid.UUID,
     du_meta_list: List["_InternalDuUploadState"],
+    data_hash_data_type_map: Dict[uuid.UUID, DataType],
 ) -> None:
     # FIXME: add sanity check assertions for certain upload actions (rule out impossible state)
     du_meta_list.sort(key=lambda d: (d.data_hash, d.du_hash, d.frame))
     du_entry0 = du_meta_list[0]
-    if du_entry0.data_type == "image" and len(du_meta_list) == 0:
+    if du_entry0.data_type == "image" and len(du_meta_list) == 1:
+        data_hash_data_type_map[data_hash] = DataType.IMAGE
         dataset.upload_image(
             _file_path_for_upload(tempdir=tempdir, data_uri=du_entry0.data_uri, database_dir=database_dir),
             title=str(data_hash),
         )
     elif du_entry0.data_type in {"image", "image_group"}:
+        data_hash_data_type_map[data_hash] = DataType.IMG_GROUP
         dataset.create_image_group(
             file_paths=[
                 _file_path_for_upload(
@@ -353,12 +357,13 @@ def _upload_data_to_encord(
             create_video=False,
         )
     elif du_entry0.data_type == "video" and du_entry0.data_uri_is_video:
+        data_hash_data_type_map[data_hash] = DataType.VIDEO
         dataset.upload_video(
             _file_path_for_upload(tempdir=tempdir, data_uri=du_entry0.data_uri, database_dir=database_dir).as_posix(),
             title=str(data_hash),
         )
     else:
-        raise RuntimeError("Unsupported config for upload to encord")
+        raise RuntimeError(f"Unsupported config for upload to encord: {du_entry0.data_type}: {len(du_meta_list)}")
 
 
 def _build_label_row_json(
@@ -368,13 +373,14 @@ def _build_label_row_json(
     uploaded_dataset_api: encord.Dataset,
     du_hash_to_data_link_map: Dict[uuid.UUID, Optional[str]],
     du_hash_map: Dict[uuid.UUID, uuid.UUID],
+    data_hash_data_type_map: Dict[uuid.UUID, DataType],
 ) -> dict:
     return {
         "label_hash": label_row.label_hash,
         "dataset_hash": str(uploaded_dataset_api.dataset_hash),
         "dataset_title": str(uploaded_dataset_api.title),
-        "data_title": str(data.data_title),
-        "data_type": str(data.data_type),
+        "data_title": str(label_row.data_title),
+        "data_type": str(data_hash_data_type_map[data.data_hash].value),
         "data_hash": str(label_row.data_hash),
         "label_status": "LABEL_IN_PROGRESS",
         "created_at": str(data.created_at),
@@ -383,8 +389,8 @@ def _build_label_row_json(
         "classification_answers": data.classification_answers,
         "object_actions": {},
         "data_units": {
-            str(du_hash): {
-                "data_hash": str(du_hash),
+            str(du_hash_map[du_hash]): {
+                "data_hash": str(du_hash_map[du_hash]),
                 "data_sequence": int(data_sequence),
                 "data_title": str(du_group_list[0].data_title),
                 "data_type": str(du_group_list[0].data_type),
@@ -398,7 +404,7 @@ def _build_label_row_json(
             }
             if du_group_list[0].data_type != "video" and len(du_group_list) == 1
             else {
-                "data_hash": str(du_hash),
+                "data_hash": str(du_hash_map[du_hash]),
                 "width": int(du_group_list[0].width),
                 "height": int(du_group_list[0].height),
                 "labels": {
@@ -432,6 +438,7 @@ def _upload_dataset_data_to_encord(
     database_dir: Path,
     data_hash_map: Dict[uuid.UUID, uuid.UUID],
     du_hash_map: Dict[uuid.UUID, uuid.UUID],
+    data_hash_data_type_map: Dict[uuid.UUID, DataType],
 ) -> Dict[uuid.UUID, Optional[str]]:
     # Upload all data to the dataset.
     data_upload_state: Dict[uuid.UUID, List[_InternalDuUploadState]] = {}
@@ -443,7 +450,9 @@ def _upload_dataset_data_to_encord(
 
     with tempfile.TemporaryDirectory() as tempdir:
         for data_hash, upload_du_list in tqdm(data_upload_state.items(), desc="Uploading to encord"):
-            _upload_data_to_encord(uploaded_dataset_api, Path(tempdir), database_dir, data_hash, upload_du_list)
+            _upload_data_to_encord(
+                uploaded_dataset_api, Path(tempdir), database_dir, data_hash, upload_du_list, data_hash_data_type_map
+            )
 
     # The data titles can now be used to generate a data hash map.
     uploaded_dataset_rows = uploaded_dataset_api.list_data_rows()
@@ -555,12 +564,14 @@ def route_action_upload_project_to_encord(
     uploaded_dataset_api = encord_client.get_dataset(uploaded_dataset.dataset_hash)
     data_hash_map: Dict[uuid.UUID, uuid.UUID] = {}
     du_hash_map: Dict[uuid.UUID, uuid.UUID] = {}
+    data_hash_data_type_map: Dict[uuid.UUID, DataType] = {}
     du_hash_to_data_link_map: Dict[uuid.UUID, Optional[str]] = _upload_dataset_data_to_encord(
         hashes=hashes,
         uploaded_dataset_api=uploaded_dataset_api,
         database_dir=database_dir,
         data_hash_map=data_hash_map,
         du_hash_map=du_hash_map,
+        data_hash_data_type_map=data_hash_data_type_map,
     )
 
     # Now that all data has been uploaded, create the encord project.
@@ -615,7 +626,9 @@ def route_action_upload_project_to_encord(
                 uploaded_dataset_api=uploaded_dataset_api,
                 du_hash_to_data_link_map=du_hash_to_data_link_map,
                 du_hash_map=du_hash_map,
+                data_hash_data_type_map=data_hash_data_type_map,
             )
+            print(f"")
             label_row.from_labels_dict(label_row_json)
             label_row.save(bundle=bundle)
         bundle.execute()
@@ -721,4 +734,4 @@ def route_action_upload_project_to_encord(
                 },
             )
         _update_label_hashes(sess, uuid.UUID(uploaded_project_hash), data_hash_to_label_hash_map)
-    sess.commit()
+        sess.commit()
