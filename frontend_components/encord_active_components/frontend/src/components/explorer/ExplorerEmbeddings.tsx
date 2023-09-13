@@ -24,6 +24,8 @@ import {
   QueryScatterPoint,
 } from "../../openapi/api";
 import { formatTooltip } from "../util/Formatter";
+import { ZAxis } from "recharts";
+import { debounce, throttle } from "radash";
 
 const getColorPrediction = scaleLinear([0, 1], ["#ef4444", "#22c55e"]);
 
@@ -50,7 +52,7 @@ export function ExplorerEmbeddings(props: {
       reductionHash ?? "",
       undefined,
       filters.filters,
-      { enabled: reductionHash != null && predictionHash === undefined }
+      { enabled: reductionHash != null && predictionHash === undefined },
     );
   const {
     isLoading: isLoadingPrediction,
@@ -63,7 +65,7 @@ export function ExplorerEmbeddings(props: {
     reductionHash ?? "",
     undefined,
     filters.filters,
-    { enabled: reductionHash != null && predictionHash !== undefined }
+    { enabled: reductionHash != null && predictionHash !== undefined },
   );
   const isLoading =
     reductionHashLoading ||
@@ -76,12 +78,14 @@ export function ExplorerEmbeddings(props: {
       ? scatteredEmbeddingsProject
       : scatteredEmbeddingsPrediction;
 
+  const [hoveredIndex, setHoveredIndex] = useState<number | undefined>();
+
   const reductionWithColor = useMemo(() => {
     if (scatteredEmbeddings == null) {
       return [];
     }
     return scatteredEmbeddings.reductions.map(
-      (entry: QueryScatterPoint | PredictionQueryScatterPoint) => {
+      (entry: QueryScatterPoint | PredictionQueryScatterPoint, index) => {
         const fill =
           "tp" in entry
             ? getColorPrediction(entry.tp / (entry.fp + entry.fn))
@@ -90,19 +94,29 @@ export function ExplorerEmbeddings(props: {
         return {
           ...entry,
           fill,
+          stroke: "#0f172a",
           value: entry.n,
+          index,
         };
-      }
+      },
     );
   }, [scatteredEmbeddings]);
 
+  const hoveredReduction = useMemo(
+    () =>
+      reductionWithColor.length == null || hoveredIndex == undefined
+        ? null
+        : { ...reductionWithColor[hoveredIndex], fill: "#e2e8f0" },
+    [reductionWithColor, hoveredIndex],
+  );
+
   const [selection, setSelection] = useState<
     | {
-        x1: number;
-        y1: number;
-        x2: number;
-        y2: number;
-      }
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+    }
     | undefined
   >();
 
@@ -128,7 +142,7 @@ export function ExplorerEmbeddings(props: {
   return (
     <>
       {filters.filters.data?.reduction !== undefined ||
-      filters.filters.annotation?.reduction !== undefined ? (
+        filters.filters.annotation?.reduction !== undefined ? (
         <Button
           className="absolute top-3 right-3 z-40"
           onClick={(e) => {
@@ -142,16 +156,19 @@ export function ExplorerEmbeddings(props: {
       <ResponsiveContainer width="100%" height={384}>
         <ScatterChart
           className="active-chart select-none"
-          onMouseDown={({ xValue, yValue }) =>
-            xValue !== undefined && yValue !== undefined
-              ? setSelection({
-                  x1: xValue,
-                  y1: yValue,
-                  x2: xValue,
-                  y2: yValue,
-                })
-              : undefined
-          }
+          onMouseDown={(elem) => {
+            if (elem == null) {
+              return null;
+            }
+            const { xValue, yValue } = elem;
+            if (xValue !== undefined && yValue !== undefined)
+              setSelection({
+                x1: xValue,
+                y1: yValue,
+                x2: xValue,
+                y2: yValue,
+              });
+          }}
           onMouseMove={(elem) => {
             if (elem == null) {
               return null;
@@ -162,10 +179,10 @@ export function ExplorerEmbeddings(props: {
               yValue !== undefined &&
               selection !== undefined
               ? setSelection((val) =>
-                  val === undefined
-                    ? undefined
-                    : { ...val, x2: xValue, y2: yValue }
-                )
+                val === undefined
+                  ? undefined
+                  : { ...val, x2: xValue, y2: yValue },
+              )
               : undefined;
           }}
           onMouseUp={() => {
@@ -186,14 +203,17 @@ export function ExplorerEmbeddings(props: {
             dataKey="x"
             type="number"
             name="x"
-            domain={["dataMin - 10", "dataMax + 10"]}
+            domain={["dataMin - 1", "dataMax + 1"]}
+            padding={{ left: 10, right: 10 }}
           />
           <YAxis
             dataKey="y"
             type="number"
             name="y"
-            domain={["dataMin - 10", "dataMax + 10"]}
+            domain={["dataMin - 1", "dataMax + 1"]}
           />
+          <ZAxis type="number" dataKey="n" range={[5, 500]} />
+
           <Tooltip
             cursor={{ strokeDasharray: "3 3" }}
             formatter={formatTooltip}
@@ -207,7 +227,15 @@ export function ExplorerEmbeddings(props: {
             />
           ) : undefined}
           {reductionWithColor != null ? (
-            <Scatter data={reductionWithColor} isAnimationActive={false} />
+            <Scatter
+              onMouseMove={console.log}
+              onMouseEnter={({ index }: (typeof reductionWithColor)[number]) =>
+                setHoveredIndex(index)
+              }
+              onMouseLeave={() => setHoveredIndex(undefined)}
+              data={[...reductionWithColor, hoveredReduction]}
+              isAnimationActive={false}
+            />
           ) : null}
         </ScatterChart>
       </ResponsiveContainer>
