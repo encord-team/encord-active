@@ -15,7 +15,7 @@ import { ExplorerFilterState } from "./ExplorerTypes";
 import { formatTooltip } from "../util/Formatter";
 import { usePredictionAnalysisDistribution } from "../../hooks/queries/usePredictionAnalysisDistribution";
 
-export const ExplorerDistribution = React.memo(ExplorerDistributionRaw);
+export const ExplorerDistribution = ExplorerDistributionRaw; // FIXME: React.memo
 
 function ExplorerDistributionRaw(props: {
   projectHash: string;

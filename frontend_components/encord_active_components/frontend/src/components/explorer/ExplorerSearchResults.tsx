@@ -14,7 +14,7 @@ const ExplorerSearchPagination = {
 
 const ExplorerSearchGrid = {};
 
-export const ExplorerSearchResults = React.memo(ExplorerSearchResultsRaw);
+export const ExplorerSearchResults = ExplorerSearchResultsRaw; // FIXME: react.memo
 
 function ExplorerSearchResultsRaw(props: {
   projectHash: string;

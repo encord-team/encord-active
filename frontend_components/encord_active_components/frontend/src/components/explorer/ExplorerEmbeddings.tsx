@@ -84,7 +84,7 @@ export function ExplorerEmbeddings(props: {
   );
 }
 
-export const ExplorerEmbeddingsMemo = React.memo(ExplorerEmbeddingsRaw);
+export const ExplorerEmbeddingsMemo = ExplorerEmbeddingsRaw; // FIXME: re-enable React.memo
 
 function ExplorerEmbeddingsRaw(props: {
   projectHash: string;
