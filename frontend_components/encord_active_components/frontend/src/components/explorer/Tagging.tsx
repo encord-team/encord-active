@@ -1,7 +1,5 @@
-import * as React from "react";
 import { Select, SelectProps, Spin, Tag } from "antd";
 import { useMemo, useRef, useState } from "react";
-import { HiOutlineTag } from "react-icons/hi";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
@@ -11,24 +9,14 @@ import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
 import { useProjectHash } from "../../hooks/useProjectHash";
 import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
-import { ProjectItemTags, ProjectTag } from "../../openapi/api";
+import { GroupedTags, ProjectItemTags, ProjectTag } from "../../openapi/api";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
   { value: "label", label: "Label", Icon: TbPolygon },
 ] as const;
 
-const taggingDisabledReasons = {
-  prediction: "Tagging is not available for predictions",
-  "missing-target": "Select items to tag first",
-} as const;
-
 const defaultTags = { data: [], label: [] };
-
-type GroupedTags = {
-  readonly data: readonly string[];
-  readonly label: readonly string[];
-};
 
 export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
   const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash);
@@ -76,39 +64,6 @@ export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
 
   return { ...allTags, selectedTags };
 };
-
-export function TaggingDropdown({
-  disabledReason,
-  children,
-  className,
-  ...rest
-}: {
-  disabledReason?: keyof typeof taggingDisabledReasons;
-  children?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      {...rest}
-      className={classy(
-        "dropdown dropdown-bottom tooltip tooltip-right min-w-fit",
-        className
-      )}
-      data-tip={disabledReason && taggingDisabledReasons[disabledReason]}
-    >
-      <label
-        tabIndex={0}
-        className={classy("btn btn-ghost gap-2", {
-          "btn-disabled": disabledReason,
-        })}
-      >
-        <HiOutlineTag />
-        Tag
-      </label>
-      {children}
-    </div>
-  );
-}
 
 export function BulkTaggingForm({
   items,
@@ -195,8 +150,7 @@ export function TaggingForm({
   onSelect?: (scope: keyof GroupedTags, tag: string) => void;
   allowClear?: SelectProps["allowClear"];
   allowTaggingAnnotations?: boolean;
-  className: string;
-}) {
+} & Pick<JSX.IntrinsicElements["div"], "className">) {
   const projectHash = useProjectHash();
   const { allDataTags, allLabelTags } = useAllTags(projectHash);
   const allTags = { data: [...allDataTags], label: [...allLabelTags] };
@@ -213,7 +167,6 @@ export function TaggingForm({
 
   return (
     <div
-      tabIndex={0}
       className={classy(
         "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
         className
@@ -221,7 +174,8 @@ export function TaggingForm({
     >
       <div className="tabs flex justify-center bg-base-100">
         {TAG_GROUPS.map((group) => (
-          <a
+          <button
+            type="button"
             key={group.value}
             className={classy("tab tab-bordered gap-2", {
               "tab-active": selectedTab.label === group.label,
@@ -230,10 +184,10 @@ export function TaggingForm({
           >
             <group.Icon className="text-base" />
             {group.label}
-          </a>
+          </button>
         ))}
       </div>
-      <div ref={ref} tabIndex={-1} className="card-body">
+      <div ref={ref} className="card-body">
         {loading && <Spin indicator={loadingIndicator} />}
         {TAG_GROUPS.map(({ value }) => (
           <Select
@@ -246,8 +200,8 @@ export function TaggingForm({
             placeholder="Tags"
             allowClear={allowClear}
             onChange={(tags) => onChange?.({ ...selectedTags, [value]: tags })}
-            onDeselect={(tag: string) => onDeselect?.(selectedTab.value, tag)}
-            onSelect={(tag: string) => onSelect?.(selectedTab.value, tag)}
+            onDeselect={(tag) => onDeselect?.(selectedTab.value, tag)}
+            onSelect={(tag) => onSelect?.(selectedTab.value, tag)}
             options={allTags[value].map((tag) => ({ value: tag }))}
             {...(controlled
               ? { value: selectedTags[value] }

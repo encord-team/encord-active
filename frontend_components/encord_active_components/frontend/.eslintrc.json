@@ -27,15 +27,21 @@
   "globals": {
     "expect": true,
     "cy": true,
-    "Cypress": true
+    "Cypress": true,
+    "JSX": "readonly"
   },
   "rules": {
+    "react/react-in-jsx-scope": "off",
     "no-use-before-define": "off",
     "no-console": "error",
     "curly": ["error", "all"],
     "padding-line-between-statements": [
       "error",
-      { "blankLine": "always", "prev": "const", "next": "return" }
+      {
+        "blankLine": "always",
+        "prev": "const",
+        "next": "return"
+      }
     ],
     "import/prefer-default-export": "off",
     "prefer-destructuring": [
@@ -51,7 +57,12 @@
     "react/require-default-props": "off",
     "radix": "off",
     "no-else-return": "off",
-    "import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": true
+      }
+    ],
     "react/jsx-props-no-spreading": [
       "error",
       {
@@ -68,7 +79,12 @@
       }
     ],
     "react-hooks/exhaustive-deps": "error",
-    "no-param-reassign": ["error", { "props": false }],
+    "no-param-reassign": [
+      "error",
+      {
+        "props": false
+      }
+    ],
     "@typescript-eslint/no-shadow": "off",
     "@typescript-eslint/ban-types": "error"
   }

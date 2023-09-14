@@ -5,7 +5,7 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, Popover, Select, Slider, Space } from "antd";
+import { Button, Popover, Select, Slider, Space, Tooltip } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { BulkTaggingForm } from "./Tagging";
 import {
@@ -411,9 +411,13 @@ export function Explorer({
             }
             trigger="click"
           >
-            <Button icon={<HiOutlineTag />} disabled={!selectedItems.size}>
-              Tag
-            </Button>
+            <Tooltip
+              title={!selectedItems.size ? "Select items to tag first" : ""}
+            >
+              <Button icon={<HiOutlineTag />} disabled={!selectedItems.size}>
+                Tag
+              </Button>
+            </Tooltip>
           </Popover>
           <Button
             disabled={!selectedItems.size}
