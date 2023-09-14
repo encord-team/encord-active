@@ -21,8 +21,14 @@ function ExplorerDistributionRaw(props: {
   projectHash: string;
   predictionHash: string | undefined;
   filters: ExplorerFilterState;
+  addFilter: (
+    domain: "data" | "annotation",
+    metric: string,
+    min: number,
+    max: number
+  ) => void;
 }) {
-  const { projectHash, predictionHash, filters } = props;
+  const { projectHash, predictionHash, filters, addFilter } = props;
   const { data: distributionProject } = useProjectAnalysisDistribution(
     projectHash,
     filters.analysisDomain,
@@ -68,29 +74,42 @@ function ExplorerDistributionRaw(props: {
         data={barData}
         className="active-chart select-none"
         onMouseDown={(chart) => {
-          const { chartX } = chart;
-
-          return chartX !== undefined
+          const { activeLabel } = chart;
+          return activeLabel !== undefined
             ? setSelection({
-                min: chartX,
-                max: chartX,
+                min: Number(activeLabel),
+                max: Number(activeLabel),
               })
             : undefined;
         }}
-        onMouseMove={({ chartX }) =>
-          chartX !== undefined && selection !== undefined
+        onMouseMove={({ activeLabel }) =>
+          activeLabel !== undefined && selection !== undefined
             ? setSelection((val) =>
-                val === undefined ? undefined : { ...val, max: chartX }
+                val === undefined
+                  ? undefined
+                  : { ...val, max: Number(activeLabel) }
               )
             : undefined
         }
         onMouseUp={() => {
           setSelection(undefined);
-          // FIXME:
+          if (selection !== undefined) {
+            addFilter(
+              filters.analysisDomain,
+              filters.orderBy,
+              Math.min(selection.min, selection.max),
+              Math.max(selection.min, selection.max)
+            );
+          }
         }}
       >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="group" type="number" padding="no-gap" />
+        <XAxis
+          dataKey="group"
+          type="number"
+          padding="no-gap"
+          domain={["dataMin", "dataMax"]}
+        />
         <YAxis tick={false} />
         <Tooltip formatter={formatTooltip} />
         <Bar dataKey="count" isAnimationActive={false} fill="#0000bf" />

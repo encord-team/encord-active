@@ -327,6 +327,30 @@ export function Explorer({
         projectHash={projectHash}
         predictionHash={predictionHash}
         filters={filters}
+        addFilter={(domain, metric, min, max) => {
+          const setFilters =
+            domain === "data" ? setDataFilters : setAnnotationFilters;
+          setFilters((filters) => {
+            if (metric in filters.metricFilters) {
+              return {
+                ...filters,
+                metricFilters: {
+                  ...filters.metricFilters,
+                  [metric]: [min, max],
+                },
+              };
+            } else {
+              return {
+                ...filters,
+                metricFilters: {
+                  [metric]: [min, max],
+                  ...filters.metricFilters,
+                },
+                ordering: [...filters.ordering, metric],
+              };
+            }
+          });
+        }}
       />
       <Space wrap>
         {predictionHash !== undefined && (
