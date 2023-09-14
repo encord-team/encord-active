@@ -40,6 +40,9 @@ export function useProjectMutationTagItems(projectHash: string) {
         queryClient.invalidateQueries({
           queryKey: ["useTaggedItems", querier.baseUrl, projectHash],
         });
+        queryClient.invalidateQueries({
+          queryKey: ["useProjectListTags", querier.baseUrl, projectHash],
+        });
       },
     }
   );

@@ -21,7 +21,7 @@ router = APIRouter(
 
 
 class ProjectTagEntry(BaseModel):
-    hash: str
+    hash: uuid.UUID
     name: str
 
 
