@@ -387,7 +387,13 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="refresh")
 @ensure_project()
 def refresh(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
+    include_unlabeled: bool = typer.Option(
+        False,
+        "--include-unlabeled",
+        "-i",
+        help="Include unlabeled data. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
+    ),
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
@@ -404,8 +410,7 @@ def refresh(
 
     try:
         project = Project(target)
-        state = project.refresh()
-        print(state)
+        state = project.refresh(initialize_label_rows=include_unlabeled)
 
         from encord_active.lib.metrics.execute import (
             execute_metrics,

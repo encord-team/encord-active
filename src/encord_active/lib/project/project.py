@@ -130,9 +130,13 @@ class Project:
 
         return self.load()
 
-    def refresh(self) -> ProjectRefreshChangeResponse:
+    def refresh(self, initialize_label_rows: bool = False) -> ProjectRefreshChangeResponse:
         """
         Refresh project data and labels using its remote project in Encord Annotate.
+
+        Args:
+            initialize_label_rows: if data has never been initialized, it won't have a label hash.
+                Setting this flag will give them a label hash.
 
         :return: The updated project instance.
         """
@@ -158,6 +162,13 @@ class Project:
         self.__save_project_meta(encord_project)
         new_ontology = OntologyStructure.from_dict(encord_project.ontology)
         self.save_ontology(new_ontology)
+
+        has_uninitialized_rows = not all(row["label_hash"] is not None for row in encord_project.label_rows)
+        if has_uninitialized_rows and initialize_label_rows:
+            untoched_data = list(filter(lambda x: x.label_hash is None, encord_project.list_label_rows_v2()))
+            collect_async(lambda x: x.initialise_labels(), untoched_data, desc="Preparing uninitialized label rows")
+            encord_project.refetch_data()
+
         data_changed = self.__download_and_save_label_rows(encord_project)
 
         stored_edit_times: list[datetime] = list(
@@ -165,7 +176,7 @@ class Project:
         )
         latest_stored_edit = max(stored_edit_times) if stored_edit_times else None
         latest_edit_times: list[datetime] = list(
-            filter(None, [meta.last_edited_at for meta in encord_project.list_label_rows()])
+            filter(None, [meta.last_edited_at for meta in encord_project.list_label_rows_v2()])
         )
         latest_edit = max(latest_edit_times) if latest_edit_times else None
 
