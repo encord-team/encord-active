@@ -29,6 +29,7 @@ def append_object_to_list(
     email: str = "coco-import@encord.com",
 ) -> None:
     timestamp: str = get_timestamp()
+    bb_key = "boundingBox" if AnnotationType == AnnotationType.BOUNDING_BOX else str(annotation_type)
     for shape_data_entry in shape_data_list:
         object_list.append(
             {

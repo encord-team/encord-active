@@ -120,11 +120,17 @@ type AnnotationObjectPoint = {
 
 type AnnotationObjectAABB = {
   readonly shape: "bounding_box";
-  readonly bounding_box: {
+  readonly boundingBox: {
     readonly x: number;
     readonly y: number;
     readonly w: number;
     readonly h: number;
+  };
+  readonly bounding_box?: {
+    readonly x?: number;
+    readonly y?: number;
+    readonly w?: number;
+    readonly h?: number;
   };
 };
 
@@ -258,7 +264,7 @@ function AnnotationRenderLayerRaw({
   ) => {
     const bb =
       poly.shape === "bounding_box"
-        ? { ...poly.bounding_box, theta: 0 }
+        ? { ...poly.bounding_box, ...poly.boundingBox, theta: 0 }
         : poly.rotatable_bounding_box;
     const x1 = bb.x * width;
     const y1 = bb.y * height;
@@ -266,6 +272,7 @@ function AnnotationRenderLayerRaw({
     const y2 = (bb.y + bb.h) * height;
     const c = Math.cos(bb.theta);
     const s = Math.sin(bb.theta);
+    console.log("a", poly);
     const rotate = (x: number, y: number): string => {
       const xr = x * c - y * s;
       const yr = x * s + y * c;
