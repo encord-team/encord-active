@@ -20,6 +20,18 @@ router = APIRouter(
 )
 
 
+class ProjectTagEntry(BaseModel):
+    hash: str
+    name: str
+
+
+@router.get("/")
+def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntry]:
+    with Session(engine) as sess:
+        tags = sess.exec(select(ProjectTag).where(ProjectTag.project_hash == project_hash)).fetchall()
+    return [ProjectTagEntry(hash=tag.tag_hash, name=tag.name) for tag in tags]
+
+
 @router.get("/tagged_items")
 def route_tagged_items(
     project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)

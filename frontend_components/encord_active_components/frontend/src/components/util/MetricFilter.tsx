@@ -5,7 +5,10 @@ import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   EnumSummary,
   MetricSummary,
+  ProjectCollaboratorEntry,
   ProjectDomainSummary,
+  ProjectTag,
+  ProjectTagEntry,
   QuerySummary,
 } from "../../openapi/api";
 
@@ -70,14 +73,18 @@ function getEnumList(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
+  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
+  tags: ReadonlyArray<ProjectTagEntry>
 ): ReadonlyArray<string> {
   if (enumSummary.type === "ontology") {
     return Object.keys(featureHashMap);
   } else if (enumSummary.type === "enum") {
     return Object.keys(enumSummary.values ?? {});
   } else if (enumSummary.type === "user_email") {
-    return [];
+    return collaborators.map(({ id }) => `${id}`);
+  } else if (enumSummary.type === "tags") {
+    return tags.map(({ hash }) => hash);
   } else {
     throw Error("Unknown enum state");
   }
@@ -88,7 +95,9 @@ function getEnumOptions(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
+  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
+  tags: ReadonlyArray<ProjectTagEntry>
 ): Array<{ label: string; value: string }> {
   if (enumSummary.type === "ontology") {
     return Object.entries(featureHashMap).map(([featureHash, feature]) => ({
@@ -101,18 +110,15 @@ function getEnumOptions(
       label: label ?? value,
     }));
   } else if (enumSummary.type === "user_email") {
-    return [];
-  }
-  throw Error("Unknown enum state");
-}
-
-function getEnumName(enumKey: string, enumSummary: EnumSummary): string {
-  if (enumKey === "feature_hash") {
-    return "Label Class";
-  } else if (enumSummary.type === "enum") {
-    return enumSummary.title;
-  } else if (enumSummary.type === "user_email") {
-    return enumSummary.title;
+    return collaborators.map(({ id, email }) => ({
+      value: `${id}`,
+      label: email,
+    }));
+  } else if (enumSummary.type === "tags") {
+    return tags.map(({ hash, name }) => ({
+      value: hash,
+      label: name,
+    }));
   }
   throw Error("Unknown enum state");
 }
@@ -159,7 +165,9 @@ function updateKey(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
+  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
+  tags: ReadonlyArray<ProjectTagEntry>
 ): (old: FilterState) => FilterState {
   return (old) => {
     const oldMetricSummary = metricsSummary.metrics[oldKey];
@@ -213,7 +221,12 @@ function updateKey(
     // Check if an enum
     const newEnumSummary = metricsSummary.enums[newKey];
     if (newEnumSummary != null && !(newKey in old.enumFilters)) {
-      const newValues = getEnumList(newEnumSummary, featureHashMap);
+      const newValues = getEnumList(
+        newEnumSummary,
+        featureHashMap,
+        collaborators,
+        tags
+      );
 
       return {
         ...renamed,
@@ -235,7 +248,9 @@ function addNewEntry(
   featureHashMap: Record<
     string,
     { readonly color: string; readonly name: string }
-  >
+  >,
+  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
+  tags: ReadonlyArray<ProjectTagEntry>
 ): (old: FilterState) => FilterState {
   return (old) => {
     // Try insert new 'metric' key.
@@ -271,7 +286,12 @@ function addNewEntry(
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
       if (newEnumSummary !== undefined) {
-        const enumValues = getEnumList(newEnumSummary, featureHashMap);
+        const enumValues = getEnumList(
+          newEnumSummary,
+          featureHashMap,
+          collaborators,
+          tags
+        );
 
         return {
           ...old,
@@ -301,6 +321,8 @@ export function MetricFilter(props: {
     string,
     { readonly color: string; readonly name: string }
   >;
+  collaborators: ReadonlyArray<ProjectCollaboratorEntry>;
+  tags: ReadonlyArray<ProjectTagEntry>;
 }) {
   const {
     filters,
@@ -308,6 +330,8 @@ export function MetricFilter(props: {
     metricsSummary: rawMetricsSummary,
     metricRanges,
     featureHashMap,
+    collaborators,
+    tags,
   } = props;
 
   // Remove any invalid filters.
@@ -352,8 +376,7 @@ export function MetricFilter(props: {
       .filter(([enumKey]) => !exists.has(enumKey))
       .map(([enumKey, enumState]) => ({
         value: enumKey,
-        label:
-          enumState !== undefined ? getEnumName(enumKey, enumState) : enumKey,
+        label: enumState !== undefined ? enumState.title : enumKey,
       }));
 
     return [...metricOptions, ...enumOptions];
@@ -391,12 +414,7 @@ export function MetricFilter(props: {
 
         const filterType = metric != null ? "metricFilters" : "enumFilters";
         const filterLabel =
-          metric != null
-            ? metric.title
-            : getEnumName(
-                filterKey,
-                enumFilter ?? { title: "Label Class", type: "ontology" }
-              );
+          metric != null ? metric.title : enumFilter?.title ?? "Error";
 
         return (
           <Row align="middle" key={`row_filter_${filterKey}`}>
@@ -424,7 +442,9 @@ export function MetricFilter(props: {
                     new_metric_key,
                     metricsSummary,
                     metricRanges,
-                    featureHashMap
+                    featureHashMap,
+                    collaborators,
+                    tags
                   )
                 )
               }
@@ -465,7 +485,12 @@ export function MetricFilter(props: {
                 options={
                   enumFilter == null
                     ? []
-                    : getEnumOptions(enumFilter, featureHashMap)
+                    : getEnumOptions(
+                        enumFilter,
+                        featureHashMap,
+                        collaborators,
+                        tags
+                      )
                 }
                 style={{ width: 500 }}
               />
@@ -480,7 +505,15 @@ export function MetricFilter(props: {
         type="primary"
         disabled={filterOptions.length === 0}
         onClick={() =>
-          setFilters(addNewEntry(metricsSummary, metricRanges, featureHashMap))
+          setFilters(
+            addNewEntry(
+              metricsSummary,
+              metricRanges,
+              featureHashMap,
+              collaborators,
+              tags
+            )
+          )
         }
       />
     </>

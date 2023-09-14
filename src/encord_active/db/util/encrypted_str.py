@@ -41,13 +41,13 @@ class EncryptedStr(TypeDecorator):
         return self.fernet.encrypt(value.encode("utf-8")).decode("utf-8")
 
     def bind_processor(self, dialect: Dialect):
-        def pack_to_int(value: Optional[str]) -> Optional[int]:
+        def encrypt_str(value: Optional[str]) -> Optional[int]:
             return self.process_bind_param(value, dialect)
 
-        return pack_to_int
+        return encrypt_str
 
     def result_processor(self, dialect: Dialect, coltype):
-        def unpack_from_int(value: Optional[str]) -> Optional[str]:
+        def decrypt_str(value: Optional[str]) -> Optional[str]:
             if value is None:
                 return None
             if self.fernet is None:
@@ -58,4 +58,4 @@ class EncryptedStr(TypeDecorator):
                 logging.error(f"Error decrypting email: {e}")
                 return ""
 
-        return unpack_from_int
+        return decrypt_str

@@ -40,6 +40,7 @@ from encord_active.db.metrics import (
     assert_cls_metrics_match,
 )
 from encord_active.db.util.char8 import Char8
+from encord_active.db.util.encrypted_annotation_json import EncryptedAnnotationJSON
 from encord_active.db.util.encrypted_str import EncryptedStr
 from encord_active.db.util.pgvector import PGVector
 from encord_active.db.util.strdict import StrDict
@@ -108,6 +109,10 @@ def field_json_dict(nullable: bool = False, default: Optional[dict] = None) -> d
 
 def field_json_list(nullable: bool = False, default: Optional[list] = None) -> list:
     return Field(sa_column=Column(JSON, nullable=nullable, default=default))
+
+
+def field_annotation_json_list(nullable: bool = False, default: Optional[List[dict]] = None) -> List[dict]:
+    return Field(sa_column=Column(EncryptedAnnotationJSON, nullable=nullable, default=default))
 
 
 EmbeddingVector = bytes  # FIXME: Union[list[float], bytes]
@@ -242,8 +247,8 @@ class ProjectDataUnitMetadata(SQLModel, table=True):
     data_type: str = field_text()
 
     # Per-frame information about the root cause.
-    objects: list = field_json_list()
-    classifications: list = field_json_list()
+    objects: list[dict] = field_annotation_json_list()
+    classifications: list[dict] = field_annotation_json_list()
 
     __table_args__ = (
         fk_constraint(["project_hash", "data_hash"], ProjectDataMetadata, "fk_project_data_units"),
@@ -650,8 +655,8 @@ class ProjectPredictionDataUnitMetadata(SQLModel, table=True):
     data_hash: UUID = field_uuid()
 
     # Per-frame information about the root cause.
-    objects: list = field_json_list()
-    classifications: list = field_json_list()
+    objects: list = field_annotation_json_list()
+    classifications: list = field_annotation_json_list()
 
     __table_args__ = (
         fk_constraint(

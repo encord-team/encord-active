@@ -8,6 +8,8 @@ class EnumType(enum.Enum):
     """Ontology well-known enum"""
     USER_EMAIL = "user_email"
     """User Email well-known enum"""
+    TAGS = "tags"
+    """Tag search support"""
     ENUM = "enum"
     """Simple enum with fixed values"""
 
@@ -80,12 +82,17 @@ DataEnums: Dict[str, EnumDefinition] = {
             str(data_type.value): data_type.name.replace("IMG_", "IMAGE_").replace("_", " ").title()
             for data_type in DataType
         },
-    )
+    ),
+    "tags": EnumDefinition(
+        enum_type=EnumType.TAGS,
+        title="Data Tags",
+        values=None,
+    ),
 }
 AnnotationEnums: Dict[str, EnumDefinition] = {
     "feature_hash": EnumDefinition(
         enum_type=EnumType.ONTOLOGY,
-        title="Label Class",
+        title="Annotation Class",
         values=None,
     ),
     "annotation_type": EnumDefinition(
@@ -115,6 +122,11 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
     "annotation_user_id": EnumDefinition(
         enum_type=EnumType.USER_EMAIL,
         title="Annotator",
+        values=None,
+    ),
+    "tags": EnumDefinition(
+        enum_type=EnumType.TAGS,
+        title="Annotation Tags",
         values=None,
     ),
 }

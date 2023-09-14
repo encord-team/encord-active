@@ -98,7 +98,7 @@ def search_filters(
         sql_table_is_annotation = getattr(sql_table, "annotation_hash", None) is not None
         sql_filters.append(base.du_hash == sql_table.du_hash)
         sql_filters.append(base.frame == sql_table.frame)
-        if sql_table_is_annotation and sql_table_is_annotation:
+        if sql_table_is_annotation and base_is_annotation:
             sql_filters.append(base.annotation_hash == sql_table.annotation_hash)  # type: ignore
         # Append to filters
         if sql_table_is_annotation and not base_is_annotation:
@@ -156,6 +156,7 @@ def _append_filters(
         enums_list = filters.setdefault(tables.analytics, [])
         for enum_name, enum_list in search.enums.items():
             if enum_name not in tables.enums:
+                print(f"DEBUG: {list(tables.enums.keys())}")
                 raise ValueError(f"Invalid enum filter: {enum_name}")
             enum_attr = getattr(tables.analytics, enum_name)
             if len(enum_list) == 1:

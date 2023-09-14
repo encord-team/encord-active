@@ -187,7 +187,7 @@ def route_project_reduction_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,
-    buckets: Literal[10, 100, 1000] = literal_bucket_depends(10),
+    buckets: Literal[10, 100, 1000] = literal_bucket_depends(100),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     engine: Engine = Depends(dep_engine_readonly),
 ) -> metric_query.Query2DEmbedding:

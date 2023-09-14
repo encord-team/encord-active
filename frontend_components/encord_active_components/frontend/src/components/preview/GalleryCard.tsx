@@ -180,7 +180,15 @@ function GalleryCardRaw(props: {
                     onClick={() => onShowSimilar(itemId)}
                     type="text"
                     key="similarity-search"
-                    icon={<MdImageSearch />}
+                    icon={
+                      <span
+                        role="img"
+                        aria-label="fullscreen"
+                        className="anticon anticon-fullscreen"
+                      >
+                        <MdImageSearch />
+                      </span>
+                    }
                   />
                 </div>
                 {

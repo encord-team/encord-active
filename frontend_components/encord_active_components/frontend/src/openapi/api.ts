@@ -234,6 +234,7 @@ export interface EnumSummary {
 export const EnumType = {
   Ontology: "ontology",
   UserEmail: "user_email",
+  Tags: "tags",
   Enum: "enum",
 } as const;
 
@@ -1134,6 +1135,25 @@ export interface ProjectTag {
 /**
  *
  * @export
+ * @interface ProjectTagEntry
+ */
+export interface ProjectTagEntry {
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagEntry
+   */
+  hash: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagEntry
+   */
+  name: string;
+}
+/**
+ *
+ * @export
  * @interface Query2DEmbedding
  */
 export interface Query2DEmbedding {
@@ -1994,6 +2014,56 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/projects_v2`;
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeListTagsApiProjectsV2ProjectHashTagsGet",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
+        `{${"project_hash"}}`,
+        encodeURIComponent(String(projectHash))
+      );
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -4009,6 +4079,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeListTagsApiProjectsV2ProjectHashTagsGet(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<Array<ProjectTagEntry>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeListTagsApiProjectsV2ProjectHashTagsGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Prediction Data Item
      * @param {string} projectHash
      * @param {string} predictionHash
@@ -4933,6 +5031,21 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<Array<ProjectTagEntry>> {
+      return localVarFp
+        .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Prediction Data Item
      * @param {string} projectHash
      * @param {string} predictionHash
@@ -5645,6 +5758,23 @@ export class ProjectsV2Api extends BaseAPI {
   public routeListProjectsApiProjectsV2Get(options?: AxiosRequestConfig) {
     return ProjectsV2ApiFp(this.configuration)
       .routeListProjectsApiProjectsV2Get(options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route List Tags
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectsV2Api
+   */
+  public routeListTagsApiProjectsV2ProjectHashTagsGet(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectsV2ApiFp(this.configuration)
+      .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
       .then((request) => request(this.axios, this.basePath));
   }
 

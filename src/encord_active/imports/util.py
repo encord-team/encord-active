@@ -26,6 +26,7 @@ def append_object_to_list(
     ontology_object,
     confidence: Optional[float],
     object_hash: Optional[str],
+    email: str = "coco-import@encord.com",
 ) -> None:
     timestamp: str = get_timestamp()
     for shape_data_entry in shape_data_list:
@@ -35,12 +36,12 @@ def append_object_to_list(
                 "color": ontology_object.color,
                 "value": "_".join(ontology_object.name.lower().split()),
                 "createdAt": timestamp,
-                "createdBy": "robot@encord.com",
+                "createdBy": email,
                 "confidence": confidence or 1.0,
                 "objectHash": object_hash or str(uuid.uuid4())[:8],
                 "featureHash": ontology_object.feature_node_hash,
                 "lastEditedAt": timestamp,
-                "lastEditedBy": "robot@encord.com",
+                "lastEditedBy": email,
                 "shape": str(annotation_type),
                 "manualAnnotation": False,
                 "reviews": [],

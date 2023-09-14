@@ -86,7 +86,7 @@ _DOMAIN_PREDICTION_TP_FP = DomainTables(
 
 TABLES_DATA = Tables(
     data=_DOMAIN_DATA,
-    annotation=_DOMAIN_DATA,
+    annotation=_DOMAIN_ANNOTATION,
     primary=_DOMAIN_DATA,
 )
 TABLES_ANNOTATION = Tables(data=_DOMAIN_DATA, annotation=_DOMAIN_ANNOTATION, primary=_DOMAIN_ANNOTATION)

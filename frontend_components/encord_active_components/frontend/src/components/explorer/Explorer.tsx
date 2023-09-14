@@ -36,6 +36,8 @@ import {
   useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
+import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
+import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
 
 export type Props = {
   projectHash: string;
@@ -118,27 +120,38 @@ export function Explorer({
     setEmbeddingFilter(undefined);
   };
 
-  const rawFilters: ExplorerFilterState = useMemo(
-    () => ({
+  const rawFilters: ExplorerFilterState = useMemo(() => {
+    const removeTagFilter = (
+      enumFilters: Readonly<Record<string, readonly string[]>>
+    ): DomainSearchFilters["enums"] => {
+      return Object.fromEntries(
+        Object.entries(enumFilters)
+          .filter(([k]) => k !== "tags")
+          .map(([k, v]) => [k, [...v]])
+      );
+    };
+    return {
       analysisDomain: selectedMetric.domain,
       filters: {
         data: {
           // FIXME: the 'as' casts should NOT! be needed
           metrics: dataFilters.metricFilters as DomainSearchFilters["metrics"],
-          enums: dataFilters.enumFilters as DomainSearchFilters["enums"],
+          enums: removeTagFilter(dataFilters.enumFilters),
           reduction:
             selectedMetric.domain === "data" ? embeddingFilter : undefined,
-          tags: undefined,
+          tags: dataFilters.enumFilters["tags"] as DomainSearchFilters["tags"],
         },
         annotation: {
           metrics:
             annotationFilters.metricFilters as DomainSearchFilters["metrics"],
-          enums: annotationFilters.enumFilters as DomainSearchFilters["enums"],
+          enums: removeTagFilter(annotationFilters.enumFilters),
           reduction:
             selectedMetric.domain === "annotation"
               ? embeddingFilter
               : undefined,
-          tags: undefined,
+          tags: annotationFilters.enumFilters[
+            "tags"
+          ] as DomainSearchFilters["tags"],
         },
       },
       orderBy: selectedMetric.metric_key,
@@ -146,20 +159,23 @@ export function Explorer({
       iou,
       predictionOutcome,
       predictionHash,
-    }),
-    [
-      selectedMetric,
-      dataFilters,
-      isAscending,
-      annotationFilters,
-      predictionHash,
-      predictionOutcome,
-      embeddingFilter,
-      iou,
-    ]
-  );
+    };
+  }, [
+    selectedMetric,
+    dataFilters,
+    isAscending,
+    annotationFilters,
+    predictionHash,
+    predictionOutcome,
+    embeddingFilter,
+    iou,
+  ]);
 
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
+
+  // Load all collaborators & tags -> needed to support filters
+  const { data: collaborators } = useProjectListCollaborators(projectHash);
+  const { data: tags } = useProjectListTags(projectHash);
 
   // Load metric ranges
   const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
@@ -371,11 +387,18 @@ export function Explorer({
                 metricsSummary={dataMetricsSummary}
                 metricRanges={dataMetricRanges?.metrics}
                 featureHashMap={featureHashMap}
+                tags={tags ?? []}
+                collaborators={collaborators ?? []}
               />
             }
             trigger="click"
           >
-            <Button>Data Filters</Button>
+            <Button>
+              Data Filters
+              {dataFilters.ordering.length === 0
+                ? ""
+                : `(${dataFilters.ordering.length})`}
+            </Button>
           </Popover>
           <Popover
             placement="bottomLeft"
@@ -386,11 +409,18 @@ export function Explorer({
                 metricsSummary={annotationMetricsSummary}
                 metricRanges={annotationMetricRanges?.metrics}
                 featureHashMap={featureHashMap}
+                tags={tags ?? []}
+                collaborators={collaborators ?? []}
               />
             }
             trigger="click"
           >
-            <Button>Annotation Filters</Button>
+            <Button>
+              Annotation Filters
+              {annotationFilters.ordering.length === 0
+                ? ""
+                : `(${annotationFilters.ordering.length})`}
+            </Button>
           </Popover>
           <Button
             disabled={!canResetFilters}

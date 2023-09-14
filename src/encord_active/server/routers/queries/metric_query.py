@@ -7,10 +7,6 @@ from fastapi import Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import Numeric
 from sqlalchemy.engine import Dialect
-from sqlalchemy.sql.functions import count as sql_count_raw
-from sqlalchemy.sql.functions import max as sql_max_raw
-from sqlalchemy.sql.functions import min as sql_min_raw
-from sqlalchemy.sql.functions import sum as sql_sum_raw
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
 from sqlmodel.sql.expression import Select
@@ -26,10 +22,12 @@ from encord_active.server.routers.queries.domain_query import (
 
 # Type hints
 TType = TypeVar("TType")
-sql_count: Callable[[], int] = sql_count_raw  # type: ignore
-sql_min: Callable[[TType], TType] = sql_min_raw  # type: ignore
-sql_max: Callable[[TType], TType] = sql_max_raw  # type: ignore
-sql_sum: Callable[[TType], TType] = sql_sum_raw  # type: ignore
+sql_count: Callable[[], int] = func.COUNT
+sql_min: Callable[[TType], TType] = func.MIN
+sql_max: Callable[[TType], TType] = func.MAX
+sql_sum: Callable[[TType], TType] = func.SUM
+sql_avg: Callable[[TType], TType] = func.AVG
+sql_coalesce: Callable[[Optional[TType], TType], TType] = func.COALESCE
 
 """
 Severe IQR Scale factor for iqr range
@@ -77,6 +75,19 @@ def get_float_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optiona
     #  hence we can assume value is near 1.0 (so we currently use same rounding as normal.
     round_digits = None if buckets is None else int(math.log10(buckets))
     return metric_attr if metric_attr is None else func.ROUND(metric_attr.cast(Numeric(20, 10)), round_digits)  # type: ignore
+
+
+def float_attr_bucket_bounds_group(
+    metric_attr: float, buckets: Optional[Literal[10, 100, 1000]], bounds: Tuple[float, float]
+) -> float:
+    if buckets is None:
+        return metric_attr
+    bound_min, bound_max = bounds
+    bound_range = bound_max - bound_min
+    bound_steps = bound_range / float(buckets)
+    if bound_steps == 0.0:
+        return func.ROUND(metric_attr - bound_min)
+    return func.ROUND((metric_attr - bound_min) / bound_steps)
 
 
 def get_int_attr_bucket(dialect: Dialect, metric_attr: int, buckets: Optional[Literal[10, 100, 1000]]) -> int:
@@ -415,18 +426,46 @@ class Query2DEmbedding(BaseModel):
 TExtraSelect = TypeVar("TExtraSelect", bound=tuple)
 
 
-def select_for_query_reduction_scatter(
-    dialect: Dialect,
+def select_bounds_for_query_reduction_scatter(
     tables: Tables,
     project_filters: ProjectFilters,
+    filters: Optional[search_query.SearchFilters],
+    extra_where: Optional[list],
+) -> "Select[Tuple[float, float, float, float]]":
+    domain_tables = tables.primary
+    where = search_query.search_filters(
+        tables=tables,
+        base=domain_tables.reduction,
+        search=filters,
+        project_filters=project_filters,
+    )
+    return select(
+        sql_coalesce(sql_min(domain_tables.reduction.x), 0.0),
+        sql_coalesce(sql_max(domain_tables.reduction.x), 1.0),
+        sql_coalesce(sql_min(domain_tables.reduction.y), 0.0),
+        sql_coalesce(sql_max(domain_tables.reduction.y), 1.0),
+    ).where(
+        *where,
+        *(extra_where or []),
+    )
+
+
+def select_for_query_reduction_scatter(
+    tables: Tables,
+    project_filters: ProjectFilters,
+    bounds: Tuple[float, float, float, float],
     buckets: Literal[10, 100, 1000],
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list],
     extra_select: TExtraSelect,
 ) -> "Select[Union[Tuple[float, float, int], Tuple[float, float, int, TExtraSelect]]]":
     domain_tables = tables.primary
-    x_attr = get_float_attr_bucket(dialect, domain_tables.reduction.x, buckets)
-    y_attr = get_float_attr_bucket(dialect, domain_tables.reduction.y, buckets)
+    x_min, x_max, y_min, y_max = bounds
+    # FIXME: plan - calculate bounds & group by x, y, feature_hash
+    # FIXME:   then either locally OR in sql via subquery WINDOW select feature hash
+    #   with COUNT(*) largest
+    x_group = float_attr_bucket_bounds_group(domain_tables.reduction.x, buckets, (x_min, x_max))
+    y_group = float_attr_bucket_bounds_group(domain_tables.reduction.y, buckets, (y_min, y_max))
     where = search_query.search_filters(
         tables=tables,
         base=domain_tables.reduction,
@@ -435,8 +474,8 @@ def select_for_query_reduction_scatter(
     )
     return (
         select(
-            x_attr.label("xv"),  # type: ignore
-            y_attr.label("yv"),  # type: ignore
+            func.ROUND(sql_avg(domain_tables.reduction.x)).label("xv"),  # type: ignore
+            func.ROUND(sql_avg(domain_tables.reduction.y)).label("xv"),  # type: ignore
             sql_count().label("n"),  # type: ignore
             *extra_select,
         )
@@ -444,7 +483,7 @@ def select_for_query_reduction_scatter(
             *where,
             *(extra_where or []),
         )
-        .group_by("xv", "yv")
+        .group_by(x_group, y_group)
     )
 
 
@@ -456,11 +495,19 @@ def query_reduction_scatter(
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list] = None,
 ) -> Query2DEmbedding:
+    bounds = sess.exec(
+        select_bounds_for_query_reduction_scatter(
+            tables=tables,
+            project_filters=project_filters,
+            filters=filters,
+            extra_where=extra_where,
+        )
+    ).first()
     query: "Select[Tuple[float, float, int]]" = select_for_query_reduction_scatter(  # type: ignore
-        dialect=sess.bind.dialect,  # type: ignore
         tables=tables,
         project_filters=project_filters,
         buckets=buckets,
+        bounds=bounds,
         filters=filters,
         extra_where=extra_where,
         extra_select=tuple(),
