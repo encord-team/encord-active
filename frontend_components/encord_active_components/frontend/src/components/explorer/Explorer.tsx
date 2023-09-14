@@ -6,6 +6,7 @@ import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
 import { Button, Popover, Select, Slider, Space, Tooltip } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
+import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
 import {
   FilterState,
@@ -37,7 +38,6 @@ import {
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
-import { useNavigate, useParams } from "react-router";
 
 export type Props = {
   projectHash: string;
@@ -67,10 +67,13 @@ export function Explorer({
 
   const navigate = useNavigate();
   const { previewItem } = useParams<{ previewItem?: string }>();
-  const setPreviewedItem = (id?: string) =>
-    id
-      ? navigate(`./${id}`, { relative: "path", replace: true })
-      : navigate(".", { relative: "path" });
+  const setPreviewedItem = useCallback(
+    (id?: string | undefined) =>
+      id
+        ? navigate(`/projects/${projectHash}/explorer/${id}`)
+        : navigate(`/projects/${projectHash}/explorer`),
+    [navigate, projectHash]
+  );
 
   // Select reduction hash
   const { data: reductionHashes, isLoading: reductionHashLoading } =
@@ -251,7 +254,10 @@ export function Explorer({
     });
   }, []);
 
-  const closePreview = useCallback(() => setPreviewedItem(undefined), []);
+  const closePreview = useCallback(
+    () => setPreviewedItem(undefined),
+    [setPreviewedItem]
+  );
   const closeSimilarityItem = useCallback(
     () => setSimilarityItem(undefined),
     []

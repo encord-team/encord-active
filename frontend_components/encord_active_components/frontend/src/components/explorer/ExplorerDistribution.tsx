@@ -74,6 +74,7 @@ function ExplorerDistributionRaw(props: {
         className="active-chart select-none"
         onMouseDown={(chart) => {
           const { activeLabel } = chart;
+
           return activeLabel !== undefined
             ? setSelection({
                 min: Number(activeLabel),
