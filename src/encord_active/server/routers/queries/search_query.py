@@ -60,6 +60,7 @@ def search_filters(
     base: Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]],
     search: Optional[SearchFilters],
     project_filters: ProjectFilters,
+    force_join: Optional[List[Union[Union[AnalyticsTable, ReductionTable, TagTable]]]] = None,
 ) -> list:
     filters: dict[
         Union[AnalyticsTable, ReductionTable, TagTable, Type[ProjectPredictionAnalyticsFalseNegatives]], list
@@ -84,6 +85,10 @@ def search_filters(
                 project_filters=project_filters,
                 table_filters=filter_list,
             )
+
+    for force_join_table in force_join or []:
+        if force_join_table != base and force_join_table not in filters:
+            filters[force_join_table] = []
 
     # Compile into sql
     compiled_filters = filters.pop(base, [])

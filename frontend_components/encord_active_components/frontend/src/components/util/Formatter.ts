@@ -57,3 +57,9 @@ export function featureHashToColor(featureHash: string) {
 
   return `hsl(${h}, ${s}%, ${l}%)`;
 }
+
+export function formatTick(value: number): string {
+  const [res] = formatTooltip(value, null);
+
+  return `${res}`;
+}

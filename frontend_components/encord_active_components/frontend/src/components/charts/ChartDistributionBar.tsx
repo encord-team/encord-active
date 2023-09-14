@@ -56,7 +56,7 @@ export function ChartDistributionBar(props: {
         value: metricKey,
       }));
     Object.entries(metricsSummary.enums)
-      .filter(([_, enumMeta]) => enumMeta.type !== "tags")
+      .filter(([_, enumMeta]) => enumMeta?.type !== "tags")
       .forEach(([enumName, enumMeta]) => {
         properties.push({
           label: enumMeta?.title ?? enumName,

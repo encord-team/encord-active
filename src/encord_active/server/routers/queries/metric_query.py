@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple, Type, TypeVar
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Numeric
+from sqlalchemy import Numeric, literal
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.operators import between_op, is_not, not_between_op
 from sqlmodel import Session, SQLModel, func, select
@@ -418,9 +418,17 @@ def query_attr_scatter(
     )
 
 
+class Query2DEmbeddingScatterPoint(BaseModel):
+    x: float
+    y: float
+    fh: str
+    fhn: int
+    n: int
+
+
 class Query2DEmbedding(BaseModel):
     count: int
-    reductions: List[QueryScatterPoint]
+    reductions: List[Query2DEmbeddingScatterPoint]
 
 
 TExtraSelect = TypeVar("TExtraSelect", bound=tuple)
@@ -458,7 +466,7 @@ def select_for_query_reduction_scatter(
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list],
     extra_select: TExtraSelect,
-) -> "Select[Union[Tuple[float, float, int], Tuple[float, float, int, TExtraSelect]]]":
+) -> "Select[Tuple[float, float, int, str]]":
     domain_tables = tables.primary
     x_min, x_max, y_min, y_max = bounds
     # FIXME: plan - calculate bounds & group by x, y, feature_hash
@@ -471,19 +479,23 @@ def select_for_query_reduction_scatter(
         base=domain_tables.reduction,
         search=filters,
         project_filters=project_filters,
+        force_join=[tables.annotation.analytics] if tables.annotation == domain_tables else [],
     )
     return (
-        select(
-            func.ROUND(sql_avg(domain_tables.reduction.x)).label("xv"),  # type: ignore
-            func.ROUND(sql_avg(domain_tables.reduction.y)).label("xv"),  # type: ignore
+        select(  # type: ignore
+            sql_avg(domain_tables.reduction.x).label("xv"),  # type: ignore
+            sql_avg(domain_tables.reduction.y).label("xv"),  # type: ignore
             sql_count().label("n"),  # type: ignore
+            tables.annotation.analytics.feature_hash.label("fh")  # type: ignore
+            if tables.annotation == domain_tables
+            else literal("").label("fh"),
             *extra_select,
         )
         .where(
             *where,
             *(extra_where or []),
         )
-        .group_by(x_group, y_group)
+        .group_by(x_group, y_group, "fh")
     )
 
 
@@ -503,7 +515,7 @@ def query_reduction_scatter(
             extra_where=extra_where,
         )
     ).first()
-    query: "Select[Tuple[float, float, int]]" = select_for_query_reduction_scatter(  # type: ignore
+    query: "Select[Tuple[float, float, int, str]]" = select_for_query_reduction_scatter(  # type: ignore
         tables=tables,
         project_filters=project_filters,
         buckets=buckets,
@@ -513,10 +525,20 @@ def query_reduction_scatter(
         extra_select=tuple(),
     )
     results = sess.exec(query).fetchall()
+    results_dedup: Dict[Tuple[float, float], Tuple[str, int, int]] = {}
+    for x, y, n, l in results:
+        el, elc, en = results_dedup.setdefault((x, y), ("", 0, 0))
+        if n > elc or (n == elc and str(l) >= str(el)):
+            results_dedup[(x, y)] = (l, n, en + n)
+        else:
+            results_dedup[(x, y)] = (el, elc, en + n)
+
     return Query2DEmbedding(
-        count=sum(n for x, y, n in results),
+        count=sum(n for x, y, n, l in results),
         reductions=[
-            QueryScatterPoint(x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n)
-            for x, y, n in results
+            Query2DEmbeddingScatterPoint(
+                x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, fh=fh, fhn=fhn, n=n
+            )
+            for (x, y), (fh, fhn, n) in results_dedup.items()
         ],
     )

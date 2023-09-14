@@ -22,10 +22,15 @@ import {
   PredictionQuery2DEmbedding,
   PredictionQueryScatterPoint,
   Query2DEmbedding,
-  QueryScatterPoint,
+  Query2DEmbeddingScatterPoint,
 } from "../../openapi/api";
-import { formatTooltip } from "../util/Formatter";
+import {
+  featureHashToColor,
+  formatTick,
+  formatTooltip,
+} from "../util/Formatter";
 import useRateLimit from "../../hooks/useRateLimit";
+import { MetricFilter } from "../util/MetricFilter";
 
 const EmbeddingScatterAxisDomain = ["dataMin - 1", "dataMax + 1"];
 const EmbeddingScatterXAxisPadding = { left: 10, right: 10 };
@@ -47,6 +52,7 @@ export function ExplorerEmbeddings(props: {
   predictionHash: string | undefined;
   reductionHash: string | undefined;
   reductionHashLoading: boolean;
+  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   filters: ExplorerFilterState;
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
 }) {
@@ -57,6 +63,7 @@ export function ExplorerEmbeddings(props: {
     reductionHashLoading,
     filters,
     setEmbeddingSelection,
+    featureHashMap,
   } = props;
 
   const [selectionRaw, setSelection] = useState<SelectionType>();
@@ -72,6 +79,7 @@ export function ExplorerEmbeddings(props: {
       setEmbeddingSelection={setEmbeddingSelection}
       selection={selection}
       setSelection={setSelection}
+      featureHashMap={featureHashMap}
     />
   );
 }
@@ -83,6 +91,7 @@ function ExplorerEmbeddingsRaw(props: {
   predictionHash: string | undefined;
   reductionHash: string | undefined;
   reductionHashLoading: boolean;
+  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   filters: ExplorerFilterState;
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
   selection: SelectionType;
@@ -99,6 +108,7 @@ function ExplorerEmbeddingsRaw(props: {
     setEmbeddingSelection,
     selection,
     setSelection,
+    featureHashMap,
   } = props;
   const { isLoading: isLoadingProject, data: scatteredEmbeddingsProject } =
     useProjectAnalysisReducedEmbeddings(
@@ -140,11 +150,17 @@ function ExplorerEmbeddingsRaw(props: {
       return [];
     }
     return scatteredEmbeddings.reductions.map(
-      (entry: QueryScatterPoint | PredictionQueryScatterPoint, index) => {
-        const fill =
-          "tp" in entry
-            ? getColorPrediction(entry.tp / (entry.fp + entry.fn))
-            : "#4a4aee";
+      (
+        entry: Query2DEmbeddingScatterPoint | PredictionQueryScatterPoint,
+        index
+      ) => {
+        let fill = "#4a4aee";
+        if ("tp" in entry) {
+          fill = getColorPrediction(entry.tp / (entry.fp + entry.fn));
+        } else if (entry.fh !== "") {
+          fill =
+            featureHashMap[entry.fh]?.color ?? featureHashToColor(entry.fh);
+        }
 
         return {
           ...entry,
@@ -155,7 +171,7 @@ function ExplorerEmbeddingsRaw(props: {
         };
       }
     );
-  }, [scatteredEmbeddings]);
+  }, [scatteredEmbeddings, featureHashMap]);
 
   const hoveredReduction = useMemo(
     () =>
@@ -282,12 +298,14 @@ function ExplorerEmbeddingsRaw(props: {
             name="x"
             domain={EmbeddingScatterAxisDomain}
             padding={EmbeddingScatterXAxisPadding}
+            tickFormatter={formatTick}
           />
           <YAxis
             dataKey="y"
             type="number"
             name="y"
             domain={EmbeddingScatterAxisDomain}
+            tickFormatter={formatTick}
           />
           <ZAxis type="number" dataKey="n" range={EmbeddingScatterZAxisRange} />
           <Tooltip

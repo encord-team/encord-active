@@ -123,7 +123,8 @@ export function Explorer({
   const rawFilters: ExplorerFilterState = useMemo(() => {
     const removeTagFilter = (
       enumFilters: Readonly<Record<string, readonly string[]>>
-    ): DomainSearchFilters["enums"] => Object.fromEntries(
+    ): DomainSearchFilters["enums"] =>
+      Object.fromEntries(
         Object.entries(enumFilters)
           .filter(([k]) => k !== "tags")
           .map(([k, v]) => [k, [...v]])
@@ -148,7 +149,8 @@ export function Explorer({
             selectedMetric.domain === "annotation"
               ? embeddingFilter
               : undefined,
-          tags: annotationFilters.enumFilters.tags as DomainSearchFilters["tags"],
+          tags: annotationFilters.enumFilters
+            .tags as DomainSearchFilters["tags"],
         },
       },
       orderBy: selectedMetric.metric_key,
@@ -301,6 +303,7 @@ export function Explorer({
         reductionHashLoading={reductionHashLoading}
         filters={filters}
         setEmbeddingSelection={setEmbeddingFilter}
+        featureHashMap={featureHashMap}
       />
       <ItemPreviewModal
         projectHash={projectHash}
@@ -392,9 +395,7 @@ export function Explorer({
           >
             <Button>
               Data Filters
-              {dataFilters.ordering.length === 0
-                ? ""
-                : `(${dataFilters.ordering.length})`}
+              {` (${dataFilters.ordering.length})`}
             </Button>
           </Popover>
           <Popover
@@ -414,9 +415,7 @@ export function Explorer({
           >
             <Button>
               Annotation Filters
-              {annotationFilters.ordering.length === 0
-                ? ""
-                : `(${annotationFilters.ordering.length})`}
+              {` (${annotationFilters.ordering.length})`}
             </Button>
           </Popover>
           <Button

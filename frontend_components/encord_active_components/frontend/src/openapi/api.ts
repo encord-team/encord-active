@@ -1165,10 +1165,47 @@ export interface Query2DEmbedding {
   count: number;
   /**
    *
-   * @type {Array<QueryScatterPoint>}
+   * @type {Array<Query2DEmbeddingScatterPoint>}
    * @memberof Query2DEmbedding
    */
-  reductions: Array<QueryScatterPoint>;
+  reductions: Array<Query2DEmbeddingScatterPoint>;
+}
+/**
+ *
+ * @export
+ * @interface Query2DEmbeddingScatterPoint
+ */
+export interface Query2DEmbeddingScatterPoint {
+  /**
+   *
+   * @type {number}
+   * @memberof Query2DEmbeddingScatterPoint
+   */
+  x: number;
+  /**
+   *
+   * @type {number}
+   * @memberof Query2DEmbeddingScatterPoint
+   */
+  y: number;
+  /**
+   *
+   * @type {string}
+   * @memberof Query2DEmbeddingScatterPoint
+   */
+  fh: string;
+  /**
+   *
+   * @type {number}
+   * @memberof Query2DEmbeddingScatterPoint
+   */
+  fhn: number;
+  /**
+   *
+   * @type {number}
+   * @memberof Query2DEmbeddingScatterPoint
+   */
+  n: number;
 }
 /**
  *
