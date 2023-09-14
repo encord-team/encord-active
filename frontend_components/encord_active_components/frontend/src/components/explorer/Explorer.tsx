@@ -70,7 +70,7 @@ export function Explorer({
   const setPreviewedItem = (id?: string) =>
     id
       ? navigate(`./${id}`, { relative: "path", replace: true })
-      : navigate("..", { relative: "path" });
+      : navigate(".", { relative: "path" });
 
   // Select reduction hash
   const { data: reductionHashes, isLoading: reductionHashLoading } =
