@@ -23,7 +23,7 @@ export function App() {
           element={<Navigate to="./summary" replace />}
         />
         <Route
-          path="/projects/:projectHash/:tab"
+          path="/projects/:projectHash/:tab/:previewItem?"
           element={
             <ErrorBoundary message="An error occurred rendering the project">
               <ProjectPage

@@ -37,6 +37,7 @@ import {
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
+import { useNavigate, useParams } from "react-router";
 
 export type Props = {
   projectHash: string;
@@ -44,8 +45,8 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -62,8 +63,12 @@ export function Explorer({
   remoteProject,
 }: Props) {
   // Item selected for extra analysis operations
-  const [previewedItem, setPreviewedItem] = useState<string | undefined>();
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
+
+  const navigate = useNavigate();
+  const { previewItem } = useParams<{ previewItem?: string }>();
+  const setPreviewedItem = (id: string) =>
+    navigate(id ? `./${id}` : ".", { relative: "path" });
 
   // Select reduction hash
   const { data: reductionHashes, isLoading: reductionHashLoading } =
@@ -306,11 +311,11 @@ export function Explorer({
       />
       <ItemPreviewModal
         projectHash={projectHash}
-        previewItem={previewedItem}
+        previewItem={previewItem}
         domain={selectedMetric.domain}
         onClose={closePreview}
         onShowSimilar={() =>
-          previewedItem != null ? showSimilarItems(previewedItem) : undefined
+          previewItem != null ? showSimilarItems(previewItem) : undefined
         }
         editUrl={editUrl}
       />
