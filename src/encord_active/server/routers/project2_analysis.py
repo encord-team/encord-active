@@ -218,7 +218,7 @@ def _get_similarity_query(
         )
         results = sess.exec(query).fetchall()
     embeddings = [np.frombuffer(e[0], dtype=np.float32) for e in results if e is not None]  # type: ignore
-    return similarity_query.SimilarityQuery(embeddings, results)  # type: ignore
+    return similarity_query.SimilarityQuery(embeddings, [rest for _em, *rest in results])  # type: ignore
 
 
 @router.get("/similarity/{item}")
@@ -281,7 +281,7 @@ def route_project_similarity_search(
 
     # Return via fallback methods (sqlite & similar)
     similarity_query_impl = _get_similarity_query(project_hash, domain, engine)
-    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=limit)
+    return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float32), k=limit, item=similarity_item)
 
 
 class MetricDissimilarityResult(BaseModel):
