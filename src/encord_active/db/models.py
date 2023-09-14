@@ -134,6 +134,7 @@ CUSTOM_METRIC_COUNT: int = 4
 
 class EmbeddingReductionType(enum.Enum):
     UMAP = "umap"
+    PCA = "pca"
 
 
 class ImportMetadataType(enum.Enum):

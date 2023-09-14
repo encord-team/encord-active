@@ -144,7 +144,7 @@ def upgrade() -> None:
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("reduction_name", AutoString(), nullable=False),
         sa.Column("reduction_description", AutoString(), nullable=False),
-        sa.Column("reduction_type", sa.Enum("UMAP", name="embeddingreductiontype"), nullable=False),
+        sa.Column("reduction_type", sa.Enum("UMAP", "PCA", name="embeddingreductiontype"), nullable=False),
         sa.Column("reduction_bytes", sa.LargeBinary(), nullable=False),
         sa.ForeignKeyConstraint(
             ["project_hash"],
