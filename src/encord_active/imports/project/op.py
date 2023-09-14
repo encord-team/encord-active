@@ -78,7 +78,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
     reduction_total_samples.extend(data_analytics_extra)
     reduction_total_samples.extend(annotation_analytics_extra)
     reduction_train_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = random.choices(
-        reduction_total_samples, k=min(len(reduction_total_samples), 10_000)
+        reduction_total_samples, k=min(len(reduction_total_samples), 50_000)
     )
     reduction_train_samples.sort(
         key=lambda x: (x.du_hash, x.frame, x.annotation_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")

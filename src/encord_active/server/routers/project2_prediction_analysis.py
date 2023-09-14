@@ -196,16 +196,17 @@ def route_prediction_reduction_scatter(
                 extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
             )
     if fn_select is not None and tp_fp_select is not None:
+        query_subquery = fn_select.union_all(tp_fp_select).subquery("join")
         query_select = (
             select(  # type: ignore
-                column("xv"),
-                column("yv"),
-                metric_query.sql_sum("n"),
-                metric_query.sql_sum("tp"),
-                metric_query.sql_sum("fn"),
+                query_subquery.c.xv,
+                query_subquery.c.yv,
+                metric_query.sql_sum(query_subquery.c.n),
+                metric_query.sql_sum(query_subquery.c.tp),
+                metric_query.sql_sum(query_subquery.c.fn),
             )
-            .select_from(fn_select.union_all(tp_fp_select))
-            .group_by("xv", "yv")
+            .select_from()
+            .group_by(query_subquery.c.xv, query_subquery.c.yv)  # type: ignore
         )
     elif fn_select is not None:
         query_select = fn_select

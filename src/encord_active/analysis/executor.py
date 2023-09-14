@@ -64,6 +64,9 @@ TTypeAnnotationAnalyticsExtra = TypeVar(
 )
 
 
+ExecutorLogger: logging.Logger = logging.getLogger("executor")
+
+
 class Executor:
     def __init__(self, config: AnalysisConfig) -> None:
         self.config = config
@@ -367,14 +370,19 @@ class SimpleExecutor(Executor):
                     leave=False,
                 ):
                     frame_num: int = frame.index
+                    if iter_frame_num + 1 != frame_num:
+                        logging.error(
+                            f"AV video frame out of sequence (overriding): {iter_frame_num} (iter) -> {frame_num} (AV)"
+                        )
+                        frame_num = iter_frame_num + 1
+                    iter_frame_num = frame_num
+
+                    # Load video
                     frame_du_meta = du_meta_list[frame_num]
                     if frame_du_meta.frame != frame_num:
                         raise ValueError(f"Frame metadata mismatch: {frame_du_meta.frame} != {frame_num}")
                     if frame.is_corrupt:
                         raise ValueError(f"Corrupt video frame: {frame_num}")
-                    if iter_frame_num + 1 != frame_num:
-                        raise ValueError(f"AV video frame out of sequence: {iter_frame_num} -> {frame_num}")
-                    iter_frame_num = frame_num
                     frame_image = frame.to_image().convert("RGB")
                     frame_input = self._get_frame_input(
                         image=frame_image, du_meta=frame_du_meta, data_meta=data_metadata

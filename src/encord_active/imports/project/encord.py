@@ -70,6 +70,7 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
 
         video_width = None
         video_height = None
+        video_labels_json = None
         for du_key, data_unit_json in data_unit_list_json.items():
             labels_json = data_unit_json.pop("labels")
             du_hash = uuid.UUID(data_unit_json.pop("data_hash"))
@@ -96,20 +97,23 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
             if is_video:
                 video_width = int(data_unit_json.pop("width"))
                 video_height = int(data_unit_json.pop("height"))
+                video_labels_json = labels_json
                 for frame, frame_labels_json in labels_json.items():
-                    ProjectDataUnitMetadata(
-                        project_hash=project_hash,
-                        du_hash=du_hash,
-                        frame=int(frame),
-                        data_hash=data_hash,
-                        width=video_width,
-                        height=video_height,
-                        data_uri=data_uri,
-                        data_uri_is_video=True,
-                        data_title=data_title,
-                        data_type=data_type,
-                        objects=frame_labels_json.get("objects", []),
-                        classifications=frame_labels_json.get("classifications", []),
+                    project_du_list.append(
+                        ProjectDataUnitMetadata(
+                            project_hash=project_hash,
+                            du_hash=du_hash,
+                            frame=int(frame),
+                            data_hash=data_hash,
+                            width=video_width,
+                            height=video_height,
+                            data_uri=data_uri,
+                            data_uri_is_video=True,
+                            data_title=data_title,
+                            data_type=data_type,
+                            objects=frame_labels_json.get("objects", []),
+                            classifications=frame_labels_json.get("classifications", []),
+                        )
                     )
             else:
                 project_du_list.append(
@@ -140,7 +144,7 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
             if video_width is None or video_height is None:
                 raise ValueError(f"Video import failure, missing width or height: {label_row_json}")
             for i in range(0, video_frames):
-                if str(i) not in data_unit_list_json:
+                if str(i) not in video_labels_json:
                     project_du_list.append(
                         ProjectDataUnitMetadata(
                             project_hash=project_hash,
