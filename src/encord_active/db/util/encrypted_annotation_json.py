@@ -1,12 +1,11 @@
 import logging
 import os
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from cryptography.fernet import Fernet, InvalidToken
-from sqlalchemy import TypeDecorator, JSON
+from sqlalchemy import JSON, TypeDecorator
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
-from sqlalchemy.types import VARCHAR
 
 __all__ = ["EncryptedAnnotationJSON"]
 
@@ -31,7 +30,7 @@ class EncryptedAnnotationJSON(TypeDecorator):
             self.fernet = Fernet(key.encode("utf-8"))
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine:
-        return dialect.type_descriptor(JSON())  # type: ignore
+        return dialect.type_descriptor(JSON)  # type: ignore
 
     @staticmethod
     def _map_json_list(value: list[dict], callback: Callable[[bytes], bytes]) -> list[dict]:
@@ -46,24 +45,33 @@ class EncryptedAnnotationJSON(TypeDecorator):
     def process_bind_param(self, value: Optional[list[dict]], dialect: Dialect) -> Optional[list[dict]]:
         if value is None:
             return None
-        if self.fernet is None:
+        fernet = self.fernet
+        if fernet is None:
             return value
-        return self._map_json_list(value, lambda b: self.fernet.encrypt(b))
+        return self._map_json_list(value, lambda b: fernet.encrypt(b))
 
     def bind_processor(self, dialect: Dialect):
+        json_bind = JSON().bind_processor(dialect)
+
         def encrypt_json_list(value: Optional[str]) -> Optional[int]:
-            return self.process_bind_param(value, dialect)
+            pre_proc = self.process_bind_param(value, dialect)
+            return json_bind(pre_proc)
 
         return encrypt_json_list
 
     def result_processor(self, dialect: Dialect, coltype):
+        json_result = JSON().result_processor(dialect, coltype)
+
         def decrypt_json_list(value: Optional[list[dict]]) -> Optional[list[dict]]:
+            if not isinstance(value, list):
+                value = json_result(value)
             if value is None:
                 return None
-            if self.fernet is None:
+            fernet = self.fernet
+            if fernet is None:
                 return value
             try:
-                return self._map_json_list(value, lambda b: self.fernet.encrypt(b))
+                return self._map_json_list(value, lambda b: fernet.encrypt(b))
             except InvalidToken as e:
                 logging.error(f"Error decrypting email: {e}")
                 return self._map_json_list(value, lambda b: b"")

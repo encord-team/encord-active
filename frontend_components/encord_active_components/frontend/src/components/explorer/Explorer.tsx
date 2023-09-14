@@ -123,13 +123,12 @@ export function Explorer({
   const rawFilters: ExplorerFilterState = useMemo(() => {
     const removeTagFilter = (
       enumFilters: Readonly<Record<string, readonly string[]>>
-    ): DomainSearchFilters["enums"] => {
-      return Object.fromEntries(
+    ): DomainSearchFilters["enums"] => Object.fromEntries(
         Object.entries(enumFilters)
           .filter(([k]) => k !== "tags")
           .map(([k, v]) => [k, [...v]])
       );
-    };
+
     return {
       analysisDomain: selectedMetric.domain,
       filters: {
@@ -139,7 +138,7 @@ export function Explorer({
           enums: removeTagFilter(dataFilters.enumFilters),
           reduction:
             selectedMetric.domain === "data" ? embeddingFilter : undefined,
-          tags: dataFilters.enumFilters["tags"] as DomainSearchFilters["tags"],
+          tags: dataFilters.enumFilters.tags as DomainSearchFilters["tags"],
         },
         annotation: {
           metrics:
@@ -149,9 +148,7 @@ export function Explorer({
             selectedMetric.domain === "annotation"
               ? embeddingFilter
               : undefined,
-          tags: annotationFilters.enumFilters[
-            "tags"
-          ] as DomainSearchFilters["tags"],
+          tags: annotationFilters.enumFilters.tags as DomainSearchFilters["tags"],
         },
       },
       orderBy: selectedMetric.metric_key,

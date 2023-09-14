@@ -22,12 +22,12 @@ from encord_active.server.routers.queries.domain_query import (
 
 # Type hints
 TType = TypeVar("TType")
-sql_count: Callable[[], int] = func.COUNT
-sql_min: Callable[[TType], TType] = func.MIN
-sql_max: Callable[[TType], TType] = func.MAX
-sql_sum: Callable[[TType], TType] = func.SUM
-sql_avg: Callable[[TType], TType] = func.AVG
-sql_coalesce: Callable[[Optional[TType], TType], TType] = func.COALESCE
+sql_count: Callable[[], int] = func.COUNT  # type: ignore
+sql_min: Callable[[TType], TType] = func.MIN  # type: ignore
+sql_max: Callable[[TType], TType] = func.MAX  # type: ignore
+sql_sum: Callable[[TType], TType] = func.SUM  # type: ignore
+sql_avg: Callable[[TType], TType] = func.AVG  # type: ignore
+sql_coalesce: Callable[[Optional[TType], TType], TType] = func.COALESCE  # type: ignore
 
 """
 Severe IQR Scale factor for iqr range

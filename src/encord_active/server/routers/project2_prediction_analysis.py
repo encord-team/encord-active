@@ -5,7 +5,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Integer
+from sqlalchemy import Integer, column
 from sqlalchemy import desc as desc_fn
 from sqlalchemy import literal
 from sqlalchemy.engine import Engine
@@ -118,15 +118,56 @@ def route_prediction_reduction_scatter(
     # Where conditions for FN table
     with Session(engine) as sess:
         tp_fp_select = None
+        reduction_bounds = None
+        if domain != PredictionDomain.FALSE_NEGATIVE:
+            reduction_bounds = sess.exec(
+                metric_query.select_bounds_for_query_reduction_scatter(
+                    tables=TABLES_PREDICTION_TP_FP,
+                    project_filters={
+                        "prediction_hash": [prediction_hash],
+                        "reduction_hash": [reduction_hash],
+                    },
+                    filters=filters,
+                    extra_where=_tp_fp_extra_where(
+                        domain,
+                        iou,
+                        ProjectPredictionAnalyticsReduced,
+                        prediction_hash,
+                    ),
+                )
+            ).first()
+        if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
+            fn_bounds = sess.exec(
+                metric_query.select_bounds_for_query_reduction_scatter(
+                    tables=TABLES_ANNOTATION,
+                    project_filters={
+                        "prediction_hash": [prediction_hash],
+                        "project_hash": [project_hash],
+                        "reduction_hash": [reduction_hash],
+                    },
+                    filters=filters,
+                    extra_where=_fn_extra_where(project_hash, ProjectAnnotationAnalyticsReduced, prediction_hash),
+                )
+            ).first()
+            if reduction_bounds is None:
+                reduction_bounds = fn_bounds
+            else:
+                reduction_bounds = (
+                    min(reduction_bounds[0], fn_bounds[0]),
+                    max(reduction_bounds[1], fn_bounds[1]),
+                    min(reduction_bounds[2], fn_bounds[2]),
+                    max(reduction_bounds[3], fn_bounds[3]),
+                )
+
         if domain != PredictionDomain.FALSE_NEGATIVE:
             tp_fp_select = metric_query.select_for_query_reduction_scatter(
-                dialect=engine.dialect,
                 tables=TABLES_PREDICTION_TP_FP,
                 project_filters={
                     "prediction_hash": [prediction_hash],
                     "reduction_hash": [reduction_hash],
                 },
                 buckets=buckets,
+                bounds=reduction_bounds or (0.0, 1.0, 0.0, 1.0),
                 filters=filters,
                 extra_where=_tp_fp_extra_where(
                     domain,
@@ -142,7 +183,6 @@ def route_prediction_reduction_scatter(
         fn_select = None
         if domain in {PredictionDomain.FALSE_NEGATIVE, PredictionDomain.ALL}:
             fn_select = metric_query.select_for_query_reduction_scatter(
-                dialect=engine.dialect,
                 tables=TABLES_ANNOTATION,
                 project_filters={
                     "prediction_hash": [prediction_hash],
@@ -150,6 +190,7 @@ def route_prediction_reduction_scatter(
                     "reduction_hash": [reduction_hash],
                 },
                 buckets=buckets,
+                bounds=reduction_bounds or (0.0, 1.0, 0.0, 1.0),
                 filters=filters,
                 extra_where=_fn_extra_where(project_hash, ProjectAnnotationAnalyticsReduced, prediction_hash),
                 extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
@@ -157,13 +198,13 @@ def route_prediction_reduction_scatter(
     if fn_select is not None and tp_fp_select is not None:
         query_select = (
             select(  # type: ignore
-                "xv",
-                "yv",
+                column("xv"),
+                column("yv"),
                 metric_query.sql_sum("n"),
                 metric_query.sql_sum("tp"),
                 metric_query.sql_sum("fn"),
             )
-            .from_statement(fn_select.union_all(tp_fp_select))
+            .select_from(fn_select.union_all(tp_fp_select))
             .group_by("xv", "yv")
         )
     elif fn_select is not None:

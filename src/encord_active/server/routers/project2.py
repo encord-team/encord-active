@@ -24,6 +24,7 @@ from encord_active.db.models import (
     EmbeddingReductionType,
     Project,
     ProjectAnnotationAnalytics,
+    ProjectCollaborator,
     ProjectDataAnalytics,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
@@ -32,7 +33,6 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
-    ProjectCollaborator,
 )
 from encord_active.db.queries.tags import (
     select_frame_data_tags,

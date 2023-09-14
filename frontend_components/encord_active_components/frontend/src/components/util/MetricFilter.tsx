@@ -7,7 +7,6 @@ import {
   MetricSummary,
   ProjectCollaboratorEntry,
   ProjectDomainSummary,
-  ProjectTag,
   ProjectTagEntry,
   QuerySummary,
 } from "../../openapi/api";

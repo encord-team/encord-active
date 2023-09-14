@@ -635,7 +635,6 @@ def route_action_upload_project_to_encord(
                 du_hash_map=du_hash_map,
                 data_hash_data_type_map=data_hash_data_type_map,
             )
-            print(f"")
             label_row.from_labels_dict(label_row_json)
             label_row.save(bundle=bundle)
         bundle.execute()

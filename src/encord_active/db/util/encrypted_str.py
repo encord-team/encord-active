@@ -41,7 +41,7 @@ class EncryptedStr(TypeDecorator):
         return self.fernet.encrypt(value.encode("utf-8")).decode("utf-8")
 
     def bind_processor(self, dialect: Dialect):
-        def encrypt_str(value: Optional[str]) -> Optional[int]:
+        def encrypt_str(value: Optional[str]) -> Optional[str]:
             return self.process_bind_param(value, dialect)
 
         return encrypt_str

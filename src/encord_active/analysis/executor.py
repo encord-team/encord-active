@@ -873,7 +873,7 @@ class SimpleExecutor(Executor):
             cls_hash = str(cls["classificationHash"])
             feature_hash = str(cls["featureHash"])
             if cls_hash in annotations:
-                hash_collision = True
+                hash_collision.add(cls_hash)
             else:
                 annotations[cls_hash] = AnnotationMetadata(
                     feature_hash=feature_hash,

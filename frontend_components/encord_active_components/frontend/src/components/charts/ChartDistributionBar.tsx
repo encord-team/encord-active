@@ -55,12 +55,14 @@ export function ChartDistributionBar(props: {
         label: metric?.title ?? metricKey,
         value: metricKey,
       }));
-    Object.entries(metricsSummary.enums).forEach(([enumName, enumMeta]) => {
-      properties.push({
-        label: enumMeta?.title ?? enumName,
-        value: enumName,
+    Object.entries(metricsSummary.enums)
+      .filter(([_, enumMeta]) => enumMeta.type !== "tags")
+      .forEach(([enumName, enumMeta]) => {
+        properties.push({
+          label: enumMeta?.title ?? enumName,
+          value: enumName,
+        });
       });
-    });
     return properties;
   }, [metricsSummary, analysisSummary]);
   const [selectedProperty, setSelectedProperty] = useState<
