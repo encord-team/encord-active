@@ -67,7 +67,7 @@ export function Explorer({
 
   const navigate = useNavigate();
   const { previewItem } = useParams<{ previewItem?: string }>();
-  const setPreviewedItem = (id: string) =>
+  const setPreviewedItem = (id?: string) =>
     id
       ? navigate(`./${id}`, { relative: "path", replace: true })
       : navigate("..", { relative: "path" });
