@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Form, Input, Modal } from "antd";
 import { useProjectMutationCreateSubset } from "../../../hooks/mutation/useProjectMutationCreateSubset";
 import { SearchFilters } from "../../../openapi/api";

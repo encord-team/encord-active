@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { MdFilterAltOff } from "react-icons/md";

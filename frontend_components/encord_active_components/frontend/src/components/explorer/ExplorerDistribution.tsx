@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useMemo, useState } from "react";
 import {
   Bar,

@@ -1,4 +1,3 @@
-import * as React from "react";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { Navigate, Route, Routes, useNavigate } from "react-router";
 import { ProjectPage } from "./components/ProjectPage";

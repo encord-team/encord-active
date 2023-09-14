@@ -1,5 +1,5 @@
 import { List } from "antd";
-import * as React from "react";
+
 import { useMemo } from "react";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";

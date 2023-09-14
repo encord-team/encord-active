@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useState } from "react";
 import { Tabs } from "antd";
 import { SummaryTab } from "./SummaryTab";

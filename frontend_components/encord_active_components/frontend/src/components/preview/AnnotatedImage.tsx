@@ -1,6 +1,6 @@
 import useResizeObserver from "use-resize-observer";
-import { useRef } from "react";
-import * as React from "react";
+import { CSSProperties, ReactNode, memo, useRef } from "react";
+
 import { ProjectItem } from "../../openapi/api";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { classy } from "../../helpers/classy";
@@ -11,7 +11,7 @@ export function AnnotatedImage(props: {
   hideExtraAnnotations?: boolean | undefined;
   className?: string | undefined;
   mode: "preview" | "full" | "large";
-  children?: React.ReactNode | undefined;
+  children?: ReactNode | undefined;
 }) {
   const {
     item,
@@ -40,8 +40,8 @@ export function AnnotatedImage(props: {
   // fit
   // width={240}
   // height={160}
-  let contentStyle: React.CSSProperties = {};
-  let figureStyle: React.CSSProperties = {};
+  let contentStyle: CSSProperties = {};
+  let figureStyle: CSSProperties = {};
   if (mode === "preview") {
     contentStyle = {
       flexShrink: 0,
@@ -173,7 +173,7 @@ type AnnotationObject = AnnotationObjectCommon &
     | AnnotationObjectBitmask
   );
 
-const AnnotationRenderLayer = React.memo(AnnotationRenderLayerRaw);
+const AnnotationRenderLayer = memo(AnnotationRenderLayerRaw);
 
 function AnnotationRenderLayerRaw({
   objects,

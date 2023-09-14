@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Checkbox, Col, Divider, Row, Select, Slider, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";

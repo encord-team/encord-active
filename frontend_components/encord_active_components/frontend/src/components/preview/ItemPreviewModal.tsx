@@ -1,5 +1,5 @@
 import { Button, Col, Modal, Row, Spin, Table } from "antd";
-import * as React from "react";
+
 import { useMemo } from "react";
 import { MdImageSearch } from "react-icons/md";
 import { EditOutlined } from "@ant-design/icons";

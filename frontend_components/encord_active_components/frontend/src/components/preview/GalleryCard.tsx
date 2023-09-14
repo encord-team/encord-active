@@ -1,10 +1,9 @@
-import * as React from "react";
 import { FullscreenOutlined } from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Checkbox, Row, Tag } from "antd";
-import { useMemo } from "react";
+import { ReactNode, memo, useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
@@ -12,7 +11,7 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 
-export const GalleryCard = React.memo(GalleryCardRaw);
+export const GalleryCard = memo(GalleryCardRaw);
 
 function GalleryCardRaw(props: {
   projectHash: string;
@@ -24,7 +23,7 @@ function GalleryCardRaw(props: {
   onClick: (itemId: string) => void;
   onShowSimilar: (itemId: string) => void;
   hideExtraAnnotations: boolean;
-  customTags?: React.ReactNode | undefined;
+  customTags?: ReactNode | undefined;
 }) {
   const {
     projectHash,

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Card, Space, Spin } from "antd";
 import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { List, Modal, Tag } from "antd";
 import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { SimilarityResult } from "../../openapi/api";

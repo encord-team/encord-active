@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";

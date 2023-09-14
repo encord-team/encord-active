@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { Button, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Card, Divider, Row, Slider, Statistic, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useDebounce } from "usehooks-ts";
