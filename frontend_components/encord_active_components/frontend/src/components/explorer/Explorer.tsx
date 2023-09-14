@@ -1081,7 +1081,7 @@ const ImageWithPolygons = ({
     width: imageWidth,
     height: imageHeight,
   } = useResizeObserver<HTMLImageElement>();
-  const api = useApi()
+  const api = useApi();
 
   const { mutate: signUrl } = useMutation(
     ["signUrl", item],
@@ -1103,6 +1103,8 @@ const ImageWithPolygons = ({
   const [polygons, setPolygons] = useState<
     Pick<ItemLabelObject, "points" | "boundingBoxPoints" | "shape" | "color">[]
   >([]);
+
+  const [displayPolygons, setDisplayPolygons] = useState(true);
 
   useEffect(() => {
     if (width == null || height == null) return;
@@ -1149,6 +1151,7 @@ const ImageWithPolygons = ({
             }
           }}
           onError={() => signUrl()}
+          onPlay={() => setDisplayPolygons(false)}
         />
       ) : (
         <img
@@ -1158,8 +1161,8 @@ const ImageWithPolygons = ({
           src={imgSrcUrl}
         />
       )}
-      {width && height && polygons.length > 0 && (
-        <svg className="absolute w-full h-full top-0 right-0">
+      {width && height && polygons.length > 0 && displayPolygons && (
+        <svg className="absolute w-full h-full top-0 right-0 pointer-events-none">
           {polygons.map(
             ({ points, boundingBoxPoints, color, shape }, index) => {
               if (shape === "point" && points)
