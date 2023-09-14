@@ -172,11 +172,11 @@ function GalleryCardRaw(props: {
                   <Button
                     className="bg-white"
                     icon={<FullscreenOutlined />}
-                    onClick={() => onExpand(itemId)}
+                    onClick={(e) => (e.stopPropagation(), onExpand(itemId))}
                   />
                   <Button
                     className="bg-white"
-                    onClick={() => onShowSimilar(itemId)}
+                    onClick={(e) => (e.stopPropagation(), onShowSimilar(itemId))}
                     type="text"
                     key="similarity-search"
                     icon={
