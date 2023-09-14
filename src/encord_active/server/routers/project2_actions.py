@@ -32,11 +32,14 @@ from encord_active.db.models import (
     Project,
     ProjectAnnotationAnalytics,
     ProjectAnnotationAnalyticsExtra,
+    ProjectAnnotationAnalyticsReduced,
     ProjectCollaborator,
     ProjectDataAnalytics,
     ProjectDataAnalyticsExtra,
+    ProjectDataAnalyticsReduced,
     ProjectDataMetadata,
     ProjectDataUnitMetadata,
+    ProjectEmbeddingReduction,
 )
 from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.server.dependencies import dep_database_dir, dep_engine, dep_ssh_key
@@ -117,6 +120,7 @@ def _update_label_hashes(
 ) -> None:
     if sess.bind is not None and sess.bind.dialect.name == "sqlite":
         # Doesn't support arrays, use json trick
+        json_bind = JSON().bind_processor(dialect=sess.bind.dialect)
         sess.execute(
             text(
                 "UPDATE project_data SET label_hash = un.value "
@@ -125,9 +129,9 @@ def _update_label_hashes(
                 "AND project_data.project_hash = :project_hash"
             ).bindparams(bindparam("project_hash", GUID), bindparam("data_hash_mapping", JSON)),
             {
-                "data_hash_mapping": {
+                "data_hash_mapping": json_bind({
                     str(k).replace("-", ""): str(v).replace("-", "") for k, v in remap_data_hash_to_label_hash.items()
-                },
+                }),
                 "project_hash": str(project_hash).replace("-", ""),
             },
         )
@@ -263,15 +267,17 @@ def route_action_create_project_subset(
         new_local_dataset_hash = uuid.uuid4()
         sess.execute(insert(Project).values(**{k: getattr(new_project, k) for k in Project.__fields__}))
         insert_data_names = sorted(ProjectDataMetadata.__fields__.keys())
+
+        guid_bind = GUID().bind_processor(dialect=engine.dialect)
+        overrides = {"project_hash": literal(guid_bind(new_local_project_hash))}
         insert_data_overrides = {
-            "dataset_hash": literal(new_local_dataset_hash),
-            "project_hash": literal(new_local_project_hash),
+            **overrides,
+            "dataset_hash": literal(guid_bind(new_local_dataset_hash)),
             "label_hash": func.gen_random_uuid()
             if engine.dialect.name == "postgresql"
             else func.lower(func.hex(func.randomblob(16))),
         }
         insert_data_unit_names = sorted(ProjectDataUnitMetadata.__fields__.keys())
-        insert_data_unit_overrides = {"project_hash": literal(new_local_project_hash)}
         sess.execute(
             insert(ProjectDataMetadata).from_select(
                 insert_data_names,
@@ -288,10 +294,7 @@ def route_action_create_project_subset(
             insert(ProjectDataUnitMetadata).from_select(
                 insert_data_unit_names,
                 select(  # type: ignore
-                    *[
-                        insert_data_unit_overrides.get(k, getattr(ProjectDataUnitMetadata, k))
-                        for k in insert_data_unit_names
-                    ]
+                    *[overrides.get(k, getattr(ProjectDataUnitMetadata, k)) for k in insert_data_unit_names]
                 ).where(
                     in_op(ProjectDataUnitMetadata.data_hash, subset_data_hashes),
                     ProjectDataUnitMetadata.project_hash == project_hash,
@@ -304,6 +307,58 @@ def route_action_create_project_subset(
         sess.bulk_save_objects(new_annotate)
         sess.bulk_save_objects(new_data_extra)
         sess.bulk_save_objects(new_annotate_extra)
+
+        insert_reduction_names = sorted(ProjectEmbeddingReduction.__fields__.keys())
+        insert_reduced_data_names = sorted(ProjectDataAnalyticsReduced.__fields__.keys())
+        insert_reduced_annotation_names = sorted(ProjectAnnotationAnalyticsReduced.__fields__.keys())
+        insert_reduction_overrides = {
+            **overrides,
+            "reduction_hash": literal(guid_bind(uuid.uuid4())),
+        }
+        sess.execute(
+            insert(ProjectEmbeddingReduction).from_select(
+                insert_reduction_names,
+                select(  # type: ignore
+                    *[
+                        insert_reduction_overrides.get(k, getattr(ProjectEmbeddingReduction, k))
+                        for k in insert_reduction_names
+                    ]
+                ).where(
+                    ProjectEmbeddingReduction.project_hash == project_hash,
+                ),
+                include_defaults=False,
+            )
+        )
+        sess.execute(
+            insert(ProjectDataAnalyticsReduced).from_select(
+                insert_reduced_data_names,
+                select(  # type: ignore
+                    *[
+                        insert_reduction_overrides.get(k, getattr(ProjectDataAnalyticsReduced, k))
+                        for k in insert_reduced_data_names
+                    ]
+                ).where(
+                    in_op(ProjectDataAnalyticsReduced.du_hash, subset_data_hashes),
+                    ProjectDataAnalyticsReduced.project_hash == project_hash,
+                ),
+                include_defaults=False,
+            )
+        )
+        sess.execute(
+            insert(ProjectAnnotationAnalyticsReduced).from_select(
+                insert_reduced_annotation_names,
+                select(  # type: ignore
+                    *[
+                        insert_reduction_overrides.get(k, getattr(ProjectAnnotationAnalyticsReduced, k))
+                        for k in insert_reduced_annotation_names
+                    ]
+                ).where(
+                    in_op(ProjectAnnotationAnalyticsReduced.du_hash, subset_data_hashes),
+                    ProjectAnnotationAnalyticsReduced.project_hash == project_hash,
+                ),
+                include_defaults=False,
+            )
+        )
 
         if len(remap_label_hashes) > 0:
             _update_label_hashes(sess, project_hash, remap_label_hashes)
