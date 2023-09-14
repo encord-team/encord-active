@@ -45,8 +45,8 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -68,7 +68,9 @@ export function Explorer({
   const navigate = useNavigate();
   const { previewItem } = useParams<{ previewItem?: string }>();
   const setPreviewedItem = (id: string) =>
-    navigate(id ? `./${id}` : ".", { relative: "path" });
+    id
+      ? navigate(`./${id}`, { relative: "path", replace: true })
+      : navigate("..", { relative: "path" });
 
   // Select reduction hash
   const { data: reductionHashes, isLoading: reductionHashLoading } =
