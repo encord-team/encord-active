@@ -297,17 +297,17 @@ function AnnotationRenderLayerRaw({
         <circle
           cx={x * width}
           cy={y * height}
-          r="5px"
+          r={`1}px`}
           fill={poly.color}
           fillOpacity={fillOpacity(select)}
         />
         <circle
           cx={x * width}
           cy={y * height}
-          r="7px"
+          r={`2px`}
           fill="none"
           stroke={poly.color}
-          strokeWidth={strokeWidth(select)}
+          strokeWidth="1px"
           strokeOpacity={strokeOpacity(select)}
         />
       </g>
