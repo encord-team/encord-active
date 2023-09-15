@@ -75,7 +75,9 @@ class ClipImgEmbedding(PureImageEmbedding):
             idx += 1
         return BaseFrameOutput(
             image=image_embedding,
+            image_comment=None,
             annotations=annotation_embeddings,
+            annotation_comments={},
         )
 
     def evaluate_embedding(self, image: ImageTensor, mask: Optional[MaskTensor]) -> EmbeddingTensor:

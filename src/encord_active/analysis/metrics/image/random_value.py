@@ -30,7 +30,9 @@ class RandomMetric(BaseMetric):
     ) -> BaseFrameOutput:
         return BaseFrameOutput(
             image=torch.rand(1, device="cpu"),
+            image_comment=None,
             annotations={annotation_hash: torch.rand(1, device="cpu") for annotation_hash in frame.annotations.keys()},
+            annotation_comments={},
         )
 
     def raw_calculate_batch(

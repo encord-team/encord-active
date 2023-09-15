@@ -724,6 +724,8 @@ class SimpleExecutor(Executor):
                 current_frame.image_deps[evaluation.ident] = metric_result.image
                 if non_ephemeral:
                     image_results_deps[evaluation.ident] = metric_result.image
+            if metric_result.image_comment is not None and non_ephemeral:
+                image_results_deps["metric_metadata"][evaluation.ident] = metric_result.image_comment
             for annotation_hash, annotation_value in metric_result.annotations.items():
                 annotation_dep = current_frame.annotations_deps[annotation_hash]
                 annotation_result_deps = annotation_results_deps[annotation_hash]
@@ -731,6 +733,10 @@ class SimpleExecutor(Executor):
                     annotation_dep[evaluation.ident] = annotation_value
                     if non_ephemeral:
                         annotation_result_deps[evaluation.ident] = annotation_value
+            for annotation_hash, annotation_comment in metric_result.annotation_comments.items():
+                annotation_result_deps = annotation_results_deps[annotation_hash]
+                if non_ephemeral:
+                    annotation_result_deps["metric_metadata"][evaluation.ident] = annotation_comment
 
         if current_frame_gt is not None:
             # Calculate iou matches & iou thresholds
@@ -1039,14 +1045,24 @@ class SimpleExecutor(Executor):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(data_metric), None)
                 if derived_metric is not None:
-                    data_metric[metric.ident] = derived_metric
+                    if isinstance(derived_metric, tuple):
+                        metric_res, metric_comment = derived_metric
+                        data_metric[metric.ident] = metric_res
+                        data_metric["metric_metadata"][metric.ident] = metric_comment
+                    else:
+                        data_metric[metric.ident] = derived_metric
         for annotation_metric in tqdm(
             self.annotation_metrics.values(), desc="Metric Computation Stage 3: Derived - Annotation"
         ):
             for metric in self.config.derived_metrics:
                 derived_metric = metric.calculate(dict(annotation_metric), annotation_metric["annotation_type"])
                 if derived_metric is not None:
-                    annotation_metric[metric.ident] = derived_metric
+                    if isinstance(derived_metric, tuple):
+                        metric_res, metric_comment = derived_metric
+                        annotation_metric[metric.ident] = metric_res
+                        annotation_metric["metric_metadata"][metric.ident] = metric_comment
+                    else:
+                        annotation_metric[metric.ident] = derived_metric
 
     def _validate_pack_deps(
         self,

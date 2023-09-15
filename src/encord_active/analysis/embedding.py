@@ -116,7 +116,7 @@ class PureObjectEmbedding(BaseEmbedding, metaclass=ABCMeta):
                 annotations[annotation_hash] = self.evaluate_embedding(annotation.mask)
             else:
                 annotations[annotation_hash] = self.classification_embedding()
-        return BaseFrameOutput(image=None, annotations=annotations)
+        return BaseFrameOutput(image=None, image_comment=None, annotations=annotations, annotation_comments={})
 
     @abstractmethod
     def evaluate_embedding(self, mask: MaskTensor) -> EmbeddingTensor:

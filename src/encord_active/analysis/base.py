@@ -36,6 +36,8 @@ class BaseFrameInput:
 class BaseFrameOutput:
     image: Optional[MetricResult]
     annotations: Dict[str, MetricResult]
+    image_comment: Optional[str]
+    annotation_comments: Dict[str, str]
 
 
 @dataclass

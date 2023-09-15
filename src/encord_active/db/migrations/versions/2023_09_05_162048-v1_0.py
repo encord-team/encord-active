@@ -1724,7 +1724,7 @@ def migrate_sqlite_database_to_new_schema():
                     "featureHash": feature_hash_str,
                     "shape": predict_shape,
                     "manualAnnotation": False,
-                    predict_shape: predict_format,
+                    ("boundingBox" if predict_shape == "bounding_box" else predict_shape): predict_format,
                 }
             )
 

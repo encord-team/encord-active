@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Optional, Protocol, Set
+from typing import Dict, Optional, Protocol, Set, Union, Tuple
 
 import torch
 
@@ -28,6 +28,9 @@ from encord_active.analysis.types import (
 )
 from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import MetricType
+
+
+MetricResultOptionalAnnotation = Union[MetricResult, Tuple[MetricResult, str]]
 
 
 class BaseMetricWithAnnotationFilter(BaseMetric, metaclass=ABCMeta):
@@ -92,27 +95,44 @@ class OneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        image = self.calculate(frame.image_deps, frame.image, None, None)
+        image_raw = self.calculate(frame.image_deps, frame.image, None, None)
+        if isinstance(image_raw, tuple):
+            image, image_comment = image_raw
+        else:
+            image = image_raw
+            image_comment = None
         annotations = {}
+        annotation_comments = {}
         for annotation_hash, annotation in frame.annotations.items():
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
                 continue
             annotation_deps = frame.annotations_deps[annotation_hash]
             if annotation.annotation_type != AnnotationType.CLASSIFICATION:
-                annotations[annotation_hash] = self.calculate(
+                annotation_raw = self.calculate(
                     deps=annotation_deps,
                     image=frame.image,
                     mask=annotation.mask,
                     bb=annotation.bounding_box,
                 )
+                if isinstance(annotation_raw, tuple):
+                    annotation_metric, annotation_comment = annotation_raw
+                else:
+                    annotation_metric = annotation_raw
+                    annotation_comment = None
+                annotations[annotation_hash] = annotation_metric
+                if annotation_comment is not None:
+                    annotation_comments[annotation_hash] = annotation_comment
             else:
                 annotations[annotation_hash] = image
-        return BaseFrameOutput(image=image, annotations=annotations)
+                annotation_comments[annotation_hash] = image_comment
+        return BaseFrameOutput(
+            image=image, annotations=annotations, image_comment=image_comment, annotation_comments=annotation_comments
+        )
 
     @abstractmethod
     def calculate(
         self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
-    ) -> MetricResult:
+    ) -> MetricResultOptionalAnnotation:
         ...
 
     def raw_calculate_batch(
@@ -158,21 +178,32 @@ class OneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
         annotations = {}
+        annotation_comments = {}
         for annotation_hash, annotation in frame.annotations.items():
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
                 continue
             annotation_deps = frame.annotations_deps[annotation_hash]
-            annotations[annotation_hash] = self.calculate(
+            annotation_raw = self.calculate(
                 annotation=annotation,
                 deps=annotation_deps,
             )
+            if isinstance(annotation_raw, tuple):
+                annotation_metric, annotation_comment = annotation_raw
+            else:
+                annotation_metric = annotation_raw
+                annotation_comment = None
+            annotations[annotation_hash] = annotation_metric
+            if annotation_comment is not None:
+                annotation_comments[annotation_hash] = annotation_comment
         return BaseFrameOutput(
             image=None,
             annotations=annotations,
+            image_comment=None,
+            annotation_comments=annotation_comments,
         )
 
     @abstractmethod
-    def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResult:
+    def calculate(self, annotation: AnnotationMetadata, deps: MetricDependencies) -> MetricResultOptionalAnnotation:
         ...
 
     def raw_calculate_batch(
@@ -212,14 +243,18 @@ class ObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
-        return BaseFrameOutput(
-            image=None,
-            annotations=self.calculate(
+        if len(frame.annotations) > 0:
+            annotations_raw = self.calculate(
                 frame.annotations,
                 frame.annotations_deps,
             )
-            if len(frame.annotations) > 0
-            else {},
+        else:
+            annotations_raw = {}
+        return BaseFrameOutput(
+            image=None,
+            image_comment=None,
+            annotations={k: v[0] if isinstance(v, tuple) else v for k, v in annotations_raw.items()},
+            annotation_comments={k: v[1] for k, v in annotations_raw.items() if isinstance(v, tuple)},
         )
 
     @abstractmethod
@@ -227,7 +262,7 @@ class ObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
         self,
         annotations: Dict[str, AnnotationMetadata],
         annotation_deps: dict[str, MetricDependencies],
-    ) -> Dict[str, MetricResult]:
+    ) -> Dict[str, MetricResultOptionalAnnotation]:
         ...
 
     def raw_calculate_batch(
@@ -253,14 +288,17 @@ class ImageObjectsMetric(BaseMetric, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
+        image_raw = self.calculate(
+            frame.image,
+            frame.image_deps,
+            frame.annotations,
+            frame.annotations_deps,
+        )
         return BaseFrameOutput(
-            image=self.calculate(
-                frame.image,
-                frame.image_deps,
-                frame.annotations,
-                frame.annotations_deps,
-            ),
+            image=image_raw[0] if isinstance(image_raw, tuple) else image_raw,
+            image_comment=image_raw[1] if isinstance(image_raw, tuple) else None,
             annotations={},
+            annotation_comments={},
         )
 
     @abstractmethod
@@ -271,7 +309,7 @@ class ImageObjectsMetric(BaseMetric, metaclass=ABCMeta):
         # key is object_hash | classification_hash
         annotations: Dict[str, AnnotationMetadata],
         annotations_deps: Dict[str, MetricDependencies],
-    ) -> MetricResult:
+    ) -> MetricResultOptionalAnnotation:
         """
         TODO: This is currently only used by object count which doesn't require all these arguments.
         """
@@ -301,8 +339,10 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
             return BaseFrameOutput(
                 image=self.default_value(),
                 annotations={annotation_hash: self.default_value() for annotation_hash in frame.annotations.keys()},
+                image_comment=None,
+                annotation_comments={},
             )
-        image = self.calculate(
+        image_raw = self.calculate(
             deps=frame.image_deps,
             image=frame.image,
             mask=None,
@@ -311,7 +351,10 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
             next_image=next_frame.image,
             next_mask=None,
         )
+        image = image_raw[0] if isinstance(image_raw, tuple) else image_raw
+        image_comment = image_raw[1] if isinstance(image_raw, tuple) else None
         annotations = {}
+        annotation_comments = {}
         for annotation_hash, annotation in frame.annotations.items():
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
                 continue
@@ -319,7 +362,7 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
             if annotation.annotation_type != AnnotationType.CLASSIFICATION:
                 prev_annotation = None if prev_frame is None else prev_frame.annotations.get(annotation_hash, None)
                 next_annotation = None if next_frame is None else next_frame.annotations.get(annotation_hash, None)
-                annotations[annotation_hash] = self.calculate(
+                annotation_raw = self.calculate(
                     deps=annotation_deps,
                     image=frame.image,
                     mask=annotation.mask,
@@ -328,11 +371,19 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
                     next_image=next_frame.image,
                     next_mask=None if next_annotation is None else next_annotation.mask,
                 )
+                annotations[annotation_hash] = (
+                    annotation_raw[0] if isinstance(annotation_raw, tuple) else annotation_raw
+                )
+                annotation_comments[annotation_hash] = annotation_raw[1] if isinstance(annotation_raw, tuple) else None
             else:
                 annotations[annotation_hash] = image
+                if image_comment is not None:
+                    annotation_comments[annotation_hash] = image_comment
         return BaseFrameOutput(
             image=image,
+            image_comment=image_comment,
             annotations=annotations,
+            annotation_comments=annotation_comments,
         )
 
     @abstractmethod
@@ -349,7 +400,7 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
         prev_mask: Optional[MaskTensor],
         next_image: ImageTensor,
         next_mask: Optional[MaskTensor],
-    ) -> MetricResult:
+    ) -> MetricResultOptionalAnnotation:
         ...
 
     def raw_calculate_batch(
@@ -373,17 +424,22 @@ class TemporalOneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta)
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
         annotations = {}
+        annotation_comments = {}
         for annotation_hash, annotation in frame.annotations.items():
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
                 continue
             annotation_deps = frame.annotations_deps[annotation_hash]
-            annotations[annotation_hash] = self.calculate(
+            annotations_raw = self.calculate(
                 annotation=annotation,
                 deps=annotation_deps,
                 prev_annotation=None if prev_frame is None else prev_frame.annotations.get(annotation_hash, None),
                 next_annotation=None if next_frame is None else next_frame.annotations.get(annotation_hash, None),
             )
-        return BaseFrameOutput(image=None, annotations=annotations)
+            annotations[annotation_hash] = annotations_raw[0] if isinstance(annotations_raw, tuple) else annotations_raw
+            annotations_raw[annotation_hash] = annotations_raw[1] if isinstance(annotations_raw, tuple) else None
+        return BaseFrameOutput(
+            image=None, image_comment=None, annotations=annotations, annotation_comments=annotation_comments
+        )
 
     @abstractmethod
     def calculate(
@@ -392,7 +448,7 @@ class TemporalOneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta)
         deps: MetricDependencies,
         prev_annotation: Optional[AnnotationMetadata],
         next_annotation: Optional[AnnotationMetadata],
-    ) -> MetricResult:
+    ) -> MetricResultOptionalAnnotation:
         ...
 
     def raw_calculate_batch(
@@ -411,14 +467,17 @@ class TemporalObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
         frame: BaseFrameInput,
         next_frame: Optional[BaseFrameInput],
     ) -> BaseFrameOutput:
+        annotations_raw = self.calculate(
+            annotations=frame.annotations,
+            annotation_deps=frame.annotations_deps,
+            prev_annotations=None if prev_frame is None else prev_frame.annotations,
+            next_annotations=None if next_frame is None else next_frame.annotations,
+        )
         return BaseFrameOutput(
             image=None,
-            annotations=self.calculate(
-                annotations=frame.annotations,
-                annotation_deps=frame.annotations_deps,
-                prev_annotations=None if prev_frame is None else prev_frame.annotations,
-                next_annotations=None if next_frame is None else next_frame.annotations,
-            ),
+            image_comment=None,
+            annotations={k: v[0] if isinstance(v, tuple) else v for k, v in annotations_raw.items()},
+            annotation_comments={k: v[1] for k, v in annotations_raw.items() if isinstance(v, tuple)},
         )
 
     @abstractmethod
@@ -428,7 +487,7 @@ class TemporalObjectByFrameMetric(BaseMetric, metaclass=ABCMeta):
         annotation_deps: dict[str, MetricDependencies],
         prev_annotations: Optional[Dict[str, AnnotationMetadata]],
         next_annotations: Optional[Dict[str, AnnotationMetadata]],
-    ) -> Dict[str, MetricResult]:
+    ) -> Dict[str, MetricResultOptionalAnnotation]:
         ...
 
     def raw_calculate_batch(
@@ -463,7 +522,9 @@ class DerivedMetric(BaseMetric, metaclass=ABCMeta):
         raise AttributeError("Derived uses separate interface, this function should NEVER be called!")
 
     @abstractmethod
-    def calculate(self, deps: MetricDependencies, annotation: Optional[AnnotationMetadata]) -> MetricResult:
+    def calculate(
+        self, deps: MetricDependencies, annotation: Optional[AnnotationMetadata]
+    ) -> MetricResultOptionalAnnotation:
         ...
 
 
