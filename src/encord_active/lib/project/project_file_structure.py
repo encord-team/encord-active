@@ -335,6 +335,10 @@ class ProjectFileStructure(BaseProjectFileStructure):
     def embeddings(self) -> Path:
         return self.project_dir / "embeddings"
 
+    def get_embedding_index_file(self, embedding_type: EmbeddingType, metric: str) -> Path:
+        embedding_file = self.get_embeddings_file(embedding_type)
+        return embedding_file.parent / f"{embedding_file.stem}_{metric}_index.pkl"
+
     def get_embeddings_file(self, type_: EmbeddingType, reduced: bool = False) -> Path:
         lookup = EMBEDDING_REDUCED_TO_FILENAME if reduced else EMBEDDING_TYPE_TO_FILENAME
         return self.embeddings / lookup[type_]

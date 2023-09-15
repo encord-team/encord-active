@@ -1,4 +1,5 @@
 import json
+from itertools import chain
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -12,6 +13,7 @@ from typer.core import TyperGroup
 
 from encord_active.cli.project import project_cli
 from encord_active.cli.utils.server import ensure_safe_project
+from encord_active.lib.embeddings.embedding_index import EmbeddingIndex
 
 load_dotenv()
 
@@ -385,7 +387,13 @@ Consider removing the directory or setting the `--name` option.
 @cli.command(name="refresh")
 @ensure_project()
 def refresh(
-    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False)
+    target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
+    include_unlabeled: bool = typer.Option(
+        False,
+        "--include-unlabeled",
+        "-i",
+        help="Include unlabeled data. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
+    ),
 ):
     """
     [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
@@ -396,12 +404,55 @@ def refresh(
     2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
     3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
     """
+    from encord_active.lib.db.connection import DBConnection
+    from encord_active.lib.metrics.types import EmbeddingType
     from encord_active.lib.project import Project
 
     try:
-        Project(target).refresh()
+        project = Project(target)
+        state = project.refresh(initialize_label_rows=include_unlabeled)
+
+        from encord_active.lib.metrics.execute import (
+            execute_metrics,
+            get_metrics_by_embedding_type,
+        )
+
+        embedding_types_to_update = list(
+            filter(
+                None,
+                [
+                    EmbeddingType.IMAGE if state.data_changed else None,
+                    EmbeddingType.OBJECT if state.labels_changed and state.has_objects else None,
+                    EmbeddingType.CLASSIFICATION if state.labels_changed and state.has_classifications else None,
+                ],
+            )
+        )
+        for et in embedding_types_to_update:
+            emb_file = project.file_structure.get_embeddings_file(et)
+            if emb_file.is_file():
+                emb_file.unlink()
+
+            emb_file_2d = project.file_structure.get_embeddings_file(et, reduced=True)
+            if emb_file_2d.is_file():
+                emb_file_2d.unlink()
+
+            EmbeddingIndex.remove_index(project.file_structure, et)
+
+        metrics_to_execute = list(chain(*[get_metrics_by_embedding_type(et) for et in embedding_types_to_update]))
+        execute_metrics(metrics_to_execute, data_dir=target, use_cache_only=True)
+        with DBConnection(project.file_structure) as conn:
+            from encord_active.lib.db.merged_metrics import (
+                MergedMetrics,
+                build_merged_metrics,
+            )
+
+            MergedMetrics(conn).replace_all(build_merged_metrics(project.file_structure.metrics))
+        ensure_safe_project(target)
+
+    except AttributeError as e:
+        rich.print(f"[orange1]{e}[/orange1]")
     except Exception as e:
-        rich.print(f"[red] ERROR: The data sync failed. Log: {e}.")
+        rich.print(f"[red]ERROR: The data sync failed. Log: {e}.")
     else:
         rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
