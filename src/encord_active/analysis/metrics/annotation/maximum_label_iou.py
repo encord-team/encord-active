@@ -11,7 +11,6 @@ from encord_active.analysis.types import (
     AnnotationMetadata,
     MaskBatchTensor,
     MetricBatchResult,
-    MetricResult,
 )
 from encord_active.db.metrics import MetricType
 

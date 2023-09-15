@@ -8,7 +8,7 @@ from encord_active.analysis.metric import (
     MetricResultOptionalAnnotation,
     TemporalObjectByFrameMetric,
 )
-from encord_active.analysis.types import AnnotationMetadata, MetricResult
+from encord_active.analysis.types import AnnotationMetadata
 from encord_active.db.metrics import MetricType
 from encord_active.lib.common.utils import get_polygon
 
