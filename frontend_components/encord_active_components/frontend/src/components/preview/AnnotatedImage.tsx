@@ -385,6 +385,8 @@ function AnnotationRenderLayerRaw({
           bitmask={bitmask.rleString}
           width={bitmask.width}
           height={bitmask.height}
+          imgWidth={width}
+          imgHeight={height}
           x={bitmask.left}
           y={bitmask.top}
           color={object.color}
@@ -409,11 +411,13 @@ function CoCoBitmaskRaw(props: {
   bitmask: string;
   width: number;
   height: number;
+  imgWidth: number;
+  imgHeight: number;
   x: number;
   y: number;
   color: string;
 }) {
-  const { bitmask, x, y, width, height, color } = props;
+  const { bitmask, x, y, width, height, imgWidth, imgHeight, color } = props;
   const { data: imageUrlRef, refetch } = useQuery(
     ["BITMASK:compileImage", bitmask, width, height, color],
     async () => {
@@ -461,7 +465,13 @@ function CoCoBitmaskRaw(props: {
   }
 
   return (
-    <image x={x} y={y} width={width} height={height} href={imageUrlRef.url} />
+    <image
+      x={(x / width) * imgWidth}
+      y={(y / height) * imgHeight}
+      width={imgWidth}
+      height={imgHeight}
+      href={imageUrlRef.url}
+    />
   );
 }
 
