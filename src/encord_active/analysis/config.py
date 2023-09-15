@@ -118,7 +118,6 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         # Generate embeddings
         ClipImgEmbedding(device, "embedding_clip", "ViT-B/32"),
         HuMomentEmbeddings(),
-        # FIXME: HuMomentEmbeddings("embedding_hu_moments"),
         # Image transformations
         RGBToLaplacian(),
         RGBToGray(),

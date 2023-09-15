@@ -976,7 +976,7 @@ class SimpleExecutor(Executor):
                                     data_raw_similarities = data_raw_dot / (data_raw_data_dist * data_raw_dist)
                                 else:
                                     raise RuntimeError(f"Unknown similarity metric: {metric.similarity}")
-                                data_raw_index = np.argsort(data_raw_similarities)[:max_neighbours]
+                                data_raw_index = np.flip(np.argsort(data_raw_similarities)[:max_neighbours])
                                 data_indices_list.append(data_raw_index)
                                 data_distances_list.append(data_raw_similarities[data_raw_index])
                             data_indices = np.stack(data_indices_list)
