@@ -406,7 +406,7 @@ class SimpleExecutor(Executor):
                         self._execute_stage_1_metrics_no_batching(
                             prev_frame=frames[0][0],
                             current_frame=frames[1][0],
-                            next_frame=frames[1][0],
+                            next_frame=frames[2][0],
                             current_frame_gt=frames[1][1],
                             du_hash=du_meta_list[0].du_hash,
                             frame=iter_frame_num - 1,

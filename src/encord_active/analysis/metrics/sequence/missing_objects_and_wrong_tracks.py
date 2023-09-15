@@ -26,7 +26,7 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
     def __init__(self) -> None:
         super().__init__(
             ident="metric_missing_or_broken_track",
-            long_name="Missing or Wrong Object in Track",
+            long_name="Wrong Object in Track",
             desc="",
             metric_type=MetricType.NORMAL,
         )
@@ -40,35 +40,36 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
     ) -> Dict[str, MetricResult]:
         annotation_res: Dict[str, MetricResult] = {}
 
-        if not (bool(annotations) or bool(prev_annotations) or bool(next_annotations)):
+        prev_annotations = {} if prev_annotations is None else prev_annotations
+        next_annotations = {} if next_annotations is None else next_annotations
+
+        if not annotations:
             return annotation_res
 
-        if bool(annotations) and (not (bool(prev_annotations) or bool(next_annotations))):
+        if (not prev_annotations) or (not next_annotations):
             return {annotation_hash: 1.0 for annotation_hash in annotations.keys()}
 
-        if bool(prev_annotations) ^ bool(next_annotations):
-            if annotations:
-                return {annotation_hash: 1.0 for annotation_hash in annotations.keys()}
-            else:
-                return annotation_res
-
         for next_annotation_hash, next_annotation_meta in next_annotations.items():
+            if next_annotation_meta.mask is None:
+                continue
+
             iou = None
+            prev_annotation_mask = None
 
             if next_annotation_hash in prev_annotations.keys():
-                if prev_annotations[next_annotation_hash].mask is None or next_annotation_meta.mask is None:
-                    iou = 0.0
+                prev_annotation_mask = prev_annotations[next_annotation_hash].mask
+                if prev_annotation_mask is None:
+                    continue
                 else:
-                    iou = mask_iou(prev_annotations[next_annotation_hash].mask, next_annotation_meta.mask)
+                    iou = mask_iou(prev_annotation_mask, next_annotation_meta.mask)
 
             # Check if prev and next annotation is temporally connected
             if iou is not None and iou > 0.5:
-                # Check if there is a missing object in the current frame
-                if next_annotation_hash not in annotations.keys():
-                    annotation_res[next_annotation_hash] = 0.0
-                else:
-                    for current_annotation_hash, current_annotation_meta in annotations.items():
-                        prev_iou = mask_iou(current_annotation_meta.mask, prev_annotations[next_annotation_hash].mask)
+                for current_annotation_hash, current_annotation_meta in annotations.items():
+                    if current_annotation_meta.mask is None or prev_annotation_mask is None:
+                        annotation_res[current_annotation_hash] = 0.0
+                    else:
+                        prev_iou = mask_iou(current_annotation_meta.mask, prev_annotation_mask)
                         next_iou = mask_iou(current_annotation_meta.mask, next_annotation_meta.mask)
 
                         # wrong object
