@@ -86,8 +86,8 @@ def float_attr_bucket_bounds_group(
     bound_range = bound_max - bound_min
     bound_steps = bound_range / float(buckets)
     if bound_steps == 0.0:
-        return func.ROUND(metric_attr - bound_min)
-    return func.ROUND((metric_attr - bound_min) / bound_steps)
+        return func.ROUND(metric_attr - bound_min)  # type: ignore
+    return func.ROUND((metric_attr - bound_min) / bound_steps)  # type: ignore
 
 
 def get_int_attr_bucket(dialect: Dialect, metric_attr: int, buckets: Optional[Literal[10, 100, 1000]]) -> int:
@@ -515,6 +515,8 @@ def query_reduction_scatter(
             extra_where=extra_where,
         )
     ).first()
+    if bounds is None:
+        return Query2DEmbedding(count=0, reductions=[])
     query: "Select[Tuple[float, float, int, str]]" = select_for_query_reduction_scatter(  # type: ignore
         tables=tables,
         project_filters=project_filters,

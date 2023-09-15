@@ -5,7 +5,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Integer, column
+from sqlalchemy import Integer
 from sqlalchemy import desc as desc_fn
 from sqlalchemy import literal
 from sqlalchemy.engine import Engine
@@ -151,7 +151,7 @@ def route_prediction_reduction_scatter(
             ).first()
             if reduction_bounds is None:
                 reduction_bounds = fn_bounds
-            else:
+            elif fn_bounds is not None:
                 reduction_bounds = (
                     min(reduction_bounds[0], fn_bounds[0]),
                     max(reduction_bounds[1], fn_bounds[1]),

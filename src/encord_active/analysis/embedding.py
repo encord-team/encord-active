@@ -62,7 +62,9 @@ class PureImageEmbedding(BaseEmbedding, metaclass=ABCMeta):
                     )
         return BaseFrameOutput(
             image=image,
+            image_comment=None,
             annotations=annotations,
+            annotation_comments={},
         )
 
     @abstractmethod

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import encord
 from tqdm import tqdm
@@ -70,7 +70,7 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
 
         video_width = None
         video_height = None
-        video_labels_json = None
+        video_labels_json: Optional[Dict[str, dict]] = None
         for du_key, data_unit_json in data_unit_list_json.items():
             labels_json = data_unit_json.pop("labels")
             du_hash = uuid.UUID(data_unit_json.pop("data_hash"))
@@ -144,7 +144,7 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
             if video_width is None or video_height is None:
                 raise ValueError(f"Video import failure, missing width or height: {label_row_json}")
             for i in range(0, video_frames):
-                if str(i) not in video_labels_json:
+                if video_labels_json is None or str(i) not in video_labels_json:
                     project_du_list.append(
                         ProjectDataUnitMetadata(
                             project_hash=project_hash,

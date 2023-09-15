@@ -123,7 +123,8 @@ class OneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
                     annotation_comments[annotation_hash] = annotation_comment
             else:
                 annotations[annotation_hash] = image
-                annotation_comments[annotation_hash] = image_comment
+                if image_comment is not None:
+                    annotation_comments[annotation_hash] = image_comment
         return BaseFrameOutput(
             image=image, annotations=annotations, image_comment=image_comment, annotation_comments=annotation_comments
         )
@@ -373,7 +374,10 @@ class TemporalOneImageMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta):
                 annotations[annotation_hash] = (
                     annotation_raw[0] if isinstance(annotation_raw, tuple) else annotation_raw
                 )
-                annotation_comments[annotation_hash] = annotation_raw[1] if isinstance(annotation_raw, tuple) else None
+                if isinstance(annotation_raw, tuple):
+                    annotation_comment = annotation_raw[1]
+                    if annotation_comment is not None:
+                        annotation_comments[annotation_hash] = annotation_comment
             else:
                 annotations[annotation_hash] = image
                 if image_comment is not None:
@@ -428,14 +432,17 @@ class TemporalOneObjectMetric(BaseMetricWithAnnotationFilter, metaclass=ABCMeta)
             if self.annotation_types is not None and annotation.annotation_type not in self.annotation_types:
                 continue
             annotation_deps = frame.annotations_deps[annotation_hash]
-            annotations_raw = self.calculate(
+            annotation_raw = self.calculate(
                 annotation=annotation,
                 deps=annotation_deps,
                 prev_annotation=None if prev_frame is None else prev_frame.annotations.get(annotation_hash, None),
                 next_annotation=None if next_frame is None else next_frame.annotations.get(annotation_hash, None),
             )
-            annotations[annotation_hash] = annotations_raw[0] if isinstance(annotations_raw, tuple) else annotations_raw
-            annotations_raw[annotation_hash] = annotations_raw[1] if isinstance(annotations_raw, tuple) else None
+            annotations[annotation_hash] = annotation_raw[0] if isinstance(annotation_raw, tuple) else annotation_raw
+            if isinstance(annotation_raw, tuple):
+                annotation_comment = annotation_raw[1]
+                if annotation_comment is not None:
+                    annotation_comments[annotation_hash] = annotation_comment
         return BaseFrameOutput(
             image=None, image_comment=None, annotations=annotations, annotation_comments=annotation_comments
         )

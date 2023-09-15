@@ -1,12 +1,5 @@
 import useResizeObserver from "use-resize-observer";
-import {
-  CSSProperties,
-  ReactNode,
-  memo,
-  useRef,
-  useMemo,
-  useEffect,
-} from "react";
+import { CSSProperties, ReactNode, memo, useRef, useEffect } from "react";
 
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { WarningOutlined } from "@ant-design/icons";
@@ -297,14 +290,14 @@ function AnnotationRenderLayerRaw({
         <circle
           cx={x * width}
           cy={y * height}
-          r={`1}px`}
+          r="1}px"
           fill={poly.color}
           fillOpacity={fillOpacity(select)}
         />
         <circle
           cx={x * width}
           cy={y * height}
-          r={`2px`}
+          r="2px"
           fill="none"
           stroke={poly.color}
           strokeWidth="1px"
@@ -458,9 +451,9 @@ function CoCoBitmaskRaw(props: {
   useEffect(() => {
     const urlMaybe = imageUrlRef?.url;
     if (urlMaybe === "") {
-      const _r = refetch();
+      refetch();
     }
-  }, [imageUrlRef?.url]);
+  }, [imageUrlRef?.url, refetch]);
 
   if (imageUrlRef === undefined) {
     return null;

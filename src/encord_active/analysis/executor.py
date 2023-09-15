@@ -725,7 +725,7 @@ class SimpleExecutor(Executor):
                 if non_ephemeral:
                     image_results_deps[evaluation.ident] = metric_result.image
             if metric_result.image_comment is not None and non_ephemeral:
-                image_results_deps["metric_metadata"][evaluation.ident] = metric_result.image_comment
+                image_results_deps["metric_metadata"][evaluation.ident] = metric_result.image_comment  # type: ignore
             for annotation_hash, annotation_value in metric_result.annotations.items():
                 annotation_dep = current_frame.annotations_deps[annotation_hash]
                 annotation_result_deps = annotation_results_deps[annotation_hash]
@@ -736,7 +736,7 @@ class SimpleExecutor(Executor):
             for annotation_hash, annotation_comment in metric_result.annotation_comments.items():
                 annotation_result_deps = annotation_results_deps[annotation_hash]
                 if non_ephemeral:
-                    annotation_result_deps["metric_metadata"][evaluation.ident] = annotation_comment
+                    annotation_result_deps["metric_metadata"][evaluation.ident] = annotation_comment  # type: ignore
 
         if current_frame_gt is not None:
             # Calculate iou matches & iou thresholds

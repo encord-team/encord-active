@@ -28,12 +28,12 @@ def serialize_pca(pca: PCA) -> bytes:
     )
 
 
-def deserialize_pca(pca: bytes) -> PCA:
-    n_features = int.from_bytes(pca[:8], byteorder="little", signed=True)
+def deserialize_pca(pca_bytes: bytes) -> PCA:
+    n_features = int.from_bytes(pca_bytes[:8], byteorder="little", signed=True)
     n_feature_bytes = n_features * 8
-    pca_rest = pca[8:]
+    pca_rest = pca_bytes[8:]
     if len(pca_rest) != n_feature_bytes + n_feature_bytes + (n_feature_bytes * n_features):
-        raise ValueError(f"Serialized PCA: {pca} is invalid")
+        raise ValueError(f"Serialized PCA: {str(pca_bytes)} is invalid")
     mean = np.frombuffer(pca_rest[:n_feature_bytes], dtype=np.float64)
     components = np.frombuffer(pca_rest[n_feature_bytes:-n_feature_bytes], dtype=np.float64)
     variance = np.frombuffer(pca_rest[-n_feature_bytes:], dtype=np.float64)

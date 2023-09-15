@@ -48,12 +48,13 @@ class EncryptedAnnotationJSON(TypeDecorator):
         fernet = self.fernet
         if fernet is None:
             return value
-        return self._map_json_list(value, lambda b: fernet.encrypt(b))
+        fernet_exists: Fernet = fernet
+        return self._map_json_list(value, lambda b: fernet_exists.encrypt(b))
 
     def bind_processor(self, dialect: Dialect):
         json_bind = JSON().bind_processor(dialect)
 
-        def encrypt_json_list(value: Optional[str]) -> Optional[int]:
+        def encrypt_json_list(value: Optional[list[dict]]) -> Optional[list[dict]]:
             pre_proc = self.process_bind_param(value, dialect)
             return json_bind(pre_proc)
 
@@ -64,14 +65,15 @@ class EncryptedAnnotationJSON(TypeDecorator):
 
         def decrypt_json_list(value: Optional[list[dict]]) -> Optional[list[dict]]:
             if not isinstance(value, list):
-                value = json_result(value)
+                value = json_result(value)  # type: ignore
             if value is None:
                 return None
             fernet = self.fernet
             if fernet is None:
                 return value
             try:
-                return self._map_json_list(value, lambda b: fernet.encrypt(b))
+                fernet_exists: Fernet = fernet
+                return self._map_json_list(value, lambda b: fernet_exists.encrypt(b))
             except InvalidToken as e:
                 logging.error(f"Error decrypting email: {e}")
                 return self._map_json_list(value, lambda b: b"")

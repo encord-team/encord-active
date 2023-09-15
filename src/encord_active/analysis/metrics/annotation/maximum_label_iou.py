@@ -2,7 +2,11 @@ from typing import Dict, Tuple
 
 import torch
 
-from encord_active.analysis.metric import MetricDependencies, ObjectByFrameMetric
+from encord_active.analysis.metric import (
+    MetricDependencies,
+    MetricResultOptionalAnnotation,
+    ObjectByFrameMetric,
+)
 from encord_active.analysis.types import (
     AnnotationMetadata,
     MaskBatchTensor,
@@ -25,7 +29,7 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
         self,
         annotations: Dict[str, AnnotationMetadata],
         annotation_deps: dict[str, MetricDependencies],
-    ) -> dict[str, MetricResult]:
+    ) -> Dict[str, MetricResultOptionalAnnotation]:
         objs = [
             (annotation_hash, annotation.mask, annotation.bounding_box.type(torch.int32).tolist())
             for annotation_hash, annotation in annotations.items()
@@ -39,7 +43,7 @@ class MaximumLabelIOUMetric(ObjectByFrameMetric):
             return {obj_hash: 0.0 for obj_hash, obj_mask, obj_bb in objs}
         # Avoid calculating twice.
         calculated_iou: Dict[Tuple[str, str], float] = {}
-        max_iou_results: Dict[str, MetricResult] = {}
+        max_iou_results: Dict[str, MetricResultOptionalAnnotation] = {}
         for obj_hash1, obj_mask1, obj_bb1 in objs:
             obj_iou_values = []
             b1x1, b1y1, b1x2, b1y2 = obj_bb1
