@@ -1,9 +1,19 @@
 import useResizeObserver from "use-resize-observer";
-import { CSSProperties, ReactNode, memo, useRef } from "react";
+import {
+  CSSProperties,
+  ReactNode,
+  memo,
+  useRef,
+  useMemo,
+  useEffect,
+} from "react";
 
 import { ProjectItem } from "../../openapi/api";
 import { useImageSrc } from "../../hooks/useImageSrc";
 import { classy } from "../../helpers/classy";
+import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
+import { WarningOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 
 export function AnnotatedImage(props: {
   item: ProjectItem;
@@ -95,13 +105,23 @@ export function AnnotatedImage(props: {
         />
       )}
       {item.objects.length > 0 && contentWidth && contentHeight ? (
-        <AnnotationRenderLayer
-          objects={item.objects as AnnotationObject[]}
-          width={contentWidth}
-          height={contentHeight}
-          annotationHash={annotationHash}
-          hideExtraAnnotations={hideExtraAnnotations ?? false}
-        />
+        <ErrorBoundary
+          message={
+            <div>
+              <WarningOutlined />
+              Rendering Error
+            </div>
+          }
+          description={null}
+        >
+          <AnnotationRenderLayer
+            objects={item.objects as AnnotationObject[]}
+            width={contentWidth}
+            height={contentHeight}
+            annotationHash={annotationHash}
+            hideExtraAnnotations={hideExtraAnnotations ?? false}
+          />
+        </ErrorBoundary>
       ) : null}
     </figure>
   );
@@ -136,13 +156,25 @@ type AnnotationObjectAABB = {
 
 type AnnotationObjectRotBB = {
   readonly shape: "rotatable_bounding_box";
-  readonly rotatable_bounding_box: {
+  readonly rotatableBoundingBox: {
     readonly x: number;
     readonly y: number;
     readonly w: number;
     readonly h: number;
     readonly theta: number;
   };
+  readonly rotatable_bounding_box?: {
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+    readonly theta: number;
+  };
+};
+
+type AnnotationObjectPolyline = {
+  readonly shape: "polyline";
+  readonly polyline: Record<string, { readonly x: number; readonly y: number }>;
 };
 
 type AnnotationObjectSkeleton = {
@@ -152,7 +184,13 @@ type AnnotationObjectSkeleton = {
 
 type AnnotationObjectBitmask = {
   readonly shape: "bitmask";
-  readonly bitmask: string;
+  readonly bitmask: {
+    readonly top: number;
+    readonly left: number;
+    readonly width: number;
+    readonly height: number;
+    readonly rleString: string;
+  };
 };
 
 type AnnotationObjectCommon = {
@@ -177,6 +215,7 @@ type AnnotationObject = AnnotationObjectCommon &
     | AnnotationObjectRotBB
     | AnnotationObjectSkeleton
     | AnnotationObjectBitmask
+    | AnnotationObjectPolyline
   );
 
 const AnnotationRenderLayer = memo(AnnotationRenderLayerRaw);
@@ -229,6 +268,24 @@ function AnnotationRenderLayerRaw({
     />
   );
 
+  const renderPolyline = (
+    poly: AnnotationObjectCommon & AnnotationObjectPolyline,
+    select: boolean | undefined
+  ) => (
+    <polyline
+      key={poly.objectHash}
+      style={{
+        fillOpacity: 0,
+        strokeOpacity: strokeOpacity(select),
+        stroke: poly.color,
+        strokeWidth: strokeWidth(select),
+      }}
+      points={Object.values(poly.polyline)
+        .map(({ x, y }) => `${x * width},${y * height}`)
+        .join(" ")}
+    />
+  );
+
   const renderPoint = (
     poly: AnnotationObjectCommon & AnnotationObjectPoint,
     select: boolean | undefined
@@ -265,17 +322,20 @@ function AnnotationRenderLayerRaw({
     const bb =
       poly.shape === "bounding_box"
         ? { ...poly.bounding_box, ...poly.boundingBox, theta: 0 }
-        : poly.rotatable_bounding_box;
+        : { ...poly.rotatableBoundingBox, ...poly.rotatableBoundingBox };
     const x1 = bb.x * width;
     const y1 = bb.y * height;
     const x2 = (bb.x + bb.w) * width;
     const y2 = (bb.y + bb.h) * height;
-    const c = Math.cos(bb.theta);
-    const s = Math.sin(bb.theta);
-    console.log("a", poly);
+    const xc = (x1 + x2) / 2.0;
+    const yc = (y1 + y2) / 2.0;
+    const DEG_TO_RAD = Math.PI / 180;
+    const c = Math.cos(bb.theta * DEG_TO_RAD);
+    const s = Math.sin(bb.theta * DEG_TO_RAD);
+
     const rotate = (x: number, y: number): string => {
-      const xr = x * c - y * s;
-      const yr = x * s + y * c;
+      const xr = xc + ((x - xc) * c - (y - yc) * s);
+      const yr = yc + ((x - xc) * s + (y - yc) * c);
 
       return `${xr},${yr}`;
     };
@@ -315,6 +375,21 @@ function AnnotationRenderLayerRaw({
       object.shape === "rotatable_bounding_box"
     ) {
       return renderBoundingBox(object, select);
+    } else if (object.shape === "polyline") {
+      return renderPolyline(object, select);
+    } else if (object.shape === "bitmask") {
+      const { bitmask } = object;
+      return (
+        <CoCoBitmaskRaw
+          key={object.objectHash}
+          bitmask={bitmask.rleString}
+          width={bitmask.width}
+          height={bitmask.height}
+          x={bitmask.left}
+          y={bitmask.top}
+          color={object.color}
+        />
+      );
     } else {
       throw Error(`Unknown shape: ${object.shape}`);
     }
@@ -328,4 +403,121 @@ function AnnotationRenderLayerRaw({
       {objects.map(renderObject)}
     </svg>
   );
+}
+
+function CoCoBitmaskRaw(props: {
+  bitmask: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  color: string;
+}) {
+  const { bitmask, x, y, width, height, color } = props;
+  const { data: imageUrlRef, refetch } = useQuery(
+    ["BITMASK:compileImage", bitmask, width, height, color],
+    async () => {
+      const imageData = cocoBitmaskToImageBitmap(bitmask, width, height, color);
+      // Would use ImageBitmap but the current structure is a svg which requires an object url
+      const canvas = new OffscreenCanvas(imageData.width, imageData.height);
+      const canvasContext = canvas.getContext("2d");
+      if (canvasContext == null) {
+        return undefined;
+      }
+      canvasContext.putImageData(imageData, 0, 0);
+      const blob = await canvas.convertToBlob();
+      return {
+        url: URL.createObjectURL(blob),
+        count: 0,
+      };
+    },
+    { staleTime: Infinity, cacheTime: 0 }
+  );
+  useEffect(() => {
+    if (imageUrlRef !== undefined) {
+      if (imageUrlRef.url === "") {
+        return undefined;
+      }
+      imageUrlRef.count += 1;
+      return () => {
+        imageUrlRef.count -= 1;
+        if (imageUrlRef.count <= 0) {
+          URL.revokeObjectURL(imageUrlRef.url);
+          imageUrlRef.url = "";
+        }
+      };
+    }
+    return undefined;
+  }, [imageUrlRef]);
+  useEffect(() => {
+    const urlMaybe = imageUrlRef?.url;
+    if (urlMaybe === "") {
+      const _r = refetch();
+    }
+  }, [imageUrlRef?.url]);
+
+  if (imageUrlRef === undefined) {
+    return null;
+  }
+
+  return (
+    <image x={x} y={y} width={width} height={height} href={imageUrlRef.url} />
+  );
+}
+
+function cocoBitmaskToImageBitmap(
+  bitmask: string,
+  width: number,
+  height: number,
+  color: string
+): ImageData {
+  // bitmask string => count list
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(bitmask);
+  const counts: number[] = [];
+  let p = 0;
+  while (p < bytes.length) {
+    let x = 0;
+    let k = 0;
+    let more = true;
+    while (more && p < bytes.length) {
+      let c = bytes[p] - 48;
+      x |= (c & 0x1f) << (5 * k);
+      more = (c & 0x20) != 0;
+      p += 1;
+      k += 1;
+      if (!more && (c & 0x10) != 0) {
+        x |= -1 << (5 * k);
+      }
+    }
+    if (counts.length > 2) {
+      x += counts[counts.length - 2];
+    }
+    counts.push(x);
+  }
+  // color decode
+  const r = parseInt(color.substring(1, 3), 16);
+  const g = parseInt(color.substring(3, 5), 16);
+  const b = parseInt(color.substring(5, 7), 16);
+  const rgba = [r, g, b, 127];
+  // count list
+  const decoded = new Uint8Array(width * height * 4);
+  let offset = 0;
+  let fill = false;
+  counts.forEach((count) => {
+    if (fill) {
+      decoded.fill(0xff, 4 * offset, 4 * (offset + count));
+    }
+    offset += count;
+    fill = !fill;
+  });
+  // FIXME: slow -> try find a wa
+  const decodedColor = decoded.map((value, index) => {
+    if (value == 0) {
+      return 0;
+    } else {
+      return rgba[index % 4];
+    }
+  });
+  return new ImageData(new Uint8ClampedArray(decodedColor), width, height);
 }

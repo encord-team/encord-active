@@ -1739,6 +1739,9 @@ def migrate_sqlite_database_to_new_schema():
     _sqlite_insert("prediction_data", list(prediction_data.values()))
     _sqlite_insert("prediction_data_units", list(prediction_data_units.values()))
 
+    def _set_analytics_constants(value: dict) -> None:
+        value["annotation_invalid"] = False
+
     _sqlite_migrate(
         "active_project_prediction_analytics",
         "prediction_analytics",
@@ -1758,6 +1761,7 @@ def migrate_sqlite_database_to_new_schema():
             "metric_label_poly_similarity": "metric_polygon_similarity",
             "metric_label_shape_outlier": "metric_shape_outlier",
         },
+        mutate=_set_analytics_constants,
     )
     _sqlite_migrate(
         "active_project_prediction_analytics_extra",

@@ -55,6 +55,7 @@ class ClipImgEmbedding(PureImageEmbedding):
         annotation_ordered = list(frame.annotations.items())
         for _, annotation in annotation_ordered:
             if annotation.mask is None or annotation.bounding_box is None:
+                # classification
                 continue
             x1, y1, x2, y2 = annotation.bounding_box.type(torch.int32).tolist()
             frame_image = frame.image.to(pre_device)
@@ -70,9 +71,11 @@ class ClipImgEmbedding(PureImageEmbedding):
         idx = 1
         for annotation_hash, annotation in annotation_ordered:
             if annotation.mask is None or annotation.bounding_box is None:
-                continue
-            annotation_embeddings[annotation_hash] = embedding_result_stack[idx].cpu()
-            idx += 1
+                # classification
+                annotation_embeddings[annotation_hash] = image_embedding
+            else:
+                annotation_embeddings[annotation_hash] = embedding_result_stack[idx].cpu()
+                idx += 1
         return BaseFrameOutput(
             image=image_embedding,
             image_comment=None,

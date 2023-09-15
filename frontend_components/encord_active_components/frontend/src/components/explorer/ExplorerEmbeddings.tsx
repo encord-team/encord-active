@@ -264,7 +264,7 @@ function ExplorerEmbeddingsRaw(props: {
   if (isLoading) {
     return (
       <Row className="h-96 w-full" justify="center" align="middle">
-        <Spin indicator={loadingIndicator} tip="Loading Embedding Plot" />
+        <Spin indicator={loadingIndicator} />
       </Row>
     );
   }

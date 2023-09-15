@@ -108,6 +108,7 @@ export function ItemPreviewModal(props: {
                 dataSource={metricsList}
                 columns={columns}
                 pagination={{ pageSize: 5 }}
+                id="key"
               />
             </Row>
             <ItemTags tags={preview.tags} annotationHash={annotationHash} />

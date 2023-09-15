@@ -1,4 +1,5 @@
-from typing import Optional, Union
+import math
+from typing import Optional, Union, List
 
 import cv2
 import numpy as np
@@ -41,7 +42,7 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
     if annotation_type == AnnotationType.CLASSIFICATION:
         return None
     if annotation_type == AnnotationType.POLYGON or annotation_type == AnnotationType.POLYLINE:
-        points = obj["polygon"]
+        points = obj["polygon"] if annotation_type == AnnotationType.POLYGON else obj["polyline"]
         data = [[points[str(i)]["x"] * width, points[str(i)]["y"] * height] for i in range(len(points))]
         if len(data) == 0:
             raise ValueError(f"Polygon found with 0 points: {obj}")
@@ -64,7 +65,29 @@ def obj_to_points(annotation_type: AnnotationType, obj: dict, img_w: int, img_h:
         ]
         return torch.tensor(data, dtype=torch.float32)
     elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
-        raise ValueError("Unsupported annotation type rot bounding box")
+        rbb = obj.get("rot_bounding_box", None) or obj.get("rotatableBoundingBox", None)
+        x = rbb["x"]
+        y = rbb["y"]
+        w = rbb["w"]
+        h = rbb["h"]
+        x2 = x + w
+        y2 = y + h
+        theta = rbb["theta"]
+        c = math.cos(theta)
+        s = math.sin(theta)
+
+        def _rotate(xv: float, yv: float) -> List[float]:
+            xr = xv * c - yv * s
+            yr = xv * s + yv * c
+            return [xr, yr]
+
+        data = [
+            _rotate(x, y),
+            _rotate(x, y2),
+            _rotate(x2, y2),
+            _rotate(x2, y),
+        ]
+        return torch.tensor(data, dtype=torch.float32)
     elif annotation_type == AnnotationType.POINT:
         point = obj["point"]["0"]
         x = point["x"]
@@ -87,20 +110,30 @@ def obj_to_mask(
     elif annotation_type == AnnotationType.BITMASK:
         from pycocotools import mask
 
-        bitmask = mask.decode(
+        bitmask_obj = obj["bitmask"]
+        rle_string = bitmask_obj["rleString"]
+        rle_width = bitmask_obj["width"]
+        rle_height = bitmask_obj["height"]
+        bitmask: np.ndarray = mask.decode(
             {
-                "counts": obj["bitmask"],  # FIXME: check, is our bitmask format the same as the coco format?
-                "size": [img_w, img_h],
+                "counts": rle_string,
+                "size": [rle_width, rle_height],
             }
         )
-        tensor = torch.from_numpy(bitmask)
+        rle_y = bitmask_obj["top"]
+        rle_x = bitmask_obj["left"]
+        if rle_x != 0 or rle_y != 0:
+            raise ValueError("Not supported")
+        if bitmask.shape != (img_h, img_w):
+            raise RuntimeError("Bugged bitmask decode, shape does not match")
+        tensor = torch.from_numpy(bitmask).type(torch.bool)
         return tensor.T  # Convert to height, width format
     elif points is None:
         raise ValueError("BUG: points value not passed as argument for annotation type containing points")
     elif annotation_type == AnnotationType.POLYGON:
         return polygon_mask(points, img_w, img_h)
     elif annotation_type == AnnotationType.POLYLINE:
-        raise ValueError("Poly-line shape is not supported")
+        return polyline_mask(points, img_w, img_h)
     elif annotation_type == AnnotationType.BOUNDING_BOX:
         # FIXME: special case annotation bounding box creation for this to avoid the redundant calculation!!
         # FIXME: cleanup and keep in gpu memory
@@ -109,9 +142,9 @@ def obj_to_mask(
             device, Point(*[int(round(x)) for x in array[0]]), Point(*[int(round(x)) for x in array[2]]), img_w, img_h
         )
     elif annotation_type == AnnotationType.ROTATABLE_BOUNDING_BOX:
-        raise ValueError("Rotated bounding box shape is not supported")
+        return polygon_mask(points, img_w, img_h)
     elif annotation_type == AnnotationType.POINT:
-        x, y = points.cpu().numpy().tolist()
+        x, y = points.cpu().numpy().tolist()[0]
         return point_mask(device, x, y, img_w, img_h)
     elif annotation_type == AnnotationType.SKELETON:
         raise ValueError("Skeleton object shape is not supported")
@@ -130,6 +163,15 @@ def laplacian2d(image: ImageTensor) -> LaplacianTensor:
     channel_count = image.shape[-3]
     kernel = _laplacian_kernel.repeat(channel_count, 1, 1, 1).to(image.device)
     return conv2d(channels_as_batch, weight=kernel, padding=1, groups=channel_count)
+
+
+def polyline_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:
+    mask = np.zeros((height, width), dtype=np.uint8)
+    points = coordinates.cpu().numpy().round(0).astype(np.int32)
+    cv2.polylines(mask, [points], False, 1)
+    for x, y in points:
+        mask[min(y, height - 1), min(x, width - 1)] = 1
+    return torch.tensor(mask).bool()
 
 
 def polygon_mask(coordinates: PointTensor, width: int, height: int) -> MaskTensor:

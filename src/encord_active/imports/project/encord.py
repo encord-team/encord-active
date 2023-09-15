@@ -169,7 +169,7 @@ def import_encord(encord_project: encord.Project, database_dir: Path, store_data
             name=encord_project.title,
             description=encord_project.description,
             remote=True,
-            ontology=encord_project.get_project_ontology().to_dict(),
+            ontology=encord_project.ontology_structure.to_dict(),
         ),
         project_import_meta=None,
         project_data_list=project_data_list,
