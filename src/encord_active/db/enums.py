@@ -115,8 +115,8 @@ AnnotationEnums: Dict[str, EnumDefinition] = {
         enum_type=EnumType.ENUM,
         title="Annotation Invalid",
         values={
-            "False": "Well-formed Annotation",
-            "True": "Invalid Annotation",
+            "0": "Well-formed Annotation",
+            "1": "Invalid Annotation",
         },
     ),
     "annotation_user_id": EnumDefinition(

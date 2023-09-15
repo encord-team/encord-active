@@ -8,12 +8,12 @@ import {
   useEffect,
 } from "react";
 
-import { ProjectItem } from "../../openapi/api";
-import { useImageSrc } from "../../hooks/useImageSrc";
-import { classy } from "../../helpers/classy";
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { WarningOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { ProjectItem } from "../../openapi/api";
+import { useImageSrc } from "../../hooks/useImageSrc";
+import { classy } from "../../helpers/classy";
 
 export function AnnotatedImage(props: {
   item: ProjectItem;
@@ -379,6 +379,7 @@ function AnnotationRenderLayerRaw({
       return renderPolyline(object, select);
     } else if (object.shape === "bitmask") {
       const { bitmask } = object;
+
       return (
         <CoCoBitmaskRaw
           key={object.objectHash}
@@ -430,6 +431,7 @@ function CoCoBitmaskRaw(props: {
       }
       canvasContext.putImageData(imageData, 0, 0);
       const blob = await canvas.convertToBlob();
+
       return {
         url: URL.createObjectURL(blob),
         count: 0,
@@ -491,7 +493,7 @@ function cocoBitmaskToImageBitmap(
     let k = 0;
     let more = true;
     while (more && p < bytes.length) {
-      let c = bytes[p] - 48;
+      const c = bytes[p] - 48;
       x |= (c & 0x1f) << (5 * k);
       more = (c & 0x20) != 0;
       p += 1;
@@ -529,5 +531,6 @@ function cocoBitmaskToImageBitmap(
       return rgba[index % 4];
     }
   });
+
   return new ImageData(new Uint8ClampedArray(decodedColor), width, height);
 }

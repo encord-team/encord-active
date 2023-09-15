@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Checkbox, Select, Space, Typography } from "antd";
 import {
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -166,6 +167,7 @@ export function ChartMetricCompareScatter(props: {
           {data != null ? (
             <Scatter
               data={data}
+              name="This Project"
               fill="#8884d8"
               isAnimationActive={false}
               line={showTrend}
@@ -175,12 +177,14 @@ export function ChartMetricCompareScatter(props: {
           {compareSampledData != null ? (
             <Scatter
               data={compareSampledData.samples}
+              name="Comparison Project"
               fill="#fd0a5a"
               isAnimationActive={false}
               line={showTrend}
               lineType="fitting"
             />
           ) : null}
+          {compareProjectHash != null ? <Legend /> : null}
         </ScatterChart>
       </ResponsiveContainer>
     </>

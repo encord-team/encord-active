@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import cv2
 import numpy as np

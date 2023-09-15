@@ -46,22 +46,21 @@ function getDataAverage(
 }
 
 /**
- * Post-process the data to scale it correctly (n is not scaled by SUM{n})
+ * Post-process the data to sort order issues.
  * @param selectedData
  */
 function tidyData(
   selectedData: readonly Readonly<QueryMetricPerformanceEntry>[]
 ): [readonly Readonly<QueryMetricPerformanceEntry>[], number | null] {
-  const maxN = selectedData.map((v) => v.n).reduce((a, b) => Math.max(a, b), 0);
-  const scaled = selectedData.map((entry) => ({ ...entry, n: entry.n / maxN }));
-  scaled.sort((a, b) => a.m - b.m);
+  const sorted = [...selectedData];
+  sorted.sort((a, b) => a.m - b.m);
   const referenceY =
     selectedData.length === 0
       ? null
       : selectedData.map((v) => v.a).reduce((a, b) => a + b) /
         selectedData.length;
 
-  return [scaled, referenceY];
+  return [sorted, referenceY];
 }
 
 export function ChartPredictionMetricPerformanceChart(props: {
@@ -186,9 +185,11 @@ export function ChartPredictionMetricPerformanceChart(props: {
           tickFormatter={(value: number) => value.toFixed(2)}
         />
         <YAxis
+          yAxisId="performance"
           type="number"
           tickFormatter={(value: number) => value.toFixed(3)}
         />
+        <YAxis yAxisId="samples" type="number" orientation="right" />
         {barGroups.map((feature) => {
           const referenceY = barRefs[feature];
           const groupName =
@@ -215,6 +216,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                   name={`${groupName} Samples`}
                   key={`${feature}n`}
                   dataKey={`${feature}n`}
+                  yAxisId="samples"
                   fill={color}
                   fillOpacity={opacityBar}
                 />
@@ -223,6 +225,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                 name={`${groupName} Performance`}
                 key={`${feature}a`}
                 dataKey={`${feature}a`}
+                yAxisId="performance"
                 fill={color}
                 fillOpacity={opacityLine}
                 stroke={color}
@@ -233,6 +236,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
                 <ReferenceLine
                   name={`${groupName} Average Performance`}
                   key={`${feature}p`}
+                  yAxisId="performance"
                   y={referenceY}
                   fill={color}
                   stroke={color}

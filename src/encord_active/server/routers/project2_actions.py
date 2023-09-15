@@ -129,9 +129,9 @@ def _update_label_hashes(
                 "AND project_data.project_hash = :project_hash"
             ).bindparams(bindparam("project_hash", GUID), bindparam("data_hash_mapping", JSON)),
             {
-                "data_hash_mapping": json_bind({
-                    str(k).replace("-", ""): str(v).replace("-", "") for k, v in remap_data_hash_to_label_hash.items()
-                }),
+                "data_hash_mapping": json_bind(
+                    {str(k).replace("-", ""): str(v).replace("-", "") for k, v in remap_data_hash_to_label_hash.items()}
+                ),
                 "project_hash": str(project_hash).replace("-", ""),
             },
         )

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Optional, Protocol, Set, Union, Tuple
+from typing import Dict, Optional, Protocol, Set, Tuple, Union
 
 import torch
 
@@ -28,7 +28,6 @@ from encord_active.analysis.types import (
 )
 from encord_active.db.enums import AnnotationType
 from encord_active.db.metrics import MetricType
-
 
 MetricResultOptionalAnnotation = Union[MetricResult, Tuple[MetricResult, str]]
 

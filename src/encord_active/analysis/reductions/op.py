@@ -4,8 +4,8 @@ import uuid
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from umap import UMAP
 from sklearn.decomposition import PCA
+from umap import UMAP
 
 from encord_active.analysis.reductions.pca_reduce import deserialize_pca, serialize_pca
 from encord_active.analysis.reductions.umap_reduce import (

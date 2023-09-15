@@ -339,7 +339,7 @@ def query_attr_distribution(
     return QueryDistribution(
         results=[
             QueryDistributionGroup(
-                group=grouping,
+                group=int(grouping) if isinstance(grouping, bool) else grouping,
                 count=count,
             )
             for grouping, count in grouping_results
