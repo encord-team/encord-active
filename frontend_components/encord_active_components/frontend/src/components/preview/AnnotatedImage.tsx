@@ -290,7 +290,7 @@ function AnnotationRenderLayerRaw({
         <circle
           cx={x * width}
           cy={y * height}
-          r="1}px"
+          r="1px"
           fill={poly.color}
           fillOpacity={fillOpacity(select)}
         />
@@ -415,7 +415,12 @@ function CoCoBitmaskRaw(props: {
   const { data: imageUrlRef, refetch } = useQuery(
     ["BITMASK:compileImage", bitmask, width, height, color],
     async () => {
-      const imageData = cocoBitmaskToImageBitmap(bitmask, width, height, color);
+      const { data: imageData, ...imageMetadata } = cocoBitmaskToImageBitmap(
+        bitmask,
+        width,
+        height,
+        color
+      );
       // Would use ImageBitmap but the current structure is a svg which requires an object url
       const canvas = new OffscreenCanvas(imageData.width, imageData.height);
       const canvasContext = canvas.getContext("2d");
@@ -428,6 +433,7 @@ function CoCoBitmaskRaw(props: {
       return {
         url: URL.createObjectURL(blob),
         count: 0,
+        ...imageMetadata,
       };
     },
     { staleTime: Infinity, cacheTime: 0 }
@@ -461,10 +467,10 @@ function CoCoBitmaskRaw(props: {
 
   return (
     <image
-      x={(x / width) * imgWidth}
-      y={(y / height) * imgHeight}
-      width={imgWidth}
-      height={imgHeight}
+      x={((x + imageUrlRef.xOffset) / width) * imgWidth}
+      y={((y + imageUrlRef.yOffset) / height) * imgHeight}
+      width={(imageUrlRef.width / width) * imgWidth}
+      height={(imageUrlRef.height / height) * imgHeight}
       href={imageUrlRef.url}
     />
   );
@@ -475,7 +481,13 @@ function cocoBitmaskToImageBitmap(
   width: number,
   height: number,
   color: string
-): ImageData {
+): {
+  readonly data: ImageData;
+  readonly xOffset: number;
+  readonly yOffset: number;
+  readonly width: number;
+  readonly height: number;
+} {
   // bitmask string => count list
   const encoder = new TextEncoder();
   const bytes = encoder.encode(bitmask);
@@ -500,13 +512,63 @@ function cocoBitmaskToImageBitmap(
     }
     counts.push(x);
   }
+
   // color decode
   const r = parseInt(color.substring(1, 3), 16);
   const g = parseInt(color.substring(3, 5), 16);
   const b = parseInt(color.substring(5, 7), 16);
   const rgba = [r, g, b, 127];
+
+  // Find min image height
+  const yOffset = Math.floor((counts[0] ?? 0) / height);
+  counts[0] = (counts[0] ?? 0) - yOffset * height;
+  const yEndOffset = Math.floor((counts[counts.length - 1] ?? 0) / height);
+  counts[counts.length - 1] =
+    (counts[counts.length - 1] ?? 0) - yEndOffset * height;
+  const resizedHeight = height - yOffset - yEndOffset;
+
+  // Find min image width
+  let xOffset = width - 1;
+  let xOffsetRangeEnd = 0;
+  let xModuloOffset = 0;
+  let fillModulo = false;
+  counts.forEach((count) => {
+    if (fillModulo) {
+      if (xModuloOffset + count >= width) {
+        // No clamp possible
+        xOffset = 0;
+        xOffsetRangeEnd = width;
+      } else {
+        // Select minimum clamp
+        xOffset = Math.min(xOffset, xModuloOffset);
+        xOffsetRangeEnd = Math.max(xOffsetRangeEnd, xModuloOffset + count);
+      }
+    }
+    fillModulo = !fillModulo;
+    xModuloOffset = (xModuloOffset + count) % width;
+  });
+  const xEndOffset = width - xOffsetRangeEnd;
+  if (xEndOffset !== 0 || xOffset !== 0) {
+    xModuloOffset = 0;
+    counts.forEach((count, i) => {
+      while (xModuloOffset + count >= width) {
+        // Wrap-around (potentially many times)
+        counts[i] -= xEndOffset + xOffset;
+        count -= width;
+      }
+      if (xModuloOffset + count >= xOffsetRangeEnd) {
+        counts[i] -= xOffsetRangeEnd - (xModuloOffset + count);
+      }
+      if (xModuloOffset < xOffset) {
+        counts[i] -= xOffset - xModuloOffset;
+      }
+      xModuloOffset = (xModuloOffset + count) % width;
+    });
+  }
+  const resizedWidth = width - xOffset - xEndOffset;
+
   // count list
-  const decoded = new Uint8Array(width * height * 4);
+  const decoded = new Uint8Array(resizedWidth * resizedHeight * 4);
   let offset = 0;
   let fill = false;
   counts.forEach((count) => {
@@ -525,5 +587,15 @@ function cocoBitmaskToImageBitmap(
     }
   });
 
-  return new ImageData(new Uint8ClampedArray(decodedColor), width, height);
+  return {
+    data: new ImageData(
+      new Uint8ClampedArray(decodedColor),
+      resizedWidth,
+      resizedHeight
+    ),
+    yOffset,
+    xOffset,
+    width: resizedWidth,
+    height: resizedHeight,
+  };
 }
