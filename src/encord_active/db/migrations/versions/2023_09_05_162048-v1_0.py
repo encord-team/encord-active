@@ -1645,6 +1645,7 @@ def migrate_sqlite_database_to_new_schema():
     prediction_data_units = {}
     for key, (annotation_type, feature_hash, confidence, annotation_bytes) in _prediction_annotations.items():
         prediction_hash, du_hash, frame, annotation_hash = key
+        annotation_hash_str = annotation_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
         feature_hash_str = feature_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
         project_hash = _prediction_to_project_hash[prediction_hash]
         predict_data_entry = prediction_data.setdefault(
@@ -1661,13 +1662,13 @@ def migrate_sqlite_database_to_new_schema():
             },
         )
         if annotation_type != _annotation_type_migrate_mapping["CLASSIFICATION"]:
-            predict_data_entry["object_answers"][annotation_hash] = {
-                "objectHash": annotation_hash,
+            predict_data_entry["object_answers"][annotation_hash_str] = {
+                "objectHash": annotation_hash_str,
                 "classifications": [],
             }
         else:
-            predict_data_entry["classification_answers"][annotation_hash] = {
-                "classificationHash": annotation_hash,
+            predict_data_entry["classification_answers"][annotation_hash_str] = {
+                "classificationHash": annotation_hash_str,
                 "classifications": [],
             }
 
@@ -1693,7 +1694,7 @@ def migrate_sqlite_database_to_new_schema():
                 {
                     "confidence": float(confidence),
                     "featureHash": root_feature_hash,
-                    "classificationHash": annotation_hash,
+                    "classificationHash": annotation_hash_str,
                     "manualAnnotation": False,
                 }
             )
@@ -1720,7 +1721,7 @@ def migrate_sqlite_database_to_new_schema():
                 {
                     "color": ontology_feature_hash_to_color_lookup[project_hash, feature_hash_str],
                     "confidence": float(confidence),
-                    "objectHash": annotation_hash,
+                    "objectHash": annotation_hash_str,
                     "featureHash": feature_hash_str,
                     "shape": predict_shape,
                     "manualAnnotation": False,

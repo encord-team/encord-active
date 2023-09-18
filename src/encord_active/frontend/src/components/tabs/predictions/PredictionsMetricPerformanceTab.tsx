@@ -136,7 +136,7 @@ export function PredictionsMetricPerformanceTab(props: {
         <Col span={8}>
           <Typography.Text strong>Show Distribution: </Typography.Text>
           <Checkbox
-            value={showDistributionBar}
+            checked={showDistributionBar}
             onChange={() => setShowDistributionBar((e) => !e)}
           />
         </Col>
