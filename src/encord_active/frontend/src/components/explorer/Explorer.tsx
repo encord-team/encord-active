@@ -45,8 +45,8 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -69,9 +69,7 @@ export function Explorer({
   const { previewItem } = useParams<{ previewItem?: string }>();
   const setPreviewedItem = useCallback(
     (id?: string | undefined) =>
-      id
-        ? navigate(`/projects/${projectHash}/explorer/${id}`)
-        : navigate(`/projects/${projectHash}/explorer`),
+      navigate(id ? `./${id}` : "..", { relative: "path" }),
     [navigate, projectHash]
   );
 
