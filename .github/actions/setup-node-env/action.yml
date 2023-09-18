@@ -19,10 +19,9 @@ runs:
     - name: Cache node modules
       id: cache-npm
       uses: actions/cache@v3
-      working-directory: ./frontend_components/encord_active_components/frontend/
       with:
-        path: ./node_modules
-        key: node-build-cache-node-modules-${{ hashFiles('**/package-lock.json') }}
+        path: ./frontend_components/encord_active_components/frontend/
+        key: node-build-cache-node-modules-${{ hashFiles('./frontend_components/encord_active_components/frontend/**/package-lock.json') }}
 
     - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
       name: Install dependencies
