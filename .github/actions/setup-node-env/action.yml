@@ -16,15 +16,15 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
 
-    - name: Cache node modules
-      id: cache-npm
-      uses: actions/cache@v3
-      with:
-        path: ./frontend_components/encord_active_components/frontend/
-        key: node-build-cache-node-modules-${{ hashFiles('./frontend_components/encord_active_components/frontend/**/package-lock.json') }}
+    #- name: Cache node modules
+    #  id: cache-npm
+    #  uses: actions/cache@v3
+    #  with:
+    #    path: ./frontend_components/encord_active_components/frontend/
+    #    key: node-build-cache-node-modules-${{ hashFiles('./frontend_components/encord_active_components/frontend/**/package-lock.json') }}
 
-    - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
-      name: Install dependencies
+    # - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+    - name: Install dependencies
       run: npm ci
       shell: bash
       working-directory: ./frontend_components/encord_active_components/frontend/
