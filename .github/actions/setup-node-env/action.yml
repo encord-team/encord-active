@@ -12,7 +12,6 @@ runs:
   steps:
     - name: Setup Node
       uses: actions/setup-node@v3
-      working-directory: ./frontend_components/encord_active_components/frontend/
       with:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
