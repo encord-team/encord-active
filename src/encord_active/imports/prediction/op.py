@@ -128,7 +128,13 @@ def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, predicti
         prediction_hash=prediction_hash,
         project_ssh_key=ssh_key if project.remote else None,
     )
-    prediction_analytics, prediction_analytics_extra, prediction_analytics_false_negatives, new_collaborators = res
+    (
+        prediction_analytics,
+        prediction_analytics_extra,
+        prediction_analytics_derived,
+        prediction_analytics_false_negatives,
+        new_collaborators,
+    ) = res
 
     prediction_db_data_meta = [
         ProjectPredictionDataMetadata(
@@ -164,5 +170,6 @@ def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, predicti
         sess.add_all(prediction_db_data_unit_meta)
         sess.add_all(prediction_analytics)
         sess.add_all(prediction_analytics_extra)
+        sess.add_all(prediction_analytics_derived)
         sess.add_all(prediction_analytics_false_negatives)
         sess.commit()

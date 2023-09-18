@@ -159,6 +159,7 @@ class SimpleExecutor(Executor):
     ) -> Tuple[
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
+        List[ProjectPredictionAnalyticsDerived],
         List[ProjectPredictionAnalyticsFalseNegatives],
         List[ProjectCollaborator],
     ]:
@@ -1348,6 +1349,7 @@ class SimpleExecutor(Executor):
     ) -> Tuple[
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
+        List[ProjectPredictionAnalyticsDerived],
         List[ProjectPredictionAnalyticsFalseNegatives],
         List[ProjectCollaborator],
     ]:
@@ -1404,6 +1406,7 @@ class SimpleExecutor(Executor):
                     for idx, (dep_du_hash, dep_frame, dep_annotation_hash) in enumerate(v.metric_keys):  # type: ignore
                         prediction_analysis_derived.append(
                             ProjectPredictionAnalyticsDerived(
+                                prediction_hash=prediction_hash,
                                 project_hash=project_hash,
                                 du_hash=du_hash,
                                 frame=frame,
@@ -1434,4 +1437,10 @@ class SimpleExecutor(Executor):
                 )
             )
 
-        return prediction_analysis, prediction_analysis_extra, prediction_false_negatives, new_collaborators
+        return (
+            prediction_analysis,
+            prediction_analysis_extra,
+            prediction_analysis_derived,
+            prediction_false_negatives,
+            new_collaborators,
+        )

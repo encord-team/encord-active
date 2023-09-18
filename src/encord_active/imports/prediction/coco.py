@@ -14,7 +14,7 @@ from encord_active.imports.prediction.op import (
 from encord_active.imports.util import (
     append_object_to_list,
     bitmask_to_bounding_box,
-    bitmask_to_encord_str,
+    bitmask_to_encord_dict,
     bitmask_to_polygon,
     bitmask_to_rotatable_bounding_box,
     coco_str_to_bitmask,
@@ -81,7 +81,7 @@ def import_coco_result(
         elif annotation_type == AnnotationType.POLYGON:
             shape_dict_list = list(bitmask_to_polygon(bitmask))
         elif annotation_type == AnnotationType.BITMASK:
-            shape_dict_list = [bitmask_to_encord_str(bitmask)]
+            shape_dict_list = [bitmask_to_encord_dict(bitmask)]
             # FIXME: bug -
             print("WARNING - skipping bitmask prediction, due to bugged implementation")
             continue

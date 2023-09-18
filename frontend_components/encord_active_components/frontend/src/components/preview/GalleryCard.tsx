@@ -172,7 +172,10 @@ function GalleryCardRaw(props: {
                   <Button
                     className="bg-white"
                     icon={<FullscreenOutlined />}
-                    onClick={(e) => (e.stopPropagation(), onExpand(itemId))}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExpand(itemId);
+                    }}
                   />
                   <Button
                     className="bg-white"

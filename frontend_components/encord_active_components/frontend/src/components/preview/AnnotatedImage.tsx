@@ -500,7 +500,7 @@ function cocoBitmaskToImageBitmap(
     while (more && p < bytes.length) {
       const c = bytes[p] - 48;
       x |= (c & 0x1f) << (5 * k);
-      more = (c & 0x20) != 0;
+      more = (c & 0x20) !== 0;
       p += 1;
       k += 1;
       if (!more && (c & 0x10) != 0) {
@@ -532,7 +532,8 @@ function cocoBitmaskToImageBitmap(
   let xOffsetRangeEnd = 0;
   let xModuloOffset = 0;
   let fillModulo = false;
-  counts.forEach((count) => {
+  counts.forEach((countRaw) => {
+    let count = countRaw;
     if (fillModulo) {
       if (xModuloOffset + count >= width) {
         // No clamp possible
@@ -580,7 +581,7 @@ function cocoBitmaskToImageBitmap(
   });
   // FIXME: slow -> try find a wa
   const decodedColor = decoded.map((value, index) => {
-    if (value == 0) {
+    if (value === 0) {
       return 0;
     } else {
       return rgba[index % 4];
