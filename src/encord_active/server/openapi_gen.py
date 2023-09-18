@@ -12,8 +12,8 @@ def generate_openapi_fe_components() -> None:
     from unittest.mock import MagicMock
 
     # Path lookup
-    src_dir = Path(__file__).parent.parent.parent.resolve()
-    fe_dir = src_dir.parent / "frontend_components" / "encord_active_components" / "frontend"
+    src_dir = Path(__file__).parent.parent.resolve()
+    fe_dir = src_dir / "frontend"
     openapi_json_path = fe_dir / "openapi.json"
     app = get_app(MagicMock(), MagicMock())
     # Output openapi
