@@ -530,10 +530,13 @@ function cocoBitmaskToImageBitmap(
   // Find min image height
   const yOffset = Math.floor((counts[0] ?? 0) / height);
   counts[0] = (counts[0] ?? 0) - yOffset * height;
-  const yEndOffset = Math.floor((counts[counts.length - 1] ?? 0) / height);
+  const yEndOffset =
+    counts.length <= 1
+      ? 0
+      : Math.floor((counts[counts.length - 1] ?? 0) / height);
   counts[counts.length - 1] =
     (counts[counts.length - 1] ?? 0) - yEndOffset * height;
-  const resizedHeight = height - yOffset - yEndOffset;
+  const resizedHeight = Math.max(1, height - yOffset - yEndOffset);
 
   // Find min image width
   let xOffset = width - 1;
@@ -556,7 +559,7 @@ function cocoBitmaskToImageBitmap(
     fillModulo = !fillModulo;
     xModuloOffset = (xModuloOffset + count) % width;
   });
-  const xEndOffset = width - xOffsetRangeEnd;
+  const xEndOffset = Math.min(width - xOffsetRangeEnd, width - xOffset);
   if (xEndOffset !== 0 || xOffset !== 0) {
     xModuloOffset = 0;
     counts.forEach((countRaw, i) => {
@@ -575,7 +578,7 @@ function cocoBitmaskToImageBitmap(
       xModuloOffset = (xModuloOffset + count) % width;
     });
   }
-  const resizedWidth = width - xOffset - xEndOffset;
+  const resizedWidth = Math.max(1, width - xOffset - xEndOffset);
 
   // count list
   const decoded = new Uint8Array(resizedWidth * resizedHeight * 4);
