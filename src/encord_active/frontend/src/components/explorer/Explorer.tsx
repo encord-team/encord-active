@@ -334,6 +334,7 @@ export function Explorer({
         predictionHash={predictionHash}
         similarityItem={similarityItem}
         onClose={closeSimilarityItem}
+        featureHashMap={featureHashMap}
       />
       <ExplorerDistribution
         projectHash={projectHash}
@@ -549,6 +550,7 @@ export function Explorer({
         selectedItems={selectedItems}
         showAnnotations={showAnnotations}
         featureHashMap={featureHashMap}
+        iou={iou}
       />
     </div>
   );

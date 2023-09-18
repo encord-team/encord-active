@@ -428,6 +428,12 @@ export interface PredictionItem {
   };
   /**
    *
+   * @type {{ [key: string]: Array<number> | undefined; }}
+   * @memberof PredictionItem
+   */
+  annotation_tp_bounds: { [key: string]: Array<number> | undefined };
+  /**
+   *
    * @type {Array<object>}
    * @memberof PredictionItem
    */
@@ -438,6 +444,18 @@ export interface PredictionItem {
    * @memberof PredictionItem
    */
   classifications: Array<object>;
+  /**
+   *
+   * @type {{ [key: string]: object | undefined; }}
+   * @memberof PredictionItem
+   */
+  object_answers: { [key: string]: object | undefined };
+  /**
+   *
+   * @type {{ [key: string]: object | undefined; }}
+   * @memberof PredictionItem
+   */
+  classification_answers: { [key: string]: object | undefined };
   /**
    *
    * @type {string}

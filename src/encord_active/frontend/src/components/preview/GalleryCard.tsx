@@ -11,6 +11,7 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 import { FeatureHashMap } from "../Types";
+import { PredictionItem, ProjectItem } from "../../openapi/api";
 
 export const GalleryCard = memo(GalleryCardRaw);
 
@@ -25,6 +26,7 @@ function GalleryCardRaw(props: {
   onShowSimilar: (itemId: string) => void;
   hideExtraAnnotations: boolean;
   customTags?: ReactNode | undefined;
+  iou: number;
   featureHashMap: FeatureHashMap;
 }) {
   const {
@@ -39,6 +41,7 @@ function GalleryCardRaw(props: {
     hideExtraAnnotations,
     customTags,
     featureHashMap,
+    iou,
   } = props;
   // Conditionally extract annotation hash
   const dataId = itemId.split("_").slice(0, 2).join("_");
@@ -62,7 +65,7 @@ function GalleryCardRaw(props: {
     usePredictionItem(projectHash, predictionHash ?? "", dataId, {
       enabled: !projectItem,
     });
-  const preview = useMemo(() => {
+  const preview: PredictionItem | ProjectItem | undefined = useMemo(() => {
     if (projectItem) {
       return previewProject;
     } else if (
@@ -73,7 +76,7 @@ function GalleryCardRaw(props: {
       return {
         ...previewProject,
         ...previewPrediction,
-      };
+      } satisfies PredictionItem;
     } else {
       return undefined;
     }
@@ -176,6 +179,23 @@ function GalleryCardRaw(props: {
     return featureMeta.name;
   }, [featureHashMap, labelObject, preview]);
 
+  const predictionTruePositive: ReadonlySet<string> | undefined = useMemo(():
+    | ReadonlySet<string>
+    | undefined => {
+    if (preview !== undefined && "annotation_tp_bounds" in preview) {
+      const tpSet = new Set();
+      Object.entries(preview.annotation_tp_bounds ?? {}).forEach(
+        ([key, [keyIOU, keyIOUBound]]) => {
+          if (keyIOU >= iou && keyIOUBound < iou) {
+            tpSet.add(key);
+          }
+        }
+      );
+      return new Set(tpSet) as ReadonlySet<string>;
+    }
+    return undefined;
+  }, [preview, iou]);
+
   return (
     <Card
       hoverable
@@ -194,6 +214,7 @@ function GalleryCardRaw(props: {
               className="h-56"
               annotationHash={annotationHash}
               hideExtraAnnotations={hideExtraAnnotations}
+              predictionTruePositive={predictionTruePositive}
               mode="full"
             >
               <div

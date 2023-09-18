@@ -61,6 +61,7 @@ export function SimilarityModal(props: {
               </Tag>
             }
             featureHashMap={featureHashMap}
+            iou={0.5}
           />
         )}
       />

@@ -628,8 +628,11 @@ def route_prediction_metric_performance(
 
 class PredictionItem(BaseModel):
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
+    annotation_tp_bounds: Dict[str, List[float]]
     objects: list[dict]
     classifications: list[dict]
+    object_answers: Dict[str, dict]
+    classification_answers: Dict[str, dict]
     label_hash: uuid.UUID
 
 
@@ -677,6 +680,9 @@ def route_prediction_data_item(
             )
         ).fetchall()
 
+    all_objects = {obj["objectHash"] for obj in du_meta.objects}
+    all_classifications = {cls["classificationHash"] for cls in du_meta.classifications}
+
     return PredictionItem(
         annotation_metrics={
             annotation_analytics.annotation_hash: {
@@ -684,7 +690,13 @@ def route_prediction_data_item(
             }
             for annotation_analytics in annotation_analytics_list
         },
+        annotation_tp_bounds={
+            annotation_analytics.annotation_hash: [annotation_analytics.iou, annotation_analytics.match_duplicate_iou]
+            for annotation_analytics in annotation_analytics_list
+        },
         objects=du_meta.objects,
         classifications=du_meta.classifications,
+        object_answers={k: v for k, v in data_meta.object_answers.items() if k in all_objects},
+        classification_answers={k: v for k, v in data_meta.classification_answers.items() if k in all_classifications},
         label_hash=data_meta.label_hash,
     )

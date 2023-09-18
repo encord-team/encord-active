@@ -152,6 +152,7 @@ export function ItemPreviewModal(props: {
               item={preview}
               annotationHash={annotationHash}
               mode="large"
+              predictionTruePositive={undefined}
             />
           </Col>
         </Row>

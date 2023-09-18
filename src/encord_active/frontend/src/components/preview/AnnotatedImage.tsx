@@ -14,6 +14,7 @@ export function AnnotatedImage(props: {
   hideExtraAnnotations?: boolean | undefined;
   className?: string | undefined;
   mode: "preview" | "full" | "large";
+  predictionTruePositive: ReadonlySet<string> | undefined;
   children?: ReactNode | undefined;
 }) {
   const {
@@ -23,6 +24,7 @@ export function AnnotatedImage(props: {
     hideExtraAnnotations,
     children,
     mode,
+    predictionTruePositive,
   } = props;
 
   const image = useRef<HTMLImageElement>(null);
@@ -120,6 +122,7 @@ export function AnnotatedImage(props: {
             width={contentWidth}
             height={contentHeight}
             annotationHash={annotationHash}
+            predictionTruePositive={predictionTruePositive}
             hideExtraAnnotations={hideExtraAnnotations ?? false}
           />
         </ErrorBoundary>
@@ -227,12 +230,14 @@ function AnnotationRenderLayerRaw({
   height,
   annotationHash,
   hideExtraAnnotations,
+  predictionTruePositive,
 }: {
   objects: AnnotationObject[];
   width: number;
   height: number;
   annotationHash: string | undefined;
   hideExtraAnnotations: boolean;
+  predictionTruePositive: ReadonlySet<string> | undefined;
 }) {
   const fillOpacity = (select: boolean | undefined): string => {
     if (select === undefined) {
@@ -250,6 +255,16 @@ function AnnotationRenderLayerRaw({
     return select ? "4px" : "1px";
   };
 
+  const color = (poly: AnnotationObjectCommon): string => {
+    if (predictionTruePositive !== undefined) {
+      return predictionTruePositive.has(poly.objectHash)
+        ? "#22c55e"
+        : "#ef4444";
+    } else {
+      return poly.color;
+    }
+  };
+
   const renderPolygon = (
     poly: AnnotationObjectCommon & AnnotationObjectPolygon,
     select: boolean | undefined
@@ -258,9 +273,9 @@ function AnnotationRenderLayerRaw({
       key={poly.objectHash}
       style={{
         fillOpacity: fillOpacity(select),
-        fill: poly.color,
+        fill: color(poly),
         strokeOpacity: strokeOpacity(select),
-        stroke: poly.color,
+        stroke: color(poly),
         strokeWidth: strokeWidth(select),
       }}
       points={Object.values(poly.polygon)
@@ -278,7 +293,7 @@ function AnnotationRenderLayerRaw({
       style={{
         fillOpacity: 0,
         strokeOpacity: strokeOpacity(select),
-        stroke: poly.color,
+        stroke: color(poly),
         strokeWidth: strokeWidth(select),
       }}
       points={Object.values(poly.polyline)
@@ -299,7 +314,7 @@ function AnnotationRenderLayerRaw({
           cx={x * width}
           cy={y * height}
           r="1px"
-          fill={poly.color}
+          fill={color(poly)}
           fillOpacity={fillOpacity(select)}
         />
         <circle
@@ -307,7 +322,7 @@ function AnnotationRenderLayerRaw({
           cy={y * height}
           r="2px"
           fill="none"
-          stroke={poly.color}
+          stroke={color(poly)}
           strokeWidth="1px"
           strokeOpacity={strokeOpacity(select)}
         />
@@ -346,9 +361,9 @@ function AnnotationRenderLayerRaw({
         key={poly.objectHash}
         style={{
           fillOpacity: fillOpacity(select),
-          fill: poly.color,
+          fill: color(poly),
           strokeOpacity: strokeOpacity(select),
-          stroke: poly.color,
+          stroke: color(poly),
           strokeWidth: strokeWidth(select),
         }}
         points={`${rotate(x1, y1)} ${rotate(x1, y2)} ${rotate(x2, y2)} ${rotate(
@@ -391,7 +406,7 @@ function AnnotationRenderLayerRaw({
           imgHeight={height}
           x={bitmask.left}
           y={bitmask.top}
-          color={object.color}
+          color={color(object)}
         />
       );
     } else {

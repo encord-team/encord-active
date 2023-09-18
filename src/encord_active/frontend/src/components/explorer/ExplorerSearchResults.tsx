@@ -29,6 +29,7 @@ function ExplorerSearchResultsRaw(props: {
   selectedItems: ReadonlySet<string>;
   showAnnotations: boolean;
   featureHashMap: FeatureHashMap;
+  iou: number;
 }) {
   const {
     projectHash,
@@ -42,6 +43,7 @@ function ExplorerSearchResultsRaw(props: {
     selectedItems,
     showAnnotations,
     featureHashMap,
+    iou,
   } = props;
 
   const loading = useMemo(
@@ -74,6 +76,7 @@ function ExplorerSearchResultsRaw(props: {
           selected={selectedItems.has(item)}
           hideExtraAnnotations={showAnnotations}
           featureHashMap={featureHashMap}
+          iou={iou}
         />
       )}
     />

@@ -16,7 +16,12 @@ from ..local_files import get_data_uri
 from .op import ProjectImportSpec
 
 
-def import_encord(encord_project: encord.Project, database_dir: Path, store_data_locally: bool, include_unlabeled: bool = False,) -> ProjectImportSpec:
+def import_encord(
+    encord_project: encord.Project,
+    database_dir: Path,
+    store_data_locally: bool,
+    include_unlabeled: bool = False,
+) -> ProjectImportSpec:
     project_hash = uuid.UUID(encord_project.project_hash)
 
     label_rows = encord_project.list_label_rows_v2()

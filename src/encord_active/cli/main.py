@@ -409,7 +409,11 @@ def refresh(
         project_hash = select_project_hash_from_name(database_dir, project_name or "")
         ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
         changes = refresh_encord_project(
-            database_dir=database_dir, encord_project_hash=project_hash, include_unlabeled=include_unlabeled, force=force, ssh_key=ssh_key
+            database_dir=database_dir,
+            encord_project_hash=project_hash,
+            include_unlabeled=include_unlabeled,
+            force=force,
+            ssh_key=ssh_key,
         )
     except Exception as e:
         rich.print(f"[red]ERROR: The data sync failed. Log: {e}.")

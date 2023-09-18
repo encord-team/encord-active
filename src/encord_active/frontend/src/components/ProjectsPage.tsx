@@ -149,6 +149,7 @@ function ProjectCard({
             item={projectDataItem}
             annotationHash={undefined}
             mode="preview"
+            predictionTruePositive={undefined}
           />
         ) : null
       }

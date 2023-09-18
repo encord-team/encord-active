@@ -25,7 +25,6 @@ from .settings import Env, get_settings
 def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
     app = FastAPI()
 
-    # app.include_router(project.router, dependencies=[Depends(verify_token)])
     app.include_router(project2.router, dependencies=[Depends(verify_token)], prefix="/api")
 
     # Create read-only engine
