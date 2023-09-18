@@ -77,9 +77,7 @@ def get_float_attr_bucket(dialect: Dialect, metric_attr: float, buckets: Optiona
     return metric_attr if metric_attr is None else func.ROUND(metric_attr.cast(Numeric(20, 10)), round_digits)  # type: ignore
 
 
-def float_attr_bucket_bounds_group(
-    metric_attr: float, buckets: Optional[Literal[10, 100, 1000]], bounds: Tuple[float, float]
-) -> float:
+def float_attr_bucket_bounds_group(metric_attr: float, buckets: Optional[int], bounds: Tuple[float, float]) -> float:
     if buckets is None:
         return metric_attr
     bound_min, bound_max = bounds
@@ -470,7 +468,8 @@ def select_for_query_reduction_scatter(
     domain_tables = tables.primary
     x_min, x_max, y_min, y_max = bounds
     x_group = float_attr_bucket_bounds_group(domain_tables.reduction.x, buckets, (x_min, x_max))
-    y_group = float_attr_bucket_bounds_group(domain_tables.reduction.y, buckets, (y_min, y_max))
+    # FIXME: make this explicit instead of a quick hack
+    y_group = float_attr_bucket_bounds_group(domain_tables.reduction.y, buckets // 2, (y_min, y_max))
     where = search_query.search_filters(
         tables=tables,
         base=domain_tables.reduction,
