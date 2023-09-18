@@ -503,7 +503,7 @@ function cocoBitmaskToImageBitmap(
       more = (c & 0x20) !== 0;
       p += 1;
       k += 1;
-      if (!more && (c & 0x10) != 0) {
+      if (!more && (c & 0x10) !== 0) {
         x |= -1 << (5 * k);
       }
     }
@@ -533,7 +533,7 @@ function cocoBitmaskToImageBitmap(
   let xModuloOffset = 0;
   let fillModulo = false;
   counts.forEach((countRaw) => {
-    let count = countRaw;
+    const count = countRaw;
     if (fillModulo) {
       if (xModuloOffset + count >= width) {
         // No clamp possible
@@ -551,7 +551,8 @@ function cocoBitmaskToImageBitmap(
   const xEndOffset = width - xOffsetRangeEnd;
   if (xEndOffset !== 0 || xOffset !== 0) {
     xModuloOffset = 0;
-    counts.forEach((count, i) => {
+    counts.forEach((countRaw, i) => {
+      let count = countRaw;
       while (xModuloOffset + count >= width) {
         // Wrap-around (potentially many times)
         counts[i] -= xEndOffset + xOffset;

@@ -466,12 +466,9 @@ def select_for_query_reduction_scatter(
     filters: Optional[search_query.SearchFilters],
     extra_where: Optional[list],
     extra_select: TExtraSelect,
-) -> "Select[Tuple[float, float, int, str]]":
+) -> "Select[Tuple[float, float, int, int, int, str]]":
     domain_tables = tables.primary
     x_min, x_max, y_min, y_max = bounds
-    # FIXME: plan - calculate bounds & group by x, y, feature_hash
-    # FIXME:   then either locally OR in sql via subquery WINDOW select feature hash
-    #   with COUNT(*) largest
     x_group = float_attr_bucket_bounds_group(domain_tables.reduction.x, buckets, (x_min, x_max))
     y_group = float_attr_bucket_bounds_group(domain_tables.reduction.y, buckets, (y_min, y_max))
     where = search_query.search_filters(
@@ -485,6 +482,8 @@ def select_for_query_reduction_scatter(
         select(  # type: ignore
             sql_avg(domain_tables.reduction.x).label("xv"),  # type: ignore
             sql_avg(domain_tables.reduction.y).label("xv"),  # type: ignore
+            x_group.label("xg"),  # type: ignore
+            y_group.label("yg"),  # type: ignore
             sql_count().label("n"),  # type: ignore
             tables.annotation.analytics.feature_hash.label("fh")  # type: ignore
             if tables.annotation == domain_tables
@@ -495,7 +494,7 @@ def select_for_query_reduction_scatter(
             *where,
             *(extra_where or []),
         )
-        .group_by(x_group, y_group, "fh")
+        .group_by("xg", "yg", "fh")
     )
 
 
@@ -517,7 +516,7 @@ def query_reduction_scatter(
     ).first()
     if bounds is None:
         return Query2DEmbedding(count=0, reductions=[])
-    query: "Select[Tuple[float, float, int, str]]" = select_for_query_reduction_scatter(  # type: ignore
+    query: "Select[Tuple[float, float, int, int, int, str]]" = select_for_query_reduction_scatter(  # type: ignore
         tables=tables,
         project_filters=project_filters,
         buckets=buckets,
@@ -527,20 +526,23 @@ def query_reduction_scatter(
         extra_select=tuple(),
     )
     results = sess.exec(query).fetchall()
-    results_dedup: Dict[Tuple[float, float], Tuple[str, int, int]] = {}
-    for x, y, n, l in results:
-        el, elc, en = results_dedup.setdefault((x, y), ("", 0, 0))
+    results_dedup: Dict[Tuple[int, int], Tuple[float, float, str, int, int]] = {}
+    for x, y, xg, yg, n, l in results:
+        ex_av, ey_av, el, elc, en = results_dedup.setdefault((xg, yg), (0.0, 0.0, "", 0, 0))
+        n_total = en + n
+        x_av = ((ex_av * en) + (x * n)) / n_total
+        y_av = ((ey_av * en) + (y * n)) / n_total
         if n > elc or (n == elc and str(l) >= str(el)):
-            results_dedup[(x, y)] = (l, n, en + n)
+            results_dedup[(xg, yg)] = (x_av, y_av, l, n, n_total)
         else:
-            results_dedup[(x, y)] = (el, elc, en + n)
+            results_dedup[(xg, yg)] = (x_av, y_av, el, elc, n_total)
 
     return Query2DEmbedding(
-        count=sum(n for x, y, n, l in results),
+        count=sum(n for x, y, xg, yg, n, l in results),
         reductions=[
             Query2DEmbeddingScatterPoint(
                 x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, fh=fh, fhn=fhn, n=n
             )
-            for (x, y), (fh, fhn, n) in results_dedup.items()
+            for x, y, fh, fhn, n in results_dedup.values()
         ],
     )

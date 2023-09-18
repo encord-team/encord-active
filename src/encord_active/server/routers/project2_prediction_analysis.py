@@ -196,18 +196,7 @@ def route_prediction_reduction_scatter(
                 extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
             )
     if fn_select is not None and tp_fp_select is not None:
-        query_subquery = fn_select.union_all(tp_fp_select).subquery("join")
-        query_select = (
-            select(  # type: ignore
-                query_subquery.c.xv,
-                query_subquery.c.yv,
-                metric_query.sql_sum(query_subquery.c.n),
-                metric_query.sql_sum(query_subquery.c.tp),
-                metric_query.sql_sum(query_subquery.c.fn),
-            )
-            .select_from()
-            .group_by(query_subquery.c.xv, query_subquery.c.yv)  # type: ignore
-        )
+        query_select = fn_select.union_all(tp_fp_select)
     elif fn_select is not None:
         query_select = fn_select
     elif tp_fp_select is not None:
@@ -218,13 +207,24 @@ def route_prediction_reduction_scatter(
     with Session(engine) as sess:
         results = sess.exec(query_select).fetchall()
 
+    results_dedup: Dict[Tuple[int, int], Tuple[float, float, str, int, int, int, int]] = {}
+    for x, y, xg, yg, n, l, tp, fn in results:
+        ex_av, ey_av, el, elc, en, etp, efn = results_dedup.setdefault((xg, yg), (0.0, 0.0, "", 0, 0, 0, 0))
+        n_total = en + n
+        x_av = ((ex_av * en) + (x * n)) / n_total
+        y_av = ((ey_av * en) + (y * n)) / n_total
+        if n > elc or (n == elc and str(l) >= str(el)):
+            results_dedup[(xg, yg)] = (x_av, y_av, l, n, n_total, etp + tp, efn + fn)
+        else:
+            results_dedup[(xg, yg)] = (x_av, y_av, el, elc, n_total, etp + tp, efn + fn)
+
     return PredictionQuery2DEmbedding(
-        count=sum(n for x, y, n, tp, fn in results),
+        count=sum(n for x, y, xg, yg, n, l, tp, fn in results),
         reductions=[
             PredictionQueryScatterPoint(
                 x=x if not math.isnan(x) else 0, y=y if not math.isnan(y) else 0, n=n, tp=tp, fp=(n - tp - fn), fn=fn
             )
-            for x, y, n, tp, fn in results
+            for x, y, fh, fhn, n, tp, fn in results_dedup.values()
         ],
     )
 
