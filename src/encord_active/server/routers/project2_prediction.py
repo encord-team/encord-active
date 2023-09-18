@@ -366,7 +366,7 @@ def route_prediction_summary(
                     **valid_metric_stats,
                 },
             ).first()
-            correlations = {name: value for name, value in zip(valid_metric_stat_names, correlation_result)}  # type: ignore
+            correlations = {name: value for name, value in zip(valid_metric_stat_names, correlation_result) if value is not None}  # type: ignore
         else:
             correlations = {}
     else:

@@ -7,9 +7,7 @@ from encord_active.cli.app_config import app_config
 from encord_active.cli.utils.decorators import find_child_projects, is_project
 from encord_active.lib.db.data.run_data_migrations import run_data_migrations
 from encord_active.lib.db.prisma_init import (
-    did_schema_change,
     ensure_prisma_db,
-    generate_prisma_client,
 )
 from encord_active.lib.project.project_file_structure import ProjectFileStructure
 from encord_active.server.start_server import start
@@ -49,9 +47,9 @@ def launch_server_app(target: Path, port: int):
     else:
         rich.print("[yellow]Bear with us, this might take a short while...")
 
-    if did_schema_change():
-        generate_prisma_client()
-    ensure_safe_project(target)
+    # if did_schema_change():
+    #     generate_prisma_client()
+    # ensure_safe_project(target)
     data_dir = target.expanduser().absolute()
     rich.print(f"[green] Server starting on [blue]http://localhost:{port}[/blue]")
     start(data_dir, port=port, reload=app_config.is_dev)

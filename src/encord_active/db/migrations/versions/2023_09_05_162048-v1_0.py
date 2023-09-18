@@ -16,6 +16,7 @@ import numpy as np
 import sqlalchemy as sa
 from alembic import op
 from cryptography.fernet import Fernet
+from pycocotools import mask
 from sqlmodel.sql.sqltypes import GUID, AutoString
 from tqdm import tqdm
 
@@ -1475,12 +1476,14 @@ def migrate_sqlite_database_to_new_schema():
 
     _du_hash_to_data_hash = {}
     du_hash_to_data_type_for_analytics = {}
+    du_hash_to_img_size = {}
 
     def _mutate_project_data_unit(data: dict) -> None:
         data["data_title"] = data_title_dict.get(data["du_hash"], "unknown")
         data["data_type"] = data_type_dict.get(data["du_hash"], "unknown")
         _du_hash_to_data_hash[data["du_hash"]] = data["data_hash"]
         du_hash_to_data_type_for_analytics[data["du_hash"]] = data["data_type"]
+        du_hash_to_img_size[data["du_hash"]] = (data["width"], data["height"])
 
     _sqlite_migrate("active_project_data_units", "project_data_units", mutate=_mutate_project_data_unit)
 
@@ -1643,7 +1646,9 @@ def migrate_sqlite_database_to_new_schema():
     op.get_bind().execute("COMMIT")
     prediction_data = {}
     prediction_data_units = {}
-    for key, (annotation_type, feature_hash, confidence, annotation_bytes) in _prediction_annotations.items():
+    for key, (annotation_type, feature_hash, confidence, annotation_bytes) in tqdm(
+        _prediction_annotations.items(), desc="Converting prediction data format"
+    ):
         prediction_hash, du_hash, frame, annotation_hash = key
         annotation_hash_str = annotation_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
         feature_hash_str = feature_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
@@ -1689,7 +1694,7 @@ def migrate_sqlite_database_to_new_schema():
                 project_hash, feature_hash_str
             ]
             for k, v in feature_hash_answers.items():
-                predict_data_entry["classification_answers"][annotation_hash][k] = v
+                predict_data_entry["classification_answers"][annotation_hash_str][k] = v
             predict_du_entry["classifications"].append(
                 {
                     "confidence": float(confidence),
@@ -1711,9 +1716,26 @@ def migrate_sqlite_database_to_new_schema():
                     predict_format[str(len(predict_format))] = {"x": poly_list[i], "y": poly_list[i + 1]}
             elif annotation_type == _annotation_type_migrate_mapping["BITMASK"]:
                 predict_shape = "bitmask"
-                # FIXME: the official encord format is a string
-                print(f"WARNING: bitmask prediction migration is kinda incorrect")
-                predict_format = np.frombuffer(annotation_bytes, dtype=np.int_).tolist()
+                width, height = du_hash_to_img_size[du_hash]
+                bitmask_counts: List[int] = np.frombuffer(annotation_bytes, dtype=np.int_).tolist()
+                bitmask_mask = np.zeros((width, height), dtype=np.uint8, order="F")
+                bitmask_fill = False
+                bitmask_offset = 0
+                for count in bitmask_counts:
+                    if bitmask_fill:
+                        bitmask_mask[bitmask_offset : bitmask_offset + count] = 1
+                    bitmask_fill = not bitmask_fill
+                    bitmask_offset += count
+                encoded_bitmask = mask.encode(bitmask_mask)
+                if len(bitmask_counts) == 1:
+                    print("WARNING: prediction has 0 size bitmask")
+                predict_format = {
+                    "rleString": encoded_bitmask["counts"].decode("utf-8"),
+                    "width": encoded_bitmask["size"][0],
+                    "height": encoded_bitmask["size"][1],
+                    "top": 0,
+                    "left": 0,
+                }
             else:
                 raise ValueError(f"Unknown annotation type: {annotation_type}")
 
