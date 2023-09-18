@@ -64,6 +64,14 @@ export function AnnotatedImage(props: {
     };
   }
 
+  // Ensure correctness if timestamp changes but video url does not.
+  useEffect(() => {
+    const videoRef = video.current;
+    if (videoRef != null) {
+      videoRef.currentTime = item.timestamp || 0;
+    }
+  }, [item.timestamp]);
+
   return (
     <figure
       className={classy(

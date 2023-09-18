@@ -115,6 +115,7 @@ export function ItemPreviewModal(props: {
           </Col>
           <Col span={12}>
             <AnnotatedImage
+              key={`preview-image-${previewItem ?? ""}`}
               item={preview}
               annotationHash={annotationHash}
               mode="large"
