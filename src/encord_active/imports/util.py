@@ -64,8 +64,6 @@ def append_object_to_list(
 
 
 def coco_str_to_bitmask(rle: str, width: int, height: int) -> torch.Tensor:
-    from pycocotools import mask
-
     bitmask = mask.decode({"counts": rle, "size": [width, height]})
     tensor = torch.from_numpy(bitmask)
     return tensor.T  # Convert to height, width format

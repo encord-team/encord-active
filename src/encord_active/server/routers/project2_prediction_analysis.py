@@ -196,16 +196,16 @@ def route_prediction_reduction_scatter(
                 extra_select=(literal(0).label("tp"), metric_query.sql_count().label("fn")),  # type: ignore
             )
     if fn_select is not None and tp_fp_select is not None:
-        query_select = fn_select.union_all(tp_fp_select)
+        query_select: "Select[Tuple[float, float, int, int, int, str, int, int]]" = fn_select.union_all(tp_fp_select)  # type: ignore
     elif fn_select is not None:
-        query_select = fn_select
+        query_select = fn_select  # type: ignore
     elif tp_fp_select is not None:
-        query_select = tp_fp_select
+        query_select = tp_fp_select  # type: ignore
     else:
         raise RuntimeError("Bug in prediction reduction")
 
     with Session(engine) as sess:
-        results = sess.exec(query_select).fetchall()
+        results: List[Tuple[float, float, int, int, int, str, int, int]] = sess.exec(query_select).fetchall()
 
     results_dedup: Dict[Tuple[int, int], Tuple[float, float, str, int, int, int, int]] = {}
     for x, y, xg, yg, n, l, tp, fn in results:
