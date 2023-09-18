@@ -29,7 +29,7 @@ import {
   formatTooltip,
 } from "../util/Formatter";
 import useRateLimit from "../../hooks/useRateLimit";
-import { MetricFilter } from "../util/MetricFilter";
+import { FeatureHashMap } from "../Types";
 
 const EmbeddingScatterAxisDomain = ["dataMin - 1", "dataMax + 1"];
 const EmbeddingScatterXAxisPadding = { left: 10, right: 10 };
@@ -51,7 +51,7 @@ export function ExplorerEmbeddings(props: {
   predictionHash: string | undefined;
   reductionHash: string | undefined;
   reductionHashLoading: boolean;
-  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
+  featureHashMap: FeatureHashMap;
   filters: ExplorerFilterState;
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
 }) {
@@ -90,7 +90,7 @@ function ExplorerEmbeddingsRaw(props: {
   predictionHash: string | undefined;
   reductionHash: string | undefined;
   reductionHashLoading: boolean;
-  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
+  featureHashMap: FeatureHashMap;
   filters: ExplorerFilterState;
   setEmbeddingSelection: (bounds: Embedding2DFilter | undefined) => void;
   selection: SelectionType;

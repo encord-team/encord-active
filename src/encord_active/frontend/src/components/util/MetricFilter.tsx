@@ -9,6 +9,7 @@ import {
   ProjectTagEntry,
   QuerySummary,
 } from "../../openapi/api";
+import { FeatureHashMap } from "../Types";
 
 export type FilterState = {
   readonly metricFilters: Readonly<Record<string, readonly number[]>>;
@@ -68,10 +69,7 @@ function getMetricBounds<
 
 function getEnumList(
   enumSummary: EnumSummary,
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >,
+  featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
   tags: ReadonlyArray<ProjectTagEntry>
 ): ReadonlyArray<string> {
@@ -90,10 +88,7 @@ function getEnumList(
 
 function getEnumOptions(
   enumSummary: EnumSummary,
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >,
+  featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
   tags: ReadonlyArray<ProjectTagEntry>
 ): Array<{ label: string; value: string }> {
@@ -160,10 +155,7 @@ function updateKey(
   newKey: string,
   metricsSummary: ProjectDomainSummary,
   metricRanges: QuerySummary["metrics"] | undefined,
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >,
+  featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
   tags: ReadonlyArray<ProjectTagEntry>
 ): (old: FilterState) => FilterState {
@@ -243,10 +235,7 @@ function updateKey(
 function addNewEntry(
   metricsSummary: ProjectDomainSummary,
   metricRanges: QuerySummary["metrics"] | undefined,
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >,
+  featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
   tags: ReadonlyArray<ProjectTagEntry>
 ): (old: FilterState) => FilterState {
@@ -315,10 +304,7 @@ export function MetricFilter(props: {
   setFilters: (arg: FilterState | ((old: FilterState) => FilterState)) => void;
   metricsSummary: ProjectDomainSummary;
   metricRanges: QuerySummary["metrics"] | undefined;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>;
   tags: ReadonlyArray<ProjectTagEntry>;
 }) {

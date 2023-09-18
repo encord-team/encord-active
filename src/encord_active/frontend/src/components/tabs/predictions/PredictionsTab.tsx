@@ -5,16 +5,14 @@ import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceT
 import { Explorer, Props as ExplorerProps } from "../../explorer";
 import { ProjectDomainSummary } from "../../../openapi/api";
 import { useProjectListPredictions } from "../../../hooks/queries/useProjectListPredictions";
+import { FeatureHashMap } from "../../Types";
 
 export function PredictionsTab(
   props: {
     projectHash: string;
     dataMetricsSummary: ProjectDomainSummary;
     annotationMetricsSummary: ProjectDomainSummary;
-    featureHashMap: Record<
-      string,
-      { readonly color: string; readonly name: string }
-    >;
+    featureHashMap: FeatureHashMap;
   } & Pick<ExplorerProps, "remoteProject" | "setSelectedProjectHash">
 ) {
   const {

@@ -5,15 +5,13 @@ import { ChartPredictionMetricVBar } from "../../charts/ChartPredictionMetricVBa
 import { ChartPredictionRecallCurve } from "../../charts/ChartPredictionRecallCurve";
 import { ProjectDomainSummary } from "../../../openapi/api";
 import { useProjectPredictionSummary } from "../../../hooks/queries/useProjectPredictionSummary";
+import { FeatureHashMap } from "../../Types";
 
 export function PredictionSummaryTab(props: {
   metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
 }) {
   const { metricsSummary, predictionHash, projectHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);

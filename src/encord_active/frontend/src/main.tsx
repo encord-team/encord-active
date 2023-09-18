@@ -19,7 +19,6 @@ const queryClient = new QueryClient({
   },
 });
 
-
 function Root() {
   const authContext = useCreateAuthContext();
   const querier = useMemo(
@@ -31,7 +30,9 @@ function Root() {
     <RollbarProvider config={rollbarConfig}>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          {env === "development" && <ReactQueryDevtools position="bottom-right" />}
+          {env === "development" && (
+            <ReactQueryDevtools position="bottom-right" />
+          )}
           <AuthContext.Provider value={authContext}>
             <QuerierContext.Provider value={querier}>
               <App />
@@ -53,5 +54,5 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <RouterProvider router={router} />
-  </React.StrictMode>,
+  </React.StrictMode>
 );

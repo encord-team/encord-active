@@ -6,12 +6,12 @@ type OntologyObjectAttributeBase = {
 
 export type OntologyObjectAttribute =
   | (OntologyObjectAttributeBase & {
-    type: "checklist" | "radio";
-    options: OntologyObjectAttributeOptions[];
-  })
+      type: "checklist" | "radio";
+      options: OntologyObjectAttributeOptions[];
+    })
   | (OntologyObjectAttributeBase & {
-    type: "text";
-  });
+      type: "text";
+    });
 
 export type OntologyObjectAttributeOptions = {
   readonly id: number | string;
@@ -42,3 +42,7 @@ export type ProjectOntology = {
     readonly attributes?: readonly OntologyObjectAttribute[];
   }[];
 };
+
+export type FeatureHashMap = Readonly<
+  Record<string, { readonly color: string; readonly name: string }>
+>;

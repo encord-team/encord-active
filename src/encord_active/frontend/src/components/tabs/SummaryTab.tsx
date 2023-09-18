@@ -12,6 +12,7 @@ import { ChartDistributionBar } from "../charts/ChartDistributionBar";
 import { ChartOutlierSummaryBar } from "../charts/ChartOutlierSummaryBar";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { AnalysisDomain, ProjectDomainSummary } from "../../openapi/api";
+import { FeatureHashMap } from "../Types";
 
 const AnalysisDomainToName: Record<AnalysisDomain, string> = {
   data: "Frames",
@@ -22,10 +23,7 @@ export function SummaryTab(props: {
   projectHash: string;
   metricsSummary: ProjectDomainSummary;
   analysisDomain: AnalysisDomain;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
 }) {
   const { projectHash, metricsSummary, analysisDomain, featureHashMap } = props;
   const summary = useProjectAnalysisSummary(projectHash, analysisDomain);

@@ -19,6 +19,7 @@ import {
   QueryMetricPerformance,
   QueryMetricPerformanceEntry,
 } from "../../openapi/api";
+import { FeatureHashMap } from "../Types";
 
 /**
  * Returns data for the average over the input data.
@@ -67,10 +68,7 @@ export function ChartPredictionMetricPerformanceChart(props: {
   data: QueryMetricPerformance["precision"] | QueryMetricPerformance["fns"];
   selectedClass: ReadonlyArray<string> | undefined;
   classDecomposition: boolean | "auto";
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
   scoreLabel: string;
   showDistributionBar: boolean;
 }) {

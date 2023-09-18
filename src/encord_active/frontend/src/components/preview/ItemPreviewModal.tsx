@@ -8,9 +8,11 @@ import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { AnnotatedImage } from "./AnnotatedImage";
 import { ItemTags } from "../explorer/Tagging";
+import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 
 export function ItemPreviewModal(props: {
   projectHash: string;
+  predictionHash: string | undefined;
   previewItem: string | undefined;
   domain: "annotation" | "data";
   onClose: () => void;
@@ -19,8 +21,15 @@ export function ItemPreviewModal(props: {
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
 }) {
-  const { previewItem, domain, projectHash, onClose, onShowSimilar, editUrl } =
-    props;
+  const {
+    previewItem,
+    domain,
+    projectHash,
+    predictionHash,
+    onClose,
+    onShowSimilar,
+    editUrl,
+  } = props;
   const dataId =
     previewItem === undefined
       ? undefined
@@ -29,9 +38,33 @@ export function ItemPreviewModal(props: {
     domain === "annotation" && previewItem !== undefined
       ? previewItem.split("_")[2]
       : undefined;
-  const { data: preview } = useProjectItem(projectHash, dataId ?? "", {
+  const { data: previewProject } = useProjectItem(projectHash, dataId ?? "", {
     enabled: dataId !== undefined,
   });
+  const { data: previewPrediction } = usePredictionItem(
+    projectHash,
+    predictionHash ?? "",
+    dataId ?? "",
+    {
+      enabled: dataId !== undefined,
+    }
+  );
+  const preview = useMemo(() => {
+    if (predictionHash === undefined) {
+      return previewProject;
+    } else if (
+      previewProject !== undefined &&
+      previewPrediction !== undefined
+    ) {
+      // Set values not set by prediction using values from preview project.
+      return {
+        ...previewProject,
+        ...previewPrediction,
+      };
+    } else {
+      return undefined;
+    }
+  }, [previewProject, previewPrediction, predictionHash]);
   const { data: projectSummary } = useProjectSummary(projectHash);
 
   const metricsList = useMemo(() => {

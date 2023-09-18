@@ -10,6 +10,7 @@ import { AnnotatedImage } from "./AnnotatedImage";
 import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
+import { FeatureHashMap } from "../Types";
 
 export const GalleryCard = memo(GalleryCardRaw);
 
@@ -24,6 +25,7 @@ function GalleryCardRaw(props: {
   onShowSimilar: (itemId: string) => void;
   hideExtraAnnotations: boolean;
   customTags?: ReactNode | undefined;
+  featureHashMap: FeatureHashMap;
 }) {
   const {
     projectHash,
@@ -36,6 +38,7 @@ function GalleryCardRaw(props: {
     onShowSimilar,
     hideExtraAnnotations,
     customTags,
+    featureHashMap,
   } = props;
   // Conditionally extract annotation hash
   const dataId = itemId.split("_").slice(0, 2).join("_");
@@ -105,21 +108,27 @@ function GalleryCardRaw(props: {
     : displayValueData;
 
   // FIXME: const description = "FIXME_DESCRIPTION";
-  const labelObject = useMemo(() => {
+  const labelObject:
+    | undefined
+    | {
+        readonly confidence: number;
+        readonly createdAt: string;
+        readonly createdBy: string;
+        readonly featureHash: string;
+        readonly lastEditedAt: string;
+        readonly lastEditedBy: string;
+        readonly manualAnnotation: boolean;
+        readonly objectHash?: string;
+        readonly classificationHash?: string;
+        readonly name?: string;
+      } = useMemo(() => {
     if (annotationHash === undefined || preview === undefined) {
       return undefined;
     }
-    const objOrClass = preview.objects
-      .concat(preview.classifications)
-      .find(
-        (elem: { objectHash?: string; classificationHash?: string }) =>
-          elem.objectHash === annotationHash ||
-          elem.classificationHash === annotationHash
-      );
-
-    return objOrClass as {
-      readonly objectHash: string;
-      readonly color: string;
+    const objOrClassList = [
+      ...preview.objects,
+      ...preview.classifications,
+    ] as readonly {
       readonly confidence: number;
       readonly createdAt: string;
       readonly createdBy: string;
@@ -127,14 +136,45 @@ function GalleryCardRaw(props: {
       readonly lastEditedAt: string;
       readonly lastEditedBy: string;
       readonly manualAnnotation: boolean;
-      readonly name: string;
-      readonly value: string;
-    };
+      readonly objectHash?: string;
+      readonly classificationHash?: string;
+      readonly name?: string;
+    }[];
+
+    return objOrClassList.find(
+      (elem: { objectHash?: string; classificationHash?: string }) =>
+        elem.objectHash === annotationHash ||
+        elem.classificationHash === annotationHash
+    );
   }, [annotationHash, preview]);
 
   const isLoading = projectItem
     ? isLoadingProject
     : isLoadingProject && isLoadingPrediction;
+
+  const labelObjectName = useMemo(() => {
+    if (labelObject == null || preview == null) {
+      return null;
+    }
+    let { featureHash } = labelObject;
+    const classificationAnswer = preview.classification_answers[
+      labelObject.classificationHash ?? ""
+    ] as {
+      readonly classifications: { readonly featureHash: string }[];
+    };
+    if (classificationAnswer !== undefined) {
+      const { classifications } = classificationAnswer;
+      if (classifications.length > 0) {
+        const { featureHash: choiceFeatureHash } = classifications[0];
+        featureHash = choiceFeatureHash;
+      }
+    }
+    const featureMeta = featureHashMap[featureHash];
+    if (featureMeta == null) {
+      return labelObject?.name ?? null;
+    }
+    return featureMeta.name;
+  }, [featureHashMap, labelObject, preview]);
 
   return (
     <Card
@@ -227,7 +267,9 @@ function GalleryCardRaw(props: {
         <Row>
           <ItemTags
             tags={preview?.tags}
-            annotationHash={labelObject?.objectHash}
+            annotationHash={
+              labelObject?.objectHash ?? labelObject?.classificationHash
+            }
             limit={4}
           />
         </Row>
@@ -236,7 +278,7 @@ function GalleryCardRaw(props: {
         <>
           <Row>
             <VscSymbolClass />
-            {labelObject.name}
+            {labelObjectName}
           </Row>
           <Row>
             <RiUserLine />

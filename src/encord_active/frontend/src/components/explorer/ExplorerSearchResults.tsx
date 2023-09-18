@@ -3,6 +3,7 @@ import { List } from "antd";
 import { useMemo } from "react";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
+import { FeatureHashMap } from "../Types";
 
 const ExplorerSearchLocale = {
   emptyText: "No Results",
@@ -27,6 +28,7 @@ function ExplorerSearchResultsRaw(props: {
   showSimilarItems: (itemId: string) => void;
   selectedItems: ReadonlySet<string>;
   showAnnotations: boolean;
+  featureHashMap: FeatureHashMap;
 }) {
   const {
     projectHash,
@@ -39,6 +41,7 @@ function ExplorerSearchResultsRaw(props: {
     showSimilarItems,
     selectedItems,
     showAnnotations,
+    featureHashMap,
   } = props;
 
   const loading = useMemo(
@@ -70,6 +73,7 @@ function ExplorerSearchResultsRaw(props: {
           onShowSimilar={showSimilarItems}
           selected={selectedItems.has(item)}
           hideExtraAnnotations={showAnnotations}
+          featureHashMap={featureHashMap}
         />
       )}
     />

@@ -4,6 +4,7 @@ import { useDebounce } from "usehooks-ts";
 import { ChartPredictionMetricPerformanceChart } from "../../charts/ChartPredictionMetricPerformanceChart";
 import { ProjectDomainSummary } from "../../../openapi/api";
 import { useProjectPredictionMetricPerformance } from "../../../hooks/queries/useProjectPredictionMetricPerformance";
+import { FeatureHashMap } from "../../Types";
 
 const bucketOptions: { label: number; value: number }[] = [
   {
@@ -24,10 +25,7 @@ export function PredictionsMetricPerformanceTab(props: {
   metricsSummary: ProjectDomainSummary;
   predictionHash: string;
   projectHash: string;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
 }) {
   const { metricsSummary, projectHash, predictionHash, featureHashMap } = props;
   const [iou, setIOU] = useState(0.5);

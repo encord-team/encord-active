@@ -2,12 +2,14 @@ import { List, Modal, Tag } from "antd";
 import { useProjectAnalysisSimilaritySearch } from "../../hooks/queries/useProjectAnalysisSimilaritySearch";
 import { SimilarityResult } from "../../openapi/api";
 import { GalleryCard } from "./GalleryCard";
+import { FeatureHashMap } from "../Types";
 
 export function SimilarityModal(props: {
   projectHash: string;
   analysisDomain: "data" | "annotation";
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
   predictionHash: string | undefined;
+  featureHashMap: FeatureHashMap;
   similarityItem: string | undefined;
   onClose: () => void;
 }) {
@@ -18,6 +20,7 @@ export function SimilarityModal(props: {
     selectedMetric,
     projectHash,
     predictionHash,
+    featureHashMap,
   } = props;
   const { data: similarItems, isLoading } = useProjectAnalysisSimilaritySearch(
     projectHash,
@@ -57,6 +60,7 @@ export function SimilarityModal(props: {
                 <span className="font-bold">{value.similarity.toFixed(5)}</span>
               </Tag>
             }
+            featureHashMap={featureHashMap}
           />
         )}
       />

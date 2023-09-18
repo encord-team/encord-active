@@ -20,16 +20,14 @@ import {
   QuerySummary,
 } from "../../openapi/api";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
+import { FeatureHashMap } from "../Types";
 
 export function ChartDistributionBar(props: {
   metricsSummary: ProjectDomainSummary;
   analysisSummary?: undefined | QuerySummary;
   analysisDomain: AnalysisDomain;
   projectHash: string;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
 }) {
   const {
     projectHash,

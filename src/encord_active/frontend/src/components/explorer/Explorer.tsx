@@ -38,6 +38,7 @@ import {
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
+import { FeatureHashMap } from "../Types";
 
 export type Props = {
   projectHash: string;
@@ -45,9 +46,9 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-  | ((dataHash: string, projectHash: string, frame: number) => string)
-  | undefined;
-  featureHashMap: Parameters<typeof MetricFilter>[0]["featureHashMap"];
+    | ((dataHash: string, projectHash: string, frame: number) => string)
+    | undefined;
+  featureHashMap: FeatureHashMap;
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
 };
@@ -70,7 +71,7 @@ export function Explorer({
   const setPreviewedItem = useCallback(
     (id?: string | undefined) =>
       navigate(id ? `./${id}` : "..", { relative: "path" }),
-    [navigate, projectHash]
+    [navigate]
   );
 
   // Select reduction hash
@@ -317,6 +318,7 @@ export function Explorer({
       />
       <ItemPreviewModal
         projectHash={projectHash}
+        predictionHash={predictionHash}
         previewItem={previewItem}
         domain={selectedMetric.domain}
         onClose={closePreview}
@@ -546,6 +548,7 @@ export function Explorer({
         showSimilarItems={showSimilarItems}
         selectedItems={selectedItems}
         showAnnotations={showAnnotations}
+        featureHashMap={featureHashMap}
       />
     </div>
   );

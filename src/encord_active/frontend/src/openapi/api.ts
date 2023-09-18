@@ -194,6 +194,7 @@ export interface Embedding2DFilter {
 
 export const EmbeddingReductionType = {
   Umap: "umap",
+  Pca: "pca",
 } as const;
 
 export type EmbeddingReductionType =
@@ -755,6 +756,18 @@ export interface ProjectItem {
    * @memberof ProjectItem
    */
   classifications: Array<object>;
+  /**
+   *
+   * @type {{ [key: string]: object | undefined; }}
+   * @memberof ProjectItem
+   */
+  object_answers: { [key: string]: object | undefined };
+  /**
+   *
+   * @type {{ [key: string]: object | undefined; }}
+   * @memberof ProjectItem
+   */
+  classification_answers: { [key: string]: object | undefined };
   /**
    *
    * @type {string}

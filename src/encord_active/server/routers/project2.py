@@ -403,6 +403,8 @@ class ProjectItem(BaseModel):
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
     objects: list[dict]
     classifications: list[dict]
+    object_answers: Dict[str, dict]
+    classification_answers: Dict[str, dict]
     dataset_title: str
     dataset_hash: uuid.UUID
     data_title: str
@@ -495,6 +497,9 @@ def route_project_data_item(
             raise ValueError("Video defined but missing valid frames_per_second")
         timestamp = (float(int(frame)) + 0.5) / float(frames_per_second)
 
+    all_objects = {obj["objectHash"] for obj in du_meta.objects}
+    all_classifications = {cls["classificationHash"] for cls in du_meta.classifications}
+
     return ProjectItem(
         data_metrics={k: _sanitise_nan(getattr(du_analytics, k)) for k in DataMetrics},
         annotation_metrics={
@@ -505,6 +510,8 @@ def route_project_data_item(
         },
         objects=du_meta.objects,
         classifications=du_meta.classifications,
+        object_answers={k: v for k, v in data_meta.object_answers.items() if k in all_objects},
+        classification_answers={k: v for k, v in data_meta.classification_answers.items() if k in all_classifications},
         dataset_title=data_meta.dataset_title,
         dataset_hash=data_meta.dataset_hash,
         data_title=data_meta.data_title,

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
+  FeatureHashMap,
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
   ProjectOntology,
@@ -44,7 +45,7 @@ export function ProjectPage(props: {
     }
   }, [isError, setSelectedProjectHash]);
 
-  const featureHashMap = useMemo(() => {
+  const featureHashMap: FeatureHashMap = useMemo(() => {
     const featureHashMap: Record<
       string,
       { readonly color: string; readonly name: string }

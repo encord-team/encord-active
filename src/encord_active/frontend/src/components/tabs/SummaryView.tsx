@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Tabs } from "antd";
 import { SummaryTab } from "./SummaryTab";
 import { ProjectSummary } from "../../openapi/api";
+import { FeatureHashMap } from "../Types";
 
 export function SummaryView(props: {
   projectHash: string;
   projectSummary: ProjectSummary;
-  featureHashMap: Record<
-    string,
-    { readonly color: string; readonly name: string }
-  >;
+  featureHashMap: FeatureHashMap;
 }) {
   const { projectSummary, projectHash, featureHashMap } = props;
   const [currentTab, setCurrentTab] = useState<string>("0");
