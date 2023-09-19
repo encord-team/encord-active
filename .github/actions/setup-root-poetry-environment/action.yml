@@ -8,7 +8,7 @@ inputs:
     required: false
   poetry:
     description: "Poetry version to use"
-    default: 1.5.0
+    default: 1.6.1
     required: false
 
 runs:
