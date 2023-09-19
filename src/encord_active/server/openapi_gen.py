@@ -15,7 +15,7 @@ def generate_openapi_fe_components() -> None:
     src_dir = Path(__file__).parent.parent.resolve()
     fe_dir = src_dir / "frontend"
     openapi_json_path = fe_dir / "openapi.json"
-    app = get_app(MagicMock(), MagicMock())
+    app = get_app(MagicMock(), MagicMock(), MagicMock())
     # Output openapi
     with open(openapi_json_path, "w", encoding="UTF-8") as f:
         json.dump(

@@ -6,8 +6,6 @@ from typing import Optional
 from cachetools import LRUCache, cached
 from pydantic import BaseSettings
 
-from encord_active.cli.utils.decorators import is_project
-
 
 class AvailableSandboxProjects(str, Enum):
     ALL = "all"
@@ -38,4 +36,4 @@ class Settings(BaseSettings):
 @cached(cache=LRUCache(maxsize=10))
 def get_settings():
     path = Path(environ.get("SERVER_START_PATH", "/data"))
-    return Settings(SERVER_START_PATH=path.parent if is_project(path) else path)
+    return Settings(SERVER_START_PATH=path)

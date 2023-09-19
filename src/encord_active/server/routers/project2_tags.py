@@ -12,12 +12,16 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
-from encord_active.lib.db.helpers.tags import GroupedTags
 from encord_active.server.dependencies import dep_engine, dep_engine_readonly
 
 router = APIRouter(
     prefix="/{project_hash}/tags",
 )
+
+
+class GroupedTags(BaseModel):
+    data: List[str]
+    label: List[str]
 
 
 class ProjectTagEntry(BaseModel):
@@ -50,7 +54,7 @@ def route_tagged_items(
         ).all()
         for du_hash, frame, tag in data_tags:
             key = f"{du_hash}_{frame}"
-            identifier_tags.setdefault(key, GroupedTags(data=[], label=[]))["data"].append(tag)
+            identifier_tags.setdefault(key, GroupedTags(data=[], label=[])).data.append(tag)
         label_tags = sess.exec(
             select(
                 ProjectTaggedAnnotation.du_hash,
@@ -70,9 +74,9 @@ def route_tagged_items(
             data_key = f"{du_hash}_{frame}"
             label_key = f"{data_key}_{annotation_hash}"
             du_tags = identifier_tags.setdefault(data_key, GroupedTags(data=[], label=[]))
-            if tag not in du_tags["label"]:
-                du_tags["label"].append(tag)
-            identifier_tags.setdefault(label_key, GroupedTags(data=du_tags["data"], label=[]))["label"].append(tag)
+            if tag not in du_tags.label:
+                du_tags.label.append(tag)
+            identifier_tags.setdefault(label_key, GroupedTags(data=du_tags.data, label=[])).label.append(tag)
     return identifier_tags
 
 
@@ -106,8 +110,8 @@ def route_tag_items(project_hash: uuid.UUID, payload: List[ItemTags], engine: En
         data_exists = set()
         label_exists = set()
         for item in payload:
-            data_tag_list = item.grouped_tags["data"]
-            annotation_tag_list = item.grouped_tags["label"]
+            data_tag_list = item.grouped_tags.data
+            annotation_tag_list = item.grouped_tags.label
             du_hash_str, frame_str, *annotation_hashes = item.id.split("_")
             du_hash = uuid.UUID(du_hash_str)
             frame = int(frame_str)

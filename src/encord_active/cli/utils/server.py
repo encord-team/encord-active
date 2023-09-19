@@ -45,9 +45,7 @@ def launch_server_app(target: Path, port: int):
     else:
         rich.print("[yellow]Bear with us, this might take a short while...")
 
-    # if did_schema_change():
-    #     generate_prisma_client()
-    # ensure_safe_project(target)
+    # Launch server
     data_dir = target.expanduser().absolute()
     rich.print(f"[green] Server starting on [blue]http://localhost:{port}[/blue]")
     start(data_dir, port=port, reload=app_config.is_dev)

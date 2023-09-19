@@ -9,20 +9,21 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.engine import Engine
 from starlette.responses import FileResponse
 
-from encord_active.lib.project.sandbox_projects.sandbox_projects import IMAGES_PATH
 from encord_active.server.dependencies import (
     dep_engine,
     dep_engine_readonly,
     dep_oauth2_scheme,
+    dep_settings,
     verify_premium,
     verify_token,
 )
 
+from ..imports.sandbox.sandbox_projects import IMAGES_PATH
 from .routers import project2
-from .settings import Env, get_settings
+from .settings import Env, Settings
 
 
-def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
+def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer, settings: Settings) -> FastAPI:
     app = FastAPI()
 
     app.include_router(project2.router, dependencies=[Depends(verify_token)], prefix="/api")
@@ -41,22 +42,23 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
         dep_engine: lambda: engine,
         dep_engine_readonly: lambda: readonly_engine,
         dep_oauth2_scheme: lambda: oauth2_scheme,
+        dep_settings: lambda: settings,
     }
 
     origins = [
-        get_settings().ALLOWED_ORIGIN,
+        settings.ALLOWED_ORIGIN,
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:5173/",
     ]
 
-    is_dev = get_settings().ENV == Env.DEVELOPMENT
+    is_dev = settings.ENV == Env.DEVELOPMENT
 
     if is_dev:
         logger = logging.getLogger(__name__)
         logger.info("Make sure you run the frontend separately.")
     else:
-        frontend_build_path = Path(__file__).parent.parent / "frontend" / "dist" / get_settings().ENV.value
+        frontend_build_path = Path(__file__).parent.parent / "frontend" / "dist" / settings.ENV.value
 
         if not frontend_build_path.exists() or not (frontend_build_path / "assets").exists():
             logger = logging.getLogger(__name__)
@@ -90,12 +92,12 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer) -> FastAPI:
     @app.on_event("startup")
     async def on_startup() -> None:
         if not is_dev:
-            webbrowser.open(get_settings().API_URL, new=0, autoraise=True)
+            webbrowser.open(settings.API_URL, new=0, autoraise=True)
 
     @app.get("/premium_available")
     async def premium_available() -> bool:
         try:
-            await verify_premium()
+            await verify_premium(settings)
             return True
         except:
             return False

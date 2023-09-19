@@ -3,9 +3,10 @@ import uuid
 from pathlib import Path
 from typing import Union
 
-import requests
-
-from encord_active.lib.common.data_utils import file_path_to_url
+from encord_active.db.local_data import (
+    download_remote_to_file,
+    file_path_to_database_uri,
+)
 
 
 def get_local_file(database_dir: Path) -> Path:
@@ -18,15 +19,8 @@ def get_local_file(database_dir: Path) -> Path:
 
 
 def download_to_local_file(database_dir: Path, local_file: Path, url: str) -> str:
-    with open(local_file, "xb") as file:
-        r = requests.get(url, stream=True)
-        if r.status_code != 200:
-            raise ConnectionError(f"Something happened, couldn't download file from: {url}")
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:  # filter out keep-alive new chunks
-                file.write(chunk)
-        file.flush()
-    return file_path_to_url(local_file, database_dir)
+    download_remote_to_file(url, local_file)
+    return file_path_to_database_uri(local_file, database_dir)
 
 
 def get_data_uri(
@@ -39,12 +33,12 @@ def get_data_uri(
     if isinstance(url_or_path, Path):
         if store_data_locally and store_symlinks:
             local_file.symlink_to(url_or_path)
-            return file_path_to_url(local_file, database_dir)
+            return file_path_to_database_uri(local_file, database_dir)
         elif store_data_locally:
             shutil.copyfile(url_or_path, local_file, follow_symlinks=False)
-            return file_path_to_url(local_file, database_dir)
+            return file_path_to_database_uri(local_file, database_dir)
         else:
-            return file_path_to_url(url_or_path, database_dir)
+            return file_path_to_database_uri(url_or_path, database_dir)
     else:
         if store_data_locally:
             return download_to_local_file(database_dir=database_dir, local_file=local_file, url=url_or_path)

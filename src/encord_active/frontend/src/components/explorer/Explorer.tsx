@@ -68,10 +68,16 @@ export function Explorer({
 
   const navigate = useNavigate();
   const { previewItem } = useParams<{ previewItem?: string }>();
+  const navigateBase =
+    predictionHash === undefined
+      ? `/projects/${projectHash}/explorer`
+      : `/projects/${projectHash}/predictions`;
   const setPreviewedItem = useCallback(
     (id?: string | undefined) =>
-      navigate(id ? `./${id}` : "..", { relative: "path" }),
-    [navigate]
+      id === undefined
+        ? navigate(navigateBase)
+        : navigate(`${navigateBase}/${encodeURIComponent(id)}`),
+    [navigate, navigateBase]
   );
 
   // Select reduction hash

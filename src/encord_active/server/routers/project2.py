@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 from starlette.responses import FileResponse
 
 from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
+from encord_active.db.local_data import db_uri_to_local_file_path
 from encord_active.db.metrics import (
     AnnotationMetrics,
     DataMetrics,
@@ -38,15 +39,13 @@ from encord_active.db.queries.tags import (
     select_frame_data_tags,
     select_frame_label_tags,
 )
-from encord_active.lib.common.data_utils import url_to_file_path
-from encord_active.lib.project.sandbox_projects.sandbox_projects import (
-    available_prebuilt_projects,
-)
+from encord_active.imports.sandbox.sandbox_projects import available_sandbox_projects
 from encord_active.server.dependencies import (
     DataItem,
     dep_database_dir,
     dep_engine,
     dep_engine_readonly,
+    dep_settings,
     dep_ssh_key,
     parse_data_item,
 )
@@ -57,7 +56,7 @@ from encord_active.server.routers import (
     project2_tags,
 )
 from encord_active.server.routers.queries.metric_query import sql_count
-from encord_active.server.settings import get_settings
+from encord_active.server.settings import Settings
 
 router = APIRouter(
     prefix="/projects_v2",
@@ -93,7 +92,9 @@ class ProjectSearchResult(BaseModel):
 
 
 @router.get("")
-def route_list_projects(engine: Engine = Depends(dep_engine_readonly)) -> ProjectSearchResult:
+def route_list_projects(
+    engine: Engine = Depends(dep_engine_readonly), settings: Settings = Depends(dep_settings)
+) -> ProjectSearchResult:
     # Load existing projects
     projects: List[ProjectSearchEntry] = []
     project_dict: Dict[uuid.UUID, ProjectSearchEntry] = {}
@@ -110,20 +111,20 @@ def route_list_projects(engine: Engine = Depends(dep_engine_readonly)) -> Projec
 
     # Load sandbox projects
     sandbox_projects: List[ProjectSandboxEntry] = []
-    for name, data in available_prebuilt_projects(get_settings().AVAILABLE_SANDBOX_PROJECTS).items():
-        project_hash = uuid.UUID(data["hash"])
+    for name, data in available_sandbox_projects(settings.AVAILABLE_SANDBOX_PROJECTS).items():
+        project_hash = data.hash
         if project_hash in project_dict:
             project_dict[project_hash].sandbox = True
             continue
         sandbox_projects.append(
             ProjectSandboxEntry(
                 project_hash=project_hash,
-                title=name,
+                title=data.name,
                 description="",
-                sandbox_url=f"/ea-sandbox-static/{data['image_filename']}",
-                data_count=data["stats"]["dataUnits"],
-                annotation_count=data["stats"]["labels"],
-                class_count=data["stats"]["classes"],
+                sandbox_url=f"/ea-sandbox-static/{data.image_filename}",
+                data_count=data.stats.data_hash_count,
+                annotation_count=data.stats.annotation_count,
+                class_count=data.stats.class_count,
             )
         )
     sandbox_projects.sort(key=lambda s: s.title)
@@ -357,7 +358,7 @@ def route_project_raw_file(
         )
         data_uri = sess.exec(query).first()
         if data_uri is not None:
-            url_path = url_to_file_path(data_uri, database_dir)
+            url_path = db_uri_to_local_file_path(data_uri, database_dir)
             if url_path is not None:
                 # FIXME: add not-modified case response (see StaticFiles)
                 return FileResponse(url_path)
@@ -479,7 +480,7 @@ def route_project_data_item(
     uri_is_video = du_meta.data_uri_is_video
     frames_per_second = data_meta.frames_per_second
     if uri is not None:
-        url_path = url_to_file_path(uri, database_dir)
+        url_path = db_uri_to_local_file_path(uri, database_dir)
         if url_path is not None:
             uri = f"/api/projects_v2/{project_hash}/files/{du_hash}/{frame}"
     elif project_remote:

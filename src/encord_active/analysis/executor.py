@@ -46,9 +46,9 @@ from encord_active.db.models import (
     ProjectPredictionAnalyticsExtra,
     ProjectPredictionAnalyticsFalseNegatives,
 )
-from encord_active.lib.common.data_utils import download_image, url_to_file_path
 
 from ..db.enums import AnnotationType, DataType
+from ..db.local_data import db_uri_to_local_file_path, open_database_uri_image
 from ..db.metrics import MetricType
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
 from .embedding import (
@@ -644,7 +644,7 @@ class SimpleExecutor(Executor):
         )
         if isinstance(img_url_or_path, Path):
             return Image.open(img_url_or_path)
-        return download_image(img_url_or_path, database_dir, cache=False)
+        return open_database_uri_image(img_url_or_path, database_dir)
 
     def _get_url_or_path(
         self,
@@ -657,7 +657,7 @@ class SimpleExecutor(Executor):
         du_hash: uuid.UUID,
     ) -> Union[str, Path]:
         if uri is not None:
-            url_path = url_to_file_path(uri, database_dir)
+            url_path = db_uri_to_local_file_path(uri, database_dir)
             if url_path is not None:
                 return url_path
             else:

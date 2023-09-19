@@ -13,7 +13,7 @@ from encord_active.cli.common import (
     select_project_hash_from_name,
 )
 from encord_active.cli.config import app_config
-from encord_active.lib.common.data_utils import url_to_file_path
+from encord_active.db.local_data import db_uri_to_local_file_path
 
 print_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -129,7 +129,7 @@ def print_data_mapping(
             continue
         local_files_seen.add(local_file.data_uri)
         map_url_str = local_file.data_uri
-        opt_path = url_to_file_path(local_file.data_uri, database_dir)
+        opt_path = db_uri_to_local_file_path(local_file.data_uri, database_dir)
         if opt_path is not None:
             if opt_path.is_relative_to(database_dir):
                 map_url_str = opt_path.relative_to(database_dir).as_posix()

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
+from encord_active.db.local_data import db_uri_to_local_file_path
 from encord_active.db.models import (
     Project,
     ProjectAnnotationAnalytics,
@@ -38,7 +39,6 @@ from encord_active.db.models import (
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
 )
-from encord_active.lib.common.data_utils import url_to_file_path
 
 
 class WholeProjectModelV1(BaseModel):
@@ -176,7 +176,7 @@ def serialize_whole_project_state(engine: Engine, database_dir: Path, project_ha
     # Actually save & generate the serialized state
     folder.mkdir(parents=True, exist_ok=False)
     for old_uri, new_uuid in local_file_map.items():
-        old_uri_path = url_to_file_path(old_uri, database_dir)
+        old_uri_path = db_uri_to_local_file_path(old_uri, database_dir)
         if old_uri_path is None:
             raise ValueError(f"Corrupt uri path: {old_uri_path}")
         shutil.copyfile(old_uri_path, folder / str(new_uuid))

@@ -6,7 +6,8 @@ from encord_active.server.settings import get_settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
-engine_path = get_settings().SERVER_START_PATH / "encord-active.sqlite"
+settings = get_settings()
+engine_path = settings.SERVER_START_PATH / "encord-active.sqlite"
 engine = get_engine(engine_path, concurrent=True)
 
-app = get_app(engine, oauth2_scheme)
+app = get_app(engine, oauth2_scheme, settings)

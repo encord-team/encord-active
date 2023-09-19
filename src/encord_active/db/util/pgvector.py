@@ -97,6 +97,8 @@ class PGVector(TypeDecorator):
             else:
                 result_value = result_processor(value)
                 np_value = np.frombuffer(result_value, dtype=np.float64)  # type: ignore
+            if np_value.ndim != 1 or np_value.shape != (self.dim,):
+                raise ValueError(f"pgvector with wrong dimension: {np_value.shape}")
             return np_value.tobytes(order="C")
 
         return process

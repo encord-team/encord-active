@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 import encord
-import requests
 from encord import Dataset, EncordUserClient
 from encord.constants.enums import DataType
 from encord.http.constants import RequestsSettings
@@ -28,6 +27,10 @@ from tqdm import tqdm
 
 from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
+from encord_active.db.local_data import (
+    db_uri_to_local_file_path,
+    download_remote_to_file,
+)
 from encord_active.db.models import (
     Project,
     ProjectAnnotationAnalytics,
@@ -41,7 +44,6 @@ from encord_active.db.models import (
     ProjectDataUnitMetadata,
     ProjectEmbeddingReduction,
 )
-from encord_active.lib.common.data_utils import url_to_file_path
 from encord_active.server.dependencies import dep_database_dir, dep_engine, dep_ssh_key
 from encord_active.server.routers.queries import search_query
 from encord_active.server.routers.queries.domain_query import TABLES_DATA
@@ -373,19 +375,12 @@ def _file_path_for_upload(
 ) -> Path:
     if data_uri is None:
         raise RuntimeError("Attempting to upload remote file to encord, this is not supported")
-    opt_path = url_to_file_path(data_uri, database_dir)
+    opt_path = db_uri_to_local_file_path(data_uri, database_dir)
     if opt_path is not None:
         return opt_path
     else:
         temp_path = tempdir / str(uuid.uuid4())
-        with open(temp_path, "xb") as file:
-            r = requests.get(data_uri, stream=True)
-            if r.status_code != 200:
-                raise ConnectionError(f"Something happened, couldn't download file from: {data_uri}")
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    file.write(chunk)
-            file.flush()
+        download_remote_to_file(data_uri, temp_path)
         return temp_path
 
 

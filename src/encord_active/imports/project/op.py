@@ -86,7 +86,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
     reduction = create_reduction(
         EmbeddingReductionType.UMAP,
         train_samples=[
-            np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in reduction_train_samples
+            np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in reduction_train_samples
         ],
     )
     project_reduction = serialize_reduction(
@@ -96,7 +96,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         project_hash=project_hash,
     )
     reduced_data_clip_raw = apply_embedding_reduction(
-        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in data_analytics_extra], reduction
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in data_analytics_extra], reduction
     )
     reduced_data_clip = [
         ProjectDataAnalyticsReduced(
@@ -110,7 +110,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         for (extra, (x, y)) in zip(data_analytics_extra, reduced_data_clip_raw)
     ]
     reduced_annotation_clip_raw = apply_embedding_reduction(
-        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float32) for sample in annotation_analytics_extra],
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in annotation_analytics_extra],
         reduction,
     )
     reduced_annotation_clip = [

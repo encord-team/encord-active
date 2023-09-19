@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.future.engine import OptionEngine
 
 from ..cli.app_config import app_config
-from .settings import Env, get_settings
+from .settings import Env, Settings
 
 
 class DataItem(BaseModel):
@@ -42,10 +42,10 @@ def parse_data_item(data_item: str) -> DataItem:
 
 def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
     segments = item.split("_")
-    if len(segments) > 3 or len(segments) < 2:
-        raise ValueError(f"Item expects 2 segments: {item}")
-    du_hash, frame = segments[:2]
-    annotation_hash = None if len(segments) == 2 else segments[2]
+    if len(segments) < 2:
+        raise ValueError(f"Item expects at least 2 segments: {item}")
+    du_hash, frame, *annotation_hash_segments = segments[:2]
+    annotation_hash = None if len(annotation_hash_segments) == 0 else "_".join(annotation_hash_segments)
     if annotation_hash is not None and len(annotation_hash) != 8:
         raise ValueError(f"Item annotation_hash should be exactly 8 characters: {annotation_hash}")
     return DataOrAnnotateItem(du_hash=uuid.UUID(du_hash), frame=int(frame), annotation_hash=annotation_hash)
@@ -63,6 +63,10 @@ def dep_oauth2_scheme() -> OAuth2PasswordBearer:
     raise RuntimeError("Missing OAuth2PasswordBearer")
 
 
+def dep_settings() -> Settings:
+    raise RuntimeError("Missing Settings")
+
+
 def dep_ssh_key() -> str:
     opt_ssh_key = app_config.get_ssh_key()
     if opt_ssh_key is None:
@@ -70,13 +74,13 @@ def dep_ssh_key() -> str:
     return opt_ssh_key.read_text("utf-8")
 
 
-def dep_database_dir() -> Path:
-    settings = get_settings()
+def dep_database_dir(settings: Annotated[Settings, Depends(dep_settings)]) -> Path:
     return settings.SERVER_START_PATH.expanduser().resolve()
 
 
-async def verify_token(token: Annotated[str, Depends(dep_oauth2_scheme)]) -> None:
-    settings = get_settings()
+async def verify_token(
+    token: Annotated[str, Depends(dep_oauth2_scheme)], settings: Annotated[Settings, Depends(dep_settings)]
+) -> None:
     if settings.JWT_SECRET is None:
         return
 
@@ -93,6 +97,6 @@ async def verify_token(token: Annotated[str, Depends(dep_oauth2_scheme)]) -> Non
         raise _http_exception(detail="Cannot access deployment")
 
 
-async def verify_premium():
-    if not get_settings().ENV != Env.PACKAGED:
+async def verify_premium(settings: Annotated[Settings, Depends(dep_settings)]):
+    if not settings.ENV != Env.PACKAGED:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Search is not enabled")

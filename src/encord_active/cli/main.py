@@ -1,5 +1,5 @@
 import json
-from itertools import chain
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -22,7 +22,6 @@ load_dotenv()
 
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
 import encord_active.db.models as __fixme_debugging
-import encord_active.lib.db  # pylint: disable=unused-import
 from encord_active.cli.app_config import APP_NAME, app_config
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
@@ -92,30 +91,44 @@ def download(
     * If the argument --project-name is not provided, a list of available sandbox projects will be displayed, allowing you to select one from the menu.
     """
     from InquirerPy import inquirer as i
+    from sqlalchemy.sql.operators import in_op
+    from sqlmodel import Session, select
 
-    from encord_active.lib.project.sandbox_projects import (
-        available_prebuilt_projects,
+    from encord_active.db.models import get_engine
+    from encord_active.db.models.project import Project
+    from encord_active.imports.sandbox.sandbox_projects import (
+        available_sandbox_projects,
+        fetch_prebuild_project,
         fetch_prebuilt_project_size,
     )
 
-    # FIXME: re-implement as sql scripts that can be executed w/ (project_hash, prediction_hash).
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
 
-    if project_name is not None and project_name not in available_prebuilt_projects():
+    all_projects = available_sandbox_projects()
+    all_project_names = {p.name: p.hash for p in all_projects.values()}
+    all_project_hashes = list(all_projects.keys())
+    if project_name is not None and project_name not in all_project_names:
         rich.print("No such project in prebuilt projects.")
         raise typer.Abort()
+    project_hash = None if project_name is None else all_project_names[project_name]
 
-    if not project_name:
+    with Session(engine) as sess:
+        downloaded_project_hashes = set(
+            sess.exec(select(Project.project_hash).where(in_op(Project.project_hash, all_project_hashes))).fetchall()
+        )
+
+    if project_hash is None:
         rich.print("Loading prebuilt projects ...")
         project_names_with_storage = []
-        downloaded_project_hashes: Set[str] = set()  # FIXME: calculate this value
-        for prebuilt_project_name, data in available_prebuilt_projects().items():
-            if data["hash"] in downloaded_project_hashes:
+        project_names_to_hash_map = {}
+        for data in all_projects.values():
+            if data.hash in downloaded_project_hashes:
                 continue
-            project_size = fetch_prebuilt_project_size(prebuilt_project_name)
-            modified_project_name = prebuilt_project_name + (
-                f" ({project_size} MB)" if project_size is not None else ""
-            )
+            project_size = fetch_prebuilt_project_size(data.hash)
+            modified_project_name = data.name + (f" ({project_size} MB)" if project_size is not None else "")
             project_names_with_storage.append(modified_project_name)
+            project_names_to_hash_map[modified_project_name] = data.hash
 
         if not project_names_with_storage:
             rich.print("[green]Nothing to download, current working directory contains all sandbox projects.")
@@ -125,12 +138,14 @@ def download(
         if not answer:
             rich.print("No project was selected.")
             raise typer.Abort()
-        project_name = answer.split(" ", maxsplit=1)[0]
+        project_hash = project_names_to_hash_map[answer]
 
-    raise ValueError("Project path not known")
-
-    # create project folder
-    # success_with_vizualise_command("NULL", "Successfully downloaded sandbox dataset. ")
+    fetch_prebuild_project(
+        project_hash=project_hash,
+        engine=engine,
+        database_dir=database_dir,
+    )
+    success_with_vizualise_command(database_dir, "Successfully downloaded sandbox dataset. ")
 
 
 @cli.command(
@@ -445,11 +460,18 @@ def quickstart(
     """
     [green bold]Start[/green bold] Encord Active straight away 🏃💨
     """
-    # from encord_active.cli.utils.server import launch_server_app
-    # project_name = "quickstart"
-    raise ValueError("IMPLEMENT THIS FUNCTION")
-    # FIXME: download quickstart via new 'pre-built' project.
-    # launch_server_app(database_dir, port)
+    from encord_active.cli.utils.server import launch_server_app
+    from encord_active.db.models import get_engine
+    from encord_active.imports.sandbox.sandbox_projects import fetch_prebuild_project
+
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    fetch_prebuild_project(
+        project_hash=uuid.UUID("d6423838-f60e-41d9-b2ca-715aa2edef9c"),
+        engine=engine,
+        database_dir=database_dir,
+    )
+    launch_server_app(database_dir, port)
 
 
 @cli.command(rich_help_panel="Resources")

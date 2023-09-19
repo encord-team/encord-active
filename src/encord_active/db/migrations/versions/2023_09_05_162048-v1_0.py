@@ -1335,10 +1335,30 @@ def _transform_annotation_type(value: str) -> int:
     return _annotation_type_migrate_mapping[value]
 
 
+def _transform_embedding_clip(value: Optional[bytes]) -> Optional[bytes]:
+    if value is None:
+        return None
+    np_array = np.frombuffer(value, dtype=np.float16)
+    if tuple(np_array.shape) != (512,):
+        raise ValueError(f"Invalid embedding clip: {tuple(np_array.shape)}")
+    return np_array.astype(dtype=np.float64).tobytes(order="C")
+
+
+def _transform_embedding_hu(value: Optional[bytes]) -> Optional[bytes]:
+    if value is None:
+        return None
+    np_array = np.frombuffer(value, dtype=np.float16)
+    if tuple(np_array.shape) != (7,):
+        raise ValueError(f"Invalid embedding hu: {tuple(np_array.shape)}")
+    return np_array.astype(dtype=np.float64).tobytes(order="C")
+
+
 TransformObjectHash = ("annotation_hash", _transform_char8)
 TransformFeatureHash = (None, _transform_char8)
 TransformClampNormal = (None, _transform_clamp_normal)
 TransformAnnotationType = (None, _transform_annotation_type)
+TransformEmbeddingClip = (None, _transform_embedding_clip)
+TransformEmbeddingHu = (None, _transform_embedding_hu)
 
 
 def _sqlite_insert(table: str, values: list[dict], batch: int = 100) -> None:
@@ -1553,7 +1573,11 @@ def migrate_sqlite_database_to_new_schema():
     _sqlite_migrate(
         "active_project_analytics_annotation_extra",
         "project_analytics_annotation_extra",
-        transform={"object_hash": TransformObjectHash},
+        transform={
+            "object_hash": TransformObjectHash,
+            "embedding_clip": TransformEmbeddingClip,
+            "embedding_hu": TransformEmbeddingHu,
+        },
     )
     _sqlite_migrate(
         "active_project_analytics_annotation_reduced",
@@ -1576,7 +1600,12 @@ def migrate_sqlite_database_to_new_schema():
         },
         mutate=_migrate_populate_data_type,
     )
-    _sqlite_migrate("active_project_analytics_data_extra", "project_analytics_data_extra", drop={"embedding_hu"})
+    _sqlite_migrate(
+        "active_project_analytics_data_extra",
+        "project_analytics_data_extra",
+        drop={"embedding_hu"},
+        transform={"embedding_clip": TransformEmbeddingClip},
+    )
     _sqlite_migrate("active_project_analytics_data_reduced", "project_analytics_data_reduced")
 
     _sqlite_migrate("active_project_tags", "project_tags")
@@ -1799,6 +1828,7 @@ def migrate_sqlite_database_to_new_schema():
         "prediction_analytics_extra",
         transform={
             "object_hash": TransformObjectHash,
+            "embedding_clip": TransformEmbeddingClip,
         },
         drop={"annotation_bytes"},
         mutate=load_prediction_to_project_hash,
