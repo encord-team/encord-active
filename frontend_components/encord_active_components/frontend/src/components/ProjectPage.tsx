@@ -143,34 +143,34 @@ export function ProjectPage(props: {
             </ApiContext.Provider>
           ),
         },
-        {
-          label: "Predictions",
-          key: "3",
-          children: (
-            <ApiContext.Provider value={api}>
-              <PredictionsTab
-                projectHash={projectHash}
-                queryAPI={queryAPI}
-                metricsSummary={projectSummary.annotations}
-                featureHashMap={featureHashMap}
-                setSelectedProjectHash={setSelectedProject}
-                remoteProject={remoteProject}
-              />
-            </ApiContext.Provider>
-          ),
-        },
-        {
-          label: "Project Comparison",
-          key: "4",
-          children: (
-            <ProjectComparisonTab
-              projectHash={projectHash}
-              queryAPI={queryAPI}
-              dataMetricsSummary={projectSummary.data}
-              annotationMetricsSummary={projectSummary.annotations}
-            />
-          ),
-        },
+        /* { */
+        /*   label: "Predictions", */
+        /*   key: "3", */
+        /*   children: ( */
+        /*     <ApiContext.Provider value={api}> */
+        /*       <PredictionsTab */
+        /*         projectHash={projectHash} */
+        /*         queryAPI={queryAPI} */
+        /*         metricsSummary={projectSummary.annotations} */
+        /*         featureHashMap={featureHashMap} */
+        /*         setSelectedProjectHash={setSelectedProject} */
+        /*         remoteProject={remoteProject} */
+        /*       /> */
+        /*     </ApiContext.Provider> */
+        /*   ), */
+        /* }, */
+        /* { */
+        /*   label: "Project Comparison", */
+        /*   key: "4", */
+        /*   children: ( */
+        /*     <ProjectComparisonTab */
+        /*       projectHash={projectHash} */
+        /*       queryAPI={queryAPI} */
+        /*       dataMetricsSummary={projectSummary.data} */
+        /*       annotationMetricsSummary={projectSummary.annotations} */
+        /*     /> */
+        /*   ), */
+        /* }, */
       ]}
       activeKey={activeTab}
       onChange={setActiveTab}
