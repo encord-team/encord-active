@@ -1702,9 +1702,9 @@ def migrate_sqlite_database_to_new_schema():
                     "classificationHash": annotation_hash_str,
                     "manualAnnotation": False,
                     "lastEditedBy": "prediction-import@encord.com",
-                    "lastEditedAt": migrate_now,
+                    "lastEditedAt": str(migrate_now),
                     "createdBy": "prediction-import@encord.com",
-                    "createdAt": migrate_now,
+                    "createdAt": str(migrate_now),
                 }
             )
         else:
@@ -1752,9 +1752,9 @@ def migrate_sqlite_database_to_new_schema():
                     "shape": predict_shape,
                     "manualAnnotation": False,
                     "lastEditedBy": "prediction-import@encord.com",
-                    "lastEditedAt": migrate_now,
+                    "lastEditedAt": str(migrate_now),
                     "createdBy": "prediction-import@encord.com",
-                    "createdAt": migrate_now,
+                    "createdAt": str(migrate_now),
                     ("boundingBox" if predict_shape == "bounding_box" else predict_shape): predict_format,
                 }
             )
