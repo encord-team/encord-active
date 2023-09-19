@@ -1442,14 +1442,12 @@ def migrate_sqlite_database_to_new_schema():
 
     ontology_feature_hash_to_answers_lookup: Dict[Tuple[str, str], Tuple[str, dict]] = {}
 
-    def _ontology_option(opt: dict, project_hash: str, parent_feature: str, parent_color: str) -> None:
+    def _ontology_option(
+        opt: dict, project_hash: str, parent_feature: str, attrib_feature: str, parent_color: str
+    ) -> None:
         ontology_feature_hash_to_color_lookup[project_hash, opt["featureNodeHash"]] = parent_color
         answers = {
-            "classifications": [
-                {
-                    "featureHash": opt["featureNodeHash"],
-                }
-            ]
+            "classifications": [{"featureHash": attrib_feature, "answers": [{"featureHash": opt["featureNodeHash"]}]}]
         }
         ontology_feature_hash_to_answers_lookup[project_hash, opt["featureNodeHash"]] = (parent_feature, answers)
 
@@ -1458,7 +1456,7 @@ def migrate_sqlite_database_to_new_schema():
         if attrib["type"] == "radio":
             # Only support ontology type for prediction re-construction.
             for opt in attrib["options"]:
-                _ontology_option(opt, project_hash, parent_feature, parent_color)
+                _ontology_option(opt, project_hash, parent_feature, attrib["featureNodeHash"], parent_color)
 
     def _mutate_store_ontology_metadata(value: dict) -> None:
         ontology_dict = json.loads(value["ontology"])
