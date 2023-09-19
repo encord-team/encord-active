@@ -163,13 +163,19 @@ function GalleryCardRaw(props: {
     const classificationAnswer = preview.classification_answers[
       labelObject.classificationHash ?? ""
     ] as {
-      readonly classifications: { readonly featureHash: string }[];
+      readonly classifications?: {
+        readonly featureHash: string;
+        readonly answers?: readonly { readonly featureHash: string }[];
+      }[];
     };
     if (classificationAnswer !== undefined) {
       const { classifications } = classificationAnswer;
-      if (classifications.length > 0) {
-        const { featureHash: choiceFeatureHash } = classifications[0];
-        featureHash = choiceFeatureHash;
+      if (classifications !== undefined && classifications.length > 0) {
+        const { answers } = classifications[0];
+        if (answers !== undefined && answers.length > 0) {
+          const { featureHash: classificationFeatureHash } = answers[0];
+          featureHash = classificationFeatureHash;
+        }
       }
     }
     const featureMeta = featureHashMap[featureHash];
