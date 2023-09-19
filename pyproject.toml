@@ -33,9 +33,19 @@ keywords = [
 readme = "README.md"
 repository = "https://github.com/encord-team/encord-active"
 
-include = ['.env', "src/encord_active/frontend/dist/**/*"]
+include = [".env", "src/encord_active/frontend/dist/**/*"]
 
-exclude = ['src/encord_active/frontend/**/*']
+exclude = [
+  "src/encord_active/frontend/*.json",
+  "src/encord_active/frontend/.*",
+  "src/encord_active/frontend/*.html",
+  "src/encord_active/frontend/*.ts",
+  "src/encord_active/frontend/*.cjs",
+  "src/encord_active/frontend/assets/**/*",
+  "src/encord_active/frontend/public/**/*",
+  "src/encord_active/frontend/src/**/*",
+  "src/encord_active/frontend/node_modules/**/*"
+]
 
 packages = [{ include = "encord_active", from = "src" }]
 
