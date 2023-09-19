@@ -44,7 +44,7 @@ def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
     segments = item.split("_")
     if len(segments) < 2:
         raise ValueError(f"Item expects at least 2 segments: {item}")
-    du_hash, frame, *annotation_hash_segments = segments[:2]
+    du_hash, frame, *annotation_hash_segments = segments
     annotation_hash = None if len(annotation_hash_segments) == 0 else "_".join(annotation_hash_segments)
     if annotation_hash is not None and len(annotation_hash) != 8:
         raise ValueError(f"Item annotation_hash should be exactly 8 characters: {annotation_hash}")

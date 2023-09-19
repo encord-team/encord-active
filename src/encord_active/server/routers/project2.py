@@ -1,16 +1,18 @@
 import math
 import uuid
+from email.utils import parsedate
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Set, Tuple
+from typing import Dict, List, Literal, Optional, Set, Tuple, Union, Annotated
 
 import encord
 from cachetools import TTLCache, cached
 from encord.http.constants import RequestsSettings
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, Response
+from starlette.staticfiles import NotModifiedResponse
 
 from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
 from encord_active.db.local_data import db_uri_to_local_file_path
@@ -347,9 +349,11 @@ def route_project_raw_file(
     project_hash: uuid.UUID,
     du_hash: uuid.UUID,
     frame: int,
+    if_none_match: Annotated[Optional[str], Header()] = None,
+    if_modified_since: Annotated[Optional[str], Header()] = None,
     engine: Engine = Depends(dep_engine_readonly),
     database_dir: Path = Depends(dep_database_dir),
-) -> FileResponse:
+) -> Response:
     with Session(engine) as sess:
         query = select(ProjectDataUnitMetadata.data_uri,).where(
             ProjectDataUnitMetadata.project_hash == project_hash,
@@ -360,8 +364,15 @@ def route_project_raw_file(
         if data_uri is not None:
             url_path = db_uri_to_local_file_path(data_uri, database_dir)
             if url_path is not None:
-                # FIXME: add not-modified case response (see StaticFiles)
-                return FileResponse(url_path)
+                file_response = FileResponse(url_path, method="GET")
+                etag = file_response.headers.get("etag", None)
+                if if_none_match is not None and etag is not None and if_none_match == etag:
+                    return NotModifiedResponse(file_response.headers)
+                if if_modified_since is not None:
+                    last_modified = file_response.headers.get("last-modified", None)
+                    if last_modified is not None and parsedate(if_modified_since) >= parsedate(last_modified):
+                        return NotModifiedResponse(file_response.headers)
+                return file_response
         raise HTTPException(status_code=404, detail="Project local file not found")
 
 

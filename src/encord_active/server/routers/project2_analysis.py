@@ -240,6 +240,8 @@ def route_project_similarity_search(
     }
     if similarity_item.annotation_hash is not None:
         join_attr_set["annotation_hash"] = similarity_item.annotation_hash
+    elif domain == AnalysisDomain.Annotation:
+        raise ValueError(f"Similarity domain mismatch: {similarity_item} in domain {domain}")
 
     with Session(engine) as sess:
         src_embedding = sess.exec(
