@@ -1338,7 +1338,14 @@ def _transform_annotation_type(value: str) -> int:
 def _transform_embedding_clip(value: Optional[bytes]) -> Optional[bytes]:
     if value is None:
         return None
-    np_array = np.frombuffer(value, dtype=np.float16)
+    if len(value) == 512 * 2:
+        np_array = np.frombuffer(value, dtype=np.float16)
+    elif len(value) == 512 * 4:
+        np_array = np.frombuffer(value, dtype=np.float32)
+    elif len(value) == 512 * 8:
+        np_array = np.frombuffer(value, dtype=np.float64)
+    else:
+        raise ValueError(f"Invalid embedding clip byte length: {len(value)} not in {{2,4,8}} X 512")
     if tuple(np_array.shape) != (512,):
         raise ValueError(f"Invalid embedding clip: {tuple(np_array.shape)}")
     return np_array.astype(dtype=np.float64).tobytes(order="C")
@@ -1347,7 +1354,14 @@ def _transform_embedding_clip(value: Optional[bytes]) -> Optional[bytes]:
 def _transform_embedding_hu(value: Optional[bytes]) -> Optional[bytes]:
     if value is None:
         return None
-    np_array = np.frombuffer(value, dtype=np.float16)
+    if len(value) == 7 * 2:
+        np_array = np.frombuffer(value, dtype=np.float16)
+    elif len(value) == 7 * 4:
+        np_array = np.frombuffer(value, dtype=np.float32)
+    elif len(value) == 7 * 8:
+        np_array = np.frombuffer(value, dtype=np.float64)
+    else:
+        raise ValueError(f"Invalid embedding clip byte length: {len(value)} not in {{2,4,8}} X 7")
     if tuple(np_array.shape) != (7,):
         raise ValueError(f"Invalid embedding hu: {tuple(np_array.shape)}")
     return np_array.astype(dtype=np.float64).tobytes(order="C")
