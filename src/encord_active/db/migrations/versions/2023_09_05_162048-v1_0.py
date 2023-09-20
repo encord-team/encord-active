@@ -1621,7 +1621,9 @@ def migrate_sqlite_database_to_new_schema():
     _sqlite_migrate("active_project_analytics_data_reduced", "project_analytics_data_reduced")
 
     _sqlite_migrate("active_project_tags", "project_tags")
-    _sqlite_migrate("active_project_tagged_annotation", "project_tagged_annotation")
+    _sqlite_migrate(
+        "active_project_tagged_annotation", "project_tagged_annotation", transform={"object_hash": TransformObjectHash}
+    )
     _sqlite_migrate("active_project_tagged_data", "project_tagged_data")
 
     _prediction_to_project_hash = {}
