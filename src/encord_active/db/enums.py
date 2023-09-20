@@ -46,6 +46,14 @@ class AnnotationType(enum.IntEnum):
     def __repr__(self) -> str:
         return self.__str__()
 
+    # OpenAPI schema
+    @classmethod
+    def __modify_schema__(cls, schema: Dict[str, list]) -> Dict[str, list]:
+        values = [c for c in cls]
+        schema["enum"] = [v.value for v in values]
+        schema["x-enum-varnames"] = [v.name for v in values]
+        return schema
+
 
 AnnotationTypeMaxValue: int = int(AnnotationType.BITMASK)
 
@@ -70,6 +78,17 @@ class DataType(enum.IntEnum):
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def __int__(self):
+        return self.value
+
+    # OpenAPI schema
+    @classmethod
+    def __modify_schema__(cls, schema: Dict[str, list]) -> Dict[str, list]:
+        values = [c for c in cls]
+        schema["enum"] = [v.value for v in values]
+        schema["x-enum-varnames"] = [v.name for v in values]
+        return schema
 
 
 DataTypeMaxValue: int = int(DataType.VIDEO)

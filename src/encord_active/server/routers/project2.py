@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import NotModifiedResponse
 
-from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType
+from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType, DataType
 from encord_active.db.local_data import db_uri_to_local_file_path
 from encord_active.db.metrics import (
     AnnotationMetrics,
@@ -57,6 +57,7 @@ from encord_active.server.routers import (
     project2_prediction,
     project2_tags,
 )
+from encord_active.server.routers.project2_prediction import AnnotationEnumItem
 from encord_active.server.routers.queries.metric_query import sql_count
 from encord_active.server.settings import Settings
 
@@ -410,9 +411,15 @@ class ProjectItemTags(BaseModel):
     label: Dict[str, List[ProjectTag]]
 
 
+class DataEnumItem(BaseModel):
+    data_type: DataType
+
+
 class ProjectItem(BaseModel):
     data_metrics: Dict[str, Optional[float]]
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
+    data_enums: DataEnumItem
+    annotation_enums: Dict[str, AnnotationEnumItem]
     objects: list[dict]
     classifications: list[dict]
     object_answers: Dict[str, dict]
@@ -517,6 +524,13 @@ def route_project_data_item(
         annotation_metrics={
             annotation_analytics.annotation_hash: {
                 k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
+            }
+            for annotation_analytics in annotation_analytics_list
+        },
+        data_enums={k: getattr(du_analytics, k) for k in DataEnums if k != "tags"},
+        annotation_enums={
+            annotation_analytics.annotation_hash: {
+                k: getattr(annotation_analytics, k) for k in AnnotationEnums if k != "tags"
             }
             for annotation_analytics in annotation_analytics_list
         },

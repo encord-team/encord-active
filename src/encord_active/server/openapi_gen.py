@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi.openapi.utils import get_openapi
 
 from encord_active.server.app import get_app
+from encord_active.server.settings import Settings, Env
 
 
 def generate_openapi_fe_components() -> None:
@@ -15,7 +16,11 @@ def generate_openapi_fe_components() -> None:
     src_dir = Path(__file__).parent.parent.resolve()
     fe_dir = src_dir / "frontend"
     openapi_json_path = fe_dir / "openapi.json"
-    app = get_app(MagicMock(), MagicMock(), MagicMock())
+    settings = Settings(
+        ENV=Env.DEVELOPMENT,
+        SERVER_START_PATH=fe_dir,
+    )
+    app = get_app(MagicMock(), MagicMock(), settings)
     # Output openapi
     with open(openapi_json_path, "w", encoding="UTF-8") as f:
         json.dump(

@@ -16,7 +16,7 @@ from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.enums import AnnotationType
+from encord_active.db.enums import AnnotationType, AnnotationEnums
 from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import (
     ProjectAnnotationAnalytics,
@@ -626,8 +626,17 @@ def route_prediction_metric_performance(
     )
 
 
+class AnnotationEnumItem(BaseModel):
+    feature_hash: str
+    annotation_type: AnnotationType
+    annotation_manual: bool
+    annotation_invalid: bool
+    annotation_user_id: int
+
+
 class PredictionItem(BaseModel):
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
+    annotation_enums: Dict[str, AnnotationEnumItem]
     annotation_tp_bounds: Dict[str, List[float]]
     objects: list[dict]
     classifications: list[dict]
@@ -687,6 +696,12 @@ def route_prediction_data_item(
         annotation_metrics={
             annotation_analytics.annotation_hash: {
                 k: _sanitise_nan(getattr(annotation_analytics, k)) for k in AnnotationMetrics
+            }
+            for annotation_analytics in annotation_analytics_list
+        },
+        annotation_enums={
+            annotation_analytics.annotation_hash: {
+                k: getattr(annotation_analytics, k) for k in AnnotationEnums if k != "tags"
             }
             for annotation_analytics in annotation_analytics_list
         },

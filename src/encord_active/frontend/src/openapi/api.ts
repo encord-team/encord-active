@@ -84,6 +84,64 @@ export interface AnalysisSearch {
 /**
  *
  * @export
+ * @interface AnnotationEnumItem
+ */
+export interface AnnotationEnumItem {
+  /**
+   *
+   * @type {string}
+   * @memberof AnnotationEnumItem
+   */
+  feature_hash: string;
+  /**
+   *
+   * @type {AnnotationType}
+   * @memberof AnnotationEnumItem
+   */
+  annotation_type: AnnotationType;
+  /**
+   *
+   * @type {boolean}
+   * @memberof AnnotationEnumItem
+   */
+  annotation_manual: boolean;
+  /**
+   *
+   * @type {boolean}
+   * @memberof AnnotationEnumItem
+   */
+  annotation_invalid: boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof AnnotationEnumItem
+   */
+  annotation_user_id: number;
+}
+
+/**
+ * An enumeration.
+ * @export
+ * @enum {string}
+ */
+
+export const AnnotationType = {
+  CLASSIFICATION: 0,
+  BOUNDING_BOX: 1,
+  ROTATABLE_BOUNDING_BOX: 2,
+  POINT: 3,
+  POLYLINE: 4,
+  POLYGON: 5,
+  SKELETON: 6,
+  BITMASK: 7,
+} as const;
+
+export type AnnotationType =
+  (typeof AnnotationType)[keyof typeof AnnotationType];
+
+/**
+ *
+ * @export
  * @interface CreateProjectSubsetPostAction
  */
 export interface CreateProjectSubsetPostAction {
@@ -118,6 +176,35 @@ export interface CreateProjectSubsetPostAction {
    */
   filters: SearchFilters;
 }
+/**
+ *
+ * @export
+ * @interface DataEnumItem
+ */
+export interface DataEnumItem {
+  /**
+   *
+   * @type {DataType}
+   * @memberof DataEnumItem
+   */
+  data_type: DataType;
+}
+
+/**
+ * An enumeration.
+ * @export
+ * @enum {string}
+ */
+
+export const DataType = {
+  IMAGE: 0,
+  IMG_GROUP: 1,
+  IMG_SEQUENCE: 2,
+  VIDEO: 3,
+} as const;
+
+export type DataType = (typeof DataType)[keyof typeof DataType];
+
 /**
  *
  * @export
@@ -426,6 +513,12 @@ export interface PredictionItem {
   annotation_metrics: {
     [key: string]: { [key: string]: number | undefined } | undefined;
   };
+  /**
+   *
+   * @type {{ [key: string]: AnnotationEnumItem | undefined; }}
+   * @memberof PredictionItem
+   */
+  annotation_enums: { [key: string]: AnnotationEnumItem | undefined };
   /**
    *
    * @type {{ [key: string]: Array<number> | undefined; }}
@@ -762,6 +855,18 @@ export interface ProjectItem {
   annotation_metrics: {
     [key: string]: { [key: string]: number | undefined } | undefined;
   };
+  /**
+   *
+   * @type {DataEnumItem}
+   * @memberof ProjectItem
+   */
+  data_enums: DataEnumItem;
+  /**
+   *
+   * @type {{ [key: string]: AnnotationEnumItem | undefined; }}
+   * @memberof ProjectItem
+   */
+  annotation_enums: { [key: string]: AnnotationEnumItem | undefined };
   /**
    *
    * @type {Array<object>}
@@ -1562,45 +1667,6 @@ export const DefaultApiAxiosParamCreator = function (
   return {
     /**
      *
-     * @summary  Favicon Ico
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    faviconIcoFaviconIcoGet: async (
-      options: AxiosRequestConfig = {}
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/favicon.ico`;
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-      let baseOptions;
-      if (configuration) {
-        baseOptions = configuration.baseOptions;
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      };
-      const localVarHeaderParameter = {} as any;
-      const localVarQueryParameter = {} as any;
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      };
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      };
-    },
-    /**
-     *
      * @summary Health Check
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1609,45 +1675,6 @@ export const DefaultApiAxiosParamCreator = function (
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       const localVarPath = `/`;
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-      let baseOptions;
-      if (configuration) {
-        baseOptions = configuration.baseOptions;
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      };
-      const localVarHeaderParameter = {} as any;
-      const localVarQueryParameter = {} as any;
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      };
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      };
-    },
-    /**
-     *
-     * @summary  Index
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    indexIndexHtmlGet: async (
-      options: AxiosRequestConfig = {}
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/index.html`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -1728,26 +1755,6 @@ export const DefaultApiFp = function (configuration?: Configuration) {
   return {
     /**
      *
-     * @summary  Favicon Ico
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async faviconIcoFaviconIcoGet(
-      options?: AxiosRequestConfig
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.faviconIcoFaviconIcoGet(options);
-      return createRequestFunction(
-        localVarAxiosArgs,
-        globalAxios,
-        BASE_PATH,
-        configuration
-      );
-    },
-    /**
-     *
      * @summary Health Check
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1760,26 +1767,6 @@ export const DefaultApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs = await localVarAxiosParamCreator.healthCheckGet(
         options
       );
-      return createRequestFunction(
-        localVarAxiosArgs,
-        globalAxios,
-        BASE_PATH,
-        configuration
-      );
-    },
-    /**
-     *
-     * @summary  Index
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async indexIndexHtmlGet(
-      options?: AxiosRequestConfig
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.indexIndexHtmlGet(options);
       return createRequestFunction(
         localVarAxiosArgs,
         globalAxios,
@@ -1825,17 +1812,6 @@ export const DefaultApiFactory = function (
   return {
     /**
      *
-     * @summary  Favicon Ico
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    faviconIcoFaviconIcoGet(options?: any): AxiosPromise<any> {
-      return localVarFp
-        .faviconIcoFaviconIcoGet(options)
-        .then((request) => request(axios, basePath));
-    },
-    /**
-     *
      * @summary Health Check
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1843,17 +1819,6 @@ export const DefaultApiFactory = function (
     healthCheckGet(options?: any): AxiosPromise<boolean> {
       return localVarFp
         .healthCheckGet(options)
-        .then((request) => request(axios, basePath));
-    },
-    /**
-     *
-     * @summary  Index
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    indexIndexHtmlGet(options?: any): AxiosPromise<any> {
-      return localVarFp
-        .indexIndexHtmlGet(options)
         .then((request) => request(axios, basePath));
     },
     /**
@@ -1879,19 +1844,6 @@ export const DefaultApiFactory = function (
 export class DefaultApi extends BaseAPI {
   /**
    *
-   * @summary  Favicon Ico
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof DefaultApi
-   */
-  public faviconIcoFaviconIcoGet(options?: AxiosRequestConfig) {
-    return DefaultApiFp(this.configuration)
-      .faviconIcoFaviconIcoGet(options)
-      .then((request) => request(this.axios, this.basePath));
-  }
-
-  /**
-   *
    * @summary Health Check
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
@@ -1900,19 +1852,6 @@ export class DefaultApi extends BaseAPI {
   public healthCheckGet(options?: AxiosRequestConfig) {
     return DefaultApiFp(this.configuration)
       .healthCheckGet(options)
-      .then((request) => request(this.axios, this.basePath));
-  }
-
-  /**
-   *
-   * @summary  Index
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof DefaultApi
-   */
-  public indexIndexHtmlGet(options?: AxiosRequestConfig) {
-    return DefaultApiFp(this.configuration)
-      .indexIndexHtmlGet(options)
       .then((request) => request(this.axios, this.basePath));
   }
 
@@ -3398,6 +3337,8 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {string} projectHash
      * @param {string} duHash
      * @param {number} frame
+     * @param {string} [ifNoneMatch]
+     * @param {string} [ifModifiedSince]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -3405,6 +3346,8 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       projectHash: string,
       duHash: string,
       frame: number,
+      ifNoneMatch?: string,
+      ifModifiedSince?: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
@@ -3447,6 +3390,14 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      if (ifNoneMatch != null) {
+        localVarHeaderParameter["if-none-match"] = String(ifNoneMatch);
+      }
+
+      if (ifModifiedSince != null) {
+        localVarHeaderParameter["if-modified-since"] = String(ifModifiedSince);
+      }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -4731,6 +4682,8 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {string} projectHash
      * @param {string} duHash
      * @param {number} frame
+     * @param {string} [ifNoneMatch]
+     * @param {string} [ifModifiedSince]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -4738,6 +4691,8 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       projectHash: string,
       duHash: string,
       frame: number,
+      ifNoneMatch?: string,
+      ifModifiedSince?: string,
       options?: AxiosRequestConfig
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
@@ -4747,6 +4702,8 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
           projectHash,
           duHash,
           frame,
+          ifNoneMatch,
+          ifModifiedSince,
           options
         );
       return createRequestFunction(
@@ -5535,6 +5492,8 @@ export const ProjectsV2ApiFactory = function (
      * @param {string} projectHash
      * @param {string} duHash
      * @param {number} frame
+     * @param {string} [ifNoneMatch]
+     * @param {string} [ifModifiedSince]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -5542,6 +5501,8 @@ export const ProjectsV2ApiFactory = function (
       projectHash: string,
       duHash: string,
       frame: number,
+      ifNoneMatch?: string,
+      ifModifiedSince?: string,
       options?: any
     ): AxiosPromise<any> {
       return localVarFp
@@ -5549,6 +5510,8 @@ export const ProjectsV2ApiFactory = function (
           projectHash,
           duHash,
           frame,
+          ifNoneMatch,
+          ifModifiedSince,
           options
         )
         .then((request) => request(axios, basePath));
@@ -6299,6 +6262,8 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {string} duHash
    * @param {number} frame
+   * @param {string} [ifNoneMatch]
+   * @param {string} [ifModifiedSince]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
@@ -6307,6 +6272,8 @@ export class ProjectsV2Api extends BaseAPI {
     projectHash: string,
     duHash: string,
     frame: number,
+    ifNoneMatch?: string,
+    ifModifiedSince?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
@@ -6314,6 +6281,8 @@ export class ProjectsV2Api extends BaseAPI {
         projectHash,
         duHash,
         frame,
+        ifNoneMatch,
+        ifModifiedSince,
         options
       )
       .then((request) => request(this.axios, this.basePath));

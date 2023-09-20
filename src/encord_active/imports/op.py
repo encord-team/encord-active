@@ -45,7 +45,6 @@ def refresh_encord_project(
     database_dir: Path,
     ssh_key: str,
     encord_project_hash: uuid.UUID,
-    include_unlabeled: bool = False,
     force: bool = False,
 ) -> bool:
     path = database_dir / "encord-active.sqlite"
@@ -59,9 +58,7 @@ def refresh_encord_project(
         requests_settings=RequestsSettings(max_retries=5),
     )
     encord_project = encord_client.get_project(str(encord_project_hash))
-    project_spec = import_encord(
-        encord_project, database_dir, include_unlabeled=include_unlabeled, store_data_locally=False
-    )
+    project_spec = import_encord(encord_project, database_dir, store_data_locally=False)
     return refresh_project(engine, database_dir, ssh_key, project_spec, force=force)
 
 

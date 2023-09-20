@@ -426,7 +426,7 @@ def refresh(
         changes = refresh_encord_project(
             database_dir=database_dir,
             encord_project_hash=project_hash,
-            include_unlabeled=include_unlabeled,
+            # FIXME: include_unlabeled=include_unlabeled,
             force=force,
             ssh_key=ssh_key,
         )

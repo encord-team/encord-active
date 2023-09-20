@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { Button, Select, Space, Tooltip } from "antd";
+import { Button, Space, Tooltip } from "antd";
 import Search from "antd/es/input/Search";
 
 export type ExplorerPremiumSearchState = {
@@ -14,15 +14,12 @@ export function useExplorerPremiumSearch(): {
   premiumSearchState: ExplorerPremiumSearchState;
 } {
   const [search, setSearch] = useState<string>();
-  const [searchMode, setSearchMode] = useState<SearchMode>("embedding");
 
   return {
     premiumSearchState: {
       search,
       setSearch,
       searchLoading: false,
-      searchMode,
-      setSearchMode,
     },
   };
 }
@@ -31,7 +28,7 @@ export function ExplorerPremiumSearch(props: {
   premiumSearchState: ExplorerPremiumSearchState;
 }) {
   const {
-    premiumSearchState: { search, setSearch, searchLoading },
+    premiumSearchState: { setSearch, searchLoading },
   } = props;
 
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)

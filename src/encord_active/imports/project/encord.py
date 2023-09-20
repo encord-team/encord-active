@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import encord
+from encord.exceptions import LabelRowError
 from tqdm import tqdm
 
 from encord_active.db.models import (
@@ -20,7 +21,6 @@ def import_encord(
     encord_project: encord.Project,
     database_dir: Path,
     store_data_locally: bool,
-    include_unlabeled: bool = False,
 ) -> ProjectImportSpec:
     project_hash = uuid.UUID(encord_project.project_hash)
 
@@ -29,16 +29,15 @@ def import_encord(
     tqdm_iter.update(1)
 
     # Batch label row initialization.
-    if include_unlabeled:
-        tqdm_iter = tqdm(total=len(label_rows), desc="Downloading Labels")
-        for i in range(0, len(label_rows), 100):
-            label_row_group = label_rows[i : i + 100]
-            bundle = encord_project.create_bundle()
-            for label_row in label_row_group:
-                label_row.initialise_labels(bundle=bundle)
-            bundle.execute()
-            tqdm_iter.update(len(label_row_group))
-        encord_project.refetch_data()
+    tqdm_iter = tqdm(total=len(label_rows), desc="Downloading Labels")
+    for i in range(0, len(label_rows), 100):
+        label_row_group = label_rows[i : i + 100]
+        bundle = encord_project.create_bundle()
+        for label_row in label_row_group:
+            label_row.initialise_labels(bundle=bundle)
+        bundle.execute()
+        tqdm_iter.update(len(label_row_group))
+    encord_project.refetch_data()
 
     # Iter label rows
     project_data_list: List[ProjectDataMetadata] = []

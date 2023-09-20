@@ -12,6 +12,10 @@ export function SimilarityModal(props: {
   featureHashMap: FeatureHashMap;
   similarityItem: string | undefined;
   onClose: () => void;
+  onExpand: (item: string) => void;
+  onClick: (item: string) => void;
+  onShowSimilar: (item: string) => void;
+  selectedItems: ReadonlySet<string>;
 }) {
   const {
     onClose,
@@ -21,6 +25,10 @@ export function SimilarityModal(props: {
     projectHash,
     predictionHash,
     featureHashMap,
+    onExpand,
+    onClick,
+    onShowSimilar,
+    selectedItems,
   } = props;
   const { data: similarItems, isLoading } = useProjectAnalysisSimilaritySearch(
     projectHash,
@@ -48,11 +56,11 @@ export function SimilarityModal(props: {
             predictionHash={predictionHash}
             itemId={value.item}
             key={value.item}
-            selected={false}
+            selected={selectedItems.has(value.item)}
             selectedMetric={selectedMetric}
-            onExpand={() => undefined}
-            onClick={() => undefined}
-            onShowSimilar={() => undefined}
+            onExpand={onExpand}
+            onClick={onClick}
+            onShowSimilar={onShowSimilar}
             hideExtraAnnotations
             customTags={
               <Tag bordered={false} color="red" className="rounded-xl">

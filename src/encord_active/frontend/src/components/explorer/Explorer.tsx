@@ -340,7 +340,11 @@ export function Explorer({
         predictionHash={predictionHash}
         similarityItem={similarityItem}
         onClose={closeSimilarityItem}
+        onExpand={setPreviewedItem}
+        onShowSimilar={setSimilarityItem}
+        onClick={toggleImageSelection}
         featureHashMap={featureHashMap}
+        selectedItems={selectedItems}
       />
       <ExplorerDistribution
         projectHash={projectHash}

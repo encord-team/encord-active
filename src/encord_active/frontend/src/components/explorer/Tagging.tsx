@@ -230,7 +230,7 @@ export function ItemTags({
     (Object.values(label).filter(Boolean).flat() as ProjectTag[]);
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1 ${className ?? ""}`}>
       {!!data.length && (
         <div className="flex items-center">
           <MdOutlineImage className="text-base" />

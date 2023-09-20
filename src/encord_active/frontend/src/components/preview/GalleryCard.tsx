@@ -1,8 +1,8 @@
-import { FullscreenOutlined } from "@ant-design/icons";
+import Icon, { FullscreenOutlined } from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
-import { Button, Card, Checkbox, Row, Tag } from "antd";
+import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
 import { ReactNode, memo, useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
@@ -12,6 +12,7 @@ import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 import { FeatureHashMap } from "../Types";
 import { PredictionItem, ProjectItem } from "../../openapi/api";
+import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
 
 export const GalleryCard = memo(GalleryCardRaw);
 
@@ -124,6 +125,7 @@ function GalleryCardRaw(props: {
         readonly objectHash?: string;
         readonly classificationHash?: string;
         readonly name?: string;
+        readonly color?: string;
       } = useMemo(() => {
     if (annotationHash === undefined || preview === undefined) {
       return undefined;
@@ -155,9 +157,12 @@ function GalleryCardRaw(props: {
     ? isLoadingProject
     : isLoadingProject && isLoadingPrediction;
 
-  const labelObjectName = useMemo(() => {
+  const [labelObjectName, labelObjectColor] = useMemo((): [
+    string | null,
+    string
+  ] => {
     if (labelObject == null || preview == null) {
-      return null;
+      return [null, "#00ffffff"];
     }
     let { featureHash } = labelObject;
     const classificationAnswer = preview.classification_answers[
@@ -180,10 +185,19 @@ function GalleryCardRaw(props: {
     }
     const featureMeta = featureHashMap[featureHash];
     if (featureMeta == null) {
-      return labelObject?.name ?? null;
+      const name = labelObject?.name ?? null;
+
+      return name === null
+        ? [null, "#00ffffff"]
+        : [name, labelObject.color ?? "#00ffffff"];
     }
-    return featureMeta.name;
+    return [featureMeta.name, featureMeta.color];
   }, [featureHashMap, labelObject, preview]);
+
+  const annotationShape =
+    preview === undefined
+      ? null
+      : preview.annotation_enums[annotationHash ?? ""]?.annotation_type;
 
   const predictionTruePositive: ReadonlySet<string> | undefined = useMemo(():
     | ReadonlySet<string>
@@ -282,16 +296,20 @@ function GalleryCardRaw(props: {
         </div>
       }
     >
-      <Row>
-        {customTags ?? (
-          <Tag bordered={false} color="gold" className="rounded-xl">
-            {metricName}:{" "}
-            <span className="font-bold">{displayValue.toFixed(5)}</span>
-          </Tag>
-        )}
+      {customTags != null ? <Row className="mt-1">{customTags}</Row> : null}
+      <Row className="mt-1">
+        <Tag bordered={false} color="gold" className="rounded-xl">
+          {metricName}:{" "}
+          <span className="font-bold">{displayValue.toFixed(5)}</span>
+        </Tag>
       </Row>
-      {preview?.tags && (
-        <Row>
+      {preview?.tags &&
+      ((labelObject == null
+        ? preview?.tags?.data?.length
+        : (preview?.tags?.label ?? {})[
+            labelObject?.objectHash ?? labelObject?.classificationHash ?? ""
+          ]?.length) ?? 0) > 0 ? (
+        <Row className="mt-1">
           <ItemTags
             tags={preview?.tags}
             annotationHash={
@@ -300,16 +318,33 @@ function GalleryCardRaw(props: {
             limit={4}
           />
         </Row>
-      )}
+      ) : null}
       {labelObject != null ? (
         <>
-          <Row>
-            <VscSymbolClass />
-            {labelObjectName}
+          <Row className="mt-1">
+            <Tag bordered={false} color="magenta" className="rounded-xl">
+              <Row>
+                {annotationShape != null ? (
+                  <AnnotationShapeIcon
+                    shape={annotationShape}
+                    color={labelObjectColor}
+                  />
+                ) : (
+                  <VscSymbolClass />
+                )}
+                <Typography.Text className="ml-1" color={labelObjectColor}>
+                  {labelObjectName}
+                </Typography.Text>
+              </Row>
+            </Tag>
           </Row>
-          <Row>
-            <RiUserLine />
-            {labelObject.lastEditedBy}
+          <Row className="mt-1">
+            <Tag bordered={false} color="cyan" className="rounded-xl">
+              <Icon component={RiUserLine} />
+              <Typography.Text className="ml-1">
+                {labelObject.lastEditedBy}
+              </Typography.Text>
+            </Tag>
           </Row>
         </>
       ) : null}
