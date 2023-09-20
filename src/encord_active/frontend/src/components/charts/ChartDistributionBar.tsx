@@ -251,7 +251,8 @@ export function ChartDistributionBar(props: {
           />
           <YAxis
             label={{
-              value: "Count",
+              value:
+                analysisDomain === "data" ? "Frame Count" : "Annotation Count",
               angle: -90,
               position: "insideLeft",
             }}

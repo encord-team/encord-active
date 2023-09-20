@@ -50,8 +50,6 @@ export function AnnotatedImage(props: {
   if (mode === "preview") {
     contentStyle = {
       flexShrink: 0,
-      minWidth: "100%",
-      minHeight: "100%",
       position: "absolute",
       overflow: "hidden",
     };
