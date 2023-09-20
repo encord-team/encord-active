@@ -285,7 +285,7 @@ function GalleryCardRaw(props: {
       <Row>
         {customTags ?? (
           <Tag bordered={false} color="gold" className="rounded-xl">
-            {metricName} -{" "}
+            {metricName}:{" "}
             <span className="font-bold">{displayValue.toFixed(5)}</span>
           </Tag>
         )}
