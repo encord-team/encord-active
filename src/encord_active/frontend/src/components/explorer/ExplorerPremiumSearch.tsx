@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { FaMagic } from "react-icons/fa";
 
-import { Button, Select, Space } from "antd";
+import { Button, Select, Space, Tooltip } from "antd";
 import Search from "antd/es/input/Search";
-
-type SearchMode = "query" | "embedding";
 
 export type ExplorerPremiumSearchState = {
   search: string | undefined;
   setSearch: (value: string | undefined) => void;
   searchLoading: boolean;
-  searchMode: SearchMode;
-  setSearchMode: (value: SearchMode) => void;
 };
 
 export function useExplorerPremiumSearch(): {
@@ -35,48 +31,24 @@ export function ExplorerPremiumSearch(props: {
   premiumSearchState: ExplorerPremiumSearchState;
 }) {
   const {
-    premiumSearchState: {
-      search,
-      setSearch,
-      searchMode,
-      setSearchMode,
-      searchLoading,
-    },
+    premiumSearchState: { search, setSearch, searchLoading },
   } = props;
 
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
   return (
     <Space.Compact size="large">
-      <Search
-        onSearch={setSearch}
-        onChange={() => setSearch(undefined)}
-        loading={searchLoading}
-        enterButton={
-          <Button className="bg-white px-4">
-            <FaMagic
-              color={search === undefined ? "red" : "blue"}
-              className="bg-white"
-            />
-          </Button>
-        }
-      />
-      <Select
-        value={searchMode}
-        onChange={(mode) => {
-          setSearchMode(mode);
-          setSearch(undefined);
-        }}
-        options={[
-          {
-            value: "embedding",
-            label: "Embedding Search",
-          },
-          {
-            value: "query",
-            label: "Query Generation",
-          },
-        ]}
-      />
+      <Tooltip overlay="Text Search">
+        <Search
+          onSearch={setSearch}
+          onChange={() => setSearch(undefined)}
+          loading={searchLoading}
+          enterButton={
+            <Button className="bg-white px-4">
+              <FaMagic color="black" className="bg-white" />
+            </Button>
+          }
+        />
+      </Tooltip>
     </Space.Compact>
   );
   /*

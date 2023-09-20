@@ -487,6 +487,7 @@ export function MetricFilter(props: {
         shape="circle"
         size="small"
         type="primary"
+        className="bg-black"
         disabled={filterOptions.length === 0}
         onClick={() =>
           setFilters(
