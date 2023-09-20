@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi.openapi.utils import get_openapi
 
 from encord_active.server.app import get_app
-from encord_active.server.settings import Settings, Env
+from encord_active.server.settings import Env, Settings
 
 
 def generate_openapi_fe_components() -> None:

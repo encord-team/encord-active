@@ -13,6 +13,8 @@ import torch
 import torchvision
 from encord.http.constants import RequestsSettings
 from PIL import Image
+from encord.objects import OntologyStructure
+from encord.objects.common import PropertyType
 from pynndescent import NNDescent
 from torch import Tensor
 from torchvision.io import VideoReader
@@ -67,6 +69,46 @@ TTypeAnnotationAnalyticsExtra = TypeVar(
 ExecutorLogger: logging.Logger = logging.getLogger("executor")
 
 
+def _return_classification_feature_hash_set(ontology: OntologyStructure) -> Set[str]:
+    valid_child_ontology_feature_hashes = set()
+    for class_label in ontology.classifications:
+        # Only allow nested to layer 1 IFF attributes[0] is RADIO && only 1 RADIO attribute.
+        num_radio = len(
+            [
+                class_question
+                for class_question in class_label.attributes
+                if class_question.get_property_type() == PropertyType.RADIO
+            ]
+        )
+        if num_radio != 1:
+            continue
+        class_question = class_label.attributes[0]
+        if class_question.get_property_type() == PropertyType.RADIO:
+            for counter, option in enumerate(class_question.options):
+                valid_child_ontology_feature_hashes.add(option.feature_node_hash)
+
+    return valid_child_ontology_feature_hashes
+
+
+def _return_classification_feature_hash(
+    label: dict, classification_answers: dict, valid_classify_child_feature_hashes: Set[str]
+) -> str:
+    classification_hash = str(label["classificationHash"])
+    root_feature_hash = str(label["featureHash"])
+    answers = classification_answers.get(classification_hash, None)
+    if answers is None:
+        return root_feature_hash
+    for classify in answers.get("classifications", []):
+        classify_answers = classify.get("answers", None)
+        if not isinstance(classify_answers, list):
+            continue
+        for answer in classify["answers"]:
+            answer_feature_hash = str(answer["featureHash"])
+            if answer_feature_hash in valid_classify_child_feature_hashes:
+                return answer_feature_hash
+    return root_feature_hash
+
+
 class Executor:
     def __init__(self, config: AnalysisConfig) -> None:
         self.config = config
@@ -82,6 +124,7 @@ class SimpleExecutor(Executor):
         self.encord_client: Optional[encord.EncordUserClient] = None
         self.encord_project_urls: Dict[Tuple[uuid.UUID, uuid.UUID], str] = {}
         self.pool_size = pool_size
+        self.valid_classification_feature_hashes: Set[str] = set()
         print(f"Simple executor: using {self.config.device.type} device")
 
     def execute_from_db(
@@ -92,6 +135,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
+        project_ontology: dict,
     ) -> Tuple[
         List[ProjectDataAnalytics],
         List[ProjectDataAnalyticsExtra],
@@ -110,6 +154,7 @@ class SimpleExecutor(Executor):
             database_dir=database_dir,
             project_hash=project_hash,
             project_ssh_key=project_ssh_key,
+            project_ontology=project_ontology,
         )
         return self._pack_output(project_hash=project_hash, collaborators=collaborators)
 
@@ -117,6 +162,7 @@ class SimpleExecutor(Executor):
         self,
         database_dir: Path,
         project_hash: uuid.UUID,
+        project_ontology: dict,
         precalculated_data: List[ProjectDataAnalytics],
         precalculated_data_extra: List[ProjectDataAnalyticsExtra],
         precalculated_annotation: List[ProjectAnnotationAnalytics],
@@ -143,19 +189,22 @@ class SimpleExecutor(Executor):
             database_dir=database_dir,
             project_hash=project_hash,
             project_ssh_key=None,
+            project_ontology=project_ontology,
         )
         return self._pack_output(project_hash=project_hash, collaborators=[])
 
     def execute_prediction_from_db(
         self,
-        data_meta: List[ProjectDataMetadata],
+        ground_truth_data_meta: List[ProjectDataMetadata],
         ground_truth_annotation_meta: List[ProjectDataUnitMetadata],
+        predicted_data_meta: List[ProjectDataMetadata],
         predicted_annotation_meta: List[ProjectDataUnitMetadata],
         collaborators: List[ProjectCollaborator],
         database_dir: Path,
         project_hash: uuid.UUID,
         prediction_hash: uuid.UUID,
         project_ssh_key: Optional[str],
+        project_ontology: dict,
     ) -> Tuple[
         List[ProjectPredictionAnalytics],
         List[ProjectPredictionAnalyticsExtra],
@@ -166,14 +215,19 @@ class SimpleExecutor(Executor):
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in predicted_annotation_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
-        values = [(data, du_dict[data.data_hash]) for data in data_meta]
-        gt_lookup = {(gt.du_hash, gt.frame): gt for gt in ground_truth_annotation_meta}
+        values = [(data, du_dict[data.data_hash]) for data in predicted_data_meta]
+        gt_data_lookup = {gt_data.data_hash: gt_data for gt_data in ground_truth_data_meta}
+        gt_lookup = {
+            (gt_du.du_hash, gt_du.frame): (gt_du, gt_data_lookup[gt_du.data_hash])
+            for gt_du in ground_truth_annotation_meta
+        }
         self.execute(
             values,
             database_dir=database_dir,
             project_hash=project_hash,
             project_ssh_key=project_ssh_key,
             gt_lookup=gt_lookup,
+            project_ontology=project_ontology,
         )
         return self._pack_prediction(
             project_hash=project_hash, prediction_hash=prediction_hash, collaborators=collaborators
@@ -185,10 +239,16 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
-        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]] = None,
+        project_ontology: dict,
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], Tuple[ProjectDataUnitMetadata, ProjectDataMetadata]]] = None,
         batch: Optional[int] = None,  # Disable the batch execution path, use legacy code-path instead.
         skip_stage_1: bool = False,
     ) -> None:
+        # Special case annotation handling
+        self.valid_classification_feature_hashes = _return_classification_feature_hash_set(
+            OntologyStructure.from_dict(project_ontology)
+        )
+
         # Split into videos & images
         video_values = [v for v in values if v[0].data_type == "video"]
         image_values = [(d, dle) for d, dl in values if d.data_type != "video" for dle in dl]
@@ -302,7 +362,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
-        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], Tuple[ProjectDataUnitMetadata, ProjectDataMetadata]]],
     ):
         if len(videos) == 0:
             return
@@ -345,7 +405,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
-        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], Tuple[ProjectDataUnitMetadata, ProjectDataMetadata]]],
     ):
         if len(videos) == 0:
             return
@@ -392,8 +452,12 @@ class SimpleExecutor(Executor):
                     if gt is None:
                         gt_input = None
                     else:
+                        gt_du, gt_data = gt
                         gt_input, _ignore = self._get_frame_annotations(
-                            gt, image_width=frame_image.width, image_height=frame_image.height
+                            du_meta=gt_du,
+                            data_meta=gt_data,
+                            image_width=frame_image.width,
+                            image_height=frame_image.height,
                         )
                     frames.append((frame_input, gt_input))
 
@@ -442,7 +506,7 @@ class SimpleExecutor(Executor):
         database_dir: Path,
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
-        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], Tuple[ProjectDataUnitMetadata, ProjectDataMetadata]]],
     ):
         def _job(data_meta_job: ProjectDataMetadata, du_meta_job: ProjectDataUnitMetadata):
             with torch.no_grad():
@@ -464,8 +528,9 @@ class SimpleExecutor(Executor):
                 if gt is None:
                     gt_input = None
                 else:
+                    gt_du, gt_data = gt
                     gt_input, _ignore = self._get_frame_annotations(
-                        gt, image_width=image.width, image_height=image.height
+                        data_meta=gt_data, du_meta=gt_du, image_width=image.width, image_height=image.height
                     )
                 self._execute_stage_1_metrics_no_batching(
                     prev_frame=None,
@@ -500,7 +565,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
         batching: int,
-        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], ProjectDataUnitMetadata]],
+        gt_lookup: Optional[Dict[Tuple[uuid.UUID, int], Tuple[ProjectDataUnitMetadata, ProjectDataMetadata]]],
     ) -> None:
         grouped_values: Dict[Tuple[int, int], List[Tuple[ProjectDataMetadata, ProjectDataUnitMetadata]]] = {}
         for data_metadata, du_metadata in values:
@@ -835,6 +900,7 @@ class SimpleExecutor(Executor):
 
     def _get_frame_annotations(
         self,
+        data_meta: ProjectDataMetadata,
         du_meta: ProjectDataUnitMetadata,
         image_width: int,
         image_height: int,
@@ -886,7 +952,9 @@ class SimpleExecutor(Executor):
                 )
         for cls in du_meta.classifications:
             cls_hash = str(cls["classificationHash"])
-            feature_hash = str(cls["featureHash"])
+            feature_hash = _return_classification_feature_hash(
+                cls, data_meta.classification_answers, self.valid_classification_feature_hashes
+            )
             if cls_hash in annotations:
                 hash_collision.add(cls_hash)
             else:
@@ -906,7 +974,7 @@ class SimpleExecutor(Executor):
         self, image: Image.Image, data_meta: ProjectDataMetadata, du_meta: ProjectDataUnitMetadata
     ) -> BaseFrameInput:
         annotations, hash_collision = self._get_frame_annotations(
-            du_meta=du_meta, image_width=image.width, image_height=image.height
+            du_meta=du_meta, data_meta=data_meta, image_width=image.width, image_height=image.height
         )
         annotations_deps: Dict[str, MetricDependencies] = {
             annotation_hash: {} for annotation_hash in annotations.keys()

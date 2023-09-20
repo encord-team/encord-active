@@ -2,19 +2,25 @@ import math
 import uuid
 from email.utils import parsedate
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Set, Tuple, Union, Annotated
+from typing import Annotated, Dict, List, Literal, Optional, Set, Tuple, Union
 
 import encord
 from cachetools import TTLCache, cached
 from encord.http.constants import RequestsSettings
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import NotModifiedResponse
 
-from encord_active.db.enums import AnnotationEnums, DataEnums, EnumDefinition, EnumType, DataType
+from encord_active.db.enums import (
+    AnnotationEnums,
+    DataEnums,
+    DataType,
+    EnumDefinition,
+    EnumType,
+)
 from encord_active.db.local_data import db_uri_to_local_file_path
 from encord_active.db.metrics import (
     AnnotationMetrics,
@@ -371,8 +377,15 @@ def route_project_raw_file(
                     return NotModifiedResponse(file_response.headers)
                 if if_modified_since is not None:
                     last_modified = file_response.headers.get("last-modified", None)
-                    if last_modified is not None and parsedate(if_modified_since) >= parsedate(last_modified):
-                        return NotModifiedResponse(file_response.headers)
+                    if last_modified is not None:
+                        if_modified_since_date = parsedate(if_modified_since)
+                        last_modified_date = parsedate(last_modified)
+                        if (
+                            if_modified_since_date is not None
+                            and last_modified_date is not None
+                            and if_modified_since_date >= last_modified_date
+                        ):
+                            return NotModifiedResponse(file_response.headers)
                 return file_response
         raise HTTPException(status_code=404, detail="Project local file not found")
 

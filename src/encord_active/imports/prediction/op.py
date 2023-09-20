@@ -119,14 +119,16 @@ def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, predicti
     # Execute metric engine.
     metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
     res = metric_engine.execute_prediction_from_db(
-        data_meta=prediction_data_metadata,
+        ground_truth_data_meta=project_data_meta_list,
         ground_truth_annotation_meta=project_du_meta_list,
+        predicted_data_meta=prediction_data_metadata,
         predicted_annotation_meta=prediction_data_unit_metadata,
         collaborators=project_collaborator_list,
         database_dir=database_dir,
         project_hash=project_hash,
         prediction_hash=prediction_hash,
         project_ssh_key=ssh_key if project.remote else None,
+        project_ontology=project.ontology,
     )
     (
         prediction_analytics,

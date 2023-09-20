@@ -59,9 +59,10 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         project.project_data_list,
         project.project_du_list,
         [],
-        database_dir,
-        project_hash,
-        ssh_key if project.project.remote else None,
+        database_dir=database_dir,
+        project_hash=project_hash,
+        project_ssh_key=ssh_key if project.project.remote else None,
+        project_ontology=project.project.ontology,
     )
     (
         data_analytics,
@@ -248,6 +249,7 @@ def refresh_project(
         database_dir=database_dir,
         project_hash=project_hash,
         project_ssh_key=ssh_key if upsert.project.remote else None,
+        project_ontology=upsert.project.ontology,
     )
     (
         data_analysis_new,

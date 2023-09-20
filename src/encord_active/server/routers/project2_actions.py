@@ -249,6 +249,7 @@ def route_action_create_project_subset(
         new_analytics = metric_engine.execute_from_db_subset(
             database_dir=database_dir,
             project_hash=new_local_project_hash,
+            project_ontology=current_project.ontology,
             precalculated_data=subset_data_analytics,
             precalculated_data_extra=subset_data_analytics_extra,
             precalculated_annotation=subset_annotation_analytics,

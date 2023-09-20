@@ -16,7 +16,7 @@ from sqlalchemy.sql.operators import is_not
 from sqlmodel import Session, select
 from sqlmodel.sql.sqltypes import GUID
 
-from encord_active.db.enums import AnnotationType, AnnotationEnums
+from encord_active.db.enums import AnnotationEnums, AnnotationType
 from encord_active.db.metrics import AnnotationMetrics
 from encord_active.db.models import (
     ProjectAnnotationAnalytics,
