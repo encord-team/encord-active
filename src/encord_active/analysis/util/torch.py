@@ -124,8 +124,10 @@ def obj_to_mask(
         rle_x = bitmask_obj["left"]
         if rle_x != 0 or rle_y != 0:
             raise ValueError("Not supported")
-        if bitmask.shape != (img_h, img_w):
-            raise RuntimeError("Bugged bitmask decode, shape does not match")
+        if tuple(bitmask.shape) != (img_h, img_w):
+            raise RuntimeError(
+                f"Bugged bitmask decode, shape does not match: {tuple(bitmask.shape)} != {(img_h, img_w)}"
+            )
         tensor = torch.from_numpy(bitmask).type(torch.bool)
         return tensor.T  # Convert to height, width format
     elif points is None:
