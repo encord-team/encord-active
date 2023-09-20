@@ -4,7 +4,7 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, Popover, Select, Slider, Space, Tooltip } from "antd";
+import { Button, Modal, Popover, Select, Slider, Space, Tooltip } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
@@ -100,6 +100,15 @@ export function Explorer({
     domain: "data",
     metric_key: "metric_random",
   });
+  const hasSelectedItems = selectedItems.size > 0;
+  const [clearSelectionModalVisible, setClearSelectionModalVisible] =
+    useState(false);
+  useEffect(() => {
+    if (hasSelectedItems) {
+      setClearSelectionModalVisible(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMetric.domain]);
 
   // Set show animations view state.
   const [showAnnotations, toggleShowAnnotations, setShowAnnotations] =
@@ -313,6 +322,21 @@ export function Explorer({
         projectHash={projectHash}
         setSelectedProjectHash={setSelectedProjectHash}
       />
+      <Modal
+        title={`Changing domain to ${selectedMetric.domain}`}
+        onOk={() => {
+          setSelectedItems(new Set());
+          setClearSelectionModalVisible(false);
+        }}
+        onCancel={() => setClearSelectionModalVisible(false)}
+        open={clearSelectionModalVisible}
+        okText="Clear"
+        cancelText="Preserve"
+        okButtonProps={{ style: { backgroundColor: "#5555ff" } }}
+      >
+        You have selected items from the previous domain, do you want to clear
+        the selection?
+      </Modal>
       <ExplorerEmbeddings
         projectHash={projectHash}
         predictionHash={predictionHash}

@@ -1,4 +1,4 @@
-import { List } from "antd";
+import { List, PaginationProps } from "antd";
 
 import { useMemo } from "react";
 import { GalleryCard } from "../preview/GalleryCard";
@@ -9,8 +9,8 @@ const ExplorerSearchLocale = {
   emptyText: "No Results",
 };
 
-const ExplorerSearchPagination = {
-  defaultPageSize: 20,
+const ExplorerSearchPagination: PaginationProps = {
+  defaultPageSize: 30,
 };
 
 const ExplorerSearchGrid = {};

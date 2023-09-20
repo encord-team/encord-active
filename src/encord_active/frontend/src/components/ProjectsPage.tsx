@@ -1,4 +1,4 @@
-import { Card, Space, Spin } from "antd";
+import { Card, Space, Spin, Tooltip } from "antd";
 import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";
 import importUrl from "../../assets/import.svg";
@@ -154,7 +154,17 @@ function ProjectCard({
         ) : null
       }
     >
-      <Meta title={project.title} description={project.description} />
+      <Meta
+        title={<Tooltip overlay={project.title}>{project.title}</Tooltip>}
+        description={
+          <Tooltip
+            overlay={project.description}
+            className="text-ellipsis whitespace-nowrap text-xs"
+          >
+            {project.description}
+          </Tooltip>
+        }
+      />
       <div className="card-body w-full justify-between gap-3 p-0">
         <div className="flex flex-col">
           <ProjectStat

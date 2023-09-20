@@ -34,6 +34,8 @@ export function ItemPreviewModal(props: {
     previewItem === undefined
       ? undefined
       : previewItem.split("_").slice(0, 2).join("_");
+  const frame =
+    previewItem === undefined ? undefined : Number(previewItem.split("_")[1]);
   const annotationHash: string | undefined =
     domain === "annotation" && previewItem !== undefined
       ? previewItem.split("_")[2]
@@ -118,9 +120,11 @@ export function ItemPreviewModal(props: {
             disabled={editUrl === undefined}
             icon={<EditOutlined />}
             onClick={() =>
-              editUrl !== undefined && preview !== undefined
+              editUrl !== undefined &&
+              preview !== undefined &&
+              frame !== undefined
                 ? window.open(
-                    editUrl(preview.data_hash, projectHash, 0),
+                    editUrl(preview.data_hash, projectHash, frame),
                     "_blank"
                   )
                 : undefined
