@@ -5,6 +5,16 @@ import "antd/dist/reset.css";
 import React, { useMemo } from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import {
+  Chart,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Title,
+  SubTitle,
+} from "chart.js";
 import { App } from "./app";
 import { AuthContext, useCreateAuthContext } from "./authContext";
 import { apiUrl, env, rollbarConfig } from "./constants";
@@ -50,6 +60,17 @@ const router = createBrowserRouter([
     element: <Root />,
   },
 ]);
+
+// charts.js register
+Chart.register(
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Title,
+  SubTitle
+);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
