@@ -701,8 +701,12 @@ def route_prediction_data_item(
         },
         annotation_enums={
             annotation_analytics.annotation_hash: {
-                k: getattr(annotation_analytics, k) for k in AnnotationEnums if k != "tags"
+                k: getattr(annotation_analytics, k)
+                for k in AnnotationEnums
+                if k not in {"tags", "annotation_manual", "annotation_user_id"}
             }
+            # FIXME: replace this if these enum components get added to prediction analytics
+            | {"annotation_manual": False, "annotation_user_id": -1}
             for annotation_analytics in annotation_analytics_list
         },
         annotation_tp_bounds={
