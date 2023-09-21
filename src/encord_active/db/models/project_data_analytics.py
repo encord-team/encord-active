@@ -49,7 +49,7 @@ class ProjectDataAnalytics(SQLModel, table=True):
     # Image Only
     metric_object_count: Optional[int] = field_metric_positive_integer()
     metric_object_density: Optional[float] = field_metric_normal()
-    metric_image_difficulty: Optional[float] = field_metric_normal()
+    metric_image_diversity: Optional[float] = field_metric_normal()
     metric_image_uniqueness: Optional[float] = field_metric_normal()
 
     # 4x custom normal metrics

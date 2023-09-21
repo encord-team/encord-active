@@ -66,8 +66,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Contrast": "metric_contrast",
     "Frame object density": "metric_object_density",
     "Green Values": "metric_green",
-    "Image Difficulty": "metric_image_difficulty",
-    "Image Diversity": "metric_image_difficulty",  # NOTE: Renamed
+    "Image Diversity": "metric_image_diversity",  # NOTE: Renamed
     "Image Singularity": "metric_image_uniqueness",
     "Object Count": "metric_object_count",
     "Random Values on Images": "metric_random",

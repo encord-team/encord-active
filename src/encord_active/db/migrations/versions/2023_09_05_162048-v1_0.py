@@ -803,7 +803,7 @@ def upgrade() -> None:
         sa.Column("metric_random", sa.REAL(), nullable=True),
         sa.Column("metric_object_count", sa.INTEGER(), nullable=True),
         sa.Column("metric_object_density", sa.REAL(), nullable=True),
-        sa.Column("metric_image_difficulty", sa.REAL(), nullable=True),
+        sa.Column("metric_image_diversity", sa.REAL(), nullable=True),
         sa.Column("metric_image_uniqueness", sa.REAL(), nullable=True),
         sa.Column("metric_custom0", sa.REAL(), nullable=True),
         sa.Column("metric_custom1", sa.REAL(), nullable=True),
@@ -818,7 +818,7 @@ def upgrade() -> None:
         sa.CheckConstraint("metric_green BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_green"),
         sa.CheckConstraint("metric_height >= 0", name="project_analytics_data_mtc_height"),
         sa.CheckConstraint(
-            "metric_image_difficulty BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_image_difficulty"
+            "metric_image_diversity BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_image_difficulty"
         ),
         sa.CheckConstraint(
             "metric_image_uniqueness BETWEEN 0.0 AND 1.0", name="project_analytics_data_mtc_image_uniqueness"
@@ -877,9 +877,9 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        "ix_project_analytics_data_ph_mtc_image_difficulty",
+        "ix_project_analytics_data_ph_mtc_image_diversity",
         "project_analytics_data",
-        ["project_hash", "metric_image_difficulty"],
+        ["project_hash", "metric_image_diversity"],
         unique=False,
     )
     op.create_index(
@@ -1608,7 +1608,7 @@ def migrate_sqlite_database_to_new_schema():
             "metric_image_singularity": "metric_image_uniqueness",
         },
         transform={
-            "metric_image_difficulty": TransformClampNormal,
+            "metric_image_diversity": TransformClampNormal,
         },
         mutate=_migrate_populate_data_type,
     )

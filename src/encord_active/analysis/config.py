@@ -11,6 +11,7 @@ from .embedding import EmbeddingDistanceMetric, NearestImageEmbeddingQuery
 from .embeddings.clip import ClipImgEmbedding
 from .embeddings.hu_moment import HuMomentEmbeddings
 from .metric import DerivedMetric, RandomSamplingQuery
+from .metrics.active_learning.diversity_sampling import ImageDiversity
 from .metrics.active_learning.uniqueness import ImageUniqueness
 from .metrics.annotation.count import ObjectCountMetric
 from .metrics.annotation.density import ObjectDensityMetric
@@ -142,7 +143,6 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         ObjectCountMetric(),  # metric_object_count
         ObjectDensityMetric(),  # metric_object_density ("Frame object density")
         # ?????
-        # FIXME: metric_image_difficulty ("Image Difficulty")  FIXME: KMeans!!??
         # FIXME: metric_label_inconsistent_class_or_track ("Inconsistent Object Classification and Track IDs")
         # FIXME: metric_label_shape_outlier ("Shape outlier detection")
         # FIXME: metric_seq_occlusion_detection (ALSO - MISSING COLUMN NAME, WILL NEED ALEMBIC MIGRATION)
@@ -175,6 +175,7 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
     derived_metrics: list[DerivedMetric] = [
         # Metrics depending on derived embedding / metric properties ONLY
         NearestNeighborAgreement(),  # metric_annotation_quality
+        ImageDiversity(),  # metric_image_diversity
         ImageUniqueness(),  # metric_image_uniqueness ("Image Singularity")
     ]
     return AnalysisConfig(

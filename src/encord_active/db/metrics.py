@@ -112,14 +112,14 @@ _DataOnlyMetrics: Dict[str, MetricDefinition] = {
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_image_difficulty": MetricDefinition(
-        title="Image Difficulty",
+    "metric_image_uniqueness": MetricDefinition(
+        title="Image Uniqueness",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
     ),
-    "metric_image_uniqueness": MetricDefinition(
-        title="Image Uniqueness",
+    "metric_image_diversity": MetricDefinition(
+        title="Image Diversity",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
