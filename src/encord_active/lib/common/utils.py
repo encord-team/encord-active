@@ -351,7 +351,8 @@ def mask_iou(m1: np.ndarray | torch.Tensor, m2: np.ndarray | torch.Tensor) -> fl
     union = (m1 | m2).sum()  # type: ignore
     if union == 0:
         return 0.0
-    return intersection / union
+
+    return float(intersection / union)
 
 
 def __rle_iou(rle1: RLEData, rle2: RLEData) -> float:

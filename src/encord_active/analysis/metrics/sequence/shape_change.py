@@ -65,6 +65,7 @@ class TemporalShapeChange(TemporalOneObjectMetric):
             or next_annotation is None
             or prev_annotation.points is None
             or next_annotation.points is None
+            or annotation.points is None
         ):
             return 1.0
 

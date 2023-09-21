@@ -1,13 +1,13 @@
-from typing import Dict, Optional, cast
+from typing import Dict, Optional
 
-import torch
 from shapely.geometry import Polygon
 
 from encord_active.analysis.metric import (
     MetricDependencies,
+    MetricResultOptionalAnnotation,
     TemporalObjectByFrameMetric,
 )
-from encord_active.analysis.types import AnnotationMetadata, MetricResult
+from encord_active.analysis.types import AnnotationMetadata
 from encord_active.db.metrics import MetricType
 from encord_active.lib.common.utils import get_polygon, mask_iou
 
@@ -37,8 +37,8 @@ class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
         annotation_deps: dict[str, MetricDependencies],
         prev_annotations: Optional[Dict[str, AnnotationMetadata]],
         next_annotations: Optional[Dict[str, AnnotationMetadata]],
-    ) -> Dict[str, MetricResult]:
-        annotation_res: Dict[str, MetricResult] = {}
+    ) -> Dict[str, MetricResultOptionalAnnotation]:
+        annotation_res: Dict[str, MetricResultOptionalAnnotation] = {}
 
         prev_annotations = {} if prev_annotations is None else prev_annotations
         next_annotations = {} if next_annotations is None else next_annotations
