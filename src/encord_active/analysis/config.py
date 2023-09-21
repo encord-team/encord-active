@@ -26,6 +26,10 @@ from .metrics.image.height import HeightMetric
 from .metrics.image.random_value import RandomMetric
 from .metrics.image.sharpness import SharpnessMetric
 from .metrics.image.width import WidthMetric
+from .metrics.sequence.missing_objects_and_wrong_tracks import (
+    TemporalMissingObjectsAndWrongTracks,
+)
+from .metrics.sequence.shape_change import TemporalShapeChange
 
 """
 Operations to support tracking for:
@@ -147,8 +151,8 @@ def create_analysis(device: torch.device) -> AnalysisConfig:
         # FIXME: metric_label_shape_outlier ("Shape outlier detection")
         # FIXME: metric_seq_occlusion_detection (ALSO - MISSING COLUMN NAME, WILL NEED ALEMBIC MIGRATION)
         # Temporal metrics
-        # FIXME: DISABLED TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
-        # FIXME: DISABLED TemporalMissingObjectsAndWrongTracks(),  # metric_missing_or_broken_track ("Missing Objects and Broken Tracks")
+        TemporalShapeChange(),  # metric_label_poly_similarity ("Polygon Shape Similarity")
+        TemporalMissingObjectsAndWrongTracks(),  # metric_missing_or_broken_track ("Missing Objects and Broken Tracks")
     ]
     derived_embeddings: list[Union[NearestImageEmbeddingQuery, RandomSamplingQuery]] = [
         # Derive properties from embedding

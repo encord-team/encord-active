@@ -23,6 +23,7 @@ import av
 import cv2
 import numpy as np
 import pandas as pd
+import torch
 from loguru import logger
 from PIL import Image
 from shapely.errors import ShapelyDeprecationWarning
@@ -345,7 +346,7 @@ def rle_to_binary_mask(rle: RLEData) -> np.ndarray:
     return mask.reshape(*size)
 
 
-def mask_iou(m1: np.ndarray, m2: np.ndarray) -> float:
+def mask_iou(m1: np.ndarray | torch.Tensor, m2: np.ndarray | torch.Tensor) -> float:
     intersection = (m1 & m2).sum()  # type: ignore
     union = (m1 | m2).sum()  # type: ignore
     if union == 0:

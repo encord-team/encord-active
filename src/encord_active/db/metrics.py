@@ -146,13 +146,13 @@ AnnotationOnlyMetrics: Dict[str, MetricDefinition] = {
         type=MetricType.NORMAL,
     ),
     "metric_polygon_similarity": MetricDefinition(
-        title="Polygon Similarity",
+        title="Track Shape Outlier",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
     ),
     "metric_missing_or_broken_track": MetricDefinition(
-        title="Missing or Broken Tracks",
+        title="Broken tracks",
         short_desc="",
         long_desc="",
         type=MetricType.NORMAL,
