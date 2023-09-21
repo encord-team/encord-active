@@ -64,7 +64,7 @@ export function SimilarityModal(props: {
             hideExtraAnnotations
             customTags={
               <Tag bordered={false} color="red" className="rounded-xl">
-                Similarity -{" "}
+                Similarity:{" "}
                 <span className="font-bold">{value.similarity.toFixed(5)}</span>
               </Tag>
             }

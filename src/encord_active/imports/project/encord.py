@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import encord
-from encord.exceptions import LabelRowError
 from tqdm import tqdm
 
 from encord_active.db.models import (

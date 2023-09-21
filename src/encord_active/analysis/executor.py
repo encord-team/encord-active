@@ -12,9 +12,9 @@ import numpy as np
 import torch
 import torchvision
 from encord.http.constants import RequestsSettings
-from PIL import Image
 from encord.objects import OntologyStructure
 from encord.objects.common import PropertyType
+from PIL import Image
 from pynndescent import NNDescent
 from torch import Tensor
 from torchvision.io import VideoReader

@@ -2,7 +2,7 @@ import math
 import uuid
 from email.utils import parsedate
 from pathlib import Path
-from typing import Annotated, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import Annotated, Dict, List, Literal, Optional, Set, Tuple
 
 import encord
 from cachetools import TTLCache, cached
