@@ -1,8 +1,7 @@
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 import torchvision.ops.boxes
-from astroid import Dict
 from clip import load as clip_load
 from torchvision.transforms import InterpolationMode
 
