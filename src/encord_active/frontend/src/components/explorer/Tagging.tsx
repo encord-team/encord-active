@@ -4,12 +4,12 @@ import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
 import { classy } from "../../helpers/classy";
-import { takeDataId } from "./id";
 import { loadingIndicator } from "../Spin";
 import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
 import { useProjectHash } from "../../hooks/useProjectHash";
 import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
 import { GroupedTags, ProjectItemTags, ProjectTag } from "../../openapi/api";
+import { toDataItemID } from "../util/ItemIdUtil";
 
 const TAG_GROUPS = [
   { value: "data", label: "Data", Icon: MdOutlineImage },
@@ -29,7 +29,7 @@ export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
   };
 
   const dataItemSet = useMemo(
-    () => new Set([...(itemSet || [])].map((id) => takeDataId(id))),
+    () => new Set([...(itemSet || [])].map((id) => toDataItemID(id))),
     [itemSet]
   );
 
@@ -90,7 +90,7 @@ export function BulkTaggingForm({
         mutate(
           items.map((id) => {
             const { label } = taggedItems?.get(id) || defaultTags;
-            const { data } = taggedItems?.get(takeDataId(id)) || defaultTags;
+            const { data } = taggedItems?.get(toDataItemID(id)) || defaultTags;
 
             const groupedTags = { data, label };
 
@@ -168,7 +168,7 @@ export function TaggingForm({
   return (
     <div
       className={classy(
-        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
+        "card-compact card dropdown-content w-64 bg-base-100 p-2 text-primary-content shadow",
         className
       )}
     >

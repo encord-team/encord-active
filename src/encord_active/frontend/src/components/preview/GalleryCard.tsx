@@ -13,6 +13,11 @@ import { ItemTags } from "../explorer/Tagging";
 import { FeatureHashMap } from "../Types";
 import { PredictionItem, ProjectItem } from "../../openapi/api";
 import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
+import {
+  toAnnotationHash,
+  toDataItemID,
+  toPredictionTy,
+} from "../util/ItemIdUtil";
 
 export const GalleryCard = memo(GalleryCardRaw);
 
@@ -45,16 +50,16 @@ function GalleryCardRaw(props: {
     iou,
   } = props;
   // Conditionally extract annotation hash
-  const dataId = itemId.split("_").slice(0, 2).join("_");
+  const dataId = toDataItemID(itemId);
   const annotationItem =
     selectedMetric.domain === "annotation" || predictionHash !== undefined;
   const annotationHash: string | undefined = annotationItem
-    ? itemId.split("_")[2]
+    ? toAnnotationHash(itemId, predictionHash !== undefined)
     : undefined;
 
   // Conditionally extract prediction type
-  const predictionTy: "TP" | "FP" | "FN" | string | undefined =
-    predictionHash !== undefined ? itemId.split("_")[3] : undefined;
+  const predictionTy: "TP" | "FP" | "FN" | undefined =
+    predictionHash !== undefined ? toPredictionTy(itemId) : undefined;
 
   // Conditionally fetch the correct dataId from project or prediction.
   const projectItem = predictionTy === undefined || predictionTy === "FN";
@@ -145,7 +150,12 @@ function GalleryCardRaw(props: {
       readonly classificationHash?: string;
       readonly name?: string;
     }[];
-
+    console.log(
+      "aded",
+      objOrClassList,
+      objOrClassList.map((v) => v.objectHash),
+      annotationHash
+    );
     return objOrClassList.find(
       (elem: { objectHash?: string; classificationHash?: string }) =>
         elem.objectHash === annotationHash ||
