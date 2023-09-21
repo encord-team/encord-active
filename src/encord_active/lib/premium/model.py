@@ -17,7 +17,7 @@ class TextQuery(SubsetQueryDefinition):
     text: str
 
 
-class CLIPQuery(SubsetQueryDefinition):
+class SemanticQuery(SubsetQueryDefinition):
     text: Optional[str]
     image: Optional[bytes]
 

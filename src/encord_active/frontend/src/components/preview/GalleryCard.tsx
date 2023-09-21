@@ -150,12 +150,7 @@ function GalleryCardRaw(props: {
       readonly classificationHash?: string;
       readonly name?: string;
     }[];
-    console.log(
-      "aded",
-      objOrClassList,
-      objOrClassList.map((v) => v.objectHash),
-      annotationHash
-    );
+
     return objOrClassList.find(
       (elem: { objectHash?: string; classificationHash?: string }) =>
         elem.objectHash === annotationHash ||

@@ -4,7 +4,16 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, Modal, Popover, Select, Slider, Space, Tooltip } from "antd";
+import {
+  Button,
+  Modal,
+  Popover,
+  Select,
+  Slider,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
@@ -30,7 +39,6 @@ import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysis
 import { ExplorerFilterState } from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
-import { SimilarityModal } from "../preview/SimilarityModal";
 import {
   ExplorerPremiumSearch,
   useExplorerPremiumSearch,
@@ -128,20 +136,6 @@ export function Explorer({
   const [embeddingFilter, setEmbeddingFilter] = useState<
     Embedding2DFilter | undefined
   >();
-  const canResetFilters =
-    predictionOutcome !== "tp" ||
-    iou !== 0.5 ||
-    dataFilters.ordering.length !== 0 ||
-    annotationFilters.ordering.length !== 0 ||
-    embeddingFilter !== undefined;
-  const resetAllFilters = () => {
-    setIsAscending(true);
-    setPredictionOutcome("tp");
-    setIou(0.5);
-    setDataFilters(DefaultFilters);
-    setAnnotationFilters(DefaultFilters);
-    setEmbeddingFilter(undefined);
-  };
 
   const rawFilters: ExplorerFilterState = useMemo(() => {
     const removeTagFilter = (
@@ -207,6 +201,11 @@ export function Explorer({
     isLoading: isLoadingAnnotationMetrics,
   } = useProjectAnalysisSummary(projectHash, "annotation");
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
+
+  // Premium search hooks:
+  const { premiumSearchState } = useExplorerPremiumSearch();
+  const { search, setSearch } = premiumSearchState;
+
   const { data: sortedItemsProject, isLoading: isLoadingSortedItemsProject } =
     useProjectAnalysisSearch(
       projectHash,
@@ -216,6 +215,9 @@ export function Explorer({
       0,
       1000,
       filters.filters,
+      similarityItem,
+      typeof search === "string" ? search : undefined,
+      typeof search !== "string" ? search : undefined,
       {
         enabled: predictionHash === undefined,
       }
@@ -244,15 +246,29 @@ export function Explorer({
       ? isLoadingSortedItemsProject
       : isLoadingSortedItemsPrediction;
 
+  const isSortedByMetric = !similarityItem && !search;
+
+  const canResetFilters =
+    similarityItem ||
+    search ||
+    predictionOutcome !== "tp" ||
+    iou !== 0.5 ||
+    dataFilters.ordering.length !== 0 ||
+    annotationFilters.ordering.length !== 0 ||
+    embeddingFilter !== undefined;
+
   const reset = (clearFilters: boolean = true) => {
     setSimilarityItem(undefined);
+    setSearch(undefined);
     if (clearFilters) {
-      resetAllFilters();
+      setIsAscending(true);
+      setPredictionOutcome("tp");
+      setIou(0.5);
+      setDataFilters(DefaultFilters);
+      setAnnotationFilters(DefaultFilters);
+      setEmbeddingFilter(undefined);
     }
   };
-
-  // Premium search hooks:
-  const { premiumSearchState } = useExplorerPremiumSearch();
 
   const itemsToRender: readonly string[] = sortedItems?.results ?? [];
 
@@ -272,16 +288,13 @@ export function Explorer({
     () => setPreviewedItem(undefined),
     [setPreviewedItem]
   );
-  const closeSimilarityItem = useCallback(
-    () => setSimilarityItem(undefined),
-    []
-  );
   const showSimilarItems = useCallback(
     (itemId: string) => {
+      setSearch(undefined);
       closePreview();
       setSimilarityItem(itemId);
     },
-    [closePreview]
+    [closePreview, setSearch]
   );
 
   const allowTaggingAnnotations = selectedMetric?.domain === "annotation";
@@ -357,19 +370,6 @@ export function Explorer({
         }
         editUrl={editUrl}
       />
-      <SimilarityModal
-        projectHash={projectHash}
-        analysisDomain={filters.analysisDomain}
-        selectedMetric={selectedMetric}
-        predictionHash={predictionHash}
-        similarityItem={similarityItem}
-        onClose={closeSimilarityItem}
-        onExpand={setPreviewedItem}
-        onShowSimilar={setSimilarityItem}
-        onClick={toggleImageSelection}
-        featureHashMap={featureHashMap}
-        selectedItems={selectedItems}
-      />
       <ExplorerDistribution
         projectHash={projectHash}
         predictionHash={predictionHash}
@@ -443,6 +443,7 @@ export function Explorer({
             ]}
           />
           <Button
+            disabled={!isSortedByMetric}
             onClick={() => setIsAscending(!isAscending)}
             icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
           />
@@ -452,21 +453,30 @@ export function Explorer({
           <Popover
             placement="bottomLeft"
             content={
-              <MetricFilter
-                filters={dataFilters}
-                setFilters={setDataFilters}
-                metricsSummary={dataMetricsSummary}
-                metricRanges={dataMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
+              <>
+                {!!(similarityItem || search) && (
+                  <Typography.Text strong>
+                    Sorting by similarity to:{" "}
+                    {similarityItem ||
+                      (typeof search === "string" ? search : search?.name)}{" "}
+                  </Typography.Text>
+                )}
+                <MetricFilter
+                  filters={dataFilters}
+                  setFilters={setDataFilters}
+                  metricsSummary={dataMetricsSummary}
+                  metricRanges={dataMetricRanges?.metrics}
+                  featureHashMap={featureHashMap}
+                  tags={tags ?? []}
+                  collaborators={collaborators ?? []}
+                />
+              </>
             }
             trigger="click"
           >
             <Button>
               Data Filters
-              {` (${dataFilters.ordering.length})`}
+              {` (${dataFilters.ordering.length + +!isSortedByMetric})`}
             </Button>
           </Popover>
           <Popover
@@ -542,7 +552,7 @@ export function Explorer({
             </Button>
             <Button
               onClick={() => setOpen("upload")}
-              disabled={canResetFilters}
+              disabled={!!canResetFilters}
               icon={<BiCloudUpload />}
             >
               Upload project
@@ -561,7 +571,7 @@ export function Explorer({
             </Button>
             <Button
               onClick={() => setOpen("upload")}
-              disabled={canResetFilters}
+              disabled={!!canResetFilters}
               hidden={remoteProject || !local}
               icon={<BiCloudUpload />}
               size="large"
@@ -570,7 +580,15 @@ export function Explorer({
             </Button>
           </>
         )}
-        <ExplorerPremiumSearch premiumSearchState={premiumSearchState} />
+        <ExplorerPremiumSearch
+          premiumSearchState={{
+            ...premiumSearchState,
+            setSearch: (args) => {
+              setSimilarityItem(undefined);
+              premiumSearchState.setSearch(args);
+            },
+          }}
+        />
       </Space>
       <ExplorerSearchResults
         projectHash={projectHash}

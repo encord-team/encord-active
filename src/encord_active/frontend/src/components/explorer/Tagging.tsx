@@ -168,7 +168,7 @@ export function TaggingForm({
   return (
     <div
       className={classy(
-        "card-compact card dropdown-content w-64 bg-base-100 p-2 text-primary-content shadow",
+        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
         className
       )}
     >

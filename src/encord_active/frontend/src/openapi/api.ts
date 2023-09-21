@@ -1572,25 +1572,6 @@ export interface SearchFilters {
 /**
  *
  * @export
- * @interface SimilarityResult
- */
-export interface SimilarityResult {
-  /**
-   *
-   * @type {string}
-   * @memberof SimilarityResult
-   */
-  item: string;
-  /**
-   *
-   * @type {number}
-   * @memberof SimilarityResult
-   */
-  similarity: number;
-}
-/**
- *
- * @export
  * @interface UploadProjectToEncordPostAction
  */
 export interface UploadProjectToEncordPostAction {
@@ -3606,10 +3587,13 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet: async (
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost: async (
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -3617,17 +3601,20 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       offset?: number,
       limit?: number,
       filters?: string,
+      text?: string,
+      image?: File,
+      item?: string,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
-        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet",
+        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost",
         "projectHash",
         projectHash
       );
       // verify required parameter 'domain' is not null or undefined
       assertParamExists(
-        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet",
+        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost",
         "domain",
         domain
       );
@@ -3646,12 +3633,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "GET",
+        method: "POST",
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+      const localVarFormParams = new ((configuration &&
+        configuration.formDataCtor) ||
+        FormData)();
 
       if (orderBy !== undefined) {
         localVarQueryParameter["order_by"] = orderBy;
@@ -3673,6 +3663,20 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         localVarQueryParameter["filters"] = filters;
       }
 
+      if (text !== undefined) {
+        localVarFormParams.append("text", text as any);
+      }
+
+      if (image !== undefined) {
+        localVarFormParams.append("image", image as any);
+      }
+
+      if (item !== undefined) {
+        localVarFormParams.append("item", item as any);
+      }
+
+      localVarHeaderParameter["Content-Type"] = "multipart/form-data";
+
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
         baseOptions && baseOptions.headers ? baseOptions.headers : {};
@@ -3681,95 +3685,14 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         ...headersFromBaseOptions,
         ...options.headers,
       };
+      if ([...localVarFormParams.keys()].length > 0)
+        localVarRequestOptions.data = localVarFormParams;
 
       return {
         url: toPathString(localVarUrlObj),
         options: localVarRequestOptions,
       };
     },
-    /**
-     *
-     * @summary Route Project Similarity Search
-     * @param {string} projectHash
-     * @param {AnalysisDomain} domain
-     * @param {string} item
-     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet:
-      async (
-        projectHash: string,
-        domain: AnalysisDomain,
-        item: string,
-        embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
-        options: AxiosRequestConfig = {}
-      ): Promise<RequestArgs> => {
-        // verify required parameter 'projectHash' is not null or undefined
-        assertParamExists(
-          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
-          "projectHash",
-          projectHash
-        );
-        // verify required parameter 'domain' is not null or undefined
-        assertParamExists(
-          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
-          "domain",
-          domain
-        );
-        // verify required parameter 'item' is not null or undefined
-        assertParamExists(
-          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
-          "item",
-          item
-        );
-        // verify required parameter 'embedding' is not null or undefined
-        assertParamExists(
-          "routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet",
-          "embedding",
-          embedding
-        );
-        const localVarPath =
-          `/api/projects_v2/{project_hash}/analysis/{domain}/similarity/{item}`
-            .replace(
-              `{${"project_hash"}}`,
-              encodeURIComponent(String(projectHash))
-            )
-            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
-            .replace(`{${"item"}}`, encodeURIComponent(String(item)));
-        // use dummy base URL string because the URL constructor only accepts absolute URLs.
-        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-        let baseOptions;
-        if (configuration) {
-          baseOptions = configuration.baseOptions;
-        }
-
-        const localVarRequestOptions = {
-          method: "GET",
-          ...baseOptions,
-          ...options,
-        };
-        const localVarHeaderParameter = {} as any;
-        const localVarQueryParameter = {} as any;
-
-        if (embedding !== undefined) {
-          localVarQueryParameter["embedding"] = embedding;
-        }
-
-        setSearchParams(localVarUrlObj, localVarQueryParameter);
-        let headersFromBaseOptions =
-          baseOptions && baseOptions.headers ? baseOptions.headers : {};
-        localVarRequestOptions.headers = {
-          ...localVarHeaderParameter,
-          ...headersFromBaseOptions,
-          ...options.headers,
-        };
-
-        return {
-          url: toPathString(localVarUrlObj),
-          options: localVarRequestOptions,
-        };
-      },
     /**
      *
      * @summary Route Project Summary
@@ -4803,10 +4726,13 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+    async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -4814,12 +4740,15 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       offset?: number,
       limit?: number,
       filters?: string,
+      text?: string,
+      image?: File,
+      item?: string,
       options?: AxiosRequestConfig
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+        await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
           orderBy,
@@ -4827,43 +4756,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
           offset,
           limit,
           filters,
-          options
-        );
-      return createRequestFunction(
-        localVarAxiosArgs,
-        globalAxios,
-        BASE_PATH,
-        configuration
-      );
-    },
-    /**
-     *
-     * @summary Route Project Similarity Search
-     * @param {string} projectHash
-     * @param {AnalysisDomain} domain
-     * @param {string} item
-     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-      projectHash: string,
-      domain: AnalysisDomain,
-      item: string,
-      embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
-      options?: AxiosRequestConfig
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string
-      ) => AxiosPromise<Array<SimilarityResult>>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-          projectHash,
-          domain,
+          text,
+          image,
           item,
-          embedding,
           options
         );
       return createRequestFunction(
@@ -5589,10 +5484,13 @@ export const ProjectsV2ApiFactory = function (
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
       orderBy?: string,
@@ -5600,10 +5498,13 @@ export const ProjectsV2ApiFactory = function (
       offset?: number,
       limit?: number,
       filters?: string,
+      text?: string,
+      image?: File,
+      item?: string,
       options?: any
     ): AxiosPromise<AnalysisSearch> {
       return localVarFp
-        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
           orderBy,
@@ -5611,33 +5512,9 @@ export const ProjectsV2ApiFactory = function (
           offset,
           limit,
           filters,
-          options
-        )
-        .then((request) => request(axios, basePath));
-    },
-    /**
-     *
-     * @summary Route Project Similarity Search
-     * @param {string} projectHash
-     * @param {AnalysisDomain} domain
-     * @param {string} item
-     * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-      projectHash: string,
-      domain: AnalysisDomain,
-      item: string,
-      embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
-      options?: any
-    ): AxiosPromise<Array<SimilarityResult>> {
-      return localVarFp
-        .routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-          projectHash,
-          domain,
+          text,
+          image,
           item,
-          embedding,
           options
         )
         .then((request) => request(axios, basePath));
@@ -6365,11 +6242,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {number} [offset]
    * @param {number} [limit]
    * @param {string} [filters] Search Filters
+   * @param {string} [text]
+   * @param {File} [image]
+   * @param {string} [item]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
    */
-  public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+  public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
     projectHash: string,
     domain: AnalysisDomain,
     orderBy?: string,
@@ -6377,10 +6257,13 @@ export class ProjectsV2Api extends BaseAPI {
     offset?: number,
     limit?: number,
     filters?: string,
+    text?: string,
+    image?: File,
+    item?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+      .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
         projectHash,
         domain,
         orderBy,
@@ -6388,35 +6271,9 @@ export class ProjectsV2Api extends BaseAPI {
         offset,
         limit,
         filters,
-        options
-      )
-      .then((request) => request(this.axios, this.basePath));
-  }
-
-  /**
-   *
-   * @summary Route Project Similarity Search
-   * @param {string} projectHash
-   * @param {AnalysisDomain} domain
-   * @param {string} item
-   * @param {RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum} embedding
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof ProjectsV2Api
-   */
-  public routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-    projectHash: string,
-    domain: AnalysisDomain,
-    item: string,
-    embedding: RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum,
-    options?: AxiosRequestConfig
-  ) {
-    return ProjectsV2ApiFp(this.configuration)
-      .routeProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGet(
-        projectHash,
-        domain,
+        text,
+        image,
         item,
-        embedding,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -6521,12 +6378,3 @@ export const RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOr
   } as const;
 export type RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum =
   (typeof RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum)[keyof typeof RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum];
-/**
- * @export
- */
-export const RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
-  {
-    EmbeddingClip: "embedding_clip",
-  } as const;
-export type RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum =
-  (typeof RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum)[keyof typeof RouteProjectSimilaritySearchApiProjectsV2ProjectHashAnalysisDomainSimilarityItemGetEmbeddingEnum];

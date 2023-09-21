@@ -11,6 +11,9 @@ export function useProjectAnalysisSearch(
   offset: number,
   limit: number,
   filters: SearchFilters | undefined = undefined,
+  similarityItem: string | undefined = undefined,
+  semanticSearch: string | undefined = undefined,
+  imageSearch: File | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
   const querier = useQuerier();
@@ -26,18 +29,24 @@ export function useProjectAnalysisSearch(
       offset,
       limit,
       filters,
+      similarityItem,
+      semanticSearch,
+      imageSearch,
     ],
     () =>
       querier
         .getProjectV2API()
-        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchGet(
+        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
           orderBy,
           orderByDesc,
           offset,
           limit,
-          filters !== undefined ? JSON.stringify(filters) : undefined
+          filters !== undefined ? JSON.stringify(filters) : undefined,
+          semanticSearch,
+          imageSearch,
+          similarityItem
         )
         .then((r) => r.data),
     {

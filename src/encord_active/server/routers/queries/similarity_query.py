@@ -37,7 +37,7 @@ class SimilarityQuery:
             self.query_impl = nn
         self.results = results
 
-    def query(self, embedding: np.ndarray, k: int, item: DataOrAnnotateItem) -> List[SimilarityResult]:
+    def query(self, embedding: np.ndarray, k: int, item: Optional[DataOrAnnotateItem]) -> List[SimilarityResult]:
         if isinstance(self.query_impl, NNDescent):
             indices_stack, distances_stack = self.query_impl.query(embedding.reshape(1, -1), k=k)
             indices = indices_stack.reshape(-1)
@@ -54,7 +54,7 @@ class SimilarityQuery:
         similarity_results = [
             pack_similarity_result(self.results[idx], similarity) for idx, similarity in zip(indices, distances)
         ]
-        if len(similarity_results) > 0:
+        if item and len(similarity_results) > 0:
             similarity_0 = similarity_results[0].item
             if similarity_0 == item.pack():
                 similarity_results = similarity_results[1:]

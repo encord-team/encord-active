@@ -12,7 +12,7 @@ class CLIPEmbedder(ImageEmbedder):
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
     def embed_texts(self, texts: list[str]) -> np.ndarray:
-        tokens = torch.stack([clip.tokenize(t) for t in texts])
+        tokens = torch.concat([clip.tokenize(t) for t in texts], dim=0)
         return self.execute_with_largest_batch_size(self.model.encode_text, tokens)
 
     def embed_images(self, images: list[Image.Image]) -> np.ndarray:

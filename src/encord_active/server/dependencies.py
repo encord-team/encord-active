@@ -2,7 +2,7 @@ import uuid
 from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Form, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import decode
 from pydantic import BaseModel
@@ -38,6 +38,10 @@ def parse_data_item(data_item: str) -> DataItem:
         raise ValueError(f"DataItem expects 2 segments: {data_item}")
     du_hash, frame = segments
     return DataItem(du_hash=uuid.UUID(du_hash), frame=int(frame))
+
+
+def parse_optional_data_or_annotate_item(item: Annotated[Optional[str], Form()] = None) -> Optional[DataOrAnnotateItem]:
+    return None if item is None else parse_data_or_annotate_item(item)
 
 
 def parse_data_or_annotate_item(item: str) -> DataOrAnnotateItem:
