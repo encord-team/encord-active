@@ -259,7 +259,7 @@ def route_project_similarity_search(
         if engine.dialect.name == "postgresql":
             pg_query = (
                 select(
-                    base_domain.metadata.embedding_clip.cosine_distance(src_embedding).label("similarity"),  # type: ignore
+                    base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
                     *base_domain.select_args(base_domain.metadata),
                 )
                 .where(

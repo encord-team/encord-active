@@ -32,7 +32,7 @@ class SimilarityQuery:
         if len(embeddings) <= 4096:
             self.query_impl = embeddings_stack
         else:
-            nn: NNDescent = NNDescent(data=embeddings_stack, metric="cosine")
+            nn: NNDescent = NNDescent(data=embeddings_stack, metric="euclidean")
             nn.prepare()
             self.query_impl = nn
         self.results = results
@@ -43,14 +43,14 @@ class SimilarityQuery:
             indices = indices_stack.reshape(-1)
             distances = distances_stack.reshape(-1)
         else:
-            # offsets = self.query_impl - embedding
-            # distances = np.linalg.norm(offsets, axis=1) L2
-            dot_product = np.dot(self.query_impl, embedding)
-            query_len = np.linalg.norm(self.query_impl, axis=1)
-            embedding_len = np.linalg.norm(embedding)
-            similarities = dot_product / (query_len * embedding_len)
-            indices = np.argsort(similarities)[:k]
-            distances = similarities[indices]
+            offsets = self.query_impl - embedding
+            distances = np.linalg.norm(offsets, axis=1)  # Euclidean distance
+            # dot_product = np.dot(self.query_impl, embedding)
+            # query_len = np.linalg.norm(self.query_impl, axis=1)
+            # embedding_len = np.linalg.norm(embedding)
+            # similarities = dot_product / (query_len * embedding_len)
+            indices = np.argsort(distances)[:k]
+            distances = distances[indices]
         similarity_results = [
             pack_similarity_result(self.results[idx], similarity) for idx, similarity in zip(indices, distances)
         ]
