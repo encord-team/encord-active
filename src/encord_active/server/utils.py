@@ -32,6 +32,7 @@ from encord_active.lib.metrics.utils import (
 from encord_active.lib.model_predictions.reader import read_class_idx as _read_class_idx
 from encord_active.lib.model_predictions.writer import MainPredictionType
 from encord_active.lib.project.project_file_structure import (
+    DataUnitStructure,
     LabelRowStructure,
     ProjectFileStructure,
 )
@@ -115,10 +116,8 @@ def _get_url(
     label_row_structure: LabelRowStructure,
     du_hash: str,
     frame: str,
+    data_opt: Optional[DataUnitStructure] = None,
 ) -> Optional[Tuple[str, Optional[float]]]:
-    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
-        label_row_structure.iter_data_unit(du_hash, None), None
-    )
     if data_opt:
         timestamp = None
         if data_opt.data_type == "video":
@@ -185,6 +184,19 @@ def to_item(
     # Derive encord url
     edit_url: Optional[str] = None
     project_meta = project_file_structure.load_project_meta()
+    label_row_structure = project_file_structure.label_row_structure(lr_hash)
+    data_opt = next(label_row_structure.iter_data_unit(du_hash, int(frame)), None) or next(
+        label_row_structure.iter_data_unit(du_hash, None), None
+    )
+    # HACKY FRAME SYNC FIX
+    if data_opt is not None and data_opt.data_type == "video":
+        sampling_rate = project_meta.get("sampling_rate")
+        fps = data_opt.frames_per_second
+        if sampling_rate is not None:
+            offset = int(fps / sampling_rate) // 2 - 1
+            frame = f"{int(frame) + offset:d}"
+    # END HACKY FRAME SYNC FIX
+
     if project_meta.get("has_remote", False):
         project_hash = project_meta["project_hash"]
         edit_url = f"https://app.encord.com/label_editor/{du_hash}&{project_hash}/{frame}"
@@ -197,8 +209,7 @@ def to_item(
         metrics=row,
     )
 
-    label_row_structure = project_file_structure.label_row_structure(lr_hash)
-    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame)
+    url = _get_url(uuid.UUID(project_meta["project_hash"]), label_row_structure, du_hash, frame, data_opt)
 
     label_row = label_row_structure.label_row_json
     du = label_row["data_units"][du_hash]
