@@ -6,7 +6,7 @@ import { useQuerier } from "../Context";
 export function useProjectAnalysisSearch(
   projectHash: string,
   domain: AnalysisDomain,
-  orderBy: string,
+  orderBy: string | undefined,
   orderByDesc: boolean,
   offset: number,
   limit: number,
@@ -39,11 +39,11 @@ export function useProjectAnalysisSearch(
         .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          filters !== undefined ? JSON.stringify(filters) : undefined,
           orderBy,
           orderByDesc,
           offset,
           limit,
-          filters !== undefined ? JSON.stringify(filters) : undefined,
           semanticSearch,
           imageSearch,
           similarityItem

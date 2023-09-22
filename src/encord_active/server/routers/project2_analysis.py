@@ -3,10 +3,10 @@ import io
 import uuid
 from enum import Enum
 from typing import Annotated, Dict, List, Literal, Optional, Tuple
-from PIL import Image, ImageOps
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 from scipy.stats import ks_2samp
 from sqlalchemy.engine import Engine
@@ -94,11 +94,67 @@ def route_project_summary(
 class AnalysisSearch(BaseModel):
     truncated: bool
     results: List[str]
+    similarities: Optional[List[float]]
 
 
 @functools.lru_cache
-def get_embedder():
+def get_embedder() -> CLIPEmbedder:
     return CLIPEmbedder()
+
+
+@functools.lru_cache(maxsize=2)
+def _get_similarity_query_index(
+    project_hash: uuid.UUID,
+    domain: AnalysisDomain,
+    engine: Engine,
+) -> similarity_query.SimilarityQuery:
+    tables = _get_metric_domain_tables(domain)
+    base_domain: DomainTables = tables.primary
+    with Session(engine) as sess:
+        query = select(base_domain.metadata.embedding_clip, *base_domain.select_args(base_domain.metadata)).where(
+            # FIXME: will break for nearest embedding on predictions
+            base_domain.metadata.project_hash == project_hash,  # type: ignore
+            is_not(base_domain.metadata.embedding_clip, None),
+        )
+        results = sess.exec(query).fetchall()
+    embeddings = [np.frombuffer(e[0], dtype=np.float64) for e in results if e is not None]  # type: ignore
+    return similarity_query.SimilarityQuery(embeddings, [rest for _em, *rest in results])  # type: ignore
+
+
+def _find_similar_items(
+    project_hash: uuid.UUID,
+    src_embedding: bytes,
+    domain: AnalysisDomain,
+    tables: DomainTables,
+    engine: Engine,
+    similarity_exclude: Optional[Tuple[DataOrAnnotateItem, list]],
+    extra_where: Optional[list],
+    extra_where_has_filters: bool,
+    limit: int,
+) -> List[similarity_query.SimilarityResult]:
+    if engine.dialect.name == "postgresql":
+        pg_where: list = (extra_where or []) + ([] if similarity_exclude is None else similarity_exclude[1])
+        with Session(engine) as sess:
+            return similarity_query.pg_similarity_query(
+                sess=sess,
+                tables=tables,
+                project_hash=project_hash,
+                embedding=src_embedding,
+                extra_where=pg_where,
+                limit=limit,
+            )
+
+    similarity_query_impl = _get_similarity_query_index(project_hash, domain, engine)
+    return similarity_query_impl.filter_query(
+        engine=engine,
+        tables=tables,
+        project_hash=project_hash,
+        filters=extra_where or [],
+        has_filters=extra_where_has_filters,
+        embedding=np.frombuffer(src_embedding, dtype=np.float64),
+        k=limit,
+        item=None if similarity_exclude is None else similarity_exclude[0],
+    )
 
 
 @router.post("/search")
@@ -106,10 +162,10 @@ def route_project_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    order_by: Optional[str] = None,
-    desc: bool = False,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(1000, le=1000),
+    order_by: Optional[str] = Form(None),
+    desc: bool = Form(False),
+    offset: int = Form(0, ge=0),
+    limit: int = Form(1000, le=1000),
     engine: Engine = Depends(dep_engine_readonly),
     similarity_item: Optional[DataOrAnnotateItem] = Depends(parse_optional_data_or_annotate_item),
     text: Annotated[Optional[str], Form()] = None,
@@ -124,39 +180,47 @@ def route_project_search(
         search=filters,
         project_filters={"project_hash": [project_hash]},
     )
-
-    with Session(engine) as sess:
-        query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
-
-        if order_by is not None:
-            if order_by in base_table.metrics or order_by in base_table.enums:
-                order_by_attr = getattr(base_table.analytics, order_by)
-                if desc:
-                    order_by_attr = order_by_attr.desc()
-                query = query.order_by(order_by_attr)
-
-        # + 1 to detect truncation.
-        query = query.offset(offset).limit(limit + 1)
-        search_results = sess.exec(query).fetchall()
-
-    results = [
-        _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
-        for result in search_results[:limit]
-    ]
+    where_has_filters = len(where) > 1  # 0 is always project hash constraint for 1 table
 
     similarity_searches = [
         True for similarity_search in [similarity_item, text, image] if similarity_search is not None
     ]
 
-    truncated = len(search_results) == limit + 1
-
-    if len(similarity_searches) == 0:
-        return AnalysisSearch(truncated=truncated, results=results)
-    elif len(similarity_searches) > 1:
+    is_similarity_query = False
+    if len(similarity_searches) > 1:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only one of `item`, `text` or `image` is allowed."
         )
+    elif len(similarity_searches) == 1:
+        is_similarity_query = True
 
+    # Base implementation.
+    if not is_similarity_query:
+        with Session(engine) as sess:
+            query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
+
+            if order_by is not None:
+                if order_by in base_table.metrics or order_by in base_table.enums:
+                    order_by_attr = getattr(base_table.analytics, order_by)
+                    if desc:
+                        order_by_attr = order_by_attr.desc()
+                    query = query.order_by(order_by_attr)
+
+            # + 1 to detect truncation.
+            query = query.offset(offset).limit(limit + 1)
+            search_results = sess.exec(query).fetchall()
+
+        results = [
+            _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
+            for result in search_results[:limit]
+        ]
+        truncated = len(search_results) == limit + 1
+        return AnalysisSearch(truncated=truncated, results=results, similarities=None)
+
+    # Requested a similarity search implementation
+    # Resolve to requested arguments to similarity enhanced search implementation
+    similarity_embedding_bytes: Optional[bytes]
+    similarity_exclude_constraint: Optional[Tuple[DataOrAnnotateItem, list]] = None
     if similarity_item is not None:
         join_attr_set = {
             "du_hash": similarity_item.du_hash,
@@ -166,55 +230,60 @@ def route_project_search(
             join_attr_set["annotation_hash"] = similarity_item.annotation_hash
         elif domain == AnalysisDomain.Annotation:
             raise ValueError(f"Similarity domain mismatch: {similarity_item} in domain {domain}")
-
         with Session(engine) as sess:
-            src_embedding = sess.exec(
+            similarity_embedding_bytes = sess.exec(
                 select(base_table.metadata.embedding_clip).where(
                     base_table.metadata.project_hash == project_hash,
                     *[
                         getattr(base_table.metadata, join_attr) == join_attr_set[join_attr]
                         for join_attr in base_table.join
                     ],
+                    base_table.metadata.project_hash == project_hash,
                 )
             ).first()
-            if src_embedding is None:
-                raise ValueError("Source entry does not exist or missing embedding")
-            extra_where = (
+            similarity_where_constraint: list = [
                 functools.reduce(
                     lambda a, b: a | b,
                     [
                         getattr(base_table.metadata, join_attr) != join_attr_set[join_attr]
                         for join_attr in base_table.join
                     ],
+                    base_table.metadata.project_hash == project_hash,
                 ),
-            )
-            similar_items = _find_similar_items(
-                project_hash, src_embedding, domain, base_table, engine, similarity_item, extra_where
-            )
+            ]
+            similarity_exclude_constraint = (similarity_item, similarity_where_constraint)
+    elif text is not None:
+        similarity_embedding_bytes = get_embedder().embed_text(text).astype(dtype=np.float64).tobytes()
+    elif image is not None:
+        request_object_content = image.file.read()
+        img_query = Image.open(io.BytesIO(request_object_content))
+        img_exif = img_query.getexif()
+        if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
+            img_query = ImageOps.exif_transpose(img_query)
+        similarity_embedding_bytes = get_embedder().embed_image(img_query).astype(dtype=np.float64).tobytes()
     else:
-        if text is not None:
-            embedding = get_embedder().embed_text(text)
-        elif image:
-            request_object_content = image.file.read()
-            query = Image.open(io.BytesIO(request_object_content))
+        # NOTE: this shouldn't happen, but the type system doesn't understand this.
+        raise ValueError("Missing search term")
 
-            img_exif = query.getexif()
-            if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
-                query = ImageOps.exif_transpose(query)
-            embedding = get_embedder().embed_image(query)
-        else:
-            # NOTE: this shouldn't happen, but the type system doesn't understand this.
-            raise ValueError("Missing search term")
+    if similarity_embedding_bytes is None:
+        raise RuntimeError("Similarity search against non missing item or failed to create embedding")
 
-        embedding_bytes = embedding.astype(dtype=np.float64).tobytes()
-        similar_items = _find_similar_items(project_hash, embedding_bytes, domain, base_table, engine)
-
-    result_set = set(results)
-    filtered_similar_items = [result.item for result in similar_items if result.item in result_set]
-
+    similarity_result = _find_similar_items(
+        project_hash,
+        similarity_embedding_bytes,
+        domain,
+        base_table,
+        engine,
+        similarity_exclude_constraint,
+        where,
+        where_has_filters,
+        limit + 1,
+    )
+    truncated = len(similarity_result) == limit + 1
     return AnalysisSearch(
         truncated=truncated,
-        results=list(dict.fromkeys([*filtered_similar_items, *results])),
+        results=[r.item for r in similarity_result],
+        similarities=[r.similarity for r in similarity_result],
     )
 
 
@@ -282,57 +351,6 @@ def route_project_reduction_scatter(
             buckets=buckets,
             filters=filters,
         )
-
-
-@functools.lru_cache(maxsize=2)
-def _get_similarity_query(
-    project_hash: uuid.UUID,
-    domain: AnalysisDomain,
-    engine: Engine,
-) -> similarity_query.SimilarityQuery:
-    tables = _get_metric_domain_tables(domain)
-    base_domain: DomainTables = tables.primary
-    with Session(engine) as sess:
-        query = select(base_domain.metadata.embedding_clip, *base_domain.select_args(base_domain.metadata)).where(
-            # FIXME: will break for nearest embedding on predictions
-            base_domain.metadata.project_hash == project_hash,  # type: ignore
-            is_not(base_domain.metadata.embedding_clip, None),
-        )
-        results = sess.exec(query).fetchall()
-    embeddings = [np.frombuffer(e[0], dtype=np.float64) for e in results if e is not None]  # type: ignore
-    return similarity_query.SimilarityQuery(embeddings, [rest for _em, *rest in results])  # type: ignore
-
-
-def _find_similar_items(
-    project_hash: uuid.UUID,
-    src_embedding: bytes,
-    domain: AnalysisDomain,
-    base_domain: DomainTables,
-    engine: Engine,
-    exclude: Optional[DataOrAnnotateItem] = None,
-    extra_where: Tuple = tuple(),
-    limit: int = 50,
-):
-    if engine.dialect.name != "postgresql":
-        # Return via fallback methods (sqlite & similar)
-        similarity_query_impl = _get_similarity_query(project_hash, domain, engine)
-        return similarity_query_impl.query(np.frombuffer(src_embedding, dtype=np.float64), k=limit, item=exclude)
-
-    with Session() as sess:
-        pg_query = (
-            select(
-                base_domain.metadata.embedding_clip.l2_distance(src_embedding).label("similarity"),  # type: ignore
-                *base_domain.select_args(base_domain.metadata),
-            )
-            .where(base_domain.metadata.project_hash == project_hash, *extra_where)
-            .order_by("similarity")
-            .limit(limit)
-        )
-        pg_results = sess.exec(pg_query).fetchall()
-        return [
-            similarity_query.pack_similarity_result(tuple(similarity_item), similarity)  # type: ignore
-            for similarity, *similarity_item in pg_results
-        ]
 
 
 # @router.get("/similarity/{item}")

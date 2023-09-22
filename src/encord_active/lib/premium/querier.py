@@ -14,7 +14,6 @@ from encord_active.lib.premium.model import (
     SemanticQuery,
     TextQuery,
 )
-from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -38,7 +37,7 @@ class Querier:
         data.pop("image", None)
         ids = set(data.pop("identifiers", []))
 
-        response = requests.post(f"{self.api_url}/{endpoint}", params=params, data=data, files=files, timeout=timeout)
+        response = requests.post(f"{self.api_url}/{endpoint}", params=params, data=data, files=files, timeout=timeout)  # type: ignore
         if response.status_code != 200:
             return None
 
@@ -54,7 +53,7 @@ class Querier:
         self, endpoint: str = "", data: Optional[dict] = None, timeout: Optional[float] = None
     ) -> Optional[dict]:
         params = {"project": self.project_hash, "db": self.db_path}
-        response = requests.post(f"{self.api_url}/{endpoint}", params=params, data=data, timeout=timeout)
+        response = requests.post(f"{self.api_url}/{endpoint}", params=params, data=data, timeout=timeout)  # type: ignore
         if response.status_code != 200:
             return None
         return response.json()

@@ -21,6 +21,7 @@ function ExplorerSearchResultsRaw(props: {
   projectHash: string;
   predictionHash: string | undefined;
   itemsToRender: readonly string[];
+  itemSimilarities: readonly number[] | undefined;
   loadingDescription: string;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
   toggleImageSelection: (itemId: string) => void;
@@ -35,6 +36,7 @@ function ExplorerSearchResultsRaw(props: {
     projectHash,
     predictionHash,
     itemsToRender,
+    itemSimilarities,
     loadingDescription,
     selectedMetric,
     toggleImageSelection,
@@ -63,13 +65,18 @@ function ExplorerSearchResultsRaw(props: {
       loading={loading}
       locale={ExplorerSearchLocale}
       pagination={ExplorerSearchPagination}
-      renderItem={(item: string) => (
+      renderItem={(item: string, index: number) => (
         <GalleryCard
           projectHash={projectHash}
           predictionHash={predictionHash}
           selectedMetric={selectedMetric}
           key={item}
           itemId={item}
+          itemSimilarity={
+            itemSimilarities == null || index > itemSimilarities.length
+              ? undefined
+              : itemSimilarities[index]
+          }
           onClick={toggleImageSelection}
           onExpand={setPreviewedItem}
           onShowSimilar={showSimilarItems}

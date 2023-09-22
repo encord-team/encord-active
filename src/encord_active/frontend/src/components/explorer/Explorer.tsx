@@ -112,6 +112,9 @@ export function Explorer({
   const [clearSelectionModalVisible, setClearSelectionModalVisible] =
     useState(false);
   useEffect(() => {
+    // Similarity item does not work between similarity domains.
+    setSimilarityItem(undefined);
+    // Selection clear modal.
     if (hasSelectedItems) {
       setClearSelectionModalVisible(true);
     }
@@ -210,7 +213,7 @@ export function Explorer({
     useProjectAnalysisSearch(
       projectHash,
       filters.analysisDomain,
-      filters.orderBy,
+      similarityItem != null || search != null ? undefined : filters.orderBy,
       filters.desc,
       0,
       1000,
@@ -271,6 +274,8 @@ export function Explorer({
   };
 
   const itemsToRender: readonly string[] = sortedItems?.results ?? [];
+  const itemSimilarities: readonly number[] | undefined =
+    sortedItems?.similarities ?? undefined;
 
   const toggleImageSelection = useCallback((id: string) => {
     setSelectedItems((prev) => {
@@ -454,13 +459,16 @@ export function Explorer({
             placement="bottomLeft"
             content={
               <>
-                {!!(similarityItem || search) && (
-                  <Typography.Text strong>
-                    Sorting by similarity to:{" "}
-                    {similarityItem ||
-                      (typeof search === "string" ? search : search?.name)}{" "}
-                  </Typography.Text>
-                )}
+                {!!(similarityItem || search) &&
+                  selectedMetric.domain === "data" && (
+                    <Typography.Text strong>
+                      Sorting by similarity to:{" "}
+                      {similarityItem ||
+                        (typeof search === "string"
+                          ? search
+                          : search?.name)}{" "}
+                    </Typography.Text>
+                  )}
                 <MetricFilter
                   filters={dataFilters}
                   setFilters={setDataFilters}
@@ -482,15 +490,27 @@ export function Explorer({
           <Popover
             placement="bottomLeft"
             content={
-              <MetricFilter
-                filters={annotationFilters}
-                setFilters={setAnnotationFilters}
-                metricsSummary={annotationMetricsSummary}
-                metricRanges={annotationMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
+              <>
+                {!!(similarityItem || search) &&
+                  selectedMetric.domain === "annotation" && (
+                    <Typography.Text strong>
+                      Sorting by similarity to:{" "}
+                      {similarityItem ||
+                        (typeof search === "string"
+                          ? search
+                          : search?.name)}{" "}
+                    </Typography.Text>
+                  )}
+                <MetricFilter
+                  filters={annotationFilters}
+                  setFilters={setAnnotationFilters}
+                  metricsSummary={annotationMetricsSummary}
+                  metricRanges={annotationMetricRanges?.metrics}
+                  featureHashMap={featureHashMap}
+                  tags={tags ?? []}
+                  collaborators={collaborators ?? []}
+                />
+              </>
             }
             trigger="click"
           >
@@ -594,6 +614,7 @@ export function Explorer({
         projectHash={projectHash}
         predictionHash={predictionHash}
         itemsToRender={itemsToRender}
+        itemSimilarities={itemSimilarities}
         loadingDescription={loadingDescription}
         selectedMetric={selectedMetric}
         toggleImageSelection={toggleImageSelection}

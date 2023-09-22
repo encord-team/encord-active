@@ -80,6 +80,12 @@ export interface AnalysisSearch {
    * @memberof AnalysisSearch
    */
   results: Array<string>;
+  /**
+   *
+   * @type {Array<number>}
+   * @memberof AnalysisSearch
+   */
+  similarities?: Array<number>;
 }
 /**
  *
@@ -3582,11 +3588,11 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
      * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
@@ -3596,11 +3602,11 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost: async (
       projectHash: string,
       domain: AnalysisDomain,
+      filters?: string,
       orderBy?: string,
       desc?: boolean,
       offset?: number,
       limit?: number,
-      filters?: string,
       text?: string,
       image?: File,
       item?: string,
@@ -3643,24 +3649,24 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         configuration.formDataCtor) ||
         FormData)();
 
+      if (filters !== undefined) {
+        localVarQueryParameter["filters"] = filters;
+      }
+
       if (orderBy !== undefined) {
-        localVarQueryParameter["order_by"] = orderBy;
+        localVarFormParams.append("order_by", orderBy as any);
       }
 
       if (desc !== undefined) {
-        localVarQueryParameter["desc"] = desc;
+        localVarFormParams.append("desc", desc as any);
       }
 
       if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset;
+        localVarFormParams.append("offset", offset as any);
       }
 
       if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit;
-      }
-
-      if (filters !== undefined) {
-        localVarQueryParameter["filters"] = filters;
+        localVarFormParams.append("limit", limit as any);
       }
 
       if (text !== undefined) {
@@ -3685,8 +3691,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         ...headersFromBaseOptions,
         ...options.headers,
       };
-      if ([...localVarFormParams.keys()].length > 0)
-        localVarRequestOptions.data = localVarFormParams;
+      localVarRequestOptions.data = localVarFormParams;
 
       return {
         url: toPathString(localVarUrlObj),
@@ -4721,11 +4726,11 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
      * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
@@ -4735,11 +4740,11 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
+      filters?: string,
       orderBy?: string,
       desc?: boolean,
       offset?: number,
       limit?: number,
-      filters?: string,
       text?: string,
       image?: File,
       item?: string,
@@ -4751,11 +4756,11 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
         await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          filters,
           orderBy,
           desc,
           offset,
           limit,
-          filters,
           text,
           image,
           item,
@@ -5479,11 +5484,11 @@ export const ProjectsV2ApiFactory = function (
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
      * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
@@ -5493,11 +5498,11 @@ export const ProjectsV2ApiFactory = function (
     routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
+      filters?: string,
       orderBy?: string,
       desc?: boolean,
       offset?: number,
       limit?: number,
-      filters?: string,
       text?: string,
       image?: File,
       item?: string,
@@ -5507,11 +5512,11 @@ export const ProjectsV2ApiFactory = function (
         .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          filters,
           orderBy,
           desc,
           offset,
           limit,
-          filters,
           text,
           image,
           item,
@@ -6237,11 +6242,11 @@ export class ProjectsV2Api extends BaseAPI {
    * @summary Route Project Search
    * @param {string} projectHash
    * @param {AnalysisDomain} domain
+   * @param {string} [filters] Search Filters
    * @param {string} [orderBy]
    * @param {boolean} [desc]
    * @param {number} [offset]
    * @param {number} [limit]
-   * @param {string} [filters] Search Filters
    * @param {string} [text]
    * @param {File} [image]
    * @param {string} [item]
@@ -6252,11 +6257,11 @@ export class ProjectsV2Api extends BaseAPI {
   public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
     projectHash: string,
     domain: AnalysisDomain,
+    filters?: string,
     orderBy?: string,
     desc?: boolean,
     offset?: number,
     limit?: number,
-    filters?: string,
     text?: string,
     image?: File,
     item?: string,
@@ -6266,11 +6271,11 @@ export class ProjectsV2Api extends BaseAPI {
       .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
         projectHash,
         domain,
+        filters,
         orderBy,
         desc,
         offset,
         limit,
-        filters,
         text,
         image,
         item,

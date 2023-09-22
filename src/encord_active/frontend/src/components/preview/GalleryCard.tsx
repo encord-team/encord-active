@@ -3,7 +3,7 @@ import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
-import { ReactNode, memo, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
@@ -25,13 +25,13 @@ function GalleryCardRaw(props: {
   projectHash: string;
   predictionHash: string | undefined;
   itemId: string;
+  itemSimilarity: number | undefined;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
   onExpand: (itemId: string) => void;
   onClick: (itemId: string) => void;
   onShowSimilar: (itemId: string) => void;
   hideExtraAnnotations: boolean;
-  customTags?: ReactNode | undefined;
   iou: number;
   featureHashMap: FeatureHashMap;
 }) {
@@ -39,13 +39,13 @@ function GalleryCardRaw(props: {
     projectHash,
     predictionHash,
     itemId,
+    itemSimilarity,
     selected,
     selectedMetric,
     onExpand,
     onClick,
     onShowSimilar,
     hideExtraAnnotations,
-    customTags,
     featureHashMap,
     iou,
   } = props;
@@ -301,7 +301,14 @@ function GalleryCardRaw(props: {
         </div>
       }
     >
-      {customTags != null ? <Row className="mt-1">{customTags}</Row> : null}
+      {itemSimilarity != null ? (
+        <Row className="mt-1">
+          <Tag bordered={false} color="red" className="rounded-xl">
+            Distance:{" "}
+            <span className="font-bold">{itemSimilarity.toFixed(5)}</span>
+          </Tag>
+        </Row>
+      ) : null}
       <Row className="mt-1">
         <Tag bordered={false} color="gold" className="rounded-xl">
           {metricName}:{" "}
