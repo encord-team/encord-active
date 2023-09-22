@@ -62,39 +62,32 @@ def import_encord(
     for label_row in tqdm(label_rows, desc="Importing Label Rows"):
         label_row_json = label_row.to_encord_dict()
         data_hash = uuid.UUID(label_row_json.pop("data_hash"))
-        label_hash = uuid.UUID(label_row_json.pop("label_hash"))
-        dataset_hash = uuid.UUID(label_row_json.pop("dataset_hash"))
-        dataset_title = str(label_row_json.pop("dataset_title"))
         data_title = str(label_row_json.pop("data_title"))
         data_unit_list_json = label_row_json.pop("data_units")
         data_type = str(label_row_json.pop("data_type"))
-        created_at = datetime.fromisoformat(label_row_json.pop("created_at"))
-        last_edited_at = datetime.fromisoformat(label_row_json.pop("last_edited_at"))
-        object_answers = label_row_json.pop("object_answers")
-        classification_answers = label_row_json.pop("classification_answers")
         is_video = data_type == "video"
         project_data_list.append(
             ProjectDataMetadata(
                 project_hash=project_hash,
                 data_hash=data_hash,
-                label_hash=label_hash,
-                dataset_hash=dataset_hash,
+                label_hash=uuid.UUID(label_row_json.pop("label_hash")),
+                dataset_hash=uuid.UUID(label_row_json.pop("dataset_hash")),
                 num_frames=len(data_unit_list_json),  # Updated later for video
                 frames_per_second=None,  # Assigned later
-                dataset_title=dataset_title,
+                dataset_title=str(label_row_json.pop("dataset_title")),
                 data_title=data_title,
                 data_type=data_type,
-                created_at=created_at,
-                last_edited_at=last_edited_at,
-                object_answers=object_answers,
-                classification_answers=classification_answers,
+                created_at=datetime.fromisoformat(label_row_json.pop("created_at")),
+                last_edited_at=datetime.fromisoformat(label_row_json.pop("last_edited_at")),
+                object_answers=label_row_json.pop("object_answers"),
+                classification_answers=label_row_json.pop("classification_answers"),
             )
         )
 
         video_width = None
         video_height = None
         video_labels_json: Optional[Dict[str, dict]] = None
-        for du_key, data_unit_json in data_unit_list_json.items():
+        for data_unit_json in data_unit_list_json.values():
             labels_json = data_unit_json.pop("labels")
             du_hash = uuid.UUID(data_unit_json.pop("data_hash"))
             data_uri = None
