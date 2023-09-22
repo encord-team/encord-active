@@ -39,6 +39,10 @@ class ProjectImportSpec:
     project_data_list: List[ProjectDataMetadata]
     project_du_list: List[ProjectDataUnitMetadata]
 
+    @property
+    def is_empty(self):
+        return len(self.project_data_list) + len(self.project_du_list) == 0
+
 
 def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec, ssh_key: str) -> None:
     """

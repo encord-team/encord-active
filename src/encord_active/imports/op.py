@@ -28,7 +28,11 @@ def import_coco_project(
 
 
 def import_encord_project(
-    database_dir: Path, encord_project_hash: uuid.UUID, ssh_key: str, store_data_locally: bool
+    database_dir: Path,
+    encord_project_hash: uuid.UUID,
+    ssh_key: str,
+    store_data_locally: bool,
+    include_unlabeled: bool = False,
 ) -> None:
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
@@ -37,7 +41,12 @@ def import_encord_project(
         requests_settings=RequestsSettings(max_retries=5),
     )
     encord_project = encord_client.get_project(str(encord_project_hash))
-    project_spec = import_encord(encord_project, database_dir, store_data_locally)
+    project_spec = import_encord(encord_project, database_dir, store_data_locally, include_unlabeled)
+    if project_spec.is_empty:
+        raise ValueError(
+            "Project is empty of has no initialised label rows. Use the `--include-unlabeled` option or add data to your Encord project"
+        )
+
     import_project(engine, database_dir, project_spec, ssh_key)
 
 
@@ -45,6 +54,7 @@ def refresh_encord_project(
     database_dir: Path,
     ssh_key: str,
     encord_project_hash: uuid.UUID,
+    include_unlabeled: bool = False,
     force: bool = False,
 ) -> bool:
     path = database_dir / "encord-active.sqlite"
@@ -58,7 +68,11 @@ def refresh_encord_project(
         requests_settings=RequestsSettings(max_retries=5),
     )
     encord_project = encord_client.get_project(str(encord_project_hash))
-    project_spec = import_encord(encord_project, database_dir, store_data_locally=False)
+    project_spec = import_encord(
+        encord_project, database_dir, store_data_locally=False, include_unlabeled=include_unlabeled
+    )
+    if project_spec.is_empty:
+        return False
     return refresh_project(engine, database_dir, ssh_key, project_spec, force=force)
 
 

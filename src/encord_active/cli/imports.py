@@ -93,6 +93,13 @@ def import_project(
         help="Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.",
         rich_help_panel=ENCORD_RICH_PANEL,
     ),
+    include_unlabeled: bool = typer.Option(
+        False,
+        "--include-unlabeled",
+        "-u",
+        help="Include unlabeled data from Encord Annotate. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
+        rich_help_panel=ENCORD_RICH_PANEL,
+    ),
 ):
     """
     [bold]Imports[/bold] a new project from Encord or a local COCO project. 📦
@@ -159,6 +166,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
             encord_project_hash=project_hash,
             ssh_key=ssh_key,
             store_data_locally=store_data_locally,
+            include_unlabeled=include_unlabeled,
         )
 
     success_with_vizualise_command(database_dir, "The data is downloaded and the metrics are complete.")

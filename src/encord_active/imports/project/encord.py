@@ -20,10 +20,27 @@ def import_encord(
     encord_project: encord.Project,
     database_dir: Path,
     store_data_locally: bool,
+    include_unlabeled: bool,
 ) -> ProjectImportSpec:
     project_hash = uuid.UUID(encord_project.project_hash)
 
     label_rows = encord_project.list_label_rows_v2()
+    if not include_unlabeled:
+        label_rows = list(filter(lambda lr: lr.label_hash is not None, label_rows))
+        if len(label_rows) == 0:
+            return ProjectImportSpec(
+                project=Project(
+                    project_hash=uuid.UUID(encord_project.project_hash),
+                    name=encord_project.title,
+                    description=encord_project.description,
+                    remote=True,
+                    ontology=encord_project.ontology_structure.to_dict(),
+                ),
+                project_import_meta=None,
+                project_data_list=[],
+                project_du_list=[],
+            )
+
     tqdm_iter = tqdm(total=1, desc="Listing Label Rows")
     tqdm_iter.update(1)
 

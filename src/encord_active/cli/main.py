@@ -404,8 +404,8 @@ def refresh(
     include_unlabeled: bool = typer.Option(
         False,
         "--include-unlabeled",
-        "-i",
-        help="Include unlabeled data. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
+        "-u",
+        help="Include unlabeled data from Encord Annotate. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
     ),
     force: bool = typer.Option(False, help="Force full refresh of the project"),
 ):
@@ -426,7 +426,7 @@ def refresh(
         changes = refresh_encord_project(
             database_dir=database_dir,
             encord_project_hash=project_hash,
-            # FIXME: include_unlabeled=include_unlabeled,
+            include_unlabeled=include_unlabeled,
             force=force,
             ssh_key=ssh_key,
         )
