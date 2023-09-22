@@ -1,4 +1,4 @@
-import Icon, { FullscreenOutlined } from "@ant-design/icons";
+import Icon, { CloseOutlined, FullscreenOutlined } from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
@@ -26,11 +26,12 @@ function GalleryCardRaw(props: {
   predictionHash: string | undefined;
   itemId: string;
   itemSimilarity: number | undefined;
+  similaritySearchCard: boolean;
   selected: boolean;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
-  onExpand: (itemId: string) => void;
-  onClick: (itemId: string) => void;
-  onShowSimilar: (itemId: string) => void;
+  setItemPreview: (itemId: string) => void;
+  setSelectedToggle: (itemId: string) => void;
+  setSimilaritySearch: (itemId: string | undefined) => void;
   hideExtraAnnotations: boolean;
   iou: number;
   featureHashMap: FeatureHashMap;
@@ -40,11 +41,12 @@ function GalleryCardRaw(props: {
     predictionHash,
     itemId,
     itemSimilarity,
+    similaritySearchCard,
     selected,
     selectedMetric,
-    onExpand,
-    onClick,
-    onShowSimilar,
+    setItemPreview,
+    setSelectedToggle,
+    setSimilaritySearch,
     hideExtraAnnotations,
     featureHashMap,
     iou,
@@ -225,7 +227,7 @@ function GalleryCardRaw(props: {
     <Card
       hoverable
       style={{ width: 240, margin: 10 }}
-      onClick={() => onClick(itemId)}
+      onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
       className={classy("group m-2.5 w-60 overflow-clip", {
@@ -242,60 +244,92 @@ function GalleryCardRaw(props: {
               predictionTruePositive={predictionTruePositive}
               mode="full"
             >
-              <div
-                className={classy(
-                  "absolute z-10 h-full w-full bg-gray-100 bg-opacity-0 group-hover:bg-opacity-70",
-                  "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
-                )}
-              >
-                <Checkbox
-                  className={classy("absolute left-2 top-2", {
-                    "!opacity-100": selected,
-                  })}
-                  checked={selected}
-                />
-                <div className="absolute top-2 right-2 flex flex-col gap-1">
-                  <Button
-                    className="bg-white"
-                    icon={<FullscreenOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onExpand(itemId);
-                    }}
+              {similaritySearchCard ? (
+                <>
+                  <Icon
+                    component={MdImageSearch}
+                    className="top-50 left-50 absolute z-20 text-5xl"
                   />
-                  <Button
-                    className="bg-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onShowSimilar(itemId);
-                    }}
-                    type="text"
-                    key="similarity-search"
-                    icon={
-                      <span
-                        role="img"
-                        aria-label="fullscreen"
-                        className="anticon anticon-fullscreen"
-                      >
-                        <MdImageSearch />
-                      </span>
-                    }
-                  />
-                </div>
-                {
-                  /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
-                  {description && (
-                    <div className="flex flex-col">
-                      <div className="inline-flex items-center gap-1">
-                        <BsCardText className="text-base" />
-                        <span>Description:</span>
-                      </div>
-                      <span>{description}</span>
+                  <div className="z-5 absolute h-full w-full bg-gray-100 bg-opacity-20" />
+                  <div
+                    className={classy(
+                      "absolute z-10 h-full w-full bg-opacity-0 group-hover:bg-opacity-70",
+                      "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                    )}
+                  >
+                    <Checkbox
+                      className={classy("absolute left-2 top-2", {
+                        "!opacity-100": selected,
+                      })}
+                      checked={selected}
+                    />
+                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                      <Button
+                        className="bg-white"
+                        icon={<FullscreenOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setItemPreview(itemId);
+                        }}
+                      />
+                      <Button
+                        className="bg-white"
+                        shape="circle"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSimilaritySearch(undefined);
+                        }}
+                        icon={<CloseOutlined />}
+                      />
                     </div>
+                  </div>
+                </>
+              ) : (
+                <div
+                  className={classy(
+                    "absolute z-10 h-full w-full bg-gray-100 bg-opacity-0 group-hover:bg-opacity-70",
+                    "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
                   )}
-                </div> */ null
-                }
-              </div>
+                >
+                  <Checkbox
+                    className={classy("absolute left-2 top-2", {
+                      "!opacity-100": selected,
+                    })}
+                    checked={selected}
+                  />
+                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    <Button
+                      className="bg-white"
+                      icon={<FullscreenOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedToggle(itemId);
+                      }}
+                    />
+                    <Button
+                      className="bg-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSimilaritySearch(itemId);
+                      }}
+                      icon={<Icon component={MdImageSearch} />}
+                    />
+                  </div>
+                  {
+                    /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
+                    {description && (
+                      <div className="flex flex-col">
+                        <div className="inline-flex items-center gap-1">
+                          <BsCardText className="text-base" />
+                          <span>Description:</span>
+                        </div>
+                        <span>{description}</span>
+                      </div>
+                    )}
+                  </div> */ null
+                  }
+                </div>
+              )}
             </AnnotatedImage>
           )}
         </div>

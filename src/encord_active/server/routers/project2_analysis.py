@@ -127,20 +127,20 @@ def _find_similar_items(
     domain: AnalysisDomain,
     tables: DomainTables,
     engine: Engine,
-    similarity_exclude: Optional[Tuple[DataOrAnnotateItem, list]],
+    similarity_exclude: Optional[DataOrAnnotateItem],
     extra_where: Optional[list],
     extra_where_has_filters: bool,
     limit: int,
 ) -> List[similarity_query.SimilarityResult]:
     if engine.dialect.name == "postgresql":
-        pg_where: list = (extra_where or []) + ([] if similarity_exclude is None else similarity_exclude[1])
         with Session(engine) as sess:
             return similarity_query.pg_similarity_query(
                 sess=sess,
                 tables=tables,
                 project_hash=project_hash,
                 embedding=src_embedding,
-                extra_where=pg_where,
+                extra_where=extra_where if extra_where_has_filters else None,
+                exclude_item=similarity_exclude,
                 limit=limit,
             )
 
@@ -153,7 +153,7 @@ def _find_similar_items(
         has_filters=extra_where_has_filters,
         embedding=np.frombuffer(src_embedding, dtype=np.float64),
         k=limit,
-        item=None if similarity_exclude is None else similarity_exclude[0],
+        item=None if similarity_exclude is None else similarity_exclude,
     )
 
 
@@ -220,7 +220,7 @@ def route_project_search(
     # Requested a similarity search implementation
     # Resolve to requested arguments to similarity enhanced search implementation
     similarity_embedding_bytes: Optional[bytes]
-    similarity_exclude_constraint: Optional[Tuple[DataOrAnnotateItem, list]] = None
+    similarity_exclude_constraint: Optional[DataOrAnnotateItem] = None
     if similarity_item is not None:
         join_attr_set = {
             "du_hash": similarity_item.du_hash,
@@ -241,17 +241,7 @@ def route_project_search(
                     base_table.metadata.project_hash == project_hash,
                 )
             ).first()
-            similarity_where_constraint: list = [
-                functools.reduce(
-                    lambda a, b: a | b,
-                    [
-                        getattr(base_table.metadata, join_attr) != join_attr_set[join_attr]
-                        for join_attr in base_table.join
-                    ],
-                    base_table.metadata.project_hash == project_hash,
-                ),
-            ]
-            similarity_exclude_constraint = (similarity_item, similarity_where_constraint)
+            similarity_exclude_constraint = similarity_item
     elif text is not None:
         similarity_embedding_bytes = get_embedder().embed_text(text).astype(dtype=np.float64).tobytes()
     elif image is not None:
@@ -282,8 +272,8 @@ def route_project_search(
     truncated = len(similarity_result) == limit + 1
     return AnalysisSearch(
         truncated=truncated,
-        results=[r.item for r in similarity_result],
-        similarities=[r.similarity for r in similarity_result],
+        results=[r.item for r in similarity_result[:limit]],
+        similarities=[r.similarity for r in similarity_result[:limit]],
     )
 
 

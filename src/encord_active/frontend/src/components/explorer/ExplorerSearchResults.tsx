@@ -10,7 +10,13 @@ const ExplorerSearchLocale = {
 };
 
 const ExplorerSearchPagination: PaginationProps = {
-  defaultPageSize: 30,
+  defaultPageSize: 20,
+  showTotal: (total) => `${total} Search Results`,
+};
+
+const ExplorerSearchPaginationTruncated: PaginationProps = {
+  defaultPageSize: 20,
+  showTotal: (total) => `${total}+ Search Results`,
 };
 
 const ExplorerSearchGrid = {};
@@ -22,11 +28,13 @@ function ExplorerSearchResultsRaw(props: {
   predictionHash: string | undefined;
   itemsToRender: readonly string[];
   itemSimilarities: readonly number[] | undefined;
+  itemSimilarityItemAtIndex0: boolean;
+  truncated: boolean;
   loadingDescription: string;
   selectedMetric: { domain: "annotation" | "data"; metric_key: string };
   toggleImageSelection: (itemId: string) => void;
   setPreviewedItem: (itemId: string) => void;
-  showSimilarItems: (itemId: string) => void;
+  setSimilaritySearch: (itemId: string | undefined) => void;
   selectedItems: ReadonlySet<string>;
   showAnnotations: boolean;
   featureHashMap: FeatureHashMap;
@@ -37,15 +45,17 @@ function ExplorerSearchResultsRaw(props: {
     predictionHash,
     itemsToRender,
     itemSimilarities,
+    itemSimilarityItemAtIndex0,
     loadingDescription,
     selectedMetric,
     toggleImageSelection,
     setPreviewedItem,
-    showSimilarItems,
+    setSimilaritySearch,
     selectedItems,
     showAnnotations,
     featureHashMap,
     iou,
+    truncated,
   } = props;
 
   const loading = useMemo(
@@ -57,29 +67,48 @@ function ExplorerSearchResultsRaw(props: {
     [loadingDescription]
   );
 
+  // Cannot search by index. So we need to unify.
+  const dataSource = useMemo((): {
+    item: string;
+    similarity?: number;
+    similaritySearchCard?: true;
+  }[] => {
+    if (itemSimilarities == null) {
+      return itemsToRender.map((item) => ({ item }));
+    }
+    return itemsToRender.map((item, index) =>
+      index === 0 && itemSimilarityItemAtIndex0
+        ? {
+            item,
+            similarity: itemSimilarities[index] ?? NaN,
+            similaritySearchCard: true,
+          }
+        : { item, similarity: itemSimilarities[index] ?? NaN }
+    );
+  }, [itemsToRender, itemSimilarities, itemSimilarityItemAtIndex0]);
+
   return (
     <List
       className="mt-2.5"
-      dataSource={itemsToRender as string[]}
+      dataSource={dataSource}
       grid={ExplorerSearchGrid}
       loading={loading}
       locale={ExplorerSearchLocale}
-      pagination={ExplorerSearchPagination}
-      renderItem={(item: string, index: number) => (
+      pagination={
+        truncated ? ExplorerSearchPaginationTruncated : ExplorerSearchPagination
+      }
+      renderItem={({ item, similarity, similaritySearchCard }) => (
         <GalleryCard
           projectHash={projectHash}
           predictionHash={predictionHash}
           selectedMetric={selectedMetric}
           key={item}
           itemId={item}
-          itemSimilarity={
-            itemSimilarities == null || index > itemSimilarities.length
-              ? undefined
-              : itemSimilarities[index]
-          }
-          onClick={toggleImageSelection}
-          onExpand={setPreviewedItem}
-          onShowSimilar={showSimilarItems}
+          itemSimilarity={similarity}
+          similaritySearchCard={similaritySearchCard ?? false}
+          setSelectedToggle={toggleImageSelection}
+          setItemPreview={setPreviewedItem}
+          setSimilaritySearch={setSimilaritySearch}
           selected={selectedItems.has(item)}
           hideExtraAnnotations={showAnnotations}
           featureHashMap={featureHashMap}

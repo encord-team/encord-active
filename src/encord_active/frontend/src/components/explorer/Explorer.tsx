@@ -4,16 +4,7 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import {
-  Button,
-  Modal,
-  Popover,
-  Select,
-  Slider,
-  Space,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Button, Modal, Popover, Select, Slider, Space, Tooltip } from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
@@ -238,6 +229,9 @@ export function Explorer({
     0,
     1000,
     filters.filters,
+    similarityItem,
+    typeof search === "string" ? search : undefined,
+    typeof search !== "string" ? search : undefined,
     {
       enabled: predictionHash !== undefined,
     }
@@ -273,9 +267,26 @@ export function Explorer({
     }
   };
 
-  const itemsToRender: readonly string[] = sortedItems?.results ?? [];
-  const itemSimilarities: readonly number[] | undefined =
-    sortedItems?.similarities ?? undefined;
+  const itemsToRender: readonly string[] = useMemo(() => {
+    if (sortedItems == null) {
+      return [];
+    }
+    if (similarityItem != null) {
+      return [similarityItem, ...sortedItems.results];
+    }
+    return sortedItems.results;
+  }, [sortedItems, similarityItem]);
+  const itemSimilarities: readonly number[] | undefined = useMemo(() => {
+    if (sortedItems == null) {
+      return undefined;
+    }
+    const { similarities } = sortedItems;
+    if (similarities !== undefined && similarityItem != null) {
+      return [0.0, ...similarities];
+    }
+    return similarities;
+  }, [sortedItems, similarityItem]);
+  const itemTruncated = sortedItems?.truncated ?? false;
 
   const toggleImageSelection = useCallback((id: string) => {
     setSelectedItems((prev) => {
@@ -293,8 +304,8 @@ export function Explorer({
     () => setPreviewedItem(undefined),
     [setPreviewedItem]
   );
-  const showSimilarItems = useCallback(
-    (itemId: string) => {
+  const setSimilaritySearch = useCallback(
+    (itemId: string | undefined) => {
       setSearch(undefined);
       closePreview();
       setSimilarityItem(itemId);
@@ -371,7 +382,7 @@ export function Explorer({
         domain={selectedMetric.domain}
         onClose={closePreview}
         onShowSimilar={() =>
-          previewItem != null ? showSimilarItems(previewItem) : undefined
+          previewItem != null ? setSimilaritySearch(previewItem) : undefined
         }
         editUrl={editUrl}
       />
@@ -458,59 +469,35 @@ export function Explorer({
           <Popover
             placement="bottomLeft"
             content={
-              <>
-                {!!(similarityItem || search) &&
-                  selectedMetric.domain === "data" && (
-                    <Typography.Text strong>
-                      Sorting by similarity to:{" "}
-                      {similarityItem ||
-                        (typeof search === "string"
-                          ? search
-                          : search?.name)}{" "}
-                    </Typography.Text>
-                  )}
-                <MetricFilter
-                  filters={dataFilters}
-                  setFilters={setDataFilters}
-                  metricsSummary={dataMetricsSummary}
-                  metricRanges={dataMetricRanges?.metrics}
-                  featureHashMap={featureHashMap}
-                  tags={tags ?? []}
-                  collaborators={collaborators ?? []}
-                />
-              </>
+              <MetricFilter
+                filters={dataFilters}
+                setFilters={setDataFilters}
+                metricsSummary={dataMetricsSummary}
+                metricRanges={dataMetricRanges?.metrics}
+                featureHashMap={featureHashMap}
+                tags={tags ?? []}
+                collaborators={collaborators ?? []}
+              />
             }
             trigger="click"
           >
             <Button>
               Data Filters
-              {` (${dataFilters.ordering.length + +!isSortedByMetric})`}
+              {` (${dataFilters.ordering.length})`}
             </Button>
           </Popover>
           <Popover
             placement="bottomLeft"
             content={
-              <>
-                {!!(similarityItem || search) &&
-                  selectedMetric.domain === "annotation" && (
-                    <Typography.Text strong>
-                      Sorting by similarity to:{" "}
-                      {similarityItem ||
-                        (typeof search === "string"
-                          ? search
-                          : search?.name)}{" "}
-                    </Typography.Text>
-                  )}
-                <MetricFilter
-                  filters={annotationFilters}
-                  setFilters={setAnnotationFilters}
-                  metricsSummary={annotationMetricsSummary}
-                  metricRanges={annotationMetricRanges?.metrics}
-                  featureHashMap={featureHashMap}
-                  tags={tags ?? []}
-                  collaborators={collaborators ?? []}
-                />
-              </>
+              <MetricFilter
+                filters={annotationFilters}
+                setFilters={setAnnotationFilters}
+                metricsSummary={annotationMetricsSummary}
+                metricRanges={annotationMetricRanges?.metrics}
+                featureHashMap={featureHashMap}
+                tags={tags ?? []}
+                collaborators={collaborators ?? []}
+              />
             }
             trigger="click"
           >
@@ -615,11 +602,13 @@ export function Explorer({
         predictionHash={predictionHash}
         itemsToRender={itemsToRender}
         itemSimilarities={itemSimilarities}
+        itemSimilarityItemAtIndex0={similarityItem != null}
+        truncated={itemTruncated}
         loadingDescription={loadingDescription}
         selectedMetric={selectedMetric}
         toggleImageSelection={toggleImageSelection}
         setPreviewedItem={setPreviewedItem}
-        showSimilarItems={showSimilarItems}
+        setSimilaritySearch={setSimilaritySearch}
         selectedItems={selectedItems}
         showAnnotations={showAnnotations}
         featureHashMap={featureHashMap}

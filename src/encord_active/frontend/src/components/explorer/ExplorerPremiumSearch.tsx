@@ -3,7 +3,7 @@ import { FaMagic } from "react-icons/fa";
 
 import { Button, Space, Tooltip, Upload } from "antd";
 import Search from "antd/es/input/Search";
-import { UploadOutlined } from "@ant-design/icons";
+import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
 
 export type ExplorerPremiumSearchState = {
   search: string | File | undefined;
@@ -47,6 +47,17 @@ export function ExplorerPremiumSearch(props: {
             <Button className="bg-white px-4">
               <FaMagic color="black" className="bg-white" />
             </Button>
+          }
+          suffix={
+            search === undefined ? null : (
+              <Tooltip
+                overlay={`Searching: ${
+                  typeof search === "string" ? search : search?.name
+                }`}
+              >
+                <SearchOutlined onClick={() => setSearch(undefined)} />
+              </Tooltip>
+            )
           }
         />
       </Tooltip>

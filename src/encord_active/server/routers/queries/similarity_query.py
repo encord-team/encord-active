@@ -191,9 +191,19 @@ def pg_similarity_query(
     tables: DomainTables,
     project_hash: uuid.UUID,
     embedding: bytes,
-    extra_where: list,
+    extra_where: Optional[list],
+    exclude_item: Optional[DataOrAnnotateItem],
     limit: int,
 ) -> List[SimilarityResult]:
+    pg_where = list(extra_where or [])
+    if len(pg_where) > 0:
+        pg_where = pg_where + [getattr(tables.analytics, j) == getattr(tables.metadata, j) for j in tables.join]
+    if exclude_item is not None:
+        pg_where.append(
+            functools.reduce(
+                lambda a, b: a | b, [getattr(tables.metadata, j) != getattr(exclude_item, j) for j in tables.join]
+            )
+        )
     pg_query = (
         select(
             tables.metadata.embedding_clip.l2_distance(embedding).label("similarity"),  # type: ignore
@@ -201,8 +211,7 @@ def pg_similarity_query(
         )
         .where(
             tables.metadata.project_hash == project_hash,
-            *list(extra_where),
-            *[getattr(tables.analytics, j) == getattr(tables.metadata, j) for j in tables.join],
+            *pg_where,
         )
         .order_by("similarity")
         .limit(limit)

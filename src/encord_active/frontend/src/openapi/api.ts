@@ -2697,6 +2697,9 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -2711,6 +2714,9 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         offset?: number,
         limit?: number,
         filters?: string,
+        text?: string,
+        image?: File,
+        item?: string,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
@@ -2762,6 +2768,9 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         };
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
+        const localVarFormParams = new ((configuration &&
+          configuration.formDataCtor) ||
+          FormData)();
 
         // authentication OAuth2PasswordBearer required
         // oauth required
@@ -2796,6 +2805,20 @@ export const ProjectsV2ApiAxiosParamCreator = function (
           localVarQueryParameter["filters"] = filters;
         }
 
+        if (text !== undefined) {
+          localVarFormParams.append("text", text as any);
+        }
+
+        if (image !== undefined) {
+          localVarFormParams.append("image", image as any);
+        }
+
+        if (item !== undefined) {
+          localVarFormParams.append("item", item as any);
+        }
+
+        localVarHeaderParameter["Content-Type"] = "multipart/form-data";
+
         setSearchParams(localVarUrlObj, localVarQueryParameter);
         let headersFromBaseOptions =
           baseOptions && baseOptions.headers ? baseOptions.headers : {};
@@ -2804,6 +2827,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
           ...headersFromBaseOptions,
           ...options.headers,
         };
+        localVarRequestOptions.data = localVarFormParams;
 
         return {
           url: toPathString(localVarUrlObj),
@@ -4519,6 +4543,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -4532,6 +4559,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       offset?: number,
       limit?: number,
       filters?: string,
+      text?: string,
+      image?: File,
+      item?: string,
       options?: AxiosRequestConfig
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
@@ -4547,6 +4577,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
           offset,
           limit,
           filters,
+          text,
+          image,
+          item,
           options
         );
       return createRequestFunction(
@@ -5392,6 +5425,9 @@ export const ProjectsV2ApiFactory = function (
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [filters] Search Filters
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -5405,6 +5441,9 @@ export const ProjectsV2ApiFactory = function (
       offset?: number,
       limit?: number,
       filters?: string,
+      text?: string,
+      image?: File,
+      item?: string,
       options?: any
     ): AxiosPromise<AnalysisSearch> {
       return localVarFp
@@ -5418,6 +5457,9 @@ export const ProjectsV2ApiFactory = function (
           offset,
           limit,
           filters,
+          text,
+          image,
+          item,
           options
         )
         .then((request) => request(axios, basePath));
@@ -6124,6 +6166,9 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {number} [offset]
    * @param {number} [limit]
    * @param {string} [filters] Search Filters
+   * @param {string} [text]
+   * @param {File} [image]
+   * @param {string} [item]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectsV2Api
@@ -6138,6 +6183,9 @@ export class ProjectsV2Api extends BaseAPI {
     offset?: number,
     limit?: number,
     filters?: string,
+    text?: string,
+    image?: File,
+    item?: string,
     options?: AxiosRequestConfig
   ) {
     return ProjectsV2ApiFp(this.configuration)
@@ -6151,6 +6199,9 @@ export class ProjectsV2Api extends BaseAPI {
         offset,
         limit,
         filters,
+        text,
+        image,
+        item,
         options
       )
       .then((request) => request(this.axios, this.basePath));

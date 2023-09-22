@@ -13,6 +13,9 @@ export function usePredictionAnalysisSearch(
   offset: number,
   limit: number,
   filters: SearchFilters | undefined = undefined,
+  similarityItem: string | undefined = undefined,
+  similarityText: string | undefined = undefined,
+  similarityImage: File | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
   const querier = useQuerier();
@@ -30,6 +33,9 @@ export function usePredictionAnalysisSearch(
       offset,
       limit,
       filters,
+      similarityItem,
+      similarityText,
+      similarityImage,
     ],
     () =>
       querier
@@ -43,7 +49,10 @@ export function usePredictionAnalysisSearch(
           orderByDesc,
           offset,
           limit,
-          filters !== undefined ? JSON.stringify(filters) : undefined
+          filters !== undefined ? JSON.stringify(filters) : undefined,
+          similarityText,
+          similarityImage,
+          similarityItem
         )
         .then((r) => r.data),
     {

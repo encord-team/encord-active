@@ -1,9 +1,9 @@
 import math
 import uuid
 from enum import Enum
-from typing import Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import Annotated, Dict, List, Literal, Optional, Tuple, Type, Union
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import Integer
 from sqlalchemy import desc as desc_fn
@@ -18,7 +18,11 @@ from encord_active.db.models import (
     ProjectPredictionAnalyticsFalseNegatives,
     ProjectPredictionAnalyticsReduced,
 )
-from encord_active.server.dependencies import dep_engine_readonly
+from encord_active.server.dependencies import (
+    DataOrAnnotateItem,
+    dep_engine_readonly,
+    parse_optional_data_or_annotate_item,
+)
 from encord_active.server.routers.project2_analysis import AnalysisSearch
 from encord_active.server.routers.queries import metric_query, search_query
 from encord_active.server.routers.queries.domain_query import (
@@ -344,6 +348,9 @@ def route_prediction_search(
     offset: int = Query(0, ge=0),
     limit: int = Query(1000, le=1000),
     engine: Engine = Depends(dep_engine_readonly),
+    similarity_item: Optional[DataOrAnnotateItem] = Depends(parse_optional_data_or_annotate_item),
+    text: Annotated[Optional[str], Form()] = None,
+    image: Annotated[Optional[UploadFile], File()] = None,
 ) -> AnalysisSearch:
     # FIXME: clean up the implementation with more shared logic.
     # Where conditions for FN table

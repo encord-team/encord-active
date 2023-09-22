@@ -12,8 +12,8 @@ export function useProjectAnalysisSearch(
   limit: number,
   filters: SearchFilters | undefined = undefined,
   similarityItem: string | undefined = undefined,
-  semanticSearch: string | undefined = undefined,
-  imageSearch: File | undefined = undefined,
+  similarityText: string | undefined = undefined,
+  similarityImage: File | undefined = undefined,
   options: Pick<UseQueryOptions, "enabled"> = {}
 ) {
   const querier = useQuerier();
@@ -30,8 +30,8 @@ export function useProjectAnalysisSearch(
       limit,
       filters,
       similarityItem,
-      semanticSearch,
-      imageSearch,
+      similarityText,
+      similarityImage,
     ],
     () =>
       querier
@@ -44,8 +44,8 @@ export function useProjectAnalysisSearch(
           orderByDesc,
           offset,
           limit,
-          semanticSearch,
-          imageSearch,
+          similarityText,
+          similarityImage,
           similarityItem
         )
         .then((r) => r.data),
