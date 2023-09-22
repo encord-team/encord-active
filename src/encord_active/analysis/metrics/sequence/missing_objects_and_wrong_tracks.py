@@ -1,7 +1,5 @@
 from typing import Dict, Optional
 
-from shapely.geometry import Polygon
-
 from encord_active.analysis.metric import (
     MetricDependencies,
     MetricResultOptionalAnnotation,
@@ -9,13 +7,7 @@ from encord_active.analysis.metric import (
 )
 from encord_active.analysis.types import AnnotationMetadata
 from encord_active.db.metrics import MetricType
-from encord_active.lib.common.utils import get_polygon, mask_iou
-
-
-def _filter_object(obj: Dict[str, MetricDependencies]) -> Dict[str, Polygon]:
-    return {
-        k: get_polygon(v) for k, v in obj.items() if v["shape"] in {"bounding_box", "rotatable_bounding_box", "polygon"}
-    }
+from encord_active.lib.common.utils import mask_iou
 
 
 class TemporalMissingObjectsAndWrongTracks(TemporalObjectByFrameMetric):
