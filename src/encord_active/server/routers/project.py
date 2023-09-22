@@ -317,6 +317,7 @@ def read_item(project: ProjectFileStructureDep, id: str, iou: Optional[float] = 
     append_tags_to_row(project, row)
     return to_item(row, project, lr_hash, du_hash, frame)
 
+
 @router.post("/{project}/sign_url/{id}")
 def sign_url(project: ProjectFileStructureDep, id: str):
     meta = project.load_project_meta()
@@ -331,12 +332,12 @@ def sign_url(project: ProjectFileStructureDep, id: str):
     elif images is not None and len(images) == 1:
         signed_url = images[0]["file_link"]
     else:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Not a valid entity for signed url")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Not a valid entity for signed url"
+        )
 
     label_row_structure.project.cached_signed_urls[du_hash] = signed_url
     return signed_url
-
-
 
 
 class ItemTags(BaseModel):
@@ -790,58 +791,16 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
     if len(item.ids):
         filtered_df = filtered_df[filtered_df["identifier"].isin(item.ids)]
 
-    target_project_dir = curr_project_structure.project_dir.parent / project_title.lower().replace(" ", "-")
-    target_project_structure = ProjectFileStructure(target_project_dir)
     current_project_meta = curr_project_structure.load_project_meta()
     remote_copy = current_project_meta.get("has_remote", False)
 
-    if target_project_dir.exists():
-        raise Exception("Subset with the same title already exists")
-    target_project_dir.mkdir()
-
-    try:
+    if remote_copy:
         ids_df = filtered_df["identifier"].str.split("_", n=4, expand=True)
         filtered_lr_du = {LabelRowDataUnit(label_row, data_unit) for label_row, data_unit in zip(ids_df[0], ids_df[1])}
         filtered_label_rows = {lr_du.label_row for lr_du in filtered_lr_du}
-        filtered_data_hashes = {lr_du.data_unit for lr_du in filtered_lr_du}
-        filtered_labels = {(ids[1][0], ids[1][1], ids[1][3] if len(ids[1]) > 3 else None) for ids in ids_df.iterrows()}
-
-        create_filtered_db(target_project_dir, filtered_df)
-
-        if curr_project_structure.image_data_unit.exists():
-            copy_image_data_unit_json(curr_project_structure, target_project_structure, filtered_data_hashes)
-
-        filtered_label_row_meta = copy_label_row_meta_json(
-            curr_project_structure, target_project_structure, filtered_label_rows
-        )
-
+        label_row_meta = json.loads(curr_project_structure.label_row_meta.read_text())
+        filtered_label_row_meta = {k: v for k, v in label_row_meta.items() if k in filtered_label_rows}
         label_rows = {label_row for label_row in filtered_label_row_meta.keys()}
-
-        shutil.copy2(curr_project_structure.ontology, target_project_structure.ontology)
-
-        copy_project_meta(
-            curr_project_structure,
-            target_project_structure,
-            project_title,
-            project_description or "",
-            final_data_version=202306141750,
-        )
-
-        create_filtered_metrics(curr_project_structure, target_project_structure, filtered_df)
-
-        # Only run data-migrations up-to just before global db migration script
-        ensure_safe_project(target_project_structure.project_dir, final_data_version=202306141750)
-        copy_filtered_data(
-            curr_project_structure,
-            target_project_structure,
-            filtered_label_rows,
-            filtered_data_hashes,
-            filtered_labels,
-        )
-
-        create_filtered_embeddings(
-            curr_project_structure, target_project_structure, filtered_label_rows, filtered_data_hashes, filtered_df
-        )
 
         if remote_copy:
             original_project = get_encord_project(
@@ -866,121 +825,7 @@ def create_subset(curr_project_structure: ProjectFileStructureDep, item: CreateS
                     accepted_label_hashes=list(label_rows),
                 ),
             )
-            cloned_project = get_encord_project(current_project_meta["ssh_key_path"], cloned_project_hash)
-            cloned_project_label_rows = [
-                cloned_project.get_label_row(src_row.label_hash) for src_row in cloned_project.list_label_rows_v2()
-            ]
-            filtered_du_lr_mapping = {lrdu.data_unit: lrdu.label_row for lrdu in filtered_lr_du}
-
-            def _get_one_data_unit(lr: dict, valid_data_units: dict) -> str:
-                data_units = lr["data_units"]
-                for data_unit_key in data_units.keys():
-                    if data_unit_key in valid_data_units:
-                        return data_unit_key
-                raise StopIteration(
-                    f"Cannot find data unit to lookup: {list(data_units.keys())}, {list(valid_data_units.keys())}"
-                )
-
-            lr_du_mapping = {
-                # We only use the label hash as the key for database migration. The data hashes are preserved anyway.
-                LabelRowDataUnit(
-                    filtered_du_lr_mapping[_get_one_data_unit(lr, filtered_du_lr_mapping)],
-                    lr["data_hash"],  # This value is the same
-                ): LabelRowDataUnit(lr["label_hash"], lr["data_hash"])
-                for lr in cloned_project_label_rows
-            }
-
-            with PrismaConnection(target_project_structure) as conn:
-                original_label_rows = conn.labelrow.find_many()
-            original_label_row_map = {
-                original_label_row.label_hash: json.loads(original_label_row.label_row_json or "")
-                for original_label_row in original_label_rows
-            }
-
-            new_label_row_map = {label_row["label_hash"]: label_row for label_row in cloned_project_label_rows}
-
-            label_row_json_map = {}
-            for (old_lr, old_du), (new_lr, new_du) in lr_du_mapping.items():
-                lr = dict(original_label_row_map[old_lr])
-                lr["label_hash"] = new_label_row_map[new_lr]["label_hash"]
-                lr["dataset_hash"] = new_label_row_map[new_lr]["dataset_hash"]
-                label_row_json_map[new_lr] = json.dumps(lr)
-
-            project_meta = fetch_project_meta(target_project_structure.project_dir)
-            project_meta["has_remote"] = True
-            project_meta["project_hash"] = cloned_project_hash
-            update_project_meta(target_project_structure.project_dir, project_meta)
-
-            du_hash_map = DataHashMapping()
-
-            replace_uids(
-                target_project_structure,
-                lr_du_mapping,
-                du_hash_map,
-                original_project.project_hash,
-                cloned_project_hash,
-                cloned_project.datasets[0]["dataset_hash"],
-            )
-
-            # Sync database identifiers
-            replace_db_uids(
-                target_project_structure,
-                du_hash_map=DataHashMapping(),  # Preserved and used as migration key
-                lr_du_mapping=lr_du_mapping,  # Update label hash and lr_dr hashes ( label hash)
-                label_row_json_map=label_row_json_map,  # Update label row jsons to correct value.
-            )
-        else:
-            # Replace all label hashes with different values, to bypass the label_hash unique constraint bug
-            # this will regenerate a unique label hash and dataset hash for the subset project.
-            new_project_hash = target_project_structure.load_project_meta()["project_hash"]
-            dataset_hash = str(uuid.uuid4())
-            with PrismaConnection(target_project_structure) as prisma_conn:
-                prisma_label_rows = prisma_conn.labelrow.find_many()
-                lh_map: Dict[str, str] = {
-                    label_row.label_hash or "": str(uuid.uuid4()) for label_row in prisma_label_rows
-                }
-                lr_du_mapping = {
-                    LabelRowDataUnit(label_row.label_hash or "", label_row.data_hash): LabelRowDataUnit(
-                        lh_map[label_row.label_hash or ""], label_row.data_hash
-                    )
-                    for label_row in prisma_label_rows
-                }
-                label_row_json_map_2: Dict[str, dict] = {
-                    lh_map[label_row.label_hash or ""]: json.loads(label_row.label_row_json or "")
-                    for label_row in prisma_label_rows
-                }
-                for label_hash, label_row_json in label_row_json_map_2.items():
-                    label_row_json["dataset_hash"] = dataset_hash
-                    label_row_json["label_hash"] = label_hash
-            replace_uids(
-                target_project_structure,
-                lr_du_mapping,
-                DataHashMapping(),
-                new_project_hash,
-                new_project_hash,
-                dataset_hash,
-            )
-            replace_db_uids(
-                target_project_structure,
-                du_hash_map=DataHashMapping(),
-                lr_du_mapping=lr_du_mapping,
-                label_row_json_map={k: json.dumps(v) for k, v in label_row_json_map_2.items()},
-                refresh=False,  # Not a remote project running the migration
-            )
-
-    except Exception as e:
-        shutil.rmtree(target_project_dir.as_posix())
-        raise e
-
-    # On Success:
-    # Mirror to global sqlite database
-    # migrate_disk_to_db(target_project_structure)
-    # run all migration scripts
-    # FIXME: hacky
-    ensure_safe_project(target_project_structure.project_dir)
-
-    # Project now exists - invalidate cache
-    get_all_projects.cache_clear()  # type: ignore
+            return cloned_project_hash
 
 
 class UploadToEncordModel(BaseModel):
