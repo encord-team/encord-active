@@ -303,7 +303,7 @@ function GalleryCardRaw(props: {
                       icon={<FullscreenOutlined />}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedToggle(itemId);
+                        setItemPreview(itemId);
                       }}
                     />
                     <Button
