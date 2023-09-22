@@ -128,7 +128,7 @@ def delete_prediction(
         )
 
 
-@project_cli.command(name="delete", short_help="Delete a prediction from the project")
+@project_cli.command(name="delete", short_help="Delete a project")
 def delete_project(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
