@@ -20,7 +20,7 @@ def generate_openapi_fe_components() -> None:
         ENV=Env.DEVELOPMENT,
         SERVER_START_PATH=fe_dir,
     )
-    app = get_app(MagicMock(), MagicMock(), settings)
+    app = get_app(MagicMock(), settings)
     # Output openapi
     with open(openapi_json_path, "w", encoding="UTF-8") as f:
         json.dump(

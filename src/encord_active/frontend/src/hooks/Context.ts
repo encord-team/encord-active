@@ -16,11 +16,7 @@ export class Querier {
     if (token) {
       this.usesAuth = true;
       configuration = new Configuration({
-        baseOptions: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        accessToken: token,
       });
     }
     this.projectV2 = ProjectsV2ApiFactory(configuration, this.baseUrl);

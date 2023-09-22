@@ -63,10 +63,6 @@ def dep_engine_readonly() -> OptionEngine:
     raise RuntimeError("Missing ReadOnly Engine")
 
 
-def dep_oauth2_scheme() -> OAuth2PasswordBearer:
-    raise RuntimeError("Missing OAuth2PasswordBearer")
-
-
 def dep_settings() -> Settings:
     raise RuntimeError("Missing Settings")
 
@@ -82,8 +78,11 @@ def dep_database_dir(settings: Annotated[Settings, Depends(dep_settings)]) -> Pa
     return settings.SERVER_START_PATH.expanduser().resolve()
 
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+
+
 async def verify_token(
-    token: Annotated[str, Depends(dep_oauth2_scheme)], settings: Annotated[Settings, Depends(dep_settings)]
+    token: Annotated[str, Depends(oauth2_scheme)], settings: Annotated[Settings, Depends(dep_settings)]
 ) -> None:
     if settings.JWT_SECRET is None:
         return

@@ -3,10 +3,12 @@ import axios from "axios";
 import { useEffect, useMemo } from "react";
 import { apiUrl } from "../constants";
 import { useQuerier } from "./Context";
+import { useAuth } from "../authContext";
 
 const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com"];
 
 export function useImageSrc(url: string | undefined): string | undefined {
+  const { token } = useAuth();
   const querier = useQuerier();
   const itemUrl =
     url === undefined || url.startsWith("http") ? url : `${apiUrl}${url}`;
@@ -25,7 +27,10 @@ export function useImageSrc(url: string | undefined): string | undefined {
       if (itemUrl === undefined) {
         return undefined;
       }
-      const res = await axios.get(itemUrl, { responseType: "blob" });
+      const res = await axios.get(itemUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
 
       return res.data as Blob | MediaSource;
     },

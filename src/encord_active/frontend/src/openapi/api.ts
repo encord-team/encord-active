@@ -1910,6 +1910,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         localVarHeaderParameter["Content-Type"] = "application/json";
 
         setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -1977,6 +1986,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         localVarHeaderParameter["Content-Type"] = "application/json";
 
         setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -2022,6 +2040,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -2072,6 +2099,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -2146,6 +2182,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         };
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
 
         setSearchParams(localVarUrlObj, localVarQueryParameter);
         let headersFromBaseOptions =
@@ -2240,6 +2285,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         };
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
 
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
@@ -2341,6 +2395,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         };
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
 
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
@@ -2456,6 +2519,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
         }
@@ -2570,6 +2642,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
         }
@@ -2682,6 +2763,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
         }
@@ -2781,6 +2871,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (iou !== undefined) {
           localVarQueryParameter["iou"] = iou;
         }
@@ -2854,6 +2953,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       if (tagName !== undefined) {
         localVarQueryParameter["tag_name"] = tagName;
@@ -2936,6 +3044,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (compareProjectHash !== undefined) {
           localVarQueryParameter["compare_project_hash"] = compareProjectHash;
         }
@@ -2996,6 +3113,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -3071,6 +3197,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         if (group !== undefined) {
           localVarQueryParameter["group"] = group;
         }
@@ -3135,6 +3270,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
 
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
         setSearchParams(localVarUrlObj, localVarQueryParameter);
         let headersFromBaseOptions =
           baseOptions && baseOptions.headers ? baseOptions.headers : {};
@@ -3191,6 +3335,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset;
@@ -3254,6 +3407,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
         baseOptions && baseOptions.headers ? baseOptions.headers : {};
@@ -3303,6 +3465,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -3377,6 +3548,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       if (ifNoneMatch != null) {
         localVarHeaderParameter["if-none-match"] = String(ifNoneMatch);
@@ -3463,6 +3643,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         };
         const localVarHeaderParameter = {} as any;
         const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
 
         if (buckets !== undefined) {
           localVarQueryParameter["buckets"] = buckets;
@@ -3552,6 +3741,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       if (xMetric !== undefined) {
         localVarQueryParameter["x_metric"] = xMetric;
@@ -3648,6 +3846,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       const localVarFormParams = new ((configuration &&
         configuration.formDataCtor) ||
         FormData)();
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       if (filters !== undefined) {
         localVarQueryParameter["filters"] = filters;
@@ -3747,6 +3954,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
       if (filters !== undefined) {
         localVarQueryParameter["filters"] = filters;
       }
@@ -3800,6 +4016,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =
@@ -3860,6 +4085,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
       localVarHeaderParameter["Content-Type"] = "application/json";
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -3917,6 +4151,15 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions =

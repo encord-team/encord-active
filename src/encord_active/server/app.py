@@ -4,7 +4,6 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.engine import Engine
 from starlette.responses import FileResponse
@@ -12,7 +11,6 @@ from starlette.responses import FileResponse
 from encord_active.server.dependencies import (
     dep_engine,
     dep_engine_readonly,
-    dep_oauth2_scheme,
     dep_settings,
     verify_premium,
     verify_token,
@@ -23,7 +21,7 @@ from .routers import project2
 from .settings import Env, Settings
 
 
-def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer, settings: Settings) -> FastAPI:
+def get_app(engine: Engine, settings: Settings) -> FastAPI:
     app = FastAPI()
 
     app.include_router(project2.router, dependencies=[Depends(verify_token)], prefix="/api")
@@ -41,7 +39,6 @@ def get_app(engine: Engine, oauth2_scheme: OAuth2PasswordBearer, settings: Setti
     app.dependency_overrides = {
         dep_engine: lambda: engine,
         dep_engine_readonly: lambda: readonly_engine,
-        dep_oauth2_scheme: lambda: oauth2_scheme,
         dep_settings: lambda: settings,
     }
 
