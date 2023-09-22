@@ -67,8 +67,8 @@ def dep_settings() -> Settings:
     raise RuntimeError("Missing Settings")
 
 
-def dep_ssh_key() -> str:
-    opt_ssh_key = app_config.get_ssh_key()
+def dep_ssh_key(settings: Annotated[Settings, Depends(dep_settings)]) -> str:
+    opt_ssh_key = settings.SSH_KEY_PATH or app_config.get_ssh_key()
     if opt_ssh_key is None:
         raise RuntimeError("Cannot run operation as ssh key is missing")
     return opt_ssh_key.read_text("utf-8")
