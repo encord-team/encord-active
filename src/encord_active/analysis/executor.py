@@ -4,7 +4,19 @@ import random
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    Any,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import av
 import encord
@@ -114,6 +126,24 @@ class Executor:
         self.config = config
 
 
+class ExecutionResult(NamedTuple):
+    data_analytics: List[ProjectDataAnalytics]
+    data_analytics_extra: List[ProjectDataAnalyticsExtra]
+    data_analytics_derived: List[ProjectDataAnalyticsDerived]
+    annotation_analytics: List[ProjectAnnotationAnalytics]
+    annotation_analytics_extra: List[ProjectAnnotationAnalyticsExtra]
+    annotation_analytics_derived: List[ProjectAnnotationAnalyticsDerived]
+    collaborators: List[ProjectCollaborator]
+
+
+class PredictionExecutionResult(NamedTuple):
+    prediction_analytics: List[ProjectPredictionAnalytics]
+    prediction_analytics_extra: List[ProjectPredictionAnalyticsExtra]
+    prediction_analytics_derived: List[ProjectPredictionAnalyticsDerived]
+    prediction_analytics_false_negatives: List[ProjectPredictionAnalyticsFalseNegatives]
+    new_collaborators: List[ProjectCollaborator]
+
+
 class SimpleExecutor(Executor):
     def __init__(self, config: AnalysisConfig, pool_size: int = 8) -> None:
         super().__init__(config=config)
@@ -136,15 +166,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         project_ssh_key: Optional[str],
         project_ontology: dict,
-    ) -> Tuple[
-        List[ProjectDataAnalytics],
-        List[ProjectDataAnalyticsExtra],
-        List[ProjectDataAnalyticsDerived],
-        List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra],
-        List[ProjectAnnotationAnalyticsDerived],
-        List[ProjectCollaborator],
-    ]:
+    ) -> ExecutionResult:
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in du_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
@@ -168,15 +190,7 @@ class SimpleExecutor(Executor):
         precalculated_annotation: List[ProjectAnnotationAnalytics],
         precalculated_annotation_extra: List[ProjectAnnotationAnalyticsExtra],
         precalculated_collaborators: List[ProjectCollaborator],
-    ) -> Tuple[
-        List[ProjectDataAnalytics],
-        List[ProjectDataAnalyticsExtra],
-        List[ProjectDataAnalyticsDerived],
-        List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra],
-        List[ProjectAnnotationAnalyticsDerived],
-        List[ProjectCollaborator],
-    ]:
+    ) -> ExecutionResult:
         self._stage_1_load_from_existing_data(
             precalculated_data=precalculated_data,
             precalculated_data_extra=precalculated_data_extra,
@@ -205,13 +219,7 @@ class SimpleExecutor(Executor):
         prediction_hash: uuid.UUID,
         project_ssh_key: Optional[str],
         project_ontology: dict,
-    ) -> Tuple[
-        List[ProjectPredictionAnalytics],
-        List[ProjectPredictionAnalyticsExtra],
-        List[ProjectPredictionAnalyticsDerived],
-        List[ProjectPredictionAnalyticsFalseNegatives],
-        List[ProjectCollaborator],
-    ]:
+    ) -> PredictionExecutionResult:
         du_dict: Dict[uuid.UUID, List[ProjectDataUnitMetadata]] = {}
         for du in predicted_annotation_meta:
             du_dict.setdefault(du.data_hash, []).append(du)
@@ -1273,15 +1281,7 @@ class SimpleExecutor(Executor):
         self,
         project_hash: uuid.UUID,
         collaborators: List[ProjectCollaborator],
-    ) -> Tuple[
-        List[ProjectDataAnalytics],
-        List[ProjectDataAnalyticsExtra],
-        List[ProjectDataAnalyticsDerived],
-        List[ProjectAnnotationAnalytics],
-        List[ProjectAnnotationAnalyticsExtra],
-        List[ProjectAnnotationAnalyticsDerived],
-        List[ProjectCollaborator],
-    ]:
+    ) -> ExecutionResult:
         data_analysis = []
         data_analysis_extra = []
         data_analysis_derived = []
@@ -1399,7 +1399,7 @@ class SimpleExecutor(Executor):
                 else:
                     raise ValueError(f"Unknown derived type: {v}")
 
-        return (
+        return ExecutionResult(
             data_analysis,
             data_analysis_extra,
             data_analysis_derived,
@@ -1414,13 +1414,7 @@ class SimpleExecutor(Executor):
         project_hash: uuid.UUID,
         prediction_hash: uuid.UUID,
         collaborators: List[ProjectCollaborator],
-    ) -> Tuple[
-        List[ProjectPredictionAnalytics],
-        List[ProjectPredictionAnalyticsExtra],
-        List[ProjectPredictionAnalyticsDerived],
-        List[ProjectPredictionAnalyticsFalseNegatives],
-        List[ProjectCollaborator],
-    ]:
+    ) -> PredictionExecutionResult:
         prediction_analysis = []
         prediction_analysis_extra = []
         prediction_analysis_derived = []
@@ -1505,7 +1499,7 @@ class SimpleExecutor(Executor):
                 )
             )
 
-        return (
+        return PredictionExecutionResult(
             prediction_analysis,
             prediction_analysis_extra,
             prediction_analysis_derived,

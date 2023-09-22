@@ -1,14 +1,14 @@
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, NamedTuple, Optional, Union
 
 import numpy as np
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.analysis.config import create_analysis, default_torch_device
-from encord_active.analysis.executor import SimpleExecutor
+from encord_active.analysis.executor import ExecutionResult, SimpleExecutor
 from encord_active.analysis.reductions.op import (
     apply_embedding_reduction,
     create_reduction,
@@ -30,6 +30,9 @@ from encord_active.db.models import (
     ProjectImportMetadata,
     ProjectPrediction,
 )
+from encord_active.db.models.project_embedding_reduction import (
+    ProjectEmbeddingReduction,
+)
 
 
 @dataclass
@@ -42,6 +45,82 @@ class ProjectImportSpec:
     @property
     def is_empty(self):
         return len(self.project_data_list) + len(self.project_du_list) == 0
+
+
+class ReductionResult(NamedTuple):
+    project_reduction: ProjectEmbeddingReduction
+    reduced_data_clip: list[ProjectDataAnalyticsReduced]
+    reduced_annotation_clip: list[ProjectAnnotationAnalyticsReduced]
+    embedding_index: ProjectEmbeddingIndex
+
+
+def _reduce_project_embeddings(project: ProjectImportSpec, exec_res: ExecutionResult) -> ReductionResult:
+    reduction_total_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = []
+    reduction_total_samples.extend(exec_res.data_analytics_extra)
+    reduction_total_samples.extend(exec_res.annotation_analytics_extra)
+    reduction_train_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = random.choices(
+        reduction_total_samples, k=min(len(reduction_total_samples), 50_000)
+    )
+    reduction_train_samples.sort(
+        key=lambda x: (x.du_hash, x.frame, x.annotation_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
+    )
+    reduction = create_reduction(
+        EmbeddingReductionType.UMAP,
+        train_samples=[
+            np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in reduction_train_samples
+        ],
+    )
+    project_reduction = serialize_reduction(
+        reduction,
+        name="Default CLIP",
+        description="",
+        project_hash=project.project.project_hash,
+    )
+    reduced_data_clip_raw = apply_embedding_reduction(
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in exec_res.data_analytics_extra],
+        reduction,
+    )
+    reduced_data_clip = [
+        ProjectDataAnalyticsReduced(
+            reduction_hash=project_reduction.reduction_hash,
+            project_hash=project.project.project_hash,
+            du_hash=extra.du_hash,
+            frame=extra.frame,
+            x=x,
+            y=y,
+        )
+        for (extra, (x, y)) in zip(exec_res.data_analytics_extra, reduced_data_clip_raw)
+    ]
+    reduced_annotation_clip_raw = apply_embedding_reduction(
+        [
+            np.frombuffer(sample.embedding_clip or b"", dtype=np.float64)
+            for sample in exec_res.annotation_analytics_extra
+        ],
+        reduction,
+    )
+    reduced_annotation_clip = [
+        ProjectAnnotationAnalyticsReduced(
+            reduction_hash=project_reduction.reduction_hash,
+            project_hash=project.project.project_hash,
+            du_hash=extra.du_hash,
+            frame=extra.frame,
+            annotation_hash=extra.annotation_hash,
+            x=x,
+            y=y,
+        )
+        for (extra, (x, y)) in zip(exec_res.annotation_analytics_extra, reduced_annotation_clip_raw)
+    ]
+
+    embedding_index = ProjectEmbeddingIndex(
+        project_hash=project.project.project_hash,
+        data_index_dirty=True,
+        data_index_name=None,
+        data_index_compiled=None,
+        annotation_index_dirty=True,
+        annotation_index_name=None,
+        annotation_index_compiled=None,
+    )
+    return ReductionResult(project_reduction, reduced_data_clip, reduced_annotation_clip, embedding_index)
 
 
 def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec, ssh_key: str) -> None:
@@ -59,7 +138,7 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
 
     # Execute metric engine.
     metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
-    res = metric_engine.execute_from_db(
+    exec_res = metric_engine.execute_from_db(
         project.project_data_list,
         project.project_du_list,
         [],
@@ -68,78 +147,8 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
         project_ssh_key=ssh_key if project.project.remote else None,
         project_ontology=project.project.ontology,
     )
-    (
-        data_analytics,
-        data_analytics_extra,
-        data_analytics_derived,
-        annotation_analytics,
-        annotation_analytics_extra,
-        annotation_analytics_derived,
-        new_collaborators,
-    ) = res
-
     # Execute embedding reduction.
-    reduction_total_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = []
-    reduction_total_samples.extend(data_analytics_extra)
-    reduction_total_samples.extend(annotation_analytics_extra)
-    reduction_train_samples: List[Union[ProjectDataAnalyticsExtra, ProjectAnnotationAnalyticsExtra]] = random.choices(
-        reduction_total_samples, k=min(len(reduction_total_samples), 50_000)
-    )
-    reduction_train_samples.sort(
-        key=lambda x: (x.du_hash, x.frame, x.annotation_hash if isinstance(x, ProjectAnnotationAnalyticsExtra) else "")
-    )
-    reduction = create_reduction(
-        EmbeddingReductionType.UMAP,
-        train_samples=[
-            np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in reduction_train_samples
-        ],
-    )
-    project_reduction = serialize_reduction(
-        reduction,
-        name="Default CLIP",
-        description="",
-        project_hash=project_hash,
-    )
-    reduced_data_clip_raw = apply_embedding_reduction(
-        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in data_analytics_extra], reduction
-    )
-    reduced_data_clip = [
-        ProjectDataAnalyticsReduced(
-            reduction_hash=project_reduction.reduction_hash,
-            project_hash=project_hash,
-            du_hash=extra.du_hash,
-            frame=extra.frame,
-            x=x,
-            y=y,
-        )
-        for (extra, (x, y)) in zip(data_analytics_extra, reduced_data_clip_raw)
-    ]
-    reduced_annotation_clip_raw = apply_embedding_reduction(
-        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in annotation_analytics_extra],
-        reduction,
-    )
-    reduced_annotation_clip = [
-        ProjectAnnotationAnalyticsReduced(
-            reduction_hash=project_reduction.reduction_hash,
-            project_hash=project_hash,
-            du_hash=extra.du_hash,
-            frame=extra.frame,
-            annotation_hash=extra.annotation_hash,
-            x=x,
-            y=y,
-        )
-        for (extra, (x, y)) in zip(annotation_analytics_extra, reduced_annotation_clip_raw)
-    ]
-
-    embedding_index = ProjectEmbeddingIndex(
-        project_hash=project_hash,
-        data_index_dirty=True,
-        data_index_name=None,
-        data_index_compiled=None,
-        annotation_index_dirty=True,
-        annotation_index_name=None,
-        annotation_index_compiled=None,
-    )
+    red_res = _reduce_project_embeddings(project, exec_res)
 
     # Populate the database.
     with Session(engine) as sess:
@@ -149,17 +158,17 @@ def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpe
                 sess.add(project.project_import_meta)
             sess.bulk_save_objects(project.project_data_list)
             sess.bulk_save_objects(project.project_du_list)
-            sess.bulk_save_objects(new_collaborators)
-            sess.bulk_save_objects([project_reduction])
-            sess.bulk_save_objects([embedding_index])
-            sess.add_all(data_analytics)
-            sess.add_all(data_analytics_extra)
-            sess.add_all(data_analytics_derived)
-            sess.add_all(annotation_analytics)
-            sess.add_all(annotation_analytics_extra)
-            sess.add_all(annotation_analytics_derived)
-            sess.add_all(reduced_data_clip)
-            sess.add_all(reduced_annotation_clip)
+            sess.bulk_save_objects(exec_res.collaborators)
+            sess.bulk_save_objects([red_res.project_reduction])
+            sess.bulk_save_objects([red_res.embedding_index])
+            sess.add_all(exec_res.data_analytics)
+            sess.add_all(exec_res.data_analytics_extra)
+            sess.add_all(exec_res.data_analytics_derived)
+            sess.add_all(exec_res.annotation_analytics)
+            sess.add_all(exec_res.annotation_analytics_extra)
+            sess.add_all(exec_res.annotation_analytics_derived)
+            sess.add_all(red_res.reduced_data_clip)
+            sess.add_all(red_res.reduced_annotation_clip)
 
 
 def refresh_project(
@@ -246,7 +255,7 @@ def refresh_project(
     metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
 
     # FIXME: currently we re-calculate stage 1 metrics for un-changed values
-    res = metric_engine.execute_from_db(
+    exec_res = metric_engine.execute_from_db(
         data_meta=updated_data_meta,
         du_meta=updated_du_meta,
         collaborators=collaborators,
@@ -255,19 +264,10 @@ def refresh_project(
         project_ssh_key=ssh_key if upsert.project.remote else None,
         project_ontology=upsert.project.ontology,
     )
-    (
-        data_analysis_new,
-        data_analysis_new_extra,
-        data_analysis_new_derived,
-        annotate_analysis_new,
-        annotate_analysis_new_extra,
-        annotation_analysis_new_derived,
-        collab_new,
-    ) = res
 
     with Session(engine) as sess:
         # Sync collab & project metadata
-        sess.add_all(collab_new)
+        sess.add_all(exec_res.collaborators)
         existing_project.ontology = upsert.project.ontology
         existing_project.name = upsert.project.name
         existing_project.description = upsert.project.description
@@ -275,31 +275,21 @@ def refresh_project(
         sess.commit()
 
         # Delete & re-add data units and analytics
-        del_list_list: List[
-            Union[
-                List[ProjectDataMetadata],
-                List[ProjectDataUnitMetadata],
-                List[ProjectDataAnalytics],
-                List[ProjectDataAnalyticsExtra],
-                List[ProjectAnnotationAnalytics],
-                List[ProjectAnnotationAnalyticsExtra],
-            ]
-        ] = [
+        for del_list in [
             existing_du_meta,
             existing_data_meta,
             existing_data_analytics,
             existing_data_analytics_extra,
             existing_annotation_analytics,
             existing_annotation_analytics_extra,
-        ]
-        for del_list in del_list_list:
+        ]:
             for d in del_list:
                 sess.delete(d)
         sess.commit()
         sess.add_all(updated_data_meta)
         sess.add_all(updated_du_meta)
-        sess.add_all(data_analysis_new)
-        sess.add_all(data_analysis_new_extra)
-        sess.add_all(annotate_analysis_new)
-        sess.add_all(annotate_analysis_new_extra)
+        sess.add_all(exec_res.data_analytics)
+        sess.add_all(exec_res.data_analytics_extra)
+        sess.add_all(exec_res.annotation_analytics)
+        sess.add_all(exec_res.annotation_analytics_extra)
     return True
