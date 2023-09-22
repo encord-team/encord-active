@@ -4,3 +4,4 @@
 .npmignore
 git_push.sh
 index.ts
+common.ts

@@ -191,6 +191,12 @@ export const createRequestFunction = function (
     axios: AxiosInstance = globalAxios,
     basePath: string = BASE_PATH
   ) => {
+    if (
+      axiosArgs?.options?.data instanceof FormData &&
+      [...axiosArgs?.options?.data.keys()].length === 0
+    )
+      delete axiosArgs.options.data;
+
     const axiosRequestArgs = {
       ...axiosArgs.options,
       url:
