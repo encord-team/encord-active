@@ -67,7 +67,7 @@ def get_app(engine: Engine, settings: Settings) -> FastAPI:
             "/assets", StaticFiles(directory=frontend_build_path / "assets", follow_symlink=False), name="fe-assets"
         )
 
-        @app.get("/")
+        @app.get("/{any:path}")
         @app.get("/index.html")
         def _index():
             return FileResponse(frontend_build_path / "index.html")
