@@ -4,7 +4,16 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import { Button, Modal, Popover, Select, Slider, Space, Tooltip } from "antd";
+import {
+  Button,
+  Modal,
+  Popover,
+  Select,
+  Slider,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
@@ -38,6 +47,7 @@ import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
 import { FeatureHashMap } from "../Types";
+import { classy } from "../../helpers/classy";
 
 export type Props = {
   projectHash: string;
@@ -667,20 +677,31 @@ function PredictionFilters({
           },
         ]}
       />
+
       {!isClassificationOnly && (
-        <div className="box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200 pr-3 pl-2.5">
-          <Slider
-            className="mt-3.5"
-            tooltip={{
-              formatter: (val: number | undefined) => `IOU: ${val}`,
-            }}
-            value={iou}
-            onChange={setIou}
-            min={0}
-            max={1}
-            step={0.01}
-          />
-        </div>
+        <>
+          <div
+            className={classy(
+              "box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200",
+              "flex items-center gap-1 px-2"
+            )}
+          >
+            <Typography.Text strong className="min-w-fit">
+              IOU:
+            </Typography.Text>
+            <Slider
+              className="w-full"
+              tooltip={{
+                formatter: (val: number | undefined) => `${val}`,
+              }}
+              value={iou}
+              onChange={setIou}
+              min={0}
+              max={1}
+              step={0.01}
+            />
+          </div>
+        </>
       )}
     </Space.Compact>
   );
