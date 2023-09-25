@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, Optional, Type, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
@@ -38,6 +38,7 @@ from encord_active.db.models import (
     ProjectTag,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
+    ProjectTaggedPrediction,
 )
 
 
@@ -65,10 +66,11 @@ class WholeProjectModelV1(BaseModel):
     project_data_units: List[ProjectDataUnitMetadata]
     project_embedding_index: List[ProjectEmbeddingIndex]
     project_embedding_reduction: List[ProjectEmbeddingReduction]
-    project_import: List[ProjectImportMetadata]
-    project_tagged_annotation: List[ProjectTaggedAnnotation]
-    project_tagged_data: List[ProjectTaggedDataUnit]
-    project_tags: List[ProjectTag]
+    project_import: List[ProjectImportMetadata] = Field(default=[])
+    project_tagged_annotation: List[ProjectTaggedAnnotation] = Field(default=[])
+    project_tagged_data: List[ProjectTaggedDataUnit] = Field(default=[])
+    project_tagged_prediction: List[ProjectTaggedPrediction] = Field(default=[])
+    project_tags: List[ProjectTag] = Field(default=[])
 
 
 T = TypeVar(
@@ -98,6 +100,7 @@ T = TypeVar(
     ProjectImportMetadata,
     ProjectTaggedAnnotation,
     ProjectTaggedDataUnit,
+    ProjectTaggedPrediction,
     ProjectTag,
 )
 
@@ -149,6 +152,7 @@ def serialize_whole_project_state(engine: Engine, database_dir: Path, project_ha
             project_import=fetch_all(ProjectImportMetadata),
             project_tagged_annotation=fetch_all(ProjectTaggedAnnotation),
             project_tagged_data=fetch_all(ProjectTaggedDataUnit),
+            project_tagged_prediction=fetch_all(ProjectTaggedPrediction),
             project_tags=fetch_all(ProjectTag),
         )
 

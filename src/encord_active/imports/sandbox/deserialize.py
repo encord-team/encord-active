@@ -56,4 +56,5 @@ def import_serialized_project(engine: Engine, db_json: Path) -> None:
         sess.bulk_save_objects(whole_project_json.prediction_analytics_derived)
         sess.bulk_save_objects(whole_project_json.prediction_analytics_reduced)
         sess.bulk_save_objects(whole_project_json.prediction_analytics_fn)
+        sess.bulk_save_objects(whole_project_json.project_tagged_prediction)
         sess.commit()
